@@ -1,0 +1,60 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: isgdb
+      POSTGRES_USER: isguser
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://isguser:${DB_PASSWORD}@postgres:5432/isgdb
+      JWT_SECRET: ${JWT_SECRET}
+      NTLM_ENABLED: ${NTLM_ENABLED}
+      DEV_USER: ${DEV_USER}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      NODE_ENV: ${NODE_ENV}
+      FRONTEND_URL: ${FRONTEND_URL}
+    depends_on:
+      postgres:
+        condition: service_started
+    ports:
+      - "3005:3005"
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_started
+
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_started
+
+  adminer:
+    image: adminer
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:

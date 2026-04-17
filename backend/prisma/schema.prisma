@@ -1,0 +1,205 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  username        String         @id
+  fullName        String
+  isActive        Boolean        @default(true)
+  employmentType  String?
+  osgbName        String?
+  roles           UserRole[]
+  facilities      UserFacility[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model Role {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  users     UserRole[]
+  createdAt DateTime   @default(now())
+}
+
+model UserRole {
+  username String
+  roleId   Int
+  user     User     @relation(fields: [username], references: [username])
+  role     Role     @relation(fields: [roleId], references: [id])
+
+  @@id([username, roleId])
+}
+
+model Facility {
+  id               String             @id
+  name             String
+  isActive         Boolean            @default(true)
+  buildings        FacilityBuilding[]
+  users            UserFacility[]
+  assignments      Assignment[]
+  monthlyHrData    MonthlyHRData[]
+  monthlyAccident  MonthlyAccidentData[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+}
+
+model FacilityBuilding {
+  id         Int      @id @default(autoincrement())
+  facilityId String
+  facility   Facility @relation(fields: [facilityId], references: [id])
+  name       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model UserFacility {
+  username   String
+  facilityId String
+  user       User     @relation(fields: [username], references: [username])
+  facility   Facility @relation(fields: [facilityId], references: [id])
+
+  @@id([username, facilityId])
+}
+
+model Professional {
+  id              Int          @id @default(autoincrement())
+  fullName        String
+  employmentType  String
+  osgbName        String?
+  titleClass      String
+  certificateNo   String?
+  certificateDate DateTime?
+  phone           String?
+  email           String?
+  unitPrice       Float?
+  isActive        Boolean      @default(true)
+  assignments     Assignment[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model EmployerRepresentative {
+  id          Int          @id @default(autoincrement())
+  fullName    String
+  title       String?
+  phone       String?
+  email       String?
+  isActive    Boolean      @default(true)
+  appointments Assignment[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model OSGBCompany {
+  id        Int      @id @default(autoincrement())
+  name      String
+  contact   String?
+  phone     String?
+  email     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Assignment {
+  id              Int                     @id @default(autoincrement())
+  facilityId      String
+  facility        Facility                @relation(fields: [facilityId], references: [id])
+  professionalId  Int?
+  professional    Professional?           @relation(fields: [professionalId], references: [id])
+  employerRepId   Int?
+  employerRep     EmployerRepresentative? @relation(fields: [employerRepId], references: [id])
+  type            String
+  durationMinutes Int
+  isFullTime      Boolean                 @default(false)
+  startDate       DateTime
+  endDate         DateTime?
+  status          String
+  costType        String?
+  unitPrice       Float?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+}
+
+model SystemSettings {
+  id                Int      @id @default(autoincrement())
+  year              Int      @unique
+  seriousAccidentDays Int    @default(4)
+  includeSaturday     Boolean  @default(true)
+  dailyWorkHours      Float    @default(7.5)
+  monthlyWorkDays     Json
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model MonthlyHRData {
+  id                 Int      @id @default(autoincrement())
+  facilityId         String
+  facility           Facility @relation(fields: [facilityId], references: [id])
+  month              String
+  mainEmployerData   Json
+  subContractorData  Json
+  createdBy          String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([facilityId, month])
+}
+
+model MonthlyAccidentData {
+  id                 Int      @id @default(autoincrement())
+  facilityId         String
+  facility           Facility @relation(fields: [facilityId], references: [id])
+  month              String
+  mainEmployerData   Json
+  subContractorData  Json
+  internData         Json
+  createdBy          String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([facilityId, month])
+}
+
+model Category {
+  id            Int             @id @default(autoincrement())
+  name          String
+  subCategories SubCategory[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model SubCategory {
+  id         Int      @id @default(autoincrement())
+  name       String
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Department {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ActivityLog {
+  id          Int      @id @default(autoincrement())
+  entityType  String
+  entityId    String
+  action      String
+  oldValue    Json?
+  newValue    Json?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  ipAddress   String?
+  userAgent   String?
+  note        String?
+}
