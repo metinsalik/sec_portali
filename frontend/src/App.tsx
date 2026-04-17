@@ -1,88 +1,178 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './components/ThemeProvider';
 import ProtectedRoute from './components/ProtectedRoute';
-import SettingsLayout from './pages/settings/SettingsLayout';
-import LoginPage from './pages/Login';
+import AppLayout from './components/layout/AppLayout';
+import { TooltipProvider } from './components/ui/tooltip';
 
-// Real Pages for Settings
+// Auth
+import LoginPage from './pages/Login';
+import PortalPage from './pages/PortalPage';
+
+// Settings
+import SettingsLayout from './pages/settings/SettingsLayout';
 import FacilitiesPage from './pages/settings/FacilitiesPage';
 import UsersPage from './pages/settings/UsersPage';
 import ParametersPage from './pages/settings/ParametersPage';
 import DefinitionsPage from './pages/settings/DefinitionsPage';
 
-const queryClient = new QueryClient();
+// Panel
+import PanelDashboard from './pages/panel/PanelDashboard';
+import ProfessionalsPage from './pages/panel/ProfessionalsPage';
+import OSGBPage from './pages/panel/OSGBPage';
+import EmployersPage from './pages/panel/EmployersPage';
+import AssignmentsPage from './pages/panel/AssignmentsPage';
+import ReconciliationPage from './pages/panel/ReconciliationPage';
 
-const PanelLayout = ({ children }: { children: React.ReactNode }) => (
-  <div className="flex h-screen bg-background text-foreground">
-    <aside className="w-64 border-r bg-card p-4">
-      <h2 className="text-xl font-bold mb-8 px-2 tracking-tight">SEÇ PORTALI</h2>
-      <nav className="space-y-1">
-        <div className="px-2 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Menü</div>
-        <a href="/panel" className="block px-2 py-2 text-sm font-medium hover:bg-accent rounded-md">Dashboard</a>
-        <a href="/settings/facilities" className="block px-2 py-2 text-sm font-medium hover:bg-accent rounded-md">Sistem Ayarları</a>
-      </nav>
-    </aside>
-    <main className="flex-1 p-8 overflow-y-auto bg-slate-50/50">
-      {children}
-    </main>
+// Placeholder for future modules
+const PlaceholderPage = ({ title }: { title: string }) => (
+  <div className="flex flex-col items-center justify-center h-64 bg-card rounded-2xl border-2 border-dashed border-border">
+    <p className="text-2xl font-bold text-muted-foreground/30 mb-2">{title}</p>
+    <p className="text-sm text-muted-foreground">Bu modül yakında hazır olacak.</p>
   </div>
 );
 
-const Dashboard = () => (
-  <div className="space-y-6">
-    <div className="flex justify-between items-center">
-      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-      <div className="text-sm text-muted-foreground">Hoş Geldiniz, {new Date().toLocaleDateString('tr-TR')}</div>
-    </div>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div className="p-6 bg-white rounded-2xl shadow-sm border border-slate-200">
-        <h3 className="text-sm font-medium text-slate-500">Aktif Tesisler</h3>
-        <p className="text-3xl font-bold mt-2 text-slate-900">12</p>
-      </div>
-      <div className="p-6 bg-white rounded-2xl shadow-sm border border-slate-200">
-        <h3 className="text-sm font-medium text-slate-500">Açık Tespit Defteri</h3>
-        <p className="text-3xl font-bold mt-2 text-slate-900">45</p>
-      </div>
-    </div>
-  </div>
-);
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: 1,
+    },
+  },
+});
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Router>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            
-            <Route path="/panel" element={
-              <ProtectedRoute>
-                <PanelLayout>
-                  <Dashboard />
-                </PanelLayout>
-              </ProtectedRoute>
-            } />
+      <ThemeProvider defaultTheme="system" storageKey="sec-portali-theme">
+        <AuthProvider>
+        <TooltipProvider>
+          <Router>
+            <Routes>
+              {/* Public */}
+              <Route path="/login" element={<LoginPage />} />
 
-            <Route path="/settings" element={
-              <ProtectedRoute requireAdmin>
-                <PanelLayout>
-                  <SettingsLayout />
-                </PanelLayout>
-              </ProtectedRoute>
-            }>
-              <Route index element={<Navigate to="facilities" replace />} />
-              <Route path="facilities" element={<FacilitiesPage />} />
-              <Route path="users" element={<UsersPage />} />
-              <Route path="parameters" element={<ParametersPage />} />
-              <Route path="definitions" element={<DefinitionsPage />} />
-            </Route>
-            
-            <Route path="/" element={<Navigate to="/panel" replace />} />
-            <Route path="*" element={<Navigate to="/panel" replace />} />
-          </Routes>
-        </Router>
+              {/* ── PORTAL (Modül Seçimi) ─────────────────────── */}
+              <Route
+                path="/portal"
+                element={
+                  <ProtectedRoute>
+                    <PortalPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* ── PANEL (Admin + Management) ─────────────────── */}
+              <Route
+                path="/panel"
+                element={<Navigate to="/panel/dashboard" replace />}
+              />
+              <Route
+                path="/panel/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'management']}>
+                    <AppLayout><PanelDashboard /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/panel/facilities"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'management']}>
+                    <AppLayout><PlaceholderPage title="Panel — Tesis Listesi" /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/panel/professionals"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'management']}>
+                    <AppLayout><ProfessionalsPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/panel/employers"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'management']}>
+                    <AppLayout><EmployersPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/panel/osgb"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'management']}>
+                    <AppLayout><OSGBPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/panel/assignments"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'management']}>
+                    <AppLayout><AssignmentsPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/panel/reconciliation"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'management']}>
+                    <AppLayout><ReconciliationPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* ── OPERATIONS (Herkes) ────────────────────────── */}
+              <Route
+                path="/operations/*"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <PlaceholderPage title="İSG Aylık Veri Sistemi — Faz 4" />
+                    </AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/operations/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <PlaceholderPage title="Operasyon Dashboard" />
+                    </AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* ── SETTINGS (Admin + Management) ─────────────── */}
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'management']}>
+                    <AppLayout>
+                      <SettingsLayout />
+                    </AppLayout>
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Navigate to="facilities" replace />} />
+                <Route path="facilities" element={<FacilitiesPage />} />
+                <Route path="users" element={<UsersPage />} />
+                <Route path="parameters" element={<ParametersPage />} />
+                <Route path="definitions" element={<DefinitionsPage />} />
+              </Route>
+
+              {/* ── Redirects ──────────────────────────────────── */}
+              <Route path="/" element={<Navigate to="/portal" replace />} />
+              <Route path="*" element={<Navigate to="/portal" replace />} />
+            </Routes>
+          </Router>
+        </TooltipProvider>
       </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

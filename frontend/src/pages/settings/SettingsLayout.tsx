@@ -13,8 +13,8 @@ const SettingsLayout = () => {
   return (
     <div className="flex flex-col space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Sistem Ayarları</h1>
-        <p className="text-slate-500 mt-1">Uygulama genelindeki tesis, kullanıcı ve parametre ayarlarını buradan yönetebilirsiniz.</p>
+        <h1 className="text-2xl font-bold tracking-tight">Sistem Ayarları</h1>
+        <p className="text-sm text-muted-foreground mt-1">Uygulama genelindeki tesis, kullanıcı ve parametre ayarlarını buradan yönetebilirsiniz.</p>
       </div>
 
       <div className="flex flex-col md:flex-row gap-8">
@@ -24,10 +24,10 @@ const SettingsLayout = () => {
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                   isActive 
-                    ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' 
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-secondary text-foreground' 
+                    : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
                 }`
               }
             >
@@ -37,7 +37,7 @@ const SettingsLayout = () => {
           ))}
         </aside>
 
-        <main className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 overflow-hidden">
+        <main className="flex-1 bg-card rounded-xl border shadow-sm p-6 overflow-hidden">
           <Outlet />
         </main>
       </div>

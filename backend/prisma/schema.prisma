@@ -38,12 +38,16 @@ model UserRole {
 model Facility {
   id               String             @id
   name             String
+  dangerClass      String             @default("Az Tehlikeli") // "Çok Tehlikeli" | "Tehlikeli" | "Az Tehlikeli"
+  employeeCount    Int                @default(0)
+  address          String?
   isActive         Boolean            @default(true)
   buildings        FacilityBuilding[]
   users            UserFacility[]
   assignments      Assignment[]
   monthlyHrData    MonthlyHRData[]
   monthlyAccident  MonthlyAccidentData[]
+  reconciliations  Reconciliation[]
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 }
@@ -96,14 +100,31 @@ model EmployerRepresentative {
 }
 
 model OSGBCompany {
-  id        Int      @id @default(autoincrement())
-  name      String
-  contact   String?
-  phone     String?
-  email     String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              Int              @id @default(autoincrement())
+  name            String
+  contact         String?
+  phone           String?
+  email           String?
+  isActive        Boolean          @default(true)
+  reconciliations Reconciliation[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model Reconciliation {
+  id            Int         @id @default(autoincrement())
+  facilityId    String
+  facility      Facility    @relation(fields: [facilityId], references: [id])
+  osgbCompanyId Int
+  osgbCompany   OSGBCompany @relation(fields: [osgbCompanyId], references: [id])
+  month         String      // "2026-04"
+  amount        Float?
+  note          String?
+  status        String      @default("Beklemede") // "Beklemede" | "Onaylandı" | "Reddedildi"
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([facilityId, osgbCompanyId, month])
 }
 
 model Assignment {

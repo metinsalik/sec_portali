@@ -24,7 +24,7 @@ export default function LoginPage() {
 
     try {
       await login(username);
-      navigate("/panel");
+      navigate("/portal");
     } catch (err: any) {
       setError(err.message || "Giriş başarısız.");
     } finally {
@@ -33,7 +33,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen bg-background">
       {/* Sol Panel - Banner */}
       <div className="hidden lg:flex w-1/2 bg-[#1e4ed8] relative overflow-hidden items-center justify-center">
         {/* Arkaplan Deseni */}
@@ -75,29 +75,29 @@ export default function LoginPage() {
       <div className="w-full lg:w-1/2 flex flex-col justify-between p-8 lg:p-24">
         <div className="w-full max-w-md mx-auto mt-10">
           <div className="mb-10">
-            <div className="w-32 h-10 bg-slate-800 flex items-center justify-center text-white font-bold tracking-wider mb-8 text-xl">
-              SE<span className="text-blue-500 font-extrabold pl-1">Ç</span>
+            <div className="w-32 h-10 bg-primary flex items-center justify-center text-primary-foreground font-bold tracking-wider mb-8 text-xl">
+              SE<span className="text-blue-500 dark:text-blue-400 font-extrabold pl-1">Ç</span>
             </div>
             
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">Tekrar Hoş Geldiniz</h2>
-            <p className="text-slate-500">Hesabınıza erişmek için kullanıcı adınızı girin.</p>
+            <h2 className="text-3xl font-bold text-foreground mb-2">Tekrar Hoş Geldiniz</h2>
+            <p className="text-muted-foreground">Hesabınıza erişmek için kullanıcı adınızı girin.</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Kullanıcı adınızı giriniz.</label>
+              <label className="text-sm font-semibold text-foreground/80">Kullanıcı adınızı giriniz.</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-slate-400" />
+                  <User className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <Input 
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="ad.soyad" 
-                  className="pl-10 py-6 bg-white border-slate-200 text-base"
+                  className="pl-10 py-6 bg-background border-input text-base"
                 />
               </div>
-              <p className="text-sm text-slate-600 font-medium">
+              <p className="text-sm text-muted-foreground font-medium">
                 Kendi windows oturumunuzda kullanıcı adınızla giriş yapabilirsiniz.
               </p>
               {error && <p className="text-sm text-red-500 font-medium mt-2">{error}</p>}
@@ -106,7 +106,7 @@ export default function LoginPage() {
             <Button 
               type="submit" 
               disabled={isSubmitting}
-              className="w-full py-6 text-base bg-[#2563eb] hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/30 transition-all font-semibold"
+              className="w-full py-6 text-base bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-500/30 transition-all font-semibold"
             >
               {isSubmitting ? "Giriş Yapılıyor..." : "Giriş Yap"} <span className="ml-2">→</span>
             </Button>
@@ -114,7 +114,7 @@ export default function LoginPage() {
         </div>
 
         <div className="mt-8 text-center">
-          <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
             © 2026 SEÇ PORTALI GÜVENLİK YÖNETİM SİSTEMİ
           </p>
         </div>

@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 // Routes
 import authRoutes from './routes/auth';
 import settingsRoutes from './routes/settings';
+import panelRoutes from './routes/panel';
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.use(helmet());
 // Route Entegrasyonu
 app.use('/api/auth', authRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/panel', panelRoutes);
 
 // Sağlık kontrolü
 app.get('/health', (req, res) => {

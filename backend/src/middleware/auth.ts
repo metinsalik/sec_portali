@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 export interface AuthRequest extends Request {
   user?: {
     username: string;
+    fullName: string;
     roles: string[];
     facilities: string[];
     isAdmin: boolean;
@@ -28,9 +29,18 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
   }
 };
 
+/** Sadece Admin erişimi */
 export const adminMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
   if (!req.user || !req.user.isAdmin) {
     return res.status(403).json({ error: 'Bu işlem için yönetici yetkisi gerekiyor.' });
+  }
+  next();
+};
+
+/** Admin VEYA Management erişimi */
+export const managementMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (!req.user || (!req.user.isAdmin && !req.user.isManagement)) {
+    return res.status(403).json({ error: 'Bu işlem için yönetici veya merkez yönetim yetkisi gerekiyor.' });
   }
   next();
 };

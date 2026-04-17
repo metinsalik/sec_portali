@@ -13,7 +13,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: () => Promise<void>;
+  login: (username?: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -30,9 +30,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const data = await res.json();
         setUser(data.user);
       } else {
+        localStorage.removeItem('token');
         setUser(null);
       }
-    } catch (error) {
+    } catch {
+      localStorage.removeItem('token');
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -42,20 +44,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (username?: string) => {
     setIsLoading(true);
     try {
-      const res = username 
+      const res = username
         ? await api.post('/auth/login', { username })
         : await api.get('/auth/login');
-        
+
       if (res.ok) {
         const data = await res.json();
         localStorage.setItem('token', data.token);
         setUser(data.user);
       } else {
         const errorData = await res.json();
-        throw new Error(errorData.error || 'Login failed');
+        throw new Error(errorData.error || 'Giriş başarısız.');
       }
     } catch (error: any) {
-      console.error('Login failed:', error);
       throw error;
     } finally {
       setIsLoading(false);

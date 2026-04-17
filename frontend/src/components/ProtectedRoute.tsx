@@ -4,22 +4,26 @@ import { useAuth } from '../context/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  /** Erişime izin verilen roller. Boşsa: tüm giriş yapmış kullanıcılar */
   allowedRoles?: string[];
   requireAdmin?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  allowedRoles, 
-  requireAdmin 
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  allowedRoles,
+  requireAdmin,
 }) => {
   const { user, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex h-screen items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-blue-600 border-t-transparent" />
+          <p className="text-sm text-slate-500">Yükleniyor...</p>
+        </div>
       </div>
     );
   }
@@ -29,11 +33,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (requireAdmin && !user.isAdmin) {
-    return <Navigate to="/panel" replace />;
+    return <Navigate to="/panel/dashboard" replace />;
   }
 
-  if (allowedRoles && !allowedRoles.some(role => user.roles.includes(role))) {
-    return <Navigate to="/panel" replace />;
+  if (allowedRoles && allowedRoles.length > 0) {
+    const hasRole = allowedRoles.some((role) => user.roles.includes(role));
+    if (!hasRole) {
+      // Specialist/Physician/DSP panele erişmeye çalışırsa → operations
+      return <Navigate to="/operations/dashboard" replace />;
+    }
   }
 
   return <>{children}</>;
