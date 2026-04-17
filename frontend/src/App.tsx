@@ -9,6 +9,7 @@ import { TooltipProvider } from './components/ui/tooltip';
 // Auth
 import LoginPage from './pages/Login';
 import PortalPage from './pages/PortalPage';
+import ProfilePage from './pages/ProfilePage';
 
 // Settings
 import SettingsLayout from './pages/settings/SettingsLayout';
@@ -24,6 +25,15 @@ import OSGBPage from './pages/panel/OSGBPage';
 import EmployersPage from './pages/panel/EmployersPage';
 import AssignmentsPage from './pages/panel/AssignmentsPage';
 import ReconciliationPage from './pages/panel/ReconciliationPage';
+
+// Operations
+import OperationsDashboard from './pages/operations/OperationsDashboard';
+import HRDataPage from './pages/operations/HRDataPage';
+import AccidentsPage from './pages/operations/AccidentsPage';
+import NotebooksPage from './pages/operations/NotebooksPage';
+import TrainingPage from './pages/operations/TrainingPage';
+import BoardPage from './pages/operations/BoardPage';
+import InspectionsPage from './pages/operations/InspectionsPage';
 
 // Placeholder for future modules
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -59,6 +69,16 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <PortalPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* ── PROFIL ─────────────────────────────────────── */}
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout><ProfilePage /></AppLayout>
                   </ProtectedRoute>
                 }
               />
@@ -127,22 +147,62 @@ function App() {
 
               {/* ── OPERATIONS (Herkes) ────────────────────────── */}
               <Route
-                path="/operations/*"
-                element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <PlaceholderPage title="İSG Aylık Veri Sistemi — Faz 4" />
-                    </AppLayout>
-                  </ProtectedRoute>
-                }
+                path="/operations"
+                element={<Navigate to="/operations/dashboard" replace />}
               />
               <Route
                 path="/operations/dashboard"
                 element={
                   <ProtectedRoute>
-                    <AppLayout>
-                      <PlaceholderPage title="Operasyon Dashboard" />
-                    </AppLayout>
+                    <AppLayout><OperationsDashboard /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/operations/hr-data"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout><HRDataPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/operations/accidents"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout><AccidentsPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/operations/notebooks"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout><NotebooksPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/operations/training"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout><TrainingPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/operations/board"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout><BoardPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/operations/inspections"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout><InspectionsPage /></AppLayout>
                   </ProtectedRoute>
                 }
               />

@@ -145,7 +145,7 @@ export default function ReconciliationPage() {
           <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(form); }} className="space-y-4 pt-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Tesis *</label>
-              <Select value={form.facilityId} onValueChange={(v) => setForm({ ...form, facilityId: v })}>
+              <Select value={form.facilityId} onValueChange={(v) => setForm({ ...form, facilityId: v || '' })}>
                 <SelectTrigger><SelectValue placeholder="Tesis seçin..." /></SelectTrigger>
                 <SelectContent>
                   {facilities.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
@@ -154,7 +154,7 @@ export default function ReconciliationPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">OSGB Firması *</label>
-              <Select value={form.osgbCompanyId} onValueChange={(v) => setForm({ ...form, osgbCompanyId: v })}>
+              <Select value={form.osgbCompanyId} onValueChange={(v) => setForm({ ...form, osgbCompanyId: v || '' })}>
                 <SelectTrigger><SelectValue placeholder="Firma seçin..." /></SelectTrigger>
                 <SelectContent>
                   {osgbList.map((o) => <SelectItem key={o.id} value={o.id.toString()}>{o.name}</SelectItem>)}

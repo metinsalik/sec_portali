@@ -1,11 +1,10 @@
-import React from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   Shield, LayoutDashboard, Building2, Users, Briefcase, UserCheck,
   ClipboardList, FileText, Settings, Bell, ChevronDown, LogOut,
-  User, BarChart3, ChevronRight, LayoutGrid
+  User, BarChart3, ChevronRight, LayoutGrid, Database, Users2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -44,14 +43,45 @@ const operationsNavItems = [
   { label: 'Ölçüm & Kontrol', icon: Building2, to: '/operations/inspections' },
 ];
 
+const settingsNavItems = [
+  { label: 'GENEL', type: 'group' },
+  { label: 'Tesis Yönetimi', icon: Building2, to: '/settings/facilities' },
+  { label: 'Kullanıcı Yönetimi', icon: Users2, to: '/settings/users' },
+  { label: 'TANIMLAR', type: 'group' },
+  { label: 'Parametreler', icon: Settings, to: '/settings/parameters' },
+  { label: 'Kategoriler', icon: Database, to: '/settings/definitions' },
+];
+
+const profileNavItems = (hasAdminAccess: boolean) => [
+  { label: 'UYGULAMALAR', type: 'group' },
+  ...(hasAdminAccess ? [{ label: 'İSG Atama Paneli', icon: LayoutDashboard, to: '/panel' }] : []),
+  { label: 'Aylık Veri Sistemi', icon: FileText, to: '/operations' },
+  { label: 'HESABIM', type: 'group' },
+  { label: 'Profil Bilgileri', icon: User, to: '/profile' },
+];
+
 export default function AppLayout({ children }: AppLayoutProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Route'a göre sidebar menüsünü belirle
+  const path = location.pathname;
+  const hasAdminAccess = user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management');
   
-  const isPanel = location.pathname.startsWith('/panel');
-  const navItems = isPanel ? panelNavItems : operationsNavItems;
-  const moduleName = isPanel ? 'İSG Atama Paneli' : 'Aylık Veri Sistemi';
+  let navItems = operationsNavItems;
+  let moduleName = 'Aylık Veri Sistemi';
+
+  if (path.startsWith('/panel')) {
+    navItems = panelNavItems;
+    moduleName = 'İSG Atama Paneli';
+  } else if (path.startsWith('/settings')) {
+    navItems = settingsNavItems;
+    moduleName = 'Sistem Ayarları';
+  } else if (path.startsWith('/profile')) {
+    navItems = profileNavItems(!!hasAdminAccess);
+    moduleName = 'Kullanıcı Profili';
+  }
 
   const handleLogout = () => {
     logout();

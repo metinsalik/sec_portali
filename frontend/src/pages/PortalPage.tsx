@@ -1,17 +1,15 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { LayoutDashboard, FileText, LogOut, Settings } from 'lucide-react';
+import { LayoutDashboard, FileText, LogOut, Settings, User } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export default function PortalPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  // Admin veya Yönetici rolü kontrolü
   // Admin veya Yönetici rolü kontrolü
   const hasAdminAccess = user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management');
 
@@ -33,7 +31,7 @@ export default function PortalPage() {
             </span>
 
             {hasAdminAccess && (
-              <Button variant="ghost" size="sm" onClick={() => navigate('/panel/settings/parameters')} className="text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" size="sm" onClick={() => navigate('/settings')} className="text-muted-foreground hover:text-foreground">
                 <Settings className="w-4 h-4 mr-2" />
                 Sistem Ayarları
               </Button>
@@ -50,6 +48,10 @@ export default function PortalPage() {
               <DropdownMenuContent align="end">
                 <DropdownMenuGroup>
                   <DropdownMenuLabel>{user?.fullName || user?.username}</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
+                    <User className="w-4 h-4 mr-2" />
+                    Profil
+                  </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout} className="text-red-600 cursor-pointer">

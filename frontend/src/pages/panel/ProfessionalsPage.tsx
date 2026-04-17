@@ -12,7 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  Plus, Search, Users, AlertTriangle, ShieldAlert, Archive, Edit, Loader2,
+  Plus, Search, Users, AlertTriangle, Archive, Edit, Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -134,7 +134,7 @@ export default function ProfessionalsPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={filterClass} onValueChange={setFilterClass}>
+        <Select value={filterClass} onValueChange={(v) => setFilterClass(v || '')}>
           <SelectTrigger className="w-48 bg-background">
             <SelectValue placeholder="Tüm Sınıflar" />
           </SelectTrigger>
@@ -223,14 +223,14 @@ export default function ProfessionalsPage() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">İstihdam Tipi *</label>
-                <Select value={form.employmentType} onValueChange={(v) => setForm({ ...form, employmentType: v })}>
+                <Select value={form.employmentType} onValueChange={(v) => setForm({ ...form, employmentType: v || '' })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{EMPLOYMENT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Unvan / Sınıf *</label>
-                <Select value={form.titleClass} onValueChange={(v) => setForm({ ...form, titleClass: v })}>
+                <Select value={form.titleClass} onValueChange={(v) => setForm({ ...form, titleClass: v || '' })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{TITLE_CLASSES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                 </Select>

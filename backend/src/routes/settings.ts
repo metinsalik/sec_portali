@@ -14,6 +14,20 @@ const prisma = new PrismaClient();
 router.use(authMiddleware);
 
 // ─────────────────────────────────────────────────────────────
+// YARDIMCI FONKSİYONLAR
+// ─────────────────────────────────────────────────────────────
+async function ensureRolesExist() {
+  const roleNames = ['admin', 'management', 'user', 'safety', 'doctor', 'dsp'];
+  for (const name of roleNames) {
+    await prisma.role.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // TESİS YÖNETİMİ — Admin + Management
 // ─────────────────────────────────────────────────────────────
 router.get('/facilities', async (req: AuthRequest, res: Response) => {
@@ -29,7 +43,12 @@ router.get('/facilities', async (req: AuthRequest, res: Response) => {
 });
 
 router.post('/facilities', managementMiddleware, async (req: AuthRequest, res: Response) => {
-  const { id, name, buildings } = req.body;
+  const { 
+    id, name, shortName, type, city, district, fullAddress, 
+    phone, email, website, commercialTitle, taxOffice, 
+    taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings 
+  } = req.body;
+
   if (!id || !name) {
     return res.status(400).json({ error: 'Tesis kodu ve adı zorunludur.' });
   }
@@ -38,29 +57,86 @@ router.post('/facilities', managementMiddleware, async (req: AuthRequest, res: R
       data: {
         id,
         name,
+        shortName,
+        type,
+        city,
+        district,
+        fullAddress,
+        phone,
+        email,
+        website,
+        commercialTitle,
+        taxOffice,
+        taxNumber,
+        sgkNumber,
+        naceCode,
+        dangerClass: dangerClass || 'Az Tehlikeli',
+        employeeCount: employeeCount ? parseInt(String(employeeCount)) : 0,
         buildings: {
-          create: (buildings as string[] | undefined)?.map((b) => ({ name: b })) ?? [],
+          create: (buildings as any[] | undefined)?.map((b) => ({
+            name: b.name,
+            constructionYear: b.constructionYear ? parseInt(String(b.constructionYear)) : null,
+            buildingHeight: b.buildingHeight ? parseFloat(String(b.buildingHeight)) : null,
+            structureHeight: b.structureHeight ? parseFloat(String(b.structureHeight)) : null,
+            buildingFloors: b.buildingFloors ? parseInt(String(b.buildingFloors)) : null,
+            structureFloors: b.structureFloors ? parseInt(String(b.structureFloors)) : null,
+            closedArea: b.closedArea ? parseFloat(String(b.closedArea)) : null,
+            parkingArea: b.parkingArea ? parseFloat(String(b.parkingArea)) : null,
+            gardenArea: b.gardenArea ? parseFloat(String(b.gardenArea)) : null,
+            bedCapacity: b.bedCapacity ? parseInt(String(b.bedCapacity)) : null,
+          })) ?? [],
         },
       },
       include: { buildings: true },
     });
     res.status(201).json(facility);
-  } catch {
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Tesis oluşturulamadı.' });
   }
 });
 
 router.put('/facilities/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
   const id = String(req.params.id);
-  const { name, isActive } = req.body;
+  const { 
+    name, shortName, type, city, district, fullAddress, 
+    phone, email, website, commercialTitle, taxOffice, 
+    taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, isActive, buildings 
+  } = req.body;
   try {
+    // Önce mevcut binaları silelim (veya güncelleyelim, ama silip yeniden oluşturmak daha basit şimdilik)
+    if (buildings !== undefined) {
+      await prisma.facilityBuilding.deleteMany({ where: { facilityId: id } });
+    }
+
     const facility = await prisma.facility.update({
       where: { id },
-      data: { name, isActive },
+      data: { 
+        name, shortName, type, city, district, fullAddress, 
+        phone, email, website, commercialTitle, taxOffice, 
+        taxNumber, sgkNumber, naceCode, dangerClass,
+        employeeCount: employeeCount ? parseInt(String(employeeCount)) : 0,
+        isActive,
+        buildings: buildings !== undefined ? {
+          create: (buildings as any[] | undefined)?.map((b) => ({
+            name: b.name,
+            constructionYear: b.constructionYear ? parseInt(String(b.constructionYear)) : null,
+            buildingHeight: b.buildingHeight ? parseFloat(String(b.buildingHeight)) : null,
+            structureHeight: b.structureHeight ? parseFloat(String(b.structureHeight)) : null,
+            buildingFloors: b.buildingFloors ? parseInt(String(b.buildingFloors)) : null,
+            structureFloors: b.structureFloors ? parseInt(String(b.structureFloors)) : null,
+            closedArea: b.closedArea ? parseFloat(String(b.closedArea)) : null,
+            parkingArea: b.parkingArea ? parseFloat(String(b.parkingArea)) : null,
+            gardenArea: b.gardenArea ? parseFloat(String(b.gardenArea)) : null,
+            bedCapacity: b.bedCapacity ? parseInt(String(b.bedCapacity)) : null,
+          })) ?? [],
+        } : undefined,
+      },
       include: { buildings: true },
     });
     res.json(facility);
-  } catch {
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Tesis güncellenemedi.' });
   }
 });
@@ -84,57 +160,141 @@ router.get('/users', adminMiddleware, async (req: AuthRequest, res: Response) =>
 });
 
 router.post('/users', adminMiddleware, async (req: AuthRequest, res: Response) => {
-  const { username, fullName, employmentType, osgbName, roles, facilities } = req.body;
-  if (!username || !fullName || !roles?.length) {
-    return res.status(400).json({ error: 'Kullanıcı adı, ad soyad ve en az bir rol zorunludur.' });
+  const { username, fullName, email, phone, department, title, roles, facilities } = req.body;
+
+  // Zorunlu alan kontrolü
+  if (!username || !fullName || !email || !phone || !department || !title || !roles?.length) {
+    return res.status(400).json({
+      error: 'Kullanıcı adı, ad soyad, e-posta, telefon, departman, ünvan ve en az bir rol zorunludur.'
+    });
   }
+
   try {
+    // Rollerin var olduğundan emin ol
+    await ensureRolesExist();
+
+    // Rol isimlerini ID'lere çevir
+    const roleRecords = await prisma.role.findMany({
+      where: { name: { in: roles as string[] } },
+    });
+
+    if (roleRecords.length !== (roles as string[]).length) {
+      return res.status(400).json({ error: 'Geçersiz rol adı.' });
+    }
+
     const user = await prisma.user.create({
       data: {
-        username: username.toLowerCase(),
-        fullName,
-        employmentType,
-        osgbName,
+        username: username.toLowerCase().trim(),
+        fullName: fullName.trim(),
+        email: email.toLowerCase().trim(),
+        phone: phone.trim(),
+        department: department.trim(),
+        title: title.trim(),
         roles: {
-          create: (roles as number[]).map((roleId) => ({ roleId })),
+          create: roleRecords.map((r) => ({ roleId: r.id })),
         },
         facilities: {
           create: (facilities as string[] | undefined)?.map((facilityId) => ({ facilityId })) ?? [],
         },
       },
+      include: {
+        roles: { include: { role: true } },
+        facilities: { include: { facility: true } },
+      },
     });
     res.status(201).json(user);
-  } catch {
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      return res.status(409).json({ error: 'Bu kullanıcı adı zaten kullanılıyor.' });
+    }
+    console.error(error);
     res.status(500).json({ error: 'Kullanıcı oluşturulamadı.' });
   }
 });
 
 router.put('/users/:username', adminMiddleware, async (req: AuthRequest, res: Response) => {
-  const username = String(req.params.username);
-  const { fullName, employmentType, osgbName, isActive, roles, facilities } = req.body;
+  const usernameParam = String(req.params.username);
+  const { fullName, email, phone, department, title, isActive, roles, facilities } = req.body;
+
   try {
-    // Mevcut rolleri ve tesisleri temizle, yeniden yaz
-    await prisma.userRole.deleteMany({ where: { username } });
-    await prisma.userFacility.deleteMany({ where: { username } });
+    const updateData: any = {};
+    if (fullName !== undefined) updateData.fullName = fullName.trim();
+    if (email !== undefined) updateData.email = email.toLowerCase().trim();
+    if (phone !== undefined) updateData.phone = phone.trim();
+    if (department !== undefined) updateData.department = department.trim();
+    if (title !== undefined) updateData.title = title.trim();
+    if (isActive !== undefined) updateData.isActive = isActive;
+
+    // Rolleri sadece gelirse güncelle
+    if (roles !== undefined) {
+      await prisma.userRole.deleteMany({ where: { username: usernameParam } });
+      await ensureRolesExist();
+      const roleRecords = await prisma.role.findMany({
+        where: { name: { in: roles as string[] } },
+      });
+      updateData.roles = {
+        create: roleRecords.map((r) => ({ roleId: r.id })),
+      };
+    }
+
+    // Tesisleri sadece gelirse güncelle
+    if (facilities !== undefined) {
+      await prisma.userFacility.deleteMany({ where: { username: usernameParam } });
+      updateData.facilities = {
+        create: (facilities as string[] | undefined)?.map((facilityId) => ({ facilityId })) ?? [],
+      };
+    }
 
     const user = await prisma.user.update({
-      where: { username },
-      data: {
-        fullName,
-        employmentType,
-        osgbName,
-        isActive,
-        roles: {
-          create: (roles as number[] | undefined)?.map((roleId) => ({ roleId })) ?? [],
-        },
-        facilities: {
-          create: (facilities as string[] | undefined)?.map((facilityId) => ({ facilityId })) ?? [],
-        },
+      where: { username: usernameParam },
+      data: updateData,
+      include: {
+        roles: { include: { role: true } },
+        facilities: { include: { facility: true } },
       },
     });
     res.json(user);
-  } catch {
+  } catch (error: any) {
+    console.error(error);
     res.status(500).json({ error: 'Kullanıcı güncellenemedi.' });
+  }
+});
+
+// Kullanıcı tesis erişimi ekle/kaldır (mevcut kullanıcıya tesis ekleme)
+router.post('/users/:username/facilities', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  const username = String(req.params.username);
+  const { facilityId, action } = req.body; // action: 'add' | 'remove'
+
+  if (!facilityId) {
+    return res.status(400).json({ error: 'Tesis ID zorunludur.' });
+  }
+
+  try {
+    if (action === 'add') {
+      await prisma.userFacility.upsert({
+        where: {
+          username_facilityId: { username, facilityId },
+        },
+        update: {},
+        create: { username, facilityId },
+      });
+    } else if (action === 'remove') {
+      await prisma.userFacility.delete({
+        where: { username_facilityId: { username, facilityId } },
+      });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { username },
+      include: {
+        roles: { include: { role: true } },
+        facilities: { include: { facility: true } },
+      },
+    });
+    res.json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Tesis erişimi güncellenemedi.' });
   }
 });
 
@@ -270,6 +430,8 @@ router.patch('/definitions/departments/:id', managementMiddleware, async (req: A
 // ─────────────────────────────────────────────────────────────
 router.get('/roles', adminMiddleware, async (req: AuthRequest, res: Response) => {
   try {
+    // İlk istekte roller yoksa oluştur
+    await ensureRolesExist();
     const roles = await prisma.role.findMany({ orderBy: { name: 'asc' } });
     res.json(roles);
   } catch {

@@ -13,12 +13,12 @@ import {
 } from '@/components/ui/select';
 import {
   Plus, Search, ClipboardList, StopCircle, Loader2, AlertTriangle,
-  Building2, Clock, CheckCircle2, XCircle,
+  Building2, Clock, CheckCircle2, XCircle, UserPlus, ShieldCheck,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface Facility { id: string; name: string; dangerClass: string; employeeCount: number }
-interface Professional { id: number; fullName: string; titleClass: string; isActive: boolean }
+interface Professional { id: number; fullName: string; titleClass: string; isActive: boolean; email?: string; phone?: string }
 interface Employer { id: number; fullName: string; title?: string }
 interface Assignment {
   id: number;
@@ -36,6 +36,7 @@ interface Assignment {
   costType?: string;
   unitPrice?: number;
   updatedAt: string;
+  grantSystemAccess?: boolean;
 }
 
 const ASSIGNMENT_TYPES = ['IGU', 'Hekim', 'DSP', 'İşveren Vekili'];
@@ -44,6 +45,7 @@ const COST_TYPES = ['Sabit', 'Saatlik'];
 const emptyForm = {
   facilityId: '', type: 'IGU', professionalId: '', employerRepId: '',
   durationMinutes: '', isFullTime: false, startDate: '', costType: '', unitPrice: '',
+  grantSystemAccess: false,
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -116,9 +118,13 @@ export default function AssignmentsPage() {
     onSuccess: (data) => {
       if (!data) return; // capacity error — stay open
       queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      toast.success('Atama oluşturuldu');
       setModalOpen(false);
       setForm(emptyForm);
       setCapacityError('');
+    },
+    onError: (error: any) => {
+      toast.error(error.message);
     },
   });
 
@@ -130,7 +136,11 @@ export default function AssignmentsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      toast.success('Atama sonlandırıldı');
       setTerminateId(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message);
     },
   });
 
@@ -160,7 +170,7 @@ export default function AssignmentsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Tesis, profesyonel veya tip ara..." className="pl-9 bg-background" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
+        <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v || '')}>
           <SelectTrigger className="w-40 bg-background">
             <SelectValue />
           </SelectTrigger>
@@ -243,7 +253,7 @@ export default function AssignmentsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 space-y-2">
                 <label className="text-sm font-medium">Tesis *</label>
-                <Select value={form.facilityId} onValueChange={(v) => setForm({ ...form, facilityId: v })}>
+                <Select value={form.facilityId} onValueChange={(v) => setForm({ ...form, facilityId: v || '' })}>
                   <SelectTrigger><SelectValue placeholder="Tesis seçin..." /></SelectTrigger>
                   <SelectContent>
                     {facilities.map((f) => (
@@ -257,7 +267,7 @@ export default function AssignmentsPage() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Atama Tipi *</label>
-                <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v, professionalId: '', employerRepId: '' })}>
+                <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v || '', professionalId: '', employerRepId: '' })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {ASSIGNMENT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
@@ -270,7 +280,7 @@ export default function AssignmentsPage() {
                   {isIGU ? 'Profesyonel' : 'İşveren Vekili'}
                 </label>
                 {isIGU ? (
-                  <Select value={form.professionalId} onValueChange={(v) => setForm({ ...form, professionalId: v })}>
+                  <Select value={form.professionalId} onValueChange={(v) => setForm({ ...form, professionalId: v || '' })}>
                     <SelectTrigger><SelectValue placeholder="Seçin..." /></SelectTrigger>
                     <SelectContent>
                       {professionals
@@ -287,7 +297,7 @@ export default function AssignmentsPage() {
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Select value={form.employerRepId} onValueChange={(v) => setForm({ ...form, employerRepId: v })}>
+                  <Select value={form.employerRepId} onValueChange={(v) => setForm({ ...form, employerRepId: v || '' })}>
                     <SelectTrigger><SelectValue placeholder="Seçin..." /></SelectTrigger>
                     <SelectContent>
                       {employers.map((e) => (
@@ -333,9 +343,33 @@ export default function AssignmentsPage() {
                 </label>
               </div>
 
+              {/* Sisteme erişim seçeneği - sadece IGU, Hekim, DSP için */}
+              {isIGU && (
+                <div className="col-span-2 space-y-3 pt-2 border-t">
+                  <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <input
+                      type="checkbox"
+                      id="grantSystemAccess"
+                      checked={form.grantSystemAccess}
+                      onChange={(e) => setForm({ ...form, grantSystemAccess: e.target.checked })}
+                      className="rounded border-muted w-4 h-4 accent-blue-600 cursor-pointer mt-0.5"
+                    />
+                    <div>
+                      <label htmlFor="grantSystemAccess" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-blue-600" />
+                        Sisteme giriş yetkisi ver
+                      </label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Bu kişiye "{form.type === 'IGU' ? 'Uzman (safety)' : form.type === 'Hekim' ? 'Hekim (doctor)' : 'DSP (dsp)'}" rolü ile otomatik kullanıcı oluşturulur ve tesis erişimi verilir.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">Maliyet Tipi</label>
-                <Select value={form.costType} onValueChange={(v) => setForm({ ...form, costType: v })}>
+                <Select value={form.costType} onValueChange={(v) => setForm({ ...form, costType: v || '' })}>
                   <SelectTrigger><SelectValue placeholder="Opsiyonel" /></SelectTrigger>
                   <SelectContent>
                     {COST_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}

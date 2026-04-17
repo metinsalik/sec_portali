@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -244,7 +244,7 @@ export default function DefinitionsPage() {
           >
             <div className="space-y-2">
               <label className="text-sm font-medium">Alt Kategori Adı *</label>
-              <Input value={subName} onChange={(e) => setSubName(e.target.value)} required autoFocus />
+              <Input value={subName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSubName(e.target.value)} required autoFocus />
             </div>
             {saveSubMutation.isError && <p className="text-sm text-destructive font-medium">{(saveSubMutation.error as Error).message}</p>}
             <DialogFooter className="mt-6">
@@ -272,7 +272,7 @@ export default function DefinitionsPage() {
           >
             <div className="space-y-2">
               <label className="text-sm font-medium">Departman Adı *</label>
-              <Input value={deptName} onChange={(e) => setDeptName(e.target.value)} required autoFocus />
+              <Input value={deptName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDeptName(e.target.value)} required autoFocus />
             </div>
             {saveDeptMutation.isError && <p className="text-sm text-destructive font-medium">{(saveDeptMutation.error as Error).message}</p>}
             <DialogFooter className="mt-6">

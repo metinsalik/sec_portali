@@ -10,6 +10,10 @@ datasource db {
 model User {
   username        String         @id
   fullName        String
+  email           String?
+  phone           String?
+  department      String?
+  title           String?
   isActive        Boolean        @default(true)
   employmentType  String?
   osgbName        String?
@@ -38,9 +42,21 @@ model UserRole {
 model Facility {
   id               String             @id
   name             String
+  shortName        String?
+  type             String?            // "Hastane", "Ofis", "Depo", etc.
+  city             String?
+  district         String?
+  fullAddress      String?
+  phone            String?
+  email            String?
+  website          String?
+  commercialTitle  String?
+  taxOffice        String?
+  taxNumber        String?
+  sgkNumber        String?
+  naceCode         String?
   dangerClass      String             @default("Az Tehlikeli") // "Çok Tehlikeli" | "Tehlikeli" | "Az Tehlikeli"
   employeeCount    Int                @default(0)
-  address          String?
   isActive         Boolean            @default(true)
   buildings        FacilityBuilding[]
   users            UserFacility[]
@@ -53,12 +69,21 @@ model Facility {
 }
 
 model FacilityBuilding {
-  id         Int      @id @default(autoincrement())
-  facilityId String
-  facility   Facility @relation(fields: [facilityId], references: [id])
-  name       String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id               Int      @id @default(autoincrement())
+  facilityId       String
+  facility         Facility @relation(fields: [facilityId], references: [id])
+  name             String
+  constructionYear Int?
+  buildingHeight   Float?
+  structureHeight  Float?
+  buildingFloors   Int?
+  structureFloors  Int?
+  closedArea       Float?
+  parkingArea      Float?
+  gardenArea       Float?
+  bedCapacity      Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model UserFacility {

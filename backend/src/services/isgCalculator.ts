@@ -1,28 +1,43 @@
 /**
  * ISG Yasal Hesaplama Motoru
- * Bölüm 11 — sec_portali.md
+ * Türkiye İSG Mevzuatına göre atama kuralları
+ * Kaynak: atama.md
  */
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
-/** Tehlike sınıfına göre dk/çalışan zorunluluğu */
+/** İş Güvenliği Uzmanı - dk/çalışan/ay */
 export const IGU_MINUTES_PER_WORKER: Record<string, number> = {
-  'Çok Tehlikeli': 40,
-  'Tehlikeli': 20,
   'Az Tehlikeli': 10,
+  'Tehlikeli': 20,
+  'Çok Tehlikeli': 40,
 };
 
+/** İşyeri Hekimi - dk/çalışan/ay */
 export const HEKIM_MINUTES_PER_WORKER: Record<string, number> = {
-  'Çok Tehlikeli': 15,
-  'Tehlikeli': 10,
   'Az Tehlikeli': 5,
+  'Tehlikeli': 10,
+  'Çok Tehlikeli': 15,
 };
 
-/** Tam zamanlı çalışma için üst limit (çalışan sayısı) */
+/** DSP - dk/çalışan/ay (sadece Çok Tehlikeli) */
+export const DSP_MINUTES_PER_WORKER = {
+  '10-49': 10,     // 10-49 çalışan
+  '50-249': 15,    // 50-249 çalışan
+  '250+': 20,      // 250+ çalışan
+};
+
+/** Tam zamanlı atama eşikleri (çalışan sayısı) */
 export const IGU_FULLTIME_THRESHOLD: Record<string, number> = {
-  'Çok Tehlikeli': 250,
-  'Tehlikeli': 500,
   'Az Tehlikeli': 1000,
+  'Tehlikeli': 500,
+  'Çok Tehlikeli': 250,
+};
+
+export const HEKIM_FULLTIME_THRESHOLD: Record<string, number> = {
+  'Az Tehlikeli': 2000,
+  'Tehlikeli': 1000,
+  'Çok Tehlikeli': 750,
 };
 
 /** Minimum sınıf gereksinimleri */
@@ -32,8 +47,8 @@ export const IGU_MIN_CLASS: Record<string, string[]> = {
   'Az Tehlikeli': ['A Sınıfı IGU', 'B Sınıfı IGU', 'C Sınıfı IGU'],
 };
 
-/** Bir profesyonelin aylık max çalışma kapasitesi (dk) */
-export const MAX_MONTHLY_CAPACITY_MINUTES = 11_700;
+/** Tam zamanlı kabul için dakika */
+export const FULLTIME_MINUTES = 11_700;
 
 // ─── Tip Tanımları ────────────────────────────────────────────────────────────
 
@@ -48,16 +63,20 @@ export interface ComplianceResult {
     isCompliant: boolean;
     isFullTimeRequired: boolean;
     hasValidClass: boolean;
+    summary: string;
   };
   hekim: {
     requiredMinutes: number;
     assignedMinutes: number;
     isCompliant: boolean;
+    isFullTimeRequired: boolean;
+    summary: string;
   };
   dsp: {
     required: boolean;
     assigned: boolean;
     isCompliant: boolean;
+    summary: string;
   };
   overallCompliant: boolean;
   monthlyPenaltyRisk: number;
@@ -65,12 +84,39 @@ export interface ComplianceResult {
 
 export interface CertificateStatus {
   isExpired: boolean;
-  isWarning: boolean;   // 90 gün içinde bitiyor
-  isCritical: boolean;  // 60 gün içinde bitiyor
+  isWarning: boolean;
+  isCritical: boolean;
   daysLeft: number | null;
 }
 
-// ─── Fonksiyonlar ─────────────────────────────────────────────────────────────
+export interface AssignmentCalculation {
+  type: 'IGU' | 'Hekim' | 'DSP';
+  dangerClass: string;
+  employeeCount: number;
+  requiredMinutes: number;
+  isFullTimeRequired: boolean;
+  isFullTime: boolean; // 11700 dk = tam zamanlı
+  summary: string;
+  legalNote: string;
+}
+
+// ─── Yardımcı Fonksiyonlar ────────────────────────────────────────────────────
+
+/**
+ * DSP için katsayı belirleme (çalışan sayısına göre)
+ */
+function getDSPMinutesPerWorker(employeeCount: number): number {
+  if (employeeCount >= 250) return DSP_MINUTES_PER_WORKER['250+'];
+  if (employeeCount >= 50) return DSP_MINUTES_PER_WORKER['50-249'];
+  return DSP_MINUTES_PER_WORKER['10-49'];
+}
+
+/**
+ * DSP eşik değeri (250+ tam zamanlı)
+ */
+const DSP_FULLTIME_THRESHOLD = 250;
+
+// ─── Hesaplama Fonksiyonları ──────────────────────────────────────────────────
 
 /**
  * IGU için gerekli aylık dakikayı hesaplar
@@ -95,14 +141,22 @@ export function calculateHekimRequiredMinutes(
 }
 
 /**
- * DSP zorunlu mu? (Sadece Çok Tehlikeli, ≥50 çalışan)
+ * DSP için gerekli aylık dakikayı hesaplar (sadece Çok Tehlikeli)
  */
-export function isDSPRequired(dangerClass: string, employeeCount: number): boolean {
-  return dangerClass === 'Çok Tehlikeli' && employeeCount >= 50;
+export function calculateDSPRequiredMinutes(employeeCount: number): number {
+  const rate = getDSPMinutesPerWorker(employeeCount);
+  return rate * employeeCount;
 }
 
 /**
- * IGU sınıfı yeterliliği — tesis tehlike sınıfına uygun mu?
+ * DSP zorunlu mu? (Sadece Çok Tehlikeli, ≥10 çalışan)
+ */
+export function isDSPRequired(dangerClass: string, employeeCount: number): boolean {
+  return dangerClass === 'Çok Tehlikeli' && employeeCount >= 10;
+}
+
+/**
+ * IGU sınıfı yeterliliği
  */
 export function isIGUClassValid(dangerClass: string, titleClass: string): boolean {
   const validClasses = IGU_MIN_CLASS[dangerClass] ?? [];
@@ -110,10 +164,18 @@ export function isIGUClassValid(dangerClass: string, titleClass: string): boolea
 }
 
 /**
- * Tam zamanlı gereksinim var mı?
+ * IGU tam zamanlı gereksinim kontrolü
  */
-export function isFullTimeRequired(dangerClass: string, employeeCount: number): boolean {
+export function isIGUFullTimeRequired(dangerClass: string, employeeCount: number): boolean {
   const threshold = IGU_FULLTIME_THRESHOLD[dangerClass] ?? 1000;
+  return employeeCount >= threshold;
+}
+
+/**
+ * Hekim tam zamanlı gereksinim kontrolü
+ */
+export function isHekimFullTimeRequired(dangerClass: string, employeeCount: number): boolean {
+  const threshold = HEKIM_FULLTIME_THRESHOLD[dangerClass] ?? 2000;
   return employeeCount >= threshold;
 }
 
@@ -124,9 +186,9 @@ export function checkCapacity(
   currentAssignedMinutes: number,
   newMinutes: number,
 ): { wouldExceed: boolean; remaining: number } {
-  const remaining = MAX_MONTHLY_CAPACITY_MINUTES - currentAssignedMinutes;
+  const remaining = FULLTIME_MINUTES - currentAssignedMinutes;
   return {
-    wouldExceed: currentAssignedMinutes + newMinutes > MAX_MONTHLY_CAPACITY_MINUTES,
+    wouldExceed: currentAssignedMinutes + newMinutes > FULLTIME_MINUTES,
     remaining,
   };
 }
@@ -155,8 +217,7 @@ export function getCertificateStatus(certificateDate: Date | null | undefined): 
 }
 
 /**
- * Ceza riski hesaplama (aylık)
- * penaltyAmounts: { iguPenalty, hekimPenalty, dspPenalty } — yıla göre ayarlardan gelir
+ * Ceza riski hesaplama
  */
 export function calculateMonthlyPenalty(
   isIGUCompliant: boolean,
@@ -172,7 +233,67 @@ export function calculateMonthlyPenalty(
 }
 
 /**
- * Bir tesisin tam uyumluluk analizini döndürür
+ * Tek atama hesaplaması (atama.md'ye göre)
+ */
+export function calculateAssignment(params: {
+  type: 'IGU' | 'Hekim' | 'DSP';
+  dangerClass: string;
+  employeeCount: number;
+  durationMinutes: number;
+  isFullTime: boolean;
+}): AssignmentCalculation {
+  const { type, dangerClass, employeeCount, durationMinutes, isFullTime } = params;
+
+  let requiredMinutes: number;
+  let isFullTimeRequired: boolean;
+  let summary: string;
+  let legalNote: string;
+
+  if (type === 'IGU') {
+    requiredMinutes = calculateIGURequiredMinutes(dangerClass, employeeCount);
+    isFullTimeRequired = isIGUFullTimeRequired(dangerClass, employeeCount);
+    const rate = IGU_MINUTES_PER_WORKER[dangerClass] || 10;
+    summary = `${dangerClass} işyerinde ${employeeCount} çalışan için IGU: ${rate} dk × ${employeeCount} = ${requiredMinutes} dk/ay`;
+    legalNote = `Çalışan başına aylık en az ${rate} dakika. ${IGU_FULLTIME_THRESHOLD[dangerClass]}+ çalışan = tam zamanlı.`;
+  } else if (type === 'Hekim') {
+    requiredMinutes = calculateHekimRequiredMinutes(dangerClass, employeeCount);
+    isFullTimeRequired = isHekimFullTimeRequired(dangerClass, employeeCount);
+    const rate = HEKIM_MINUTES_PER_WORKER[dangerClass] || 5;
+    summary = `${dangerClass} işyerinde ${employeeCount} çalışan için Hekim: ${rate} dk × ${employeeCount} = ${requiredMinutes} dk/ay`;
+    legalNote = `Çalışan başına aylık en az ${rate} dakika. ${HEKIM_FULLTIME_THRESHOLD[dangerClass]}+ çalışan = tam zamanlı.`;
+  } else {
+    // DSP - sadece Çok Tehlikeli
+    if (dangerClass !== 'Çok Tehlikeli') {
+      requiredMinutes = 0;
+      isFullTimeRequired = false;
+      summary = 'DSP sadece Çok Tehlikeli işyerlerinde zorunludur.';
+      legalNote = 'Diğer tehlike sınıflarında DSP zorunlu değildir.';
+    } else {
+      requiredMinutes = calculateDSPRequiredMinutes(employeeCount);
+      isFullTimeRequired = employeeCount >= DSP_FULLTIME_THRESHOLD;
+      const rate = getDSPMinutesPerWorker(employeeCount);
+      let countRange = '10-49';
+      if (employeeCount >= 250) countRange = '250+';
+      else if (employeeCount >= 50) countRange = '50-249';
+      summary = `${dangerClass} işyerinde ${employeeCount} çalışan için DSP: ${rate} dk × ${employeeCount} = ${requiredMinutes} dk/ay`;
+      legalNote = `${countRange} çalışan grubu için ${rate} dk/çalışan. ${DSP_FULLTIME_THRESHOLD}+ çalışan = tam zamanlı. 11700 dk = tam zamanlı atama.`;
+    }
+  }
+
+  return {
+    type,
+    dangerClass,
+    employeeCount,
+    requiredMinutes,
+    isFullTimeRequired,
+    isFullTime: durationMinutes >= FULLTIME_MINUTES || isFullTime,
+    summary,
+    legalNote,
+  };
+}
+
+/**
+ * Bir tesisin tam uyumluluk analizi
  */
 export function analyzeFacilityCompliance(params: {
   facilityId: string;
@@ -198,22 +319,40 @@ export function analyzeFacilityCompliance(params: {
   // IGU
   const iguRequired = calculateIGURequiredMinutes(dangerClass, employeeCount);
   const iguAssigned = iguAssignments.reduce((sum, a) => sum + a.durationMinutes, 0);
-  const iguFullTimeRequired = isFullTimeRequired(dangerClass, employeeCount);
+  const iguFullTimeRequired = isIGUFullTimeRequired(dangerClass, employeeCount);
   const iguHasFullTime = iguAssignments.some((a) => a.isFullTime);
   const iguValidClass = iguAssignments.some((a) => isIGUClassValid(dangerClass, a.titleClass));
   const iguCompliant = iguFullTimeRequired
     ? iguHasFullTime && iguValidClass
     : iguAssigned >= iguRequired && iguValidClass;
+  const iguRate = IGU_MINUTES_PER_WORKER[dangerClass] || 10;
 
   // Hekim
   const hekimRequired = calculateHekimRequiredMinutes(dangerClass, employeeCount);
   const hekimAssigned = hekimAssignments.reduce((sum, a) => sum + a.durationMinutes, 0);
-  const hekimCompliant = hekimAssigned >= hekimRequired;
+  const hekimFullTimeRequired = isHekimFullTimeRequired(dangerClass, employeeCount);
+  const hekimHasFullTime = hekimAssignments.some((a) => a.isFullTime);
+  const hekimCompliant = hekimFullTimeRequired
+    ? hekimHasFullTime
+    : hekimAssigned >= hekimRequired;
+  const hekimRate = HEKIM_MINUTES_PER_WORKER[dangerClass] || 5;
 
   // DSP
   const dspRequired = isDSPRequired(dangerClass, employeeCount);
   const dspAssigned = dspAssignments.length > 0;
   const dspCompliant = !dspRequired || dspAssigned;
+
+  // DSP summary
+  let dspSummary = '';
+  if (dangerClass !== 'Çok Tehlikeli') {
+    dspSummary = 'DSP zorunlu değil (Çok Tehlikeli değil)';
+  } else if (!dspRequired) {
+    dspSummary = 'DSP zorunlu değil (10 çalışan altı)';
+  } else if (dspAssigned) {
+    dspSummary = 'Atanmış';
+  } else {
+    dspSummary = 'ATANMAMIŞ - Zorunlu!';
+  }
 
   // Ceza
   const monthlyPenaltyRisk = calculateMonthlyPenalty(
@@ -234,16 +373,20 @@ export function analyzeFacilityCompliance(params: {
       isCompliant: iguCompliant,
       isFullTimeRequired: iguFullTimeRequired,
       hasValidClass: iguValidClass,
+      summary: `Gerekli: ${iguRequired} dk/ay (${iguRate} dk × ${employeeCount}) | Atanan: ${iguAssigned} dk | ${iguFullTimeRequired ? 'Tam zamanlı gerekli' : 'Kısmi süreli yeterli'} | Sınıf: ${iguValidClass ? 'Uygun' : 'Uygun değil!'}`,
     },
     hekim: {
       requiredMinutes: hekimRequired,
       assignedMinutes: hekimAssigned,
       isCompliant: hekimCompliant,
+      isFullTimeRequired: hekimFullTimeRequired,
+      summary: `Gerekli: ${hekimRequired} dk/ay (${hekimRate} dk × ${employeeCount}) | Atanan: ${hekimAssigned} dk | ${hekimFullTimeRequired ? 'Tam zamanlı gerekli' : 'Kısmi süreli yeterli'}`,
     },
     dsp: {
       required: dspRequired,
       assigned: dspAssigned,
       isCompliant: dspCompliant,
+      summary: dspSummary,
     },
     overallCompliant: iguCompliant && hekimCompliant && dspCompliant,
     monthlyPenaltyRisk,

@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
+import { toast } from 'sonner';
 
 interface User {
   username: string;
@@ -63,10 +64,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('token');
     setUser(null);
-  };
+    toast.info('Çıkış yapıldı');
+  }, []);
+
+  // Session timeout warning
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // JWT payload decode (exp claim kontrolü)
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const expTime = payload.exp * 1000; // ms'ye çevir
+      const now = Date.now();
+
+      // 30 dakika kala uyar
+      const warningTime = expTime - 30 * 60 * 1000;
+      const warnDelay = warningTime - now;
+
+      if (warnDelay > 0 && warnDelay < 8 * 60 * 60 * 1000) {
+        const warningTimer = setTimeout(() => {
+          toast.warning('Oturumunuz 30 dakika içinde sona erecek', {
+            description: 'Devam etmek için lütfen sayfayı yenileyin',
+            duration: 10000,
+          });
+        }, warnDelay);
+
+        return () => clearTimeout(warningTimer);
+      }
+    } catch {
+      // Token decode hatası - ignore
+    }
+  }, [user]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
