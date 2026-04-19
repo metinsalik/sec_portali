@@ -1,19 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
+} from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { 
   Building2, MapPin, ChevronLeft, Users, Shield, 
   Activity, Briefcase, Phone, Mail, Globe, 
   Clock, CheckCircle2, AlertCircle, FileText,
   Calendar, TrendingUp, History, ClipboardCheck,
-  Stethoscope, HardHat, HeartPulse, Info, UserCheck, UserX
+  Stethoscope, HardHat, HeartPulse, Info, UserCheck, UserX,
+  Plus, Edit2, Trash2, Loader2, UserPlus, CreditCard
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
 
 interface Facility {
   id: string;
@@ -33,9 +42,56 @@ interface Facility {
   activityLogs: any[];
 }
 
+interface Professional {
+  id: number;
+  fullName: string;
+  titleClass: string;
+  isActive: boolean;
+}
+
+interface EmployerRepresentative {
+  id: number;
+  fullName: string;
+  title: string;
+  isActive: boolean;
+}
+
+interface Assignment {
+  id: number;
+  type: string;
+  durationMinutes: number;
+  isFullTime: boolean;
+  startDate: string;
+  status: string;
+  costType: string;
+  unitPrice: number | null;
+  professional?: Professional;
+  employerRep?: EmployerRepresentative;
+  professionalId?: number;
+  employerRepId?: number;
+}
+
 const PanelFacilityLifeCardPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // Modal States
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [manageModalOpen, setManageModalOpen] = useState(false);
+  const [assignType, setAssignType] = useState<'IGU' | 'Hekim' | 'DSP' | 'Vekil'>('IGU');
+  const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
+
+  // Form State
+  const [formData, setFormData] = useState({
+    professionalId: '',
+    employerRepId: '',
+    durationMinutes: '',
+    isFullTime: false,
+    startDate: new Date().toISOString().split('T')[0],
+    costType: 'Aylık Sabit',
+    unitPrice: '',
+  });
 
   const { data: facility, isLoading } = useQuery<Facility>({
     queryKey: ['facility-detail', id],
@@ -43,10 +99,110 @@ const PanelFacilityLifeCardPage = () => {
       const res = await api.get(`/settings/facilities/${id}`);
       if (!res.ok) throw new Error('Tesis yüklenemedi');
       const data = await res.json();
-      // Fetch activity logs separately if needed, but we added them to include
       return data;
     }
   });
+
+  const { data: professionals = [] } = useQuery<Professional[]>({
+    queryKey: ['professionals', 'active'],
+    queryFn: async () => {
+      const res = await api.get('/panel/professionals');
+      if (!res.ok) throw new Error('Yüklenemedi');
+      return res.json();
+    }
+  });
+
+  const { data: employerReps = [] } = useQuery<EmployerRepresentative[]>({
+    queryKey: ['employers', 'active'],
+    queryFn: async () => {
+      const res = await api.get('/panel/employers');
+      if (!res.ok) throw new Error('Yüklenemedi');
+      return res.json();
+    }
+  });
+
+  // Mutations
+  const assignMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await api.post('/panel/assignments', data);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Atama yapılamadı');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['facility-detail', id] });
+      toast.success('Atama başarıyla yapıldı');
+      setAssignModalOpen(false);
+      resetForm();
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id: assignmentId, data }: { id: number; data: any }) => {
+      const res = await api.put(`/panel/assignments/${assignmentId}`, data);
+      if (!res.ok) throw new Error('Güncellenemedi');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['facility-detail', id] });
+      toast.success('Atama güncellendi');
+      setEditingAssignment(null);
+    }
+  });
+
+  const terminateMutation = useMutation({
+    mutationFn: async (assignmentId: number) => {
+      const res = await api.post(`/panel/assignments/${assignmentId}/terminate`, {});
+      if (!res.ok) throw new Error('Sonlandırılamadı');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['facility-detail', id] });
+      toast.success('Atama sonlandırıldı');
+    }
+  });
+
+  const resetForm = () => {
+    setFormData({
+      professionalId: '',
+      employerRepId: '',
+      durationMinutes: '',
+      isFullTime: false,
+      startDate: new Date().toISOString().split('T')[0],
+      costType: 'Aylık Sabit',
+      unitPrice: '',
+    });
+  };
+
+  const openAssignModal = (type: 'IGU' | 'Hekim' | 'DSP' | 'Vekil') => {
+    setAssignType(type);
+    
+    // Default duration calculation
+    let duration = 0;
+    if (facility) {
+      const reqs = getRequirements(facility.employeeCount, facility.dangerClass);
+      const active = facility.assignments?.filter(a => a.status === 'Aktif' && a.type === type) || [];
+      const assigned = active.reduce((sum, a) => sum + a.durationMinutes, 0);
+      
+      if (type === 'IGU') duration = reqs.igu.totalMin - assigned;
+      else if (type === 'Hekim') duration = reqs.hekim.totalMin - assigned;
+      else if (type === 'DSP') duration = reqs.dsp.totalMin - assigned;
+      else if (type === 'Vekil') duration = 11700;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      durationMinutes: Math.max(0, duration).toString(),
+      isFullTime: type === 'Vekil'
+    }));
+    
+    setAssignModalOpen(true);
+  };
 
   if (isLoading) {
     return (
@@ -152,6 +308,28 @@ const PanelFacilityLifeCardPage = () => {
   const isHekimMet = assignedHekimMin >= reqs.hekim.totalMin;
   const isDspMet = !reqs.dsp.required || assignedDspMin >= reqs.dsp.totalMin;
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!facility) return;
+
+    assignMutation.mutate({
+      facilityId: facility.id,
+      type: assignType,
+      professionalId: assignType !== 'Vekil' ? formData.professionalId : undefined,
+      employerRepId: assignType === 'Vekil' ? formData.employerRepId : undefined,
+      durationMinutes: formData.durationMinutes,
+      isFullTime: formData.isFullTime,
+      startDate: formData.startDate,
+      costType: formData.costType,
+      unitPrice: formData.unitPrice,
+    });
+  };
+
+  const openManageModal = (type: 'IGU' | 'Hekim' | 'DSP' | 'Vekil') => {
+    setAssignType(type);
+    setManageModalOpen(true);
+  };
+
   return (
     <div className="p-8 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">
       {/* Compact Header */}
@@ -203,7 +381,10 @@ const PanelFacilityLifeCardPage = () => {
           <Button variant="outline" className="rounded-xl h-10 px-4 font-semibold text-xs border-slate-200 dark:border-slate-800">
             <FileText className="w-4 h-4 mr-2 text-primary" /> Rapor
           </Button>
-          <Button className="rounded-xl h-10 px-6 font-bold text-xs bg-slate-900 hover:bg-slate-800 shadow-lg">
+          <Button 
+            className="rounded-xl h-10 px-6 font-bold text-xs bg-slate-900 hover:bg-slate-800 shadow-lg"
+            onClick={() => openAssignModal('IGU')}
+          >
             Atama Yap
           </Button>
         </div>
@@ -231,7 +412,17 @@ const PanelFacilityLifeCardPage = () => {
                 </span>
               </div>
             </div>
-            <CardTitle className="text-base font-bold mt-4">İş Güvenliği Uzmanı</CardTitle>
+            <div className="flex items-center justify-between mt-4">
+              <CardTitle className="text-base font-bold">İş Güvenliği Uzmanı</CardTitle>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="w-8 h-8 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+                onClick={() => openManageModal('IGU')}
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
             <div className="bg-white/60 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3">
@@ -270,7 +461,11 @@ const PanelFacilityLifeCardPage = () => {
             <div className="space-y-2">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Atanmış Profesyoneller</span>
               {activeAssignments.filter(a => a.type === 'IGU').map(as => (
-                <div key={as.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm group">
+                <div 
+                  key={as.id} 
+                  className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm group cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => openManageModal('IGU')}
+                >
                   <div className="flex items-center gap-3">
                     <UserCheck className="w-4 h-4 text-emerald-500" />
                     <div>
@@ -278,12 +473,16 @@ const PanelFacilityLifeCardPage = () => {
                       <p className="text-[9px] text-slate-400 font-medium uppercase">{as.professional?.titleClass} SINIFI • {as.durationMinutes} DK</p>
                     </div>
                   </div>
+                  <Edit2 className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               ))}
               {activeAssignments.filter(a => a.type === 'IGU').length === 0 && (
-                <div className="flex items-center gap-3 p-3 bg-rose-500/5 rounded-xl border border-dashed border-rose-200">
-                  <UserX className="w-4 h-4 text-rose-400" />
-                  <span className="text-[11px] font-medium text-rose-500">Henüz atama yapılmadı</span>
+                <div 
+                  className="flex items-center gap-3 p-3 bg-rose-500/5 rounded-xl border border-dashed border-rose-200 cursor-pointer hover:bg-rose-500/10 transition-colors"
+                  onClick={() => openAssignModal('IGU')}
+                >
+                  <UserPlus className="w-4 h-4 text-rose-400" />
+                  <span className="text-[11px] font-medium text-rose-500">Atama Yap</span>
                 </div>
               )}
             </div>
@@ -323,7 +522,17 @@ const PanelFacilityLifeCardPage = () => {
                 </span>
               </div>
             </div>
-            <CardTitle className="text-base font-bold mt-4">İşyeri Hekimi</CardTitle>
+            <div className="flex items-center justify-between mt-4">
+              <CardTitle className="text-base font-bold">İşyeri Hekimi</CardTitle>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="w-8 h-8 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+                onClick={() => openManageModal('Hekim')}
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
             <div className="bg-white/60 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3">
@@ -348,7 +557,11 @@ const PanelFacilityLifeCardPage = () => {
             <div className="space-y-2">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Atanmış Profesyoneller</span>
               {activeAssignments.filter(a => a.type === 'Hekim').map(as => (
-                <div key={as.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div 
+                  key={as.id} 
+                  className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm cursor-pointer hover:border-primary/50 group"
+                  onClick={() => openManageModal('Hekim')}
+                >
                   <div className="flex items-center gap-3">
                     <UserCheck className="w-4 h-4 text-emerald-500" />
                     <div>
@@ -356,12 +569,16 @@ const PanelFacilityLifeCardPage = () => {
                       <p className="text-[9px] text-slate-400 font-medium uppercase">{as.durationMinutes} DK ATAMA</p>
                     </div>
                   </div>
+                  <Edit2 className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               ))}
               {activeAssignments.filter(a => a.type === 'Hekim').length === 0 && (
-                <div className="flex items-center gap-3 p-3 bg-rose-500/5 rounded-xl border border-dashed border-rose-200">
-                  <UserX className="w-4 h-4 text-rose-400" />
-                  <span className="text-[11px] font-medium text-rose-500">Henüz atama yapılmadı</span>
+                <div 
+                  className="flex items-center gap-3 p-3 bg-rose-500/5 rounded-xl border border-dashed border-rose-200 cursor-pointer hover:bg-rose-500/10 transition-colors"
+                  onClick={() => openAssignModal('Hekim')}
+                >
+                  <UserPlus className="w-4 h-4 text-rose-400" />
+                  <span className="text-[11px] font-medium text-rose-500">Atama Yap</span>
                 </div>
               )}
             </div>
@@ -401,7 +618,17 @@ const PanelFacilityLifeCardPage = () => {
                 </span>
               </div>
             </div>
-            <CardTitle className="text-base font-bold mt-4">Diğer Sağlık Personeli</CardTitle>
+            <div className="flex items-center justify-between mt-4">
+              <CardTitle className="text-base font-bold">Diğer Sağlık Personeli</CardTitle>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="w-8 h-8 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+                onClick={() => openManageModal('DSP')}
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
             <div className="bg-white/60 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3">
@@ -427,7 +654,11 @@ const PanelFacilityLifeCardPage = () => {
             <div className="space-y-2">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Atanmış Profesyoneller</span>
               {activeAssignments.filter(a => a.type === 'DSP').map(as => (
-                <div key={as.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div 
+                  key={as.id} 
+                  className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm cursor-pointer hover:border-primary/50 group"
+                  onClick={() => openManageModal('DSP')}
+                >
                   <div className="flex items-center gap-3">
                     <UserCheck className="w-4 h-4 text-emerald-500" />
                     <div>
@@ -435,12 +666,16 @@ const PanelFacilityLifeCardPage = () => {
                       <p className="text-[9px] text-slate-400 font-medium uppercase">{as.durationMinutes} DK ATAMA</p>
                     </div>
                   </div>
+                  <Edit2 className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               ))}
               {reqs.dsp.required && activeAssignments.filter(a => a.type === 'DSP').length === 0 && (
-                <div className="flex items-center gap-3 p-3 bg-rose-500/5 rounded-xl border border-dashed border-rose-200">
-                  <UserX className="w-4 h-4 text-rose-400" />
-                  <span className="text-[11px] font-medium text-rose-500">Zorunlu atama eksik</span>
+                <div 
+                  className="flex items-center gap-3 p-3 bg-rose-500/5 rounded-xl border border-dashed border-rose-200 cursor-pointer hover:bg-rose-500/10 transition-colors"
+                  onClick={() => openAssignModal('DSP')}
+                >
+                  <UserPlus className="w-4 h-4 text-rose-400" />
+                  <span className="text-[11px] font-medium text-rose-500">Atama Yap</span>
                 </div>
               )}
             </div>
@@ -543,6 +778,336 @@ const PanelFacilityLifeCardPage = () => {
           </Card>
         </div>
       </div>
+
+      {/* Assignment Modal */}
+      <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>
+        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
+          <DialogHeader className="px-8 py-6 bg-slate-900 text-white">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                <UserPlus className="w-5 h-5 text-white/70" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-bold tracking-tight">Hızlı Atama Yap</DialogTitle>
+                <DialogDescription className="text-white/40 text-xs mt-1">
+                  {facility.name} için {assignType} ataması
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="p-8 space-y-6 bg-white dark:bg-slate-900">
+            <div className="grid grid-cols-2 gap-5">
+              <div className="col-span-2 space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">
+                  {assignType === 'Vekil' ? 'İŞVEREN VEKİLİ SEÇİN *' : 'PROFESYONEL SEÇİN *'}
+                </label>
+                <Select 
+                  value={assignType === 'Vekil' ? formData.employerRepId : formData.professionalId} 
+                  onValueChange={(v) => setFormData({ ...formData, [assignType === 'Vekil' ? 'employerRepId' : 'professionalId']: v })}
+                >
+                  <SelectTrigger className="rounded-xl border-slate-100 h-11 text-sm font-medium focus:ring-primary/10">
+                    <SelectValue placeholder={assignType === 'Vekil' ? 'Vekil Listesi' : 'Uzman / Hekim Listesi'} />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {assignType === 'Vekil' 
+                      ? employerReps.map(r => (
+                          <SelectItem key={r.id} value={r.id.toString()} className="text-xs font-medium">
+                            {r.fullName} ({r.title || 'İşveren Vekili'})
+                          </SelectItem>
+                        ))
+                      : professionals
+                          .filter(p => {
+                            if (assignType === 'IGU') return p.titleClass.includes('IGU');
+                            if (assignType === 'Hekim') return p.titleClass === 'İşyeri Hekimi';
+                            if (assignType === 'DSP') return p.titleClass === 'DSP';
+                            return false;
+                          })
+                          .map(p => (
+                            <SelectItem key={p.id} value={p.id.toString()} className="text-xs font-medium">
+                              {p.fullName} ({p.titleClass})
+                            </SelectItem>
+                          ))
+                    }
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">SÜRE (DK/AY) *</label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input 
+                    type="number" 
+                    value={formData.durationMinutes} 
+                    onChange={(e) => setFormData({ ...formData, durationMinutes: e.target.value })}
+                    required
+                    className="pl-10 rounded-xl border-slate-100 h-11 text-sm font-medium focus-visible:ring-primary/10"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">BAŞLANGIÇ TARİHİ *</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input 
+                    type="date" 
+                    value={formData.startDate} 
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    required
+                    className="pl-10 rounded-xl border-slate-100 h-11 text-sm font-medium focus-visible:ring-primary/10"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">MALİYET TİPİ</label>
+                <Select 
+                  value={formData.costType} 
+                  onValueChange={(v) => setFormData({ ...formData, costType: v })}
+                >
+                  <SelectTrigger className="rounded-xl border-slate-100 h-11 text-sm font-medium focus:ring-primary/10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="Aylık Sabit" className="text-xs font-medium">Aylık Sabit</SelectItem>
+                    <SelectItem value="Saatlik" className="text-xs font-medium">Saatlik</SelectItem>
+                    <SelectItem value="Çalışan Başı" className="text-xs font-medium">Çalışan Başı</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">BİRİM FİYAT (₺)</label>
+                <div className="relative">
+                  <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input 
+                    type="number" 
+                    value={formData.unitPrice} 
+                    onChange={(e) => setFormData({ ...formData, unitPrice: e.target.value })}
+                    className="pl-10 rounded-xl border-slate-100 h-11 text-sm font-medium focus-visible:ring-primary/10"
+                  />
+                </div>
+              </div>
+
+              <div className="col-span-2 flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div 
+                  className={cn(
+                    "w-10 h-5 rounded-full relative cursor-pointer transition-colors",
+                    formData.isFullTime ? "bg-primary" : "bg-slate-300"
+                  )}
+                  onClick={() => {
+                    const newFT = !formData.isFullTime;
+                    setFormData({ 
+                      ...formData, 
+                      isFullTime: newFT,
+                      durationMinutes: newFT ? '11700' : formData.durationMinutes
+                    });
+                  }}
+                >
+                  <div className={cn(
+                    "absolute top-1 w-3 h-3 bg-white rounded-full transition-all",
+                    formData.isFullTime ? "left-6" : "left-1"
+                  )} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-200">TAM ZAMANLI ATAMA</span>
+                  <span className="text-[10px] text-slate-500 font-medium tracking-tight">Bu personeli tesisin tam zamanlı uzmanı olarak ata.</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-2xl flex gap-3">
+              <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium leading-relaxed">
+                Atama yapılmadan önce personelin kalan kapasitesi sistem tarafından kontrol edilecektir. Kapasite yetersizse işlem reddedilir.
+              </p>
+            </div>
+
+            <DialogFooter className="gap-3 pt-2">
+              <Button type="button" variant="ghost" onClick={() => setAssignModalOpen(false)} className="rounded-xl h-11 px-6 font-bold text-xs text-slate-400">Vazgeç</Button>
+              <Button 
+                type="submit" 
+                disabled={assignMutation.isPending || (assignType === 'Vekil' ? !formData.employerRepId : !formData.professionalId)} 
+                className="rounded-xl h-11 px-8 font-bold text-xs bg-slate-900 hover:bg-slate-800 shadow-lg text-white"
+              >
+                {assignMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Atamayı Tamamla
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Assignments Modal */}
+      <Dialog open={manageModalOpen} onOpenChange={setManageModalOpen}>
+        <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
+          <DialogHeader className="px-8 py-6 bg-slate-900 text-white flex flex-row items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                <History className="w-5 h-5 text-white/70" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-bold tracking-tight">Atama Yönetimi</DialogTitle>
+                <DialogDescription className="text-white/40 text-xs mt-1">
+                  {facility.name} - {assignType} Aktif Atamaları
+                </DialogDescription>
+              </div>
+            </div>
+            <Button 
+              onClick={() => {
+                setManageModalOpen(false);
+                openAssignModal(assignType);
+              }}
+              className="bg-primary hover:bg-primary/90 text-white rounded-xl h-9 px-4 text-xs font-bold"
+            >
+              <UserPlus className="w-3.5 h-3.5 mr-2" /> Yeni Atama
+            </Button>
+          </DialogHeader>
+
+          <div className="p-8 bg-white dark:bg-slate-900 min-h-[400px]">
+            {facility.assignments?.filter(a => a.status === 'Aktif' && a.type === assignType).length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 opacity-40">
+                <Shield className="w-12 h-12 mb-4" />
+                <p className="text-sm font-bold">Aktif atama bulunamadı.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {facility.assignments?.filter(a => a.status === 'Aktif' && a.type === assignType).map(a => (
+                  <div key={a.id} className="p-5 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex items-center justify-between group">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center font-bold text-primary">
+                        {(a.professional?.fullName || a.employerRep?.fullName || '?')[0]}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">
+                          {a.professional?.fullName || a.employerRep?.fullName}
+                        </p>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> {a.durationMinutes} DK
+                          </span>
+                          {a.isFullTime && <Badge className="bg-primary/10 text-primary border-none text-[8px] font-black h-4 px-1.5 uppercase">TAM ZAMANLI</Badge>}
+                          <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                            <Calendar className="w-3 h-3" /> {new Date(a.startDate).toLocaleDateString('tr-TR')} Başlangıç
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="w-9 h-9 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600"
+                        onClick={() => {
+                          setEditingAssignment(a);
+                          setFormData({
+                            professionalId: a.professionalId?.toString() || '',
+                            employerRepId: a.employerRepId?.toString() || '',
+                            durationMinutes: a.durationMinutes.toString(),
+                            isFullTime: a.isFullTime,
+                            startDate: new Date(a.startDate).toISOString().split('T')[0],
+                            costType: a.costType || 'Aylık Sabit',
+                            unitPrice: a.unitPrice?.toString() || '',
+                          });
+                        }}
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="w-9 h-9 rounded-xl hover:bg-rose-50 text-rose-500"
+                        onClick={() => {
+                          if (confirm('Bu atamayı sonlandırmak istediğinize emin misiniz?')) {
+                            terminateMutation.mutate(a.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {editingAssignment && (
+              <div className="mt-8 p-6 rounded-2xl border border-primary/20 bg-primary/5 space-y-4 animate-in slide-in-from-bottom-2">
+                <h4 className="text-xs font-bold text-primary flex items-center gap-2">
+                  <Edit2 className="w-3 h-3" /> ATAMAYI DÜZENLE: {editingAssignment.professional?.fullName || editingAssignment.employerRep?.fullName}
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 ml-1">SÜRE (DK/AY)</label>
+                    <Input 
+                      type="number"
+                      value={formData.durationMinutes}
+                      onChange={(e) => setFormData({...formData, durationMinutes: e.target.value})}
+                      className="h-10 rounded-xl bg-white border-slate-100"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 ml-1">MALİYET TİPİ / BİRİM FİYAT</label>
+                    <div className="flex gap-2">
+                      <Select value={formData.costType} onValueChange={(v) => setFormData({...formData, costType: v})}>
+                        <SelectTrigger className="h-10 rounded-xl bg-white border-slate-100 flex-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Aylık Sabit">Sabit</SelectItem>
+                          <SelectItem value="Saatlik">Saatlik</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input 
+                        type="number"
+                        value={formData.unitPrice}
+                        onChange={(e) => setFormData({...formData, unitPrice: e.target.value})}
+                        className="h-10 rounded-xl bg-white border-slate-100 w-24"
+                        placeholder="₺"
+                      />
+                    </div>
+                  </div>
+                  <div className="col-span-2 flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className={cn("w-8 h-4 rounded-full relative cursor-pointer", formData.isFullTime ? "bg-primary" : "bg-slate-200")}
+                        onClick={() => {
+                          const newFT = !formData.isFullTime;
+                          setFormData({...formData, isFullTime: newFT, durationMinutes: newFT ? '11700' : formData.durationMinutes});
+                        }}
+                      >
+                        <div className={cn("absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all", formData.isFullTime ? "left-4 h-3 w-3" : "left-0.5 h-3 w-3")} />
+                      </div>
+                      <span className="text-[10px] font-bold">TAM ZAMANLI</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" className="h-8 rounded-lg text-[10px] font-bold" onClick={() => setEditingAssignment(null)}>Vazgeç</Button>
+                      <Button 
+                        className="h-8 rounded-lg text-[10px] font-bold bg-primary text-white"
+                        onClick={() => {
+                          updateMutation.mutate({
+                            id: editingAssignment.id,
+                            data: {
+                              durationMinutes: parseInt(formData.durationMinutes),
+                              isFullTime: formData.isFullTime,
+                              costType: formData.costType,
+                              unitPrice: formData.unitPrice ? parseFloat(formData.unitPrice) : null,
+                            }
+                          });
+                        }}
+                      >
+                        Güncelle
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

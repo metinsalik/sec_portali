@@ -8,9 +8,11 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
+RUN sed -i 's/\r$//' entrypoint.sh
 RUN chmod +x entrypoint.sh
 RUN npx prisma generate
 
 EXPOSE 3005
 
-CMD ["./entrypoint.sh"]
+ENTRYPOINT []
+CMD ["/bin/sh", "/app/entrypoint.sh"]
