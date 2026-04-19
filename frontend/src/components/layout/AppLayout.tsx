@@ -4,7 +4,8 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   Shield, LayoutDashboard, Building2, Users, Briefcase, UserCheck,
   ClipboardList, FileText, Settings, Bell, ChevronDown, LogOut,
-  User, BarChart3, ChevronRight, LayoutGrid, Database, Users2
+  User, BarChart3, ChevronRight, LayoutGrid, Database, Users2, Mail,
+  BellRing, Layers
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { NotificationBell } from './NotificationBell';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -28,9 +30,11 @@ const panelNavItems = [
   { label: 'ATAMA', type: 'group' },
   { label: 'Atama Yönetimi', icon: ClipboardList, to: '/panel/assignments' },
   { label: 'Mutabakat', icon: FileText, to: '/panel/reconciliation' },
+  { label: 'YÖNETİM', type: 'group' },
+  { label: 'Modül Ayarları', icon: Settings, to: '/panel/settings' },
 ];
 
-const operationsNavItems = [
+const operationsNavItems = (hasAdminAccess: boolean) => [
   { label: 'GENEL', type: 'group' },
   { label: 'Dashboard', icon: LayoutDashboard, to: '/operations/dashboard' },
   { label: 'VERİ GİRİŞİ', type: 'group' },
@@ -41,6 +45,10 @@ const operationsNavItems = [
   { label: 'Eğitim Takibi', icon: FileText, to: '/operations/training' },
   { label: 'İSG Kurul', icon: Users, to: '/operations/board' },
   { label: 'Ölçüm & Kontrol', icon: Building2, to: '/operations/inspections' },
+  ...(hasAdminAccess ? [
+    { label: 'YÖNETİM', type: 'group' },
+    { label: 'Modül Ayarları', icon: Settings, to: '/operations/settings' },
+  ] : []),
 ];
 
 const settingsNavItems = [
@@ -48,8 +56,12 @@ const settingsNavItems = [
   { label: 'Tesis Yönetimi', icon: Building2, to: '/settings/facilities' },
   { label: 'Kullanıcı Yönetimi', icon: Users2, to: '/settings/users' },
   { label: 'TANIMLAR', type: 'group' },
-  { label: 'Parametreler', icon: Settings, to: '/settings/parameters' },
   { label: 'Kategoriler', icon: Database, to: '/settings/definitions' },
+  { label: 'SİSTEM', type: 'group' },
+  { label: 'E-posta Ayarları', icon: Mail, to: '/settings/smtp' },
+  { label: 'Bildirim Ayarları', icon: BellRing, to: '/settings/notifications' },
+  { label: 'E-posta Şablonları', icon: FileText, to: '/settings/templates' },
+  { label: 'Rapor Şablonları', icon: Layers, to: '/settings/reports' },
 ];
 
 const profileNavItems = (hasAdminAccess: boolean) => [
@@ -69,7 +81,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const path = location.pathname;
   const hasAdminAccess = user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management');
   
-  let navItems = operationsNavItems;
+  let navItems = operationsNavItems(!!hasAdminAccess);
   let moduleName = 'Aylık Veri Sistemi';
 
   if (path.startsWith('/panel')) {
@@ -78,9 +90,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   } else if (path.startsWith('/settings')) {
     navItems = settingsNavItems;
     moduleName = 'Sistem Ayarları';
-  } else if (path.startsWith('/profile')) {
+  } else if (path.startsWith('/profile') || path.startsWith('/notifications')) {
     navItems = profileNavItems(!!hasAdminAccess);
-    moduleName = 'Kullanıcı Profili';
+    moduleName = path.startsWith('/profile') ? 'Kullanıcı Profili' : 'Bildirim Merkezi';
   }
 
   const handleLogout = () => {
@@ -195,10 +207,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="w-4 h-4 text-muted-foreground" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full" />
-            </Button>
+            <NotificationBell />
             {user?.isAdmin && (
               <Button
                 variant="ghost"

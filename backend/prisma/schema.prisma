@@ -57,15 +57,36 @@ model Facility {
   naceCode         String?
   dangerClass      String             @default("Az Tehlikeli") // "Çok Tehlikeli" | "Tehlikeli" | "Az Tehlikeli"
   employeeCount    Int                @default(0)
+  employeeCountHistory EmployeeCountHistory[]
   isActive         Boolean            @default(true)
   buildings        FacilityBuilding[]
   users            UserFacility[]
   assignments      Assignment[]
+  activityLogs     ActivityLog[]
   monthlyHrData    MonthlyHRData[]
   monthlyAccident  MonthlyAccidentData[]
   reconciliations  Reconciliation[]
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
+}
+
+model ActivityLog {
+  id         Int      @id @default(autoincrement())
+  facilityId String
+  facility   Facility @relation(fields: [facilityId], references: [id])
+  username   String
+  action     String   // e.g., "Çalışan Sayısı Güncellendi", "Yeni Atama Yapıldı"
+  details    String?
+  createdAt  DateTime @default(now())
+}
+
+model EmployeeCountHistory {
+  id            Int      @id @default(autoincrement())
+  facilityId    String
+  facility      Facility @relation(fields: [facilityId], references: [id])
+  count         Int
+  effectiveDate DateTime
+  createdAt     DateTime @default(now())
 }
 
 model FacilityBuilding {
@@ -130,6 +151,8 @@ model OSGBCompany {
   contact         String?
   phone           String?
   email           String?
+  city            String?
+  district        String?
   isActive        Boolean          @default(true)
   reconciliations Reconciliation[]
   createdAt       DateTime         @default(now())
@@ -236,16 +259,88 @@ model Department {
   updatedAt DateTime @updatedAt
 }
 
-model ActivityLog {
+
+model SmtpSettings {
+  id        Int      @id @default(1) // Always use ID 1 for system-wide settings
+  host      String
+  port      Int
+  user      String
+  pass      String
+  secure    Boolean  @default(false)
+  fromEmail String
+  fromName  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  title     String
+  message   String
+  type      String   // "info", "warning", "success", "error"
+  module    String   @default("SYSTEM") // e.g., "OPERATIONS", "FACILITIES", "SYSTEM"
+  targetRole String? // Specific role to notify, or null for all
+  username  String?  // Specific user to notify, or null for all
+  isRead    Boolean  @default(false)
+  link      String?  // Optional link to redirect
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model NotificationTemplate {
   id          Int      @id @default(autoincrement())
-  entityType  String
-  entityId    String
-  action      String
-  oldValue    Json?
-  newValue    Json?
-  createdBy   String
+  code        String   @unique // e.g., "NEW_ACCIDENT_REPORT"
+  name        String   // Human readable name
+  module      String   // e.g., "OPERATIONS", "FACILITIES"
+  subject     String
+  body        String   @db.Text
   createdAt   DateTime @default(now())
-  ipAddress   String?
-  userAgent   String?
-  note        String?
+  updatedAt   DateTime @updatedAt
+}
+
+model NotificationConfig {
+  id           Int      @id @default(autoincrement())
+  code         String   @unique // Matches NotificationTemplate.code
+  module       String
+  description  String?
+  emailEnabled Boolean  @default(true)
+  appEnabled   Boolean  @default(true)
+  priority     String   @default("normal") // "low", "normal", "high", "critical"
+  updatedAt    DateTime @updatedAt
+}
+
+model AdministrativeFine {
+  id                            Int      @id @default(autoincrement())
+  year                          Int      @unique
+  specialistAndPhysicianVery    Float
+  specialistAndPhysicianDanger  Float
+  specialistAndPhysicianLess    Float
+  dspVeryDangerous              Float
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
+}
+
+model ReportTemplate {
+  id            Int      @id @default(autoincrement())
+  code          String   // e.g., "MONTHLY_ACCIDENT_REPORT"
+  name          String
+  version       Int      @default(1)
+  isActive      Boolean  @default(false)
+  isArchived    Boolean  @default(false)
+  module        String   // "OPERATIONS" | "FACILITIES" | "PANEL"
+  
+  // Quality Metadata
+  documentNo    String?
+  revisionNo    String?
+  releaseDate   DateTime?
+  
+  // Design
+  content       Json     // Tiptap JSON content
+  orientation   String   @default("PORTRAIT") // "PORTRAIT" | "LANDSCAPE"
+  logoUrl       String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([code, version])
 }

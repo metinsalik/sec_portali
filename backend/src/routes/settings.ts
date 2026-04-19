@@ -13,9 +13,9 @@ const prisma = new PrismaClient();
 // Tüm settings rotaları kimlik doğrulama gerektirir
 router.use(authMiddleware);
 
-// ─────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
 // YARDIMCI FONKSİYONLAR
-// ─────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
 async function ensureRolesExist() {
   const roleNames = ['admin', 'management', 'user', 'safety', 'doctor', 'dsp'];
   for (const name of roleNames) {
@@ -27,18 +27,48 @@ async function ensureRolesExist() {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// TESİS YÖNETİMİ — Admin + Management
-// ─────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// TESİS YÖNETİMİ - Admin + Management
+// ──────────────────────────────────────────────────────────────────────────────
 router.get('/facilities', async (req: AuthRequest, res: Response) => {
   try {
     const facilities = await prisma.facility.findMany({
-      include: { buildings: true },
+      include: { buildings: true, assignments: true },
       orderBy: { id: 'asc' },
     });
     res.json(facilities);
   } catch {
     res.status(500).json({ error: 'Tesisler getirilemedi.' });
+  }
+});
+
+router.get('/facilities/:id', async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  try {
+    const facility = await prisma.facility.findUnique({
+      where: { id },
+      include: { 
+        buildings: true, 
+        assignments: {
+          include: {
+            professional: true,
+            employerRep: true
+          }
+        },
+        employeeCountHistory: {
+          orderBy: { effectiveDate: 'desc' },
+          take: 12
+        },
+        activityLogs: {
+          orderBy: { createdAt: 'desc' },
+          take: 50
+        }
+      },
+    });
+    if (!facility) return res.status(404).json({ error: 'Tesis bulunamadı.' });
+    res.json(facility);
+  } catch (error) {
+    res.status(500).json({ error: 'Tesis detayları getirilemedi.' });
   }
 });
 
@@ -49,101 +79,180 @@ router.post('/facilities', managementMiddleware, async (req: AuthRequest, res: R
     taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings 
   } = req.body;
 
-  if (!id || !name) {
-    return res.status(400).json({ error: 'Tesis kodu ve adı zorunludur.' });
-  }
   try {
     const facility = await prisma.facility.create({
       data: {
-        id,
-        name,
-        shortName,
-        type,
-        city,
-        district,
-        fullAddress,
-        phone,
-        email,
-        website,
-        commercialTitle,
-        taxOffice,
-        taxNumber,
-        sgkNumber,
-        naceCode,
-        dangerClass: dangerClass || 'Az Tehlikeli',
-        employeeCount: employeeCount ? parseInt(String(employeeCount)) : 0,
+        id, name, shortName, type, city, district, fullAddress,
+        phone, email, website, commercialTitle, taxOffice,
+        taxNumber, sgkNumber, naceCode, dangerClass, 
+        employeeCount: parseInt(employeeCount) || 0,
         buildings: {
-          create: (buildings as any[] | undefined)?.map((b) => ({
+          create: buildings?.map((b: any) => ({
             name: b.name,
-            constructionYear: b.constructionYear ? parseInt(String(b.constructionYear)) : null,
-            buildingHeight: b.buildingHeight ? parseFloat(String(b.buildingHeight)) : null,
-            structureHeight: b.structureHeight ? parseFloat(String(b.structureHeight)) : null,
-            buildingFloors: b.buildingFloors ? parseInt(String(b.buildingFloors)) : null,
-            structureFloors: b.structureFloors ? parseInt(String(b.structureFloors)) : null,
-            closedArea: b.closedArea ? parseFloat(String(b.closedArea)) : null,
-            parkingArea: b.parkingArea ? parseFloat(String(b.parkingArea)) : null,
-            gardenArea: b.gardenArea ? parseFloat(String(b.gardenArea)) : null,
-            bedCapacity: b.bedCapacity ? parseInt(String(b.bedCapacity)) : null,
-          })) ?? [],
-        },
+            constructionYear: parseInt(b.constructionYear) || null,
+            buildingHeight: parseFloat(b.buildingHeight) || null,
+            structureHeight: parseFloat(b.structureHeight) || null,
+            buildingFloors: parseInt(b.buildingFloors) || null,
+            structureFloors: parseInt(b.structureFloors) || null,
+            closedArea: parseFloat(b.closedArea) || null,
+            parkingArea: parseFloat(b.parkingArea) || null,
+            gardenArea: parseFloat(b.gardenArea) || null,
+            bedCapacity: parseInt(b.bedCapacity) || null
+          })) || []
+        }
       },
-      include: { buildings: true },
+      include: { buildings: true }
     });
     res.status(201).json(facility);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Tesis oluşturulamadı.' });
+  } catch (error: any) {
+    console.error('Facility creation error:', error);
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'Bu tesis kodu zaten kullanımda.' });
+    }
+    res.status(500).json({ error: 'Tesis oluşturulamadı: ' + error.message });
   }
 });
 
 router.put('/facilities/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
-  const id = String(req.params.id);
+  const oldId = req.params.id as any;
   const { 
-    name, shortName, type, city, district, fullAddress, 
+    id: newId, name, shortName, type, city, district, fullAddress, 
     phone, email, website, commercialTitle, taxOffice, 
-    taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, isActive, buildings 
+    taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings 
   } = req.body;
+
   try {
-    // Önce mevcut binaları silelim (veya güncelleyelim, ama silip yeniden oluşturmak daha basit şimdilik)
-    if (buildings !== undefined) {
-      await prisma.facilityBuilding.deleteMany({ where: { facilityId: id } });
-    }
+    // Once binalari temizle (basit yaklasim)
+    await prisma.facilityBuilding.deleteMany({ where: { facilityId: oldId } as any });
 
     const facility = await prisma.facility.update({
-      where: { id },
-      data: { 
-        name, shortName, type, city, district, fullAddress, 
-        phone, email, website, commercialTitle, taxOffice, 
+      where: { id: oldId } as any,
+      data: {
+        id: (newId as string) || oldId,
+        name, shortName, type, city, district, fullAddress,
+        phone, email, website, commercialTitle, taxOffice,
         taxNumber, sgkNumber, naceCode, dangerClass,
-        employeeCount: employeeCount ? parseInt(String(employeeCount)) : 0,
-        isActive,
-        buildings: buildings !== undefined ? {
-          create: (buildings as any[] | undefined)?.map((b) => ({
+        employeeCount: parseInt(employeeCount) || 0,
+        isActive: req.body.isActive !== undefined ? req.body.isActive : true,
+        buildings: {
+          create: buildings?.map((b: any) => ({
             name: b.name,
-            constructionYear: b.constructionYear ? parseInt(String(b.constructionYear)) : null,
-            buildingHeight: b.buildingHeight ? parseFloat(String(b.buildingHeight)) : null,
-            structureHeight: b.structureHeight ? parseFloat(String(b.structureHeight)) : null,
-            buildingFloors: b.buildingFloors ? parseInt(String(b.buildingFloors)) : null,
-            structureFloors: b.structureFloors ? parseInt(String(b.structureFloors)) : null,
-            closedArea: b.closedArea ? parseFloat(String(b.closedArea)) : null,
-            parkingArea: b.parkingArea ? parseFloat(String(b.parkingArea)) : null,
-            gardenArea: b.gardenArea ? parseFloat(String(b.gardenArea)) : null,
-            bedCapacity: b.bedCapacity ? parseInt(String(b.bedCapacity)) : null,
-          })) ?? [],
-        } : undefined,
+            constructionYear: parseInt(b.constructionYear) || null,
+            buildingHeight: parseFloat(b.buildingHeight) || null,
+            structureHeight: parseFloat(b.structureHeight) || null,
+            buildingFloors: parseInt(b.buildingFloors) || null,
+            structureFloors: parseInt(b.structureFloors) || null,
+            closedArea: parseFloat(b.closedArea) || null,
+            parkingArea: parseFloat(b.parkingArea) || null,
+            gardenArea: parseFloat(b.gardenArea) || null,
+            bedCapacity: parseInt(b.bedCapacity) || null
+          })) || []
+        }
       },
-      include: { buildings: true },
+      include: { buildings: true }
     });
     res.json(facility);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Tesis güncellenemedi.' });
+  } catch (error: any) {
+    console.error('Facility update error:', error);
+    res.status(500).json({ error: 'Tesis güncellenemedi: ' + error.message });
   }
 });
 
-// ─────────────────────────────────────────────────────────────
-// KULLANICI YÖNETİMİ — Sadece Admin
-// ─────────────────────────────────────────────────────────────
+router.delete('/facilities/:id', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  const id = req.params.id as any;
+  try {
+    await prisma.facilityBuilding.deleteMany({ where: { facilityId: id } as any });
+    await prisma.userFacility.deleteMany({ where: { facilityId: id } as any });
+    await prisma.employeeCountHistory.deleteMany({ where: { facilityId: id } as any });
+    await prisma.facility.delete({ where: { id } as any });
+    res.json({ message: 'Tesis başarıyla silindi.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Tesis silinemedi.' });
+  }
+});
+
+// Çalışan Sayısı Güncelleme (Tekil)
+router.patch('/facilities/:id/employee-count', managementMiddleware, async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { count, effectiveDate } = req.body;
+
+  try {
+    const parsedCount = parseInt(count);
+    const parsedDate = new Date(effectiveDate);
+
+    if (isNaN(parsedCount)) return res.status(400).json({ error: 'Geçersiz çalışan sayısı.' });
+
+    const result = await prisma.$transaction([
+      prisma.facility.update({
+        where: { id },
+        data: { employeeCount: parsedCount }
+      }),
+      prisma.employeeCountHistory.create({
+        data: {
+          facilityId: id,
+          count: parsedCount,
+          effectiveDate: parsedDate
+        }
+      }),
+      prisma.activityLog.create({
+        data: {
+          facilityId: id,
+          username: req.user!.username,
+          action: 'Çalışan Sayısı Güncellendi',
+          details: `Çalışan sayısı ${parsedCount} olarak güncellendi. (Yürürlük: ${parsedDate.toLocaleDateString('tr-TR')})`
+        }
+      })
+    ]);
+
+    res.json(result[0]);
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: 'Güncelleme başarısız: ' + error.message });
+  }
+});
+
+// Çalışan Sayısı Güncelleme (Toplu)
+router.post('/facilities/bulk-employee-count', managementMiddleware, async (req: AuthRequest, res: Response) => {
+  const { updates, effectiveDate } = req.body; // updates: { id: string, count: number }[]
+
+  try {
+    const parsedDate = new Date(effectiveDate);
+
+    await prisma.$transaction(
+      updates.map((u: any) => [
+        prisma.facility.update({
+          where: { id: u.id },
+          data: { employeeCount: parseInt(u.count) }
+        }),
+        prisma.employeeCountHistory.create({
+          data: {
+            facilityId: u.id,
+            count: parseInt(u.count),
+            effectiveDate: parsedDate
+          }
+        }),
+        prisma.activityLog.create({
+          data: {
+            facilityId: u.id,
+            username: req.user!.username,
+            action: 'Toplu Çalışan Sayısı Güncelleme',
+            details: `Toplu güncelleme ile çalışan sayısı ${u.count} yapıldı.`
+          }
+        })
+      ]).flat()
+    );
+
+    res.json({ message: 'Toplu güncelleme başarılı.' });
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: 'Toplu güncelleme başarısız: ' + error.message });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// KULLANICI YÖNETİMİ - Sadece Admin
+// ──────────────────────────────────────────────────────────────────────────────
 router.get('/users', adminMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const users = await prisma.user.findMany({
@@ -151,7 +260,7 @@ router.get('/users', adminMiddleware, async (req: AuthRequest, res: Response) =>
         roles: { include: { role: true } },
         facilities: { include: { facility: true } },
       },
-      orderBy: { fullName: 'asc' },
+      orderBy: { createdAt: 'desc' },
     });
     res.json(users);
   } catch {
@@ -162,34 +271,24 @@ router.get('/users', adminMiddleware, async (req: AuthRequest, res: Response) =>
 router.post('/users', adminMiddleware, async (req: AuthRequest, res: Response) => {
   const { username, fullName, email, phone, department, title, roles, facilities } = req.body;
 
-  // Zorunlu alan kontrolü
-  if (!username || !fullName || !email || !phone || !department || !title || !roles?.length) {
-    return res.status(400).json({
-      error: 'Kullanıcı adı, ad soyad, e-posta, telefon, departman, ünvan ve en az bir rol zorunludur.'
-    });
+  if (!username || !fullName) {
+    return res.status(400).json({ error: 'Kullanıcı adı ve ad soyad zorunludur.' });
   }
 
   try {
-    // Rollerin var olduğundan emin ol
     await ensureRolesExist();
-
-    // Rol isimlerini ID'lere çevir
     const roleRecords = await prisma.role.findMany({
       where: { name: { in: roles as string[] } },
     });
-
-    if (roleRecords.length !== (roles as string[]).length) {
-      return res.status(400).json({ error: 'Geçersiz rol adı.' });
-    }
 
     const user = await prisma.user.create({
       data: {
         username: username.toLowerCase().trim(),
         fullName: fullName.trim(),
-        email: email.toLowerCase().trim(),
-        phone: phone.trim(),
-        department: department.trim(),
-        title: title.trim(),
+        email: email?.toLowerCase().trim(),
+        phone: phone?.trim(),
+        department: department?.trim(),
+        title: title?.trim(),
         roles: {
           create: roleRecords.map((r) => ({ roleId: r.id })),
         },
@@ -225,7 +324,6 @@ router.put('/users/:username', adminMiddleware, async (req: AuthRequest, res: Re
     if (title !== undefined) updateData.title = title.trim();
     if (isActive !== undefined) updateData.isActive = isActive;
 
-    // Rolleri sadece gelirse güncelle
     if (roles !== undefined) {
       await prisma.userRole.deleteMany({ where: { username: usernameParam } });
       await ensureRolesExist();
@@ -237,7 +335,6 @@ router.put('/users/:username', adminMiddleware, async (req: AuthRequest, res: Re
       };
     }
 
-    // Tesisleri sadece gelirse güncelle
     if (facilities !== undefined) {
       await prisma.userFacility.deleteMany({ where: { username: usernameParam } });
       updateData.facilities = {
@@ -260,10 +357,9 @@ router.put('/users/:username', adminMiddleware, async (req: AuthRequest, res: Re
   }
 });
 
-// Kullanıcı tesis erişimi ekle/kaldır (mevcut kullanıcıya tesis ekleme)
 router.post('/users/:username/facilities', adminMiddleware, async (req: AuthRequest, res: Response) => {
   const username = String(req.params.username);
-  const { facilityId, action } = req.body; // action: 'add' | 'remove'
+  const { facilityId, action } = req.body; 
 
   if (!facilityId) {
     return res.status(400).json({ error: 'Tesis ID zorunludur.' });
@@ -272,9 +368,7 @@ router.post('/users/:username/facilities', adminMiddleware, async (req: AuthRequ
   try {
     if (action === 'add') {
       await prisma.userFacility.upsert({
-        where: {
-          username_facilityId: { username, facilityId },
-        },
+        where: { username_facilityId: { username, facilityId } },
         update: {},
         create: { username, facilityId },
       });
@@ -298,9 +392,9 @@ router.post('/users/:username/facilities', adminMiddleware, async (req: AuthRequ
   }
 });
 
-// ─────────────────────────────────────────────────────────────
-// SİSTEM PARAMETRELERİ — Admin + Management
-// ─────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// SİSTEM PARAMETRELERİ - Admin + Management
+// ──────────────────────────────────────────────────────────────────────────────
 router.get('/parameters', async (req: AuthRequest, res: Response) => {
   try {
     const year = parseInt(req.query.year as string) || new Date().getFullYear();
@@ -335,9 +429,9 @@ router.post('/parameters', managementMiddleware, async (req: AuthRequest, res: R
   }
 });
 
-// ─────────────────────────────────────────────────────────────
-// KATEGORİLER & ALT KATEGORİLER & DEPARTMANLAR — Admin + Management
-// ─────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// KATEGORİLER & ALT KATEGORİLER & DEPARTMANLAR - Admin + Management
+// ──────────────────────────────────────────────────────────────────────────────
 router.get('/definitions/categories', async (req: AuthRequest, res: Response) => {
   try {
     const categories = await prisma.category.findMany({
@@ -369,6 +463,15 @@ router.patch('/definitions/categories/:id', managementMiddleware, async (req: Au
     res.json(category);
   } catch {
     res.status(500).json({ error: 'Kategori güncellenemedi.' });
+  }
+});
+
+router.get('/definitions/subcategories', async (req: AuthRequest, res: Response) => {
+  try {
+    const subs = await prisma.subCategory.findMany({ include: { category: true }, orderBy: { name: 'asc' } });
+    res.json(subs);
+  } catch {
+    res.status(500).json({ error: 'Alt kategoriler getirilemedi.' });
   }
 });
 
@@ -425,17 +528,413 @@ router.patch('/definitions/departments/:id', managementMiddleware, async (req: A
   }
 });
 
-// ─────────────────────────────────────────────────────────────
-// ROL LİSTESİ — Kullanıcı yönetimi formu için
-// ─────────────────────────────────────────────────────────────
-router.get('/roles', adminMiddleware, async (req: AuthRequest, res: Response) => {
+// ──────────────────────────────────────────────────────────────────────────────
+// ROL LİSTESİ - Kullanıcı yönetimi formu için
+// ──────────────────────────────────────────────────────────────────────────────
+router.get('/roles', async (req: AuthRequest, res: Response) => {
   try {
-    // İlk istekte roller yoksa oluştur
-    await ensureRolesExist();
-    const roles = await prisma.role.findMany({ orderBy: { name: 'asc' } });
+    const roles = await prisma.role.findMany({
+      orderBy: { name: 'asc' }
+    });
     res.json(roles);
   } catch {
     res.status(500).json({ error: 'Roller getirilemedi.' });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// SMTP AYARLARI - Sadece Admin
+// ──────────────────────────────────────────────────────────────────────────────
+router.get('/smtp', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const settings = await prisma.smtpSettings.findFirst({ where: { id: 1 } });
+    res.json(settings);
+  } catch {
+    res.status(500).json({ error: 'SMTP ayarları getirilemedi.' });
+  }
+});
+
+router.post('/smtp', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  const { host, port, user, pass, secure, fromEmail, fromName } = req.body;
+  
+  if (!host || !port || !user || !pass || !fromEmail) {
+    return res.status(400).json({ error: 'Tüm alanlar zorunludur.' });
+  }
+
+  try {
+    const settings = await prisma.smtpSettings.upsert({
+      where: { id: 1 },
+      update: { host, port: parseInt(String(port)), user, pass, secure, fromEmail, fromName },
+      create: { id: 1, host, port: parseInt(String(port)), user, pass, secure, fromEmail, fromName },
+    });
+    res.json(settings);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'SMTP ayarları kaydedilemedi.' });
+  }
+});
+
+router.post('/smtp/test', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  const { to } = req.body;
+  if (!to) return res.status(400).json({ error: 'Alıcı e-posta adresi zorunludur.' });
+
+  try {
+    const { sendMail } = require('../services/mail');
+    await sendMail(
+      to, 
+      'SEC Portalı - SMTP Test Mesajı', 
+      'SEC Portalı SMTP ayarları başarıyla doğrulandı.'
+    );
+    res.json({ message: 'Test e-postası başarıyla gönderildi.' });
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: `Test e-postası gönderilemedi: ${error.message}` });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// BİLDİRİM AYARLARI & ŞABLONLARI - Sadece Admin
+// ──────────────────────────────────────────────────────────────────────────────
+
+async function seedNotificationConfigs() {
+  const configs = [
+    { code: 'NEW_ACCIDENT', module: 'OPERATIONS', name: 'Yeni Kaza Bildirimi', description: 'Yeni bir iş kazası kaydedildiğinde bildirim gider.' },
+    { code: 'ASSIGNMENT_REMINDER', module: 'OPERATIONS', name: 'Atama Hatırlatıcı', description: 'Süresi dolmak üzere olan atamalar için bildirim gider.' },
+    { code: 'RECONCILIATION_APPROVED', module: 'PANEL', name: 'Mutabakat Onayı', description: 'Bir mutabakat onaylandığında bildirim gider.' },
+    { code: 'SYSTEM_ALERT', module: 'SYSTEM', name: 'Sistem Uyarısı', description: 'Kritik sistem olaylarında bildirim gider.' },
+  ];
+
+  for (const config of configs) {
+    await prisma.notificationConfig.upsert({
+      where: { code: config.code },
+      update: { module: config.module, description: config.description },
+      create: { 
+        code: config.code, 
+        module: config.module, 
+        description: config.description,
+        emailEnabled: true,
+        appEnabled: true,
+        priority: 'normal'
+      },
+    });
+
+    // Varsayılan şablonları da oluştur (eğer yoksa)
+    await prisma.notificationTemplate.upsert({
+      where: { code: config.code },
+      update: {},
+      create: {
+        code: config.code,
+        name: config.name,
+        module: config.module,
+        subject: `${config.name} - SEC Portalı`,
+        body: `Sayın Yetkili,\n\n${config.description}\n\nDetaylar için lütfen sisteme giriş yapınız.\n\nİyi çalışmalar.`
+      }
+    });
+  }
+}
+
+router.get('/notification-configs', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    await seedNotificationConfigs(); // Her ihtimale karşı seedle
+    const configs = await prisma.notificationConfig.findMany({
+      orderBy: [{ module: 'asc' }, { code: 'asc' }]
+    });
+    res.json(configs);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Bildirim ayarları getirilemedi.' });
+  }
+});
+
+router.post('/notification-configs', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  const { code, name, module, description, priority } = req.body;
+  
+  if (!code || !name || !module) {
+    return res.status(400).json({ error: 'Kod, isim ve modül zorunludur.' });
+  }
+
+  try {
+    const config = await prisma.notificationConfig.create({
+      data: {
+        code: code.toUpperCase().replace(/\s+/g, '_'),
+        module: module.toUpperCase(),
+        description,
+        priority: priority || 'normal',
+        emailEnabled: true,
+        appEnabled: true,
+      }
+    });
+
+    await prisma.notificationTemplate.create({
+      data: {
+        code: config.code,
+        name: name,
+        module: config.module,
+        subject: `${name} - SEC Portalı`,
+        body: `Sayın Yetkili,\n\n${description || name}\n\nDetaylar için lütfen sisteme giriş yapınız.\n\nİyi çalışmalar.`
+      }
+    });
+
+    res.status(201).json(config);
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'Bu kod ile bir bildirim zaten mevcut.' });
+    }
+    console.error(error);
+    res.status(500).json({ error: 'Bildirim türü oluşturulamadı.' });
+  }
+});
+
+router.put('/notification-configs/:code', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  const { code } = req.params;
+  const { emailEnabled, appEnabled, priority } = req.body;
+  try {
+    const config = await prisma.notificationConfig.update({
+      where: { code },
+      data: { emailEnabled, appEnabled, priority }
+    });
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: 'Bildirim ayarı güncellenemedi.' });
+  }
+});
+
+router.get('/notification-templates', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const templates = await prisma.notificationTemplate.findMany({
+      orderBy: [{ module: 'asc' }, { code: 'asc' }]
+    });
+    res.json(templates);
+  } catch (error) {
+    res.status(500).json({ error: 'Bildirim şablonları getirilemedi.' });
+  }
+});
+
+router.put('/notification-templates/:code', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  const { code } = req.params;
+  const { subject, body } = req.body;
+  try {
+    const template = await prisma.notificationTemplate.update({
+      where: { code },
+      data: { subject, body }
+    });
+    res.json(template);
+  } catch (error) {
+    res.status(500).json({ error: 'Bildirim şablonu güncellenemedi.' });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// İDARİ PARA CEZALARI (Panel Ayarları) - Sadece Admin
+// ──────────────────────────────────────────────────────────────────────────────
+router.get('/fines', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const year = parseInt(req.query.year as string) || new Date().getFullYear();
+    const fines = await prisma.administrativeFine.findUnique({
+      where: { year },
+    });
+    res.json(fines);
+  } catch {
+    res.status(500).json({ error: 'Cezalar getirilemedi.' });
+  }
+});
+
+router.post('/fines', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  const { 
+    year, 
+    specialistAndPhysicianVery, 
+    specialistAndPhysicianDanger, 
+    specialistAndPhysicianLess, 
+    dspVeryDangerous 
+  } = req.body;
+
+  try {
+    const fines = await prisma.administrativeFine.upsert({
+      where: { year: parseInt(String(year)) },
+      update: { 
+        specialistAndPhysicianVery: parseFloat(String(specialistAndPhysicianVery)),
+        specialistAndPhysicianDanger: parseFloat(String(specialistAndPhysicianDanger)),
+        specialistAndPhysicianLess: parseFloat(String(specialistAndPhysicianLess)),
+        dspVeryDangerous: parseFloat(String(dspVeryDangerous))
+      },
+      create: { 
+        year: parseInt(String(year)),
+        specialistAndPhysicianVery: parseFloat(String(specialistAndPhysicianVery)),
+        specialistAndPhysicianDanger: parseFloat(String(specialistAndPhysicianDanger)),
+        specialistAndPhysicianLess: parseFloat(String(specialistAndPhysicianLess)),
+        dspVeryDangerous: parseFloat(String(dspVeryDangerous))
+      },
+    });
+    res.json(fines);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Cezalar kaydedilemedi.' });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// RAPOR ŞABLONLARI - Sadece Admin
+// ──────────────────────────────────────────────────────────────────────────────
+
+router.get('/report-templates', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const templates = await prisma.reportTemplate.findMany({
+      orderBy: [{ code: 'asc' }, { version: 'desc' }]
+    });
+    res.json(templates);
+  } catch (error) {
+    res.status(500).json({ error: 'Rapor şablonları getirilemedi.' });
+  }
+});
+
+router.get('/report-templates/:id', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const template = await prisma.reportTemplate.findUnique({
+      where: { id: parseInt(req.params.id) }
+    });
+    if (!template) return res.status(404).json({ error: 'Şablon bulunamadı.' });
+    res.json(template);
+  } catch (error) {
+    res.status(500).json({ error: 'Şablon getirilemedi.' });
+  }
+});
+
+router.post('/report-templates', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  const { name, code, module, content, orientation, documentNo, revisionNo, releaseDate } = req.body;
+  
+  if (!name || !code || !module) {
+    return res.status(400).json({ error: 'İsim, kod ve modül zorunludur.' });
+  }
+
+  try {
+    const template = await prisma.reportTemplate.create({
+      data: {
+        name,
+        code: code.toUpperCase().replace(/\s+/g, '_'),
+        module: module.toUpperCase(),
+        content: content || {},
+        orientation: orientation || 'PORTRAIT',
+        documentNo,
+        revisionNo,
+        releaseDate: releaseDate ? new Date(releaseDate) : null,
+      }
+    });
+    res.status(201).json(template);
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'Bu kod ve versiyon kombinasyonu zaten mevcut.' });
+    }
+    console.error(error);
+    res.status(500).json({ error: 'Şablon oluşturulamadı.' });
+  }
+});
+
+router.put('/report-templates/:id', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  const { name, content, orientation, documentNo, revisionNo, releaseDate, isActive } = req.body;
+
+  try {
+    const template = await prisma.reportTemplate.update({
+      where: { id },
+      data: {
+        name,
+        content,
+        orientation,
+        documentNo,
+        revisionNo,
+        releaseDate: releaseDate ? new Date(releaseDate) : undefined,
+        isActive,
+      }
+    });
+    res.json(template);
+  } catch (error) {
+    res.status(500).json({ error: 'Şablon güncellenemedi.' });
+  }
+});
+
+router.post('/report-templates/:id/clone', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+
+  try {
+    const source = await prisma.reportTemplate.findUnique({ where: { id } });
+    if (!source) return res.status(404).json({ error: 'Kaynak şablon bulunamadı.' });
+
+    // En son versiyonu bul
+    const lastVersion = await prisma.reportTemplate.findFirst({
+      where: { code: source.code },
+      orderBy: { version: 'desc' }
+    });
+
+    const nextVersion = (lastVersion?.version || source.version) + 1;
+
+    const clone = await prisma.reportTemplate.create({
+      data: {
+        ...source,
+        id: undefined,
+        version: nextVersion,
+        isActive: false,
+        name: `${source.name} (Kopya V${nextVersion})`,
+        createdAt: undefined,
+        updatedAt: undefined,
+      }
+    });
+
+    res.status(201).json(clone);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Şablon kopyalanamadı.' });
+  }
+});
+
+router.post('/report-templates/:id/publish', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+
+  try {
+    const template = await prisma.reportTemplate.findUnique({ where: { id } });
+    if (!template) return res.status(404).json({ error: 'Şablon bulunamadı.' });
+
+    // Aynı koddaki diğer tüm aktifleri deaktif et
+    await prisma.reportTemplate.updateMany({
+      where: { code: template.code, isActive: true },
+      data: { isActive: false }
+    });
+
+    // Bunu aktif et
+    const updated = await prisma.reportTemplate.update({
+      where: { id },
+      data: { isActive: true }
+    });
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Şablon yayınlanamadı.' });
+  }
+});
+
+router.post('/report-templates/:id/deactivate', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  try {
+    const updated = await prisma.reportTemplate.update({
+      where: { id },
+      data: { isActive: false }
+    });
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Şablon pasife alınamadı.' });
+  }
+});
+
+router.delete('/report-templates/:id', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  try {
+    const template = await prisma.reportTemplate.findUnique({ where: { id } });
+    if (!template) return res.status(404).json({ error: 'Şablon bulunamadı.' });
+    if (template.isActive) return res.status(400).json({ error: 'Aktif bir şablon silinemez. Önce pasife alın veya başka bir sürümü yayınlayın.' });
+
+    await prisma.reportTemplate.delete({ where: { id } });
+    res.json({ message: 'Şablon başarıyla silindi.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Şablon silinemedi.' });
   }
 });
 

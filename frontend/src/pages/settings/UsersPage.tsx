@@ -6,8 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UserPlus, Search, User as UserIcon, ShieldCheck, Loader2, Building2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { UserPlus, Search, User as UserIcon, ShieldCheck, Loader2, Building2, LayoutGrid, List, Archive, CheckCircle2, ChevronRight, Edit2, Eye, Mail, Phone, MapPin, Building } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Separator } from '@/components/ui/separator';
 
 interface User {
   username: string;
@@ -51,6 +55,10 @@ const UsersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [facilityFilter, setFacilityFilter] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
 
   // Form state
   const [form, setForm] = useState({
@@ -178,10 +186,29 @@ const UsersPage = () => {
     },
   });
 
-  const filteredUsers = users?.filter(u =>
-    u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.username.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = users?.filter(u => {
+    const matchesSearch = u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         u.username.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = roleFilter === 'all' || u.roles.some(r => r.role.name === roleFilter);
+    const matchesFacility = facilityFilter === 'all' || u.facilities.some(f => f.facilityId === facilityFilter);
+    const matchesStatus = activeTab === 'active' ? u.isActive : !u.isActive;
+    return matchesSearch && matchesRole && matchesFacility && matchesStatus;
+  }).sort((a, b) => a.fullName.localeCompare(b.fullName, 'tr'));
+
+  // Rolere göre gruplama (Kullanıcının ilk rolünü grup olarak kabul edelim)
+  const groupedUsers = filteredUsers?.reduce((acc, user) => {
+    const primaryRole = user.roles[0]?.role.name || 'user';
+    if (!acc[primaryRole]) acc[primaryRole] = [];
+    acc[primaryRole].push(user);
+    return acc;
+  }, {} as Record<string, User[]>);
+
+  const sortedRoles = Object.keys(groupedUsers || {}).sort((a, b) => {
+    // Admin her zaman en üstte
+    if (a === 'admin') return -1;
+    if (b === 'admin') return 1;
+    return (ROLE_LABELS[a] || a).localeCompare(ROLE_LABELS[b] || b, 'tr');
+  });
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -215,108 +242,270 @@ const UsersPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="İsim veya kullanıcı adına göre ara..."
-            className="pl-10 bg-background"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      {/* Tabs for Active/Archive */}
+      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 -mx-6 px-6">
+        <div className="flex gap-8">
+          <button 
+            onClick={() => setActiveTab('active')}
+            className={cn(
+              "px-1 py-4 text-sm font-bold transition-all relative",
+              activeTab === 'active' ? "text-primary" : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            Aktif Kullanıcılar
+            {activeTab === 'active' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />}
+          </button>
+          <button 
+            onClick={() => setActiveTab('archive')}
+            className={cn(
+              "px-1 py-4 text-sm font-bold transition-all relative",
+              activeTab === 'archive' ? "text-primary" : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            Arşiv
+            {activeTab === 'archive' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />}
+          </button>
         </div>
-        <Button onClick={() => setIsModalOpen(true)}>
-          <UserPlus className="w-4 h-4 mr-2" /> Kullanıcı Ekle
-        </Button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border bg-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-muted/50 text-muted-foreground font-medium border-b">
-              <tr>
-                <th className="px-6 py-4">Kullanıcı</th>
-                <th className="px-6 py-4">Departman / Ünvan</th>
-                <th className="px-6 py-4">Roller</th>
-                <th className="px-6 py-4">Tesisler</th>
-                <th className="px-6 py-4">Durum</th>
-                <th className="px-6 py-4">İşlem</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filteredUsers?.map((user) => (
-                <tr key={user.username} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-foreground">
-                        <UserIcon className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="font-semibold text-foreground">{user.fullName}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">{user.username}</div>
-                        {user.email && <div className="text-xs text-muted-foreground">{user.email}</div>}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm">
-                      <div>{user.department || '-'}</div>
-                      <div className="text-muted-foreground">{user.title || '-'}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-2">
-                      {user.roles.map(r => (
-                        <Badge key={r.role.id} variant="outline" className="font-normal text-xs">
-                          {ROLE_LABELS[r.role.name] || r.role.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-2 max-w-[200px]">
-                      {user.facilities.length > 0 ? (
-                        user.facilities.map(f => (
-                          <Badge key={f.facilityId} variant="secondary" className="font-normal text-xs">
-                            {f.facility.name}
-                          </Badge>
-                        ))
-                      ) : (
-                        <span className="text-muted-foreground text-xs">Tesis yok</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <Badge
-                      variant={user.isActive ? "outline" : "secondary"}
-                      className={user.isActive ? "border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400 font-normal" : "font-normal"}
-                    >
-                      {user.isActive ? "Aktif" : "Pasif"}
-                    </Badge>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => openEditModal(user)}>
-                        Düzenle
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleUserStatusMutation.mutate({ username: user.username, isActive: !user.isActive })}
-                      >
-                        {user.isActive ? 'Pasif Et' : 'Aktif Et'}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Kullanıcı Yönetimi</h1>
+            <p className="text-slate-500 text-sm mt-1">Sistem erişimi olan tüm personelleri yönetin ve yetkilendirin.</p>
+          </div>
+          <Button onClick={() => setIsModalOpen(true)} className="bg-primary hover:bg-primary/90 h-11 rounded-xl px-6 font-medium shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+            <UserPlus className="w-5 h-5 mr-2" /> Kullanıcı Ekle
+          </Button>
         </div>
 
-        {filteredUsers?.length === 0 && (
-          <div className="p-12 text-center text-muted-foreground">
-            Kullanıcı bulunamadı.
+        <div className="flex flex-col lg:flex-row gap-4 bg-white dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="İsim veya kullanıcı adına göre ara..." 
+              className="pl-10 bg-slate-50 dark:bg-slate-800/50 border-none h-11 rounded-xl"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-3">
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="w-[180px] bg-slate-50 dark:bg-slate-800/50 border-none h-11 rounded-xl">
+                <SelectValue placeholder="Rol Filtrele" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm Roller</SelectItem>
+                {roles.map(r => <SelectItem key={r.id} value={r.name}>{ROLE_LABELS[r.name] || r.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+
+            <Select value={facilityFilter} onValueChange={setFacilityFilter}>
+              <SelectTrigger className="w-[180px] bg-slate-50 dark:bg-slate-800/50 border-none h-11 rounded-xl">
+                <SelectValue placeholder="Tesis Filtrele" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm Tesisler</SelectItem>
+                {facilities.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+
+            <Separator orientation="vertical" className="h-8 mx-1 hidden md:block" />
+
+            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+              <Button 
+                variant={viewMode === 'list' ? 'secondary' : 'ghost'} 
+                size="sm" 
+                onClick={() => setViewMode('list')}
+                className={cn("h-9 w-10 p-0 rounded-lg transition-all", viewMode === 'list' ? "bg-white dark:bg-slate-700 shadow-sm text-primary" : "text-slate-500")}
+              >
+                <List className="w-4 h-4" />
+              </Button>
+              <Button 
+                variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
+                size="sm" 
+                onClick={() => setViewMode('grid')}
+                className={cn("h-9 w-10 p-0 rounded-lg transition-all", viewMode === 'grid' ? "bg-white dark:bg-slate-700 shadow-sm text-primary" : "text-slate-500")}
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="min-h-[400px]">
+        {filteredUsers && filteredUsers.length > 0 ? (
+          viewMode === 'list' ? (
+            <Accordion type="multiple" defaultValue={sortedRoles} className="space-y-4">
+              {sortedRoles.map(roleName => (
+                <AccordionItem key={roleName} value={roleName} className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm border-b-0">
+                  <AccordionTrigger className="hover:no-underline px-6 py-4 bg-slate-50/40 dark:bg-slate-800/40 group">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center text-primary shadow-sm border border-slate-200/60 dark:border-slate-700 group-hover:scale-105 transition-transform">
+                        <ShieldCheck className="w-5 h-5" />
+                      </div>
+                      <div className="flex flex-col items-start gap-0.5">
+                        <span className="font-bold text-slate-900 dark:text-slate-100 text-base">{ROLE_LABELS[roleName] || roleName}</span>
+                        <span className="text-[10px] text-slate-500 font-medium uppercase tracking-tight">{groupedUsers![roleName].length} Kullanıcı</span>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="p-0 pb-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse min-w-[800px]">
+                        <thead>
+                          <tr className="bg-slate-50/20 dark:bg-slate-900/20 border-t border-b border-slate-100 dark:border-slate-800">
+                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kullanıcı Bilgisi</th>
+                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Departman / Ünvan</th>
+                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tesisler</th>
+                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Durum</th>
+                            <th className="px-6 py-3 text-right px-8 text-[10px] font-bold text-slate-400 uppercase tracking-wider">İşlemler</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {groupedUsers![roleName].map((user) => (
+                            <tr key={user.username} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-colors group">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400 border border-slate-100 dark:border-slate-700 group-hover:text-primary transition-colors">
+                                    <UserIcon className="w-4 h-4" />
+                                  </div>
+                                  <div>
+                                    <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{user.fullName}</div>
+                                    <div className="text-[10px] font-mono text-slate-400 uppercase tracking-tight">{user.username}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="text-xs">
+                                  <div className="font-medium text-slate-700 dark:text-slate-300">{user.department || '-'}</div>
+                                  <div className="text-slate-500">{user.title || '-'}</div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                  {user.facilities.length > 0 ? (
+                                    user.facilities.map(f => (
+                                      <Badge key={f.facilityId} variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium text-[9px] py-0 px-1.5 border-none">
+                                        {f.facility.name}
+                                      </Badge>
+                                    ))
+                                  ) : (
+                                    <span className="text-slate-400 text-[10px]">Erişim Yok</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-2">
+                                  <div className={cn("w-1.5 h-1.5 rounded-full", user.isActive ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-slate-300")} />
+                                  <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400">{user.isActive ? "Aktif" : "Pasif"}</span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    onClick={() => toggleUserStatusMutation.mutate({ username: user.username, isActive: !user.isActive })}
+                                    className={cn(
+                                      "w-8 h-8 rounded-lg transition-colors",
+                                      user.isActive ? "text-slate-400 hover:text-amber-600 hover:bg-amber-50" : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+                                    )}
+                                    title={user.isActive ? "Pasife Al (Arşivle)" : "Aktife Al"}
+                                  >
+                                    {user.isActive ? <Archive className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                                  </Button>
+                                  <Button variant="ghost" size="icon" onClick={() => openEditModal(user)} className="w-8 h-8 rounded-lg hover:bg-primary/5 text-slate-400 hover:text-primary transition-colors">
+                                    <Edit2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredUsers.map((user) => (
+                <Card key={user.username} className="hover:shadow-xl transition-all border border-slate-200/60 shadow-sm group overflow-hidden rounded-2xl bg-white dark:bg-slate-900 flex flex-col hover:-translate-y-1 duration-300">
+                   <CardHeader className="p-5 pb-0">
+                     <div className="flex justify-between items-start">
+                       <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-primary/70 border border-slate-100 dark:border-slate-800 group-hover:scale-110 transition-transform">
+                         <UserIcon className="w-6 h-6" />
+                       </div>
+                       <div className="flex items-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => toggleUserStatusMutation.mutate({ username: user.username, isActive: !user.isActive })}
+                          className={cn(
+                            "w-8 h-8 rounded-lg transition-colors",
+                            user.isActive ? "text-slate-400 hover:text-amber-600 hover:bg-amber-50" : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+                          )}
+                          title={user.isActive ? "Pasife Al (Arşivle)" : "Aktife Al"}
+                        >
+                          {user.isActive ? <Archive className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                        </Button>
+                        <Badge variant={user.isActive ? "outline" : "secondary"} className={cn(
+                          "font-medium text-[10px] px-2 py-0",
+                          user.isActive ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+                        )}>
+                          {user.isActive ? "Aktif" : "Pasif"}
+                        </Badge>
+                       </div>
+                     </div>
+                   </CardHeader>
+                   <CardContent className="p-5 flex-1 flex flex-col">
+                      <div className="mb-4">
+                         <h3 className="font-bold text-slate-800 dark:text-slate-100 line-clamp-1">{user.fullName}</h3>
+                         <p className="text-[10px] font-mono text-slate-400 uppercase tracking-wider mt-0.5">{user.username}</p>
+                      </div>
+                      
+                      <div className="space-y-3 mb-6 flex-1">
+                         <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-400 font-medium">
+                           <div className="w-7 h-7 bg-primary/5 rounded-lg flex items-center justify-center text-primary/60">
+                             <ShieldCheck className="w-3.5 h-3.5" />
+                           </div>
+                           <span className="line-clamp-1">{user.roles.map(r => ROLE_LABELS[r.role.name] || r.role.name).join(', ')}</span>
+                         </div>
+                         <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-400">
+                           <div className="w-7 h-7 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center text-slate-400">
+                             <Building className="w-3.5 h-3.5" />
+                           </div>
+                           <span className="line-clamp-1">{user.department || '-'}</span>
+                         </div>
+                         <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-400">
+                           <div className="w-7 h-7 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center text-slate-400">
+                             <Building2 className="w-3.5 h-3.5" />
+                           </div>
+                           <span className="line-clamp-1">{user.facilities.length} Tesis Erişimi</span>
+                         </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-4 border-t border-slate-100 dark:border-slate-800 mt-auto">
+                         <Button onClick={() => openEditModal(user)} className="flex-1 bg-slate-50 hover:bg-primary hover:text-white text-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-primary h-10 rounded-xl transition-all font-medium text-xs">
+                           Düzenle
+                         </Button>
+                      </div>
+                   </CardContent>
+                </Card>
+              ))}
+            </div>
+          )
+        ) : (
+          <div className="text-center py-24 bg-background/50 rounded-3xl border-2 border-dashed border-muted">
+            <div className="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Archive className="w-10 h-10 text-muted-foreground" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Kullanıcı Bulunamadı</h3>
+            <p className="text-muted-foreground max-w-xs mx-auto">Bu bölümde gösterilecek kullanıcı bulunmuyor.</p>
           </div>
         )}
       </div>

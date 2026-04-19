@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -7,13 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Building2, MapPin, ChevronRight, Loader2, Save, Trash2, Building, Info, Phone, Mail, Globe, Briefcase, Shield, Ruler, Users, ClipboardList, Edit2, Eye, FileText, Activity, ChevronLeft } from 'lucide-react';
+import { Plus, Search, Building2, MapPin, ChevronRight, Loader2, Save, Trash2, Building, Info, Phone, Mail, Globe, Briefcase, Shield, Ruler, Users, ClipboardList, Edit2, Eye, FileText, Activity, ChevronLeft, LayoutGrid, List, Archive, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { IL_ILCE_DATA } from '@/data/turkiye';
 import type { City } from '@/data/turkiye';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 interface BuildingBlock {
   name: string;
@@ -68,6 +70,7 @@ const DANGER_CLASSES = [
 
 const FacilitiesPage = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   
@@ -108,6 +111,10 @@ const FacilitiesPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [view, setView] = useState<'list' | 'detail'>('list');
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [dangerClassFilter, setDangerClassFilter] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
 
   const { data: facilities, isLoading } = useQuery<Facility[]>({
     queryKey: ['facilities'],
@@ -117,6 +124,19 @@ const FacilitiesPage = () => {
       return res.json();
     }
   });
+
+  const { data: complianceData } = useQuery<any[]>({
+    queryKey: ['assignments-status'],
+    queryFn: async () => {
+      const res = await api.get('/panel/assignments/compliance-status');
+      if (!res.ok) return [];
+      return res.json();
+    }
+  });
+
+  const getComplianceForFacility = (id: string) => {
+    return complianceData?.find(c => c.facilityId === id);
+  };
 
   // Otomatik kod üretimi
   useEffect(() => {
@@ -256,10 +276,37 @@ const FacilitiesPage = () => {
     }
   };
 
-  const filteredFacilities = facilities?.filter(f => 
-    f.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    f.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredFacilities = facilities?.filter(f => {
+    const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         f.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = typeFilter === 'all' || f.type === typeFilter;
+    const matchesDanger = dangerClassFilter === 'all' || f.dangerClass === dangerClassFilter;
+    const matchesStatus = activeTab === 'active' ? f.isActive : !f.isActive;
+    return matchesSearch && matchesType && matchesDanger && matchesStatus;
+  }).sort((a, b) => {
+    // Hastane önceliği (ilk onlar listelenir)
+    const aIsHospital = a.type === 'Hastane';
+    const bIsHospital = b.type === 'Hastane';
+    
+    if (aIsHospital && !bIsHospital) return -1;
+    if (!aIsHospital && bIsHospital) return 1;
+    
+    // Alfabetik sıralama
+    return a.name.localeCompare(b.name, 'tr');
+  });
+
+  // Tesis tipine göre gruplama
+  const groupedFacilities = filteredFacilities?.reduce((acc, facility) => {
+    if (!acc[facility.type]) acc[facility.type] = [];
+    acc[facility.type].push(facility);
+    return acc;
+  }, {} as Record<string, Facility[]>);
+
+  const sortedTypes = Object.keys(groupedFacilities || {}).sort((a, b) => {
+    if (a === 'Hastane') return -1;
+    if (b === 'Hastane') return 1;
+    return a.localeCompare(b, 'tr');
+  });
 
   if (isLoading) {
     return (
@@ -278,126 +325,293 @@ const FacilitiesPage = () => {
           handleEdit(selectedFacility);
           setView('list'); // Switch back to list so that when dialog closes, we are on list
         }} 
+        complianceData={complianceData}
       />
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Tesis adı veya koduna göre ara..." 
-            className="pl-10 bg-background border-none shadow-sm"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      {/* Tabs for Active/Archive */}
+      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 -mx-6 px-6">
+        <div className="flex gap-8">
+          <button 
+            onClick={() => setActiveTab('active')}
+            className={cn(
+              "px-1 py-4 text-sm font-bold transition-all relative",
+              activeTab === 'active' ? "text-primary" : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            Aktif Tesisler
+            {activeTab === 'active' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />}
+          </button>
+          <button 
+            onClick={() => setActiveTab('archive')}
+            className={cn(
+              "px-1 py-4 text-sm font-bold transition-all relative",
+              activeTab === 'archive' ? "text-primary" : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            Arşiv
+            {activeTab === 'archive' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />}
+          </button>
         </div>
-        <Button onClick={() => { resetForm(); setIsModalOpen(true); }} className="bg-primary hover:bg-primary/90 h-12 rounded-xl px-6 font-medium shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
-          <Plus className="w-5 h-5 mr-2" /> Yeni Tesis Ekle
-        </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        {filteredFacilities?.map((facility) => (
-          <Card key={facility.id} className="hover:shadow-lg transition-all border-none shadow-sm group">
-            <CardContent className="p-0">
-              <div className="flex items-stretch">
-                <div className="w-2 bg-primary/20 group-hover:bg-primary transition-colors" />
-                <div className="flex-1 p-5 flex items-center justify-between">
-                  <div className="flex items-center gap-5">
-                    <div className="w-14 h-14 bg-secondary/50 rounded-2xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                      <Building2 className="w-7 h-7" />
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Tesis Yönetimi</h1>
+            <p className="text-slate-500 text-sm mt-1">Organizasyon yapınızdaki tüm tesisleri yönetin ve izleyin.</p>
+          </div>
+          <Button onClick={() => { resetForm(); setIsModalOpen(true); }} className="bg-primary hover:bg-primary/90 h-11 rounded-xl px-6 font-medium shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+            <Plus className="w-5 h-5 mr-2" /> Yeni Tesis Ekle
+          </Button>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-4 bg-white dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Tesis adı veya koduna göre ara..." 
+              className="pl-10 bg-slate-50 dark:bg-slate-800/50 border-none h-11 rounded-xl"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-3">
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-[180px] bg-slate-50 dark:bg-slate-800/50 border-none h-11 rounded-xl">
+                <SelectValue placeholder="Tesis Tipi" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm Tipler</SelectItem>
+                {FACILITY_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+
+            <Select value={dangerClassFilter} onValueChange={setDangerClassFilter}>
+              <SelectTrigger className="w-[180px] bg-slate-50 dark:bg-slate-800/50 border-none h-11 rounded-xl">
+                <SelectValue placeholder="Tehlike Sınıfı" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm Sınıflar</SelectItem>
+                {DANGER_CLASSES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+
+            <Separator orientation="vertical" className="h-8 mx-1 hidden md:block" />
+
+            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+              <Button 
+                variant={viewMode === 'list' ? 'secondary' : 'ghost'} 
+                size="sm" 
+                onClick={() => setViewMode('list')}
+                className={cn("h-9 w-10 p-0 rounded-lg transition-all", viewMode === 'list' ? "bg-white dark:bg-slate-700 shadow-sm text-primary" : "text-slate-500")}
+              >
+                <List className="w-4 h-4" />
+              </Button>
+              <Button 
+                variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
+                size="sm" 
+                onClick={() => setViewMode('grid')}
+                className={cn("h-9 w-10 p-0 rounded-lg transition-all", viewMode === 'grid' ? "bg-white dark:bg-slate-700 shadow-sm text-primary" : "text-slate-500")}
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="min-h-[400px]">
+        {filteredFacilities && filteredFacilities.length > 0 ? (
+          viewMode === 'list' ? (
+            <Accordion type="multiple" defaultValue={sortedTypes} className="space-y-4">
+              {sortedTypes.map(type => (
+                <AccordionItem key={type} value={type} className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm border-b-0">
+                  <AccordionTrigger className="hover:no-underline px-6 py-4 bg-slate-50/40 dark:bg-slate-800/40 group">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center text-primary shadow-sm border border-slate-200/60 dark:border-slate-700 group-hover:scale-105 transition-transform">
+                        {type === 'Hastane' ? <Building2 className="w-5 h-5" /> : <Building className="w-5 h-5" />}
+                      </div>
+                      <div className="flex flex-col items-start gap-0.5">
+                        <span className="font-bold text-slate-900 dark:text-slate-100 text-base">{type}</span>
+                        <span className="text-[10px] text-slate-500 font-medium uppercase tracking-tight">{groupedFacilities![type].length} Tesis</span>
+                      </div>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-3">
-                        <h3 className="font-medium text-slate-800 dark:text-slate-100">{facility.name}</h3>
-                        <Badge variant="secondary" className="font-mono text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 uppercase tracking-widest px-2 py-0 border-none">
-                          {facility.id}
-                        </Badge>
+                  </AccordionTrigger>
+                  <AccordionContent className="p-0 pb-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse min-w-[800px]">
+                        <thead>
+                          <tr className="bg-slate-50/20 dark:bg-slate-900/20 border-t border-b border-slate-100 dark:border-slate-800">
+                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tesis Bilgisi</th>
+                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lokasyon</th>
+                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tehlike Sınıfı</th>
+                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Atama Durumu</th>
+                             <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Durum</th>
+                            <th className="px-6 py-3 text-right px-8 text-[10px] font-bold text-slate-400 uppercase tracking-wider">İşlemler</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {groupedFacilities![type].map((facility) => (
+                            <tr key={facility.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-colors group">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center justify-center text-slate-400 border border-slate-100 dark:border-slate-700 group-hover:text-primary transition-colors">
+                                    <Building2 className="w-4 h-4" />
+                                  </div>
+                                  <div>
+                                    <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm line-clamp-1">{facility.name}</div>
+                                    <div className="text-[10px] font-mono text-slate-400 uppercase tracking-tight">{facility.id}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1.5 whitespace-nowrap">
+                                  <MapPin className="w-3 h-3 opacity-60" /> {facility.city} / {facility.district}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                 <Badge variant="outline" className={cn(
+                                   "text-[10px] py-0 font-medium",
+                                   facility.dangerClass === 'Çok Tehlikeli' ? "border-rose-200 text-rose-600 bg-rose-50" : 
+                                   facility.dangerClass === 'Tehlikeli' ? "border-amber-200 text-amber-600 bg-amber-50" : 
+                                   "border-emerald-200 text-emerald-600 bg-emerald-50"
+                                 )}>
+                                   {facility.dangerClass}
+                                 </Badge>
+                              </td>
+                              <td className="px-6 py-4">
+                                 {(() => {
+                                   const comp = getComplianceForFacility(facility.id);
+                                   if (!comp) return <span className="text-[10px] text-slate-300 italic">Yükleniyor...</span>;
+                                   
+                                   if (comp.overallCompliant) return <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[9px] py-0 font-bold shadow-sm shadow-emerald-500/5">TAM UYGUN</Badge>;
+                                   if (comp.category === 'none') return <Badge className="bg-slate-50 text-slate-400 border-slate-100 text-[9px] py-0 font-bold">ATAMA YOK</Badge>;
+                                   return <Badge className="bg-rose-50 text-rose-600 border-rose-100 text-[9px] py-0 font-bold shadow-sm shadow-rose-500/5">EKSİK ATAMA</Badge>;
+                                 })()}
+                               </td>
+                               <td className="px-6 py-4">
+                                 <div className="flex items-center gap-2">
+                                   <div className={cn("w-1.5 h-1.5 rounded-full", facility.isActive ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-slate-300")} />
+                                   <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400">{facility.isActive ? "Aktif" : "Pasif"}</span>
+                                 </div>
+                               </td>
+                              <td className="px-6 py-4 text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    onClick={(e) => { e.stopPropagation(); deactivateMutation.mutate({ id: facility.id, isActive: facility.isActive }); }}
+                                    className={cn(
+                                      "w-8 h-8 rounded-lg transition-colors",
+                                      facility.isActive ? "text-slate-400 hover:text-amber-600 hover:bg-amber-50" : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+                                    )}
+                                    title={facility.isActive ? "Pasife Al (Arşivle)" : "Aktife Al"}
+                                  >
+                                    {facility.isActive ? <Archive className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                                  </Button>
+                                  <Button variant="ghost" size="icon" onClick={() => handleView(facility)} className="w-8 h-8 rounded-lg hover:bg-primary/5 text-slate-400 hover:text-primary transition-colors">
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" onClick={() => handleEdit(facility)} className="w-8 h-8 rounded-lg hover:bg-primary/5 text-slate-400 hover:text-primary transition-colors">
+                                    <Edit2 className="w-4 h-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" onClick={() => handleView(facility)} className="w-8 h-8 rounded-lg hover:bg-primary/5 text-slate-400 hover:text-primary transition-colors">
+                                    <ChevronRight className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredFacilities.map((facility) => (
+                <Card key={facility.id} className="hover:shadow-xl transition-all border border-slate-200/60 shadow-sm group overflow-hidden rounded-2xl bg-white dark:bg-slate-900 flex flex-col hover:-translate-y-1 duration-300">
+                   <CardHeader className="p-5 pb-0">
+                     <div className="flex justify-between items-start">
+                       <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-primary/70 border border-slate-100 dark:border-slate-800 group-hover:scale-110 transition-transform">
+                         <Building2 className="w-6 h-6" />
+                       </div>
+                       <div className="flex items-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={(e) => { e.stopPropagation(); deactivateMutation.mutate({ id: facility.id, isActive: facility.isActive }); }}
+                          className={cn(
+                            "w-8 h-8 rounded-lg transition-colors",
+                            facility.isActive ? "text-slate-400 hover:text-amber-600 hover:bg-amber-50" : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+                          )}
+                          title={facility.isActive ? "Pasife Al (Arşivle)" : "Aktife Al"}
+                        >
+                          {facility.isActive ? <Archive className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                        </Button>
                         <Badge variant={facility.isActive ? "outline" : "secondary"} className={cn(
-                          "font-medium",
-                          facility.isActive ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400" : "bg-slate-100 text-slate-600"
+                          "font-medium text-[10px] px-2 py-0",
+                          facility.isActive ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
                         )}>
                           {facility.isActive ? "Aktif" : "Pasif"}
                         </Badge>
+                       </div>
+                     </div>
+                   </CardHeader>
+                   <CardContent className="p-5 flex-1 flex flex-col">
+                      <div className="mb-4">
+                         <h3 className="font-bold text-slate-800 dark:text-slate-100 line-clamp-1">{facility.name}</h3>
+                         <p className="text-[10px] font-mono text-slate-400 uppercase tracking-wider mt-0.5">{facility.id}</p>
                       </div>
-                      <div className="flex flex-wrap items-center gap-y-2 gap-x-6 mt-3 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1.5 font-medium">
-                          <MapPin className="w-4 h-4 text-primary/70" /> {facility.city} / {facility.district}
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <Building className="w-4 h-4 text-primary/70" /> {facility.buildings?.length || 0} Blok
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <Shield className="w-4 h-4 text-primary/70" /> {facility.dangerClass}
-                        </span>
-                        
-                        {/* Atamalar Özeti */}
-                        {facility.assignments?.length > 0 && (
-                          <div className="flex items-center gap-3 border-l pl-6 ml-2">
-                            {facility.assignments.map((a, idx) => (
-                              <Badge key={idx} variant="secondary" className="bg-primary/5 text-[10px] font-semibold py-0.5 px-2">
-                                {a.type}: {a.professional?.fullName || a.employerRep?.fullName || '—'}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
+                      
+                      <div className="space-y-3 mb-6 flex-1">
+                         <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-400 font-medium">
+                           <div className="w-7 h-7 bg-primary/5 rounded-lg flex items-center justify-center text-primary/60">
+                             <Building className="w-3.5 h-3.5" />
+                           </div>
+                           {facility.type}
+                         </div>
+                         <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-400">
+                           <div className="w-7 h-7 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center text-slate-400">
+                             <MapPin className="w-3.5 h-3.5" />
+                           </div>
+                           <span className="line-clamp-1">{facility.city} / {facility.district}</span>
+                         </div>
+                         <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-400">
+                           <div className="w-7 h-7 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center text-slate-400">
+                             <Shield className="w-3.5 h-3.5" />
+                           </div>
+                           {facility.dangerClass}
+                         </div>
                       </div>
-                    </div>
-                  </div>
-                    <div className="flex items-center gap-2 pr-5">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={(e) => { e.stopPropagation(); handleView(facility); }}
-                        className="text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl w-10 h-10"
-                      >
-                        <Eye className="w-5 h-5" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={(e) => { e.stopPropagation(); handleEdit(facility); }}
-                        className="text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl w-10 h-10"
-                      >
-                        <Edit2 className="w-5 h-5" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={(e) => { e.stopPropagation(); deactivateMutation.mutate({ id: facility.id, isActive: facility.isActive }); }}
-                        disabled={deactivateMutation.isPending}
-                        className={cn(
-                          "rounded-xl w-10 h-10",
-                          facility.isActive ? "text-muted-foreground hover:text-destructive hover:bg-destructive/10" : "text-emerald-600 hover:bg-emerald-50"
-                        )}
-                      >
-                        {deactivateMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => handleView(facility)}
-                        className="rounded-full hover:bg-primary/10 hover:text-primary transition-colors"
-                      >
-                        <ChevronRight className="w-6 h-6" />
-                      </Button>
-                    </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
 
-        {filteredFacilities?.length === 0 && (
+                      <div className="flex items-center gap-2 pt-4 border-t border-slate-100 dark:border-slate-800 mt-auto">
+                         <Button onClick={() => handleView(facility)} className="flex-1 bg-slate-50 hover:bg-primary hover:text-white text-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-primary h-10 rounded-xl transition-all font-medium text-xs">
+                           Detayı Gör
+                         </Button>
+                         <Button variant="ghost" size="icon" onClick={() => handleEdit(facility)} className="w-10 h-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400">
+                           <Edit2 className="w-4 h-4" />
+                         </Button>
+                      </div>
+                   </CardContent>
+                </Card>
+              ))}
+            </div>
+          )
+        ) : (
           <div className="text-center py-24 bg-background/50 rounded-3xl border-2 border-dashed border-muted">
             <div className="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Building2 className="w-10 h-10 text-muted-foreground" />
+              <Archive className="w-10 h-10 text-muted-foreground" />
             </div>
             <h3 className="text-xl font-semibold mb-2">Tesis Bulunamadı</h3>
-            <p className="text-muted-foreground max-w-xs mx-auto">Aramanızla eşleşen bir tesis bulunamadı veya henüz hiç tesis eklenmemiş.</p>
+            <p className="text-muted-foreground max-w-xs mx-auto">Bu bölümde gösterilecek tesis bulunmuyor.</p>
           </div>
         )}
       </div>
@@ -787,189 +1001,256 @@ const FacilitiesPage = () => {
   );
 };
 
-// --- LifeCardView Component ---
-const LifeCardView = ({ facility, onBack, onEdit }: { facility: Facility, onBack: () => void, onEdit: () => void }) => {
+const LifeCardView = ({ facility, onBack, onEdit, complianceData }: { 
+  facility: Facility, 
+  onBack: () => void, 
+  onEdit: () => void,
+  complianceData?: any[]
+}) => {
+  const navigate = useNavigate();
+  const comp = complianceData?.find(c => (c.facilityId as string) === (facility.id as string));
+
+  const RoleMiniBadge = ({ type, compliance }: { type: string, compliance: any }) => {
+    if (!compliance) return null;
+    const isCompliant = compliance.isCompliant;
+    const isRequired = type === 'DSP' ? compliance.required : true;
+
+    if (!isRequired) return null;
+
+    return (
+      <div className={cn(
+        "flex items-center gap-2 px-3 py-2 rounded-xl border",
+        isCompliant ? "bg-emerald-50/50 border-emerald-100 text-emerald-700" : "bg-rose-50/50 border-rose-100 text-rose-700"
+      )}>
+        {isCompliant ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+        <span className="text-[10px] font-bold uppercase tracking-wider">{type}</span>
+      </div>
+    );
+  };
+
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6 pb-20">
+    <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-6 pb-20">
        {/* Top Header */}
        <div className="flex items-center justify-between">
          <Button variant="ghost" onClick={onBack} className="gap-2 text-slate-500 hover:text-primary transition-colors group px-0">
-           <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-center group-hover:bg-primary/5 transition-colors">
-             <ChevronLeft className="w-5 h-5" />
+           <div className="w-9 h-9 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center group-hover:bg-primary/5 transition-colors">
+             <ChevronLeft className="w-4 h-4" />
            </div>
-           <span className="font-medium text-sm tracking-tight">Tesis Listesine Dön</span>
+           <span className="font-medium text-xs tracking-tight">Tesis Listesi</span>
          </Button>
-         <Button onClick={onEdit} className="bg-emerald-600 hover:bg-emerald-700 gap-3 px-8 h-12 rounded-2xl shadow-lg shadow-emerald-500/20 font-medium transition-all hover:scale-105 active:scale-95">
-           <Edit2 className="w-4 h-4" /> Düzenle
+         <Button onClick={onEdit} className="bg-primary hover:bg-primary/90 gap-2 px-6 h-10 rounded-xl shadow-md shadow-primary/10 font-medium transition-all">
+           <Edit2 className="w-3.5 h-3.5" /> Bilgileri Güncelle
          </Button>
        </div>
        
-       {/* Main Card */}
-       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-          <div className="p-12 border-b border-slate-50 dark:border-slate-800/50">
-             <div className="flex items-start justify-between">
-               <div className="flex items-center gap-10">
-                 <div className="w-28 h-28 bg-primary/5 rounded-[40px] flex items-center justify-center border border-primary/10 shadow-inner">
-                   <Building2 className="w-14 h-14 text-primary" />
-                 </div>
-                 <div>
-                   <div className="flex items-center gap-4 mb-3">
-                     <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-medium px-4 py-1 rounded-lg uppercase text-[10px] tracking-widest">{facility.type}</Badge>
-                     <span className="text-xs font-mono font-semibold text-primary bg-primary/5 px-3 py-1 rounded-md">{facility.id}</span>
+       {/* Main Content Card */}
+       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          {/* Header Section */}
+          <div className="p-8 border-b border-slate-100 dark:border-slate-800/50">
+             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex items-center gap-6">
+                  <div className="w-20 h-20 bg-primary/5 rounded-2xl flex items-center justify-center border border-primary/10 text-primary">
+                    <Building2 className="w-10 h-10" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <Badge variant="outline" className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-medium text-[10px] tracking-wider py-0.5">{facility.type}</Badge>
+                      <span className="text-[10px] font-mono font-semibold text-primary bg-primary/5 px-2 py-0.5 rounded border border-primary/10">{facility.id}</span>
+                    </div>
+                    <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">{facility.name}</h1>
+                    <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm font-medium">{facility.commercialTitle}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                   <div className="text-right hidden md:block">
+                     <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-1">Kayıt Durumu</p>
+                     <Badge variant={facility.isActive ? "outline" : "secondary"} className={cn(
+                       "text-[10px] px-3 py-1 rounded-full font-semibold uppercase tracking-wider",
+                       facility.isActive ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500 border-none"
+                     )}>
+                       {facility.isActive ? "Sistemde Aktif" : "Pasif Kayıt"}
+                     </Badge>
                    </div>
-                   <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white leading-tight">{facility.name}</h1>
-                   <p className="text-slate-500 dark:text-slate-400 mt-2 text-base font-medium max-w-2xl">{facility.commercialTitle}</p>
-                 </div>
-               </div>
-               <div className="text-right">
-                  <Badge variant={facility.isActive ? "outline" : "secondary"} className={cn(
-                    "text-[11px] px-6 py-2 rounded-full font-medium uppercase tracking-widest shadow-sm",
-                    facility.isActive ? "border-emerald-100 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/50" : "bg-slate-100 text-slate-500 border-none"
-                  )}>
-                    {facility.isActive ? "Aktif Tesis" : "Pasif Kayıt"}
-                  </Badge>
-               </div>
+                </div>
              </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-0 divide-x divide-slate-50 dark:divide-slate-800/50">
-             <div className="p-10 text-center hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
-                <Users className="w-6 h-6 mx-auto mb-4 text-primary opacity-60" />
-                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-2">Çalışan Sayısı</p>
-                <p className="text-xl font-semibold tracking-tight text-slate-800 dark:text-slate-100">{facility.employeeCount || '0'}</p>
+          {/* Stats Bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 border-b border-slate-100 dark:border-slate-800/50">
+             <div className="p-6 text-center border-r border-slate-100 dark:border-slate-800/50">
+                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-1.5 flex items-center justify-center gap-1.5">
+                   <Users className="w-3.5 h-3.5" /> Çalışan Sayısı
+                </p>
+                <p className="text-lg font-bold text-slate-800 dark:text-slate-100">{facility.employeeCount || '0'}</p>
              </div>
-             <div className="p-10 text-center hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
-                <Shield className="w-6 h-6 mx-auto mb-4 text-orange-400 opacity-60" />
-                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-2">Tehlike Sınıfı</p>
-                <p className="text-xl font-semibold tracking-tight text-slate-800 dark:text-slate-100">{facility.dangerClass}</p>
+             <div className="p-6 text-center border-r border-slate-100 dark:border-slate-800/50">
+                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-1.5 flex items-center justify-center gap-1.5">
+                   <Shield className="w-3.5 h-3.5" /> Tehlike Sınıfı
+                </p>
+                <p className="text-lg font-bold text-slate-800 dark:text-slate-100">{facility.dangerClass}</p>
              </div>
-             <div className="p-10 text-center hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
-                <Ruler className="w-6 h-6 mx-auto mb-4 text-emerald-400 opacity-60" />
-                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-2">Kapalı Alan</p>
-                <p className="text-xl font-semibold tracking-tight text-slate-800 dark:text-slate-100">{facility.buildings.reduce((acc, b) => acc + (parseFloat(b.closedArea) || 0), 0).toLocaleString()} <span className="text-base font-medium text-slate-400">m²</span></p>
+             <div className="p-6 text-center border-r border-slate-100 dark:border-slate-800/50">
+                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-1.5 flex items-center justify-center gap-1.5">
+                   <Ruler className="w-3.5 h-3.5" /> Kapalı Alan
+                </p>
+                <p className="text-lg font-bold text-slate-800 dark:text-slate-100">
+                  {facility.buildings.reduce((acc, b) => acc + (parseFloat(b.closedArea) || 0), 0).toLocaleString()} <span className="text-xs font-medium text-slate-400">m²</span>
+                </p>
              </div>
-             <div className="p-10 text-center hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
-                <Activity className="w-6 h-6 mx-auto mb-4 text-blue-400 opacity-60" />
-                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-2">Zorunlu İSG Süresi</p>
-                <p className="text-xl font-semibold tracking-tight text-slate-800 dark:text-slate-100">
+             <div className="p-6 text-center">
+                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-1.5 flex items-center justify-center gap-1.5">
+                   <Activity className="w-3.5 h-3.5" /> İSG Süresi
+                </p>
+                <p className="text-lg font-bold text-slate-800 dark:text-slate-100">
                   {Math.ceil((parseInt(facility.employeeCount || '0') * (facility.dangerClass === 'Çok Tehlikeli' ? 40 : facility.dangerClass === 'Tehlikeli' ? 20 : 10)) / 60)} 
-                  <span className="text-base font-medium text-slate-400 ml-1">sa/ay</span>
+                  <span className="text-xs font-medium text-slate-400 ml-1">sa/ay</span>
                 </p>
              </div>
           </div>
-       </div>
 
-       <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          <div className="md:col-span-2 space-y-10">
-             <div className="bg-white dark:bg-slate-900 rounded-[40px] p-12 border border-slate-100 dark:border-slate-800 shadow-sm">
-                <h3 className="font-semibold text-lg mb-10 flex items-center gap-4 text-slate-900 dark:text-white">
-                  <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center"><MapPin className="w-5 h-5 text-primary" /></div>
-                  İletişim & Lokasyon
+          <div className="grid grid-cols-1 md:grid-cols-3">
+            {/* Left Column: Details */}
+            <div className="md:col-span-2 p-8 space-y-8 border-r border-slate-100 dark:border-slate-800/50">
+              {/* Location & Contact */}
+              <div>
+                <h3 className="text-sm font-semibold mb-6 flex items-center gap-2 text-slate-900 dark:text-white uppercase tracking-tight">
+                  <MapPin className="w-4 h-4 text-primary" /> İletişim ve Lokasyon
                 </h3>
-                <div className="grid grid-cols-2 gap-12">
-                   <div className="space-y-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-1">Şehir / İlçe</p>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{facility.city} / {facility.district}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-1">Adres Detayı</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">{facility.fullAddress}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center justify-center border border-slate-100 dark:border-slate-700"><Phone className="w-4 h-4 text-slate-400" /></div>
                       <div>
-                         <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest mb-3">Bölge Bilgisi</p>
-                         <p className="text-lg font-medium text-slate-800 dark:text-slate-100">{facility.city} / {facility.district}</p>
+                        <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Telefon</p>
+                        <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">{facility.phone || '—'}</p>
                       </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center justify-center border border-slate-100 dark:border-slate-700"><Mail className="w-4 h-4 text-slate-400" /></div>
                       <div>
-                         <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest mb-3">Tam Adres</p>
-                         <p className="text-base text-slate-500 dark:text-slate-400 leading-relaxed font-medium">{facility.fullAddress}</p>
+                        <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">E-Posta</p>
+                        <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">{facility.email || '—'}</p>
                       </div>
-                   </div>
-                   <div className="space-y-8">
-                      <div className="flex items-center gap-5">
-                         <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center shadow-sm"><Phone className="w-5 h-5 text-slate-400" /></div>
-                         <div>
-                            <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest mb-1">Sabit Telefon</p>
-                            <p className="font-semibold text-base text-slate-800 dark:text-slate-100">{facility.phone}</p>
-                         </div>
-                      </div>
-                      <div className="flex items-center gap-5">
-                         <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center shadow-sm"><Mail className="w-5 h-5 text-slate-400" /></div>
-                         <div>
-                            <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest mb-1">Resmi E-Posta</p>
-                            <p className="font-semibold text-base text-slate-800 dark:text-slate-100">{facility.email}</p>
-                         </div>
-                      </div>
-                   </div>
+                    </div>
+                  </div>
                 </div>
-             </div>
+              </div>
 
-             <div className="bg-white dark:bg-slate-900 rounded-[40px] p-12 border border-slate-100 dark:border-slate-800 shadow-sm">
-                <div className="flex items-center justify-between mb-10">
-                   <h3 className="font-semibold text-xl flex items-center gap-4 text-slate-900 dark:text-white">
-                     <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center"><Building className="w-5 h-5 text-emerald-600" /></div>
-                     Yapısal Bloklar & Teknik Detay
-                   </h3>
-                   <Badge variant="outline" className="px-4 py-1 rounded-full font-medium">{facility.buildings.length} Toplam Blok</Badge>
+              <Separator className="bg-slate-100 dark:bg-slate-800" />
+
+              {/* Buildings */}
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-slate-900 dark:text-white uppercase tracking-tight">
+                    <Building className="w-4 h-4 text-primary" /> Yapısal Birimler
+                  </h3>
+                  <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100 uppercase tracking-widest">{facility.buildings.length} BLOK</span>
                 </div>
-                <div className="space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    {facility.buildings.map((b, i) => (
-                      <div key={i} className="flex items-center justify-between p-8 bg-slate-50/50 dark:bg-slate-800/40 rounded-[32px] border border-slate-100 dark:border-slate-800/50 group hover:border-emerald-500/30 transition-all hover:bg-white dark:hover:bg-slate-800">
-                         <div className="flex items-center gap-6">
-                            <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center font-medium text-lg text-emerald-600 shadow-sm border border-emerald-500/10 group-hover:scale-110 transition-transform">{i+1}</div>
+                      <div key={i} className="flex items-center justify-between p-4 bg-slate-50/50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800/50">
+                         <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-white dark:bg-slate-900 rounded-lg flex items-center justify-center font-bold text-sm text-primary shadow-sm border border-slate-100">{i+1}</div>
                             <div>
-                               <p className="font-medium text-lg text-slate-800 dark:text-slate-100">{b.name}</p>
-                               <div className="flex items-center gap-4 mt-1 text-sm text-slate-500 font-medium">
-                                 <span>{b.buildingFloors} Katlı Yapı</span>
-                                 <Separator orientation="vertical" className="h-3 bg-slate-300" />
-                                 <span>{b.closedArea} m² Kapalı</span>
-                                 <Separator orientation="vertical" className="h-3 bg-slate-300" />
-                                 <span>Yıl: {b.constructionYear}</span>
+                               <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">{b.name}</p>
+                               <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-500 font-medium">
+                                 <span>{b.buildingFloors} Kat</span>
+                                 <span>•</span>
+                                 <span>{b.closedArea} m²</span>
                                </div>
                             </div>
                          </div>
                          <div className="text-right">
-                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Yatak Kapasite</p>
-                            <p className="font-medium text-lg text-slate-800 dark:text-slate-100">{b.bedCapacity || '0'}</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Kapasite</p>
+                            <p className="font-semibold text-sm text-slate-700 dark:text-slate-200">{b.bedCapacity || '0'}</p>
                          </div>
                       </div>
                    ))}
                 </div>
-             </div>
-          </div>
+              </div>
+            </div>
 
-          <div className="space-y-10">
-             <div className="bg-slate-900 text-white rounded-[40px] p-10 shadow-2xl border border-white/5 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-primary/20 transition-colors" />
-                <h3 className="font-medium text-lg mb-10 flex items-center gap-4 relative z-10">
-                  <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center"><Briefcase className="w-5 h-5 text-primary" /></div>
-                  Kurumsal Künye
+            {/* Right Column: Corporate & Meta */}
+            <div className="p-8 bg-slate-50/30 dark:bg-slate-900/20 space-y-8">
+              {/* Corporate Info */}
+              <div>
+                <h3 className="text-sm font-semibold mb-6 flex items-center gap-2 text-slate-900 dark:text-white uppercase tracking-tight">
+                  <Briefcase className="w-4 h-4 text-primary" /> Kurumsal Detaylar
                 </h3>
-                <div className="space-y-10 relative z-10">
-                   <div className="grid grid-cols-1 gap-8">
-                      <div>
-                         <p className="text-[11px] font-medium text-slate-500 uppercase tracking-widest mb-3">Vergi Dairesi & Numarası</p>
-                         <p className="font-medium text-base tracking-tight">{facility.taxOffice || '—'} / {facility.taxNumber || '—'}</p>
-                      </div>
-                      <div>
-                         <p className="text-[11px] font-medium text-slate-500 uppercase tracking-widest mb-3">SGK İşyeri Sicil No</p>
-                         <p className="font-medium text-base font-mono tracking-widest bg-white/5 p-4 rounded-2xl border border-white/5">{facility.sgkNumber || '—'}</p>
-                      </div>
+                <div className="space-y-6">
+                   <div className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm">
+                      <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-1.5">Vergi Dairesi & No</p>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{facility.taxOffice || '—'} / {facility.taxNumber || '—'}</p>
                    </div>
-                   <div className="pt-8 border-t border-slate-800">
-                      <p className="text-[11px] font-medium text-slate-500 uppercase tracking-widest mb-4">Faaliyet Alanı (NACE Kodu)</p>
-                      <p className="text-sm text-slate-400 leading-relaxed font-semibold italic">"{facility.naceCode || 'Nace kodu tanımlanmamış.'}"</p>
+                   <div className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm">
+                      <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-1.5">SGK Sicil Numarası</p>
+                      <p className="text-sm font-mono font-bold text-primary tracking-wider">{facility.sgkNumber || '—'}</p>
+                   </div>
+                   <div className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm">
+                      <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-2">Faaliyet (NACE)</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-normal font-medium italic">"{facility.naceCode || 'Nace kodu tanımlanmamış.'}"</p>
                    </div>
                 </div>
-             </div>
-
-             <div className="bg-white dark:bg-slate-900 rounded-[32px] p-10 border border-slate-100 dark:border-slate-800 shadow-sm">
-                <h3 className="font-semibold text-lg mb-8 flex items-center gap-4 text-slate-900 dark:text-white">
-                  <Activity className="w-5 h-5 text-primary" /> Atama Durumu
-                </h3>
-                <div className="space-y-4">
-                   <div className="p-6 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 text-center">
-                      <ClipboardList className="w-8 h-8 mx-auto mb-3 text-slate-400" />
-                      <p className="text-sm text-slate-500 font-medium">Bu tesis için henüz aktif bir İSG ataması bulunmamaktadır.</p>
-                      <Button variant="link" className="text-primary font-medium mt-2">Atama Yap &rarr;</Button>
-                    </div>
-                 </div>
               </div>
-           </div>
-        </div>
-     </div>
+
+              {/* Assignment Status */}
+              <div>
+                <h3 className="text-sm font-semibold mb-4 flex items-center gap-2 text-slate-900 dark:text-white uppercase tracking-tight">
+                  <Activity className="w-4 h-4 text-primary" /> Atama Durumu
+                </h3>
+                <div className="p-5 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+                   {comp ? (
+                     <>
+                       <div className="flex flex-wrap gap-2">
+                         <RoleMiniBadge type="IGU" compliance={comp.igu} />
+                         <RoleMiniBadge type="Hekim" compliance={comp.hekim} />
+                         <RoleMiniBadge type="DSP" compliance={comp.dsp} />
+                       </div>
+                       <div className="pt-2 border-t border-slate-50 dark:border-slate-700">
+                         {comp.overallCompliant ? (
+                           <div className="flex items-center gap-2 text-emerald-600">
+                             <CheckCircle2 className="w-4 h-4" />
+                             <span className="text-xs font-bold uppercase tracking-wide">Tüm Atamalar Uygun</span>
+                           </div>
+                         ) : (
+                           <div className="flex flex-col gap-2">
+                             <div className="flex items-center gap-2 text-rose-600">
+                               <AlertTriangle className="w-4 h-4" />
+                               <span className="text-xs font-bold uppercase tracking-wide">Atama Eksikliği Mevcut</span>
+                             </div>
+                             <Button 
+                               onClick={() => navigate('/panel/assignments')} 
+                               variant="link" 
+                               className="text-primary text-[11px] font-bold h-auto p-0 justify-start"
+                             >
+                               Atama Panelini Aç &rarr;
+                             </Button>
+                           </div>
+                         )}
+                       </div>
+                     </>
+                   ) : (
+                     <div className="text-center py-2">
+                        <Loader2 className="w-4 h-4 mx-auto animate-spin text-slate-300" />
+                        <p className="text-[10px] text-slate-400 mt-2">Veriler yükleniyor...</p>
+                     </div>
+                   )}
+                </div>
+              </div>
+            </div>
+          </div>
+       </div>
+    </div>
   );
 };
 

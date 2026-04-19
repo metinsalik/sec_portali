@@ -10,21 +10,32 @@ import { TooltipProvider } from './components/ui/tooltip';
 import LoginPage from './pages/Login';
 import PortalPage from './pages/PortalPage';
 import ProfilePage from './pages/ProfilePage';
+import NotificationPage from './pages/notifications/NotificationPage';
 
 // Settings
 import SettingsLayout from './pages/settings/SettingsLayout';
 import FacilitiesPage from './pages/settings/FacilitiesPage';
 import UsersPage from './pages/settings/UsersPage';
-import ParametersPage from './pages/settings/ParametersPage';
 import DefinitionsPage from './pages/settings/DefinitionsPage';
+import SmtpSettingsPage from './pages/settings/SmtpSettingsPage';
+import NotificationSettingsPage from './pages/settings/NotificationSettingsPage';
+import EmailTemplatesPage from './pages/settings/EmailTemplatesPage';
+import ReportTemplatesPage from './pages/settings/ReportTemplatesPage';
+import ReportEditorPage from './pages/settings/ReportEditorPage';
+import OperationsSettings from './pages/operations/OperationsSettings';
 
 // Panel
 import PanelDashboard from './pages/panel/PanelDashboard';
+import PanelFacilitiesPage from './pages/panel/PanelFacilitiesPage';
+import PanelFacilityLifeCardPage from './pages/panel/PanelFacilityLifeCardPage';
 import ProfessionalsPage from './pages/panel/ProfessionalsPage';
+import PanelProfessionalLifeCardPage from './pages/panel/PanelProfessionalLifeCardPage';
 import OSGBPage from './pages/panel/OSGBPage';
+import PanelOSGBLifeCardPage from './pages/panel/PanelOSGBLifeCardPage';
 import EmployersPage from './pages/panel/EmployersPage';
 import AssignmentsPage from './pages/panel/AssignmentsPage';
 import ReconciliationPage from './pages/panel/ReconciliationPage';
+import PanelSettings from './pages/panel/PanelSettings';
 
 // Operations
 import OperationsDashboard from './pages/operations/OperationsDashboard';
@@ -82,6 +93,15 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              {/* ── BILDIRIMLER ───────────────────────────────── */}
+              <Route
+                path="/notifications"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout><NotificationPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
 
               {/* ── PANEL (Admin + Management) ─────────────────── */}
               <Route
@@ -100,7 +120,15 @@ function App() {
                 path="/panel/facilities"
                 element={
                   <ProtectedRoute allowedRoles={['admin', 'management']}>
-                    <AppLayout><PlaceholderPage title="Panel — Tesis Listesi" /></AppLayout>
+                    <AppLayout><PanelFacilitiesPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/panel/facilities/:id"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'management']}>
+                    <AppLayout><PanelFacilityLifeCardPage /></AppLayout>
                   </ProtectedRoute>
                 }
               />
@@ -109,6 +137,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['admin', 'management']}>
                     <AppLayout><ProfessionalsPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/panel/professionals/:id"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'management']}>
+                    <AppLayout><PanelProfessionalLifeCardPage /></AppLayout>
                   </ProtectedRoute>
                 }
               />
@@ -129,6 +165,14 @@ function App() {
                 }
               />
               <Route
+                path="/panel/osgb/:id"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'management']}>
+                    <AppLayout><PanelOSGBLifeCardPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/panel/assignments"
                 element={
                   <ProtectedRoute allowedRoles={['admin', 'management']}>
@@ -141,6 +185,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['admin', 'management']}>
                     <AppLayout><ReconciliationPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/panel/settings"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'management']}>
+                    <AppLayout><PanelSettings /></AppLayout>
                   </ProtectedRoute>
                 }
               />
@@ -206,6 +258,14 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/operations/settings"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'management']}>
+                    <AppLayout><OperationsSettings /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
 
               {/* ── SETTINGS (Admin + Management) ─────────────── */}
               <Route
@@ -221,8 +281,12 @@ function App() {
                 <Route index element={<Navigate to="facilities" replace />} />
                 <Route path="facilities" element={<FacilitiesPage />} />
                 <Route path="users" element={<UsersPage />} />
-                <Route path="parameters" element={<ParametersPage />} />
                 <Route path="definitions" element={<DefinitionsPage />} />
+                <Route path="smtp" element={<SmtpSettingsPage />} />
+                <Route path="notifications" element={<NotificationSettingsPage />} />
+                <Route path="templates" element={<EmailTemplatesPage />} />
+                <Route path="reports" element={<ReportTemplatesPage />} />
+                <Route path="reports/edit/:id" element={<ReportEditorPage />} />
               </Route>
 
               {/* ── Redirects ──────────────────────────────────── */}

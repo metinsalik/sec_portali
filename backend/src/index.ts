@@ -8,6 +8,7 @@ import authRoutes from './routes/auth';
 import settingsRoutes from './routes/settings';
 import panelRoutes from './routes/panel';
 import operationsRoutes from './routes/operations';
+import notificationRoutes from './routes/notifications';
 
 // Middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
@@ -29,6 +30,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/panel', panelRoutes);
 app.use('/api/operations', operationsRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Sağlık kontrolü
 app.get('/health', (req, res) => {

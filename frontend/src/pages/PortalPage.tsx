@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LayoutDashboard, FileText, LogOut, Settings, User } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { NotificationBell } from '@/components/layout/NotificationBell';
 
 export default function PortalPage() {
   const { user, logout } = useAuth();
@@ -38,6 +39,7 @@ export default function PortalPage() {
             )}
 
             <ThemeToggle />
+            <NotificationBell />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

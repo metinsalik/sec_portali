@@ -1,3 +1,4 @@
+import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -41,21 +42,20 @@ const buttonVariants = cva(
   }
 )
 
-function Button({
-  className,
-  variant = "default",
-  size = "default",
-  asChild = false,
-  ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants> & { asChild?: boolean }) {
+const Button = React.forwardRef<
+  HTMLButtonElement,
+  ButtonPrimitive.Props & VariantProps<typeof buttonVariants> & { asChild?: boolean }
+>(({ className, variant = "default", size = "default", asChild = false, ...props }, ref) => {
   const Comp = asChild ? Slot : ButtonPrimitive
   return (
     <Comp
+      ref={ref}
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
   )
-}
+})
+Button.displayName = "Button"
 
 export { Button, buttonVariants }

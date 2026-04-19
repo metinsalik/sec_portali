@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --watch src --ext ts --exec ts-node src/index.ts",
+    "dev": "nodemon -L --watch src --ext ts --exec ts-node --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "db:push": "prisma db push",
@@ -23,6 +23,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
+    "nodemailer": "^8.0.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -31,6 +32,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.1.0",
     "@types/node": "^25.6.0",
+    "@types/nodemailer": "^8.0.0",
     "nodemon": "^3.1.14",
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2",

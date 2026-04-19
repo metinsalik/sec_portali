@@ -78,6 +78,11 @@ export interface ComplianceResult {
     isCompliant: boolean;
     summary: string;
   };
+  vekil: {
+    assigned: boolean;
+    names: string[];
+    summary: string;
+  };
   overallCompliant: boolean;
   monthlyPenaltyRisk: number;
 }
@@ -303,6 +308,7 @@ export function analyzeFacilityCompliance(params: {
   iguAssignments: Array<{ durationMinutes: number; isFullTime: boolean; titleClass: string }>;
   hekimAssignments: Array<{ durationMinutes: number; isFullTime: boolean }>;
   dspAssignments: Array<{ durationMinutes: number }>;
+  vekilAssignments: Array<{ name: string }>;
   penaltyAmounts?: { iguPenalty: number; hekimPenalty: number; dspPenalty: number };
 }): ComplianceResult {
   const {
@@ -313,31 +319,41 @@ export function analyzeFacilityCompliance(params: {
     iguAssignments,
     hekimAssignments,
     dspAssignments,
+    vekilAssignments,
     penaltyAmounts = { iguPenalty: 0, hekimPenalty: 0, dspPenalty: 0 },
   } = params;
 
-  // IGU
-  const iguRequired = calculateIGURequiredMinutes(dangerClass, employeeCount);
-  const iguAssigned = iguAssignments.reduce((sum, a) => sum + a.durationMinutes, 0);
-  const iguFullTimeRequired = isIGUFullTimeRequired(dangerClass, employeeCount);
-  const iguHasFullTime = iguAssignments.some((a) => a.isFullTime);
-  const iguValidClass = iguAssignments.some((a) => isIGUClassValid(dangerClass, a.titleClass));
-  const iguCompliant = iguFullTimeRequired
-    ? iguHasFullTime && iguValidClass
-    : iguAssigned >= iguRequired && iguValidClass;
+  // --- IGU TIERED LOGIC ---
+  const iguThreshold = IGU_FULLTIME_THRESHOLD[dangerClass] || 1000;
   const iguRate = IGU_MINUTES_PER_WORKER[dangerClass] || 10;
+  
+  const requiredIGUFullTimeCount = Math.floor(employeeCount / iguThreshold);
+  const excessIGUEmployees = employeeCount % iguThreshold;
+  const requiredIGUExcessMinutes = excessIGUEmployees * iguRate;
 
-  // Hekim
-  const hekimRequired = calculateHekimRequiredMinutes(dangerClass, employeeCount);
-  const hekimAssigned = hekimAssignments.reduce((sum, a) => sum + a.durationMinutes, 0);
-  const hekimFullTimeRequired = isHekimFullTimeRequired(dangerClass, employeeCount);
-  const hekimHasFullTime = hekimAssignments.some((a) => a.isFullTime);
-  const hekimCompliant = hekimFullTimeRequired
-    ? hekimHasFullTime
-    : hekimAssigned >= hekimRequired;
+  const assignedIGUFullTime = iguAssignments.filter(a => a.isFullTime && isIGUClassValid(dangerClass, a.titleClass)).length;
+  // Total assigned minutes counting full-time as at least 11700
+  const totalIGUMinutes = iguAssignments.reduce((sum, a) => sum + (a.isFullTime ? Math.max(a.durationMinutes, 11700) : a.durationMinutes), 0);
+  
+  // Requirement: at least the floor count of full-timers, AND enough total minutes for everyone
+  // Actually, each full-timer satisfies exactly 'iguThreshold' employees.
+  const iguValidClass = iguAssignments.some((a) => isIGUClassValid(dangerClass, a.titleClass));
+  const iguCompliant = assignedIGUFullTime >= requiredIGUFullTimeCount && totalIGUMinutes >= (requiredIGUFullTimeCount * 11700 + requiredIGUExcessMinutes) && iguValidClass;
+
+  // --- HEKIM TIERED LOGIC ---
+  const hekimThreshold = HEKIM_FULLTIME_THRESHOLD[dangerClass] || 2000;
   const hekimRate = HEKIM_MINUTES_PER_WORKER[dangerClass] || 5;
 
-  // DSP
+  const requiredHekimFullTimeCount = Math.floor(employeeCount / hekimThreshold);
+  const excessHekimEmployees = employeeCount % hekimThreshold;
+  const requiredHekimExcessMinutes = excessHekimEmployees * hekimRate;
+
+  const assignedHekimFullTime = hekimAssignments.filter(a => a.isFullTime).length;
+  const totalHekimMinutes = hekimAssignments.reduce((sum, a) => sum + (a.isFullTime ? Math.max(a.durationMinutes, 11700) : a.durationMinutes), 0);
+  
+  const hekimCompliant = assignedHekimFullTime >= requiredHekimFullTimeCount && totalHekimMinutes >= (requiredHekimFullTimeCount * 11700 + requiredHekimExcessMinutes);
+
+  // --- DSP ---
   const dspRequired = isDSPRequired(dangerClass, employeeCount);
   const dspAssigned = dspAssignments.length > 0;
   const dspCompliant = !dspRequired || dspAssigned;
@@ -345,14 +361,17 @@ export function analyzeFacilityCompliance(params: {
   // DSP summary
   let dspSummary = '';
   if (dangerClass !== 'Çok Tehlikeli') {
-    dspSummary = 'DSP zorunlu değil (Çok Tehlikeli değil)';
+    dspSummary = 'Zorunlu değil';
   } else if (!dspRequired) {
-    dspSummary = 'DSP zorunlu değil (10 çalışan altı)';
+    dspSummary = '10 çalışan altı zorunlu değil';
   } else if (dspAssigned) {
     dspSummary = 'Atanmış';
   } else {
-    dspSummary = 'ATANMAMIŞ - Zorunlu!';
+    dspSummary = 'ATANMAMIŞ!';
   }
+
+  // --- VEKIL ---
+  const vekilAssigned = vekilAssignments.length > 0;
 
   // Ceza
   const monthlyPenaltyRisk = calculateMonthlyPenalty(
@@ -368,25 +387,30 @@ export function analyzeFacilityCompliance(params: {
     dangerClass,
     employeeCount,
     igu: {
-      requiredMinutes: iguRequired,
-      assignedMinutes: iguAssigned,
+      requiredMinutes: requiredIGUFullTimeCount * 11700 + requiredIGUExcessMinutes,
+      assignedMinutes: totalIGUMinutes,
       isCompliant: iguCompliant,
-      isFullTimeRequired: iguFullTimeRequired,
+      isFullTimeRequired: requiredIGUFullTimeCount > 0,
       hasValidClass: iguValidClass,
-      summary: `Gerekli: ${iguRequired} dk/ay (${iguRate} dk × ${employeeCount}) | Atanan: ${iguAssigned} dk | ${iguFullTimeRequired ? 'Tam zamanlı gerekli' : 'Kısmi süreli yeterli'} | Sınıf: ${iguValidClass ? 'Uygun' : 'Uygun değil!'}`,
+      summary: `${requiredIGUFullTimeCount > 0 ? requiredIGUFullTimeCount + ' Tam Zamanlı + ' : ''}${requiredIGUExcessMinutes} dk gerekli | ${assignedIGUFullTime} Tam Zamanlı + ${Math.max(0, totalIGUMinutes - assignedIGUFullTime * 11700)} dk atanmış`,
     },
     hekim: {
-      requiredMinutes: hekimRequired,
-      assignedMinutes: hekimAssigned,
+      requiredMinutes: requiredHekimFullTimeCount * 11700 + requiredHekimExcessMinutes,
+      assignedMinutes: totalHekimMinutes,
       isCompliant: hekimCompliant,
-      isFullTimeRequired: hekimFullTimeRequired,
-      summary: `Gerekli: ${hekimRequired} dk/ay (${hekimRate} dk × ${employeeCount}) | Atanan: ${hekimAssigned} dk | ${hekimFullTimeRequired ? 'Tam zamanlı gerekli' : 'Kısmi süreli yeterli'}`,
+      isFullTimeRequired: requiredHekimFullTimeCount > 0,
+      summary: `${requiredHekimFullTimeCount > 0 ? requiredHekimFullTimeCount + ' Tam Zamanlı + ' : ''}${requiredHekimExcessMinutes} dk gerekli | ${assignedHekimFullTime} Tam Zamanlı + ${Math.max(0, totalHekimMinutes - assignedHekimFullTime * 11700)} dk atanmış`,
     },
     dsp: {
       required: dspRequired,
       assigned: dspAssigned,
       isCompliant: dspCompliant,
       summary: dspSummary,
+    },
+    vekil: {
+      assigned: vekilAssigned,
+      names: vekilAssignments.map(v => v.name),
+      summary: vekilAssigned ? vekilAssignments.map(v => v.name).join(', ') : 'Atanmamış',
     },
     overallCompliant: iguCompliant && hekimCompliant && dspCompliant,
     monthlyPenaltyRisk,

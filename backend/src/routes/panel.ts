@@ -216,6 +216,53 @@ router.post('/professionals/:id/archive', async (req: AuthRequest, res: Response
   }
 });
 
+// Tek profesyonel detay (Yaşam Kartı)
+router.get('/professionals/:id', async (req: AuthRequest, res: Response) => {
+  const id = parseInt(String(req.params.id));
+  try {
+    const professional = await prisma.professional.findUnique({
+      where: { id },
+      include: {
+        assignments: {
+          include: { facility: true },
+          orderBy: { startDate: 'desc' },
+        },
+      },
+    });
+
+    if (!professional) return res.status(404).json({ error: 'Profesyonel bulunamadı.' });
+
+    // Sertifika durumu
+    const certificateStatus = getCertificateStatus(professional.certificateDate);
+
+    // Aktivite loglarını bul (Email üzerinden User eşleştirmesi ile)
+    let activityLogs: any[] = [];
+    if (professional.email) {
+      const user = await prisma.user.findFirst({
+        where: { email: professional.email },
+      });
+
+      if (user) {
+        activityLogs = await prisma.activityLog.findMany({
+          where: { username: user.username },
+          include: { facility: true },
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+        });
+      }
+    }
+
+    res.json({
+      ...professional,
+      certificateStatus,
+      activityLogs,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Profesyonel detayları getirilemedi.' });
+  }
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // OSGB FİRMALARI
 // ─────────────────────────────────────────────────────────────────────────────
@@ -232,10 +279,10 @@ router.get('/osgb', async (req: AuthRequest, res: Response) => {
 });
 
 router.post('/osgb', async (req: AuthRequest, res: Response) => {
-  const { name, contact, phone, email } = req.body;
+  const { name, contact, phone, email, city, district } = req.body;
   if (!name) return res.status(400).json({ error: 'Firma adı zorunludur.' });
   try {
-    const company = await prisma.oSGBCompany.create({ data: { name, contact, phone, email } });
+    const company = await prisma.oSGBCompany.create({ data: { name, contact, phone, email, city, district } });
     res.status(201).json(company);
   } catch {
     res.status(500).json({ error: 'OSGB firması oluşturulamadı.' });
@@ -244,12 +291,47 @@ router.post('/osgb', async (req: AuthRequest, res: Response) => {
 
 router.put('/osgb/:id', async (req: AuthRequest, res: Response) => {
   const id = parseInt(String(req.params.id));
-  const { name, contact, phone, email, isActive } = req.body;
+  const { name, contact, phone, email, city, district, isActive } = req.body;
   try {
-    const company = await prisma.oSGBCompany.update({ where: { id }, data: { name, contact, phone, email, isActive } });
+    const company = await prisma.oSGBCompany.update({
+      where: { id },
+      data: { name, contact, phone, email, city, district, isActive },
+    });
     res.json(company);
   } catch {
     res.status(500).json({ error: 'OSGB firması güncellenemedi.' });
+  }
+});
+
+// OSGB Detay (Yaşam Kartı)
+router.get('/osgb/:id', async (req: AuthRequest, res: Response) => {
+  const id = parseInt(String(req.params.id));
+  try {
+    const company = await prisma.oSGBCompany.findUnique({
+      where: { id },
+    });
+
+    if (!company) return res.status(404).json({ error: 'OSGB firması bulunamadı.' });
+
+    // Bu OSGB'ye bağlı profesyonelleri bul
+    // osgbName üzerinden eşleştiriyoruz (schema'da string olarak tutulduğu için)
+    const professionals = await prisma.professional.findMany({
+      where: { osgbName: company.name },
+      include: {
+        assignments: {
+          where: { status: 'Aktif' },
+          include: { facility: true },
+        },
+      },
+    });
+
+    res.json({
+      ...company,
+      professionals,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'OSGB detayları getirilemedi.' });
   }
 });
 
@@ -303,6 +385,70 @@ router.post('/employers/:id/archive', async (req: AuthRequest, res: Response) =>
 // ─────────────────────────────────────────────────────────────────────────────
 // ATAMA YÖNETİMİ
 // ─────────────────────────────────────────────────────────────────────────────
+router.get('/assignments/compliance-status', async (req: AuthRequest, res: Response) => {
+  try {
+    const facilities = await prisma.facility.findMany({
+      where: { isActive: true },
+      include: {
+        assignments: {
+          where: { status: 'Aktif' },
+          include: { professional: true, employerRep: true },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    const results = facilities.map((f) => {
+      const activeAssignments = f.assignments;
+      const iguAssignments = activeAssignments
+        .filter((a) => a.type === 'IGU' && a.professional)
+        .map((a) => ({
+          durationMinutes: a.durationMinutes,
+          isFullTime: a.isFullTime,
+          titleClass: a.professional!.titleClass,
+        }));
+      const hekimAssignments = activeAssignments
+        .filter((a) => a.type === 'Hekim')
+        .map((a) => ({ durationMinutes: a.durationMinutes, isFullTime: a.isFullTime }));
+      const dspAssignments = activeAssignments
+        .filter((a) => a.type === 'DSP')
+        .map((a) => ({ durationMinutes: a.durationMinutes }));
+      const vekilAssignments = activeAssignments
+        .filter((a) => a.type === 'Vekil' && a.employerRep)
+        .map((a) => ({ name: a.employerRep!.fullName }));
+
+      const compliance = analyzeFacilityCompliance({
+        facilityId: f.id,
+        facilityName: f.name,
+        dangerClass: f.dangerClass,
+        employeeCount: f.employeeCount,
+        iguAssignments,
+        hekimAssignments,
+        dspAssignments,
+        vekilAssignments,
+      });
+
+      let category: 'missing' | 'none' | 'compliant' = 'compliant';
+      if (f.assignments.length === 0) {
+        category = 'none';
+      } else if (!compliance.overallCompliant) {
+        category = 'missing';
+      }
+
+      return {
+        ...compliance,
+        category,
+        assignmentsCount: f.assignments.length,
+      };
+    });
+
+    res.json(results);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Atama uyumluluk durumları getirilemedi.' });
+  }
+});
+
 router.get('/assignments', async (req: AuthRequest, res: Response) => {
   try {
     const { facilityId, status } = req.query;
@@ -350,21 +496,31 @@ router.post('/assignments', async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const assignment = await prisma.assignment.create({
-      data: {
-        facilityId,
-        professionalId: professionalId ? parseInt(professionalId) : null,
-        employerRepId: employerRepId ? parseInt(employerRepId) : null,
-        type,
-        durationMinutes: parseInt(durationMinutes),
-        isFullTime: isFullTime ?? false,
-        startDate: new Date(startDate),
-        status: 'Aktif',
-        costType,
-        unitPrice: unitPrice ? parseFloat(unitPrice) : null,
-      },
-      include: { facility: true, professional: true },
-    });
+    const [assignment] = await prisma.$transaction([
+      prisma.assignment.create({
+        data: {
+          facilityId,
+          professionalId: professionalId ? parseInt(professionalId) : null,
+          employerRepId: employerRepId ? parseInt(String(employerRepId)) : null,
+          type,
+          durationMinutes: isFullTime ? 11700 : parseInt(String(durationMinutes || 0)),
+          isFullTime: isFullTime ?? false,
+          startDate: new Date(startDate),
+          status: 'Aktif',
+          costType,
+          unitPrice: unitPrice ? parseFloat(unitPrice) : null,
+        },
+        include: { facility: true, professional: true },
+      }),
+      prisma.activityLog.create({
+        data: {
+          facilityId,
+          username: req.user!.username,
+          action: 'Yeni Atama Yapıldı',
+          details: `${type} tipi atama yapıldı. (${durationMinutes} dk)`
+        }
+      })
+    ]);
     res.status(201).json(assignment);
   } catch (error) {
     console.error(error);
@@ -384,7 +540,12 @@ router.put('/assignments/:id', async (req: AuthRequest, res: Response) => {
     }
     const assignment = await prisma.assignment.update({
       where: { id },
-      data: { durationMinutes, isFullTime, costType, unitPrice: unitPrice ? parseFloat(unitPrice) : null },
+      data: { 
+        durationMinutes: isFullTime ? 11700 : parseInt(String(durationMinutes || 0)), 
+        isFullTime, 
+        costType, 
+        unitPrice: unitPrice ? parseFloat(unitPrice) : null 
+      },
     });
     res.json(assignment);
   } catch {
@@ -395,10 +556,23 @@ router.put('/assignments/:id', async (req: AuthRequest, res: Response) => {
 router.post('/assignments/:id/terminate', async (req: AuthRequest, res: Response) => {
   const id = parseInt(String(req.params.id));
   try {
-    const assignment = await prisma.assignment.update({
-      where: { id },
-      data: { status: 'Sona Erdi', endDate: new Date() },
-    });
+    const existing = await prisma.assignment.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Atama bulunamadı.' });
+
+    const [assignment] = await prisma.$transaction([
+      prisma.assignment.update({
+        where: { id },
+        data: { status: 'Sona Erdi', endDate: new Date() },
+      }),
+      prisma.activityLog.create({
+        data: {
+          facilityId: existing.facilityId,
+          username: req.user!.username,
+          action: 'Atama Sonlandırıldı',
+          details: `${existing.type} tipi atama sonlandırıldı.`
+        }
+      })
+    ]);
     res.json(assignment);
   } catch {
     res.status(500).json({ error: 'Atama sonlandırılamadı.' });
