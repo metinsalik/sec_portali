@@ -868,11 +868,9 @@ const FacilitiesPage = () => {
                         </div>
                         <h4 className="text-base font-semibold text-slate-800 dark:text-slate-100">Bloklar</h4>
                       </div>
-                      {!isEditing && !formData.id && (
-                        <Button type="button" variant="outline" size="lg" onClick={addBuilding} className="border-primary text-primary hover:bg-primary/5 rounded-xl">
-                          <Plus className="w-5 h-5 mr-2" /> Blok Ekle
-                        </Button>
-                      )}
+                      <Button type="button" variant="outline" size="lg" onClick={addBuilding} className="border-primary text-primary hover:bg-primary/5 rounded-xl">
+                        <Plus className="w-5 h-5 mr-2" /> Blok Ekle
+                      </Button>
                     </div>
 
                     <div className="space-y-10">

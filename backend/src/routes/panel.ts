@@ -7,43 +7,112 @@ import {
   checkCapacity,
 } from '../services/isgCalculator';
 
+import { getDashboardStats, getEmployeeTrend } from '../services/dashboardService';
+
 const router = Router();
 const prisma = new PrismaClient();
 
 router.use(authMiddleware);
 router.use(managementMiddleware);
 
+/**
+ * Profesyonel için kullanıcı kaydı oluşturur veya günceller
+ */
+async function syncUserForProfessional(professional: any, username: string) {
+  if (!username) return;
+
+  const normalizedUsername = username.toLowerCase().trim();
+  
+  // Rol belirleme
+  let roleName = 'user';
+  if (professional.titleClass.includes('IGU')) roleName = 'safety';
+  else if (professional.titleClass === 'İşyeri Hekimi') roleName = 'doctor';
+  else if (professional.titleClass === 'DSP') roleName = 'dsp';
+
+  const role = await prisma.role.upsert({
+    where: { name: roleName },
+    update: {},
+    create: { name: roleName }
+  });
+
+  await prisma.user.upsert({
+    where: { username: normalizedUsername },
+    update: {
+      fullName: professional.fullName,
+      email: professional.email,
+      phone: professional.phone,
+      employmentType: professional.employmentType,
+      osgbName: professional.osgbName,
+      title: professional.titleClass,
+      isActive: professional.isActive,
+    },
+    create: {
+      username: normalizedUsername,
+      fullName: professional.fullName,
+      email: professional.email,
+      phone: professional.phone,
+      employmentType: professional.employmentType,
+      osgbName: professional.osgbName,
+      title: professional.titleClass,
+      isActive: professional.isActive,
+      roles: {
+        create: { roleId: role.id }
+      }
+    }
+  });
+}
+
+/**
+ * İşveren Vekili için kullanıcı kaydı oluşturur veya günceller
+ */
+async function syncUserForEmployerRep(employerRep: any, username: string) {
+  if (!username) return;
+
+  const normalizedUsername = username.toLowerCase().trim();
+  const roleName = 'user';
+
+  const role = await prisma.role.upsert({
+    where: { name: roleName },
+    update: {},
+    create: { name: roleName }
+  });
+
+  await prisma.user.upsert({
+    where: { username: normalizedUsername },
+    update: {
+      fullName: employerRep.fullName,
+      email: employerRep.email,
+      phone: employerRep.phone,
+      title: employerRep.title || 'İşveren Vekili',
+      isActive: employerRep.isActive,
+    },
+    create: {
+      username: normalizedUsername,
+      fullName: employerRep.fullName,
+      email: employerRep.email,
+      phone: employerRep.phone,
+      title: employerRep.title || 'İşveren Vekili',
+      isActive: employerRep.isActive,
+      roles: {
+        create: { roleId: role.id }
+      }
+    }
+  });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // DASHBOARD KPI
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/dashboard', async (req: AuthRequest, res: Response) => {
   try {
-    const [facilities, professionals, assignments] = await Promise.all([
-      prisma.facility.findMany({
-        where: { isActive: true },
-        include: { assignments: { where: { status: 'Aktif' } } },
-      }),
-      prisma.professional.findMany({ where: { isActive: true } }),
-      prisma.assignment.findMany({ where: { status: 'Aktif' } }),
+    const [stats, trend] = await Promise.all([
+      getDashboardStats(),
+      getEmployeeTrend(),
     ]);
 
-    // Sertifika uyarıları
-    const certWarnings = professionals.filter((p) => {
-      const status = getCertificateStatus(p.certificateDate);
-      return status.isWarning || status.isCritical || status.isExpired;
-    });
-
-    const certCritical = professionals.filter((p) => {
-      const status = getCertificateStatus(p.certificateDate);
-      return status.isCritical || status.isExpired;
-    });
-
     res.json({
-      totalFacilities: facilities.length,
-      totalProfessionals: professionals.length,
-      totalActiveAssignments: assignments.length,
-      certWarningCount: certWarnings.length,
-      certCriticalCount: certCritical.length,
+      ...stats,
+      employeeTrend: trend,
     });
   } catch (error) {
     console.error(error);
@@ -150,10 +219,15 @@ router.get('/professionals', async (req: AuthRequest, res: Response) => {
 });
 
 router.post('/professionals', async (req: AuthRequest, res: Response) => {
-  const { fullName, employmentType, osgbName, titleClass, certificateNo, certificateDate, phone, email, unitPrice } = req.body;
+  const { 
+    fullName, employmentType, osgbName, titleClass, 
+    certificateNo, certificateDate, phone, email, unitPrice, username 
+  } = req.body;
+
   if (!fullName || !employmentType || !titleClass) {
     return res.status(400).json({ error: 'Ad soyad, istihdam tipi ve sınıf/unvan zorunludur.' });
   }
+
   try {
     const professional = await prisma.professional.create({
       data: {
@@ -166,17 +240,28 @@ router.post('/professionals', async (req: AuthRequest, res: Response) => {
         phone,
         email,
         unitPrice: unitPrice ? parseFloat(unitPrice) : null,
+        username: username?.toLowerCase().trim() || null,
       },
     });
+
+    if (username) {
+      await syncUserForProfessional(professional, username);
+    }
+
     res.status(201).json(professional);
-  } catch {
+  } catch (error) {
+    console.error('Professional Create Error:', error);
     res.status(500).json({ error: 'Profesyonel oluşturulamadı.' });
   }
 });
 
 router.put('/professionals/:id', async (req: AuthRequest, res: Response) => {
   const id = parseInt(String(req.params.id));
-  const { fullName, employmentType, osgbName, titleClass, certificateNo, certificateDate, phone, email, unitPrice } = req.body;
+  const { 
+    fullName, employmentType, osgbName, titleClass, 
+    certificateNo, certificateDate, phone, email, unitPrice, username 
+  } = req.body;
+
   try {
     const professional = await prisma.professional.update({
       where: { id },
@@ -190,10 +275,17 @@ router.put('/professionals/:id', async (req: AuthRequest, res: Response) => {
         phone,
         email,
         unitPrice: unitPrice ? parseFloat(unitPrice) : null,
+        username: username?.toLowerCase().trim() || null,
       },
     });
+
+    if (username) {
+      await syncUserForProfessional(professional, username);
+    }
+
     res.json(professional);
-  } catch {
+  } catch (error) {
+    console.error('Professional Update Error:', error);
     res.status(500).json({ error: 'Profesyonel güncellenemedi.' });
   }
 });
@@ -350,24 +442,53 @@ router.get('/employers', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.post('/employers', async (req: AuthRequest, res: Response) => {
-  const { fullName, title, phone, email } = req.body;
+router.post('/employer-representatives', async (req: AuthRequest, res: Response) => {
+  const { fullName, title, phone, email, username } = req.body;
   if (!fullName) return res.status(400).json({ error: 'Ad soyad zorunludur.' });
   try {
-    const employer = await prisma.employerRepresentative.create({ data: { fullName, title, phone, email } });
+    const employer = await prisma.employerRepresentative.create({ 
+      data: { 
+        fullName, 
+        title, 
+        phone, 
+        email,
+        username: username?.toLowerCase().trim() || null 
+      } 
+    });
+
+    if (username) {
+      await syncUserForEmployerRep(employer, username);
+    }
+
     res.status(201).json(employer);
-  } catch {
+  } catch (error) {
+    console.error('Employer Rep Create Error:', error);
     res.status(500).json({ error: 'İşveren vekili oluşturulamadı.' });
   }
 });
 
-router.put('/employers/:id', async (req: AuthRequest, res: Response) => {
+router.put('/employer-representatives/:id', async (req: AuthRequest, res: Response) => {
   const id = parseInt(String(req.params.id));
-  const { fullName, title, phone, email } = req.body;
+  const { fullName, title, phone, email, username } = req.body;
   try {
-    const employer = await prisma.employerRepresentative.update({ where: { id }, data: { fullName, title, phone, email } });
+    const employer = await prisma.employerRepresentative.update({ 
+      where: { id }, 
+      data: { 
+        fullName, 
+        title, 
+        phone, 
+        email,
+        username: username?.toLowerCase().trim() || null
+      } 
+    });
+
+    if (username) {
+      await syncUserForEmployerRep(employer, username);
+    }
+
     res.json(employer);
-  } catch {
+  } catch (error) {
+    console.error('Employer Rep Update Error:', error);
     res.status(500).json({ error: 'İşveren vekili güncellenemedi.' });
   }
 });
@@ -555,6 +676,7 @@ router.put('/assignments/:id', async (req: AuthRequest, res: Response) => {
 
 router.post('/assignments/:id/terminate', async (req: AuthRequest, res: Response) => {
   const id = parseInt(String(req.params.id));
+  const { endDate } = req.body;
   try {
     const existing = await prisma.assignment.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: 'Atama bulunamadı.' });
@@ -562,7 +684,10 @@ router.post('/assignments/:id/terminate', async (req: AuthRequest, res: Response
     const [assignment] = await prisma.$transaction([
       prisma.assignment.update({
         where: { id },
-        data: { status: 'Sona Erdi', endDate: new Date() },
+        data: { 
+          status: 'Sona Erdi', 
+          endDate: endDate ? new Date(endDate) : new Date() 
+        },
       }),
       prisma.activityLog.create({
         data: {

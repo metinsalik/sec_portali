@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Edit, ChevronRight, Loader2, Tag, Building2 } from 'lucide-react';
+import { Plus, Edit, ChevronRight, Loader2, Tag, Building2, Trash2 } from 'lucide-react';
 
 interface SubCategory { id: number; name: string; categoryId: number }
 interface Category { id: number; name: string; subCategories: SubCategory[] }
@@ -78,6 +78,33 @@ export default function DefinitionsPage() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['departments'] }); setDeptModal({ open: false }); setDeptName(''); },
   });
 
+  const deleteCatMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await api.delete(`/settings/definitions/categories/${id}`);
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
+  });
+
+  const deleteSubMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await api.delete(`/settings/definitions/subcategories/${id}`);
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
+  });
+
+  const deleteDeptMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await api.delete(`/settings/definitions/departments/${id}`);
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['departments'] }),
+  });
+
   const openCatEdit = (cat: Category) => { setCatName(cat.name); setCatModal({ open: true, edit: cat }); };
   const openSubEdit = (sub: SubCategory) => { setSubName(sub.name); setSubModal({ open: true, edit: sub }); };
   const openDeptEdit = (d: Department) => { setDeptName(d.name); setDeptModal({ open: true, edit: d }); };
@@ -124,6 +151,14 @@ export default function DefinitionsPage() {
                       <Button variant="ghost" size="sm" onClick={() => openCatEdit(cat)} className="h-8 px-3 text-xs text-muted-foreground">
                         <Edit className="w-3.5 h-3.5 mr-2" /> Düzenle
                       </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => { if(confirm('Bu kategoriyi ve tüm alt kategorilerini silmek istediğinize emin misiniz?')) deleteCatMutation.mutate(cat.id); }} 
+                        className="h-8 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
                       <Button
                         variant="secondary"
                         size="sm"
@@ -144,9 +179,19 @@ export default function DefinitionsPage() {
                             <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
                             <span className="text-foreground">{sub.name}</span>
                           </div>
-                          <Button variant="ghost" size="sm" onClick={() => openSubEdit(sub)} className="h-7 px-2 text-xs text-muted-foreground">
-                            <Edit className="w-3.5 h-3.5" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => openSubEdit(sub)} className="h-7 px-2 text-xs text-muted-foreground">
+                              <Edit className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => { if(confirm('Bu alt kategoriyi silmek istediğinize emin misiniz?')) deleteSubMutation.mutate(sub.id); }} 
+                              className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -185,9 +230,19 @@ export default function DefinitionsPage() {
                     <Building2 className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm font-medium text-foreground">{dept.name}</span>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => openDeptEdit(dept)} className="h-8 px-3 text-xs text-muted-foreground">
-                    <Edit className="w-3.5 h-3.5 mr-2" /> Düzenle
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => openDeptEdit(dept)} className="h-8 px-3 text-xs text-muted-foreground">
+                      <Edit className="w-3.5 h-3.5 mr-2" /> Düzenle
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => { if(confirm('Bu departmanı silmek istediğinize emin misiniz?')) deleteDeptMutation.mutate(dept.id); }} 
+                      className="h-8 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
               ))}
               {departments.length === 0 && (

@@ -9,10 +9,10 @@ import { Plus, Search, UserCheck, Edit, Archive, Loader2, Phone, Mail, AlertTria
 import { cn } from '@/lib/utils';
 
 interface Employer {
-  id: number; fullName: string; title?: string; phone?: string; email?: string; isActive: boolean;
+  id: number; fullName: string; title?: string; phone?: string; email?: string; username?: string; isActive: boolean;
 }
 
-const emptyForm = { fullName: '', title: '', phone: '', email: '' };
+const emptyForm = { fullName: '', title: '', phone: '', email: '', username: '' };
 
 export default function EmployersPage() {
   const queryClient = useQueryClient();
@@ -57,7 +57,13 @@ export default function EmployersPage() {
   const openAdd = () => { setEditItem(null); setForm(emptyForm); setModalOpen(true); };
   const openEdit = (e: Employer) => {
     setEditItem(e);
-    setForm({ fullName: e.fullName, title: e.title ?? '', phone: e.phone ?? '', email: e.email ?? '' });
+    setForm({ 
+      fullName: e.fullName, 
+      title: e.title ?? '', 
+      phone: e.phone ?? '', 
+      email: e.email ?? '',
+      username: e.username ?? ''
+    });
     setModalOpen(true);
   };
 
@@ -190,6 +196,12 @@ export default function EmployersPage() {
                       <div className="flex flex-col gap-1">
                         <span className="text-xs text-slate-600 dark:text-slate-400 font-medium flex items-center gap-2"><Phone className="w-3 h-3 opacity-50" /> {e.phone || '—'}</span>
                         <span className="text-xs text-slate-600 dark:text-slate-400 font-medium flex items-center gap-2"><Mail className="w-3 h-3 opacity-50" /> {e.email || '—'}</span>
+                        {e.username && (
+                          <span className="text-[10px] text-primary font-bold flex items-center gap-2 mt-1">
+                            <UserCheck className="w-3 h-3" />
+                            {e.username}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -259,6 +271,24 @@ export default function EmployersPage() {
                     className="rounded-xl border-slate-100 h-11 text-sm font-medium focus-visible:ring-primary/10 bg-slate-50/50"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2 bg-primary/5 p-4 rounded-2xl border border-primary/10 mt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <UserCheck className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                  <label className="text-[10px] font-black text-primary tracking-widest uppercase">Uygulama Erişimi (Kullanıcı Adı)</label>
+                </div>
+                <Input 
+                  placeholder="Örn: vekil.isminiz" 
+                  value={form.username} 
+                  onChange={(ev) => setForm({ ...form, username: ev.target.value })} 
+                  className="rounded-xl border-white bg-white/50 h-11 text-sm font-medium focus-visible:ring-primary/20" 
+                />
+                <p className="text-[10px] text-slate-500 font-medium mt-2 leading-relaxed">
+                  Kullanıcı adı girdiğinizde bu vekil için otomatik olarak bir kullanıcı hesabı oluşturulacaktır.
+                </p>
               </div>
             </div>
             

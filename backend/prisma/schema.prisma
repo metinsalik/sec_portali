@@ -127,6 +127,7 @@ model Professional {
   phone           String?
   email           String?
   unitPrice       Float?
+  username        String?      // Link to User.username
   isActive        Boolean      @default(true)
   assignments     Assignment[]
   createdAt       DateTime     @default(now())
@@ -139,6 +140,7 @@ model EmployerRepresentative {
   title       String?
   phone       String?
   email       String?
+  username    String?      // Link to User.username
   isActive    Boolean      @default(true)
   appointments Assignment[]
   createdAt   DateTime     @default(now())

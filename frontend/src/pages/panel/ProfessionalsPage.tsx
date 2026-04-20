@@ -21,7 +21,7 @@ import {
 import {
   Plus, Search, Users, AlertTriangle, Archive, Edit, Loader2,
   LayoutGrid, List as ListIcon, Filter, ExternalLink, Briefcase,
-  Building2, Phone, Mail, Award, Clock
+  Building2, Phone, Mail, Award, Clock, UserCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -29,7 +29,7 @@ interface CertStatus { isExpired: boolean; isCritical: boolean; isWarning: boole
 interface Professional {
   id: number; fullName: string; employmentType: string; osgbName?: string;
   titleClass: string; certificateNo?: string; certificateDate?: string;
-  phone?: string; email?: string; unitPrice?: number; isActive: boolean;
+  phone?: string; email?: string; unitPrice?: number; username?: string; isActive: boolean;
   certificateStatus: CertStatus;
   assignments: { facility: { name: string } }[];
 }
@@ -42,7 +42,7 @@ const EMPLOYMENT_TYPES = ['Tesis Kadrosu', 'OSGB Kadrosu'];
 const emptyForm = {
   fullName: '', employmentType: 'Tesis Kadrosu', osgbName: '',
   titleClass: 'A Sınıfı IGU', certificateNo: '', certificateDate: '',
-  phone: '', email: '', unitPrice: '',
+  phone: '', email: '', unitPrice: '', username: '',
 };
 
 function CertBadge({ status }: { status: CertStatus }) {
@@ -121,6 +121,7 @@ export default function ProfessionalsPage() {
       certificateDate: p.certificateDate ? p.certificateDate.substring(0, 10) : '',
       phone: p.phone ?? '', email: p.email ?? '',
       unitPrice: p.unitPrice?.toString() ?? '',
+      username: p.username ?? '',
     });
     setModalOpen(true);
   };
@@ -221,6 +222,15 @@ export default function ProfessionalsPage() {
             <span>{p.email || '—'}</span>
             <div className="w-1 h-1 rounded-full bg-slate-200" />
             <span>{p.phone || '—'}</span>
+            {p.username && (
+              <>
+                <div className="w-1 h-1 rounded-full bg-slate-200" />
+                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 flex items-center gap-1 py-0 px-1.5 h-4">
+                  <UserCheck className="w-2.5 h-2.5" />
+                  {p.username}
+                </Badge>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -375,8 +385,8 @@ export default function ProfessionalsPage() {
       </div>
 
       <Dialog open={modalOpen} onOpenChange={(v) => { setModalOpen(v); if (!v) setEditItem(null); }}>
-        <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden border-none shadow-2xl rounded-2xl">
-          <DialogHeader className="px-8 py-6 bg-slate-900">
+        <DialogContent className="sm:max-w-[1200px] w-[95vw] h-[85vh] p-0 overflow-hidden border-none shadow-2xl rounded-2xl flex flex-col">
+          <DialogHeader className="px-8 py-6 bg-slate-900 shrink-0">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
                 <Users className="w-5 h-5 text-white/70" />
@@ -386,84 +396,121 @@ export default function ProfessionalsPage() {
               </DialogTitle>
             </div>
           </DialogHeader>
+          
           <form
             onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(form); }}
-            className="p-8 space-y-6 bg-white dark:bg-slate-900"
+            className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-900"
           >
-            <div className="grid grid-cols-2 gap-5">
-              <div className="col-span-2 space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">Ad Soyad *</label>
-                <Input 
-                  value={form.fullName} 
-                  onChange={(e) => setForm({ ...form, fullName: e.target.value })} 
-                  required 
-                  className="rounded-xl border-slate-100 h-11 text-sm font-medium focus-visible:ring-primary/10"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">İstihdam Tipi *</label>
-                <Select value={form.employmentType} onValueChange={(v) => setForm({ ...form, employmentType: v || '' })}>
-                  <SelectTrigger className="rounded-xl border-slate-100 h-11 text-sm font-medium focus:ring-primary/10"><SelectValue /></SelectTrigger>
-                  <SelectContent className="rounded-xl">{EMPLOYMENT_TYPES.map((t) => <SelectItem key={t} value={t} className="text-xs font-medium">{t}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">Sınıf / Unvan *</label>
-                <Select value={form.titleClass} onValueChange={(v) => setForm({ ...form, titleClass: v || '' })}>
-                  <SelectTrigger className="rounded-xl border-slate-100 h-11 text-sm font-medium focus:ring-primary/10"><SelectValue /></SelectTrigger>
-                  <SelectContent className="rounded-xl">{TITLE_CLASSES.map((c) => <SelectItem key={c} value={c} className="text-xs font-medium">{c}</SelectItem>)}</SelectContent>
-                </Select>
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                <div className="space-y-6">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">Kişisel ve Mesleki Bilgiler</h3>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Ad Soyad *</label>
+                      <Input 
+                        value={form.fullName} 
+                        onChange={(e) => setForm({ ...form, fullName: e.target.value })} 
+                        required 
+                        className="rounded-xl border-slate-100 h-11 text-sm font-medium focus-visible:ring-primary/10"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">İstihdam Tipi *</label>
+                        <Select value={form.employmentType} onValueChange={(v) => setForm({ ...form, employmentType: v || '' })}>
+                          <SelectTrigger className="rounded-xl border-slate-100 h-11 text-sm font-medium focus:ring-primary/10"><SelectValue /></SelectTrigger>
+                          <SelectContent className="rounded-xl">{EMPLOYMENT_TYPES.map((t) => <SelectItem key={t} value={t} className="text-xs font-medium">{t}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Sınıf / Unvan *</label>
+                        <Select value={form.titleClass} onValueChange={(v) => setForm({ ...form, titleClass: v || '' })}>
+                          <SelectTrigger className="rounded-xl border-slate-100 h-11 text-sm font-medium focus:ring-primary/10"><SelectValue /></SelectTrigger>
+                          <SelectContent className="rounded-xl">{TITLE_CLASSES.map((c) => <SelectItem key={c} value={c} className="text-xs font-medium">{c}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Sertifika No</label>
+                        <Input value={form.certificateNo} onChange={(e) => setForm({ ...form, certificateNo: e.target.value })} className="rounded-xl border-slate-100 h-11 text-sm font-medium focus-visible:ring-primary/10" />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Sertifika Tarihi</label>
+                        <Input type="date" value={form.certificateDate} onChange={(e) => setForm({ ...form, certificateDate: e.target.value })} className="rounded-xl border-slate-100 h-11 text-sm font-medium focus-visible:ring-primary/10" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">İletişim ve Diğer Bilgiler</h3>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Telefon</label>
+                        <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="rounded-xl border-slate-100 h-11 text-sm font-medium focus-visible:ring-primary/10" />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">E-posta</label>
+                        <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="rounded-xl border-slate-100 h-11 text-sm font-medium focus-visible:ring-primary/10" />
+                      </div>
+                    </div>
+
+                    {form.employmentType === 'OSGB Kadrosu' && (
+                      <div className="space-y-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 animate-in slide-in-from-top-2 duration-300">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">OSGB Firma Adı</label>
+                          <Select value={form.osgbName} onValueChange={(v) => setForm({ ...form, osgbName: v })}>
+                            <SelectTrigger className="rounded-xl border-white dark:border-slate-700 bg-white dark:bg-slate-900 h-11 text-sm font-medium focus:ring-primary/10"><SelectValue placeholder="OSGB Seçin" /></SelectTrigger>
+                            <SelectContent className="rounded-xl">{osgbCompanies.map((c) => <SelectItem key={c.id} value={c.name} className="text-xs font-medium">{c.name}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Birim Ücret (₺/ay)</label>
+                          <Input type="number" value={form.unitPrice} onChange={(e) => setForm({ ...form, unitPrice: e.target.value })} className="rounded-xl border-white dark:border-slate-700 bg-white dark:bg-slate-900 h-11 text-sm font-medium focus-visible:ring-primary/10" />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-4 p-5 bg-primary/[0.02] dark:bg-primary/[0.01] rounded-2xl border border-primary/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Users className="w-3.5 h-3.5 text-primary" />
+                        </div>
+                        <label className="text-[10px] font-bold text-primary tracking-widest uppercase">Uygulama Erişimi (Kullanıcı Adı)</label>
+                      </div>
+                      <Input 
+                        placeholder="Örn: uzman.isminiz" 
+                        value={form.username} 
+                        onChange={(e) => setForm({ ...form, username: e.target.value })} 
+                        className="rounded-xl border-primary/10 bg-white dark:bg-slate-900 h-11 text-sm font-medium focus-visible:ring-primary/20 shadow-sm" 
+                      />
+                      <p className="text-[10px] text-slate-500 font-medium leading-relaxed italic opacity-70">
+                        Boş bırakılırsa kullanıcı hesabı oluşturulmaz.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {form.employmentType === 'OSGB Kadrosu' && (
-                <>
-                <div className="col-span-2 space-y-2">
-                  <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">OSGB Firma Adı</label>
-                  <Select value={form.osgbName} onValueChange={(v) => setForm({ ...form, osgbName: v })}>
-                    <SelectTrigger className="rounded-xl border-slate-100 h-11 text-sm font-medium focus:ring-primary/10"><SelectValue placeholder="OSGB Seçin" /></SelectTrigger>
-                    <SelectContent className="rounded-xl">{osgbCompanies.map((c) => <SelectItem key={c.id} value={c.name} className="text-xs font-medium">{c.name}</SelectItem>)}</SelectContent>
-                  </Select>
+              {saveMutation.isError && (
+                <div className="mt-8 max-w-5xl mx-auto p-4 bg-rose-50 text-rose-600 rounded-xl text-xs font-semibold border border-rose-100 flex items-center gap-3">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  {(saveMutation.error as Error).message}
                 </div>
-                <div className="col-span-2 space-y-2">
-                  <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">Birim Ücret (₺/ay)</label>
-                  <Input type="number" value={form.unitPrice} onChange={(e) => setForm({ ...form, unitPrice: e.target.value })} className="rounded-xl border-slate-100 h-11 text-sm font-medium focus-visible:ring-primary/10" />
-                </div>
-                </>
               )}
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">Sertifika No</label>
-                <Input value={form.certificateNo} onChange={(e) => setForm({ ...form, certificateNo: e.target.value })} className="rounded-xl border-slate-100 h-11 text-sm font-medium focus-visible:ring-primary/10" />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">Sertifika Tarihi</label>
-                <Input type="date" value={form.certificateDate} onChange={(e) => setForm({ ...form, certificateDate: e.target.value })} className="rounded-xl border-slate-100 h-11 text-sm font-medium focus-visible:ring-primary/10" />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">Telefon</label>
-                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="rounded-xl border-slate-100 h-11 text-sm font-medium focus-visible:ring-primary/10" />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">E-posta</label>
-                <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="rounded-xl border-slate-100 h-11 text-sm font-medium focus-visible:ring-primary/10" />
-              </div>
             </div>
-
-            {saveMutation.isError && (
-              <div className="p-4 bg-rose-50 text-rose-600 rounded-xl text-xs font-semibold border border-rose-100 flex items-center gap-3">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                {(saveMutation.error as Error).message}
-              </div>
-            )}
             
-            <DialogFooter className="gap-3 pt-2">
-              <Button type="button" variant="ghost" onClick={() => setModalOpen(false)} className="rounded-xl h-11 px-6 font-bold text-xs text-slate-400">Vazgeç</Button>
-              <Button type="submit" disabled={saveMutation.isPending} className="rounded-xl h-11 px-8 font-bold text-xs bg-slate-900 hover:bg-slate-800 shadow-lg text-white">
+            <DialogFooter className="px-8 py-6 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 shrink-0 gap-3">
+              <Button type="button" variant="ghost" onClick={() => setModalOpen(false)} className="rounded-xl h-11 px-6 font-bold text-xs text-slate-400 hover:text-slate-600 transition-colors">Vazgeç</Button>
+              <Button type="submit" disabled={saveMutation.isPending} className="rounded-xl h-11 px-10 font-bold text-xs bg-slate-900 hover:bg-slate-800 shadow-xl text-white transition-all active:scale-95">
                 {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Kaydet
               </Button>

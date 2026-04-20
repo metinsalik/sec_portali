@@ -11,6 +11,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "turkey-map-react": path.resolve(__dirname, "./node_modules/turkey-map-react/lib/index.js"),
     },
   },
   server: {
@@ -24,5 +25,8 @@ export default defineConfig({
     proxy: {
       '/api': 'http://backend:3005'
     }
+  },
+  optimizeDeps: {
+    include: ['turkey-map-react']
   }
 })

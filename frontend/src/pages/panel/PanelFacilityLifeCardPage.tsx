@@ -18,10 +18,11 @@ import {
   Clock, CheckCircle2, AlertCircle, FileText,
   Calendar, TrendingUp, History, ClipboardCheck,
   Stethoscope, HardHat, HeartPulse, Info, UserCheck, UserX,
-  Plus, Edit2, Trash2, Loader2, UserPlus, CreditCard
+  Plus, Edit2, Trash2, Loader2, UserPlus, CreditCard, XCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { QuickAssignModal } from '@/components/panel/assignments/QuickAssignModal';
 import { toast } from 'sonner';
 
 interface Facility {
@@ -81,8 +82,9 @@ const PanelFacilityLifeCardPage = () => {
   const [manageModalOpen, setManageModalOpen] = useState(false);
   const [assignType, setAssignType] = useState<'IGU' | 'Hekim' | 'DSP' | 'Vekil'>('IGU');
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
+  const [terminatingAssignmentId, setTerminatingAssignmentId] = useState<number | null>(null);
+  const [terminationDate, setTerminationDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // Form State
   const [formData, setFormData] = useState({
     professionalId: '',
     employerRepId: '',
@@ -122,25 +124,6 @@ const PanelFacilityLifeCardPage = () => {
   });
 
   // Mutations
-  const assignMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await api.post('/panel/assignments', data);
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Atama yapılamadı');
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['facility-detail', id] });
-      toast.success('Atama başarıyla yapıldı');
-      setAssignModalOpen(false);
-      resetForm();
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    }
-  });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id: assignmentId, data }: { id: number; data: any }) => {
@@ -156,14 +139,15 @@ const PanelFacilityLifeCardPage = () => {
   });
 
   const terminateMutation = useMutation({
-    mutationFn: async (assignmentId: number) => {
-      const res = await api.post(`/panel/assignments/${assignmentId}/terminate`, {});
+    mutationFn: async ({ id: assignmentId, endDate }: { id: number; endDate: string }) => {
+      const res = await api.post(`/panel/assignments/${assignmentId}/terminate`, { endDate });
       if (!res.ok) throw new Error('Sonlandırılamadı');
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['facility-detail', id] });
       toast.success('Atama sonlandırıldı');
+      setTerminatingAssignmentId(null);
     }
   });
 
@@ -181,26 +165,6 @@ const PanelFacilityLifeCardPage = () => {
 
   const openAssignModal = (type: 'IGU' | 'Hekim' | 'DSP' | 'Vekil') => {
     setAssignType(type);
-    
-    // Default duration calculation
-    let duration = 0;
-    if (facility) {
-      const reqs = getRequirements(facility.employeeCount, facility.dangerClass);
-      const active = facility.assignments?.filter(a => a.status === 'Aktif' && a.type === type) || [];
-      const assigned = active.reduce((sum, a) => sum + a.durationMinutes, 0);
-      
-      if (type === 'IGU') duration = reqs.igu.totalMin - assigned;
-      else if (type === 'Hekim') duration = reqs.hekim.totalMin - assigned;
-      else if (type === 'DSP') duration = reqs.dsp.totalMin - assigned;
-      else if (type === 'Vekil') duration = 11700;
-    }
-
-    setFormData(prev => ({
-      ...prev,
-      durationMinutes: Math.max(0, duration).toString(),
-      isFullTime: type === 'Vekil'
-    }));
-    
     setAssignModalOpen(true);
   };
 
@@ -308,22 +272,6 @@ const PanelFacilityLifeCardPage = () => {
   const isHekimMet = assignedHekimMin >= reqs.hekim.totalMin;
   const isDspMet = !reqs.dsp.required || assignedDspMin >= reqs.dsp.totalMin;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!facility) return;
-
-    assignMutation.mutate({
-      facilityId: facility.id,
-      type: assignType,
-      professionalId: assignType !== 'Vekil' ? formData.professionalId : undefined,
-      employerRepId: assignType === 'Vekil' ? formData.employerRepId : undefined,
-      durationMinutes: formData.durationMinutes,
-      isFullTime: formData.isFullTime,
-      startDate: formData.startDate,
-      costType: formData.costType,
-      unitPrice: formData.unitPrice,
-    });
-  };
 
   const openManageModal = (type: 'IGU' | 'Hekim' | 'DSP' | 'Vekil') => {
     setAssignType(type);
@@ -779,179 +727,25 @@ const PanelFacilityLifeCardPage = () => {
         </div>
       </div>
 
-      {/* Assignment Modal */}
-      <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>
-        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
-          <DialogHeader className="px-8 py-6 bg-slate-900 text-white">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                <UserPlus className="w-5 h-5 text-white/70" />
-              </div>
-              <div>
-                <DialogTitle className="text-lg font-bold tracking-tight">Hızlı Atama Yap</DialogTitle>
-                <DialogDescription className="text-white/40 text-xs mt-1">
-                  {facility.name} için {assignType} ataması
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmit} className="p-8 space-y-6 bg-white dark:bg-slate-900">
-            <div className="grid grid-cols-2 gap-5">
-              <div className="col-span-2 space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">
-                  {assignType === 'Vekil' ? 'İŞVEREN VEKİLİ SEÇİN *' : 'PROFESYONEL SEÇİN *'}
-                </label>
-                <Select 
-                  value={assignType === 'Vekil' ? formData.employerRepId : formData.professionalId} 
-                  onValueChange={(v) => setFormData({ ...formData, [assignType === 'Vekil' ? 'employerRepId' : 'professionalId']: v })}
-                >
-                  <SelectTrigger className="rounded-xl border-slate-100 h-11 text-sm font-medium focus:ring-primary/10">
-                    <SelectValue placeholder={assignType === 'Vekil' ? 'Vekil Listesi' : 'Uzman / Hekim Listesi'} />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    {assignType === 'Vekil' 
-                      ? employerReps.map(r => (
-                          <SelectItem key={r.id} value={r.id.toString()} className="text-xs font-medium">
-                            {r.fullName} ({r.title || 'İşveren Vekili'})
-                          </SelectItem>
-                        ))
-                      : professionals
-                          .filter(p => {
-                            if (assignType === 'IGU') return p.titleClass.includes('IGU');
-                            if (assignType === 'Hekim') return p.titleClass === 'İşyeri Hekimi';
-                            if (assignType === 'DSP') return p.titleClass === 'DSP';
-                            return false;
-                          })
-                          .map(p => (
-                            <SelectItem key={p.id} value={p.id.toString()} className="text-xs font-medium">
-                              {p.fullName} ({p.titleClass})
-                            </SelectItem>
-                          ))
-                    }
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">SÜRE (DK/AY) *</label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input 
-                    type="number" 
-                    value={formData.durationMinutes} 
-                    onChange={(e) => setFormData({ ...formData, durationMinutes: e.target.value })}
-                    required
-                    className="pl-10 rounded-xl border-slate-100 h-11 text-sm font-medium focus-visible:ring-primary/10"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">BAŞLANGIÇ TARİHİ *</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input 
-                    type="date" 
-                    value={formData.startDate} 
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    required
-                    className="pl-10 rounded-xl border-slate-100 h-11 text-sm font-medium focus-visible:ring-primary/10"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">MALİYET TİPİ</label>
-                <Select 
-                  value={formData.costType} 
-                  onValueChange={(v) => setFormData({ ...formData, costType: v })}
-                >
-                  <SelectTrigger className="rounded-xl border-slate-100 h-11 text-sm font-medium focus:ring-primary/10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="Aylık Sabit" className="text-xs font-medium">Aylık Sabit</SelectItem>
-                    <SelectItem value="Saatlik" className="text-xs font-medium">Saatlik</SelectItem>
-                    <SelectItem value="Çalışan Başı" className="text-xs font-medium">Çalışan Başı</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1">BİRİM FİYAT (₺)</label>
-                <div className="relative">
-                  <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input 
-                    type="number" 
-                    value={formData.unitPrice} 
-                    onChange={(e) => setFormData({ ...formData, unitPrice: e.target.value })}
-                    className="pl-10 rounded-xl border-slate-100 h-11 text-sm font-medium focus-visible:ring-primary/10"
-                  />
-                </div>
-              </div>
-
-              <div className="col-span-2 flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                <div 
-                  className={cn(
-                    "w-10 h-5 rounded-full relative cursor-pointer transition-colors",
-                    formData.isFullTime ? "bg-primary" : "bg-slate-300"
-                  )}
-                  onClick={() => {
-                    const newFT = !formData.isFullTime;
-                    setFormData({ 
-                      ...formData, 
-                      isFullTime: newFT,
-                      durationMinutes: newFT ? '11700' : formData.durationMinutes
-                    });
-                  }}
-                >
-                  <div className={cn(
-                    "absolute top-1 w-3 h-3 bg-white rounded-full transition-all",
-                    formData.isFullTime ? "left-6" : "left-1"
-                  )} />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-200">TAM ZAMANLI ATAMA</span>
-                  <span className="text-[10px] text-slate-500 font-medium tracking-tight">Bu personeli tesisin tam zamanlı uzmanı olarak ata.</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-2xl flex gap-3">
-              <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium leading-relaxed">
-                Atama yapılmadan önce personelin kalan kapasitesi sistem tarafından kontrol edilecektir. Kapasite yetersizse işlem reddedilir.
-              </p>
-            </div>
-
-            <DialogFooter className="gap-3 pt-2">
-              <Button type="button" variant="ghost" onClick={() => setAssignModalOpen(false)} className="rounded-xl h-11 px-6 font-bold text-xs text-slate-400">Vazgeç</Button>
-              <Button 
-                type="submit" 
-                disabled={assignMutation.isPending || (assignType === 'Vekil' ? !formData.employerRepId : !formData.professionalId)} 
-                className="rounded-xl h-11 px-8 font-bold text-xs bg-slate-900 hover:bg-slate-800 shadow-lg text-white"
-              >
-                {assignMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Atamayı Tamamla
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <QuickAssignModal 
+        open={assignModalOpen}
+        onOpenChange={setAssignModalOpen}
+        facility={facility}
+        type={assignType}
+      />
 
       {/* Manage Assignments Modal */}
       <Dialog open={manageModalOpen} onOpenChange={setManageModalOpen}>
-        <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
-          <DialogHeader className="px-8 py-6 bg-slate-900 text-white flex flex-row items-center justify-between">
+        <DialogContent className="sm:max-w-[1000px] w-[95vw] h-[85vh] p-0 overflow-hidden border-none shadow-2xl rounded-3xl flex flex-col">
+          <DialogHeader className="px-8 py-6 bg-slate-900 text-white flex flex-row items-center justify-between shrink-0">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
                 <History className="w-5 h-5 text-white/70" />
               </div>
               <div>
                 <DialogTitle className="text-lg font-bold tracking-tight">Atama Yönetimi</DialogTitle>
-                <DialogDescription className="text-white/40 text-xs mt-1">
-                  {facility.name} - {assignType} Aktif Atamaları
+                <DialogDescription className="text-white/40 text-[10px] uppercase tracking-widest mt-1 font-bold">
+                  {facility.name} • {assignType} Aktif Atamaları
                 </DialogDescription>
               </div>
             </div>
@@ -960,37 +754,37 @@ const PanelFacilityLifeCardPage = () => {
                 setManageModalOpen(false);
                 openAssignModal(assignType);
               }}
-              className="bg-primary hover:bg-primary/90 text-white rounded-xl h-9 px-4 text-xs font-bold"
+              className="bg-white hover:bg-slate-100 text-slate-900 rounded-xl h-10 px-6 text-[11px] font-bold shadow-lg transition-all active:scale-95"
             >
-              <UserPlus className="w-3.5 h-3.5 mr-2" /> Yeni Atama
+              <UserPlus className="w-4 h-4 mr-2" /> Yeni Atama Ekle
             </Button>
           </DialogHeader>
 
-          <div className="p-8 bg-white dark:bg-slate-900 min-h-[400px]">
+          <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-slate-950 custom-scrollbar">
             {facility.assignments?.filter(a => a.status === 'Aktif' && a.type === assignType).length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 opacity-40">
-                <Shield className="w-12 h-12 mb-4" />
-                <p className="text-sm font-bold">Aktif atama bulunamadı.</p>
+              <div className="flex flex-col items-center justify-center py-32 opacity-20">
+                <Shield className="w-16 h-16 mb-4" />
+                <p className="text-sm font-bold tracking-widest">AKTİF ATAMA BULUNAMADI</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {facility.assignments?.filter(a => a.status === 'Aktif' && a.type === assignType).map(a => (
-                  <div key={a.id} className="p-5 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex items-center justify-between group">
+                  <div key={a.id} className="p-6 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex items-center justify-between group hover:border-primary/20 transition-all duration-300">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center font-bold text-primary">
+                      <div className="w-12 h-12 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center font-bold text-primary shadow-inner">
                         {(a.professional?.fullName || a.employerRep?.fullName || '?')[0]}
                       </div>
                       <div>
                         <p className="text-sm font-bold text-slate-900 dark:text-white">
                           {a.professional?.fullName || a.employerRep?.fullName}
                         </p>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> {a.durationMinutes} DK
+                        <div className="flex flex-wrap items-center gap-3 mt-2">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5" /> {a.durationMinutes} DK
                           </span>
-                          {a.isFullTime && <Badge className="bg-primary/10 text-primary border-none text-[8px] font-black h-4 px-1.5 uppercase">TAM ZAMANLI</Badge>}
-                          <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                            <Calendar className="w-3 h-3" /> {new Date(a.startDate).toLocaleDateString('tr-TR')} Başlangıç
+                          {a.isFullTime && <Badge className="bg-primary/10 text-primary border-none text-[8px] font-black h-4 px-2 uppercase tracking-tighter">TAM ZAMANLI</Badge>}
+                          <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 border-l pl-3">
+                            <Calendar className="w-3.5 h-3.5" /> {new Date(a.startDate).toLocaleDateString('tr-TR')}
                           </span>
                         </div>
                       </div>
@@ -999,7 +793,7 @@ const PanelFacilityLifeCardPage = () => {
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="w-9 h-9 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600"
+                        className="w-10 h-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-primary transition-all"
                         onClick={() => {
                           setEditingAssignment(a);
                           setFormData({
@@ -1013,19 +807,15 @@ const PanelFacilityLifeCardPage = () => {
                           });
                         }}
                       >
-                        <Edit2 className="w-3.5 h-3.5" />
+                        <Edit2 className="w-4 h-4" />
                       </Button>
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="w-9 h-9 rounded-xl hover:bg-rose-50 text-rose-500"
-                        onClick={() => {
-                          if (confirm('Bu atamayı sonlandırmak istediğinize emin misiniz?')) {
-                            terminateMutation.mutate(a.id);
-                          }
-                        }}
+                        className="w-10 h-10 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-900/10 text-slate-400 hover:text-rose-500 transition-all"
+                        onClick={() => setTerminatingAssignmentId(a.id)}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
@@ -1034,58 +824,67 @@ const PanelFacilityLifeCardPage = () => {
             )}
 
             {editingAssignment && (
-              <div className="mt-8 p-6 rounded-2xl border border-primary/20 bg-primary/5 space-y-4 animate-in slide-in-from-bottom-2">
-                <h4 className="text-xs font-bold text-primary flex items-center gap-2">
-                  <Edit2 className="w-3 h-3" /> ATAMAYI DÜZENLE: {editingAssignment.professional?.fullName || editingAssignment.employerRep?.fullName}
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 ml-1">SÜRE (DK/AY)</label>
+              <div className="mt-8 p-8 rounded-2xl border-2 border-primary/10 bg-primary/[0.02] dark:bg-primary/[0.01] space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-primary flex items-center gap-2 uppercase tracking-widest">
+                    <Edit2 className="w-4 h-4" /> Atama Güncelleme
+                  </h4>
+                  <Badge variant="outline" className="bg-white dark:bg-slate-900 border-primary/20 text-primary font-bold">
+                    {editingAssignment.professional?.fullName || editingAssignment.employerRep?.fullName}
+                  </Badge>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Süre (Dk/Ay)</label>
                     <Input 
                       type="number"
                       value={formData.durationMinutes}
                       onChange={(e) => setFormData({...formData, durationMinutes: e.target.value})}
-                      className="h-10 rounded-xl bg-white border-slate-100"
+                      className="h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 shadow-sm"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 ml-1">MALİYET TİPİ / BİRİM FİYAT</label>
-                    <div className="flex gap-2">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Maliyet ve Birim Fiyat</label>
+                    <div className="flex gap-3">
                       <Select value={formData.costType} onValueChange={(v) => setFormData({...formData, costType: v})}>
-                        <SelectTrigger className="h-10 rounded-xl bg-white border-slate-100 flex-1">
+                        <SelectTrigger className="h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 flex-1 shadow-sm">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Aylık Sabit">Sabit</SelectItem>
-                          <SelectItem value="Saatlik">Saatlik</SelectItem>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value="Aylık Sabit" className="text-xs font-medium">Sabit</SelectItem>
+                          <SelectItem value="Saatlik" className="text-xs font-medium">Saatlik</SelectItem>
                         </SelectContent>
                       </Select>
-                      <Input 
-                        type="number"
-                        value={formData.unitPrice}
-                        onChange={(e) => setFormData({...formData, unitPrice: e.target.value})}
-                        className="h-10 rounded-xl bg-white border-slate-100 w-24"
-                        placeholder="₺"
-                      />
+                      <div className="relative w-32">
+                        <Input 
+                          type="number"
+                          value={formData.unitPrice}
+                          onChange={(e) => setFormData({...formData, unitPrice: e.target.value})}
+                          className="h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 pl-7 shadow-sm"
+                          placeholder="0"
+                        />
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">₺</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="col-span-2 flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100">
-                    <div className="flex items-center gap-2">
+                  <div className="md:col-span-2 flex items-center justify-between p-5 bg-white dark:bg-slate-900 rounded-2xl border border-primary/10 shadow-sm">
+                    <div className="flex items-center gap-3">
                       <div 
-                        className={cn("w-8 h-4 rounded-full relative cursor-pointer", formData.isFullTime ? "bg-primary" : "bg-slate-200")}
+                        className={cn("w-10 h-5 rounded-full relative cursor-pointer transition-colors shadow-inner", formData.isFullTime ? "bg-primary" : "bg-slate-200 dark:bg-slate-800")}
                         onClick={() => {
                           const newFT = !formData.isFullTime;
                           setFormData({...formData, isFullTime: newFT, durationMinutes: newFT ? '11700' : formData.durationMinutes});
                         }}
                       >
-                        <div className={cn("absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all", formData.isFullTime ? "left-4 h-3 w-3" : "left-0.5 h-3 w-3")} />
+                        <div className={cn("absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all shadow-sm", formData.isFullTime ? "left-5.5" : "left-0.5")} />
                       </div>
-                      <span className="text-[10px] font-bold">TAM ZAMANLI</span>
+                      <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide">TAM ZAMANLI DURUMU</span>
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" className="h-8 rounded-lg text-[10px] font-bold" onClick={() => setEditingAssignment(null)}>Vazgeç</Button>
+                    <div className="flex gap-3">
+                      <Button variant="ghost" className="h-10 px-6 rounded-xl text-[11px] font-bold text-slate-400 hover:text-slate-600" onClick={() => setEditingAssignment(null)}>İptal</Button>
                       <Button 
-                        className="h-8 rounded-lg text-[10px] font-bold bg-primary text-white"
+                        className="h-10 px-8 rounded-xl text-[11px] font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-xl transition-all active:scale-95"
                         onClick={() => {
                           updateMutation.mutate({
                             id: editingAssignment.id,
@@ -1098,7 +897,7 @@ const PanelFacilityLifeCardPage = () => {
                           });
                         }}
                       >
-                        Güncelle
+                        Değişiklikleri Kaydet
                       </Button>
                     </div>
                   </div>
@@ -1106,6 +905,62 @@ const PanelFacilityLifeCardPage = () => {
               </div>
             )}
           </div>
+          <DialogFooter className="px-8 py-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 shrink-0">
+            <p className="text-[10px] text-slate-400 font-medium italic">Atama detaylarını düzenlemek için ilgili kaydın yanındaki düzenle butonunu kullanın.</p>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Termination Dialog */}
+      <Dialog open={terminatingAssignmentId !== null} onOpenChange={(v) => !v && setTerminatingAssignmentId(null)}>
+        <DialogContent className="sm:max-w-[450px] w-[95vw] p-0 overflow-hidden border-none shadow-2xl rounded-3xl flex flex-col">
+          <DialogHeader className="px-8 py-6 bg-rose-600 text-white shrink-0">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                <XCircle className="w-5 h-5 text-white/70" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-bold tracking-tight">Atamayı Sonlandır</DialogTitle>
+                <DialogDescription className="text-white/60 text-xs mt-1 font-medium">
+                  Bu işlem geri alınamaz. Lütfen bitiş tarihini seçin.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="p-8 space-y-6 bg-white dark:bg-slate-900 flex-1 overflow-y-auto">
+            <div className="space-y-3">
+              <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Bitiş Tarihi *</label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input 
+                  type="date" 
+                  value={terminationDate} 
+                  onChange={(e) => setTerminationDate(e.target.value)}
+                  required
+                  className="pl-10 rounded-xl border-slate-100 dark:border-slate-800 h-11 text-sm font-medium focus-visible:ring-primary/10 shadow-sm"
+                />
+              </div>
+            </div>
+            
+            <div className="p-4 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/20 rounded-2xl flex items-start gap-3">
+              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-rose-700 dark:text-rose-400 font-medium leading-relaxed">
+                Atama sonlandırıldığında ilgili profesyonelin bu tesisteki kapasitesi serbest kalacaktır.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="px-8 py-6 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 shrink-0 gap-3">
+            <Button variant="ghost" onClick={() => setTerminatingAssignmentId(null)} className="rounded-xl h-11 px-6 font-bold text-xs text-slate-400 hover:text-slate-600">Vazgeç</Button>
+            <Button 
+              variant="destructive"
+              className="rounded-xl h-11 px-8 font-bold text-xs shadow-lg transition-all active:scale-95"
+              onClick={() => terminatingAssignmentId && terminateMutation.mutate({ id: terminatingAssignmentId, endDate: terminationDate })}
+              disabled={terminateMutation.isPending}
+            >
+              {terminateMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <XCircle className="w-4 h-4 mr-2" />}
+              Atamayı Kalıcı Olarak Sonlandır
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

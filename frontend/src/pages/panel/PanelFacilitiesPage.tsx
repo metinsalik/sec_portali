@@ -5,8 +5,10 @@ import {
   Building2, MapPin, Search, Filter, 
   LayoutGrid, List, ChevronRight, Shield, 
   Users, Activity, Building, ArrowRight, ChevronDown,
-  RefreshCw, Calendar as CalendarIcon, Save, Loader2, Eye
+  RefreshCw, Calendar as CalendarIcon, Save, Loader2, Eye,
+  CheckCircle2, XCircle, AlertTriangle, Info, Clock, CreditCard, UserPlus, Calendar
 } from 'lucide-react';
+import { QuickAssignModal } from '@/components/panel/assignments/QuickAssignModal';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +37,7 @@ interface Facility {
   employeeCount: number;
   city: string;
   district: string;
+  compliance?: any; // To store compliance result
 }
 
 export default function PanelFacilitiesPage() {
@@ -54,14 +57,32 @@ export default function PanelFacilitiesPage() {
   const [singleCount, setSingleCount] = useState<string>('');
   const [bulkCounts, setBulkCounts] = useState<Record<string, string>>({});
 
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignType, setAssignType] = useState<'IGU' | 'Hekim' | 'DSP' | 'Vekil'>('IGU');
+
   const { data: facilities = [], isLoading } = useQuery<Facility[]>({
-    queryKey: ['facilities'],
+    queryKey: ['facilities-with-compliance'],
     queryFn: async () => {
-      const res = await api.get('/settings/facilities');
-      if (!res.ok) throw new Error('Tesisler yüklenemedi');
-      return res.json();
+      const [facRes, compRes] = await Promise.all([
+        api.get('/settings/facilities'),
+        api.get('/panel/assignments/compliance-status')
+      ]);
+      
+      if (!facRes.ok || !compRes.ok) throw new Error('Veriler yüklenemedi');
+      
+      const facilitiesData = await facRes.json();
+      const complianceData = await compRes.json();
+      
+      // Merge compliance data into facilities
+      return facilitiesData.map((f: any) => ({
+        ...f,
+        compliance: complianceData.find((c: any) => c.facilityId === f.id)
+      }));
     }
   });
+
+
+  const [expandedFacilityId, setExpandedFacilityId] = useState<string | null>(null);
 
   const singleUpdateMutation = useMutation({
     mutationFn: async (data: { id: string, count: number, effectiveDate: string }) => {
@@ -161,6 +182,12 @@ export default function PanelFacilitiesPage() {
       updates,
       effectiveDate: updateDate
     });
+  };
+
+  const openAssignModal = (facility: Facility, type: 'IGU' | 'Hekim' | 'DSP' | 'Vekil') => {
+    setSelectedFacility(facility);
+    setAssignType(type);
+    setAssignModalOpen(true);
   };
 
   if (isLoading) {
@@ -274,80 +301,220 @@ export default function PanelFacilitiesPage() {
                         <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground tracking-wider">Tesis Bilgisi</th>
                         <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground tracking-wider">Tehlike Sınıfı</th>
                         <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground tracking-wider text-center">Çalışan</th>
+                        <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground tracking-wider text-center">Uzman (İGÜ)</th>
+                        <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground tracking-wider text-center">İşyeri Hekimi</th>
+                        <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground tracking-wider text-center">DSP</th>
                         <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground tracking-wider">Durum</th>
                         <th className="px-6 py-3 text-right"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
                       {groupedFacilities[type].map((f) => (
-                        <tr key={f.id} className="hover:bg-muted/20 transition-colors group">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-background rounded-lg flex items-center justify-center text-muted-foreground border group-hover:text-primary transition-colors">
-                                <Building2 className="w-4 h-4" />
+                        <React.Fragment key={f.id}>
+                          <tr className={cn(
+                            "hover:bg-muted/20 transition-colors group cursor-pointer",
+                            expandedFacilityId === f.id && "bg-muted/30"
+                          )} onClick={() => setExpandedFacilityId(expandedFacilityId === f.id ? null : f.id)}>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-background rounded-lg flex items-center justify-center text-muted-foreground border group-hover:text-primary transition-colors">
+                                  <Building2 className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <div className="font-semibold text-sm hover:text-primary transition-colors">{f.name}</div>
+                                  <div className="text-[10px] font-mono text-muted-foreground">{f.id}</div>
+                                </div>
                               </div>
-                              <div>
-                                <div className="font-semibold text-sm cursor-pointer hover:text-primary transition-colors" onClick={() => handleView(f)}>{f.name}</div>
-                                <div className="text-[10px] font-mono text-muted-foreground">{f.id}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <Badge variant="outline" className={cn(
+                                "text-[10px] font-bold px-2 py-0",
+                                f.dangerClass === 'Çok Tehlikeli' ? "border-rose-200 text-rose-600 bg-rose-50" : 
+                                f.dangerClass === 'Tehlikeli' ? "border-amber-200 text-amber-600 bg-amber-50" : 
+                                "border-emerald-200 text-emerald-600 bg-emerald-50"
+                              )}>
+                                {f.dangerClass}
+                              </Badge>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); openSingleUpdate(f); }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 bg-muted hover:bg-primary/10 hover:text-primary transition-colors rounded-full text-[11px] font-bold border border-transparent hover:border-primary/20"
+                              >
+                                <Users className="w-3 h-3" />
+                                {f.employeeCount || 0}
+                              </button>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              {f.compliance?.igu ? (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); openAssignModal(f, 'IGU'); }}
+                                  className={cn(
+                                    "text-[10px] font-bold px-2 py-1 rounded-lg border flex items-center justify-center gap-1.5 mx-auto transition-all",
+                                    f.compliance.igu.isCompliant 
+                                      ? "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100" 
+                                      : "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100"
+                                  )}
+                                >
+                                  {f.compliance.igu.isCompliant ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                  {f.compliance.igu.isCompliant ? "UYGUN" : "EKSİK"}
+                                </button>
+                              ) : "-"}
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              {f.compliance?.hekim ? (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); openAssignModal(f, 'Hekim'); }}
+                                  className={cn(
+                                    "text-[10px] font-bold px-2 py-1 rounded-lg border flex items-center justify-center gap-1.5 mx-auto transition-all",
+                                    f.compliance.hekim.isCompliant 
+                                      ? "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100" 
+                                      : "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100"
+                                  )}
+                                >
+                                  {f.compliance.hekim.isCompliant ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                  {f.compliance.hekim.isCompliant ? "UYGUN" : "EKSİK"}
+                                </button>
+                              ) : "-"}
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              {f.compliance?.dsp ? (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); openAssignModal(f, 'DSP'); }}
+                                  className={cn(
+                                    "text-[10px] font-bold px-2 py-1 rounded-lg border flex items-center justify-center gap-1.5 mx-auto transition-all",
+                                    f.compliance.dsp.summary === 'Muaf' ? "bg-slate-50 text-slate-400 border-slate-100" :
+                                    f.compliance.dsp.summary === 'Zorunlu Değil' ? "bg-blue-50 text-blue-600 border-blue-100" :
+                                    f.compliance.dsp.isCompliant 
+                                      ? "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100" 
+                                      : "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100"
+                                  )}
+                                >
+                                  {f.compliance.dsp.summary === 'Muaf' ? <Shield className="w-3 h-3" /> :
+                                   f.compliance.dsp.summary === 'Zorunlu Değil' ? <Info className="w-3 h-3" /> :
+                                   f.compliance.dsp.isCompliant ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                  {f.compliance.dsp.summary}
+                                </button>
+                              ) : "-"}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2">
+                                <div className={cn("w-1.5 h-1.5 rounded-full", f.isActive ? "bg-emerald-500" : "bg-slate-300")} />
+                                <span className="text-[11px] font-medium">{f.isActive ? "Aktif" : "Pasif"}</span>
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <Badge variant="outline" className={cn(
-                              "text-[10px] font-bold px-2 py-0",
-                              f.dangerClass === 'Çok Tehlikeli' ? "border-rose-200 text-rose-600 bg-rose-50" : 
-                              f.dangerClass === 'Tehlikeli' ? "border-amber-200 text-amber-600 bg-amber-50" : 
-                              "border-emerald-200 text-emerald-600 bg-emerald-50"
-                            )}>
-                              {f.dangerClass}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <button 
-                              onClick={() => openSingleUpdate(f)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1 bg-muted hover:bg-primary/10 hover:text-primary transition-colors rounded-full text-[11px] font-bold border border-transparent hover:border-primary/20"
-                            >
-                              <Users className="w-3 h-3" />
-                              {f.employeeCount || 0}
-                            </button>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              <div className={cn("w-1.5 h-1.5 rounded-full", f.isActive ? "bg-emerald-500" : "bg-slate-300")} />
-                              <span className="text-[11px] font-medium">{f.isActive ? "Aktif" : "Pasif"}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleView(f)}
-                                className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/5"
-                                title="Detayları Gör"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => openSingleUpdate(f)}
-                                className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/5"
-                                title="Çalışan Güncelle"
-                              >
-                                <RefreshCw className="w-3.5 h-3.5" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => navigate('/panel/assignments', { state: { facilityId: f.id } })} 
-                                className="h-8 px-3 rounded-lg text-primary hover:text-primary hover:bg-primary/5 font-semibold text-[11px] gap-2"
-                              >
-                                Atamalar <ArrowRight className="w-3.5 h-3.5" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={(e) => { e.stopPropagation(); handleView(f); }}
+                                  className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/5"
+                                  title="Detayları Gör"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <ChevronDown className={cn(
+                                  "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                                  expandedFacilityId === f.id && "rotate-180"
+                                )} />
+                              </div>
+                            </td>
+                          </tr>
+                          
+                          {/* Expanded Compliance Summary */}
+                          {expandedFacilityId === f.id && (
+                            <tr className="bg-muted/10">
+                              <td colSpan={8} className="px-8 py-6 border-b">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in slide-in-from-top-2">
+                                  <div>
+                                    <h4 className="text-[10px] font-bold text-rose-500 flex items-center gap-2 mb-4 tracking-wider uppercase">
+                                      <AlertTriangle className="w-3.5 h-3.5" /> Mevcut Eksiklikler
+                                    </h4>
+                                    <div className="space-y-3">
+                                      {!f.compliance?.igu?.isCompliant && (
+                                        <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3">
+                                          <XCircle className="w-4 h-4 text-rose-600" />
+                                          <p className="text-[11px] font-bold text-rose-700">
+                                            {f.compliance?.igu?.requiredMinutes - f.compliance?.igu?.assignedMinutes} dk İG Uzmanı eksik
+                                          </p>
+                                        </div>
+                                      )}
+                                      {!f.compliance?.hekim?.isCompliant && (
+                                        <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3">
+                                          <XCircle className="w-4 h-4 text-rose-600" />
+                                          <p className="text-[11px] font-bold text-rose-700">
+                                            {f.compliance?.hekim?.requiredMinutes - f.compliance?.hekim?.assignedMinutes} dk İşyeri Hekimi eksik
+                                          </p>
+                                        </div>
+                                      )}
+                                      {!f.compliance?.dsp?.isCompliant && f.compliance?.dsp?.required && (
+                                        <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3">
+                                          <XCircle className="w-4 h-4 text-rose-600" />
+                                          <p className="text-[11px] font-bold text-rose-700">DSP ataması eksik</p>
+                                        </div>
+                                      )}
+                                      {f.compliance?.overallCompliant && (
+                                        <p className="text-[11px] text-muted-foreground font-medium italic">Herhangi bir eksiklik bulunmamaktadır.</p>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div>
+                                    <h4 className="text-[10px] font-bold text-emerald-500 flex items-center gap-2 mb-4 tracking-wider uppercase">
+                                      <CheckCircle2 className="w-3.5 h-3.5" /> Karşılanan Şartlar
+                                    </h4>
+                                    <div className="space-y-2">
+                                      {f.compliance?.igu?.hasValidClass && (
+                                        <div className="p-2.5 bg-emerald-50/50 border border-emerald-100/50 rounded-lg flex items-center gap-3">
+                                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                                          <p className="text-[10px] font-bold text-emerald-700">İG Uzmanı sınıf şartı karşılandı</p>
+                                        </div>
+                                      )}
+                                      {f.compliance?.hekim?.isCompliant && (
+                                        <div className="p-2.5 bg-emerald-50/50 border border-emerald-100/50 rounded-lg flex items-center gap-3">
+                                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                                          <p className="text-[10px] font-bold text-emerald-700">İşyeri Hekimi asgari süre sağlandı</p>
+                                        </div>
+                                      )}
+                                      {f.compliance?.dsp?.isCompliant && (
+                                        <div className="p-2.5 bg-emerald-50/50 border border-emerald-100/50 rounded-lg flex items-center gap-3">
+                                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                                          <p className="text-[10px] font-bold text-emerald-700">DSP şartı karşılandı ({f.compliance.dsp.summary})</p>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <div className="mt-8 pt-6 border-t">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Toplam Uyumluluk</span>
+                                        <span className="text-xs font-black text-primary">
+                                          {Math.round(((f.compliance?.igu?.isCompliant ? 33 : 0) + (f.compliance?.hekim?.isCompliant ? 33 : 0) + (f.compliance?.dsp?.isCompliant ? 34 : 0)))}%
+                                        </span>
+                                      </div>
+                                      <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                                        <div 
+                                          className="h-full bg-primary transition-all duration-500"
+                                          style={{ width: `${((f.compliance?.igu?.isCompliant ? 33 : 0) + (f.compliance?.hekim?.isCompliant ? 33 : 0) + (f.compliance?.dsp?.isCompliant ? 34 : 0))}%` }}
+                                        />
+                                      </div>
+                                      <div className="mt-6 flex justify-end">
+                                        <Button 
+                                          variant="outline" 
+                                          size="sm" 
+                                          onClick={() => handleView(f)}
+                                          className="h-9 px-6 rounded-xl text-[10px] font-bold gap-2 hover:bg-primary hover:text-white transition-all"
+                                        >
+                                          Detaylı Life Card Görünümü <ArrowRight className="w-3.5 h-3.5" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>
@@ -405,6 +572,35 @@ export default function PanelFacilitiesPage() {
                     </div>
                   </div>
                 </div>
+
+                <div className="space-y-2 mb-6">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-background border text-[10px] font-bold">
+                    <span className="text-muted-foreground">İG UZMANI</span>
+                    <span className={f.compliance?.igu?.isCompliant ? "text-emerald-600" : "text-rose-600"}>
+                      {f.compliance?.igu?.isCompliant ? "UYGUN" : "EKSİK"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-background border text-[10px] font-bold">
+                    <span className="text-muted-foreground">İŞYERİ HEKİMİ</span>
+                    <span className={f.compliance?.hekim?.isCompliant ? "text-emerald-600" : "text-rose-600"}>
+                      {f.compliance?.hekim?.isCompliant ? "UYGUN" : "EKSİK"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-background border text-[10px] font-bold">
+                    <span className="text-muted-foreground">DSP</span>
+                    <span className={f.compliance?.dsp?.isCompliant ? "text-emerald-600" : "text-rose-600"}>
+                      {f.compliance?.dsp?.summary}
+                    </span>
+                  </div>
+                </div>
+                
+                {(!f.compliance?.overallCompliant) && (
+                  <div className="mb-6 p-3 bg-rose-50 rounded-xl border border-rose-100">
+                    <p className="text-[10px] font-bold text-rose-700 flex items-center gap-2">
+                      <AlertTriangle className="w-3 h-3" /> Eksiklikler Mevcut
+                    </p>
+                  </div>
+                )}
                 
                 <Button 
                   onClick={() => handleView(f)}
@@ -477,87 +673,100 @@ export default function PanelFacilitiesPage() {
 
       {/* Bulk Update Dialog */}
       <Dialog open={isBulkUpdateOpen} onOpenChange={setIsBulkUpdateOpen}>
-        <DialogContent className="sm:max-w-[1200px] w-[95vw] h-[85vh] flex flex-col p-0 gap-0 border-none shadow-2xl rounded-2xl bg-white dark:bg-slate-950 overflow-hidden">
-          <DialogHeader className="p-8 bg-slate-900 text-white relative overflow-hidden shrink-0">
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center border border-white/10">
-                  <RefreshCw className="w-5 h-5 text-primary/80" />
+        <DialogContent className="sm:max-w-[1200px] w-[95vw] h-[85vh] flex flex-col p-0 gap-0 border-none shadow-2xl rounded-3xl bg-white dark:bg-slate-950 overflow-hidden">
+          <DialogHeader className="px-10 py-8 bg-slate-900 text-white relative overflow-hidden shrink-0">
+            <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
+              <RefreshCw className="w-32 h-32" />
+            </div>
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+              <div className="flex items-center gap-6">
+                <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20">
+                  <RefreshCw className="w-8 h-8 text-primary/80" />
                 </div>
                 <div>
-                  <DialogTitle className="text-xl font-semibold tracking-tight">Toplu Çalışan Güncelleme</DialogTitle>
-                  <DialogDescription className="text-slate-400 text-sm">Tesislerin çalışan verilerini merkezi olarak düzenleyin.</DialogDescription>
+                  <DialogTitle className="text-2xl font-black tracking-tight uppercase">Toplu Çalışan Güncelleme</DialogTitle>
+                  <DialogDescription className="text-white/40 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">
+                    Operasyonel Kapasite Planlama • 2026 Q2
+                  </DialogDescription>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 bg-white/5 p-2 px-4 rounded-xl border border-white/10 min-w-[220px]">
+              <div className="flex items-center gap-4 bg-white/5 p-3 px-6 rounded-2xl border border-white/10 min-w-[260px] shadow-inner">
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-medium text-slate-500 tracking-wide">Geçerlilik Tarihi</span>
+                  <span className="text-[10px] font-black text-white/40 tracking-widest uppercase">Geçerlilik Tarihi</span>
                   <Input 
                     type="date" 
                     value={updateDate} 
                     onChange={e => setUpdateDate(e.target.value)} 
-                    className="bg-transparent border-none text-white font-medium p-0 h-auto focus-visible:ring-0 text-sm cursor-pointer"
+                    className="bg-transparent border-none text-white font-bold p-0 h-auto focus-visible:ring-0 text-sm cursor-pointer"
                   />
                 </div>
-                <CalendarIcon className="w-4 h-4 text-slate-500 ml-auto" />
+                <CalendarIcon className="w-5 h-5 text-white/20 ml-auto" />
               </div>
             </div>
           </DialogHeader>
 
-          <div className="flex-1 overflow-hidden flex flex-col p-8 space-y-6 bg-slate-50/30 dark:bg-slate-950">
-            <div className="relative group max-w-md">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input 
-                placeholder="Tesis ara..." 
-                className="pl-10 h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm focus:ring-1 focus:ring-primary/20 text-sm transition-all"
-                onChange={(e) => {
-                  const term = e.target.value.toLowerCase();
-                  const rows = document.querySelectorAll('.bulk-row');
-                  rows.forEach((row: any) => {
-                    const text = row.dataset.name.toLowerCase() + row.dataset.id.toLowerCase();
-                    row.style.display = text.includes(term) ? 'table-row' : 'none';
-                  });
-                }}
-              />
+          <div className="flex-1 overflow-hidden flex flex-col p-10 space-y-8 bg-slate-50/30 dark:bg-slate-950">
+            <div className="flex items-center justify-between">
+              <div className="relative group max-w-md w-full">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
+                <Input 
+                  placeholder="Tesis adı veya koduna göre filtrele..." 
+                  className="pl-12 h-12 rounded-2xl bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 shadow-sm focus:ring-2 focus:ring-primary/10 text-sm font-medium transition-all"
+                  onChange={(e) => {
+                    const term = e.target.value.toLowerCase();
+                    const rows = document.querySelectorAll('.bulk-row');
+                    rows.forEach((row: any) => {
+                      const text = row.dataset.name.toLowerCase() + row.dataset.id.toLowerCase();
+                      row.style.display = text.includes(term) ? 'table-row' : 'none';
+                    });
+                  }}
+                />
+              </div>
+              <div className="flex items-center gap-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <div className="flex items-center gap-2">
+                   <div className="w-2 h-2 rounded-full bg-primary/40" />
+                   {facilities.length} Toplam Tesis
+                </div>
+              </div>
             </div>
 
-            <div className="flex-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
-              <div className="overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+            <div className="flex-1 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
+              <div className="overflow-y-auto flex-1 custom-scrollbar">
                 <table className="w-full text-left border-collapse">
-                  <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900 z-10 border-b border-slate-100 dark:border-slate-800">
+                  <thead className="sticky top-0 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md z-10 border-b border-slate-100 dark:border-slate-800">
                     <tr>
-                      <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 tracking-wide">Tesis Adı / Kod</th>
-                      <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 tracking-wide text-center">Mevcut</th>
-                      <th className="px-6 py-4 text-[10px] font-semibold text-slate-400 tracking-wide text-right w-[180px]">Yeni Değer</th>
+                      <th className="px-10 py-5 text-[10px] font-black text-slate-400 tracking-widest uppercase">Tesis Bilgileri</th>
+                      <th className="px-10 py-5 text-[10px] font-black text-slate-400 tracking-widest uppercase text-center">Mevcut Kapasite</th>
+                      <th className="px-10 py-5 text-[10px] font-black text-slate-400 tracking-widest uppercase text-right w-[200px]">Yeni Değer</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
                     {facilities.map(f => (
                       <tr key={f.id} data-name={f.name} data-id={f.id} className="bulk-row hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors shadow-sm border border-slate-200/50 dark:border-slate-700/50">
-                              <Building2 className="w-4 h-4" />
+                        <td className="px-10 py-5">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white transition-all shadow-sm border border-slate-100 dark:border-slate-700">
+                              <Building2 className="w-5 h-5" />
                             </div>
                             <div>
-                              <div className="font-medium text-slate-700 dark:text-slate-200 text-sm">{f.name}</div>
-                              <div className="text-[10px] font-mono text-slate-400 uppercase mt-0.5">{f.id}</div>
+                              <div className="font-bold text-slate-700 dark:text-slate-200 text-sm group-hover:text-primary transition-colors">{f.name}</div>
+                              <div className="text-[10px] font-mono font-bold text-slate-400 uppercase mt-0.5 tracking-tighter">{f.id}</div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="text-xs font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-md">
+                        <td className="px-10 py-5 text-center">
+                          <span className="text-xs font-black text-slate-500 bg-slate-50 dark:bg-slate-800 px-4 py-1.5 rounded-full border border-slate-100 dark:border-slate-700">
                             {f.employeeCount}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="relative inline-block w-28">
+                        <td className="px-10 py-5 text-right">
+                          <div className="relative inline-block w-32">
                             <Input 
                               type="number" 
                               value={bulkCounts[f.id] || ''} 
                               onChange={e => setBulkCounts({...bulkCounts, [f.id]: e.target.value})}
-                              className="h-9 rounded-lg bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-semibold text-center text-primary text-sm focus:ring-2 focus:ring-primary/10"
+                              className="h-10 rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 font-black text-center text-primary text-sm focus:ring-4 focus:ring-primary/10 transition-all"
                               placeholder="-"
                             />
                           </div>
@@ -570,21 +779,24 @@ export default function PanelFacilitiesPage() {
             </div>
           </div>
 
-          <DialogFooter className="p-6 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
-            <div className="flex items-center gap-6">
+          <DialogFooter className="px-10 py-8 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-6 shrink-0">
+            <div className="flex items-center gap-8">
               <div className="flex flex-col">
-                <span className="text-[9px] font-semibold text-slate-400 tracking-wide">Kapsam</span>
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{facilities.length} Tesis</span>
+                <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">İşlem Özeti</span>
+                <span className="text-sm font-black text-slate-900 dark:text-white">{facilities.length} Tesis Güncellenecek</span>
               </div>
-              <p className="text-[11px] text-slate-400 font-medium hidden md:block border-l pl-6">
-                Girilen değerler tesislerin ana çalışan sayısını güncelleyecektir.
-              </p>
+              <div className="hidden md:flex items-center gap-3 border-l border-slate-100 dark:border-slate-800 pl-8">
+                 <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
+                   Değişiklikler anlık olarak tüm raporlara yansıtılacaktır.
+                 </p>
+              </div>
             </div>
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              <Button type="button" variant="ghost" onClick={() => setIsBulkUpdateOpen(false)} className="rounded-xl h-10 px-6 font-semibold text-slate-500 text-xs">Vazgeç</Button>
-              <Button onClick={handleBulkSubmit} disabled={bulkUpdateMutation.isPending} className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl h-10 px-8 font-semibold gap-2 shadow-sm transition-all text-xs">
-                {bulkUpdateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                Değişiklikleri Kaydet
+            <div className="flex items-center gap-4 w-full sm:w-auto">
+              <Button type="button" variant="ghost" onClick={() => setIsBulkUpdateOpen(false)} className="rounded-2xl h-12 px-8 font-black text-[10px] uppercase tracking-widest text-slate-400 hover:bg-slate-50">Vazgeç</Button>
+              <Button onClick={handleBulkSubmit} disabled={bulkUpdateMutation.isPending} className="bg-slate-900 hover:bg-slate-800 text-white rounded-2xl h-12 px-10 font-black text-[10px] uppercase tracking-widest gap-3 shadow-xl transition-all active:scale-95">
+                {bulkUpdateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                VERİLERİ KAYDET
               </Button>
             </div>
           </DialogFooter>
@@ -598,6 +810,12 @@ export default function PanelFacilitiesPage() {
           <p className="text-muted-foreground max-w-xs mx-auto">Arama kriterlerinize uygun tesis bulunmamaktadır.</p>
         </div>
       )}
+      <QuickAssignModal 
+        open={assignModalOpen}
+        onOpenChange={setAssignModalOpen}
+        facility={selectedFacility}
+        type={assignType}
+      />
     </div>
   );
 }

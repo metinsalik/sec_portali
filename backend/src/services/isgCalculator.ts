@@ -76,6 +76,8 @@ export interface ComplianceResult {
     required: boolean;
     assigned: boolean;
     isCompliant: boolean;
+    requiredMinutes: number;
+    assignedMinutes: number;
     summary: string;
   };
   vekil: {
@@ -354,20 +356,32 @@ export function analyzeFacilityCompliance(params: {
   const hekimCompliant = assignedHekimFullTime >= requiredHekimFullTimeCount && totalHekimMinutes >= (requiredHekimFullTimeCount * 11700 + requiredHekimExcessMinutes);
 
   // --- DSP ---
-  const dspRequired = isDSPRequired(dangerClass, employeeCount);
+  const isHekimFullTimeAssigned = hekimAssignments.some(a => a.isFullTime);
+  
+  let dspRequired = isDSPRequired(dangerClass, employeeCount);
+  if (isHekimFullTimeAssigned) {
+    dspRequired = false;
+  }
+
+  const dspRequiredMinutes = dspRequired ? calculateDSPRequiredMinutes(employeeCount) : 0;
+  const dspAssignedMinutes = dspAssignments.reduce((sum, a) => sum + a.durationMinutes, 0);
   const dspAssigned = dspAssignments.length > 0;
-  const dspCompliant = !dspRequired || dspAssigned;
+  
+  // If assigned even if not required, it's compliant. If required and not assigned, not compliant.
+  const dspCompliant = dspAssigned || !dspRequired;
 
   // DSP summary
   let dspSummary = '';
   if (dangerClass !== 'Çok Tehlikeli') {
-    dspSummary = 'Zorunlu değil';
+    dspSummary = 'Muaf';
+  } else if (isHekimFullTimeAssigned) {
+    dspSummary = 'Zorunlu Değil';
   } else if (!dspRequired) {
     dspSummary = '10 çalışan altı zorunlu değil';
   } else if (dspAssigned) {
-    dspSummary = 'Atanmış';
+    dspSummary = 'Uygun';
   } else {
-    dspSummary = 'ATANMAMIŞ!';
+    dspSummary = 'Eksik';
   }
 
   // --- VEKIL ---
@@ -405,6 +419,8 @@ export function analyzeFacilityCompliance(params: {
       required: dspRequired,
       assigned: dspAssigned,
       isCompliant: dspCompliant,
+      requiredMinutes: dspRequiredMinutes,
+      assignedMinutes: dspAssignedMinutes,
       summary: dspSummary,
     },
     vekil: {

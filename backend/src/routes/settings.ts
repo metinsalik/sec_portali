@@ -455,7 +455,7 @@ router.post('/definitions/categories', managementMiddleware, async (req: AuthReq
   }
 });
 
-router.patch('/definitions/categories/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
+router.put('/definitions/categories/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
   const id = parseInt(String(req.params.id));
   const { name } = req.body;
   try {
@@ -463,6 +463,18 @@ router.patch('/definitions/categories/:id', managementMiddleware, async (req: Au
     res.json(category);
   } catch {
     res.status(500).json({ error: 'Kategori güncellenemedi.' });
+  }
+});
+
+router.delete('/definitions/categories/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
+  const id = parseInt(String(req.params.id));
+  try {
+    // Önce alt kategorileri sil (veya kontrol et)
+    await prisma.subCategory.deleteMany({ where: { categoryId: id } });
+    await prisma.category.delete({ where: { id } });
+    res.json({ message: 'Kategori silindi.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Kategori silinemedi. Başka verilerle ilişkili olabilir.' });
   }
 });
 
@@ -486,7 +498,7 @@ router.post('/definitions/subcategories', managementMiddleware, async (req: Auth
   }
 });
 
-router.patch('/definitions/subcategories/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
+router.put('/definitions/subcategories/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
   const id = parseInt(String(req.params.id));
   const { name } = req.body;
   try {
@@ -494,6 +506,16 @@ router.patch('/definitions/subcategories/:id', managementMiddleware, async (req:
     res.json(sub);
   } catch {
     res.status(500).json({ error: 'Alt kategori güncellenemedi.' });
+  }
+});
+
+router.delete('/definitions/subcategories/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
+  const id = parseInt(String(req.params.id));
+  try {
+    await prisma.subCategory.delete({ where: { id } });
+    res.json({ message: 'Alt kategori silindi.' });
+  } catch {
+    res.status(500).json({ error: 'Alt kategori silinemedi.' });
   }
 });
 
@@ -517,7 +539,7 @@ router.post('/definitions/departments', managementMiddleware, async (req: AuthRe
   }
 });
 
-router.patch('/definitions/departments/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
+router.put('/definitions/departments/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
   const id = parseInt(String(req.params.id));
   const { name } = req.body;
   try {
@@ -525,6 +547,16 @@ router.patch('/definitions/departments/:id', managementMiddleware, async (req: A
     res.json(dept);
   } catch {
     res.status(500).json({ error: 'Departman güncellenemedi.' });
+  }
+});
+
+router.delete('/definitions/departments/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
+  const id = parseInt(String(req.params.id));
+  try {
+    await prisma.department.delete({ where: { id } });
+    res.json({ message: 'Departman silindi.' });
+  } catch {
+    res.status(500).json({ error: 'Departman silinemedi.' });
   }
 });
 

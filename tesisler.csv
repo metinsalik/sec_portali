@@ -1,0 +1,49 @@
+Tesis Adý;Ticari Unvan;Ýl;Ýlçe;Adres;NACE;SGK;Tehlike Sýnýfý;Çalýþan Sayýsý;Tesis Türü;Durum
+MLP Antalya Konuk Evi;28610010115235780072046-152;Antalya;Antalya;Güzeloba Mah. 2157 Sk. Dýþ Kapý No:11;;;Az Tehlikeli;1;Ofis;Aktif
+MLP Karadeniz Ýdari;;;;;;;Az Tehlikeli;1;Ofis;Aktif
+MLP Samsun Liv Ýdari;Hançerli Mah. Derviþzade Sk. Dýþ Kapý No:6 Ýç Kapý No:13;Samsun;Samsun;Hançerli Mah. Derviþzade Sk. Dýþ Kapý No:6 Ýç Kapý No:13;;28610010111679150551844-000;Çok Tehlikeli;4;Ofis;Aktif
+GOP Diyaliz Merkezi;Bileþim Turizm Ýnþaat San. ve Tic. A.S Özel Gaziosmanpaþa Diyaliz Merkezi Þubesi;Ýstanbul;Ýstanbul;Yenidoðan Mah.Erka Balata Sk. No:6C;;286220606108001203425-76/000;Tehlikeli;65;Týp Merkezi;Aktif
+MLP Ankara Depo;;Ankara;Ankara;Çamlýca Mh.Baðdat Cad. Dýþ Kapý No:83 Ýç Kapý No:17;;;Tehlikeli;1;Depo;Aktif
+MLP ÝGA;;;;;;;Az Tehlikeli;13;Ofis;Aktif
+MLP Merkez Depo;;;;;;;Tehlikeli;4;Depo;Aktif
+MLP Vadi Ýdari;;;;;;;Az Tehlikeli;0;Ofis;Aktif
+MLP Vadi Ofis;;;;;;;Az Tehlikeli;26;Ofis;Aktif
+MLP Çaðrý Merkezi;;;;;;;Az Tehlikeli;50;Çaðrý Merkezi;Aktif
+MLP AR-GE;;;;;;;Az Tehlikeli;94;Ofis;Aktif
+MLP Merkez;;;;;;;Az Tehlikeli;419;Ofis;Aktif
+Ýstinye Dent;;Ýstanbul;Ýstanbul;Ayazaða, Defne Sk. No:1 D:34408,;;;Tehlikeli;39;Hastane;Aktif
+MP Ýstanbul Onkoloji;MLP Saðlýk Hizmetleri Anonim Þirketi;Ýstanbul;Ýstanbul;Cevizli, Talatpaþa Cd. B Blok No:75/0;;2,86101E+25;Çok Tehlikeli;222;Hastane;Aktif
+VM MP Samsun;;;;;;;Çok Tehlikeli;714;Hastane;Aktif
+VM MP Pendik;;;;;;;Çok Tehlikeli;799;Hastane;Aktif
+VM MP Mersin;;;;;;;Çok Tehlikeli;484;Hastane;Aktif
+VM MP Maltepe;;;;;;;Çok Tehlikeli;452;Hastane;Aktif
+VM MP Kocaeli;;;;;;;Çok Tehlikeli;595;Hastane;Aktif
+VM MP Florya;;;;;;;Çok Tehlikeli;569;Hastane;Aktif
+VM MP Fatih;;;;;;;Çok Tehlikeli;262;Hastane;Aktif
+VM MP Bursa;;;;;;;Çok Tehlikeli;486;Hastane;Aktif
+VM MP Ankara;;;;;;;Çok Tehlikeli;367;Hastane;Aktif
+MP Yýldýzlý;;;;;;;Çok Tehlikeli;263;Hastane;Aktif
+MP Karadeniz;;;;;;;Çok Tehlikeli;306;Hastane;Aktif
+MP Tokat;;;;;;;Çok Tehlikeli;250;Hastane;Aktif
+MP Tem;;;;;;;Çok Tehlikeli;263;Hastane;Aktif
+MP Seyhan;;;;;;;Çok Tehlikeli;345;Hastane;Aktif
+MP Ordu;;;;;;;Çok Tehlikeli;350;Hastane;Aktif
+MP Ýzmir;;;;;;;Çok Tehlikeli;210;Hastane;Aktif
+MP Göztepe;;;;;;;Çok Tehlikeli;701;Hastane;Aktif
+MP Gebze;;;;;;;Çok Tehlikeli;413;Hastane;Aktif
+MP Çanakkale;;;;;;;Çok Tehlikeli;5;Hastane;Aktif
+MP Bahçelievler;;;;;;;Çok Tehlikeli;740;Hastane;Aktif
+MP Ataþehir;;;;;;;Çok Tehlikeli;193;Hastane;Aktif
+MP Antalya;;;;;;;Çok Tehlikeli;699;Hastane;Aktif
+MP Ýncek;;;;;;;Çok Tehlikeli;43;Hastane;Aktif
+MP Ankara;;;;;;;Çok Tehlikeli;456;Hastane;Aktif
+MP Adana;;;;;;;Çok Tehlikeli;341;Hastane;Aktif
+Liv Vadi;Samsun Medikal Grup Özel Saðlýk Hizm. A.Þ.;Ýstanbul;Ýstanbul;Ayazaða Mahallesi, Kemerburgaz Caddesi, Vadistanbul Park Etabý, 7F Blok 34396;86.10.13;2,86E+39;Çok Tehlikeli;570;Hastane;Aktif
+Liv Ulus;MLP Saðlýk Hizmetleri Anonim Þirketi;Ýstanbul;Ýstanbul;Ahmet Adnan Saygun Cad. Canan Sok. No:5 34340;86.10.13;2,861E+25;Çok Tehlikeli;766;Hastane;Aktif
+Liv Samsun;Samsun Medikal Grup Özel Saðlýk Hizm. A.Þ.;Samsun;Samsun;Hançerli, Fatih Sultan Mehmet Cd No:155 55020;86.10.12;2,861E+25;Çok Tehlikeli;219;Hastane;Aktif
+Liv Gaziantep;MLP Gaziantep Saðlýk Hizmetleri Anonim Þirketi;Gaziantep;Gaziantep;Seyrantepe, Abdulkadir Konukoðlu Cd No:1 27080;86.10.12;2,861E+25;Çok Tehlikeli;370;Hastane;Aktif
+Liv Ankara;MS Saðlýk Hizmetleri Ticaret Anonim Þirketi;Ankara;Ankara;Kavaklýdere, Bestekar Sok. No:8 06680;86.10.13;2,861E+25;Çok Tehlikeli;469;Hastane;Aktif
+ÝSÜ Týp Fakültesi;Ýstinye Üniversitesi;Ýstanbul;Ýstanbul;Merkez, Çukurçeþme Cd. No:51, 34245;86.10.05;2,86101E+25;Çok Tehlikeli;762;Hastane;Aktif
+ÝSÜ MP Gaziosmanpaþa;Ýstinye Üniversitesi;Ýstanbul;Ýstanbul;Merkez, Çukurçeþme Cd. No:57 D:59, 34250;86.10.12;2,86101E+25;Çok Tehlikeli;611;Hastane;Aktif
+ÝSÜ Liv Topkapý;Ýstinye Üniversitesi;Ýstanbul;Ýstanbul;Maltepe Mah Edirne Çýrpýcý Yolu Sk. No:9, 34010;86.10.13;2,861E+25;Çok Tehlikeli;246;Hastane;Aktif
+ÝSÜ Liv Bahçeþehir;Ýstinye Üniversitesi;Ýstanbul;Ýstanbul;Aþýk Veysel, Süleyman Demirel Cd. No:1, 34517;86.10.12;2,86101E+25;Çok Tehlikeli;730;Hastane;Aktif
