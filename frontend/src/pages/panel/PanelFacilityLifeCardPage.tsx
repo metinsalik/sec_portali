@@ -268,6 +268,9 @@ const PanelFacilityLifeCardPage = () => {
   const assignedHekimMin = activeAssignments.filter(a => a.type === 'Hekim').reduce((sum, a) => sum + a.durationMinutes, 0);
   const assignedDspMin = activeAssignments.filter(a => a.type === 'DSP').reduce((sum, a) => sum + a.durationMinutes, 0);
 
+  const isIguExcess = assignedIguMin > reqs.igu.totalMin;
+  const isHekimExcess = assignedHekimMin > reqs.hekim.totalMin;
+
   const isIguMet = assignedIguMin >= reqs.igu.totalMin;
   const isHekimMet = assignedHekimMin >= reqs.hekim.totalMin;
   const isDspMet = !reqs.dsp.required || assignedDspMin >= reqs.dsp.totalMin;
@@ -343,19 +346,22 @@ const PanelFacilityLifeCardPage = () => {
         {/* IGU Requirement */}
         <Card className={cn(
           "border-none shadow-sm rounded-3xl overflow-hidden transition-all duration-300",
-          isIguMet ? "bg-emerald-50/50 dark:bg-emerald-950/20 ring-1 ring-emerald-100 dark:ring-emerald-900/30" : "bg-rose-50/50 dark:bg-rose-950/20 ring-1 ring-rose-100 dark:ring-rose-900/30"
+          !isIguMet ? "bg-rose-50/50 dark:bg-rose-950/20 ring-1 ring-rose-100 dark:ring-rose-900/30" : 
+          isIguExcess ? "bg-amber-50/50 dark:bg-amber-950/20 ring-1 ring-amber-100 dark:ring-amber-900/30" :
+          "bg-emerald-50/50 dark:bg-emerald-950/20 ring-1 ring-emerald-100 dark:ring-emerald-900/30"
         )}>
           <CardHeader className="p-6 pb-2">
             <div className="flex items-center justify-between">
               <div className={cn(
                 "w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm",
-                isIguMet ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"
+                !isIguMet ? "bg-rose-500 text-white" : 
+                isIguExcess ? "bg-amber-500 text-white" : "bg-emerald-500 text-white"
               )}>
                 <HardHat className="w-6 h-6" />
               </div>
               <div className="text-right">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Gereksinim</span>
-                <span className={cn("text-lg font-black", isIguMet ? "text-emerald-600" : "text-rose-600")}>
+                <span className={cn("text-lg font-black", !isIguMet ? "text-rose-600" : isIguExcess ? "text-amber-600" : "text-emerald-600")}>
                   {reqs.igu.totalMin} <span className="text-[10px] font-bold">DK</span>
                 </span>
               </div>
@@ -438,11 +444,14 @@ const PanelFacilityLifeCardPage = () => {
             <div className="pt-2">
               <div className="flex items-center justify-between text-[10px] font-bold mb-1.5 px-1">
                 <span className="text-slate-400 uppercase">Karşılama Oranı</span>
-                <span className={isIguMet ? "text-emerald-500" : "text-rose-500"}>{Math.min(100, Math.round((assignedIguMin / reqs.igu.totalMin) * 100))}%</span>
+                <span className={!isIguMet ? "text-rose-500" : isIguExcess ? "text-amber-500" : "text-emerald-500"}>
+                    {Math.min(100, Math.round((assignedIguMin / reqs.igu.totalMin) * 100))}%
+                    {isIguExcess && ` (+${assignedIguMin - reqs.igu.totalMin} dk fazla)`}
+                </span>
               </div>
               <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                 <div 
-                  className={cn("h-full transition-all duration-1000", isIguMet ? "bg-emerald-500" : "bg-rose-500")}
+                  className={cn("h-full transition-all duration-1000", !isIguMet ? "bg-rose-500" : isIguExcess ? "bg-amber-500" : "bg-emerald-500")}
                   style={{ width: `${Math.min(100, (assignedIguMin / reqs.igu.totalMin) * 100)}%` }}
                 />
               </div>
@@ -453,19 +462,22 @@ const PanelFacilityLifeCardPage = () => {
         {/* Workplace Doctor Requirement */}
         <Card className={cn(
           "border-none shadow-sm rounded-3xl overflow-hidden transition-all duration-300",
-          isHekimMet ? "bg-emerald-50/50 dark:bg-emerald-950/20 ring-1 ring-emerald-100 dark:ring-emerald-900/30" : "bg-rose-50/50 dark:bg-rose-950/20 ring-1 ring-rose-100 dark:ring-rose-900/30"
+          !isHekimMet ? "bg-rose-50/50 dark:bg-rose-950/20 ring-1 ring-rose-100 dark:ring-rose-900/30" :
+          isHekimExcess ? "bg-amber-50/50 dark:bg-amber-950/20 ring-1 ring-amber-100 dark:ring-amber-900/30" :
+          "bg-emerald-50/50 dark:bg-emerald-950/20 ring-1 ring-emerald-100 dark:ring-emerald-900/30"
         )}>
           <CardHeader className="p-6 pb-2">
             <div className="flex items-center justify-between">
               <div className={cn(
                 "w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm",
-                isHekimMet ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"
+                !isHekimMet ? "bg-rose-500 text-white" :
+                isHekimExcess ? "bg-amber-500 text-white" : "bg-emerald-500 text-white"
               )}>
                 <Stethoscope className="w-6 h-6" />
               </div>
               <div className="text-right">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Gereksinim</span>
-                <span className={cn("text-lg font-black", isHekimMet ? "text-emerald-600" : "text-rose-600")}>
+                <span className={cn("text-lg font-black", !isHekimMet ? "text-rose-600" : isHekimExcess ? "text-amber-600" : "text-emerald-600")}>
                   {reqs.hekim.totalMin} <span className="text-[10px] font-bold">DK</span>
                 </span>
               </div>
@@ -534,11 +546,14 @@ const PanelFacilityLifeCardPage = () => {
             <div className="pt-2">
               <div className="flex items-center justify-between text-[10px] font-bold mb-1.5 px-1">
                 <span className="text-slate-400 uppercase">Karşılama Oranı</span>
-                <span className={isHekimMet ? "text-emerald-500" : "text-rose-500"}>{Math.min(100, Math.round((assignedHekimMin / reqs.hekim.totalMin) * 100))}%</span>
+                <span className={!isHekimMet ? "text-rose-500" : isHekimExcess ? "text-amber-500" : "text-emerald-500"}>
+                    {Math.min(100, Math.round((assignedHekimMin / reqs.hekim.totalMin) * 100))}%
+                    {isHekimExcess && ` (+${assignedHekimMin - reqs.hekim.totalMin} dk fazla)`}
+                </span>
               </div>
               <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                 <div 
-                  className={cn("h-full transition-all duration-1000", isHekimMet ? "bg-emerald-500" : "bg-rose-500")}
+                  className={cn("h-full transition-all duration-1000", !isHekimMet ? "bg-rose-500" : isHekimExcess ? "bg-amber-500" : "bg-emerald-500")}
                   style={{ width: `${Math.min(100, (assignedHekimMin / reqs.hekim.totalMin) * 100)}%` }}
                 />
               </div>

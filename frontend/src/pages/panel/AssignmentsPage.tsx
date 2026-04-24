@@ -221,7 +221,7 @@ export default function AssignmentsPage() {
     setFormData(prev => ({
       ...prev,
       durationMinutes: Math.max(0, duration).toString(),
-      isFullTime: type === 'Vekil' || (type === 'IGU' ? facility.igu.isFullTimeRequired : type === 'Hekim' ? facility.hekim.isFullTimeRequired : false)
+      isFullTime: type === 'Vekil' || (type === 'IGU' ? (facility.igu.isFullTimeRequired && facility.igu.assignedMinutes === 0) : type === 'Hekim' ? (facility.hekim.isFullTimeRequired && facility.hekim.assignedMinutes === 0) : false)
     }));
     
     setAssignModalOpen(true);
@@ -282,7 +282,11 @@ export default function AssignmentsPage() {
           <div className="flex flex-col">
             <span className="text-[10px] font-bold uppercase tracking-wider">{type}</span>
             <span className="text-[9px] font-medium opacity-70">
-              {type === 'DSP' || type === 'Vekil' ? (compliance.assigned ? 'Atanmış' : 'Eksik') : `${compliance.assignedMinutes} / ${compliance.requiredMinutes} dk`}
+              {type === 'DSP' || type === 'Vekil' ? (compliance.assigned ? 'Atanmış' : 'Eksik') : 
+               compliance.assignedMinutes > compliance.requiredMinutes ? 
+               `${compliance.assignedMinutes} / ${compliance.requiredMinutes} dk (+${compliance.assignedMinutes - compliance.requiredMinutes} dk fazla)` :
+               `${compliance.assignedMinutes} / ${compliance.requiredMinutes} dk`
+              }
             </span>
           </div>
         </div>

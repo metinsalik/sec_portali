@@ -35,6 +35,7 @@ import PanelOSGBLifeCardPage from './pages/panel/PanelOSGBLifeCardPage';
 import EmployersPage from './pages/panel/EmployersPage';
 import AssignmentsPage from './pages/panel/AssignmentsPage';
 import ReconciliationPage from './pages/panel/ReconciliationPage';
+import ReconciliationDetailsPage from './pages/panel/ReconciliationDetailsPage';
 import PanelSettings from './pages/panel/PanelSettings';
 
 // Operations
@@ -185,6 +186,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['admin', 'management']}>
                     <AppLayout><ReconciliationPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/panel/reconciliation/:id"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'management']}>
+                    <AppLayout><ReconciliationDetailsPage /></AppLayout>
                   </ProtectedRoute>
                 }
               />

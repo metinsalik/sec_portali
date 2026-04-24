@@ -9,7 +9,9 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('--- Veri Aktarımı Başladı ---');
 
-  const dataPath = 'C:\\Users\\metin\\Desktop\\sec_portali';
+  // Veri dosyalarının yolu: backend/data dizini
+  const dataPath = path.join(__dirname, '..', '..', 'data');
+  console.log(`Veri dizini: ${dataPath}`);
 
   // Helper to normalize strings for matching
   const normalize = (s: string) => s ? s.trim().toLowerCase().replace(/ı/g, 'i').replace(/İ/g, 'i').replace(/ş/g, 's').replace(/Ş/g, 's').replace(/ğ/g, 'g').replace(/Ğ/g, 'g').replace(/ü/g, 'u').replace(/Ü/g, 'u').replace(/ö/g, 'o').replace(/Ö/g, 'o').replace(/ç/g, 'c').replace(/Ç/g, 'c') : '';

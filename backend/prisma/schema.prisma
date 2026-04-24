@@ -162,17 +162,21 @@ model OSGBCompany {
 }
 
 model Reconciliation {
-  id            Int         @id @default(autoincrement())
-  facilityId    String
-  facility      Facility    @relation(fields: [facilityId], references: [id])
-  osgbCompanyId Int
-  osgbCompany   OSGBCompany @relation(fields: [osgbCompanyId], references: [id])
-  month         String      // "2026-04"
-  amount        Float?
-  note          String?
-  status        String      @default("Beklemede") // "Beklemede" | "Onaylandı" | "Reddedildi"
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id               Int         @id @default(autoincrement())
+  facilityId       String
+  facility         Facility    @relation(fields: [facilityId], references: [id])
+  osgbCompanyId    Int
+  osgbCompany      OSGBCompany @relation(fields: [osgbCompanyId], references: [id])
+  month            String      // "2026-04"
+  calculatedAmount Float?      // Sistem tarafından hesaplanan tutar
+  invoiceAmount    Float?      // OSGB'den gelen fatura tutarı
+  difference       Float?      // Fark (Hesaplanan - Fatura)
+  calculationDetails Json?     // Detaylı hesaplama dökümü (her profesyonel için)
+  amount           Float?      // Toplam (genellikle onaylanan tutar)
+  note             String?
+  status           String      @default("Beklemede") // "Beklemede" | "Onaylandı" | "Reddedildi" | "Uyuşmazlık"
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
   @@unique([facilityId, osgbCompanyId, month])
 }

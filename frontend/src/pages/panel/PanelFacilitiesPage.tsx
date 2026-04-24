@@ -48,6 +48,7 @@ export default function PanelFacilitiesPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [dangerFilter, setDangerFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [complianceFilter, setComplianceFilter] = useState<string>('all');
 
   // Update States
   const [isBulkUpdateOpen, setIsBulkUpdateOpen] = useState(false);
@@ -121,7 +122,15 @@ export default function PanelFacilitiesPage() {
     const matchesType = typeFilter === 'all' || f.type === typeFilter;
     const matchesDanger = dangerFilter === 'all' || f.dangerClass === dangerFilter;
     const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? f.isActive : !f.isActive);
-    return matchesSearch && matchesType && matchesStatus && matchesDanger;
+    
+    let matchesCompliance = true;
+    if (complianceFilter === 'compliant') {
+      matchesCompliance = f.compliance?.overallCompliant === true;
+    } else if (complianceFilter === 'missing') {
+      matchesCompliance = f.compliance?.overallCompliant === false;
+    }
+
+    return matchesSearch && matchesType && matchesStatus && matchesDanger && matchesCompliance;
   });
 
   // Tesis tipine göre gruplama ve sıralama
@@ -275,6 +284,17 @@ export default function PanelFacilitiesPage() {
               <SelectItem value="passive">Pasif</SelectItem>
             </SelectContent>
           </Select>
+
+          <Select value={complianceFilter} onValueChange={setComplianceFilter}>
+            <SelectTrigger className="w-[160px] h-10 bg-muted/30 border-none">
+              <SelectValue placeholder="Uyumluluk" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tüm Atamalar</SelectItem>
+              <SelectItem value="compliant">Ataması Tam (Uygun)</SelectItem>
+              <SelectItem value="missing">Ataması Eksik</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -346,36 +366,36 @@ export default function PanelFacilitiesPage() {
                               </button>
                             </td>
                             <td className="px-6 py-4 text-center">
-                              {f.compliance?.igu ? (
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); openAssignModal(f, 'IGU'); }}
-                                  className={cn(
-                                    "text-[10px] font-bold px-2 py-1 rounded-lg border flex items-center justify-center gap-1.5 mx-auto transition-all",
-                                    f.compliance.igu.isCompliant 
-                                      ? "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100" 
-                                      : "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100"
-                                  )}
-                                >
-                                  {f.compliance.igu.isCompliant ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                                  {f.compliance.igu.isCompliant ? "UYGUN" : "EKSİK"}
-                                </button>
-                              ) : "-"}
+                                  {f.compliance?.igu ? (
+                                    <button 
+                                      onClick={(e) => { e.stopPropagation(); openAssignModal(f, 'IGU'); }}
+                                      className={cn(
+                                        "text-[10px] font-bold px-2 py-1 rounded-lg border flex items-center justify-center gap-1.5 mx-auto transition-all",
+                                        f.compliance.igu.isCompliant 
+                                          ? "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100" 
+                                          : "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100"
+                                      )}
+                                    >
+                                      {f.compliance.igu.isCompliant ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                      {f.compliance.igu.isCompliant ? "UYGUN" : "EKSİK"}
+                                    </button>
+                                  ) : "-"}
                             </td>
                             <td className="px-6 py-4 text-center">
-                              {f.compliance?.hekim ? (
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); openAssignModal(f, 'Hekim'); }}
-                                  className={cn(
-                                    "text-[10px] font-bold px-2 py-1 rounded-lg border flex items-center justify-center gap-1.5 mx-auto transition-all",
-                                    f.compliance.hekim.isCompliant 
-                                      ? "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100" 
-                                      : "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100"
-                                  )}
-                                >
-                                  {f.compliance.hekim.isCompliant ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                                  {f.compliance.hekim.isCompliant ? "UYGUN" : "EKSİK"}
-                                </button>
-                              ) : "-"}
+                                  {f.compliance?.hekim ? (
+                                    <button 
+                                      onClick={(e) => { e.stopPropagation(); openAssignModal(f, 'Hekim'); }}
+                                      className={cn(
+                                        "text-[10px] font-bold px-2 py-1 rounded-lg border flex items-center justify-center gap-1.5 mx-auto transition-all",
+                                        f.compliance.hekim.isCompliant 
+                                          ? "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100" 
+                                          : "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100"
+                                      )}
+                                    >
+                                      {f.compliance.hekim.isCompliant ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                      {f.compliance.hekim.isCompliant ? "UYGUN" : "EKSİK"}
+                                    </button>
+                                  ) : "-"}
                             </td>
                             <td className="px-6 py-4 text-center">
                               {f.compliance?.dsp ? (
@@ -465,16 +485,26 @@ export default function PanelFacilitiesPage() {
                                       <CheckCircle2 className="w-3.5 h-3.5" /> Karşılanan Şartlar
                                     </h4>
                                     <div className="space-y-2">
-                                      {f.compliance?.igu?.hasValidClass && (
-                                        <div className="p-2.5 bg-emerald-50/50 border border-emerald-100/50 rounded-lg flex items-center gap-3">
-                                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                                          <p className="text-[10px] font-bold text-emerald-700">İG Uzmanı sınıf şartı karşılandı</p>
+                                      {f.compliance?.igu?.isCompliant && (
+                                        <div className={cn(
+                                          "p-2.5 border rounded-lg flex items-center gap-3",
+                                          f.compliance.igu.assignedMinutes > f.compliance.igu.requiredMinutes ? "bg-amber-50/50 border-amber-100/50" : "bg-emerald-50/50 border-emerald-100/50"
+                                        )}>
+                                          {f.compliance.igu.assignedMinutes > f.compliance.igu.requiredMinutes ? <AlertTriangle className="w-3.5 h-3.5 text-amber-500" /> : <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+                                          <p className={cn("text-[10px] font-bold", f.compliance.igu.assignedMinutes > f.compliance.igu.requiredMinutes ? "text-amber-700" : "text-emerald-700")}>
+                                            İG Uzmanı şartı karşılandı {f.compliance.igu.assignedMinutes > f.compliance.igu.requiredMinutes && `(+${f.compliance.igu.assignedMinutes - f.compliance.igu.requiredMinutes} dk fazla)`}
+                                          </p>
                                         </div>
                                       )}
                                       {f.compliance?.hekim?.isCompliant && (
-                                        <div className="p-2.5 bg-emerald-50/50 border border-emerald-100/50 rounded-lg flex items-center gap-3">
-                                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                                          <p className="text-[10px] font-bold text-emerald-700">İşyeri Hekimi asgari süre sağlandı</p>
+                                        <div className={cn(
+                                          "p-2.5 border rounded-lg flex items-center gap-3",
+                                          f.compliance.hekim.assignedMinutes > f.compliance.hekim.requiredMinutes ? "bg-amber-50/50 border-amber-100/50" : "bg-emerald-50/50 border-emerald-100/50"
+                                        )}>
+                                          {f.compliance.hekim.assignedMinutes > f.compliance.hekim.requiredMinutes ? <AlertTriangle className="w-3.5 h-3.5 text-amber-500" /> : <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+                                          <p className={cn("text-[10px] font-bold", f.compliance.hekim.assignedMinutes > f.compliance.hekim.requiredMinutes ? "text-amber-700" : "text-emerald-700")}>
+                                            İşyeri Hekimi asgari süre sağlandı {f.compliance.hekim.assignedMinutes > f.compliance.hekim.requiredMinutes && `(+${f.compliance.hekim.assignedMinutes - f.compliance.hekim.requiredMinutes} dk fazla)`}
+                                          </p>
                                         </div>
                                       )}
                                       {f.compliance?.dsp?.isCompliant && (

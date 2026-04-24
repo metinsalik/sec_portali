@@ -339,8 +339,10 @@ export function analyzeFacilityCompliance(params: {
   
   // Requirement: at least the floor count of full-timers, AND enough total minutes for everyone
   // Actually, each full-timer satisfies exactly 'iguThreshold' employees.
+  // Requirement: at least enough total minutes for everyone, and at least one valid class professional
   const iguValidClass = iguAssignments.some((a) => isIGUClassValid(dangerClass, a.titleClass));
-  const iguCompliant = assignedIGUFullTime >= requiredIGUFullTimeCount && totalIGUMinutes >= (requiredIGUFullTimeCount * 11700 + requiredIGUExcessMinutes) && iguValidClass;
+  const iguRequiredMinutes = requiredIGUFullTimeCount * 11700 + requiredIGUExcessMinutes;
+  const iguCompliant = totalIGUMinutes >= iguRequiredMinutes && iguValidClass;
 
   // --- HEKIM TIERED LOGIC ---
   const hekimThreshold = HEKIM_FULLTIME_THRESHOLD[dangerClass] || 2000;
@@ -353,7 +355,8 @@ export function analyzeFacilityCompliance(params: {
   const assignedHekimFullTime = hekimAssignments.filter(a => a.isFullTime).length;
   const totalHekimMinutes = hekimAssignments.reduce((sum, a) => sum + (a.isFullTime ? Math.max(a.durationMinutes, 11700) : a.durationMinutes), 0);
   
-  const hekimCompliant = assignedHekimFullTime >= requiredHekimFullTimeCount && totalHekimMinutes >= (requiredHekimFullTimeCount * 11700 + requiredHekimExcessMinutes);
+  const hekimRequiredMinutes = requiredHekimFullTimeCount * 11700 + requiredHekimExcessMinutes;
+  const hekimCompliant = totalHekimMinutes >= hekimRequiredMinutes;
 
   // --- DSP ---
   const isHekimFullTimeAssigned = hekimAssignments.some(a => a.isFullTime);

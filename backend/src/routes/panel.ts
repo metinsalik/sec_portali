@@ -8,6 +8,12 @@ import {
 } from '../services/isgCalculator';
 
 import { getDashboardStats, getEmployeeTrend } from '../services/dashboardService';
+import { 
+  calculateMonthlyReconciliation, 
+  syncReconciliation, 
+  autoSyncAllMonths,
+  exportReconciliationToExcel
+} from '../services/reconciliationService';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -642,6 +648,11 @@ router.post('/assignments', async (req: AuthRequest, res: Response) => {
         }
       })
     ]);
+
+    // Atama değişikliği sonrası mutabakatı tetikle
+    const month = format(new Date(startDate), 'yyyy-MM');
+    await syncReconciliation(month);
+
     res.status(201).json(assignment);
   } catch (error) {
     console.error(error);
@@ -668,6 +679,11 @@ router.put('/assignments/:id', async (req: AuthRequest, res: Response) => {
         unitPrice: unitPrice ? parseFloat(unitPrice) : null 
       },
     });
+
+    // Atama değişikliği sonrası mutabakatı tetikle
+    const month = format(new Date(existing.startDate), 'yyyy-MM');
+    await syncReconciliation(month);
+
     res.json(assignment);
   } catch {
     res.status(500).json({ error: 'Atama güncellenemedi.' });
@@ -698,6 +714,15 @@ router.post('/assignments/:id/terminate', async (req: AuthRequest, res: Response
         }
       })
     ]);
+
+    // Atama değişikliği sonrası mutabakatı tetikle
+    const month = format(new Date(existing.startDate), 'yyyy-MM');
+    await syncReconciliation(month);
+    if (endDate) {
+        const endMonth = format(new Date(endDate), 'yyyy-MM');
+        if (endMonth !== month) await syncReconciliation(endMonth);
+    }
+
     res.json(assignment);
   } catch {
     res.status(500).json({ error: 'Atama sonlandırılamadı.' });
@@ -714,11 +739,73 @@ router.get('/reconciliation', async (req: AuthRequest, res: Response) => {
         osgbCompany: true,
         facility: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ month: 'desc' }, { osgbCompany: { name: 'asc' } }],
     });
     res.json(items);
   } catch {
     res.status(500).json({ error: 'Mutabakat kayıtları getirilemedi.' });
+  }
+});
+
+// Mutabakat hesaplama önizleme
+router.get('/reconciliation/calculate', async (req: AuthRequest, res: Response) => {
+  const { month } = req.query;
+  if (!month) return res.status(400).json({ error: 'Ay (month) parametresi gereklidir.' });
+  
+  try {
+    const results = await calculateMonthlyReconciliation(String(month));
+    res.json(results);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Hesaplama yapılamadı.' });
+  }
+});
+
+// Mutabakat kayıtlarını oluştur/güncelle (Sync)
+router.post('/reconciliation/sync', async (req: AuthRequest, res: Response) => {
+  const { month } = req.body;
+  if (!month) return res.status(400).json({ error: 'Ay (month) parametresi gereklidir.' });
+
+  try {
+    const items = await syncReconciliation(String(month));
+    res.json(items);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Senkronizasyon yapılamadı.' });
+  }
+});
+
+// Otomatik tüm ayları senkronize et
+router.post('/reconciliation/auto-sync', async (req: AuthRequest, res: Response) => {
+  try {
+    await autoSyncAllMonths(2026);
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Otomatik senkronizasyon başarısız.' });
+  }
+});
+
+// Excel Export
+router.get('/reconciliation/export', async (req: AuthRequest, res: Response) => {
+  const { osgbId, month } = req.query;
+  try {
+    const items = await prisma.reconciliation.findMany({
+      where: {
+        ...(osgbId ? { osgbCompanyId: parseInt(String(osgbId)) } : {}),
+        ...(month ? { month: String(month) } : {})
+      },
+      include: { osgbCompany: true, facility: true }
+    });
+
+    const buffer = await exportReconciliationToExcel(items);
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=mutabakat_${month || 'tum'}.xlsx`);
+    res.send(buffer);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Excel dışa aktarma başarısız.' });
   }
 });
 
@@ -729,12 +816,42 @@ router.post('/reconciliation', async (req: AuthRequest, res: Response) => {
   }
   try {
     const item = await prisma.reconciliation.create({
-      data: { facilityId, osgbCompanyId, month, amount: amount ? parseFloat(amount) : null, note },
+      data: { facilityId, osgbCompanyId: parseInt(osgbCompanyId), month, amount: amount ? parseFloat(amount) : null, note },
       include: { osgbCompany: true, facility: true },
     });
     res.status(201).json(item);
   } catch {
     res.status(500).json({ error: 'Mutabakat oluşturulamadı.' });
+  }
+});
+
+router.put('/reconciliation/:id', async (req: AuthRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  const { invoiceAmount, status, note, amount } = req.body;
+
+  try {
+    const existing = await prisma.reconciliation.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Kayıt bulunamadı.' });
+
+    const calcAmount = existing.calculatedAmount || 0;
+    const invAmount = invoiceAmount !== undefined ? parseFloat(invoiceAmount) : (existing.invoiceAmount || 0);
+    const diff = calcAmount - invAmount;
+
+    const item = await prisma.reconciliation.update({
+      where: { id },
+      data: {
+        invoiceAmount: invAmount,
+        difference: diff,
+        status: status || existing.status,
+        note: note !== undefined ? note : existing.note,
+        amount: amount !== undefined ? parseFloat(amount) : existing.amount
+      },
+      include: { osgbCompany: true, facility: true }
+    });
+    res.json(item);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Güncelleme yapılamadı.' });
   }
 });
 

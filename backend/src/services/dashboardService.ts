@@ -60,12 +60,27 @@ export async function getDashboardStats() {
   });
 
   const totalEmployees = facilities.reduce((sum, f) => sum + f.employeeCount, 0);
-  const totalCompliant = complianceResults.filter((r) => r.overallCompliant).length;
-  const averageComplianceScore = facilities.length > 0 ? (totalCompliant / facilities.length) * 100 : 0;
+  
+  // 1. Ortalama Uyum Skoru (Daha hassas hesaplama: Her tesisin % uyumluluk ortalaması)
+  const averageComplianceScore = facilities.length > 0 
+    ? complianceResults.reduce((sum, r) => {
+        const iguScore = Math.min(100, r.igu.requiredMinutes > 0 ? (r.igu.assignedMinutes / r.igu.requiredMinutes) * 100 : 100);
+        const hekimScore = Math.min(100, r.hekim.requiredMinutes > 0 ? (r.hekim.assignedMinutes / r.hekim.requiredMinutes) * 100 : 100);
+        const dspScore = !r.dsp.required ? 100 : Math.min(100, r.dsp.totalMin > 0 ? (r.dsp.assignedMinutes / r.dsp.totalMin) * 100 : 0);
+        return sum + ((iguScore + hekimScore + dspScore) / 3);
+      }, 0) / facilities.length
+    : 0;
 
+  // 2. Aylık OSGB Maliyeti (Reconciliation logic ile senkronize edildi)
   const monthlyOsgbCost = assignments
-    .filter((a) => a.costType === 'OSGB' && a.unitPrice)
-    .reduce((sum, a) => sum + (a.unitPrice || 0), 0);
+    .filter((a) => a.costType === 'OSGB' && (a.unitPrice || (a.professional && a.professional.unitPrice)))
+    .reduce((sum, a) => {
+      const price = a.unitPrice || a.professional?.unitPrice || 0;
+      if (a.isFullTime) return sum + price;
+      // Kısmi süreli: Saate yuvarla
+      const hours = Math.ceil(a.durationMinutes / 60);
+      return sum + (hours * price);
+    }, 0);
 
   const monthlyPenaltyRisk = complianceResults.reduce((sum, r) => sum + r.monthlyPenaltyRisk, 0);
   
