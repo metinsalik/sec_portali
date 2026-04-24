@@ -33,4 +33,17 @@ export const api = {
     apiFetch(endpoint, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: (endpoint: string) =>
     apiFetch(endpoint, { method: 'DELETE' }),
+  customFetch: (endpoint: string, options: RequestInit) => {
+    const token = localStorage.getItem('token');
+    const headers = {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers as Record<string, string>),
+    };
+    return fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+  }
 };
+
+export default api;

@@ -46,6 +46,7 @@ import NotebooksPage from './pages/operations/NotebooksPage';
 import TrainingPage from './pages/operations/TrainingPage';
 import BoardPage from './pages/operations/BoardPage';
 import InspectionsPage from './pages/operations/InspectionsPage';
+import OperationsFacilityPage from './pages/operations/OperationsFacilityPage';
 
 // Placeholder for future modules
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -216,6 +217,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <AppLayout><OperationsDashboard /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/operations/facility"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout><OperationsFacilityPage /></AppLayout>
                   </ProtectedRoute>
                 }
               />

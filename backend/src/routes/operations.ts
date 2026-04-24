@@ -122,6 +122,16 @@ router.post('/hr/:facilityId/monthly', async (req: AuthRequest, res: Response) =
       include: { facility: { select: { name: true } } },
     });
 
+    // Aktivite günlüğü ekle
+    await prisma.activityLog.create({
+      data: {
+        facilityId,
+        username: user.username,
+        action: 'Aylık Personel Verisi Güncellendi',
+        details: `${month} dönemi için personel verileri girildi/güncellendi.`
+      }
+    });
+
     res.status(201).json(data);
   } catch (error) {
     console.error(error);
@@ -234,7 +244,7 @@ router.put('/accidents/:facilityId/monthly/:month', async (req: AuthRequest, res
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TESİS LİSTESİ (sadece atanmış tesisler)
+// TESİS YÖNETİMİ (Sadece atanmış tesisler)
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/facilities', async (req: AuthRequest, res: Response) => {
   try {
@@ -245,11 +255,8 @@ router.get('/facilities', async (req: AuthRequest, res: Response) => {
 
     const facilities = await prisma.facility.findMany({
       where: { isActive: true, ...facilityFilter },
-      select: {
-        id: true,
-        name: true,
-        dangerClass: true,
-        employeeCount: true,
+      include: {
+        buildings: true,
       },
       orderBy: { name: 'asc' },
     });
@@ -257,6 +264,98 @@ router.get('/facilities', async (req: AuthRequest, res: Response) => {
     res.json(facilities);
   } catch {
     res.status(500).json({ error: 'Tesisler getirilemedi.' });
+  }
+});
+
+router.get('/facilities/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = getUser(req);
+
+    // Yetki kontrolü (admin/management değilse ve tesise atanmamışsa)
+    const isAssigned = user.isAdmin || user.isManagement || user.facilities?.includes(id);
+    if (!isAssigned) {
+      return res.status(403).json({ error: 'Bu tesise erişim yetkiniz bulunmamaktadır.' });
+    }
+
+    const facility = await prisma.facility.findUnique({
+      where: { id },
+      include: {
+        buildings: true,
+        assignments: {
+          include: {
+            professional: true,
+            employerRep: true
+          }
+        }
+      },
+    });
+
+    if (!facility) return res.status(404).json({ error: 'Tesis bulunamadı.' });
+    res.json(facility);
+  } catch {
+    res.status(500).json({ error: 'Tesis bilgileri getirilemedi.' });
+  }
+});
+
+router.put('/facilities/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = getUser(req);
+    const {
+      name, shortName, type, city, district, fullAddress,
+      phone, email, website, commercialTitle, taxOffice,
+      taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings
+    } = req.body;
+
+    // Yetki kontrolü
+    const isAssigned = user.isAdmin || user.isManagement || user.facilities?.includes(id);
+    if (!isAssigned) {
+      return res.status(403).json({ error: 'Bu tesisi güncelleme yetkiniz bulunmamaktadır.' });
+    }
+
+    // Mevcut binaları temizle ve yenilerini ekle (Settings rotasındaki mantığın aynısı)
+    await prisma.facilityBuilding.deleteMany({ where: { facilityId: id } });
+
+    const facility = await prisma.facility.update({
+      where: { id },
+      data: {
+        name, shortName, type, city, district, fullAddress,
+        phone, email, website, commercialTitle, taxOffice,
+        taxNumber, sgkNumber, naceCode, dangerClass,
+        employeeCount: parseInt(employeeCount) || 0,
+        buildings: {
+          create: buildings?.map((b: any) => ({
+            name: b.name,
+            constructionYear: parseInt(b.constructionYear) || null,
+            buildingHeight: parseFloat(b.buildingHeight) || null,
+            structureHeight: parseFloat(b.structureHeight) || null,
+            buildingFloors: parseInt(b.buildingFloors) || null,
+            structureFloors: parseInt(b.structureFloors) || null,
+            closedArea: parseFloat(b.closedArea) || null,
+            parkingArea: parseFloat(b.parkingArea) || null,
+            gardenArea: parseFloat(b.gardenArea) || null,
+            bedCapacity: parseInt(b.bedCapacity) || null
+          })) || []
+        }
+      },
+      include: { buildings: true }
+    });
+
+    // Aktivite günlüğü ekle
+    await prisma.activityLog.create({
+      data: {
+        facilityId: id,
+        username: user.username,
+        action: 'Tesis Bilgileri Güncellendi',
+        details: 'Tesis bilgileri kullanıcı tarafından güncellendi.'
+      }
+    });
+
+    res.json(facility);
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: 'Tesis güncellenemedi: ' + error.message });
   }
 });
 

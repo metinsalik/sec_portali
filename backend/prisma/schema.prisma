@@ -66,6 +66,7 @@ model Facility {
   monthlyHrData    MonthlyHRData[]
   monthlyAccident  MonthlyAccidentData[]
   reconciliations  Reconciliation[]
+  notebookEntries  NotebookEntry[]
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 }
@@ -245,6 +246,7 @@ model Category {
   id            Int             @id @default(autoincrement())
   name          String
   subCategories SubCategory[]
+  notebookEntries NotebookEntry[]
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 }
@@ -254,6 +256,7 @@ model SubCategory {
   name       String
   categoryId Int
   category   Category @relation(fields: [categoryId], references: [id])
+  notebookEntries NotebookEntry[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
@@ -261,8 +264,33 @@ model SubCategory {
 model Department {
   id        Int      @id @default(autoincrement())
   name      String
+  notebookEntries NotebookEntry[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model NotebookEntry {
+  id              Int      @id @default(autoincrement())
+  facilityId      String
+  facility        Facility @relation(fields: [facilityId], references: [id])
+  year            Int
+  date            DateTime
+  authorType      String   // "DOKTOR" | "UZMAN"
+  authorName      String
+  content         String   @db.Text
+  categoryId      Int
+  category        Category @relation(fields: [categoryId], references: [id])
+  subCategoryId   Int?
+  subCategory     SubCategory? @relation(fields: [subCategoryId], references: [id])
+  departmentId    Int
+  department      Department @relation(fields: [departmentId], references: [id])
+  documentUrl     String?  // PNG, JPEG, PDF path
+  status          String   @default("Eksik") // "Eksik" | "Tamamlandı"
+  createdBy       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([facilityId, year])
 }
 
 

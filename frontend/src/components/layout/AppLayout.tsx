@@ -37,6 +37,7 @@ const panelNavItems = [
 const operationsNavItems = (hasAdminAccess: boolean) => [
   { label: 'GENEL', type: 'group' },
   { label: 'Dashboard', icon: LayoutDashboard, to: '/operations/dashboard' },
+  { label: 'Tesis Bilgileri', icon: Building2, to: '/operations/facility' },
   { label: 'VERİ GİRİŞİ', type: 'group' },
   { label: 'Aylık Personel Verisi', icon: Users, to: '/operations/hr-data' },
   { label: 'Kaza İstatistikleri', icon: BarChart3, to: '/operations/accidents' },
