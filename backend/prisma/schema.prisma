@@ -66,9 +66,106 @@ model Facility {
   monthlyHrData    MonthlyHRData[]
   monthlyAccident  MonthlyAccidentData[]
   reconciliations  Reconciliation[]
-  notebookEntries  NotebookEntry[]
+  notebookPages    NotebookPage[]
+  incidents        ExtraordinaryIncident[]
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
+}
+
+// Olağan Dışı Olay Parametreleri
+model IncidentCategory {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  incidents ExtraordinaryIncident[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model IncidentRootCause {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  incidents ExtraordinaryIncident[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model IncidentSupportUnit {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  incidents ExtraordinaryIncident[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EmergencyCode {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  incidents ExtraordinaryIncident[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ExtraordinaryIncident {
+  id                  Int      @id @default(autoincrement())
+  facilityId          String
+  facility            Facility @relation(fields: [facilityId], references: [id])
+  
+  // Olay Türü
+  categoryId          Int
+  category            IncidentCategory @relation(fields: [categoryId], references: [id])
+  
+  // Kök Neden
+  rootCauseId         Int
+  rootCause           IncidentRootCause @relation(fields: [rootCauseId], references: [id])
+  
+  // Yer-Bölüm-Alan
+  departmentId        Int
+  department          Department @relation(fields: [departmentId], references: [id])
+  locationDetail      String
+  
+  // Tarih/Saat
+  incidentDate        DateTime
+  
+  // Müdahale
+  interventionRequired Boolean
+  interventionTime     DateTime?
+  controlTime          DateTime
+  
+  // Destek
+  supportReceived      Boolean
+  supportUnitId        Int?
+  supportUnit          IncidentSupportUnit? @relation(fields: [supportUnitId], references: [id])
+  
+  // Anons
+  announcementMade     Boolean
+  emergencyCodeId      Int?
+  emergencyCode        EmergencyCode? @relation(fields: [emergencyCodeId], references: [id])
+  
+  // Hizmet Kesintisi
+  serviceInterrupted   Boolean
+  interruptionDuration Float?
+  
+  // İstatistikler
+  evacuatedStaffCount  Int      @default(0)
+  evacuatedPatientCount Int     @default(0)
+  injuredCount         Int      @default(0)
+  deceasedCount        Int      @default(0)
+  
+  // Metin Alanları
+  summary              String   @db.Text
+  causeDetail          String   @db.Text
+  detectedEffect       String   @db.Text
+  observations         String   @db.Text
+  actionsTaken         String   @db.Text
+  resultEvaluation     String   @db.Text
+  
+  attachments          Json?    // Array of { name: string, url: string, type: string }
+  
+  createdBy            String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([facilityId])
 }
 
 model ActivityLog {
@@ -246,7 +343,7 @@ model Category {
   id            Int             @id @default(autoincrement())
   name          String
   subCategories SubCategory[]
-  notebookEntries NotebookEntry[]
+  notebookItems NotebookItem[]
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 }
@@ -256,7 +353,7 @@ model SubCategory {
   name       String
   categoryId Int
   category   Category @relation(fields: [categoryId], references: [id])
-  notebookEntries NotebookEntry[]
+  notebookItems NotebookItem[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
@@ -264,17 +361,35 @@ model SubCategory {
 model Department {
   id        Int      @id @default(autoincrement())
   name      String
-  notebookEntries NotebookEntry[]
+  notebookItems NotebookItem[]
+  incidents     ExtraordinaryIncident[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model NotebookEntry {
+model NotebookPage {
   id              Int      @id @default(autoincrement())
   facilityId      String
   facility        Facility @relation(fields: [facilityId], references: [id])
   year            Int
   date            DateTime
+  documentUrl     String?  // PNG, JPEG, PDF path
+  documentUploadedAt DateTime?
+  status          String   @default("Eksik") // "Eksik" | "Tamamlandı"
+  items           NotebookItem[]
+  isLocked        Boolean  @default(false) // Admin can unlock
+  isArchived      Boolean  @default(false) // Soft delete
+  createdBy       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([facilityId, year])
+}
+
+model NotebookItem {
+  id              Int      @id @default(autoincrement())
+  pageId          Int
+  page            NotebookPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
   authorType      String   // "DOKTOR" | "UZMAN"
   authorName      String
   content         String   @db.Text
@@ -284,13 +399,8 @@ model NotebookEntry {
   subCategory     SubCategory? @relation(fields: [subCategoryId], references: [id])
   departmentId    Int
   department      Department @relation(fields: [departmentId], references: [id])
-  documentUrl     String?  // PNG, JPEG, PDF path
-  status          String   @default("Eksik") // "Eksik" | "Tamamlandı"
-  createdBy       String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-
-  @@index([facilityId, year])
 }
 
 

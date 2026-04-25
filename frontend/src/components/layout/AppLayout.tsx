@@ -5,7 +5,7 @@ import {
   Shield, LayoutDashboard, Building2, Users, Briefcase, UserCheck,
   ClipboardList, FileText, Settings, Bell, ChevronDown, LogOut,
   User, BarChart3, ChevronRight, LayoutGrid, Database, Users2, Mail,
-  BellRing, Layers
+  BellRing, Layers, ShieldAlert
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,7 @@ const operationsNavItems = (hasAdminAccess: boolean) => [
   { label: 'Aylık Personel Verisi', icon: Users, to: '/operations/hr-data' },
   { label: 'Kaza İstatistikleri', icon: BarChart3, to: '/operations/accidents' },
   { label: 'KAYITLAR', type: 'group' },
+  { label: 'Olağan Dışı Olaylar', icon: ShieldAlert, to: '/operations/incidents' },
   { label: 'Tespit & Öneri Defteri', icon: ClipboardList, to: '/operations/notebooks' },
   { label: 'Eğitim Takibi', icon: FileText, to: '/operations/training' },
   { label: 'İSG Kurul', icon: Users, to: '/operations/board' },

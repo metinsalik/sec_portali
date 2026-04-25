@@ -1,13 +1,16 @@
 import { PrismaClient } from '@prisma/client';
+
 const prisma = new PrismaClient();
 
 async function main() {
-  const count = await prisma.assignment.count();
-  const pros = await prisma.professional.count();
-  const facs = await prisma.facility.count();
-  console.log(`Tesisler: ${facs}`);
-  console.log(`Profesyoneller: ${pros}`);
-  console.log(`Atamalar: ${count}`);
+  try {
+    const count = await prisma.notebookEntry.count();
+    console.log('NotebookEntry count:', count);
+  } catch (error: any) {
+    console.error('Error accessing NotebookEntry:', error.message);
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
-main().finally(() => prisma.$disconnect());
+main();

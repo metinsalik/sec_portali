@@ -561,6 +561,66 @@ router.delete('/definitions/departments/:id', managementMiddleware, async (req: 
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
+// OLAĞAN DIŞI OLAY TANIMLARI - Admin + Management
+// ──────────────────────────────────────────────────────────────────────────────
+
+// Generic helper for incident definitions
+const incidentModels = {
+  'incident-categories': 'incidentCategory',
+  'incident-root-causes': 'incidentRootCause',
+  'incident-support-units': 'incidentSupportUnit',
+  'emergency-codes': 'emergencyCode'
+} as const;
+
+Object.entries(incidentModels).forEach(([path, model]) => {
+  // GET
+  router.get(`/definitions/${path}`, async (req: AuthRequest, res: Response) => {
+    try {
+      const items = await (prisma[model] as any).findMany({ orderBy: { name: 'asc' } });
+      res.json(items);
+    } catch {
+      res.status(500).json({ error: 'Veriler getirilemedi.' });
+    }
+  });
+
+  // POST
+  router.post(`/definitions/${path}`, managementMiddleware, async (req: AuthRequest, res: Response) => {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'İsim zorunludur.' });
+    try {
+      const item = await (prisma[model] as any).create({ data: { name } });
+      res.status(201).json(item);
+    } catch (error: any) {
+      if (error.code === 'P2002') return res.status(400).json({ error: 'Bu isim zaten mevcut.' });
+      res.status(500).json({ error: 'Kayıt oluşturulamadı.' });
+    }
+  });
+
+  // PUT
+  router.put(`/definitions/${path}/:id`, managementMiddleware, async (req: AuthRequest, res: Response) => {
+    const id = parseInt(String(req.params.id));
+    const { name } = req.body;
+    try {
+      const item = await (prisma[model] as any).update({ where: { id }, data: { name } });
+      res.json(item);
+    } catch {
+      res.status(500).json({ error: 'Güncelleme başarısız.' });
+    }
+  });
+
+  // DELETE
+  router.delete(`/definitions/${path}/:id`, managementMiddleware, async (req: AuthRequest, res: Response) => {
+    const id = parseInt(String(req.params.id));
+    try {
+      await (prisma[model] as any).delete({ where: { id } });
+      res.json({ message: 'Kayıt silindi.' });
+    } catch {
+      res.status(500).json({ error: 'Silme işlemi başarısız. Bu kayıt kullanımda olabilir.' });
+    }
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
 // ROL LİSTESİ - Kullanıcı yönetimi formu için
 // ──────────────────────────────────────────────────────────────────────────────
 router.get('/roles', async (req: AuthRequest, res: Response) => {

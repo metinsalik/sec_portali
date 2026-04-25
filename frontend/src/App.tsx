@@ -42,6 +42,7 @@ import PanelSettings from './pages/panel/PanelSettings';
 import OperationsDashboard from './pages/operations/OperationsDashboard';
 import HRDataPage from './pages/operations/HRDataPage';
 import AccidentsPage from './pages/operations/AccidentsPage';
+import ExtraordinaryIncidentsPage from './pages/operations/ExtraordinaryIncidentsPage';
 import NotebooksPage from './pages/operations/NotebooksPage';
 import TrainingPage from './pages/operations/TrainingPage';
 import BoardPage from './pages/operations/BoardPage';
@@ -241,6 +242,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <AppLayout><AccidentsPage /></AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/operations/incidents"
+                element={
+                  <ProtectedRoute>
+                    <AppLayout><ExtraordinaryIncidentsPage /></AppLayout>
                   </ProtectedRoute>
                 }
               />

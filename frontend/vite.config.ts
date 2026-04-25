@@ -23,7 +23,8 @@ export default defineConfig({
       clientPort: 80
     },
     proxy: {
-      '/api': 'http://backend:3005'
+      '/api': 'http://backend:3005',
+      '/uploads': 'http://backend:3005'
     }
   },
   optimizeDeps: {
