@@ -151,7 +151,10 @@ const ExtraordinaryIncidentForm = ({ initialData, onSuccess, onCancel }: Extraor
                 <SelectValue placeholder="Tesis seçin" />
               </SelectTrigger>
               <SelectContent>
-                {facilities.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                {facilities
+                  .filter(f => isAdmin || user?.facilities?.some((uf: any) => uf.facilityId === f.id))
+                  .map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)
+                }
               </SelectContent>
             </Select>
           </div>

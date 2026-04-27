@@ -236,16 +236,19 @@ const ExtraordinaryIncidentsPage = () => {
               />
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {isAdmin && (
+              {(isAdmin || (user?.facilities && user.facilities.length > 1)) && (
                 <Select value={selectedFacility} onValueChange={setSelectedFacility}>
                   <SelectTrigger className="w-[200px] h-10">
                     <SelectValue placeholder="Tüm Tesisler" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tüm Tesisler</SelectItem>
-                    {facilities.map(f => (
-                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                    ))}
+                    {facilities
+                      .filter(f => isAdmin || user?.facilities?.some((uf: any) => uf.facilityId === f.id))
+                      .map(f => (
+                        <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                      ))
+                    }
                   </SelectContent>
                 </Select>
               )}
