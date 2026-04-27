@@ -72,7 +72,7 @@ const ExtraordinaryIncidentForm = ({ initialData, onSuccess, onCancel }: Extraor
         deceasedCount: initialData.deceasedCount?.toString(),
       });
     } else if (!isAdmin && user?.facilities?.[0]) {
-      setFormData((prev: any) => ({ ...prev, facilityId: user.facilities[0].facilityId }));
+      setFormData((prev: any) => ({ ...prev, facilityId: user.facilities[0] }));
     }
   }, [initialData, isAdmin, user]);
 
@@ -152,7 +152,7 @@ const ExtraordinaryIncidentForm = ({ initialData, onSuccess, onCancel }: Extraor
               </SelectTrigger>
               <SelectContent>
                 {facilities
-                  .filter(f => isAdmin || user?.facilities?.some((uf: any) => uf.facilityId === f.id))
+                  .filter(f => isAdmin || user?.facilities?.includes(f.id))
                   .map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)
                 }
               </SelectContent>

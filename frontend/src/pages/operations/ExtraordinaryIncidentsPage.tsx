@@ -244,7 +244,7 @@ const ExtraordinaryIncidentsPage = () => {
                   <SelectContent>
                     <SelectItem value="all">Tüm Tesisler</SelectItem>
                     {facilities
-                      .filter(f => isAdmin || user?.facilities?.some((uf: any) => uf.facilityId === f.id))
+                      .filter(f => isAdmin || user?.facilities?.includes(f.id))
                       .map(f => (
                         <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
                       ))
