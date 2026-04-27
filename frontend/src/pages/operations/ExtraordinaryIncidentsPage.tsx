@@ -148,12 +148,10 @@ const ExtraordinaryIncidentsPage = () => {
               <LayoutGrid className="w-4 h-4" />
             </Button>
           </div>
+          <Button onClick={() => { setEditingIncident(null); setIsFormOpen(true); }} className="shadow-sm shadow-primary/20">
+            <Plus className="w-4 h-4 mr-2" /> Yeni Olay Bildirimi
+          </Button>
           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => { setEditingIncident(null); setIsFormOpen(true); }} className="shadow-sm shadow-primary/20">
-                <Plus className="w-4 h-4 mr-2" /> Yeni Olay Bildirimi
-              </Button>
-            </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingIncident ? 'Olay Kaydını Düzenle' : 'Yeni Olağan Dışı Olay Bildirimi'}</DialogTitle>
@@ -239,7 +237,9 @@ const ExtraordinaryIncidentsPage = () => {
               {(isAdmin || (user?.facilities && user.facilities.length > 1)) && (
                 <Select value={selectedFacility} onValueChange={setSelectedFacility}>
                   <SelectTrigger className="w-[200px] h-10">
-                    <SelectValue placeholder="Tüm Tesisler" />
+                    <SelectValue>
+                      {facilities.find(f => f.id === selectedFacility)?.name || "Tüm Tesisler"}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tüm Tesisler</SelectItem>
@@ -255,36 +255,42 @@ const ExtraordinaryIncidentsPage = () => {
               
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-[160px] h-10">
-                  <SelectValue placeholder="Kategori" />
+                  <SelectValue>
+                    {categories.find(c => String(c.id) === categoryFilter)?.name || "Tüm Kategoriler"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tüm Kategoriler</SelectItem>
                   {categories.map(c => (
-                    <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
               <Select value={rootCauseFilter} onValueChange={setRootCauseFilter}>
                 <SelectTrigger className="w-[160px] h-10">
-                  <SelectValue placeholder="Kök Neden" />
+                  <SelectValue>
+                    {rootCauses.find(rc => String(rc.id) === rootCauseFilter)?.name || "Tüm Nedenler"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tüm Nedenler</SelectItem>
                   {rootCauses.map(rc => (
-                    <SelectItem key={rc.id} value={rc.id.toString()}>{rc.name}</SelectItem>
+                    <SelectItem key={rc.id} value={String(rc.id)}>{rc.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
               <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
                 <SelectTrigger className="w-[160px] h-10">
-                  <SelectValue placeholder="Departman" />
+                  <SelectValue>
+                    {departments.find(d => String(d.id) === departmentFilter)?.name || "Tüm Bölümler"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tüm Departmanlar</SelectItem>
+                  <SelectItem value="all">Tüm Bölümler</SelectItem>
                   {departments.map(d => (
-                    <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>
+                    <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

@@ -148,7 +148,9 @@ const ExtraordinaryIncidentForm = ({ initialData, onSuccess, onCancel }: Extraor
               disabled={!isAdmin && !!initialData}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Tesis seçin" />
+                <SelectValue>
+                  {facilities.find(f => f.id === formData.facilityId)?.name || "Tesis seçin"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {facilities
@@ -162,14 +164,16 @@ const ExtraordinaryIncidentForm = ({ initialData, onSuccess, onCancel }: Extraor
           <div className="space-y-2">
             <Label>Olay Türü *</Label>
             <Select 
-              value={formData.categoryId} 
+              value={String(formData.categoryId || '')} 
               onValueChange={v => updateField('categoryId', v)}
             >
               <SelectTrigger>
-                <SelectValue placeholder={categories.length > 0 ? "Kategori seçin" : "Yükleniyor..."} />
+                <SelectValue>
+                  {categories.find(c => String(c.id) === String(formData.categoryId))?.name || "Kategori seçin"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {categories.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                {categories.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -177,14 +181,16 @@ const ExtraordinaryIncidentForm = ({ initialData, onSuccess, onCancel }: Extraor
           <div className="space-y-2">
             <Label>Kök Neden *</Label>
             <Select 
-              value={formData.rootCauseId} 
+              value={String(formData.rootCauseId || '')} 
               onValueChange={v => updateField('rootCauseId', v)}
             >
               <SelectTrigger>
-                <SelectValue placeholder={rootCauses.length > 0 ? "Kök neden seçin" : "Yükleniyor..."} />
+                <SelectValue>
+                  {rootCauses.find(rc => String(rc.id) === String(formData.rootCauseId))?.name || "Kök neden seçin"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {rootCauses.map(rc => <SelectItem key={rc.id} value={rc.id.toString()}>{rc.name}</SelectItem>)}
+                {rootCauses.map(rc => <SelectItem key={rc.id} value={String(rc.id)}>{rc.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -193,14 +199,16 @@ const ExtraordinaryIncidentForm = ({ initialData, onSuccess, onCancel }: Extraor
             <div className="space-y-2">
               <Label>Bölüm (Sorumluluk) *</Label>
               <Select 
-                value={formData.departmentId} 
+                value={String(formData.departmentId || '')} 
                 onValueChange={v => updateField('departmentId', v)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={departments.length > 0 ? "Bölüm" : "..."} />
+                  <SelectValue>
+                    {departments.find(d => String(d.id) === String(formData.departmentId))?.name || "Bölüm seçin"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {departments.map(d => <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>)}
+                  {departments.map(d => <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -251,12 +259,17 @@ const ExtraordinaryIncidentForm = ({ initialData, onSuccess, onCancel }: Extraor
                 <Label htmlFor="supportReceived" className="text-xs">Destek Alındı mı?</Label>
               </div>
               {formData.supportReceived && (
-                <Select value={formData.supportUnitId} onValueChange={v => updateField('supportUnitId', v)}>
+                <Select 
+                  value={String(formData.supportUnitId || '')} 
+                  onValueChange={v => updateField('supportUnitId', v)}
+                >
                   <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder={supportUnits.length > 0 ? "Birim seçin" : "..."} />
+                    <SelectValue>
+                      {supportUnits.find(su => String(su.id) === String(formData.supportUnitId))?.name || "Birim seçin"}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {supportUnits.map(su => <SelectItem key={su.id} value={su.id.toString()}>{su.name}</SelectItem>)}
+                    {supportUnits.map(su => <SelectItem key={su.id} value={String(su.id)}>{su.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               )}
@@ -268,12 +281,17 @@ const ExtraordinaryIncidentForm = ({ initialData, onSuccess, onCancel }: Extraor
                 <Label htmlFor="announcementMade" className="text-xs">Acil Durum Anonsu?</Label>
               </div>
               {formData.announcementMade && (
-                <Select value={formData.emergencyCodeId} onValueChange={v => updateField('emergencyCodeId', v)}>
+                <Select 
+                  value={String(formData.emergencyCodeId || '')} 
+                  onValueChange={v => updateField('emergencyCodeId', v)}
+                >
                   <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder={emergencyCodes.length > 0 ? "Kod seçin" : "..."} />
+                    <SelectValue>
+                      {emergencyCodes.find(ec => String(ec.id) === String(formData.emergencyCodeId))?.name || "Kod seçin"}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {emergencyCodes.map(ec => <SelectItem key={ec.id} value={ec.id.toString()}>{ec.name}</SelectItem>)}
+                    {emergencyCodes.map(ec => <SelectItem key={ec.id} value={String(ec.id)}>{ec.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               )}
@@ -371,7 +389,7 @@ const ExtraordinaryIncidentForm = ({ initialData, onSuccess, onCancel }: Extraor
                   className="h-6 w-6 p-0 rounded-full shadow-lg"
                   onClick={() => setFiles(prev => prev.filter((_, idx) => idx !== index))}
                 >
-                  <X className="w-4 h-4" />
+                  <XCircle className="w-4 h-4" />
                 </Button>
               </div>
               

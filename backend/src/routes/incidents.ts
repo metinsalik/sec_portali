@@ -119,7 +119,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 });
 
 // Yeni olay kaydet
-router.post('/', upload.array('files', 4), async (req: AuthRequest, res: Response) => {
+router.post('/', upload.array('attachments', 4), async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
     const {
@@ -188,7 +188,7 @@ router.post('/', upload.array('files', 4), async (req: AuthRequest, res: Respons
 });
 
 // Olay güncelle
-router.put('/:id', async (req: AuthRequest, res: Response) => {
+router.put('/:id', upload.array('attachments', 4), async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     const user = req.user!;
@@ -200,7 +200,8 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
       supportReceived, supportUnitId, announcementMade, emergencyCodeId,
       serviceInterrupted, interruptionDuration,
       evacuatedStaffCount, evacuatedPatientCount, injuredCount, deceasedCount,
-      summary, causeDetail, detectedEffect, observations, actionsTaken, resultEvaluation
+      summary, causeDetail, detectedEffect, observations, actionsTaken, resultEvaluation,
+      existingAttachments // Silinmeyen mevcut dosyalar (JSON string)
     } = req.body;
 
     const existing = await prisma.extraordinaryIncident.findUnique({ where: { id } });
@@ -214,6 +215,17 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
       if (!hasAccess) return res.status(403).json({ error: 'Bu olayı güncellemeye yetkiniz yok.' });
     }
 
+    // Yeni dosyaları işle
+    const newAttachments = (req.files as Express.Multer.File[] || []).map(f => ({
+      name: f.originalname,
+      url: `/uploads/incidents/${f.filename}`,
+      type: f.mimetype
+    }));
+
+    // Mevcut ve yeni dosyaları birleştir
+    let attachments = JSON.parse(existingAttachments || '[]');
+    attachments = [...attachments, ...newAttachments];
+
     const updated = await prisma.extraordinaryIncident.update({
       where: { id },
       data: {
@@ -222,14 +234,14 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
         departmentId: departmentId ? parseInt(departmentId) : undefined,
         locationDetail,
         incidentDate: incidentDate ? new Date(incidentDate) : undefined,
-        interventionRequired: interventionRequired !== undefined ? !!interventionRequired : undefined,
-        interventionTime: interventionTime ? new Date(interventionTime) : (interventionRequired === false ? null : undefined),
+        interventionRequired: interventionRequired === 'true' || interventionRequired === true,
+        interventionTime: interventionTime ? new Date(interventionTime) : (interventionRequired === 'false' ? null : undefined),
         controlTime: controlTime ? new Date(controlTime) : undefined,
-        supportReceived: supportReceived !== undefined ? !!supportReceived : undefined,
-        supportUnitId: supportUnitId ? parseInt(supportUnitId) : (supportReceived === false ? null : undefined),
-        announcementMade: announcementMade !== undefined ? !!announcementMade : undefined,
-        emergencyCodeId: emergencyCodeId ? parseInt(emergencyCodeId) : (announcementMade === false ? null : undefined),
-        serviceInterrupted: serviceInterrupted !== undefined ? !!serviceInterrupted : undefined,
+        supportReceived: supportReceived === 'true' || supportReceived === true,
+        supportUnitId: supportUnitId ? parseInt(supportUnitId) : (supportReceived === 'false' ? null : undefined),
+        announcementMade: announcementMade === 'true' || announcementMade === true,
+        emergencyCodeId: emergencyCodeId ? parseInt(emergencyCodeId) : (announcementMade === 'false' ? null : undefined),
+        serviceInterrupted: serviceInterrupted === 'true' || serviceInterrupted === true,
         interruptionDuration: interruptionDuration !== undefined ? parseFloat(interruptionDuration) : undefined,
         evacuatedStaffCount: evacuatedStaffCount !== undefined ? parseInt(evacuatedStaffCount) : undefined,
         evacuatedPatientCount: evacuatedPatientCount !== undefined ? parseInt(evacuatedPatientCount) : undefined,
@@ -240,7 +252,8 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
         detectedEffect,
         observations,
         actionsTaken,
-        resultEvaluation
+        resultEvaluation,
+        attachments: attachments.length > 0 ? attachments : undefined
       }
     });
 
