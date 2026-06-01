@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { UserPlus, Clock, Calendar, CreditCard, Loader2, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface QuickAssignModalProps {
   open: boolean;
@@ -31,8 +32,61 @@ export function QuickAssignModal({ open, onOpenChange, facility, type, onSuccess
     costType: 'Aylık Sabit',
     unitPrice: '',
   });
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingAssignment, setPendingAssignment] = useState<any>(null);
 
-  // Re-calculate duration when facility or type changes
+  const doAssign = async (data: any, confirmed = false) => {
+    const res = await api.post('/panel/assignments', confirmed ? { ...data, confirmed: true } : data);
+    if (!res.ok) {
+      const err = await res.json();
+      if (err.code === 'PROFESSIONAL_ASSIGNED_ELSEWHERE') {
+        setPendingAssignment(data);
+        setShowConfirmDialog(true);
+        return null;
+      }
+      throw new Error(err.error || 'Atama yapılamadı');
+    }
+    return res.json();
+  };
+
+  const assignMutation = useMutation({
+    mutationFn: (data: any) => doAssign(data),
+    onSuccess: (result) => {
+      if (!result) return;
+      queryClient.invalidateQueries({ queryKey: ['facilities-with-compliance'] });
+      queryClient.invalidateQueries({ queryKey: ['facility-detail', facility?.id] });
+      queryClient.invalidateQueries({ queryKey: ['panel-dashboard'] });
+      toast.success('Atama başarıyla yapıldı');
+      onOpenChange(false);
+      onSuccess?.();
+    },
+    onError: (error: Error) => {
+      if (error.message !== 'PROFESSIONAL_ASSIGNED_ELSEWHERE') {
+        toast.error(error.message);
+      }
+    }
+  });
+
+  const confirmMutation = useMutation({
+    mutationFn: () => doAssign(pendingAssignment, true),
+    onSuccess: (result) => {
+      if (!result) return;
+      queryClient.invalidateQueries({ queryKey: ['facilities-with-compliance'] });
+      queryClient.invalidateQueries({ queryKey: ['facility-detail', facility?.id] });
+      queryClient.invalidateQueries({ queryKey: ['panel-dashboard'] });
+      toast.success('Atama başarıyla yapıldı');
+      setShowConfirmDialog(false);
+      setPendingAssignment(null);
+      onOpenChange(false);
+      onSuccess?.();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+      setShowConfirmDialog(false);
+      setPendingAssignment(null);
+    }
+  });
+
   React.useEffect(() => {
     if (facility && open) {
       let duration = 0;
@@ -78,26 +132,6 @@ export function QuickAssignModal({ open, onOpenChange, facility, type, onSuccess
     enabled: open && type === 'Vekil'
   });
 
-  const assignMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await api.post('/panel/assignments', data);
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Atama yapılamadı');
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['facilities-with-compliance'] });
-      queryClient.invalidateQueries({ queryKey: ['facility-detail', facility?.id] });
-      queryClient.invalidateQueries({ queryKey: ['panel-dashboard'] });
-      toast.success('Atama başarıyla yapıldı');
-      onOpenChange(false);
-      onSuccess?.();
-    },
-    onError: (error) => toast.error(error.message)
-  });
-
   const handleAssignSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!facility) return;
@@ -113,6 +147,15 @@ export function QuickAssignModal({ open, onOpenChange, facility, type, onSuccess
       costType: formData.costType,
       unitPrice: formData.unitPrice,
     });
+  };
+
+  const handleConfirmAssignment = () => {
+    confirmMutation.mutate();
+  };
+
+  const handleCancelConfirm = () => {
+    setShowConfirmDialog(false);
+    setPendingAssignment(null);
   };
 
   return (
@@ -156,13 +199,13 @@ export function QuickAssignModal({ open, onOpenChange, facility, type, onSuccess
                       : professionals
                           .filter((p: any) => {
                             if (type === 'IGU') {
-                              const isVeryDangerous = facility?.dangerClass === 'Çok Tehlikeli';
-                              const isFirstAssignment = (facility?.compliance?.igu?.assignedMinutes || 0) === 0;
-                              
-                              if (isVeryDangerous && isFirstAssignment) {
-                                return p.titleClass === 'A Sınıfı IGU';
-                              }
-                              return p.titleClass.includes('IGU');
+                               const isVeryDangerous = facility?.dangerClass === 'Çok Tehlikeli';
+                               const hasAClassAssigned = facility?.assignments?.some((a: any) => a.type === 'IGU' && a.professional?.titleClass === 'A Sınıfı IGU');
+                               
+                               if (isVeryDangerous && !hasAClassAssigned) {
+                                 return p.titleClass === 'A Sınıfı IGU';
+                               }
+                               return p.titleClass.includes('IGU');
                             }
                             if (type === 'Hekim') return p.titleClass === 'İşyeri Hekimi';
                             if (type === 'DSP') return p.titleClass === 'DSP';
@@ -287,6 +330,40 @@ export function QuickAssignModal({ open, onOpenChange, facility, type, onSuccess
           </DialogFooter>
         </form>
       </DialogContent>
+
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent className="sm:max-w-[420px] w-[95vw] max-h-[90vh] p-0 overflow-hidden border-none shadow-2xl rounded-3xl flex flex-col">
+          <AlertDialogHeader className="px-8 py-6 bg-slate-900 text-white shrink-0">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                <Info className="w-5 h-5 text-white/70" />
+              </div>
+              <div>
+                <AlertDialogTitle className="text-lg font-bold tracking-tight">Atama Onayı</AlertDialogTitle>
+                <AlertDialogDescription className="text-white/40 text-xs mt-1 font-medium">
+                  Bu profesyonel zaten başka bir tesiste atanmış durumda. Yine de eklemek istiyor musunuz?
+                </AlertDialogDescription>
+              </div>
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="px-8 py-6 bg-white dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 shrink-0 gap-3">
+            <AlertDialogCancel 
+              onClick={handleCancelConfirm}
+              className="rounded-xl h-11 px-6 font-bold text-xs text-slate-400 hover:text-slate-600 transition-colors bg-transparent border-none shadow-none"
+            >
+              Vazgeç
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmAssignment}
+              disabled={confirmMutation.isPending}
+              className="rounded-xl h-11 px-10 font-bold text-xs bg-slate-900 hover:bg-slate-800 shadow-xl text-white transition-all active:scale-95"
+            >
+              {confirmMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Ekle
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

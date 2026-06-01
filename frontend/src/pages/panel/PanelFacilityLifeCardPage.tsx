@@ -14,16 +14,27 @@ import {
 } from '@/components/ui/select';
 import { 
   Building2, MapPin, ChevronLeft, Users, Shield, 
-  Activity, Briefcase, Phone, Mail, Globe, 
+  Activity, 
   Clock, CheckCircle2, AlertCircle, FileText,
-  Calendar, TrendingUp, History, ClipboardCheck,
-  Stethoscope, HardHat, HeartPulse, Info, UserCheck, UserX,
-  Plus, Edit2, Trash2, Loader2, UserPlus, CreditCard, XCircle
+  Calendar, TrendingUp, History,
+  Stethoscope, HardHat, HeartPulse, Info, UserCheck,
+  Plus, Edit2, Trash2, Loader2, UserPlus, XCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Separator } from '@/components/ui/separator';
 import { QuickAssignModal } from '@/components/panel/assignments/QuickAssignModal';
 import { toast } from 'sonner';
+
+interface EmployeeCountHistory {
+  effectiveDate: string;
+  count: number;
+}
+
+interface ActivityLog {
+  action: string;
+  details: string;
+  createdAt: string;
+  username: string;
+}
 
 interface Facility {
   id: string;
@@ -38,9 +49,9 @@ interface Facility {
   dangerClass: string;
   employeeCount: number;
   isActive: boolean;
-  assignments: any[];
-  employeeCountHistory: any[];
-  activityLogs: any[];
+  assignments: Assignment[];
+  employeeCountHistory: EmployeeCountHistory[];
+  activityLogs: ActivityLog[];
 }
 
 interface Professional {
@@ -91,6 +102,7 @@ const PanelFacilityLifeCardPage = () => {
     durationMinutes: '',
     isFullTime: false,
     startDate: new Date().toISOString().split('T')[0],
+    endDate: null as string | null,
     costType: 'Aylık Sabit',
     unitPrice: '',
   });
@@ -105,28 +117,20 @@ const PanelFacilityLifeCardPage = () => {
     }
   });
 
-  const { data: professionals = [] } = useQuery<Professional[]>({
-    queryKey: ['professionals', 'active'],
-    queryFn: async () => {
-      const res = await api.get('/panel/professionals');
-      if (!res.ok) throw new Error('Yüklenemedi');
-      return res.json();
-    }
-  });
-
-  const { data: employerReps = [] } = useQuery<EmployerRepresentative[]>({
-    queryKey: ['employers', 'active'],
-    queryFn: async () => {
-      const res = await api.get('/panel/employers');
-      if (!res.ok) throw new Error('Yüklenemedi');
-      return res.json();
-    }
-  });
 
   // Mutations
 
+interface UpdateAssignmentData {
+  durationMinutes: number;
+  isFullTime: boolean;
+  startDate: string;
+  endDate: string | null;
+  costType: string;
+  unitPrice: number | null;
+}
+
   const updateMutation = useMutation({
-    mutationFn: async ({ id: assignmentId, data }: { id: number; data: any }) => {
+    mutationFn: async ({ id: assignmentId, data }: { id: number; data: UpdateAssignmentData }) => {
       const res = await api.put(`/panel/assignments/${assignmentId}`, data);
       if (!res.ok) throw new Error('Güncellenemedi');
       return res.json();
@@ -151,17 +155,6 @@ const PanelFacilityLifeCardPage = () => {
     }
   });
 
-  const resetForm = () => {
-    setFormData({
-      professionalId: '',
-      employerRepId: '',
-      durationMinutes: '',
-      isFullTime: false,
-      startDate: new Date().toISOString().split('T')[0],
-      costType: 'Aylık Sabit',
-      unitPrice: '',
-    });
-  };
 
   const openAssignModal = (type: 'IGU' | 'Hekim' | 'DSP' | 'Vekil') => {
     setAssignType(type);
@@ -672,7 +665,7 @@ const PanelFacilityLifeCardPage = () => {
           <Card className="border-none shadow-sm rounded-3xl bg-white dark:bg-slate-900 overflow-hidden">
             <div className="max-h-[500px] overflow-y-auto scrollbar-thin">
               <div className="p-2">
-                {facility.activityLogs?.length > 0 ? facility.activityLogs.map((log: any, idx: number) => (
+                {facility.activityLogs?.length > 0 ? facility.activityLogs.map((log: ActivityLog, idx: number) => (
                   <div key={idx} className="flex gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-2xl group">
                     <div className="relative">
                       <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center z-10 relative">
@@ -722,7 +715,7 @@ const PanelFacilityLifeCardPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                  {facility.employeeCountHistory?.map((h: any, idx: number) => (
+                  {facility.employeeCountHistory?.map((h: EmployeeCountHistory, idx: number) => (
                     <tr key={idx} className="group">
                       <td className="py-4 text-xs font-semibold text-slate-600 dark:text-slate-400">
                         {new Date(h.effectiveDate).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' })}
@@ -812,13 +805,14 @@ const PanelFacilityLifeCardPage = () => {
                         onClick={() => {
                           setEditingAssignment(a);
                           setFormData({
-                            professionalId: a.professionalId?.toString() || '',
-                            employerRepId: a.employerRepId?.toString() || '',
+                            professionalId: a.professionalId?.toString() ?? '',
+                            employerRepId: a.employerRepId?.toString() ?? '',
                             durationMinutes: a.durationMinutes.toString(),
                             isFullTime: a.isFullTime,
-                            startDate: new Date(a.startDate).toISOString().split('T')[0],
+                            startDate: a.startDate ? new Date(a.startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                            endDate: null as string | null,
                             costType: a.costType || 'Aylık Sabit',
-                            unitPrice: a.unitPrice?.toString() || '',
+                            unitPrice: a.unitPrice?.toString() ?? '',
                           });
                         }}
                       >
@@ -856,6 +850,24 @@ const PanelFacilityLifeCardPage = () => {
                       type="number"
                       value={formData.durationMinutes}
                       onChange={(e) => setFormData({...formData, durationMinutes: e.target.value})}
+                      className="h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 shadow-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Başlangıç Tarihi</label>
+                    <Input 
+                      type="date"
+                      value={formData.startDate}
+                      onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                      className="h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 shadow-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Bitiş Tarihi</label>
+                    <Input 
+                      type="date"
+                      value={formData.endDate ? formData.endDate : ''}
+                      onChange={(e) => setFormData({...formData, endDate: e.target.value || null})}
                       className="h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 shadow-sm"
                     />
                   </div>
@@ -903,12 +915,14 @@ const PanelFacilityLifeCardPage = () => {
                         onClick={() => {
                           updateMutation.mutate({
                             id: editingAssignment.id,
-                            data: {
-                              durationMinutes: parseInt(formData.durationMinutes),
-                              isFullTime: formData.isFullTime,
-                              costType: formData.costType,
-                              unitPrice: formData.unitPrice ? parseFloat(formData.unitPrice) : null,
-                            }
+                                data: {
+                                  durationMinutes: parseInt(formData.durationMinutes),
+                                  isFullTime: formData.isFullTime,
+                                  costType: formData.costType,
+                                  unitPrice: formData.unitPrice === '' ? null : parseFloat(formData.unitPrice),
+                                  startDate: formData.startDate,
+                                  endDate: formData.endDate || null,
+                                }
                           });
                         }}
                       >

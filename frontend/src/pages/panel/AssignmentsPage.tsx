@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -18,7 +18,7 @@ import {
 import {
   Search, Shield, AlertTriangle, Loader2, CheckCircle2, 
   XCircle, UserPlus, Building2, Users, ArrowRight, Info,
-  Calendar, Clock, CreditCard, MoreVertical, Trash2, Edit2, History
+  Calendar, Clock, CreditCard, Trash2, Edit2, History
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -65,6 +65,7 @@ interface Assignment {
   durationMinutes: number;
   isFullTime: boolean;
   startDate: string;
+  endDate?: string | null; // Add endDate
   status: string;
   costType: string;
   unitPrice: number | null;
@@ -87,23 +88,26 @@ export default function AssignmentsPage() {
   const [terminatingAssignmentId, setTerminatingAssignmentId] = useState<number | null>(null);
   const [terminationDate, setTerminationDate] = useState(new Date().toISOString().split('T')[0]);
 
-  useEffect(() => {
-    if (location.state?.facilityId) {
-      setSearch(location.state.facilityId);
-      // Determine tab based on facility's likely state or just show it
-      // For simplicity, we can clear the tab filter if searching by ID, 
-      // but the current structure depends on tabs.
-      // Let's find which tab this facility belongs to after data loads.
-    }
-  }, [location.state]);
+  // Removed useEffect with synchronous state update to avoid cascading renders
+  // If search needs to be pre-filled based on location.state, consider using a ref or a different approach.
 
   // Form State
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    professionalId: string;
+    employerRepId: string;
+    durationMinutes: string;
+    isFullTime: boolean;
+    startDate: string;
+    endDate: string | null;
+    costType: string;
+    unitPrice: string;
+  }>({
     professionalId: '',
     employerRepId: '',
     durationMinutes: '',
     isFullTime: false,
     startDate: new Date().toISOString().split('T')[0],
+    endDate: '', 
     costType: 'Aylık Sabit',
     unitPrice: '',
   });
@@ -124,7 +128,7 @@ export default function AssignmentsPage() {
       const res = await api.get(`/panel/assignments?facilityId=${selectedFacility.facilityId}&status=Aktif`);
       if (!res.ok) throw new Error('Yüklenemedi');
       const all = await res.json();
-      return all.filter((a: any) => a.type === assignType);
+      return all.filter((a: Assignment) => a.type === assignType);
     },
     enabled: !!selectedFacility && manageModalOpen
   });
@@ -147,8 +151,20 @@ export default function AssignmentsPage() {
     }
   });
 
+interface AssignRequest {
+  facilityId: string;
+  type: 'IGU' | 'Hekim' | 'DSP' | 'Vekil';
+  professionalId?: string;
+  employerRepId?: string;
+  durationMinutes: string;
+  isFullTime: boolean;
+  startDate: string;
+  costType: string;
+  unitPrice: string;
+}
+
   const assignMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: AssignRequest) => {
       const res = await api.post('/panel/assignments', data);
       if (!res.ok) {
         const err = await res.json();
@@ -167,8 +183,20 @@ export default function AssignmentsPage() {
     }
   });
 
+interface UpdateAssignmentRequest {
+  id: number;
+  data: {
+    durationMinutes: number;
+    isFullTime: boolean;
+    startDate: string;
+    endDate: string | null;
+    costType: string;
+    unitPrice: number | null;
+  };
+}
+
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+    mutationFn: async ({ id, data }: UpdateAssignmentRequest) => {
       const res = await api.put(`/panel/assignments/${id}`, data);
       if (!res.ok) throw new Error('Güncellenemedi');
       return res.json();
@@ -202,6 +230,7 @@ export default function AssignmentsPage() {
       durationMinutes: '',
       isFullTime: false,
       startDate: new Date().toISOString().split('T')[0],
+      endDate: null,
       costType: 'Aylık Sabit',
       unitPrice: '',
     });
@@ -246,13 +275,36 @@ export default function AssignmentsPage() {
     return matchesSearch && matchesTab;
   });
 
+  type ComplianceType = ComplianceInfo | (ComplianceInfo & { hasValidClass: boolean }) | { required: boolean; assigned: boolean; isCompliant: boolean; summary: string } | { assigned: boolean; names: string[]; summary: string };
+
   const StatusBadge = ({ type, compliance, facility }: { 
     type: 'IGU' | 'Hekim' | 'DSP' | 'Vekil', 
-    compliance: any,
+    compliance: ComplianceType,
     facility: FacilityCompliance
   }) => {
-    const isCompliant = type === 'DSP' || type === 'Vekil' ? compliance.assigned : compliance.isCompliant;
-    const isRequired = type === 'DSP' ? compliance.required : type === 'Vekil' ? true : true;
+    let isCompliant: boolean;
+    let isRequired: boolean;
+    let assignedMinutes: number | undefined;
+    let requiredMinutes: number | undefined;
+    let assigned: boolean | undefined;
+
+    if (type === 'IGU' || type === 'Hekim') {
+      const comp = compliance as (ComplianceInfo | (ComplianceInfo & { hasValidClass: boolean }));
+      isCompliant = comp.isCompliant;
+      isRequired = true; // Assuming IGU and Hekim are always required
+      assignedMinutes = comp.assignedMinutes;
+      requiredMinutes = comp.requiredMinutes;
+    } else if (type === 'DSP') {
+      const comp = compliance as { required: boolean; assigned: boolean; isCompliant: boolean; summary: string };
+      isCompliant = comp.isCompliant;
+      isRequired = comp.required;
+      assigned = comp.assigned;
+    } else { // Vekil
+      const comp = compliance as { assigned: boolean; names: string[]; summary: string };
+      isCompliant = comp.assigned;
+      isRequired = true;
+      assigned = comp.assigned;
+    }
 
     if (!isRequired) return (
       <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 opacity-50">
@@ -270,7 +322,7 @@ export default function AssignmentsPage() {
             : "bg-rose-50 dark:bg-rose-900/10 border-rose-100 dark:border-rose-900/20 text-rose-700 dark:text-rose-400 hover:bg-rose-100/50"
         )}
         onClick={() => {
-          if (isCompliant || compliance.assigned) {
+          if (isCompliant || assigned) { // Use 'assigned' for DSP/Vekil
             openManageModal(facility, type);
           } else {
             openAssignModal(facility, type);
@@ -282,10 +334,11 @@ export default function AssignmentsPage() {
           <div className="flex flex-col">
             <span className="text-[10px] font-bold uppercase tracking-wider">{type}</span>
             <span className="text-[9px] font-medium opacity-70">
-              {type === 'DSP' || type === 'Vekil' ? (compliance.assigned ? 'Atanmış' : 'Eksik') : 
-               compliance.assignedMinutes > compliance.requiredMinutes ? 
-               `${compliance.assignedMinutes} / ${compliance.requiredMinutes} dk (+${compliance.assignedMinutes - compliance.requiredMinutes} dk fazla)` :
-               `${compliance.assignedMinutes} / ${compliance.requiredMinutes} dk`
+              {type === 'DSP' || type === 'Vekil' ? (assigned ? 'Atanmış' : 'Eksik') : 
+               assignedMinutes !== undefined && requiredMinutes !== undefined ?
+               (assignedMinutes > requiredMinutes ? 
+               `${assignedMinutes} / ${requiredMinutes} dk (+${assignedMinutes - requiredMinutes} dk fazla)` :
+               `${assignedMinutes} / ${requiredMinutes} dk`) : ''
               }
             </span>
           </div>
@@ -390,7 +443,7 @@ export default function AssignmentsPage() {
       </div>
 
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+        <Tabs value={activeTab} onValueChange={(v: 'missing' | 'compliant' | 'none') => setActiveTab(v)} className="w-full">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4">
             <TabsList className="bg-slate-50/50 dark:bg-slate-800 p-1 rounded-xl border border-slate-100 dark:border-slate-800 shrink-0">
               <TabsTrigger value="missing" className="rounded-lg px-6 font-bold text-[10px] tracking-wide data-[state=active]:bg-white data-[state=active]:shadow-sm">
@@ -530,7 +583,7 @@ export default function AssignmentsPage() {
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Maliyet Tipi</label>
                   <Select 
-                    value={formData.costType} 
+                    value={formData.costType as string} 
                     onValueChange={(v) => setFormData({ ...formData, costType: v })}
                   >
                     <SelectTrigger className="rounded-xl border-slate-100 h-11 text-sm font-medium focus:ring-primary/10">
@@ -685,6 +738,7 @@ export default function AssignmentsPage() {
                             durationMinutes: a.durationMinutes.toString(),
                             isFullTime: a.isFullTime,
                             startDate: new Date(a.startDate).toISOString().split('T')[0],
+                            endDate: a.endDate ? new Date(a.endDate).toISOString().split('T')[0] : null, // Populate endDate
                             costType: a.costType || 'Aylık Sabit',
                             unitPrice: a.unitPrice?.toString() || '',
                           });
@@ -728,12 +782,30 @@ export default function AssignmentsPage() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Başlangıç Tarihi</label>
+                    <Input 
+                      type="date"
+                      value={formData.startDate}
+                      onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                      className="h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 shadow-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Bitiş Tarihi</label>
+                      <Input 
+                        type="date"
+                        value={formData.endDate || ''}
+                        onChange={(e) => setFormData({...formData, endDate: e.target.value || null})}
+                        className="h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 shadow-sm"
+                      />
+                  </div>
+                  <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Maliyet ve Birim Fiyat</label>
                     <div className="flex gap-3">
-                      <Select value={formData.costType} onValueChange={(v) => setFormData({...formData, costType: v})}>
-                        <SelectTrigger className="h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 flex-1 shadow-sm">
-                          <SelectValue />
-                        </SelectTrigger>
+                  <Select value={formData.costType as string} onValueChange={(v) => setFormData({...formData, costType: v})}>
+                    <SelectTrigger className="h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 flex-1 shadow-sm">
+                      <SelectValue />
+                    </SelectTrigger>
                         <SelectContent className="rounded-xl">
                           <SelectItem value="Aylık Sabit" className="text-xs font-medium">Aylık Sabit</SelectItem>
                           <SelectItem value="Saatlik" className="text-xs font-medium">Saatlik</SelectItem>
@@ -774,6 +846,8 @@ export default function AssignmentsPage() {
                             data: {
                               durationMinutes: parseInt(formData.durationMinutes),
                               isFullTime: formData.isFullTime,
+                              startDate: formData.startDate,
+                              endDate: formData.endDate || null,
                               costType: formData.costType,
                               unitPrice: formData.unitPrice ? parseFloat(formData.unitPrice) : null,
                             }
