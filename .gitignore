@@ -30,3 +30,6 @@ yarn-debug.log*
 
 # Uploads
 backend/uploads/
+
+# Database dump
+backend/database_dump.sql

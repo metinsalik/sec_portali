@@ -97,6 +97,10 @@ Bu sistem, üç kaynaktan analiz edilerek oluşturulmuştur:
 | → Eğitim Takibi | ✅ | ✅ | ✅ |
 | → İSG Kurul | ✅ | ✅ | ✅ |
 | → Ölçüm & Kontrol | ✅ | ✅ | ✅ |
+| **İş Takip (Workflow)** | ✅ | ✅ | ✅ |
+| → Kanban & Liste Görünümü| ✅ | ✅ | ✅ |
+| → Havuz & Ekip Özeti | ✅ | ✅ | ✅ |
+| → Modül Ayarları | ✅ | ❌ | ❌ |
 | **Sistem Ayarları** | ✅ | ⚠️ (kısıtlı) | ❌ |
 | → Tesisler | ✅ | ✅ | ❌ |
 | → Kullanıcı Yönetimi | ✅ | ❌ | ❌ |
@@ -171,14 +175,15 @@ if (user.roles.includes('admin') || user.roles.includes('management')) {
 Giriş sonrası ekranın üst kısmında **iki ana modül** görünür (admin/management için):
 
 ```
-┌─────────────────────────────────────────────┐
-│  [Logo]  [İSG ATAMA PANELİ] [İSG AYLIK VERİ] │  ← Ana Sekme/Nav
-│                                    [⚙️ Ayarlar] [🔔] [👤]  │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  [Logo]  [İSG ATAMA PANELİ] [İSG AYLIK VERİ] [İŞ TAKİP]     │  ← Ana Sekme/Nav
+│                                        [⚙️ Ayarlar] [🔔] [👤]  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 - **İSG Atama Paneli** → Sol sidebar ile panel modülleri
 - **İSG Aylık Veri Sistemi** → Sol sidebar ile operasyon modülleri
+- **İş Takip (Workflow)** → Sol sidebar ile iş takibi ve görev yönetimi
 - **Sistem Ayarları** → Üst sağ köşe ⚙️ ikonu veya dropdown
 - **Bildirimler** → Üst sağ 🔔 ikonu
 - **Kullanıcı Profili** → Üst sağ 👤 ikonu + dropdown (Profil, Çıkış)
@@ -1579,7 +1584,210 @@ await apiCall(`/api/panel/assignments/${id}`, 'PUT', {
 
 ---
 
-> **Son Güncelleme:** 2026-04-16  
-> **Versiyon:** 1.3  
+> **Son Güncelleme:** 2026-05-06
+> **Versiyon:** 1.4  
 > **Oluşturan:** Metin Salık + Antigravity AI  
-> **Toplam Bölüm:** 34 (Bölüm 0 dahil 35 başlık)
+> **Toplam Bölüm:** 35 (Bölüm 0 dahil 36 başlık)
+
+---
+
+## BÖLÜM 35: WORKFLOW (İŞ TAKİP) MODÜLÜ
+
+### 35.1 Modülün Amacı
+Kurum içi veya tesisler arası görev atama, durum takibi, ekip yönetimi ve çok kanallı bildirim (Email, In-App, Telegram, WhatsApp) süreçlerinin merkezi olarak yönetilmesi. Bu modül `workflow.md` gereksinimlerinin sisteme entegre halidir.
+
+### 35.2 Rol & Hiyerarşi Sistemi
+Bu modülün yetkileri, merkezi NTLM rollerinden bağımsızdır. Kullanıcıların modül içindeki hiyerarşisine göre yetkileri belirlenir.
+*Hiyerarşi:* Direktör > Müdür > Sorumlu > Üye (ve İzleyici)
+
+| İşlem | Direktör | Müdür | Sorumlu | Üye | İzleyici |
+|-------|----------|-------|---------|-----|---------|
+| Tüm işleri gör | ✅ | ❌ | ❌ | ❌ | ✅ |
+| Kendi ekibini gör | ✅ | ✅ | ✅ | ❌ | ✅ |
+| İş oluştur | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Herkese ata | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Ekibine ata | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Havuzdan iş al | ✅ | ✅ | ✅ | ✅ | ❌ |
+| İş sil | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Modül ayarlarını düzenle | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Kullanıcıya rol ata | ✅ | ❌ | ❌ | ❌ | ❌ |
+
+### 35.3 Veritabanı Şeması (Prisma)
+Workflow modülü mevcut veritabanına entegre edilir. `workflow.md` referansındaki SQL tabloları Prisma modellerine uyarlanmıştır:
+
+```prisma
+// WORKFLOW MODÜLÜ
+model WorkflowDepartment {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  managerId   String?  // username
+  createdAt   DateTime @default(now())
+  roles       WorkflowUserRole[]
+  tasks       WorkflowTask[]
+}
+
+model WorkflowUserRole {
+  id           Int      @id @default(autoincrement())
+  userId       String   @unique // FK -> User.username
+  user         User     @relation(fields: [userId], references: [username])
+  moduleRole   String   // 'DIREKTOR' | 'MUDUR' | 'SORUMLU' | 'UYE' | 'IZLEYICI'
+  departmentId Int?
+  department   WorkflowDepartment? @relation(fields: [departmentId], references: [id])
+  reportsTo    String?  // FK -> User.username (üst yönetici)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model WorkflowCategory {
+  id        Int      @id @default(autoincrement())
+  name      String
+  color     String?
+  icon      String?
+  createdAt DateTime @default(now())
+  tasks     WorkflowTask[]
+}
+
+model WorkflowTag {
+  id        Int      @id @default(autoincrement())
+  name      String
+  color     String?
+  tasks     WorkflowTaskTag[]
+}
+
+model WorkflowTask {
+  id           Int      @id @default(autoincrement())
+  title        String
+  description  String?
+  priority     String   @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
+  status       String   @default("BEKLIYOR") // BEKLIYOR, DEVAM, TAMAMLANDI, YARIM_KALDI, IPTAL
+  categoryId   Int?
+  category     WorkflowCategory? @relation(fields: [categoryId], references: [id])
+  departmentId Int?
+  department   WorkflowDepartment? @relation(fields: [departmentId], references: [id])
+  createdBy    String   // username
+  dueDate      DateTime?
+  alarmDate    DateTime?
+  isPool       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  tags         WorkflowTaskTag[]
+  assignments  WorkflowTaskAssignment[]
+  history      WorkflowTaskHistory[]
+  comments     WorkflowTaskComment[]
+  alarms       WorkflowAlarm[]
+}
+
+model WorkflowTaskTag {
+  taskId Int
+  task   WorkflowTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  tagId  Int
+  tag    WorkflowTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  @@id([taskId, tagId])
+}
+
+model WorkflowTaskAssignment {
+  id         Int      @id @default(autoincrement())
+  taskId     Int
+  task       WorkflowTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId     String   // username
+  role       String   @default("ASSIGNEE") // ASSIGNEE, WATCHER
+  assignedBy String   // username
+  assignedAt DateTime @default(now())
+  completedAt DateTime?
+}
+
+model WorkflowTaskHistory {
+  id         Int      @id @default(autoincrement())
+  taskId     Int
+  task       WorkflowTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  changedBy  String   // username
+  oldStatus  String?
+  newStatus  String?
+  note       String?
+  changedAt  DateTime @default(now())
+}
+
+model WorkflowTaskComment {
+  id         Int      @id @default(autoincrement())
+  taskId     Int
+  task       WorkflowTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId     String   // username
+  content    String
+  createdAt  DateTime @default(now())
+}
+
+model WorkflowAlarm {
+  id         Int      @id @default(autoincrement())
+  taskId     Int
+  task       WorkflowTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  alarmDate  DateTime
+  alarmType  String   // EMAIL, TELEGRAM, WHATSAPP, INAPP
+  isSent     Boolean  @default(false)
+  sentAt     DateTime?
+  createdBy  String   // username
+}
+
+model WorkflowNotificationSettings {
+  id                   Int      @id @default(autoincrement())
+  userId               String   @unique // username
+  user                 User     @relation(fields: [userId], references: [username])
+  telegramChatId       String?
+  whatsappNumber       String?
+  notifyOnAssign       Boolean  @default(true)
+  notifyOnStatusChange Boolean  @default(true)
+  notifyOnAlarm        Boolean  @default(true)
+  notifyOnComment      Boolean  @default(true)
+  updatedAt            DateTime @updatedAt
+}
+```
+
+> **Not:** Workflow modellerinin çalışabilmesi için `User` modeline ilgili relations (örn: `workflowRoles WorkflowUserRole?`) eklenmelidir.
+
+### 35.4 Backend URL ve Routing
+**Middleware:** `workflowAuth.js` eklenerek `req.user.workflowRole` üzerinden yetki kontrolü yapılır. Modül API istekleri `/api/workflow` altında toplanır.
+
+**API Endpoint'leri:**
+- `GET/POST/PUT/DELETE /api/workflow/settings/*` (Kullanıcı rolleri, Departmanlar, Kategoriler, Etiketler)
+- `GET/POST/PUT/DELETE /api/workflow/tasks` (İş CRUD ve liste)
+- `PATCH /api/workflow/tasks/:id/status` (Durum değiştirme)
+- `GET /api/workflow/tasks/pool` ve `POST /api/workflow/tasks/:id/claim` (Havuz işlemleri)
+- `POST/DELETE /api/workflow/tasks/:id/assign` (Atama işlemleri)
+- `GET/POST/DELETE /api/workflow/tasks/:id/comments` (Yorumlar)
+- `GET /api/workflow/tasks/:id/history` (Audit log)
+- `GET /api/workflow/dashboard/*` (my-tasks, team, overview özetleri)
+- `GET/PUT /api/workflow/notifications/settings`
+- `POST /api/workflow/notifications/test`
+
+**Bildirim ve Alarm Servisleri:**
+- `NotificationService`: `sendInApp`, `sendEmail`, `sendTelegram`, `sendWhatsApp` fonskiyonları uygulanır.
+- `alarmJob.js`: `node-cron` kullanılarak 15 dakikada bir tetiklenir, `WorkflowAlarm` tablosundan zamanı gelen bildirimleri gönderir.
+
+### 35.5 Frontend Görünümleri ve Navigasyon
+Giriş sonrasında gösterilen `PortalPage.tsx` ana yönlendirme bileşenine **"İş Takip"** kartı eklenir.
+
+**Klasör Yapısı:** `src/pages/workflow/`
+**Görünümler:**
+- **BoardView:** Sütun bazlı (Bekliyor, Devam, Tamamlandı, Yarım Kaldı, İptal) sürükle-bırak Kanban panosu.
+- **ListView:** Filtrelenebilir, detaylı iş tablosu.
+- **PoolView:** Sahipsiz işleri görme ve kendi üstüne alma ekranı.
+- **TeamOverview:** Müdür ve Direktör için ekip performansı ve iş yükü dağılımı.
+- **WorkflowSettings:** Rol yönetimi, departman hiyerarşisi, kategori/etiket ve bildirim kanalları ayarları.
+
+Tasarım genel sistemin (Shadcn/UI, Tailwind CSS v4, Glassmorphism teması) stil kurallarıyla birebir uyumlu geliştirilir.
+
+### 35.6 Çevre Değişkenleri Eki
+Mevcut `.env` yapısına bildirimler için aşağıdaki anahtarlar eklenecektir:
+```env
+# Telegram Bot
+TELEGRAM_BOT_TOKEN=
+
+# WhatsApp (Twilio veya Meta)
+WHATSAPP_PROVIDER=twilio
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_WHATSAPP_FROM=
+META_WHATSAPP_TOKEN=
+META_PHONE_NUMBER_ID=
+```

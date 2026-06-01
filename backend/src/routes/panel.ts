@@ -6,6 +6,7 @@ import {
   getCertificateStatus,
   checkCapacity,
 } from '../services/isgCalculator';
+import { format } from 'date-fns'; // Import format for date operations
 
 import { getDashboardStats, getEmployeeTrend } from '../services/dashboardService';
 import { 
@@ -156,7 +157,7 @@ router.get('/facilities/:id/compliance', async (req: AuthRequest, res: Response)
       include: {
         assignments: {
           where: { status: 'Aktif' },
-          include: { professional: true },
+          include: { professional: true, employerRep: true }, // Include employerRep
         },
       },
     });
@@ -179,6 +180,9 @@ router.get('/facilities/:id/compliance', async (req: AuthRequest, res: Response)
     const dspAssignments = activeAssignments
       .filter((a) => a.type === 'DSP')
       .map((a) => ({ durationMinutes: a.durationMinutes }));
+    const vekilAssignments = activeAssignments
+      .filter((a) => a.type === 'Vekil' && a.employerRep)
+      .map((a) => ({ name: a.employerRep!.fullName })); // Add vekilAssignments
 
     const result = analyzeFacilityCompliance({
       facilityId: facility.id,
@@ -188,7 +192,8 @@ router.get('/facilities/:id/compliance', async (req: AuthRequest, res: Response)
       iguAssignments,
       hekimAssignments,
       dspAssignments,
-    });
+      vekilAssignments, // Pass vekilAssignments
+    }); // Closing the analyzeFacilityCompliance call
     res.json(result);
   } catch (error) {
     console.error(error);
@@ -623,31 +628,30 @@ router.post('/assignments', async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const [assignment] = await prisma.$transaction([
-      prisma.assignment.create({
-        data: {
-          facilityId,
-          professionalId: professionalId ? parseInt(professionalId) : null,
-          employerRepId: employerRepId ? parseInt(String(employerRepId)) : null,
-          type,
-          durationMinutes: isFullTime ? 11700 : parseInt(String(durationMinutes || 0)),
-          isFullTime: isFullTime ?? false,
-          startDate: new Date(startDate),
-          status: 'Aktif',
-          costType,
-          unitPrice: unitPrice ? parseFloat(unitPrice) : null,
-        },
-        include: { facility: true, professional: true },
-      }),
-      prisma.activityLog.create({
-        data: {
-          facilityId,
-          username: req.user!.username,
-          action: 'Yeni Atama Yapıldı',
-          details: `${type} tipi atama yapıldı. (${durationMinutes} dk)`
-        }
-      })
-    ]);
+    const assignment = await prisma.assignment.create({
+      data: {
+        facilityId,
+        professionalId: professionalId ? parseInt(professionalId) : null,
+        employerRepId: employerRepId ? parseInt(String(employerRepId)) : null,
+        type,
+        durationMinutes: isFullTime ? 11700 : parseInt(String(durationMinutes || 0)),
+        isFullTime: isFullTime ?? false,
+        startDate: new Date(startDate),
+        status: 'Aktif',
+        costType,
+        unitPrice: unitPrice ? parseFloat(unitPrice) : null,
+      },
+      include: { facility: true, professional: true, employerRep: true }, // Include employerRep
+    });
+
+    await prisma.activityLog.create({
+      data: {
+        facilityId,
+        username: req.user!.username,
+        action: 'Yeni Atama Yapıldı',
+        details: `${format(new Date(startDate), 'dd.MM.yyyy')} tarihinde ${assignment.professional?.fullName || assignment.employerRep?.fullName || 'Bilinmiyor'} - ${type} tipi atama yapıldı. (${durationMinutes} dk.)`
+      }
+    });
 
     // Atama değişikliği sonrası mutabakatı tetikle
     const month = format(new Date(startDate), 'yyyy-MM');
@@ -694,7 +698,14 @@ router.post('/assignments/:id/terminate', async (req: AuthRequest, res: Response
   const id = parseInt(String(req.params.id));
   const { endDate } = req.body;
   try {
-    const existing = await prisma.assignment.findUnique({ where: { id } });
+    const existing = await prisma.assignment.findUnique({ 
+      where: { id },
+      include: {
+        professional: true,
+        employerRep: true,
+        facility: true,
+      }
+    });
     if (!existing) return res.status(404).json({ error: 'Atama bulunamadı.' });
 
     const [assignment] = await prisma.$transaction([
@@ -710,7 +721,7 @@ router.post('/assignments/:id/terminate', async (req: AuthRequest, res: Response
           facilityId: existing.facilityId,
           username: req.user!.username,
           action: 'Atama Sonlandırıldı',
-          details: `${existing.type} tipi atama sonlandırıldı.`
+          details: `${existing.professional?.fullName || existing.employerRep?.fullName || 'Bilinmiyor'}'in ${existing.facility?.name || 'Bilinmiyor'} tesisindeki ${existing.type} ataması ${format(endDate ? new Date(endDate) : new Date(), 'dd.MM.yyyy')} tarihinde ${req.user!.fullName || req.user!.username} tarafından sonlandırıldı.`
         }
       })
     ]);
@@ -826,7 +837,7 @@ router.post('/reconciliation', async (req: AuthRequest, res: Response) => {
 });
 
 router.put('/reconciliation/:id', async (req: AuthRequest, res: Response) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id)); // Cast to string
   const { invoiceAmount, status, note, amount } = req.body;
 
   try {

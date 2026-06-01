@@ -17,6 +17,10 @@ router.post('/login', async (req: any, res: Response) => {
       return res.status(400).json({ error: 'Kullanıcı adı gereklidir.' });
     }
 
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(403).json({ error: 'Bu sisteme yalnızca NTLM (Tek Tıkla Giriş) ile erişilebilir. Manuel giriş devre dışıdır.' });
+    }
+
     const username = inputUsername.toLowerCase();
 
     let user = await prisma.user.findUnique({
@@ -135,6 +139,19 @@ router.get('/login', ntlm({
 // Profile / Me Endpoint
 router.get('/me', authMiddleware, (req: AuthRequest, res: Response) => {
   res.json({ user: req.user });
+});
+
+// Active user count endpoint (authenticated)
+router.get('/active-count', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const count = await prisma.user.count({
+      where: { isActive: true }
+    });
+    res.json({ count });
+  } catch (error) {
+    console.error('Active count error:', error);
+    res.status(500).json({ error: 'Kullanıcı sayısı alınamadı.' });
+  }
 });
 
 export default router;

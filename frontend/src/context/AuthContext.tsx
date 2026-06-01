@@ -105,7 +105,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (token) {
       fetchMe();
     } else {
-      setIsLoading(false);
+      login()
+        .catch(() => {
+          setIsLoading(false);
+        });
     }
   }, []);
 

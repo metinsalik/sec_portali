@@ -5,7 +5,7 @@ import {
   Shield, LayoutDashboard, Building2, Users, Briefcase, UserCheck,
   ClipboardList, FileText, Settings, Bell, ChevronDown, LogOut,
   User, BarChart3, ChevronRight, LayoutGrid, Database, Users2, Mail,
-  BellRing, Layers, ShieldAlert
+  BellRing, Layers, ShieldAlert, AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -66,6 +66,25 @@ const settingsNavItems = [
   { label: 'Rapor Şablonları', icon: Layers, to: '/settings/reports' },
 ];
 
+const workflowNavItems = (hasAdminAccess: boolean) => [
+  { label: 'GENEL', type: 'group' },
+  { label: 'Dashboard', icon: LayoutDashboard, to: '/workflow/dashboard' },
+  { label: 'İş Panosu', icon: ClipboardList, to: '/workflow/board' },
+  { label: 'İş Havuzu', icon: Users2, to: '/workflow/pool' },
+  { label: 'Ekip Özeti', icon: BarChart3, to: '/workflow/team' },
+  { label: 'YÖNETİM', type: 'group' },
+  { label: 'Modül Ayarları', icon: Settings, to: '/workflow/settings' },
+];
+
+const riskNavItems = [
+  { label: 'GENEL', type: 'group' },
+  { label: 'Dashboard', icon: LayoutDashboard, to: '/risks' },
+  { label: 'TESİSLER', type: 'group' },
+  { label: 'Tesis Listesi', icon: Building2, to: '/risks' },
+  { label: 'AYARLAR', type: 'group' },
+  { label: 'Modül Ayarları', icon: Settings, to: '/risks/settings' },
+];
+
 const profileNavItems = (hasAdminAccess: boolean) => [
   { label: 'UYGULAMALAR', type: 'group' },
   ...(hasAdminAccess ? [{ label: 'İSG Atama Paneli', icon: LayoutDashboard, to: '/panel' }] : []),
@@ -89,6 +108,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
   if (path.startsWith('/panel')) {
     navItems = panelNavItems;
     moduleName = 'İSG Atama Paneli';
+  } else if (path.startsWith('/workflow')) {
+    navItems = workflowNavItems(!!hasAdminAccess);
+    moduleName = 'İş Takip (Workflow)';
+  } else if (path.startsWith('/risks')) {
+    navItems = riskNavItems;
+    moduleName = 'Risk Yaşam Döngüsü';
   } else if (path.startsWith('/settings')) {
     navItems = settingsNavItems;
     moduleName = 'Sistem Ayarları';
@@ -134,14 +159,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
             const Icon = item.icon!;
             return (
               <NavLink
-                key={item.to}
+                key={item.label + '-' + i}
                 to={item.to!}
                 className={({ isActive }) =>
                   cn(
                     'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors group',
                     isActive
-                      ? 'bg-secondary text-foreground'
-                      : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   )
                 }
               >
@@ -156,9 +181,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <div className="border-t p-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-secondary transition-colors text-left">
-                <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center shrink-0">
-                  <User className="w-4 h-4 text-foreground" />
+              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted transition-colors text-left">
+                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shrink-0">
+                  <User className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{user?.fullName}</p>

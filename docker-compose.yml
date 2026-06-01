@@ -19,7 +19,6 @@ services:
     build: ./backend
     volumes:
       - ./backend:/app
-      - /app/node_modules
     environment:
       DATABASE_URL: postgresql://isguser:${DB_PASSWORD}@postgres:5432/isgdb
       JWT_SECRET: ${JWT_SECRET}

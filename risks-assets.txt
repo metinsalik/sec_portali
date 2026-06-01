@@ -1,0 +1,69 @@
+Departmanlar:
+
+Başhekimlik
+Bilgi Sistemleri Müdürlüğü
+Biyomedikal Müdürlüğü
+Hasta Bakım Hizmetleri Müdürlüğü
+İnsan Kaynakları Müdürlüğü
+İş Sağlığı ve Güvenliği
+Kalite Müdürlüğü
+Misafir Hizmetleri Müdürlüğü
+Otelcilik ve Destek Hizmetleri Müdürlüğü
+Teknik Hizmetler Müdürlüğü
+Satınalma Müdürlüğü
+Üst Yönetim
+Diğer
+
+Kategoril ve alt Kategoriler
+
+Tıbbi Hizmetler
+• Hizmete erişim ile ilgili riskler
+• Hasta kabul süreci ile ilgili riskler
+• Tanı süreci ile ilgili riskler
+• Tedavi ve rehabilitasyon süreci ile ilgili riskler
+• Takip ve taburculuk süreci ile ilgili riskler
+• Tıbbi kayıt ve arşiv süreci ile ilgili riskler
+Yönetsel Hizmetler
+• İdari süreçler ile ilgili riskler
+• Finansal süreçler ile ilgili riskler
+• İtibar yönetimi
+• Paydaşlarla iletişim süreçlerine yönelik riskler 
+• Bilgi yönetimi süreçleri ile ilgili riskler
+Tesis Güvenliği
+• Atık yönetimi sürecindeki riskler
+• Tıbbi cihaz ve malzeme yönetimi süreci riskleri
+• Diğer cihaz ve malzemelerin yönetim süreci riskleri
+• Yangın Güvenliği ile ilgili riskler
+• Altyapı Sistemleri ile ilgili riskler
+• İnşaat ve Renovasyon ile ilgili riskler
+• Acil Durum ve Afet Yönetimi ile ilgili riskler
+• Emniyet ile ilgili riskler
+Çevre Güvenliği
+• Hava kirliliği oluşturabilecek unsurlar
+• Atıkların çevreye zarar vermesi
+• Çevreden hastaneye gelecek zararlar
+• Tehlikeli atıklardan oluşabilecek zararlar
+İş Sağlığı ve Güvenliği
+• Güvenlik - Fiziksel Risk Etmenleri
+• Güvenlik - Biyolojik Risk Etmenleri
+• Güvenlik - Psikososyal Risk Etmenleri
+• Güvenlik- Ergonomik Risk Etmenleri
+• Tehlikeli Madde Yönetimi / Kimyasal Risk Etmenleri
+
+
+
+Acil Servis: 
+Poliklinikler: 
+Yatan Hasta Servisi
+Yoğun Bakım Üniteleri
+Ameliyathane
+Doğumhane
+Radyoloji 
+Tıbbi Laboratuvarlar
+Eczane
+Sterilizasyon
+Mutfak ve Yemekhane
+Çamaşırhane
+Teknik Servis
+Morg
+Atık Yönetim Alanı

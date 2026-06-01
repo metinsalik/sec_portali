@@ -66,16 +66,17 @@ export async function getDashboardStats() {
     ? complianceResults.reduce((sum, r) => {
         const iguScore = Math.min(100, r.igu.requiredMinutes > 0 ? (r.igu.assignedMinutes / r.igu.requiredMinutes) * 100 : 100);
         const hekimScore = Math.min(100, r.hekim.requiredMinutes > 0 ? (r.hekim.assignedMinutes / r.hekim.requiredMinutes) * 100 : 100);
-        const dspScore = !r.dsp.required ? 100 : Math.min(100, r.dsp.totalMin > 0 ? (r.dsp.assignedMinutes / r.dsp.totalMin) * 100 : 0);
+        const dspScore = !r.dsp.required ? 100 : Math.min(100, r.dsp.requiredMinutes > 0 ? (r.dsp.assignedMinutes / r.dsp.requiredMinutes) * 100 : 0);
         return sum + ((iguScore + hekimScore + dspScore) / 3);
       }, 0) / facilities.length
     : 0;
 
   // 2. Aylık OSGB Maliyeti (Reconciliation logic ile senkronize edildi)
   const monthlyOsgbCost = assignments
-    .filter((a) => a.costType === 'OSGB' && (a.unitPrice || (a.professional && a.professional.unitPrice)))
+    .filter((a) => a.costType === 'OSGB' && (a.unitPrice || (a.professionalId && professionals.find(p => p.id === a.professionalId)?.unitPrice)))
     .reduce((sum, a) => {
-      const price = a.unitPrice || a.professional?.unitPrice || 0;
+      const professional = a.professionalId ? professionals.find(p => p.id === a.professionalId) : null;
+      const price = a.unitPrice || professional?.unitPrice || 0;
       if (a.isFullTime) return sum + price;
       // Kısmi süreli: Saate yuvarla
       const hours = Math.ceil(a.durationMinutes / 60);
@@ -157,12 +158,33 @@ export async function getEmployeeTrend() {
     orderBy: { effectiveDate: 'asc' },
   });
 
-  // Ay bazında grupla
-  const trend: Record<string, number> = {};
-  history.forEach((h) => {
-    const month = h.effectiveDate.toISOString().substring(0, 7); // YYYY-MM
-    trend[month] = (trend[month] || 0) + h.count;
+  const monthlyTrendData: { month: string; totalCount: number; percentChange: number | null }[] = [];
+  let previousMonthTotalCount: number | null = null;
+
+  // Group by month and get the latest count for each month
+  const monthlyData: Record<string, number> = {};
+  history.forEach(h => {
+    const monthKey = h.effectiveDate.toISOString().substring(0, 7); // YYYY-MM
+    monthlyData[monthKey] = h.count; // Assuming the latest entry for a month is the most accurate
   });
 
-  return Object.entries(trend).map(([month, count]) => ({ month, count }));
+  const sortedMonths = Object.keys(monthlyData).sort();
+
+  sortedMonths.forEach(month => {
+    const currentMonthTotalCount = monthlyData[month];
+    let percentChange: number | null = null;
+
+    if (previousMonthTotalCount !== null) {
+      percentChange = ((currentMonthTotalCount - previousMonthTotalCount) / previousMonthTotalCount) * 100;
+    }
+    
+    monthlyTrendData.push({ 
+      month, 
+      totalCount: currentMonthTotalCount, 
+      percentChange 
+    });
+    previousMonthTotalCount = currentMonthTotalCount;
+  });
+
+  return monthlyTrendData;
 }

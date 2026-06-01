@@ -231,3 +231,101 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
 }
+
+/* Login Page Specific Styles */
+.medical-pattern-login {
+  background-color: #0051d5;
+  background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0);
+  background-size: 32px 32px;
+}
+.form-shadow {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+/* MLP-CARE Custom Theme */
+@theme {
+  --color-on-tertiary: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-error: #ba1a1a;
+  --color-outline-variant: #c2c7cc;
+  --color-on-secondary-container: #fefcff;
+  --color-surface-ice: #e5eeff;
+  --color-secondary-container: #346cef;
+  --color-on-error-container: #93000a;
+  --color-outline: #73787c;
+  --color-tertiary: #171b1c;
+  --color-surface-bright: #f6fafe;
+  --color-pattern-dot: #d3e4fe;
+  --color-tertiary-fixed: #e0e3e4;
+  --color-surface-container-highest: #dfe3e7;
+  --color-on-primary: #ffffff;
+  --color-surface: #f6fafe;
+  --color-secondary: #0051d5;
+  --color-tertiary-fixed-dim: #c4c7c8;
+  --color-outline-soft: rgba(226, 232, 240, 0.8);
+  --color-on-surface: #171c20;
+  --color-surface-container: #eaeef3;
+  --color-secondary-fixed-dim: #b4c5ff;
+  --color-primary-fixed: #cbe6fa;
+  --color-on-error: #ffffff;
+  --color-on-tertiary-fixed: #181c1d;
+  --color-primary-fixed-dim: #b0cadd;
+  --color-surface-variant: #dfe3e7;
+  --color-surface-dim: #d6dadf;
+  --color-on-surface-variant: #42474b;
+  --color-tertiary-container: #2c3031;
+  --color-inverse-on-surface: #edf1f6;
+  --color-primary-container: #183241;
+  --color-secondary-fixed: #dbe1ff;
+  --color-on-tertiary-fixed-variant: #434748;
+  --color-inverse-primary: #b0cadd;
+  --color-primary: #011d2b;
+  --color-background-medical: #f8f9ff;
+  --color-surface-container-high: #e4e9ed;
+  --color-inverse-surface: #2c3135;
+  --color-surface-tint: #486172;
+  --color-on-secondary-fixed: #00174b;
+  --color-on-background: #171c20;
+  --color-on-primary-fixed-variant: #314a5a;
+  --color-on-primary-container: #819aac;
+  --color-on-secondary-fixed-variant: #003ea7;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f0f4f9;
+  --color-on-tertiary-container: #949899;
+  --color-on-primary-fixed: #011e2c;
+  
+  /* Fonts from Mockup */
+  --font-body-sm: Inter, sans-serif;
+  --font-label-sm: Inter, sans-serif;
+  --font-label-md: Inter, sans-serif;
+  --font-body-md: Inter, sans-serif;
+  --font-body-lg: Inter, sans-serif;
+  --font-headline-md: Inter, sans-serif;
+  --font-headline-lg: Inter, sans-serif;
+  --font-headline-xl: Inter, sans-serif;
+}
+
+/* Custom Charts */
+.medical-pattern {
+  background-image: radial-gradient(var(--color-pattern-dot) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+.donut-chart {
+  border-radius: 50%;
+  position: relative;
+}
+.donut-chart::before {
+  content: "";
+  position: absolute;
+  top: 15%;
+  left: 15%;
+  right: 15%;
+  bottom: 15%;
+  background: white;
+  border-radius: 50%;
+}
+.risk-bar-unbearable { background-color: #801313; }
+.risk-bar-probable { background-color: #d9a406; }
+.risk-bar-significant { background-color: #f26522; }
+.risk-bar-high { background-color: #dc2626; }
+.risk-bar-insignificant { background-color: #22c55e; }

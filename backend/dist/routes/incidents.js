@@ -1,0 +1,261 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const client_1 = require("@prisma/client");
+const auth_1 = require("../middleware/auth");
+const multer_1 = __importDefault(require("multer"));
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
+const router = (0, express_1.Router)();
+const prisma = new client_1.PrismaClient();
+// Multer storage config
+const storage = multer_1.default.diskStorage({
+    destination: (req, file, cb) => {
+        const dir = 'uploads/incidents';
+        if (!fs_1.default.existsSync(dir))
+            fs_1.default.mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, uniqueSuffix + path_1.default.extname(file.originalname));
+    }
+});
+const upload = (0, multer_1.default)({
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+    fileFilter: (req, file, cb) => {
+        const allowed = ['.jpg', '.jpeg', '.png', '.pdf'];
+        const ext = path_1.default.extname(file.originalname).toLowerCase();
+        if (allowed.includes(ext))
+            cb(null, true);
+        else
+            cb(new Error('Sadece .jpg, .jpeg, .png ve .pdf dosyaları yüklenebilir.'));
+    }
+});
+router.use(auth_1.authMiddleware);
+// Tüm olayları getir (Admin her şeyi, kullanıcı kendi tesislerini görür)
+router.get('/', async (req, res) => {
+    try {
+        const { facilityId } = req.query;
+        const user = req.user;
+        const isAdmin = user.roles.includes('admin') || user.roles.includes('management');
+        const where = {};
+        // Filtreleme
+        if (facilityId) {
+            where.facilityId = facilityId;
+        }
+        // Yetkilendirme
+        if (!isAdmin) {
+            const userFacilities = await prisma.userFacility.findMany({
+                where: { username: user.username },
+                select: { facilityId: true }
+            });
+            const allowedIds = userFacilities.map(uf => uf.facilityId);
+            if (facilityId && !allowedIds.includes(facilityId)) {
+                return res.status(403).json({ error: 'Bu tesise erişim yetkiniz yok.' });
+            }
+            where.facilityId = { in: allowedIds };
+        }
+        const incidents = await prisma.extraordinaryIncident.findMany({
+            where,
+            include: {
+                facility: { select: { name: true } },
+                category: true,
+                rootCause: true,
+                department: true,
+                supportUnit: true,
+                emergencyCode: true
+            },
+            orderBy: { incidentDate: 'desc' }
+        });
+        res.json(incidents);
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Olaylar getirilemedi.' });
+    }
+});
+// Tekil olay getir
+router.get('/:id', async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const user = req.user;
+        const isAdmin = user.roles.includes('admin') || user.roles.includes('management');
+        const incident = await prisma.extraordinaryIncident.findUnique({
+            where: { id },
+            include: {
+                facility: { select: { name: true } },
+                category: true,
+                rootCause: true,
+                department: true,
+                supportUnit: true,
+                emergencyCode: true
+            }
+        });
+        if (!incident)
+            return res.status(404).json({ error: 'Olay bulunamadı.' });
+        // Yetki kontrolü
+        if (!isAdmin) {
+            const hasAccess = await prisma.userFacility.findFirst({
+                where: { username: user.username, facilityId: incident.facilityId }
+            });
+            if (!hasAccess)
+                return res.status(403).json({ error: 'Bu olayı görmeye yetkiniz yok.' });
+        }
+        res.json(incident);
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Olay detayları getirilemedi.' });
+    }
+});
+// Yeni olay kaydet
+router.post('/', upload.array('attachments', 4), async (req, res) => {
+    try {
+        const user = req.user;
+        const { facilityId, categoryId, rootCauseId, departmentId, locationDetail, incidentDate, interventionRequired, interventionTime, controlTime, supportReceived, supportUnitId, announcementMade, emergencyCodeId, serviceInterrupted, interruptionDuration, evacuatedStaffCount, evacuatedPatientCount, injuredCount, deceasedCount, summary, causeDetail, detectedEffect, observations, actionsTaken, resultEvaluation } = req.body;
+        // Yetki kontrolü
+        const hasAccess = await prisma.userFacility.findFirst({
+            where: { username: user.username, facilityId }
+        });
+        const isAdmin = user.roles.includes('admin') || user.roles.includes('management');
+        if (!hasAccess && !isAdmin) {
+            return res.status(403).json({ error: 'Bu tesis için olay kaydetme yetkiniz yok.' });
+        }
+        // Dosyaları işle
+        const attachments = (req.files || []).map(f => ({
+            name: f.originalname,
+            url: `/uploads/incidents/${f.filename}`,
+            type: f.mimetype
+        }));
+        const incident = await prisma.extraordinaryIncident.create({
+            data: {
+                facilityId,
+                categoryId: parseInt(categoryId),
+                rootCauseId: parseInt(rootCauseId),
+                departmentId: parseInt(departmentId),
+                locationDetail,
+                incidentDate: new Date(incidentDate),
+                interventionRequired: interventionRequired === 'true' || interventionRequired === true,
+                interventionTime: interventionTime ? new Date(interventionTime) : null,
+                controlTime: new Date(controlTime),
+                supportReceived: supportReceived === 'true' || supportReceived === true,
+                supportUnitId: supportUnitId ? parseInt(supportUnitId) : null,
+                announcementMade: announcementMade === 'true' || announcementMade === true,
+                emergencyCodeId: emergencyCodeId ? parseInt(emergencyCodeId) : null,
+                serviceInterrupted: serviceInterrupted === 'true' || serviceInterrupted === true,
+                interruptionDuration: parseFloat(interruptionDuration) || 0,
+                evacuatedStaffCount: parseInt(evacuatedStaffCount) || 0,
+                evacuatedPatientCount: parseInt(evacuatedPatientCount) || 0,
+                injuredCount: parseInt(injuredCount) || 0,
+                deceasedCount: parseInt(deceasedCount) || 0,
+                summary,
+                causeDetail,
+                detectedEffect,
+                observations,
+                actionsTaken,
+                resultEvaluation,
+                attachments: attachments.length > 0 ? attachments : undefined,
+                createdBy: user.username
+            }
+        });
+        res.status(201).json(incident);
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Olay kaydedilemedi: ' + error.message });
+    }
+});
+// Olay güncelle
+router.put('/:id', upload.array('attachments', 4), async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const user = req.user;
+        const isAdmin = user.roles.includes('admin') || user.roles.includes('management');
+        const { categoryId, rootCauseId, departmentId, locationDetail, incidentDate, interventionRequired, interventionTime, controlTime, supportReceived, supportUnitId, announcementMade, emergencyCodeId, serviceInterrupted, interruptionDuration, evacuatedStaffCount, evacuatedPatientCount, injuredCount, deceasedCount, summary, causeDetail, detectedEffect, observations, actionsTaken, resultEvaluation, existingAttachments // Silinmeyen mevcut dosyalar (JSON string)
+         } = req.body;
+        const existing = await prisma.extraordinaryIncident.findUnique({ where: { id } });
+        if (!existing)
+            return res.status(404).json({ error: 'Olay bulunamadı.' });
+        // Yetki kontrolü
+        if (!isAdmin) {
+            const hasAccess = await prisma.userFacility.findFirst({
+                where: { username: user.username, facilityId: existing.facilityId }
+            });
+            if (!hasAccess)
+                return res.status(403).json({ error: 'Bu olayı güncellemeye yetkiniz yok.' });
+        }
+        // Yeni dosyaları işle
+        const newAttachments = (req.files || []).map(f => ({
+            name: f.originalname,
+            url: `/uploads/incidents/${f.filename}`,
+            type: f.mimetype
+        }));
+        // Mevcut ve yeni dosyaları birleştir
+        let attachments = JSON.parse(existingAttachments || '[]');
+        attachments = [...attachments, ...newAttachments];
+        const updated = await prisma.extraordinaryIncident.update({
+            where: { id },
+            data: {
+                categoryId: categoryId ? parseInt(categoryId) : undefined,
+                rootCauseId: rootCauseId ? parseInt(rootCauseId) : undefined,
+                departmentId: departmentId ? parseInt(departmentId) : undefined,
+                locationDetail,
+                incidentDate: incidentDate ? new Date(incidentDate) : undefined,
+                interventionRequired: interventionRequired === 'true' || interventionRequired === true,
+                interventionTime: interventionTime ? new Date(interventionTime) : (interventionRequired === 'false' ? null : undefined),
+                controlTime: controlTime ? new Date(controlTime) : undefined,
+                supportReceived: supportReceived === 'true' || supportReceived === true,
+                supportUnitId: supportUnitId ? parseInt(supportUnitId) : (supportReceived === 'false' ? null : undefined),
+                announcementMade: announcementMade === 'true' || announcementMade === true,
+                emergencyCodeId: emergencyCodeId ? parseInt(emergencyCodeId) : (announcementMade === 'false' ? null : undefined),
+                serviceInterrupted: serviceInterrupted === 'true' || serviceInterrupted === true,
+                interruptionDuration: interruptionDuration !== undefined ? parseFloat(interruptionDuration) : undefined,
+                evacuatedStaffCount: evacuatedStaffCount !== undefined ? parseInt(evacuatedStaffCount) : undefined,
+                evacuatedPatientCount: evacuatedPatientCount !== undefined ? parseInt(evacuatedPatientCount) : undefined,
+                injuredCount: injuredCount !== undefined ? parseInt(injuredCount) : undefined,
+                deceasedCount: deceasedCount !== undefined ? parseInt(deceasedCount) : undefined,
+                summary,
+                causeDetail,
+                detectedEffect,
+                observations,
+                actionsTaken,
+                resultEvaluation,
+                attachments: attachments.length > 0 ? attachments : undefined
+            }
+        });
+        res.json(updated);
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Olay güncellenemedi.' });
+    }
+});
+// Olay sil
+router.delete('/:id', async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const user = req.user;
+        const isAdmin = user.roles.includes('admin') || user.roles.includes('management');
+        const existing = await prisma.extraordinaryIncident.findUnique({ where: { id } });
+        if (!existing)
+            return res.status(404).json({ error: 'Olay bulunamadı.' });
+        // Yetki kontrolü
+        if (!isAdmin) {
+            const hasAccess = await prisma.userFacility.findFirst({
+                where: { username: user.username, facilityId: existing.facilityId }
+            });
+            if (!hasAccess)
+                return res.status(403).json({ error: 'Bu olayı silmeye yetkiniz yok.' });
+        }
+        await prisma.extraordinaryIncident.delete({ where: { id } });
+        res.json({ message: 'Olay başarıyla silindi.' });
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Olay silinemedi.' });
+    }
+});
+exports.default = router;

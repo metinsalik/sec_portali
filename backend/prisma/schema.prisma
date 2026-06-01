@@ -8,214 +8,199 @@ datasource db {
 }
 
 model User {
-  username        String         @id
-  fullName        String
-  email           String?
-  phone           String?
-  department      String?
-  title           String?
-  isActive        Boolean        @default(true)
-  employmentType  String?
-  osgbName        String?
-  roles           UserRole[]
-  facilities      UserFacility[]
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  username              String                        @id
+  fullName              String
+  isActive              Boolean                       @default(true)
+  employmentType        String?
+  osgbName              String?
+  createdAt             DateTime                      @default(now())
+  updatedAt             DateTime                      @updatedAt
+  department            String?
+  email                 String?
+  phone                 String?
+  title                 String?
+  facilities            UserFacility[]
+  roles                 UserRole[]
+  workflowNotifications WorkflowNotificationSettings?
+  workflowRole          WorkflowUserRole?
 }
 
 model Role {
   id        Int        @id @default(autoincrement())
   name      String     @unique
-  users     UserRole[]
   createdAt DateTime   @default(now())
+  users     UserRole[]
 }
 
 model UserRole {
   username String
   roleId   Int
-  user     User     @relation(fields: [username], references: [username])
-  role     Role     @relation(fields: [roleId], references: [id])
+  role     Role   @relation(fields: [roleId], references: [id])
+  user     User   @relation(fields: [username], references: [username])
 
   @@id([username, roleId])
 }
 
 model Facility {
-  id               String             @id
-  name             String
-  shortName        String?
-  type             String?            // "Hastane", "Ofis", "Depo", etc.
-  city             String?
-  district         String?
-  fullAddress      String?
-  phone            String?
-  email            String?
-  website          String?
-  commercialTitle  String?
-  taxOffice        String?
-  taxNumber        String?
-  sgkNumber        String?
-  naceCode         String?
-  dangerClass      String             @default("Az Tehlikeli") // "Çok Tehlikeli" | "Tehlikeli" | "Az Tehlikeli"
-  employeeCount    Int                @default(0)
-  employeeCountHistory EmployeeCountHistory[]
-  isActive         Boolean            @default(true)
-  buildings        FacilityBuilding[]
-  users            UserFacility[]
-  assignments      Assignment[]
-  activityLogs     ActivityLog[]
-  monthlyHrData    MonthlyHRData[]
-  monthlyAccident  MonthlyAccidentData[]
-  reconciliations  Reconciliation[]
-  notebookPages    NotebookPage[]
-  incidents        ExtraordinaryIncident[]
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  id                     String                  @id
+  name                   String
+  isActive               Boolean                 @default(true)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  city                   String?
+  commercialTitle        String?
+  dangerClass            String                  @default("Az Tehlikeli")
+  district               String?
+  email                  String?
+  employeeCount          Int                     @default(0)
+  fullAddress            String?
+  naceCode               String?
+  phone                  String?
+  sgkNumber              String?
+  shortName              String?
+  taxNumber              String?
+  taxOffice              String?
+  type                   String?
+  website                String?
+  activityLogs           ActivityLog[]
+  assignments            Assignment[]
+  employeeCountHistory   EmployeeCountHistory[]
+  incidents              ExtraordinaryIncident[]
+  buildings              FacilityBuilding[]
+  monthlyAccident        MonthlyAccidentData[]
+  monthlyHrData          MonthlyHRData[]
+  notebookPages          NotebookPage[]
+  reconciliations        Reconciliation[]
+  riskCategorySettings   RiskCategorySetting[]
+  riskDepartments        RiskDepartment[]
+  riskDepartmentSettings RiskDepartmentSetting[]
+  riskExpertFacilities   RiskExpertFacility[]
+  users                  UserFacility[]
 }
 
-// Olağan Dışı Olay Parametreleri
 model IncidentCategory {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
+  id        Int                     @id @default(autoincrement())
+  name      String                  @unique
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
   incidents ExtraordinaryIncident[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model IncidentRootCause {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
+  id        Int                     @id @default(autoincrement())
+  name      String                  @unique
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
   incidents ExtraordinaryIncident[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model IncidentSupportUnit {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
+  id        Int                     @id @default(autoincrement())
+  name      String                  @unique
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
   incidents ExtraordinaryIncident[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model EmergencyCode {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
+  id        Int                     @id @default(autoincrement())
+  name      String                  @unique
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
   incidents ExtraordinaryIncident[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model ExtraordinaryIncident {
-  id                  Int      @id @default(autoincrement())
-  facilityId          String
-  facility            Facility @relation(fields: [facilityId], references: [id])
-  
-  // Olay Türü
-  categoryId          Int
-  category            IncidentCategory @relation(fields: [categoryId], references: [id])
-  
-  // Kök Neden
-  rootCauseId         Int
-  rootCause           IncidentRootCause @relation(fields: [rootCauseId], references: [id])
-  
-  // Yer-Bölüm-Alan
-  departmentId        Int
-  department          Department @relation(fields: [departmentId], references: [id])
-  locationDetail      String
-  
-  // Tarih/Saat
-  incidentDate        DateTime
-  
-  // Müdahale
-  interventionRequired Boolean
-  interventionTime     DateTime?
-  controlTime          DateTime
-  
-  // Destek
-  supportReceived      Boolean
-  supportUnitId        Int?
-  supportUnit          IncidentSupportUnit? @relation(fields: [supportUnitId], references: [id])
-  
-  // Anons
-  announcementMade     Boolean
-  emergencyCodeId      Int?
-  emergencyCode        EmergencyCode? @relation(fields: [emergencyCodeId], references: [id])
-  
-  // Hizmet Kesintisi
-  serviceInterrupted   Boolean
-  interruptionDuration Float?
-  
-  // İstatistikler
-  evacuatedStaffCount  Int      @default(0)
-  evacuatedPatientCount Int     @default(0)
-  injuredCount         Int      @default(0)
-  deceasedCount        Int      @default(0)
-  
-  // Metin Alanları
-  summary              String   @db.Text
-  causeDetail          String   @db.Text
-  detectedEffect       String   @db.Text
-  observations         String   @db.Text
-  actionsTaken         String   @db.Text
-  resultEvaluation     String   @db.Text
-  
-  attachments          Json?    // Array of { name: string, url: string, type: string }
-  
-  createdBy            String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                    Int                  @id @default(autoincrement())
+  facilityId            String
+  categoryId            Int
+  rootCauseId           Int
+  departmentId          Int
+  locationDetail        String
+  incidentDate          DateTime
+  interventionRequired  Boolean
+  interventionTime      DateTime?
+  controlTime           DateTime
+  supportReceived       Boolean
+  supportUnitId         Int?
+  announcementMade      Boolean
+  emergencyCodeId       Int?
+  serviceInterrupted    Boolean
+  interruptionDuration  Float?
+  evacuatedStaffCount   Int                  @default(0)
+  evacuatedPatientCount Int                  @default(0)
+  injuredCount          Int                  @default(0)
+  deceasedCount         Int                  @default(0)
+  summary               String
+  causeDetail           String
+  detectedEffect        String
+  observations          String
+  actionsTaken          String
+  resultEvaluation      String
+  createdBy             String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  attachments           Json?
+  category              IncidentCategory     @relation(fields: [categoryId], references: [id])
+  department            Department           @relation(fields: [departmentId], references: [id])
+  emergencyCode         EmergencyCode?       @relation(fields: [emergencyCodeId], references: [id])
+  facility              Facility             @relation(fields: [facilityId], references: [id])
+  rootCause             IncidentRootCause    @relation(fields: [rootCauseId], references: [id])
+  supportUnit           IncidentSupportUnit? @relation(fields: [supportUnitId], references: [id])
 
   @@index([facilityId])
 }
 
 model ActivityLog {
-  id         Int      @id @default(autoincrement())
-  facilityId String
-  facility   Facility @relation(fields: [facilityId], references: [id])
-  username   String
-  action     String   // e.g., "Çalışan Sayısı Güncellendi", "Yeni Atama Yapıldı"
-  details    String?
-  createdAt  DateTime @default(now())
+  id             Int           @id @default(autoincrement())
+  action         String
+  createdAt      DateTime      @default(now())
+  details        String?
+  facilityId     String
+  username       String
+  facility       Facility      @relation(fields: [facilityId], references: [id])
+  professionalId Int?
+  professional   Professional? @relation(fields: [professionalId], references: [id])
 }
 
 model EmployeeCountHistory {
   id            Int      @id @default(autoincrement())
   facilityId    String
-  facility      Facility @relation(fields: [facilityId], references: [id])
   count         Int
   effectiveDate DateTime
   createdAt     DateTime @default(now())
+  facility      Facility @relation(fields: [facilityId], references: [id])
 }
 
 model FacilityBuilding {
   id               Int      @id @default(autoincrement())
   facilityId       String
-  facility         Facility @relation(fields: [facilityId], references: [id])
   name             String
-  constructionYear Int?
-  buildingHeight   Float?
-  structureHeight  Float?
-  buildingFloors   Int?
-  structureFloors  Int?
-  closedArea       Float?
-  parkingArea      Float?
-  gardenArea       Float?
-  bedCapacity      Int?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  bedCapacity      Int?
+  buildingFloors   Int?
+  buildingHeight   Float?
+  closedArea       Float?
+  constructionYear Int?
+  gardenArea       Float?
+  parkingArea      Float?
+  structureFloors  Int?
+  structureHeight  Float?
+  facility         Facility @relation(fields: [facilityId], references: [id])
 }
 
 model UserFacility {
   username   String
   facilityId String
-  user       User     @relation(fields: [username], references: [username])
   facility   Facility @relation(fields: [facilityId], references: [id])
+  user       User     @relation(fields: [username], references: [username])
 
   @@id([username, facilityId])
 }
 
 model Professional {
-  id              Int          @id @default(autoincrement())
+  id              Int           @id @default(autoincrement())
   fullName        String
   employmentType  String
   osgbName        String?
@@ -225,24 +210,25 @@ model Professional {
   phone           String?
   email           String?
   unitPrice       Float?
-  username        String?      // Link to User.username
-  isActive        Boolean      @default(true)
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  username        String?
   assignments     Assignment[]
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  activityLogs    ActivityLog[]
 }
 
 model EmployerRepresentative {
-  id          Int          @id @default(autoincrement())
-  fullName    String
-  title       String?
-  phone       String?
-  email       String?
-  username    String?      // Link to User.username
-  isActive    Boolean      @default(true)
+  id           Int          @id @default(autoincrement())
+  fullName     String
+  title        String?
+  phone        String?
+  email        String?
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  username     String?
   appointments Assignment[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
 }
 
 model OSGBCompany {
@@ -251,30 +237,30 @@ model OSGBCompany {
   contact         String?
   phone           String?
   email           String?
-  city            String?
-  district        String?
   isActive        Boolean          @default(true)
-  reconciliations Reconciliation[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+  city            String?
+  district        String?
+  reconciliations Reconciliation[]
 }
 
 model Reconciliation {
-  id               Int         @id @default(autoincrement())
-  facilityId       String
-  facility         Facility    @relation(fields: [facilityId], references: [id])
-  osgbCompanyId    Int
-  osgbCompany      OSGBCompany @relation(fields: [osgbCompanyId], references: [id])
-  month            String      // "2026-04"
-  calculatedAmount Float?      // Sistem tarafından hesaplanan tutar
-  invoiceAmount    Float?      // OSGB'den gelen fatura tutarı
-  difference       Float?      // Fark (Hesaplanan - Fatura)
-  calculationDetails Json?     // Detaylı hesaplama dökümü (her profesyonel için)
-  amount           Float?      // Toplam (genellikle onaylanan tutar)
-  note             String?
-  status           String      @default("Beklemede") // "Beklemede" | "Onaylandı" | "Reddedildi" | "Uyuşmazlık"
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  id                 Int         @id @default(autoincrement())
+  facilityId         String
+  osgbCompanyId      Int
+  month              String
+  amount             Float?
+  note               String?
+  status             String      @default("Beklemede")
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  calculatedAmount   Float?
+  calculationDetails Json?
+  difference         Float?
+  invoiceAmount      Float?
+  facility           Facility    @relation(fields: [facilityId], references: [id])
+  osgbCompany        OSGBCompany @relation(fields: [osgbCompanyId], references: [id])
 
   @@unique([facilityId, osgbCompanyId, month])
 }
@@ -282,11 +268,8 @@ model Reconciliation {
 model Assignment {
   id              Int                     @id @default(autoincrement())
   facilityId      String
-  facility        Facility                @relation(fields: [facilityId], references: [id])
   professionalId  Int?
-  professional    Professional?           @relation(fields: [professionalId], references: [id])
   employerRepId   Int?
-  employerRep     EmployerRepresentative? @relation(fields: [employerRepId], references: [id])
   type            String
   durationMinutes Int
   isFullTime      Boolean                 @default(false)
@@ -297,115 +280,117 @@ model Assignment {
   unitPrice       Float?
   createdAt       DateTime                @default(now())
   updatedAt       DateTime                @updatedAt
+  employerRep     EmployerRepresentative? @relation(fields: [employerRepId], references: [id])
+  facility        Facility                @relation(fields: [facilityId], references: [id])
+  professional    Professional?           @relation(fields: [professionalId], references: [id])
 }
 
 model SystemSettings {
-  id                Int      @id @default(autoincrement())
-  year              Int      @unique
-  seriousAccidentDays Int    @default(4)
+  id                  Int      @id @default(autoincrement())
+  year                Int      @unique
+  seriousAccidentDays Int      @default(4)
   includeSaturday     Boolean  @default(true)
   dailyWorkHours      Float    @default(7.5)
   monthlyWorkDays     Json
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 model MonthlyHRData {
-  id                 Int      @id @default(autoincrement())
-  facilityId         String
-  facility           Facility @relation(fields: [facilityId], references: [id])
-  month              String
-  mainEmployerData   Json
-  subContractorData  Json
-  createdBy          String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                Int      @id @default(autoincrement())
+  facilityId        String
+  month             String
+  mainEmployerData  Json
+  subContractorData Json
+  createdBy         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  facility          Facility @relation(fields: [facilityId], references: [id])
 
   @@unique([facilityId, month])
 }
 
 model MonthlyAccidentData {
-  id                 Int      @id @default(autoincrement())
-  facilityId         String
-  facility           Facility @relation(fields: [facilityId], references: [id])
-  month              String
-  mainEmployerData   Json
-  subContractorData  Json
-  internData         Json
-  createdBy          String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                Int      @id @default(autoincrement())
+  facilityId        String
+  month             String
+  mainEmployerData  Json
+  subContractorData Json
+  internData        Json
+  createdBy         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  facility          Facility @relation(fields: [facilityId], references: [id])
 
   @@unique([facilityId, month])
 }
 
 model Category {
-  id            Int             @id @default(autoincrement())
+  id            Int            @id @default(autoincrement())
   name          String
-  subCategories SubCategory[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   notebookItems NotebookItem[]
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  subCategories SubCategory[]
 }
 
 model SubCategory {
-  id         Int      @id @default(autoincrement())
-  name       String
-  categoryId Int
-  category   Category @relation(fields: [categoryId], references: [id])
+  id            Int            @id @default(autoincrement())
+  name          String
+  categoryId    Int
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   notebookItems NotebookItem[]
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  category      Category       @relation(fields: [categoryId], references: [id])
 }
 
 model Department {
-  id        Int      @id @default(autoincrement())
-  name      String
-  notebookItems NotebookItem[]
+  id            Int                     @id @default(autoincrement())
+  name          String
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
   incidents     ExtraordinaryIncident[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  notebookItems NotebookItem[]
 }
 
 model NotebookPage {
-  id              Int      @id @default(autoincrement())
-  facilityId      String
-  facility        Facility @relation(fields: [facilityId], references: [id])
-  year            Int
-  date            DateTime
-  documentUrl     String?  // PNG, JPEG, PDF path
+  id                 Int            @id @default(autoincrement())
+  facilityId         String
+  year               Int
+  date               DateTime
+  documentUrl        String?
+  status             String         @default("Eksik")
+  createdBy          String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
   documentUploadedAt DateTime?
-  status          String   @default("Eksik") // "Eksik" | "Tamamlandı"
-  items           NotebookItem[]
-  isLocked        Boolean  @default(false) // Admin can unlock
-  isArchived      Boolean  @default(false) // Soft delete
-  createdBy       String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  isArchived         Boolean        @default(false)
+  isLocked           Boolean        @default(false)
+  items              NotebookItem[]
+  facility           Facility       @relation(fields: [facilityId], references: [id])
 
   @@index([facilityId, year])
 }
 
 model NotebookItem {
-  id              Int      @id @default(autoincrement())
-  pageId          Int
-  page            NotebookPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  authorType      String   // "DOKTOR" | "UZMAN"
-  authorName      String
-  content         String   @db.Text
-  categoryId      Int
-  category        Category @relation(fields: [categoryId], references: [id])
-  subCategoryId   Int?
-  subCategory     SubCategory? @relation(fields: [subCategoryId], references: [id])
-  departmentId    Int
-  department      Department @relation(fields: [departmentId], references: [id])
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            Int          @id @default(autoincrement())
+  pageId        Int
+  authorType    String
+  authorName    String
+  content       String
+  categoryId    Int
+  subCategoryId Int?
+  departmentId  Int
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  category      Category     @relation(fields: [categoryId], references: [id])
+  department    Department   @relation(fields: [departmentId], references: [id])
+  page          NotebookPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id])
 }
 
-
 model SmtpSettings {
-  id        Int      @id @default(1) // Always use ID 1 for system-wide settings
+  id        Int      @id @default(1)
   host      String
   port      Int
   user      String
@@ -418,73 +403,312 @@ model SmtpSettings {
 }
 
 model Notification {
+  id         Int      @id @default(autoincrement())
+  title      String
+  message    String
+  type       String
+  module     String   @default("SYSTEM")
+  targetRole String?
+  username   String?
+  isRead     Boolean  @default(false)
+  link       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model NotificationTemplate {
   id        Int      @id @default(autoincrement())
-  title     String
-  message   String
-  type      String   // "info", "warning", "success", "error"
-  module    String   @default("SYSTEM") // e.g., "OPERATIONS", "FACILITIES", "SYSTEM"
-  targetRole String? // Specific role to notify, or null for all
-  username  String?  // Specific user to notify, or null for all
-  isRead    Boolean  @default(false)
-  link      String?  // Optional link to redirect
+  code      String   @unique
+  name      String
+  module    String
+  subject   String
+  body      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model NotificationTemplate {
-  id          Int      @id @default(autoincrement())
-  code        String   @unique // e.g., "NEW_ACCIDENT_REPORT"
-  name        String   // Human readable name
-  module      String   // e.g., "OPERATIONS", "FACILITIES"
-  subject     String
-  body        String   @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
 model NotificationConfig {
   id           Int      @id @default(autoincrement())
-  code         String   @unique // Matches NotificationTemplate.code
+  code         String   @unique
   module       String
   description  String?
   emailEnabled Boolean  @default(true)
   appEnabled   Boolean  @default(true)
-  priority     String   @default("normal") // "low", "normal", "high", "critical"
+  priority     String   @default("normal")
   updatedAt    DateTime @updatedAt
 }
 
 model AdministrativeFine {
-  id                            Int      @id @default(autoincrement())
-  year                          Int      @unique
-  specialistAndPhysicianVery    Float
-  specialistAndPhysicianDanger  Float
-  specialistAndPhysicianLess    Float
-  dspVeryDangerous              Float
-  createdAt                     DateTime @default(now())
-  updatedAt                     DateTime @updatedAt
+  id                           Int      @id @default(autoincrement())
+  year                         Int      @unique
+  specialistAndPhysicianVery   Float
+  specialistAndPhysicianDanger Float
+  specialistAndPhysicianLess   Float
+  dspVeryDangerous             Float
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
 }
 
 model ReportTemplate {
-  id            Int      @id @default(autoincrement())
-  code          String   // e.g., "MONTHLY_ACCIDENT_REPORT"
-  name          String
-  version       Int      @default(1)
-  isActive      Boolean  @default(false)
-  isArchived    Boolean  @default(false)
-  module        String   // "OPERATIONS" | "FACILITIES" | "PANEL"
-  
-  // Quality Metadata
-  documentNo    String?
-  revisionNo    String?
-  releaseDate   DateTime?
-  
-  // Design
-  content       Json     // Tiptap JSON content
-  orientation   String   @default("PORTRAIT") // "PORTRAIT" | "LANDSCAPE"
-  logoUrl       String?
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          Int       @id @default(autoincrement())
+  code        String
+  name        String
+  version     Int       @default(1)
+  isActive    Boolean   @default(false)
+  isArchived  Boolean   @default(false)
+  module      String
+  documentNo  String?
+  revisionNo  String?
+  releaseDate DateTime?
+  content     Json
+  orientation String    @default("PORTRAIT")
+  logoUrl     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@unique([code, version])
+}
+
+model WorkflowDepartment {
+  id          Int                @id @default(autoincrement())
+  name        String
+  description String?
+  managerId   String?
+  createdAt   DateTime           @default(now())
+  tasks       WorkflowTask[]
+  roles       WorkflowUserRole[]
+}
+
+model WorkflowUserRole {
+  id           Int                 @id @default(autoincrement())
+  userId       String              @unique
+  moduleRole   String
+  departmentId Int?
+  reportsTo    String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  department   WorkflowDepartment? @relation(fields: [departmentId], references: [id])
+  user         User                @relation(fields: [userId], references: [username])
+}
+
+model WorkflowCategory {
+  id        Int            @id @default(autoincrement())
+  name      String
+  color     String?
+  icon      String?
+  createdAt DateTime       @default(now())
+  tasks     WorkflowTask[]
+}
+
+model WorkflowTag {
+  id    Int               @id @default(autoincrement())
+  name  String
+  color String?
+  tasks WorkflowTaskTag[]
+}
+
+model WorkflowTask {
+  id           Int                      @id @default(autoincrement())
+  title        String
+  description  String?
+  priority     String                   @default("MEDIUM")
+  status       String                   @default("BEKLIYOR")
+  categoryId   Int?
+  departmentId Int?
+  createdBy    String
+  dueDate      DateTime?
+  alarmDate    DateTime?
+  isPool       Boolean                  @default(false)
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+  alarms       WorkflowAlarm[]
+  category     WorkflowCategory?        @relation(fields: [categoryId], references: [id])
+  department   WorkflowDepartment?      @relation(fields: [departmentId], references: [id])
+  assignments  WorkflowTaskAssignment[]
+  comments     WorkflowTaskComment[]
+  history      WorkflowTaskHistory[]
+  tags         WorkflowTaskTag[]
+}
+
+model WorkflowTaskTag {
+  taskId Int
+  tagId  Int
+  tag    WorkflowTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  task   WorkflowTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, tagId])
+}
+
+model WorkflowTaskAssignment {
+  id          Int          @id @default(autoincrement())
+  taskId      Int
+  userId      String
+  role        String       @default("ASSIGNEE")
+  assignedBy  String
+  assignedAt  DateTime     @default(now())
+  completedAt DateTime?
+  task        WorkflowTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model WorkflowTaskHistory {
+  id        Int          @id @default(autoincrement())
+  taskId    Int
+  changedBy String
+  oldStatus String?
+  newStatus String?
+  note      String?
+  changedAt DateTime     @default(now())
+  task      WorkflowTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model WorkflowTaskComment {
+  id        Int          @id @default(autoincrement())
+  taskId    Int
+  userId    String
+  content   String
+  createdAt DateTime     @default(now())
+  task      WorkflowTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model WorkflowAlarm {
+  id        Int          @id @default(autoincrement())
+  taskId    Int
+  alarmDate DateTime
+  alarmType String
+  isSent    Boolean      @default(false)
+  sentAt    DateTime?
+  createdBy String
+  task      WorkflowTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model WorkflowNotificationSettings {
+  id                   Int      @id @default(autoincrement())
+  userId               String   @unique
+  telegramChatId       String?
+  whatsappNumber       String?
+  notifyOnAssign       Boolean  @default(true)
+  notifyOnStatusChange Boolean  @default(true)
+  notifyOnAlarm        Boolean  @default(true)
+  notifyOnComment      Boolean  @default(true)
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [username])
+}
+
+model RiskExpertFacility {
+  expertUsername String
+  facilityId     String
+  facility       Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@id([expertUsername, facilityId])
+}
+
+model RiskDepartment {
+  id         Int             @id @default(autoincrement())
+  facilityId String
+  name       String
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  code       String?
+  facility   Facility        @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  risks      RiskLifecycle[]
+
+  @@unique([facilityId, name])
+}
+
+model RiskLifecycle {
+  id                         String         @id @default(uuid())
+  departmentId               Int
+  riskNo                     Int
+  riskCategory               String
+  subCategory                String?
+  area                       String
+  method                     String         @default("Fine Kinney")
+  activity                   String
+  hazard                     String
+  riskDescription            String
+  initialCondition           String?
+  initialImage               String?
+  initialProb                Float
+  initialFreq                Float?
+  initialSev                 Float
+  initialScore               Float
+  initialLevel               String
+  firstActionPlan            String?
+  actionsTaken               String?
+  actionDate                 DateTime?
+  actionBy                   String?
+  actionImage                String?
+  followUpMeasure            String?
+  extraImprovement           String?
+  finalProb                  Float?
+  finalFreq                  Float?
+  finalSev                   Float?
+  finalScore                 Float?
+  finalLevel                 String?
+  status                     String         @default("ACIK_TEHLIKE")
+  createdBy                  String?
+  createdAt                  DateTime       @default(now())
+  updatedAt                  DateTime       @updatedAt
+  affectedPeople             String?
+  controlResponsible         String?
+  controlResult              String?
+  detectionDate              DateTime?
+  dueDate                    DateTime?
+  effectivenessMethod        String?
+  impactDamage               String?
+  improvementResponsible     String?
+  legislation                String?
+  postImprovementDueDate     DateTime?
+  postImprovementResponsible String?
+  auditLogs                  RiskAuditLog[]
+  department                 RiskDepartment @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@index([departmentId])
+}
+
+model RiskAuditLog {
+  id            String        @id @default(uuid())
+  riskId        String
+  action        String
+  details       String?
+  changedFields Json?
+  username      String
+  createdAt     DateTime      @default(now())
+  risk          RiskLifecycle @relation(fields: [riskId], references: [id], onDelete: Cascade)
+
+  @@index([riskId])
+}
+
+model RiskDepartmentSetting {
+  id         Int      @id @default(autoincrement())
+  facilityId String
+  name       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@unique([facilityId, name])
+}
+
+model RiskCategorySetting {
+  id            Int                      @id @default(autoincrement())
+  facilityId    String
+  name          String
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  facility      Facility                 @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  subCategories RiskSubCategorySetting[]
+
+  @@unique([facilityId, name])
+}
+
+model RiskSubCategorySetting {
+  id         Int                 @id @default(autoincrement())
+  name       String
+  categoryId Int
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  category   RiskCategorySetting @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, name])
 }
