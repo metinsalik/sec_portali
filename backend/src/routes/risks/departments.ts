@@ -23,6 +23,16 @@ async function checkFacilityAccess(req: Request, facilityId: string): Promise<bo
   return !!access;
 }
 
+// Helper to generate a 3-letter code from a department name
+function generateDeptCode(name: string): string {
+  const charMap: Record<string, string> = {
+    'ı': 'i', 'i': 'i', 'ş': 's', 'ğ': 'g', 'ü': 'u', 'ö': 'o', 'ç': 'c',
+    'I': 'I', 'İ': 'I', 'Ş': 'S', 'Ğ': 'G', 'Ü': 'U', 'Ö': 'O', 'Ç': 'C'
+  };
+  const str = name.replace(/[ıişğüöçIİŞĞÜÖÇ]/g, (m) => charMap[m]);
+  return str.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase() || 'GEN';
+}
+
 // GET /api/risks/departments?facilityId=xxx
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -107,7 +117,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     if (existing) return res.status(409).json({ error: 'Bu departman zaten mevcut.' });
 
     const dept = await prisma.riskDepartment.create({
-      data: { facilityId, name },
+      data: { facilityId, name, code: generateDeptCode(name) },
     });
     res.status(201).json(dept);
   } catch (error) {
@@ -132,7 +142,7 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     const updatedDept = await prisma.riskDepartment.update({
       where: { id },
-      data: { name },
+      data: { name, code: generateDeptCode(name) },
     });
     res.json(updatedDept);
   } catch (error) {

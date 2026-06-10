@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dökülme-Saçılma Kiti Yönetim Sistemi</title>
+<style>
+:root{
+  --bg:#f3f4f6;--panel:#fff;--dark:#111827;--text:#1f2937;--muted:#6b7280;--border:#d1d5db;
+  --blue:#2563eb;--green:#059669;--amber:#d97706;--red:#dc2626;--purple:#7c3aed;
+  --soft-blue:#eff6ff;--soft-green:#ecfdf5;--soft-amber:#fffbeb;--soft-red:#fef2f2;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+.app{display:grid;grid-template-columns:290px 1fr;min-height:100vh}
+.sidebar{background:var(--dark);color:white;padding:18px 14px;position:sticky;top:0;height:100vh;overflow:auto}
+.brand{padding:6px 10px 16px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:14px}
+.brand h1{font-size:18px;line-height:1.25;margin:0}
+.brand p{font-size:12px;color:#d1d5db;margin:8px 0 0;line-height:1.35}
+.nav-title{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;margin:18px 10px 8px;font-weight:800}
+.nav button{width:100%;display:flex;align-items:center;gap:10px;text-align:left;background:transparent;color:#e5e7eb;border:0;border-radius:10px;padding:11px 10px;margin:4px 0;cursor:pointer;font-weight:800;font-size:13px}
+.nav button:hover{background:rgba(255,255,255,.08)}
+.nav button.active{background:white;color:#111827}
+.nav .num{width:24px;height:24px;border-radius:7px;background:rgba(255,255,255,.12);display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+.nav button.active .num{background:#111827;color:white}
+.sidebar-footer{margin-top:18px;padding:12px 10px;border-top:1px solid rgba(255,255,255,.12);font-size:12px;color:#d1d5db;line-height:1.45}
+.content{padding:22px;max-width:1500px;width:100%;margin:auto}
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:16px}
+.topbar h2{margin:0;font-size:24px}
+.topbar p{margin:6px 0 0;color:var(--muted);font-size:13px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.04);margin-bottom:14px}
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px}
+.metric-title{font-size:12px;color:var(--muted);font-weight:800}
+.metric{font-size:30px;font-weight:900;margin-top:4px}
+.metric.green{color:var(--green)}.metric.amber{color:var(--amber)}.metric.red{color:var(--red)}.metric.blue{color:var(--blue)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:1100px){.app{grid-template-columns:1fr}.sidebar{position:relative;height:auto}.cards{grid-template-columns:repeat(2,1fr)}.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+@media(max-width:600px){.cards{grid-template-columns:1fr}}
+label{display:block;font-size:12px;font-weight:900;color:#374151;margin-top:10px}
+input,select,textarea{width:100%;padding:10px;margin-top:5px;border:1px solid var(--border);border-radius:9px;background:white;font-size:13px}
+textarea{min-height:76px;resize:vertical}
+button{border:0;border-radius:9px;padding:10px 13px;font-weight:900;cursor:pointer;font-size:13px}
+.btn-primary{background:var(--blue);color:white}.btn-secondary{background:#e5e7eb;color:#111827}.btn-danger{background:var(--red);color:white}.btn-ok{background:var(--green);color:white}.btn-warn{background:var(--amber);color:white}.btn-ghost{background:white;border:1px solid var(--border);color:#111827}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:900;white-space:nowrap}
+.b-green{background:#d1fae5;color:#065f46}.b-amber{background:#fef3c7;color:#92400e}.b-red{background:#fee2e2;color:#991b1b}.b-blue{background:#dbeafe;color:#1e40af}.b-gray{background:#e5e7eb;color:#374151}.b-purple{background:#ede9fe;color:#5b21b6}
+table{width:100%;border-collapse:collapse;background:white;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+th,td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:13px;vertical-align:top}
+th{background:#f9fafb;color:#374151;font-size:12px}
+tr:hover{background:#f9fafb}
+.section{display:none}.section.active{display:block}
+.small{font-size:12px;color:var(--muted);line-height:1.4}
+.item-box{border:1px dashed var(--border);border-radius:12px;padding:12px;background:#fbfdff;margin-top:10px}
+.step-help{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.help-box{border:1px solid var(--border);border-radius:12px;background:#fff;padding:12px;font-size:12px;line-height:1.4}
+.help-box b{display:block;margin-bottom:5px}
+.help-box.red{background:var(--soft-red);border-color:#fecaca}.help-box.amber{background:var(--soft-amber);border-color:#fde68a}.help-box.green{background:var(--soft-green);border-color:#bbf7d0}.help-box.blue{background:var(--soft-blue);border-color:#bfdbfe}
+.filters{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.alert{border-left:5px solid var(--amber);background:white;border-top:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:11px;border-radius:9px;margin-bottom:8px;font-size:13px;line-height:1.35}
+.alert.red{border-left-color:var(--red);background:#fff}.alert.green{border-left-color:var(--green)}.alert.blue{border-left-color:var(--blue)}
+.hidden{display:none!important}
+hr{border:0;border-top:1px solid #e5e7eb;margin:14px 0}
+.print-title{display:none}
+@media print{
+  .sidebar,.topbar .actions,.no-print,button,.filters{display:none!important}
+  .app{display:block}.content{padding:0;max-width:none}.section{display:block!important}.card{box-shadow:none;border:0;padding:0;margin-bottom:14px}
+  .print-title{display:block}table{border:1px solid #999}th,td{border:1px solid #999}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <h1>Dökülme-Saçılma Kiti Yönetim Sistemi</h1>
+      <p>Kurulumdan denetime kadar iş bazlı takip paneli.</p>
+    </div>
+    <div class="nav">
+      <div class="nav-title">Genel</div>
+      <button class="active" onclick="showSection('dashboard',this)"><span class="num">0</span> Kontrol Paneli</button>
+
+      <div class="nav-title">İş Akışı</div>
+      <button onclick="showSection('need',this)"><span class="num">1</span> İhtiyaç & Amaç Belirleme</button>
+      <button onclick="showSection('placement',this)"><span class="num">2</span> Birim & Yerleşim</button>
+      <button onclick="showSection('content',this)"><span class="num">3</span> Kit İçeriği Yönetimi</button>
+      <button onclick="showSection('check',this)"><span class="num">4</span> Periyodik Kontrol</button>
+      <button onclick="showSection('usage',this)"><span class="num">5</span> Kullanım / Olay Kaydı</button>
+      <button onclick="showSection('actions',this)"><span class="num">6</span> Aksiyon Takibi</button>
+
+      <div class="nav-title">Çıktılar</div>
+      <button onclick="showSection('reports',this)"><span class="num">7</span> Rapor & Denetim</button>
+      <button onclick="showSection('settings',this)"><span class="num">8</span> Veri Yönetimi</button>
+    </div>
+    <div class="sidebar-footer">
+      <b>Temel mantık:</b><br>
+      Her kit önce amacıyla tanımlanır, sonra lokasyonu, içeriği, kontrolü, kullanımı ve aksiyonu ayrı ekranlarda yönetilir.
+    </div>
+  </aside>
+
+  <main class="content">
+    <div class="print-title">
+      <h1>Dökülme-Saçılma Kiti Yönetim Sistemi Raporu</h1>
+      <p id="printDate"></p>
+    </div>
+
+    <div class="topbar no-print">
+      <div>
+        <h2 id="pageTitle">Kontrol Paneli</h2>
+        <p id="pageDesc">Tüm kitlerin genel durumunu, geciken kontrolleri, kritik içerikleri ve açık aksiyonları izleyin.</p>
+      </div>
+      <div class="actions" style="margin-top:0">
+        <button class="btn-secondary" onclick="seedExample()">Örnek Veri</button>
+        <button class="btn-ghost" onclick="window.print()">Yazdır / PDF</button>
+      </div>
+    </div>
+
+    <section id="dashboard" class="section active">
+      <div class="cards">
+        <div class="card"><div class="metric-title">Toplam Kit</div><div class="metric blue" id="mTotal">0</div></div>
+        <div class="card"><div class="metric-title">Aktif Kit</div><div class="metric green" id="mActive">0</div></div>
+        <div class="card"><div class="metric-title">Kontrolü Geciken</div><div class="metric red" id="mOverdue">0</div></div>
+        <div class="card"><div class="metric-title">Kritik İçerik</div><div class="metric red" id="mCritical">0</div></div>
+        <div class="card"><div class="metric-title">Açık Aksiyon</div><div class="metric amber" id="mOpenActions">0</div></div>
+      </div>
+
+      <div class="card">
+        <h3>Yapılan İşe Göre Süreç Haritası</h3>
+        <div class="step-help">
+          <div class="help-box blue"><b>1. Kurulum</b>Hangi amaçla, hangi birime, hangi risk için kit konulacak?</div>
+          <div class="help-box green"><b>2. İçerik</b>Kitin içinde ne var, SKT var mı, minimum miktar yeterli mi?</div>
+          <div class="help-box amber"><b>3. Kontrol</b>Kim, ne zaman, hangi kriterlere göre kontrol etti?</div>
+          <div class="help-box red"><b>4. Aksiyon</b>Eksik varsa kim kapatacak, termin geçti mi, kanıt var mı?</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Kritik Uyarılar</h3>
+        <div id="dashboardAlerts"></div>
+      </div>
+
+      <div class="card">
+        <h3>Kayıt Özeti</h3>
+        <div class="filters no-print">
+          <input id="globalSearch" placeholder="Ara: birim, lokasyon, kit, sorumlu..." oninput="render()"/>
+          <select id="globalPurpose" onchange="render()"><option value="">Tüm amaçlar</option></select>
+          <select id="globalRisk" onchange="render()"><option value="">Tüm riskler</option><option>Düşük</option><option>Orta</option><option>Yüksek</option><option>Kritik</option></select>
+          <select id="globalStatus" onchange="render()"><option value="">Tüm durumlar</option><option>Planlandı</option><option>Kurulumda</option><option>Aktif</option><option>Eksik</option><option>Kullanımda / Tamamlanacak</option><option>Pasif</option></select>
+          <select id="globalProblem" onchange="render()"><option value="">Tüm kayıtlar</option><option value="overdue">Kontrolü geciken</option><option value="critical">Kritik içerik</option><option value="action">Açık aksiyon</option><option value="missing">Kurulum eksik</option></select>
+        </div>
+        <div id="kitTable"></div>
+      </div>
+    </section>
+
+    <section id="need" class="section">
+      <div class="card">
+        <h3>1. İhtiyaç & Amaç Belirleme</h3>
+        <p class="small">Bu ekran yeni kit tanımlamak içindir. Önce kitin hangi dökülme/saçılma riskine cevap vereceğini netleştir. Yanlış amaç, yanlış içerik ve olay anında başarısız müdahale demektir.</p>
+        <input type="hidden" id="kitId"/>
+        <div class="grid3">
+          <div><label>Amaç / Risk Türü</label><select id="purpose" onchange="applyPurposeDefaults()"></select></div>
+          <div><label>Risk Seviyesi</label><select id="risk"><option>Düşük</option><option>Orta</option><option>Yüksek</option><option>Kritik</option></select></div>
+          <div><label>Kit Durumu</label><select id="status"><option>Planlandı</option><option>Kurulumda</option><option>Aktif</option><option>Eksik</option><option>Kullanımda / Tamamlanacak</option><option>Pasif</option></select></div>
+        </div>
+        <label>Kit Adı</label><input id="kitName" placeholder="Örn. Formaldehit/Formalin Dökülme Kiti"/>
+        <label>İhtiyaç Gerekçesi</label><textarea id="needReason" placeholder="Bu kite neden ihtiyaç var? Hangi kimyasal, hangi işlem, hangi kötü senaryo için konumlandırılıyor?"></textarea>
+        <label>En Kötü Senaryo</label><textarea id="worstCase" placeholder="Örn. formalin dökülmesi, yoğun buhar maruziyeti, alanın kullanılamaması, personel etkilenmesi..."></textarea>
+        <div class="actions">
+          <button class="btn-primary" onclick="saveNeed()">İhtiyacı Kaydet / Güncelle</button>
+          <button class="btn-secondary" onclick="resetForm()">Yeni Kayıt Başlat</button>
+        </div>
+      </div>
+      <div class="card"><h3>Tanımlı Kitler</h3><div id="needList"></div></div>
+    </section>
+
+    <section id="placement" class="section">
+      <div class="card">
+        <h3>2. Birim & Yerleşim</h3>
+        <p class="small">Bu ekran kitin nerede duracağını, kimin sorumlu olduğunu ve sahada erişilebilir olup olmadığını yönetir.</p>
+        <label>Kit Seç</label><select id="placementKit" onchange="loadPlacement()"></select>
+        <div class="grid3">
+          <div><label>Birim</label><input id="unit" placeholder="Örn. Patoloji Laboratuvarı"/></div>
+          <div><label>Alt Alan / Oda</label><input id="area" placeholder="Örn. Makroskopi"/></div>
+          <div><label>Net Lokasyon</label><input id="location" placeholder="Örn. Giriş sağ duvar"/></div>
+        </div>
+        <div class="grid2">
+          <div><label>Sorumlu</label><input id="owner" placeholder="Ad soyad / birim"/></div>
+          <div><label>Yedek Sorumlu</label><input id="backupOwner" placeholder="Ad soyad / birim"/></div>
+        </div>
+        <div class="grid4">
+          <div><label><input type="checkbox" id="pVisible" style="width:auto"> Görünür / erişilebilir</label></div>
+          <div><label><input type="checkbox" id="pSign" style="width:auto"> Etiket / işaret var</label></div>
+          <div><label><input type="checkbox" id="pInstruction" style="width:auto"> Talimat var</label></div>
+          <div><label><input type="checkbox" id="pTraining" style="width:auto"> Personel biliyor</label></div>
+        </div>
+        <label>Yerleşim Notu</label><textarea id="placementNote" placeholder="Erişim sorunu, görünürlük, uygun olmayan konum vb."></textarea>
+        <div class="actions">
+          <button class="btn-primary" onclick="savePlacement()">Yerleşimi Kaydet</button>
+        </div>
+      </div>
+      <div class="card"><h3>Yerleşim Durumu</h3><div id="placementList"></div></div>
+    </section>
+
+    <section id="content" class="section">
+      <div class="card">
+        <h3>3. Kit İçeriği Yönetimi</h3>
+        <p class="small">Bu ekran kitin içindeki malzemeleri yönetir. SKT geçen veya minimum altına düşen kalemler kritik uyarı üretir.</p>
+        <label>Kit Seç</label><select id="contentKit" onchange="loadContent()"></select>
+        <div class="actions">
+          <button class="btn-secondary" onclick="addSuggestedItems()">Seçilen Amaca Göre Önerilen İçeriği Ekle</button>
+          <button class="btn-secondary" onclick="addItem()">+ Malzeme Ekle</button>
+        </div>
+        <div id="items"></div>
+        <div class="actions">
+          <button class="btn-primary" onclick="saveContent()">İçeriği Kaydet</button>
+        </div>
+      </div>
+      <div class="card"><h3>İçerik Riskleri</h3><div id="contentList"></div></div>
+    </section>
+
+    <section id="check" class="section">
+      <div class="card">
+        <h3>4. Periyodik Kontrol</h3>
+        <p class="small">Bu ekran periyodik kontrol içindir. Kontrol; içerik, SKT, miktar, ambalaj, erişim ve atık ekipmanı açısından yapılmalıdır.</p>
+        <label>Kit Seç</label><select id="checkKit" onchange="loadCheck()"></select>
+        <div class="grid3">
+          <div><label>Son Kontrol Tarihi</label><input id="lastCheck" type="date"/></div>
+          <div><label>Kontrol Periyodu</label><select id="period"><option value="30">Aylık</option><option value="60">2 Aylık</option><option value="90">3 Aylık</option><option value="180">6 Aylık</option></select></div>
+          <div><label>Kontrol Sonucu</label><select id="checkResult"><option>Uygun</option><option>Şartlı Uygun</option><option>Uygun Değil</option><option>Kontrol Edilmedi</option></select></div>
+        </div>
+        <label>Kontrol Eden</label><input id="checkedBy" placeholder="Ad soyad / görev"/>
+        <div class="grid4">
+          <div><label><input type="checkbox" id="qContent" style="width:auto"> İçerik tam</label></div>
+          <div><label><input type="checkbox" id="qExpiry" style="width:auto"> SKT uygun</label></div>
+          <div><label><input type="checkbox" id="qQty" style="width:auto"> Miktar yeterli</label></div>
+          <div><label><input type="checkbox" id="qPackage" style="width:auto"> Ambalaj sağlam</label></div>
+        </div>
+        <label>Kontrol Notu / Uygunsuzluk</label><textarea id="checkNote"></textarea>
+        <div class="actions">
+          <button class="btn-primary" onclick="saveCheck()">Kontrolü Kaydet</button>
+          <button class="btn-ok" onclick="quickCheck()">Bugün Kontrol Edildi ve Uygun</button>
+        </div>
+      </div>
+      <div class="card"><h3>Kontrol Planı</h3><div id="checkList"></div></div>
+    </section>
+
+    <section id="usage" class="section">
+      <div class="card">
+        <h3>5. Kullanım / Olay Kaydı</h3>
+        <p class="small">Kit kullanıldıysa bu ekranla kayda alınır. Kit kullanıldıktan sonra “Aktif” bırakılması ciddi kör noktadır; tamamlanana kadar “Kullanımda / Tamamlanacak” durumuna geçmelidir.</p>
+        <label>Kit Seç</label><select id="usageKit" onchange="loadUsage()"></select>
+        <div class="grid3">
+          <div><label>Olay Tarihi</label><input id="incidentDate" type="date"/></div>
+          <div><label>Dökülme Türü</label><select id="incidentType"><option>Kimyasal</option><option>Biyolojik</option><option>Sitotoksik</option><option>Formalin</option><option>Asit-Baz</option><option>Cıva</option><option>Diğer</option></select></div>
+          <div><label>Kit Kullanım Durumu</label><select id="kitUsed"><option>Kullanıldı</option><option>Kısmen Kullanıldı</option><option>Kullanılmadı</option></select></div>
+        </div>
+        <label>Olay Açıklaması</label><textarea id="incidentDesc" placeholder="Ne döküldü, yaklaşık miktar neydi, kim müdahale etti, alan kapatıldı mı?"></textarea>
+        <label>Kullanılan / Eksilen Malzemeler</label><textarea id="usedItems" placeholder="Örn. 2 absorban ped, 1 atık poşeti, 1 eldiven..."></textarea>
+        <label>Sonuç / Değerlendirme</label><textarea id="incidentOutcome" placeholder="Alan temizlendi, atık bertarafa gönderildi, kit tamamlanacak vb."></textarea>
+        <div class="actions">
+          <button class="btn-primary" onclick="saveUsage()">Olayı Kaydet</button>
+        </div>
+      </div>
+      <div class="card"><h3>Olay Geçmişi</h3><div id="usageList"></div></div>
+    </section>
+
+    <section id="actions" class="section">
+      <div class="card">
+        <h3>6. Aksiyon Takibi</h3>
+        <p class="small">Bu ekran eksikleri kapatmak içindir. Açık aksiyonun “takipte” kalması yeterli değildir; termin, sorumlu ve kapatma kanıtı olmalıdır.</p>
+        <label>Kit Seç</label><select id="actionKit"></select>
+        <div class="grid3">
+          <div><label>Aksiyon Türü</label><select id="actionType"><option>Eksik malzeme tamamlama</option><option>SKT geçmiş ürün değişimi</option><option>Yerleşim / işaretleme düzeltmesi</option><option>Eğitim / bilgilendirme</option><option>Olay sonrası tamamlama</option><option>Diğer</option></select></div>
+          <div><label>Sorumlu</label><input id="actionOwner" placeholder="Ad soyad / birim"/></div>
+          <div><label>Termin</label><input id="actionDue" type="date"/></div>
+        </div>
+        <label>Aksiyon Açıklaması</label><textarea id="actionText"></textarea>
+        <div class="actions">
+          <button class="btn-primary" onclick="saveAction()">Aksiyon Ekle</button>
+        </div>
+      </div>
+      <div class="card"><h3>Açık / Kapalı Aksiyonlar</h3><div id="actionList"></div></div>
+    </section>
+
+    <section id="reports" class="section">
+      <div class="card">
+        <h3>7. Rapor & Denetim</h3>
+        <p class="small">Denetim açısından savunulabilir kayıt; amacı, lokasyonu, içeriği, kontrolü ve aksiyon kapanışı olan kayıttır. Sadece “kit mevcut” bilgisi yetersizdir.</p>
+        <div class="actions no-print">
+          <button class="btn-secondary" onclick="exportCSV()">CSV Raporu İndir</button>
+          <button class="btn-secondary" onclick="exportJSON()">JSON Yedek Al</button>
+          <button class="btn-ghost" onclick="window.print()">Yazdır / PDF</button>
+        </div>
+      </div>
+      <div class="card"><h3>Denetim Karar Tablosu</h3><div id="auditTable"></div></div>
+      <div class="card"><h3>Uyarı Listesi</h3><div id="reportAlerts"></div></div>
+    </section>
+
+    <section id="settings" class="section">
+      <div class="card">
+        <h3>8. Veri Yönetimi</h3>
+        <p class="small">Veriler bu tarayıcıda saklanır. Kurumsal kullanımda merkezi veri tabanı, yetkilendirme ve değişiklik geçmişi gerekir.</p>
+        <div class="actions">
+          <button class="btn-secondary" onclick="exportJSON()">JSON Yedek Al</button>
+          <button class="btn-secondary" onclick="document.getElementById('importFile').click()">JSON İçe Aktar</button>
+          <input type="file" id="importFile" class="hidden" accept=".json" onchange="importJSON(event)"/>
+          <button class="btn-secondary" onclick="exportCSV()">CSV Raporu İndir</button>
+          <button class="btn-danger" onclick="clearAll()">Tüm Veriyi Sil</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Kurumsal Kullanıma Geçmeden Önce Eklenmesi Gerekenler</h3>
+        <div class="alert red"><b>Zayıf halka:</b> Bu tek dosyalık uygulama pilot kullanım için uygundur. Resmi denetim kanıtı olarak kullanılacaksa kullanıcı girişi, değişiklik geçmişi, merkezi yedekleme ve onay akışı eklenmelidir.</div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+const KEY="spill-kit-manager-leftnav-v1";
+let kits=JSON.parse(localStorage.getItem(KEY)||"[]");
+const purposes=[
+ ["kimyasal","Kimyasal dökülme-saçılma"],
+ ["biyolojik","Biyolojik materyal dökülmesi"],
+ ["sitotoksik","Sitotoksik / kemoterapi dökülmesi"],
+ ["formalin","Formaldehit / formalin dökülmesi"],
+ ["asitbaz","Asit-baz / korozif dökülme"],
+ ["civa","Cıva dökülmesi"],
+ ["genel","Genel amaçlı absorban kit"]
+];
+const purposeMap=Object.fromEntries(purposes);
+const suggested={
+ kimyasal:[["Kimyasal absorban ped/granül","Absorban",5,2,""],["Kimyasala dayanıklı eldiven","KKD",2,1,""],["Koruyucu gözlük/yüz siperi","KKD",1,1,""],["Kimyasal atık poşeti/kap","Atık",2,1,""],["Uyarı şeridi/işaret","İşaretleme",1,1,""]],
+ biyolojik:[["Biyolojik absorban","Absorban",5,2,""],["Dezenfektan tablet/solüsyon","Dezenfektan",1,1,""],["Tek kullanımlık eldiven","KKD",4,2,""],["Tıbbi atık poşeti","Atık",2,1,""],["Maske/önlük","KKD",2,1,""]],
+ sitotoksik:[["Sitotoksik absorban ped","Absorban",4,3,""],["Sitotoksik atık torbası","Atık",2,2,""],["Kemoterapi eldiveni","KKD",4,2,""],["Sıvı geçirmez önlük","KKD",2,1,""],["Dökülme uyarı işareti","İşaretleme",1,1,""]],
+ formalin:[["Formalin absorban/nötralizan","Nötralizan",1,1,""],["Kimyasala dayanıklı eldiven","KKD",2,1,""],["Yüz siperi/gözlük","KKD",1,1,""],["Sızdırmaz atık kabı","Atık",1,1,""],["Formalin dökülme talimatı","Talimat",1,1,""]],
+ asitbaz:[["Asit nötralizan","Nötralizan",1,1,""],["Baz nötralizan","Nötralizan",1,1,""],["Korozif kimyasal eldiveni","KKD",2,1,""],["Yüz siperi/gözlük","KKD",1,1,""],["Kimyasal atık kabı","Atık",1,1,""]],
+ civa:[["Cıva toplama aparatı","Aparat",1,1,""],["Cıva absorban/sülfür tozu","Absorban",1,1,""],["Sızdırmaz kap","Atık",1,1,""],["Eldiven","KKD",2,1,""],["Cıva dökülme talimatı","Talimat",1,1,""]],
+ genel:[["Genel absorban ped/granül","Absorban",5,2,""],["Eldiven","KKD",2,1,""],["Atık poşeti","Atık",2,1,""],["Uyarı işareti","İşaretleme",1,1,""]]
+};
+function $(id){return document.getElementById(id)}
+function save(){localStorage.setItem(KEY,JSON.stringify(kits))}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function today(){return new Date().toISOString().slice(0,10)}
+function addDays(s,d){if(!s)return"";let x=new Date(s);x.setDate(x.getDate()+Number(d));return x.toISOString().slice(0,10)}
+function daysTo(s){if(!s)return null;return Math.ceil((new Date(s)-new Date(today()))/(1000*60*60*24))}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
+function badge(t,c){return `<span class="badge ${c}">${esc(t)}</span>`}
+function purposeBadge(p){return badge(purposeMap[p]||p||"-","b-blue")}
+function riskBadge(r){return badge(r||"-",{Düşük:"b-green",Orta:"b-gray",Yüksek:"b-amber",Kritik:"b-red"}[r]||"b-gray")}
+function statusBadge(s){return badge(s||"-",s==="Aktif"?"b-green":s==="Pasif"?"b-gray":s==="Eksik"?"b-red":"b-amber")}
+function initSelects(){
+ const purposeOptions=purposes.map(([v,t])=>`<option value="${v}">${t}</option>`).join("");
+ ["purpose"].forEach(id=>$(id).innerHTML=purposeOptions);
+ $("globalPurpose").innerHTML='<option value="">Tüm amaçlar</option>'+purposeOptions;
+ ["placementKit","contentKit","checkKit","usageKit","actionKit"].forEach(id=>refreshKitSelect(id));
+}
+function refreshKitSelect(id){
+ const html=kits.length? kits.map(k=>`<option value="${k.id}">${esc(k.kitName||"(adsız kit)")} - ${esc(k.unit||"birim yok")}</option>`).join("") : `<option value="">Kayıt yok</option>`;
+ $(id).innerHTML=html;
+}
+function refreshAllSelects(){["placementKit","contentKit","checkKit","usageKit","actionKit"].forEach(refreshKitSelect)}
+function showSection(id,btn){
+ document.querySelectorAll(".section").forEach(s=>s.classList.remove("active")); $(id).classList.add("active");
+ document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active")); btn.classList.add("active");
+ const titles={
+  dashboard:["Kontrol Paneli","Tüm kitlerin genel durumunu, geciken kontrolleri, kritik içerikleri ve açık aksiyonları izleyin."],
+  need:["İhtiyaç & Amaç Belirleme","Yeni kit ihtiyacını tanımlayın; amaç, risk seviyesi ve kötü senaryoyu netleştirin."],
+  placement:["Birim & Yerleşim","Kitin hangi birimde, nerede ve kimin sorumluluğunda olduğunu yönetin."],
+  content:["Kit İçeriği Yönetimi","Kit içeriği, miktar, minimum seviye ve SKT bilgilerini takip edin."],
+  check:["Periyodik Kontrol","Kontrol tarihlerini, sonuçları ve kontrol kriterlerini kaydedin."],
+  usage:["Kullanım / Olay Kaydı","Kit kullanımı, olay açıklaması ve eksilen malzemeleri kaydedin."],
+  actions:["Aksiyon Takibi","Eksiklerin kapatılması için sorumlu, termin ve kanıt takibi yapın."],
+  reports:["Rapor & Denetim","Denetime hazır kayıtları, açık riskleri ve raporları görün."],
+  settings:["Veri Yönetimi","Yedekleme, içe aktarma ve veri temizleme işlemlerini yönetin."]
+ };
+ $("pageTitle").textContent=titles[id][0]; $("pageDesc").textContent=titles[id][1];
+ render();
+}
+function applyPurposeDefaults(){
+ const p=$("purpose").value;
+ const names={kimyasal:"Kimyasal Dökülme-Saçılma Kiti",biyolojik:"Biyolojik Dökülme Kiti",sitotoksik:"Sitotoksik / Kemoterapi Dökülme Kiti",formalin:"Formaldehit / Formalin Dökülme Kiti",asitbaz:"Asit-Baz / Korozif Dökülme Kiti",civa:"Cıva Dökülme Kiti",genel:"Genel Amaçlı Absorban Kit"};
+ const risks={kimyasal:"Yüksek",biyolojik:"Yüksek",sitotoksik:"Kritik",formalin:"Kritik",asitbaz:"Yüksek",civa:"Kritik",genel:"Orta"};
+ $("kitName").value=names[p]; $("risk").value=risks[p];
+}
+function resetForm(){
+ $("kitId").value=""; $("purpose").value="kimyasal"; $("risk").value="Yüksek"; $("status").value="Planlandı"; $("kitName").value="Kimyasal Dökülme-Saçılma Kiti"; $("needReason").value=""; $("worstCase").value="";
+}
+function getKit(id){return kits.find(k=>k.id===id)}
+function saveNeed(){
+ let id=$("kitId").value||uid(); let k=getKit(id)||{id,items:[],actions:[],incidents:[],placement:{},checks:{}};
+ Object.assign(k,{purpose:$("purpose").value,risk:$("risk").value,status:$("status").value,kitName:$("kitName").value.trim(),needReason:$("needReason").value.trim(),worstCase:$("worstCase").value.trim(),updatedAt:new Date().toISOString()});
+ if(!k.kitName){alert("Kit adı zorunludur.");return}
+ if(!getKit(id))kits.push(k);
+ save(); refreshAllSelects(); render(); alert("İhtiyaç kaydı güncellendi.");
+}
+function editNeed(id){
+ const k=getKit(id); if(!k)return; $("kitId").value=k.id; $("purpose").value=k.purpose||"kimyasal"; $("risk").value=k.risk||"Orta"; $("status").value=k.status||"Planlandı"; $("kitName").value=k.kitName||""; $("needReason").value=k.needReason||""; $("worstCase").value=k.worstCase||"";
+ document.querySelector('.nav button[onclick*="need"]').click();
+}
+function loadPlacement(){
+ const k=getKit($("placementKit").value); if(!k)return; const p=k.placement||{};
+ $("unit").value=p.unit||k.unit||""; $("area").value=p.area||""; $("location").value=p.location||""; $("owner").value=p.owner||""; $("backupOwner").value=p.backupOwner||"";
+ $("pVisible").checked=!!p.visible; $("pSign").checked=!!p.sign; $("pInstruction").checked=!!p.instruction; $("pTraining").checked=!!p.training; $("placementNote").value=p.note||"";
+}
+function savePlacement(){
+ const k=getKit($("placementKit").value); if(!k)return alert("Kit seçilmedi.");
+ k.placement={unit:$("unit").value.trim(),area:$("area").value.trim(),location:$("location").value.trim(),owner:$("owner").value.trim(),backupOwner:$("backupOwner").value.trim(),visible:$("pVisible").checked,sign:$("pSign").checked,instruction:$("pInstruction").checked,training:$("pTraining").checked,note:$("placementNote").value.trim()};
+ k.unit=k.placement.unit; k.updatedAt=new Date().toISOString();
+ if(k.status==="Planlandı")k.status="Kurulumda";
+ save(); refreshAllSelects(); render(); alert("Yerleşim kaydedildi.");
+}
+function addItem(data={}){
+ const div=document.createElement("div"); div.className="item-box";
+ div.innerHTML=`<div class="grid4">
+ <div><label>Malzeme</label><input class="iName" value="${esc(data.name||"")}" placeholder="Absorban ped"/></div>
+ <div><label>Tür</label><input class="iType" value="${esc(data.type||"")}" placeholder="KKD / Absorban / Atık"/></div>
+ <div><label>Mevcut</label><input class="iQty" type="number" min="0" value="${data.qty??""}"/></div>
+ <div><label>Minimum</label><input class="iMin" type="number" min="0" value="${data.min??""}"/></div>
+ </div>
+ <div class="grid2">
+ <div><label>SKT</label><input class="iExp" type="date" value="${data.exp||""}"/></div>
+ <div><label>Not</label><input class="iNote" value="${esc(data.note||"")}"/></div>
+ </div>
+ <div class="actions"><button class="btn-danger" onclick="this.closest('.item-box').remove()">Sil</button></div>`;
+ $("items").appendChild(div);
+}
+function readItems(){
+ return [...document.querySelectorAll("#items .item-box")].map(b=>({name:b.querySelector(".iName").value.trim(),type:b.querySelector(".iType").value.trim(),qty:b.querySelector(".iQty").value,min:b.querySelector(".iMin").value,exp:b.querySelector(".iExp").value,note:b.querySelector(".iNote").value.trim()})).filter(i=>i.name);
+}
+function loadContent(){
+ const k=getKit($("contentKit").value); $("items").innerHTML=""; if(!k)return; (k.items||[]).forEach(addItem);
+}
+function addSuggestedItems(){
+ const k=getKit($("contentKit").value); if(!k)return alert("Kit seçilmedi.");
+ const existing=[...document.querySelectorAll(".iName")].map(x=>x.value.toLowerCase());
+ (suggested[k.purpose]||[]).forEach(([name,type,qty,min,exp])=>{if(!existing.includes(name.toLowerCase()))addItem({name,type,qty,min,exp})});
+}
+function saveContent(){
+ const k=getKit($("contentKit").value); if(!k)return alert("Kit seçilmedi.");
+ k.items=readItems(); if(k.status==="Kurulumda"&&k.items.length)k.status="Aktif"; k.updatedAt=new Date().toISOString();
+ save(); render(); alert("İçerik kaydedildi.");
+}
+function loadCheck(){
+ const k=getKit($("checkKit").value); if(!k)return; const c=k.checks||{};
+ $("lastCheck").value=c.lastCheck||""; $("period").value=c.period||"30"; $("checkResult").value=c.result||"Kontrol Edilmedi"; $("checkedBy").value=c.checkedBy||""; $("checkNote").value=c.note||"";
+ $("qContent").checked=!!c.content; $("qExpiry").checked=!!c.expiry; $("qQty").checked=!!c.qty; $("qPackage").checked=!!c.package;
+}
+function saveCheck(){
+ const k=getKit($("checkKit").value); if(!k)return alert("Kit seçilmedi.");
+ k.checks={lastCheck:$("lastCheck").value,period:$("period").value,result:$("checkResult").value,checkedBy:$("checkedBy").value.trim(),note:$("checkNote").value.trim(),content:$("qContent").checked,expiry:$("qExpiry").checked,qty:$("qQty").checked,package:$("qPackage").checked};
+ if(k.checks.result==="Uygun"&&k.status!=="Pasif")k.status="Aktif"; if(k.checks.result==="Uygun Değil")k.status="Eksik";
+ k.updatedAt=new Date().toISOString(); save(); render(); alert("Kontrol kaydedildi.");
+}
+function quickCheck(){
+ $("lastCheck").value=today(); $("checkResult").value="Uygun"; $("qContent").checked=true; $("qExpiry").checked=true; $("qQty").checked=true; $("qPackage").checked=true; saveCheck();
+}
+function loadUsage(){
+ $("incidentDate").value=today(); const k=getKit($("usageKit").value); if(k)$("incidentType").value=purposeMap[k.purpose]?.split(" ")[0] || "Kimyasal";
+}
+function saveUsage(){
+ const k=getKit($("usageKit").value); if(!k)return alert("Kit seçilmedi.");
+ k.incidents=k.incidents||[]; k.incidents.push({date:$("incidentDate").value,type:$("incidentType").value,used:$("kitUsed").value,desc:$("incidentDesc").value.trim(),items:$("usedItems").value.trim(),outcome:$("incidentOutcome").value.trim(),id:uid()});
+ if($("kitUsed").value!=="Kullanılmadı")k.status="Kullanımda / Tamamlanacak";
+ k.actions=k.actions||[]; k.actions.push({id:uid(),type:"Olay sonrası tamamlama",text:"Kit kullanımı sonrası içerik kontrol edilecek ve eksilen malzemeler tamamlanacak.",owner:(k.placement||{}).owner||"",due:addDays(today(),3),status:"Açık",evidence:""});
+ save(); render(); alert("Olay kaydedildi ve tamamlayıcı aksiyon açıldı.");
+}
+function saveAction(){
+ const k=getKit($("actionKit").value); if(!k)return alert("Kit seçilmedi.");
+ k.actions=k.actions||[]; k.actions.push({id:uid(),type:$("actionType").value,text:$("actionText").value.trim(),owner:$("actionOwner").value.trim(),due:$("actionDue").value,status:"Açık",evidence:""});
+ save(); render(); alert("Aksiyon eklendi.");
+}
+function closeAction(kitId,actionId){
+ const k=getKit(kitId); if(!k)return; const a=(k.actions||[]).find(x=>x.id===actionId); if(!a)return;
+ const ev=prompt("Kapatma kanıtı / not girin:",a.evidence||"Tamamlandı"); if(ev===null)return;
+ a.status="Kapalı"; a.closed=today(); a.evidence=ev; save(); render();
+}
+function deleteKit(id){if(confirm("Bu kit kaydı silinsin mi?")){kits=kits.filter(k=>k.id!==id);save();refreshAllSelects();render()}}
+function placementComplete(k){const p=k.placement||{};return !!(p.unit&&p.location&&p.owner&&p.visible&&p.sign&&p.instruction&&p.training)}
+function itemProblems(item){
+ const arr=[]; if(item.exp){let d=daysTo(item.exp); if(d<0)arr.push("SKT geçmiş"); else if(d<=30)arr.push("SKT 30 gün içinde"); else if(d<=90)arr.push("SKT 90 gün içinde")}
+ if(Number(item.min||0)>0 && Number(item.qty||0)<Number(item.min||0))arr.push("miktar minimum altında");
+ return arr;
+}
+function controlState(k){
+ const c=k.checks||{}; if(k.status==="Pasif")return{label:"Pasif",cls:"b-gray",next:""};
+ if(!c.lastCheck)return{label:"Kontrol tarihi yok",cls:"b-red",next:""};
+ const next=addDays(c.lastCheck,c.period||30),d=daysTo(next);
+ if(d<0)return{label:`Gecikmiş (${Math.abs(d)} gün)`,cls:"b-red",next};
+ if(d<=30)return{label:`Yaklaşıyor (${d} gün)`,cls:"b-amber",next};
+ return{label:`Uygun (${d} gün)`,cls:"b-green",next};
+}
+function openActions(k){return(k.actions||[]).filter(a=>a.status!=="Kapalı")}
+function criticalItems(k){return(k.items||[]).flatMap(i=>itemProblems(i).map(p=>({item:i,problem:p})))}
+function filteredKits(){
+ const q=($("globalSearch")?.value||"").toLowerCase(),p=$("globalPurpose")?.value||"",r=$("globalRisk")?.value||"",s=$("globalStatus")?.value||"",prob=$("globalProblem")?.value||"";
+ return kits.filter(k=>{
+  const hay=`${k.kitName} ${k.unit} ${(k.placement||{}).location} ${(k.placement||{}).owner} ${k.needReason}`.toLowerCase();
+  if(q&&!hay.includes(q))return false; if(p&&k.purpose!==p)return false; if(r&&k.risk!==r)return false; if(s&&k.status!==s)return false;
+  if(prob==="overdue"&&controlState(k).cls!=="b-red")return false;
+  if(prob==="critical"&&!criticalItems(k).length)return false;
+  if(prob==="action"&&!openActions(k).length)return false;
+  if(prob==="missing"&&placementComplete(k)&&(k.items||[]).length)return false;
+  return true;
+ });
+}
+function allAlerts(){
+ const a=[]; kits.forEach(k=>{
+  if(!placementComplete(k))a.push(["red",`${k.kitName||"Adsız kit"}: yerleşim/sorumlu/işaretleme/talimat/eğitim bilgisi eksik.`]);
+  if(!(k.items||[]).length)a.push(["red",`${k.kitName||"Adsız kit"}: içerik tanımlanmamış.`]);
+  const st=controlState(k); if(st.cls==="b-red"&&k.status!=="Pasif")a.push(["red",`${k.kitName}: ${st.label}.`]); else if(st.cls==="b-amber")a.push(["amber",`${k.kitName}: kontrol yaklaşmış. Sonraki kontrol ${st.next}.`]);
+  criticalItems(k).forEach(x=>a.push([x.problem.includes("90")?"amber":"red",`${k.kitName} - ${x.item.name}: ${x.problem}.`]));
+  openActions(k).forEach(act=>{let d=daysTo(act.due); a.push([d!==null&&d<0?"red":"amber",`${k.kitName}: açık aksiyon - ${act.text||act.type}. Termin: ${act.due||"-"}.`])});
+ }); return a;
+}
+function renderMetrics(){
+ $("mTotal").textContent=kits.length;
+ $("mActive").textContent=kits.filter(k=>k.status==="Aktif").length;
+ $("mOverdue").textContent=kits.filter(k=>controlState(k).cls==="b-red"&&k.status!=="Pasif").length;
+ $("mCritical").textContent=kits.reduce((n,k)=>n+criticalItems(k).filter(x=>!x.problem.includes("90")).length,0);
+ $("mOpenActions").textContent=kits.reduce((n,k)=>n+openActions(k).length,0);
+}
+function renderKitTable(){
+ const rows=filteredKits().map(k=>`<tr>
+ <td>${purposeBadge(k.purpose)}<br><b>${esc(k.kitName)}</b></td>
+ <td><b>${esc((k.placement||{}).unit||k.unit||"-")}</b><br><span class="small">${esc((k.placement||{}).location||"-")}</span></td>
+ <td>${riskBadge(k.risk)}<br>${statusBadge(k.status)}</td>
+ <td>${badge(controlState(k).label,controlState(k).cls)}<br><span class="small">Sonraki: ${esc(controlState(k).next||"-")}</span></td>
+ <td>${criticalItems(k).length?badge(criticalItems(k).length+" içerik uyarısı","b-red"):badge("İçerik uygun","b-green")}<br>${openActions(k).length?badge(openActions(k).length+" açık aksiyon","b-amber"):badge("Aksiyon yok","b-green")}</td>
+ <td class="no-print"><button class="btn-secondary" onclick="editNeed('${k.id}')">Düzenle</button> <button class="btn-danger" onclick="deleteKit('${k.id}')">Sil</button></td>
+ </tr>`).join("");
+ $("kitTable").innerHTML=`<table><thead><tr><th>Amaç / Kit</th><th>Birim / Lokasyon</th><th>Risk / Durum</th><th>Kontrol</th><th>Risk Göstergesi</th><th class="no-print">İşlem</th></tr></thead><tbody>${rows||"<tr><td colspan='6'>Kayıt yok.</td></tr>"}</tbody></table>`;
+}
+function renderNeedList(){
+ $("needList").innerHTML=`<table><thead><tr><th>Kit</th><th>Amaç</th><th>Risk</th><th>Durum</th><th>İhtiyaç Gerekçesi</th><th>İşlem</th></tr></thead><tbody>${kits.map(k=>`<tr><td><b>${esc(k.kitName)}</b></td><td>${purposeBadge(k.purpose)}</td><td>${riskBadge(k.risk)}</td><td>${statusBadge(k.status)}</td><td>${esc(k.needReason||"-")}</td><td><button class="btn-secondary" onclick="editNeed('${k.id}')">Aç</button></td></tr>`).join("")||"<tr><td colspan='6'>Kayıt yok.</td></tr>"}</tbody></table>`;
+}
+function renderPlacementList(){
+ $("placementList").innerHTML=`<table><thead><tr><th>Kit</th><th>Birim</th><th>Lokasyon</th><th>Sorumlu</th><th>Yerleşim Kontrolü</th></tr></thead><tbody>${kits.map(k=>{const p=k.placement||{};const ok=placementComplete(k);return`<tr><td>${esc(k.kitName)}</td><td>${esc(p.unit||"-")}</td><td>${esc(p.location||"-")}</td><td>${esc(p.owner||"-")}</td><td>${ok?badge("Tam","b-green"):badge("Eksik","b-red")}</td></tr>`}).join("")||"<tr><td colspan='5'>Kayıt yok.</td></tr>"}</tbody></table>`;
+}
+function renderContentList(){
+ const rows=[]; kits.forEach(k=>(k.items||[]).forEach(i=>rows.push(`<tr><td>${esc(k.kitName)}</td><td>${esc(i.name)}</td><td>${esc(i.type)}</td><td>${esc(i.qty||"0")} / min ${esc(i.min||"0")}</td><td>${esc(i.exp||"-")}</td><td>${itemProblems(i).length?itemProblems(i).map(p=>badge(p,p.includes("90")?"b-amber":"b-red")).join(" "):badge("Uygun","b-green")}</td></tr>`)));
+ $("contentList").innerHTML=`<table><thead><tr><th>Kit</th><th>Malzeme</th><th>Tür</th><th>Miktar</th><th>SKT</th><th>Durum</th></tr></thead><tbody>${rows.join("")||"<tr><td colspan='6'>İçerik yok.</td></tr>"}</tbody></table>`;
+}
+function renderCheckList(){
+ const rows=kits.slice().sort((a,b)=>(controlState(a).next||"9999").localeCompare(controlState(b).next||"9999")).map(k=>`<tr><td>${esc(controlState(k).next||"-")}</td><td>${esc(k.kitName)}</td><td>${esc((k.placement||{}).unit||"-")}</td><td>${badge(controlState(k).label,controlState(k).cls)}</td><td>${esc((k.checks||{}).result||"-")}</td><td>${esc((k.checks||{}).checkedBy||"-")}</td></tr>`).join("");
+ $("checkList").innerHTML=`<table><thead><tr><th>Sonraki Kontrol</th><th>Kit</th><th>Birim</th><th>Kontrol Durumu</th><th>Sonuç</th><th>Kontrol Eden</th></tr></thead><tbody>${rows||"<tr><td colspan='6'>Kayıt yok.</td></tr>"}</tbody></table>`;
+}
+function renderUsageList(){
+ const rows=[]; kits.forEach(k=>(k.incidents||[]).forEach(i=>rows.push(`<tr><td>${esc(i.date)}</td><td>${esc(k.kitName)}</td><td>${esc((k.placement||{}).unit||"-")}</td><td>${esc(i.type)}</td><td>${esc(i.used)}</td><td>${esc(i.desc||"-")}</td><td>${esc(i.items||"-")}</td></tr>`)));
+ $("usageList").innerHTML=`<table><thead><tr><th>Tarih</th><th>Kit</th><th>Birim</th><th>Tür</th><th>Kullanım</th><th>Açıklama</th><th>Eksilen</th></tr></thead><tbody>${rows.join("")||"<tr><td colspan='7'>Olay kaydı yok.</td></tr>"}</tbody></table>`;
+}
+function renderActionList(){
+ const rows=[]; kits.forEach(k=>(k.actions||[]).forEach(a=>{let d=daysTo(a.due);rows.push(`<tr><td>${esc(k.kitName)}</td><td>${esc(a.type||"-")}</td><td>${esc(a.text||"-")}</td><td>${esc(a.owner||"-")}</td><td>${esc(a.due||"-")} ${d!==null&&d<0&&a.status!=="Kapalı"?badge("gecikti","b-red"):""}</td><td>${badge(a.status||"Açık",a.status==="Kapalı"?"b-green":"b-amber")}</td><td>${esc(a.evidence||"-")}</td><td class="no-print">${a.status!=="Kapalı"?`<button class="btn-ok" onclick="closeAction('${k.id}','${a.id}')">Kapat</button>`:""}</td></tr>`)}));
+ $("actionList").innerHTML=`<table><thead><tr><th>Kit</th><th>Tür</th><th>Aksiyon</th><th>Sorumlu</th><th>Termin</th><th>Durum</th><th>Kanıt</th><th class="no-print">İşlem</th></tr></thead><tbody>${rows.join("")||"<tr><td colspan='8'>Aksiyon yok.</td></tr>"}</tbody></table>`;
+}
+function renderReports(){
+ const rows=kits.map(k=>{const ready=placementComplete(k)&&(k.items||[]).length&&controlState(k).cls!=="b-red"&&!criticalItems(k).filter(x=>!x.problem.includes("90")).length&&!openActions(k).length;return`<tr><td>${esc(k.kitName)}</td><td>${purposeBadge(k.purpose)}</td><td>${riskBadge(k.risk)}</td><td>${placementComplete(k)?badge("Tam","b-green"):badge("Eksik","b-red")}</td><td>${(k.items||[]).length?badge("Var","b-green"):badge("Yok","b-red")}</td><td>${badge(controlState(k).label,controlState(k).cls)}</td><td>${openActions(k).length?badge(openActions(k).length+" açık","b-amber"):badge("Kapalı","b-green")}</td><td>${ready?badge("Denetime hazır","b-green"):badge("Takip gerekli","b-red")}</td></tr>`}).join("");
+ $("auditTable").innerHTML=`<table><thead><tr><th>Kit</th><th>Amaç</th><th>Risk</th><th>Yerleşim</th><th>İçerik</th><th>Kontrol</th><th>Aksiyon</th><th>Karar</th></tr></thead><tbody>${rows||"<tr><td colspan='8'>Kayıt yok.</td></tr>"}</tbody></table>`;
+ $("reportAlerts").innerHTML=renderAlertsHTML(allAlerts());
+}
+function renderAlertsHTML(alerts){
+ return alerts.length?alerts.map(a=>`<div class="alert ${a[0]}">${esc(a[1])}</div>`).join(""):`<div class="alert green">Kritik uyarı yok.</div>`;
+}
+function render(){
+ $("printDate").textContent="Rapor tarihi: "+new Date().toLocaleString("tr-TR");
+ renderMetrics(); renderKitTable(); renderNeedList(); renderPlacementList(); renderContentList(); renderCheckList(); renderUsageList(); renderActionList(); renderReports();
+ $("dashboardAlerts").innerHTML=renderAlertsHTML(allAlerts().slice(0,8));
+ refreshAllSelects();
+}
+function exportJSON(){download(new Blob([JSON.stringify(kits,null,2)],{type:"application/json"}),"dokulme-sacilma-kit-yonetimi.json")}
+function exportCSV(){
+ const rows=[["Kit","Amaç","Risk","Durum","Birim","Lokasyon","Sorumlu","Son Kontrol","Sonraki Kontrol","Kontrol Durumu","İçerik Uyarısı","Açık Aksiyon"]];
+ kits.forEach(k=>rows.push([k.kitName,purposeMap[k.purpose]||k.purpose,k.risk,k.status,(k.placement||{}).unit,(k.placement||{}).location,(k.placement||{}).owner,(k.checks||{}).lastCheck,controlState(k).next,controlState(k).label,criticalItems(k).map(x=>x.item.name+"-"+x.problem).join(" | "),openActions(k).map(a=>a.text||a.type).join(" | ")]));
+ const csv=rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(";")).join("\n");
+ download(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"}),"dokulme-sacilma-kit-raporu.csv");
+}
+function download(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href)}
+function importJSON(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d))throw Error("Dosya liste formatında değil.");kits=d;save();render();alert("Veri içe aktarıldı.")}catch(err){alert("İçe aktarma başarısız: "+err.message)}};r.readAsText(f)}
+function clearAll(){if(confirm("Tüm veriler silinecek. Emin misiniz?")){kits=[];save();render()}}
+function seedExample(){
+ const d=today();
+ kits=[
+ {id:uid(),purpose:"formalin",risk:"Kritik",status:"Aktif",kitName:"Formaldehit / Formalin Dökülme Kiti",needReason:"Patoloji makroskopi alanında formalin dökülmesine müdahale.",worstCase:"Yoğun buhar maruziyeti, alanın kapatılması, çalışan etkilenmesi.",placement:{unit:"Patoloji Laboratuvarı",area:"Makroskopi",location:"Formalin çalışma bankosu karşı duvar",owner:"Patoloji Sorumlusu",backupOwner:"Nöbetçi tekniker",visible:true,sign:true,instruction:true,training:true,note:""},unit:"Patoloji Laboratuvarı",items:[{name:"Formalin absorban/nötralizan",type:"Nötralizan",qty:1,min:1,exp:addDays(d,45),note:""},{name:"Yüz siperi/gözlük",type:"KKD",qty:1,min:1,exp:"",note:""},{name:"Sızdırmaz atık kabı",type:"Atık",qty:1,min:1,exp:"",note:""}],checks:{lastCheck:addDays(d,-40),period:30,result:"Şartlı Uygun",checkedBy:"Birim sorumlusu",note:"Kontrol gecikmiş",content:true,expiry:true,qty:true,package:true},actions:[{id:uid(),type:"Periyodik kontrol",text:"Formalin kit kontrolü yenilenecek.",owner:"Patoloji Sorumlusu",due:addDays(d,2),status:"Açık",evidence:""}],incidents:[]},
+ {id:uid(),purpose:"sitotoksik",risk:"Kritik",status:"Eksik",kitName:"Sitotoksik / Kemoterapi Dökülme Kiti",needReason:"Kemoterapi hazırlama alanında sitotoksik dökülmeye müdahale.",worstCase:"Sitotoksik maruziyet, kontaminasyon, atık yönetimi uygunsuzluğu.",placement:{unit:"Onkoloji Eczane",area:"Kemoterapi hazırlama",location:"Biyogüvenlik kabini çıkışı",owner:"Eczane Sorumlusu",backupOwner:"Onkoloji Hemşiresi",visible:true,sign:true,instruction:false,training:true,note:"Talimat eksik."},unit:"Onkoloji Eczane",items:[{name:"Sitotoksik absorban ped",type:"Absorban",qty:1,min:3,exp:addDays(d,180),note:"Eksik"},{name:"Sitotoksik atık torbası",type:"Atık",qty:2,min:2,exp:"",note:""}],checks:{lastCheck:addDays(d,-8),period:30,result:"Uygun Değil",checkedBy:"Eczane",note:"Absorban minimum altında.",content:false,expiry:true,qty:false,package:true},actions:[{id:uid(),type:"Eksik malzeme tamamlama",text:"Sitotoksik absorban ped tamamlanacak.",owner:"Satın Alma / Eczane",due:addDays(d,-2),status:"Açık",evidence:""}],incidents:[]},
+ {id:uid(),purpose:"biyolojik",risk:"Yüksek",status:"Aktif",kitName:"Biyolojik Dökülme Kiti",needReason:"Acil serviste kan/vücut sıvısı dökülmesine müdahale.",worstCase:"Biyolojik kontaminasyon, temas riski, alan kapanması.",placement:{unit:"Acil Servis",area:"Müdahale Alanı",location:"Kirli alan çıkışı",owner:"Acil Servis Sorumlusu",backupOwner:"Vardiya Sorumlusu",visible:true,sign:true,instruction:true,training:true,note:""},unit:"Acil Servis",items:[{name:"Biyolojik absorban",type:"Absorban",qty:5,min:2,exp:"",note:""},{name:"Dezenfektan tablet",type:"Dezenfektan",qty:1,min:1,exp:addDays(d,25),note:"SKT yaklaşmış"},{name:"Tıbbi atık poşeti",type:"Atık",qty:3,min:1,exp:"",note:""}],checks:{lastCheck:addDays(d,-5),period:30,result:"Uygun",checkedBy:"Acil sorumlusu",note:"",content:true,expiry:true,qty:true,package:true},actions:[],incidents:[]}
+ ];
+ save(); render(); alert("Örnek veri yüklendi.");
+}
+initSelects(); applyPurposeDefaults(); render();
+</script>
+</body>
+</html>

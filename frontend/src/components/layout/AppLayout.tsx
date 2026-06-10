@@ -5,7 +5,7 @@ import {
   Shield, LayoutDashboard, Building2, Users, Briefcase, UserCheck,
   ClipboardList, FileText, Settings, Bell, ChevronDown, LogOut,
   User, BarChart3, ChevronRight, LayoutGrid, Database, Users2, Mail,
-  BellRing, Layers, ShieldAlert, AlertTriangle
+  BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { NotificationBell } from './NotificationBell';
+import { FacilitySwitcher } from './FacilitySwitcher';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -85,6 +86,23 @@ const riskNavItems = [
   { label: 'Modül Ayarları', icon: Settings, to: '/risks/settings' },
 ];
 
+const hazmatNavItems = [
+  { label: 'GENEL', type: 'group' },
+  { label: 'Dashboard', icon: LayoutDashboard, to: '/hazmat/dashboard' },
+  { label: 'TEHLİKELİ MADDE YÖNETİMİ', type: 'group' },
+  { label: 'Tehlikeli Maddeler', icon: AlertTriangle, to: '/hazmat/materials' },
+  { label: 'Envanter', icon: ClipboardList, to: '/hazmat/inventory' },
+  { label: 'Departmanlar', icon: LayoutGrid, to: '/hazmat/departments' },
+  { label: 'EKİPMAN YÖNETİMİ', type: 'group' },
+  { label: 'Göz Yıkama / Boy Duşu', icon: Droplets, to: '/hazmat/eye-wash' },
+  { label: 'Dökülme Saçılma Kiti', icon: LifeBuoy, to: '/hazmat/spill-kits' },
+  { label: 'AYARLAR', type: 'group' },
+  { label: 'Kategoriler', icon: FolderTree, to: '/hazmat/settings/categories' },
+  { label: 'Miktar Cinsi', icon: Database, to: '/hazmat/settings/units' },
+  { label: 'Bölüm - Departman', icon: Settings, to: '/hazmat/settings/departments' },
+  { label: 'Kit Malzemeleri', icon: PackageOpen, to: '/hazmat/settings/kit-items' },
+];
+
 const profileNavItems = (hasAdminAccess: boolean) => [
   { label: 'UYGULAMALAR', type: 'group' },
   ...(hasAdminAccess ? [{ label: 'İSG Atama Paneli', icon: LayoutDashboard, to: '/panel' }] : []),
@@ -114,6 +132,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   } else if (path.startsWith('/risks')) {
     navItems = riskNavItems;
     moduleName = 'Risk Yaşam Döngüsü';
+  } else if (path.startsWith('/hazmat')) {
+    navItems = hazmatNavItems;
+    moduleName = 'Tehlikeli Madde Yönetimi';
   } else if (path.startsWith('/settings')) {
     navItems = settingsNavItems;
     moduleName = 'Sistem Ayarları';
@@ -145,6 +166,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
             {moduleName}
           </span>
         </div>
+
+        {/* Facility Switcher (Show for modules that need it) */}
+        {(path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations')) && (
+          <FacilitySwitcher />
+        )}
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">

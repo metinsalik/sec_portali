@@ -23,6 +23,16 @@ async function checkFacilityAccess(req: Request, facilityId: string): Promise<bo
   return !!access;
 }
 
+// Helper to generate a 3-letter code from a department name
+function generateDeptCode(name: string): string {
+  const charMap: Record<string, string> = {
+    'ı': 'i', 'i': 'i', 'ş': 's', 'ğ': 'g', 'ü': 'u', 'ö': 'o', 'ç': 'c',
+    'I': 'I', 'İ': 'I', 'Ş': 'S', 'Ğ': 'G', 'Ü': 'U', 'Ö': 'O', 'Ç': 'C'
+  };
+  const str = name.replace(/[ıişğüöçIİŞĞÜÖÇ]/g, (m) => charMap[m]);
+  return str.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase() || 'GEN';
+}
+
 // Default initializer helper
 async function initializeFacilityRiskSettings(facilityId: string) {
   const deptCount = await prisma.riskDepartmentSetting.count({ where: { facilityId } });
@@ -39,7 +49,7 @@ async function initializeFacilityRiskSettings(facilityId: string) {
     await prisma.riskDepartment.upsert({
       where: { facilityId_name: { facilityId, name } },
       update: {},
-      create: { facilityId, name }
+      create: { facilityId, name, code: generateDeptCode(name) }
     });
   }
 

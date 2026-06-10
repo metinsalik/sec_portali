@@ -14,6 +14,7 @@ import ProfilePage from './pages/ProfilePage';
 import NotificationPage from './pages/notifications/NotificationPage';
 
 // Settings
+import HazmatKitItemsPage from './pages/settings/HazmatKitItemsPage';
 import SettingsLayout from './pages/settings/SettingsLayout';
 import FacilitiesPage from './pages/settings/FacilitiesPage';
 import UsersPage from './pages/settings/UsersPage';
@@ -60,10 +61,25 @@ import WorkflowSettings from './pages/workflow/WorkflowSettings';
 // Risk Yaşam Döngüsü
 import RiskDashboard from './pages/risks/RiskDashboard';
 import RiskFacilityPage from './pages/risks/RiskFacilityPage';
+import FacilityDepartmentsPage from './pages/risks/FacilityDepartmentsPage';
+import FacilityCategoriesPage from './pages/risks/FacilityCategoriesPage';
+import RiskCategoryPage from './pages/risks/RiskCategoryPage';
 import RiskDepartmentPage from './pages/risks/RiskDepartmentPage';
 import RiskFormPage from './pages/risks/RiskFormPage';
 import RiskViewPage from './pages/risks/RiskViewPage';
 import RiskSettings from './pages/risks/RiskSettings';
+
+// HazMat
+import HazmatDashboardPage from './pages/hazmat/HazmatDashboardPage';
+import MaterialsListPage from './pages/hazmat/MaterialsListPage';
+import MaterialFormPage from './pages/hazmat/MaterialFormPage';
+import MaterialViewPage from './pages/hazmat/MaterialViewPage';
+import HazmatSettingsPage from './pages/hazmat/HazmatSettingsPage';
+import FacilityInventoryListPage from './pages/hazmat/FacilityInventoryListPage';
+import FacilityInventoryFormPage from './pages/hazmat/FacilityInventoryFormPage';
+import HazmatDepartmentsPage from './pages/hazmat/HazmatDepartmentsPage';
+import HazmatDepartmentViewPage from './pages/hazmat/HazmatDepartmentViewPage';
+import SpillKitsPage from './pages/hazmat/SpillKitsPage';
 
 // Placeholder for future modules
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -328,6 +344,30 @@ function App() {
                   }
                 />
                 <Route
+                  path="/risks/facility/:facilityId/departments"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><FacilityDepartmentsPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/risks/facility/:facilityId/categories"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><FacilityCategoriesPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/risks/facility/:facilityId/category-details"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><RiskCategoryPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/risks/department/:departmentId"
                   element={
                     <ProtectedRoute>
@@ -410,6 +450,148 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <AppLayout><WorkflowSettings /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* ── HAZMAT (TEHLİKELİ MADDE YÖNETİMİ) ────────────── */}
+                <Route
+                  path="/hazmat"
+                  element={<Navigate to="/hazmat/dashboard" replace />}
+                />
+                <Route
+                  path="/hazmat/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><HazmatDashboardPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/materials"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><MaterialsListPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/materials/new"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><MaterialFormPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/materials/edit/:id"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><MaterialFormPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/materials/view/:id"
+                  element={
+                    <ProtectedRoute>
+                      <MaterialViewPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/inventory"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><FacilityInventoryListPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/inventory/new"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><FacilityInventoryFormPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/departments"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><HazmatDepartmentsPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/departments/:id"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><HazmatDepartmentViewPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/eye-wash"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><PlaceholderPage title="Göz Solüsyonu İhtiyaç Analizi" /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/spill-kits"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><SpillKitsPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/settings/units"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><HazmatSettingsPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/settings/departments"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><HazmatSettingsPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/settings/labels"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><HazmatSettingsPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/settings/ppe"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><HazmatSettingsPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/settings/categories"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><HazmatSettingsPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/settings/kit-items"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><HazmatKitItemsPage /></AppLayout>
                     </ProtectedRoute>
                   }
                 />

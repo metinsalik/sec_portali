@@ -8,88 +8,67 @@ const API = import.meta.env.VITE_API_URL || '';
 
 interface Props {
   facilityId: string;
+  departmentName?: string;
   onClose: () => void;
   onSuccess: () => void;
 }
 
 // Excel sütun eşleme (esnek — Türkçe başlıkları destekler)
 const COL_MAP: Record<string, string> = {
-  'no': 'riskNo', 'sıra no': 'riskNo', 'risk no': 'riskNo',
-  'kategori': 'riskCategory', 'risk kategorisi': 'riskCategory',
-  'alt kategori': 'subCategory',
+  // 1. Bölüm Genel Bilgiler
+  'tespit tarihi': 'detectionDate',
+  'risk kategorisi': 'riskCategory',
+  'alt risk kategorisi': 'subCategory',
   'bölüm': 'department', 'departman': 'department',
   'alan': 'area',
   'faaliyet': 'activity',
-  'tehlike': 'hazard', 'tehlike kaynağı': 'hazard',
-  'risk': 'riskDescription', 'risk açıklaması': 'riskDescription',
-  
-  // Mevcut durum
-  'mevcut durum': 'initialCondition',
+
+  // 2. Bölüm : Mevcut Durum Değerlendirmesi:
+  'tehlike': 'hazard',
+  'risk': 'riskDescription',
+  'sonuç/ olası etki zarar': 'impactDamage',
+  'riskten etkilenecek kişiler': 'affectedPeople',
   'mevcut durum açıklaması (tespit edilen riske ilişkin mevcut önlemler)': 'initialCondition',
-  'mevcut durum görseli (varsa tespit edilen riske ilişkin görsel)': 'initialImage',
-  
-  'olasılık': 'initialProb', 'p': 'initialProb',
-  'frekans': 'initialFreq', 'f': 'initialFreq', 'frekans (f)': 'initialFreq',
-  'şiddet': 'initialSev', 's': 'initialSev',
-  'risk skoru': 'initialScore', 'skor': 'initialScore', 'r=p*f*s': 'initialScore',
-  
-  // Birleşik başlıklar (Kinney & Matris şablonları için)
-  'mevcut risk skoru olasılık': 'initialProb',
-  'mevcut risk skoru frekans': 'initialFreq',
-  'mevcut risk skoru şiddet': 'initialSev',
-  'mevcut risk skoru risk puanı': 'initialScore',
-  
-  'iyileştirme planı alınacak önlemler / iyileştirici faaliyet': 'firstActionPlan',
-  'iyileştirme planı iyileştirme sorumlusu': 'improvementResponsible',
-  'iyileştirme planı termin': 'dueDate',
-  
+  'mevcut durum açıklaması': 'initialCondition',
+  'mevcut durum görseli': 'initialImage',
+  'olasılık': 'initialProb',
+  'frekans': 'initialFreq',
+  'şiddet': 'initialSev',
+  'risk puanı': 'initialScore',
+  'risk seviyesi': 'initialLevel',
+  'ilgili mevzuat': 'legislation',
+
+  // 3. Bölüm İyileştirme Planı / Uygulama
+  'alınacak önlemler / iyileştirici faaliyet': 'firstActionPlan',
+  'iyileştirme sorumlusu': 'improvementResponsible',
+  'termin tarihi': 'dueDate',
+  'termin': 'dueDate',
   'iyileştirme açıklaması (tespit edilen riske ilişkin yapılan iyileştirmeler)': 'actionsTaken',
+  'iyileştirme açıklaması': 'actionsTaken',
   'iyileştirme tamamlanma tarihi': 'actionDate',
   'iyileştirme sonrası görseli (yapılan iyileştirme sonrasını gösteren görsel)': 'actionImage',
-  
+  'iyileştirme sonrası görseli': 'actionImage',
   'iyileştirme sonrası risk skoru olasılık': 'finalProb',
   'iyileştirme sonrası risk skoru frekans': 'finalFreq',
   'iyileştirme sonrası risk skoru şiddet': 'finalSev',
   'iyileştirme sonrası risk skoru risk puanı': 'finalScore',
-  
-  'iyileştirme etkinlik ölçümü etkinlik ölçüm yöntemi': 'effectivenessMethod',
-  'iyileştirme etkinlik ölçümü iyileştirme kontrol sorumlusu': 'controlResponsible',
-  'iyileştirme etkinlik ölçümü sonuç': 'controlResult',
+  'iyileştirme sonrası risk skoru risk seviyesi': 'finalLevel',
 
-  // Fallbackler
-  'müdahale planı': 'firstActionPlan', 'aksiyon planı': 'firstActionPlan',
-  'alınacak önlemler / iyileştirici faaliyet': 'firstActionPlan',
-  'yapılan işlemler': 'actionsTaken', 'alınan önlemler': 'actionsTaken',
-  'sorumlu': 'actionBy', 'sorumlu birim': 'actionBy',
-  'tarih': 'actionDate', 'uygulama tarihi': 'actionDate',
-  'takip': 'followUpMeasure', 'etkinlik ölçümü': 'followUpMeasure',
-  'ek iyileştirme': 'extraImprovement',
-  'son olasılık': 'finalProb', 'son şiddet': 'finalSev',
-  'son skor': 'finalScore', 'son risk skoru': 'finalScore',
-
-  // Yeni Alanlar
-  'tespit tarihi': 'detectionDate',
-  'sonuç / olası etki zarar': 'impactDamage', 'sonuç/ olası etki zarar': 'impactDamage',
-  'riskten etkilenecek kişiler': 'affectedPeople', 'etkilenecek kişiler': 'affectedPeople',
-  'iyileştirme sorumlusu': 'improvementResponsible',
-  'termin': 'dueDate', 'termin tarihi': 'dueDate',
-  'iyileştirme sonrası sorumlu': 'postImprovementResponsible', 'iyileştirme sonrası iyileştirme sorumlusu': 'postImprovementResponsible',
-  'iyileştirme sonrası termin': 'postImprovementDueDate', 'iyileştirme sonrası termin tarihi': 'postImprovementDueDate',
-  'etkinlik ölçüm yöntemi': 'effectivenessMethod', 'ölçüm yöntemi': 'effectivenessMethod',
-  'kontrol sorumlusu': 'controlResponsible', 'iyileştirme kontrol sorumlusu': 'controlResponsible',
-  'etkinlik ölçümü sonuç': 'controlResult',
-  'ilgili mevzuat': 'legislation', 'mevzuat': 'legislation',
-  'açıklama / ilgili mevzuat-doküman': 'legislation',
-  
-  // Çakışma önleyici
+  // 4. Bölüm İyileştirme Etkinlik Ölçümü
+  'etkinlik ölçüm yöntemi': 'effectivenessMethod',
+  'iyileştirme kontrol sorumlusu': 'controlResponsible',
+  'kontrol sorumlusu': 'controlResponsible',
   'sonuç': 'controlResult',
+
+  // Fallbacks and exact match handles
+  'no': 'riskNo', 'sıra no': 'riskNo', 'risk no': 'riskNo',
 };
 
 function normalizeHeader(h: string): string {
   return h.toLowerCase().trim().replace(/\s+/g, ' ');
 }
 
-export default function RiskExcelImport({ facilityId, onClose, onSuccess }: Props) {
+export default function RiskExcelImport({ facilityId, departmentName, onClose, onSuccess }: Props) {
   const token = localStorage.getItem('token');
   const fileRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<any[]>([]);
@@ -200,15 +179,22 @@ export default function RiskExcelImport({ facilityId, onClose, onSuccess }: Prop
       const dataStartIdx = hasSubHeaders ? headerRowIdx + 2 : headerRowIdx + 1;
       const mapped = raw.slice(dataStartIdx).filter(r => r.some(Boolean)).map(row => {
         const obj: any = {};
+        const sortedKeys = Object.keys(COL_MAP).sort((a, b) => b.length - a.length);
+
         headers.forEach((h, i) => {
-          const field = COL_MAP[h];
-          if (field) {
+          const matchedKey = sortedKeys.find(k => h.includes(k));
+          if (matchedKey) {
+            const field = COL_MAP[matchedKey];
             obj[field] = row[i] ?? '';
           }
         });
         
-        // Apply default department if empty or not mapped
-        obj.department = obj.department || extractedDept || 'Genel';
+        // Always prioritize the active department where the user is importing from.
+        const finalDept = departmentName || obj.department || extractedDept || 'Genel';
+        obj.department = finalDept;
+        
+        // As requested: Alan: Departmanla aynı olarak gelsin
+        obj.area = obj.area || finalDept;
         
         return obj;
       }).filter(r => r.department || r.hazard || r.riskDescription || r.riskCategory);
@@ -227,7 +213,7 @@ export default function RiskExcelImport({ facilityId, onClose, onSuccess }: Prop
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const wb = XLSX.read(e.target?.result, { type: 'array' });
+        const wb = XLSX.read(e.target?.result, { type: 'array', cellDates: true });
         setWorkbook(wb);
         setSheets(wb.SheetNames);
         

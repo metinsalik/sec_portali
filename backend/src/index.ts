@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 // Routes
 import authRoutes from './routes/auth';
 import settingsRoutes from './routes/settings';
+import hazmatKitItemsRoutes from './routes/settings/hazmat-kit-items';
 import panelRoutes from './routes/panel';
 import operationsRoutes from './routes/operations';
 import notificationRoutes from './routes/notifications';
@@ -13,6 +14,7 @@ import notebookRoutes from './routes/notebooks';
 import incidentRoutes from './routes/incidents';
 import workflowRoutes from './routes/workflow';
 import riskRoutes from './routes/risks';
+import hazmatRoutes from './routes/hazmat';
 
 // Middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
@@ -22,7 +24,8 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3005;
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors({
   origin: process.env.FRONTEND_URL || '*',
   credentials: true,
@@ -37,6 +40,7 @@ app.use('/uploads', express.static('uploads'));
 // Route Entegrasyonu
 app.use('/api/auth', authRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/settings/hazmat-kit-items', hazmatKitItemsRoutes);
 app.use('/api/panel', panelRoutes);
 app.use('/api/operations', operationsRoutes);
 app.use('/api/notifications', notificationRoutes);
@@ -44,6 +48,7 @@ app.use('/api/notebooks', notebookRoutes);
 app.use('/api/incidents', incidentRoutes);
 app.use('/api/workflow', workflowRoutes);
 app.use('/api/risks', riskRoutes);
+app.use('/api/hazmat', hazmatRoutes);
 
 // Sağlık kontrolü
 app.get('/health', (req, res) => {

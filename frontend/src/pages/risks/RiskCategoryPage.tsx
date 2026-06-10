@@ -1,9 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useState, useMemo } from 'react';
 import {
-  ArrowLeft, Plus, Upload, Pencil, X, Check, AlertTriangle,
-  Eye, ArrowUpDown, Trash2
+  ArrowLeft, Plus, Upload, Pencil, Eye, ArrowUpDown, Trash2, AlertTriangle, Building2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,9 +37,6 @@ const LEVEL_COLORS: Record<string, string> = {
   'Bilinmiyor':              '#9ca3af'  // Gri
 };
 
-// Colors for Pie Chart (Status)
-const PIE_COLORS = ['#dc2626', '#ea580c', '#2563eb', '#16a34a'];
-
 function StatusBadge({ status }: { status: string }) {
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG['ACIK_TEHLIKE'];
   return (
@@ -58,45 +54,75 @@ function LevelBadge({ level }: { level: string }) {
   );
 }
 
-export default function RiskDepartmentPage() {
-  const { departmentId } = useParams<{ departmentId: string }>();
+export default function RiskCategoryPage() {
+  const { facilityId } = useParams<{ facilityId: string }>();
+  const [searchParams] = useSearchParams();
+  const mainCat = searchParams.get('mainCat') || '';
+  const subCat = searchParams.get('subCat') || '';
+  
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const token = localStorage.getItem('token');
 
-  const [showImport, setShowImport] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('');
-  const [filterCategory, setFilterCategory] = useState<string>('');
+  const [filterDepartment, setFilterDepartment] = useState<string>('');
   const [filterResponsible, setFilterResponsible] = useState<string>('');
 
-  // Sorting State
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'initialScore', direction: 'desc' });
 
-  const { data: department } = useQuery({
-    queryKey: ['risk-department-details', departmentId],
+  // Tesis Bilgisi
+  const { data: facilities = [] } = useQuery({
+    queryKey: ['risk-facilities'],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/risks/departments/${departmentId}`, {
+      const res = await fetch(`${API}/api/risks/facilities`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (!res.ok) throw new Error('Departman detayları alınamadı');
+      return res.json();
+    }
+  });
+  const facility = facilities.find((f: any) => f.id === facilityId);
+
+  // Departmanlar (Haritalama için)
+  const { data: departments = [] } = useQuery({
+    queryKey: ['risk-departments', facilityId],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/risks/departments?facilityId=${facilityId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       return res.json();
     },
-    enabled: !!departmentId
+    enabled: !!facilityId
   });
 
-  const { data: risks = [], isLoading } = useQuery({
-    queryKey: ['risks', departmentId],
+  const departmentMap = useMemo(() => {
+    const map: Record<string, { name: string, code: string }> = {};
+    departments.forEach((d: any) => {
+      map[d.id] = { name: d.name, code: d.code };
+    });
+    return map;
+  }, [departments]);
+
+  // Riskler
+  const { data: allRisks = [], isLoading } = useQuery({
+    queryKey: ['facility-risks', facilityId],
     queryFn: async () => {
-      const params = new URLSearchParams({ departmentId: departmentId! });
-      if (filterStatus) params.set('status', filterStatus);
-      const res = await fetch(`${API}/api/risks/lifecycle?${params}`, {
+      const res = await fetch(`${API}/api/risks/lifecycle?facilityId=${facilityId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error('Riskler alınamadı');
       return res.json();
     },
-    enabled: !!departmentId,
+    enabled: !!facilityId,
   });
+
+  // Kategoriye Göre Filtrele
+  const categoryRisks = useMemo(() => {
+    return allRisks.filter((r: any) => {
+      if (mainCat && r.riskCategory !== mainCat) return false;
+      if (subCat && r.subCategory !== subCat) return false;
+      return true;
+    });
+  }, [allRisks, mainCat, subCat]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -108,7 +134,7 @@ export default function RiskDepartmentPage() {
     },
     onSuccess: () => {
       toast.success('Risk silindi');
-      queryClient.invalidateQueries({ queryKey: ['risks', departmentId] });
+      queryClient.invalidateQueries({ queryKey: ['facility-risks', facilityId] });
     },
     onError: () => toast.error('Silme işlemi başarısız'),
   });
@@ -127,17 +153,20 @@ export default function RiskDepartmentPage() {
     setSortConfig({ key, direction });
   };
 
-  // Unique categories & responsibles for filtering
-  const uniqueCategories = useMemo(() => Array.from(new Set(risks.map((r: any) => r.riskCategory).filter(Boolean))) as string[], [risks]);
-  const uniqueResponsibles = useMemo(() => Array.from(new Set(risks.map((r: any) => r.improvementResponsible).filter(Boolean))) as string[], [risks]);
+  const uniqueDepartments = useMemo(() => {
+    const ids = Array.from(new Set(categoryRisks.map((r: any) => r.departmentId).filter(Boolean))) as string[];
+    return ids.map(id => ({ id, name: departmentMap[id]?.name || 'Bilinmeyen Departman' }));
+  }, [categoryRisks, departmentMap]);
+
+  const uniqueResponsibles = useMemo(() => Array.from(new Set(categoryRisks.map((r: any) => r.improvementResponsible).filter(Boolean))) as string[], [categoryRisks]);
 
   const sortedRisks = useMemo(() => {
-    let sortableRisks = [...risks];
+    let sortableRisks = [...categoryRisks];
     if (filterStatus) {
       sortableRisks = sortableRisks.filter(r => r.status === filterStatus);
     }
-    if (filterCategory) {
-      sortableRisks = sortableRisks.filter(r => r.riskCategory === filterCategory);
+    if (filterDepartment) {
+      sortableRisks = sortableRisks.filter(r => r.departmentId === filterDepartment);
     }
     if (filterResponsible) {
       sortableRisks = sortableRisks.filter(r => r.improvementResponsible === filterResponsible);
@@ -166,18 +195,7 @@ export default function RiskDepartmentPage() {
       });
     }
     return sortableRisks;
-  }, [risks, sortConfig, filterStatus, filterCategory, filterResponsible]);
-
-  // Dashboard Metrics Computations (Dinamik)
-  const statusCounts = useMemo(() => {
-    const counts = { ACIK_TEHLIKE: 0, ILK_MUDAHALE_EDILDI: 0, TAKIP_SURECINDE: 0, KAPATILDI_GUVENLI: 0 };
-    sortedRisks.forEach((r: any) => {
-      if (counts[r.status as keyof typeof counts] !== undefined) {
-        counts[r.status as keyof typeof counts]++;
-      }
-    });
-    return Object.entries(counts).map(([k, v]) => ({ name: STATUS_CONFIG[k].label, value: v, status: k }));
-  }, [sortedRisks]);
+  }, [categoryRisks, sortConfig, filterStatus, filterDepartment, filterResponsible]);
 
   const levelCounts = useMemo(() => {
     const levels = sortedRisks.reduce((acc: any, r: any) => {
@@ -192,47 +210,36 @@ export default function RiskDepartmentPage() {
     }));
   }, [sortedRisks]);
 
-  const deptName = department?.name || 'Departman';
-  const deptCode = department?.code || 'GEN';
-  const facilityId = department?.facilityId;
-
-  // Dinamik Filtre Metni
   const activeFiltersText = [
     filterStatus && `Durum: ${STATUS_CONFIG[filterStatus]?.label}`,
-    filterCategory && `Kategori: ${filterCategory}`,
+    filterDepartment && `Departman: ${departmentMap[filterDepartment]?.name}`,
     filterResponsible && `Sorumlu: ${filterResponsible}`
   ].filter(Boolean).join(', ');
 
   const chartTitleSuffix = activeFiltersText ? ` - ${activeFiltersText}` : '';
+
+  const pageTitle = subCat ? `${mainCat} - ${subCat}` : mainCat;
 
   return (
     <div className="space-y-6">
       {/* Başlık ve Aksiyonlar */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate(facilityId ? `/risks/facility/${facilityId}` : '/risks')} className="h-8 px-2">
-            <ArrowLeft className="w-4 h-4 mr-1" /> Departmanlar
+          <Button variant="ghost" size="sm" onClick={() => navigate(`/risks/facility/${facilityId}/categories`)} className="h-8 px-2">
+            <ArrowLeft className="w-4 h-4 mr-1" /> Kategoriler
           </Button>
           <div className="h-5 w-px bg-border" />
           <div>
             <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              {deptName}
+              {pageTitle}
             </h1>
-            <p className="text-xs text-muted-foreground font-mono mt-0.5">Departman Kodu: {deptCode}</p>
+            <p className="text-xs text-muted-foreground font-mono mt-0.5">{facility?.name || 'Tesis'} Kapsamında</p>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => setShowImport(true)} className="shadow-sm">
-            <Upload className="w-4 h-4 mr-1.5" /> Excel İçe Aktar
-          </Button>
-          <Button size="sm" onClick={() => navigate(`/risks/department/${departmentId}/create`)} className="shadow-md">
-            <Plus className="w-4 h-4 mr-1.5" /> Yeni Risk Ekle
-          </Button>
         </div>
       </div>
 
-      {/* YENİ STITCH DASHBOARD KISMI */}
-      {!isLoading && risks.length > 0 && (() => {
+      {/* DASHBOARD KISMI */}
+      {!isLoading && categoryRisks.length > 0 && (() => {
         const total = sortedRisks.length;
         const acikCount = sortedRisks.filter(r => r.status === 'ACIK_TEHLIKE').length;
         const kapaliCount = total - acikCount;
@@ -251,8 +258,8 @@ export default function RiskDepartmentPage() {
           <>
           <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             <div className="lg:col-span-1 bg-card dark:bg-slate-900 p-6 rounded-xl border border-border dark:border-slate-800 form-shadow flex flex-col">
-              <h4 className="text-sm font-bold text-foreground dark:text-slate-100 mb-6 truncate" title={`Departman Durum Dağılımı${chartTitleSuffix}`}>
-                Departman Durum Dağılımı{chartTitleSuffix && <span className="font-normal text-xs ml-1 opacity-70">({chartTitleSuffix})</span>}
+              <h4 className="text-sm font-bold text-foreground dark:text-slate-100 mb-6 truncate">
+                Kategori Durum Dağılımı{chartTitleSuffix && <span className="font-normal text-xs ml-1 opacity-70">({chartTitleSuffix})</span>}
               </h4>
               <div className="flex-1 flex flex-col items-center justify-center relative">
                 <div 
@@ -278,11 +285,10 @@ export default function RiskDepartmentPage() {
             </div>
 
             <div className="lg:col-span-2 bg-card dark:bg-slate-900 p-6 rounded-xl border border-border dark:border-slate-800 form-shadow">
-              <h4 className="text-sm font-bold text-foreground dark:text-slate-100 mb-6 truncate" title={`Departman Risk Seviyesi Dağılımı${chartTitleSuffix}`}>
-                Departman Risk Seviyesi Dağılımı{chartTitleSuffix && <span className="font-normal text-xs ml-1 opacity-70">({chartTitleSuffix})</span>}
+              <h4 className="text-sm font-bold text-foreground dark:text-slate-100 mb-6 truncate">
+                Kategori Risk Seviyesi Dağılımı{chartTitleSuffix && <span className="font-normal text-xs ml-1 opacity-70">({chartTitleSuffix})</span>}
               </h4>
               <div className="space-y-6 pt-4">
-                
                 {[
                   { label: 'Tolere Gösterilemez Risk', count: tolere, barClass: 'risk-bar-unbearable', width: pct(tolere) },
                   { label: 'Yüksek Risk', count: yuksek, barClass: 'risk-bar-high', width: pct(yuksek) },
@@ -303,20 +309,9 @@ export default function RiskDepartmentPage() {
                     </div>
                   </div>
                 ))}
-                
-                <div className="flex flex-wrap justify-center gap-6 pt-6 border-t border-border dark:border-slate-700 mt-4">
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full risk-bar-unbearable"></div><span className="text-[10px] font-medium text-muted-foreground dark:text-slate-400">Tolere G.</span></div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full risk-bar-high"></div><span className="text-[10px] font-medium text-muted-foreground dark:text-slate-400">Yüksek</span></div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full risk-bar-significant"></div><span className="text-[10px] font-medium text-muted-foreground dark:text-slate-400">Önemli</span></div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full risk-bar-probable"></div><span className="text-[10px] font-medium text-muted-foreground dark:text-slate-400">Olası</span></div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full risk-bar-insignificant"></div><span className="text-[10px] font-medium text-muted-foreground dark:text-slate-400">Önemsiz</span></div>
-                </div>
               </div>
             </div>
           </section>
-
-          {/* GELİŞMİŞ DASHBOARD KISMI (Accordion Yapısı) */}
-          <FacilityAdvancedDashboard facilityRisks={sortedRisks} />
           </>
         );
       })()}
@@ -325,10 +320,10 @@ export default function RiskDepartmentPage() {
       <div className="flex flex-col sm:flex-row gap-3 bg-card p-3 rounded-xl border shadow-sm">
         <div className="flex gap-2 flex-wrap items-center">
           <Button size="sm" variant={filterStatus === '' ? 'default' : 'outline'} onClick={() => setFilterStatus('')} className="h-8 text-xs rounded-full">
-            Tümü ({risks.length})
+            Tümü ({categoryRisks.length})
           </Button>
           {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
-            const count = risks.filter((r: any) => r.status === key).length;
+            const count = categoryRisks.filter((r: any) => r.status === key).length;
             return (
               <Button
                 key={key} size="sm" variant={filterStatus === key ? 'default' : 'outline'}
@@ -344,13 +339,13 @@ export default function RiskDepartmentPage() {
         
         <div className="flex gap-2 flex-wrap ml-auto">
           <select 
-            value={filterCategory} 
-            onChange={(e) => setFilterCategory(e.target.value)}
+            value={filterDepartment} 
+            onChange={(e) => setFilterDepartment(e.target.value)}
             className="h-8 text-xs bg-background border border-border rounded-full px-3 focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
-            <option value="">Tüm Kategoriler</option>
-            {uniqueCategories.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
+            <option value="">Tüm Departmanlar</option>
+            {uniqueDepartments.map(dept => (
+              <option key={dept.id} value={dept.id}>{dept.name}</option>
             ))}
           </select>
           
@@ -373,17 +368,12 @@ export default function RiskDepartmentPage() {
           <div className="space-y-3 p-4">
             {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-12 w-full rounded-md" />)}
           </div>
-        ) : risks.length === 0 ? (
+        ) : categoryRisks.length === 0 ? (
           <CardContent className="py-20 text-center">
             <AlertTriangle className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
             <p className="font-medium text-lg text-muted-foreground">
-              {filterStatus ? 'Bu filtrede risk bulunamadı' : 'Henüz risk yok'}
+              {filterStatus ? 'Bu filtrede risk bulunamadı' : 'Bu kategoriye ait risk yok'}
             </p>
-            {!filterStatus && (
-              <p className="text-sm text-muted-foreground/60 mt-2">
-                "Yeni Risk Ekle" butonu ile ilk riskinizi oluşturun.
-              </p>
-            )}
           </CardContent>
         ) : (
           <div className="overflow-x-auto">
@@ -393,8 +383,11 @@ export default function RiskDepartmentPage() {
                   <th className="px-4 py-3 font-medium cursor-pointer hover:bg-muted/80 transition-colors" onClick={() => handleSort('riskNo')}>
                     <div className="flex items-center gap-1">Risk No <ArrowUpDown className="w-3 h-3"/></div>
                   </th>
-                  <th className="px-4 py-3 font-medium cursor-pointer hover:bg-muted/80 transition-colors" onClick={() => handleSort('riskCategory')}>
-                    <div className="flex items-center gap-1">Kategori - Alt Kategori <ArrowUpDown className="w-3 h-3"/></div>
+                  <th className="px-4 py-3 font-medium cursor-pointer hover:bg-muted/80 transition-colors" onClick={() => handleSort('departmentId')}>
+                    <div className="flex items-center gap-1">Departman <ArrowUpDown className="w-3 h-3"/></div>
+                  </th>
+                  <th className="px-4 py-3 font-medium cursor-pointer hover:bg-muted/80 transition-colors" onClick={() => handleSort('subCategory')}>
+                    <div className="flex items-center gap-1">Alt Kategori <ArrowUpDown className="w-3 h-3"/></div>
                   </th>
                   <th className="px-4 py-3 font-medium cursor-pointer hover:bg-muted/80 transition-colors" onClick={() => handleSort('improvementResponsible')}>
                     <div className="flex items-center gap-1">Sorumlu <ArrowUpDown className="w-3 h-3"/></div>
@@ -409,57 +402,53 @@ export default function RiskDepartmentPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {sortedRisks.map((risk) => (
-                  <tr key={risk.id} className="hover:bg-muted/20 transition-colors group">
-                    <td className="px-4 py-3 font-mono font-medium text-muted-foreground">
-                      {deptCode}-{String(risk.riskNo).padStart(3, '0')}
-                    </td>
-                    <td className="px-4 py-3 min-w-[200px]">
-                      <div className="font-medium text-foreground">{risk.riskCategory}</div>
-                      {risk.subCategory && <div className="text-xs text-muted-foreground">{risk.subCategory}</div>}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {risk.improvementResponsible || '-'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <LevelBadge level={risk.finalLevel || risk.initialLevel} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={risk.status} />
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-blue-600" onClick={() => navigate(`/risks/department/${departmentId}/view/${risk.id}`)}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-orange-600" onClick={() => navigate(`/risks/department/${departmentId}/edit/${risk.id}`)}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(risk.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {sortedRisks.map((risk) => {
+                  const dept = departmentMap[risk.departmentId];
+                  const dCode = dept?.code || 'GEN';
+                  return (
+                    <tr key={risk.id} className="hover:bg-muted/20 transition-colors group">
+                      <td className="px-4 py-3 font-mono font-medium text-muted-foreground">
+                        {dCode}-{String(risk.riskNo).padStart(3, '0')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium flex items-center gap-2">
+                          <Building2 className="w-3 h-3 text-muted-foreground" />
+                          {dept?.name || 'Bilinmeyen'}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {risk.subCategory || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {risk.improvementResponsible || '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <LevelBadge level={risk.finalLevel || risk.initialLevel} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={risk.status} />
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-blue-600" onClick={() => navigate(`/risks/department/${risk.departmentId}/view/${risk.id}`)}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-orange-600" onClick={() => navigate(`/risks/department/${risk.departmentId}/edit/${risk.id}`)}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(risk.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </Card>
-
-      {/* Modal: Excel Import */}
-      {showImport && (
-        <RiskExcelImport
-          facilityId={facilityId}
-          departmentName={department?.name}
-          onClose={() => setShowImport(false)}
-          onSuccess={() => {
-            setShowImport(false);
-            queryClient.invalidateQueries({ queryKey: ['risks', departmentId] });
-          }}
-        />
-      )}
     </div>
   );
 }

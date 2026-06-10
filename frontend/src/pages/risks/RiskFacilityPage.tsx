@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Building2, Plus, ChevronRight, AlertTriangle, ShieldCheck, Clock, Activity, ArrowLeft, RefreshCcw } from 'lucide-react';
+import { Building2, Plus, ChevronRight, AlertTriangle, ShieldCheck, Clock, Activity, ArrowLeft, RefreshCcw, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,7 +36,6 @@ export default function RiskFacilityPage() {
   const token = localStorage.getItem('token');
   const [newDeptName, setNewDeptName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterCategory, setFilterCategory] = useState('');
   const [adding, setAdding] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
 
@@ -76,21 +75,25 @@ export default function RiskFacilityPage() {
 
   const facility = facilities.find((f: any) => f.id === facilityId);
 
+  // Departman listesi artık burada search edilmeyecek, tümünü göstereceğiz
   const filteredDepartments = useMemo(() => {
-    return departments.filter((d: any) => d.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [departments, searchQuery]);
-
-  const uniqueCategories = useMemo(() => {
-    return Array.from(new Set(facilityRisks.map((r: any) => r.riskCategory).filter(Boolean))) as string[];
-  }, [facilityRisks]);
+    return departments;
+  }, [departments]);
 
   const filteredFacilityRisks = useMemo(() => {
-    let list = [...facilityRisks];
-    if (filterCategory) {
-      list = list.filter(r => r.riskCategory === filterCategory);
-    }
-    return list;
-  }, [facilityRisks, filterCategory]);
+    return facilityRisks;
+  }, [facilityRisks]);
+
+  const categoryStats = useMemo(() => {
+    const stats: Record<string, { name: string, riskCount: number, acikCount: number }> = {};
+    facilityRisks.forEach((r: any) => {
+      const cat = r.riskCategory || 'Belirtilmemiş';
+      if (!stats[cat]) stats[cat] = { name: cat, riskCount: 0, acikCount: 0 };
+      stats[cat].riskCount++;
+      if (r.status === 'ACIK_TEHLIKE') stats[cat].acikCount++;
+    });
+    return Object.values(stats).sort((a, b) => b.riskCount - a.riskCount);
+  }, [facilityRisks]);
 
   // Dashboard Metrics
   const statusCounts = useMemo(() => {
@@ -141,11 +144,8 @@ export default function RiskFacilityPage() {
   };
 
   // Dinamik Filtre Metni
-  const activeFiltersText = [
-    filterCategory && `Kategori: ${filterCategory}`
-  ].filter(Boolean).join(', ');
-
-  const chartTitleSuffix = activeFiltersText ? ` - ${activeFiltersText}` : '';
+  const activeFiltersText = '';
+  const chartTitleSuffix = '';
 
   return (
     <div className="space-y-6">
@@ -299,28 +299,6 @@ export default function RiskFacilityPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <h4 className="text-2xl text-foreground dark:text-slate-100 font-bold">Departmanlar</h4>
           <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="relative flex-1 md:w-64">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input 
-                type="text"
-                placeholder="Departman ara..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-card dark:bg-slate-900 border border-border dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-secondary/20 focus:outline-none text-sm"
-              />
-            </div>
-            <select 
-              value={filterCategory} 
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="bg-card dark:bg-slate-900 border border-border dark:border-slate-700 rounded-lg px-4 py-2 text-sm font-medium focus:ring-2 focus:ring-secondary/20 outline-none"
-            >
-              <option value="">Tüm Kategoriler</option>
-              {uniqueCategories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
           </div>
         </div>
 
@@ -335,8 +313,8 @@ export default function RiskFacilityPage() {
             <p className="font-medium">Departman bulunamadı</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {filteredDepartments.map((dept: any) => {
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {filteredDepartments.slice(0, 3).map((dept: any) => {
               const acikCount = dept.stats?.acik || 0;
               const hasRisk = dept.riskCount > 0;
               
@@ -372,6 +350,97 @@ export default function RiskFacilityPage() {
                 </div>
               );
             })}
+
+            {/* Her Zaman Gösterilen "Tüm Departmanlar" Butonu */}
+            <div
+              onClick={() => navigate(`/risks/facility/${facilityId}/departments`)}
+              className="bg-card dark:bg-slate-900 p-6 rounded-xl border border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group flex flex-col items-center justify-center text-center h-full min-h-[160px]"
+            >
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3 text-primary group-hover:scale-110 transition-transform">
+                <ArrowRight className="w-6 h-6" />
+              </div>
+              <h5 className="text-lg font-bold text-foreground">
+                {filteredDepartments.length > 3 ? 'Daha Fazla' : 'Tüm Departmanlar'}
+              </h5>
+              <p className="text-sm text-muted-foreground mt-1">
+                {filteredDepartments.length > 3 
+                  ? `+${filteredDepartments.length - 3} departman daha var` 
+                  : 'Tüm departmanları yönet ve listele'}
+              </p>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Kategoriler */}
+      <section className="mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <h4 className="text-2xl text-foreground dark:text-slate-100 font-bold">Kategoriler</h4>
+        </div>
+
+        {risksLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {[1,2,3].map(i => <Skeleton key={i} className="h-40 w-full rounded-xl bg-muted dark:bg-slate-800" />)}
+          </div>
+        ) : categoryStats.length === 0 ? (
+          <div className="col-span-full py-16 text-center text-muted-foreground dark:text-slate-400 bg-muted/30 dark:bg-slate-800/30 rounded-xl border border-dashed border-border dark:border-slate-700">
+            <AlertTriangle className="w-10 h-10 opacity-30 mx-auto mb-3" />
+            <p className="font-medium">Kategori bulunamadı</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {categoryStats.slice(0, 3).map((cat: any, idx: number) => {
+              const hasRisk = cat.riskCount > 0;
+              return (
+                <div
+                  key={idx}
+                  onClick={() => navigate(`/risks/facility/${facilityId}/categories?category=${encodeURIComponent(cat.name)}`)}
+                  className="bg-card dark:bg-slate-900 p-6 rounded-xl border border-border dark:border-slate-800 form-shadow hover:border-secondary transition-colors cursor-pointer group flex flex-col h-full"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <h5 className="text-lg font-bold text-foreground dark:text-slate-100 truncate pr-2">{cat.name}</h5>
+                    <span className={`text-xs px-2 py-1 rounded shrink-0 ${hasRisk ? 'bg-error-container text-on-error-container' : 'bg-muted dark:bg-slate-800/50 text-muted-foreground dark:text-slate-400'}`}>
+                      {cat.riskCount} Risk
+                    </span>
+                  </div>
+                  
+                  <div className="mb-6 flex-1">
+                    {hasRisk ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-error"></div>
+                        <span className="text-sm text-muted-foreground dark:text-slate-400">Açık Tehlike</span>
+                        <span className="ml-auto font-bold text-error">{cat.acikCount}</span>
+                      </div>
+                    ) : (
+                      <div className="italic text-muted-foreground dark:text-slate-400 text-sm">Risk kaydı yok</div>
+                    )}
+                  </div>
+                  
+                  <div className="pt-4 border-t border-border dark:border-slate-700 flex items-center justify-between text-secondary">
+                    <span className="text-sm font-medium">Detayları Gör</span>
+                    <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Her Zaman Gösterilen "Tüm Kategoriler" Butonu */}
+            <div
+              onClick={() => navigate(`/risks/facility/${facilityId}/categories`)}
+              className="bg-card dark:bg-slate-900 p-6 rounded-xl border border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group flex flex-col items-center justify-center text-center h-full min-h-[160px]"
+            >
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3 text-primary group-hover:scale-110 transition-transform">
+                <ArrowRight className="w-6 h-6" />
+              </div>
+              <h5 className="text-lg font-bold text-foreground">
+                {categoryStats.length > 3 ? 'Daha Fazla' : 'Tüm Kategoriler'}
+              </h5>
+              <p className="text-sm text-muted-foreground mt-1">
+                {categoryStats.length > 3 
+                  ? `+${categoryStats.length - 3} kategori daha var` 
+                  : 'Tüm kategorileri listele'}
+              </p>
+            </div>
           </div>
         )}
       </section>

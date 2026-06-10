@@ -161,6 +161,7 @@ router.post('/import', authMiddleware, async (req: Request, res: Response) => {
             affectedPeople:             row.affectedPeople || null,
             improvementResponsible:     row.improvementResponsible || null,
             dueDate:                    parseDate(row.dueDate),
+            dueDatePeriod:              row.dueDatePeriod || null,
             postImprovementResponsible: row.postImprovementResponsible || null,
             postImprovementDueDate:     parseDate(row.postImprovementDueDate),
             effectivenessMethod:        row.effectivenessMethod || null,
@@ -285,7 +286,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
       detectionDate, impactDamage, affectedPeople, improvementResponsible, dueDate,
       actionsTaken, actionDate, actionImage,
       finalProb, finalFreq, finalSev, finalScore, postImprovementResponsible, postImprovementDueDate,
-      effectivenessMethod, controlResponsible, controlResult, legislation
+      effectivenessMethod, controlResponsible, controlResult, legislation,
+      dueDatePeriod,
     } = req.body;
 
     let dept = await prisma.riskDepartment.findUnique({
@@ -358,6 +360,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
         affectedPeople:             affectedPeople || null,
         improvementResponsible:     improvementResponsible || null,
         dueDate:                    parseDate(dueDate),
+        dueDatePeriod:              dueDatePeriod || null,
         postImprovementResponsible: postImprovementResponsible || null,
         postImprovementDueDate:     parseDate(postImprovementDueDate),
         effectivenessMethod:        effectivenessMethod || null,

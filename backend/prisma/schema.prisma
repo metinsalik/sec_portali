@@ -76,6 +76,11 @@ model Facility {
   riskDepartmentSettings RiskDepartmentSetting[]
   riskExpertFacilities   RiskExpertFacility[]
   users                  UserFacility[]
+  hazmatDepartments      HazmatDepartment[]
+  facilityHazmatItems    FacilityHazmatItem[]
+  spillKits     HazmatSpillKit[]
+  spillKitMasterItems HazmatSpillKitMasterItem[]
+  hazmatInventoryItems   HazmatInventoryItem[]
 }
 
 model IncidentCategory {
@@ -659,6 +664,7 @@ model RiskLifecycle {
   improvementResponsible     String?
   legislation                String?
   postImprovementDueDate     DateTime?
+  dueDatePeriod              String?
   postImprovementResponsible String?
   auditLogs                  RiskAuditLog[]
   department                 RiskDepartment @relation(fields: [departmentId], references: [id], onDelete: Cascade)
@@ -711,4 +717,314 @@ model RiskSubCategorySetting {
   category   RiskCategorySetting @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@unique([categoryId, name])
+}
+
+model HazmatUnit {
+  id             String                @id @default(cuid())
+  name           String
+  symbol         String
+  isActive       Boolean               @default(true)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  facilityItems  FacilityHazmatItem[]
+}
+
+model HazmatHazardLabel {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  materials HazmatMaterialHazardLabel[]
+}
+
+model HazmatAdrLabel {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  materials HazmatMaterialAdrLabel[]
+}
+
+model HazmatPpe {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  materials HazmatMaterialPpe[]
+}
+
+model HazmatCategory {
+  id          String   @id @default(uuid())
+  name        String
+  scope       String?
+  examples    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  materials HazmatMaterial[]
+}
+
+model HazmatMaterial {
+  id                            String                      @id @default(uuid())
+  productName                   String
+  brandName                     String?
+  usageMethod                   String?
+  composition                   String?
+  hazardDescription             String?
+  firstAid                      String?
+  fireFightingMeasures          String?
+  accidentalReleaseMeasures     String?
+  handlingAndStorage            String?
+  exposureControlsPpe           String?
+  physicalAndChemicalProperties String?
+  stabilityAndReactivity        String?
+  toxicologicalInformation      String?
+  ecologicalInformation         String?
+  disposalConsiderations        String?
+  transportInfo                 String?
+  regulatoryInfo                String?
+  imageUrl                      String?
+  sdsUrl                        String?
+  sdsExpiryDate                 DateTime?
+  categoryId                    String?
+  category                      HazmatCategory?             @relation(fields: [categoryId], references: [id])
+  isActive                      Boolean                     @default(true)
+  createdAt                     DateTime                    @default(now())
+  updatedAt                     DateTime                    @updatedAt
+  hazardLabels                  HazmatMaterialHazardLabel[]
+  adrLabels                     HazmatMaterialAdrLabel[]
+  ppes                          HazmatMaterialPpe[]
+  facilityItems                 FacilityHazmatItem[]
+  inventory                     HazmatInventoryItem[]
+  auditLogs                     HazmatAuditLog[]
+}
+
+model HazmatMaterialHazardLabel {
+  id         String            @id @default(uuid())
+  materialId String
+  labelId    String
+  material   HazmatMaterial    @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  label      HazmatHazardLabel @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@unique([materialId, labelId])
+}
+
+model HazmatMaterialAdrLabel {
+  id         String            @id @default(uuid())
+  materialId String
+  labelId    String
+  material   HazmatMaterial    @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  label      HazmatAdrLabel    @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@unique([materialId, labelId])
+}
+
+model HazmatMaterialPpe {
+  id         String         @id @default(uuid())
+  materialId String
+  ppeId      String
+  material   HazmatMaterial @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  ppe        HazmatPpe      @relation(fields: [ppeId], references: [id], onDelete: Cascade)
+
+  @@unique([materialId, ppeId])
+}
+
+model HazmatDepartment {
+  id         String                @id @default(uuid())
+  facilityId String
+  facility   Facility              @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  name       String
+  isActive   Boolean               @default(true)
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+  inventory  HazmatInventoryItem[]
+}
+
+model FacilityHazmatItem {
+  id          String   @id @default(uuid())
+  facilityId  String
+  materialId  String
+  amountValue Float?
+  unitId      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  facility Facility       @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  material HazmatMaterial @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  unit     HazmatUnit?    @relation(fields: [unitId], references: [id])
+
+  @@unique([facilityId, materialId])
+}
+
+model HazmatInventoryItem {
+  id           String           @id @default(uuid())
+  facilityId   String
+  departmentId String
+  materialId   String
+  minQuantity  Float?
+  maxQuantity  Float?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  facility     Facility         @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  department   HazmatDepartment @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  material     HazmatMaterial   @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@unique([facilityId, departmentId, materialId])
+  @@index([facilityId, departmentId])
+  @@index([facilityId, materialId])
+}
+
+model HazmatAuditLog {
+  id            String         @id @default(uuid())
+  materialId    String
+  action        String
+  details       String?
+  changedFields Json?
+  username      String
+  createdAt     DateTime       @default(now())
+  material      HazmatMaterial @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@index([materialId])
+}
+
+model HazmatSpillKit {
+  id           String   @id @default(uuid())
+  facilityId   String
+  purpose      String
+  risk         String   @default("Orta")
+  kitName      String
+  needReason   String?
+  worstCase    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  items       HazmatSpillKitItem[]
+  placements  HazmatSpillKitDepartment[]
+
+  facility  Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@index([facilityId])
+}
+
+model HazmatSpillKitItem {
+  id         String   @id @default(uuid())
+  kitId      String
+  name       String
+  type       String?
+  qty        Int      @default(0)
+  min        Int      @default(0)
+  exp        String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  kit HazmatSpillKit @relation(fields: [kitId], references: [id], onDelete: Cascade)
+
+  @@index([kitId])
+}
+
+model HazmatSpillKitDepartment {
+  id           String   @id @default(uuid())
+  kitId        String
+  unit         String
+  area         String?
+  location     String?
+  owner        String?
+  backupOwner  String?
+  visible      Boolean  @default(false)
+  sign         Boolean  @default(false)
+  instruction  Boolean  @default(false)
+  training     Boolean  @default(false)
+  note         String?
+  status       String   @default("Kurulumda")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  kit       HazmatSpillKit @relation(fields: [kitId], references: [id], onDelete: Cascade)
+  checks    HazmatSpillKitCheck[]
+  incidents HazmatSpillKitIncident[]
+  actions   HazmatSpillKitAction[]
+
+  @@index([kitId])
+}
+
+model HazmatSpillKitCheck {
+  id            String   @id @default(uuid())
+  placementId   String
+  lastCheck     DateTime?
+  period        Int      @default(30)
+  result        String   @default("Kontrol Edilmedi")
+  checkedBy     String?
+  contentOk     Boolean  @default(false)
+  expiryOk      Boolean  @default(false)
+  qtyOk         Boolean  @default(false)
+  packageOk     Boolean  @default(false)
+  note          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  placement HazmatSpillKitDepartment @relation(fields: [placementId], references: [id], onDelete: Cascade)
+
+  @@index([placementId])
+}
+
+model HazmatSpillKitIncident {
+  id              String   @id @default(uuid())
+  placementId     String
+  incidentDate    DateTime?
+  incidentType    String?
+  kitUsed         String?
+  incidentDesc    String?
+  usedItems       String?
+  incidentOutcome String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  placement HazmatSpillKitDepartment @relation(fields: [placementId], references: [id], onDelete: Cascade)
+
+  @@index([placementId])
+}
+
+model HazmatSpillKitAction {
+  id          String   @id @default(uuid())
+  placementId String
+  actionType  String?
+  owner       String?
+  dueDate     DateTime?
+  description String?
+  status      String   @default("Açık")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  placement HazmatSpillKitDepartment @relation(fields: [placementId], references: [id], onDelete: Cascade)
+
+  @@index([placementId])
+}
+
+
+model HazmatSpillKitMasterItem {
+  id         String   @id @default(uuid())
+  facilityId String
+  name       String
+  type       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@index([facilityId])
 }
