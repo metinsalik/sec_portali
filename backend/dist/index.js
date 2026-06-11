@@ -10,6 +10,7 @@ const dotenv_1 = __importDefault(require("dotenv"));
 // Routes
 const auth_1 = __importDefault(require("./routes/auth"));
 const settings_1 = __importDefault(require("./routes/settings"));
+const hazmat_kit_items_1 = __importDefault(require("./routes/settings/hazmat-kit-items"));
 const panel_1 = __importDefault(require("./routes/panel"));
 const operations_1 = __importDefault(require("./routes/operations"));
 const notifications_1 = __importDefault(require("./routes/notifications"));
@@ -17,12 +18,14 @@ const notebooks_1 = __importDefault(require("./routes/notebooks"));
 const incidents_1 = __importDefault(require("./routes/incidents"));
 const workflow_1 = __importDefault(require("./routes/workflow"));
 const risks_1 = __importDefault(require("./routes/risks"));
+const hazmat_1 = __importDefault(require("./routes/hazmat"));
 // Middleware
 const errorHandler_1 = require("./middleware/errorHandler");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3005;
-app.use(express_1.default.json());
+app.use(express_1.default.json({ limit: '50mb' }));
+app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
 app.use((0, cors_1.default)({
     origin: process.env.FRONTEND_URL || '*',
     credentials: true,
@@ -35,6 +38,7 @@ app.use('/uploads', express_1.default.static('uploads'));
 // Route Entegrasyonu
 app.use('/api/auth', auth_1.default);
 app.use('/api/settings', settings_1.default);
+app.use('/api/settings/hazmat-kit-items', hazmat_kit_items_1.default);
 app.use('/api/panel', panel_1.default);
 app.use('/api/operations', operations_1.default);
 app.use('/api/notifications', notifications_1.default);
@@ -42,6 +46,7 @@ app.use('/api/notebooks', notebooks_1.default);
 app.use('/api/incidents', incidents_1.default);
 app.use('/api/workflow', workflow_1.default);
 app.use('/api/risks', risks_1.default);
+app.use('/api/hazmat', hazmat_1.default);
 // Sağlık kontrolü
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

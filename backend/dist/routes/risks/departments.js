@@ -26,6 +26,15 @@ async function checkFacilityAccess(req, facilityId) {
     });
     return !!access;
 }
+// Helper to generate a 3-letter code from a department name
+function generateDeptCode(name) {
+    const charMap = {
+        'ı': 'i', 'i': 'i', 'ş': 's', 'ğ': 'g', 'ü': 'u', 'ö': 'o', 'ç': 'c',
+        'I': 'I', 'İ': 'I', 'Ş': 'S', 'Ğ': 'G', 'Ü': 'U', 'Ö': 'O', 'Ç': 'C'
+    };
+    const str = name.replace(/[ıişğüöçIİŞĞÜÖÇ]/g, (m) => charMap[m]);
+    return str.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase() || 'GEN';
+}
 // GET /api/risks/departments?facilityId=xxx
 router.get('/', auth_1.authMiddleware, async (req, res) => {
     try {
@@ -105,7 +114,7 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
         if (existing)
             return res.status(409).json({ error: 'Bu departman zaten mevcut.' });
         const dept = await prisma.riskDepartment.create({
-            data: { facilityId, name },
+            data: { facilityId, name, code: generateDeptCode(name) },
         });
         res.status(201).json(dept);
     }
@@ -128,7 +137,7 @@ router.put('/:id', auth_1.authMiddleware, async (req, res) => {
         }
         const updatedDept = await prisma.riskDepartment.update({
             where: { id },
-            data: { name },
+            data: { name, code: generateDeptCode(name) },
         });
         res.json(updatedDept);
     }

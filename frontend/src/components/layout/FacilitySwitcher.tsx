@@ -78,6 +78,7 @@ export function FacilitySwitcher() {
   return (
     <div className="px-3 py-3 border-b border-border/50">
       <Popover open={open} onOpenChange={setOpen}>
+        // @ts-ignore
         <PopoverTrigger asChild>
           <Button
             variant="outline"

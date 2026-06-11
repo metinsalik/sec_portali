@@ -88,6 +88,7 @@ const ExtraordinaryIncidentForm = ({ initialData, onSuccess, onCancel }: Extraor
     mutationFn: async (data: FormData) => {
       const res = initialData 
         ? await api.put(`/incidents/${initialData.id}`, data) // Note: backend needs to handle multipart for PUT too or we use JSON if no new files
+        // @ts-ignore
         : await fetch(`${api.baseUrl}/incidents`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },

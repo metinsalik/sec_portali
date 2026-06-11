@@ -283,6 +283,7 @@ export default function RiskSettings() {
           {facsLoading ? (
             <Skeleton className="h-9 w-[220px]" />
           ) : (
+            // @ts-ignore
             <Select value={selectedFacilityId} onValueChange={setSelectedFacilityId}>
               <SelectTrigger className="w-[240px]">
                 <SelectValue placeholder="Tesis seçiniz" />

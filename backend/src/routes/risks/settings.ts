@@ -154,7 +154,7 @@ async function initializeFacilityRiskSettings(facilityId: string) {
 // GET /api/risks/settings?facilityId=xxx
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { facilityId } = req.query;
+    const { facilityId } = req.query as Record<string, any>;
     if (!facilityId) {
       return res.status(400).json({ error: 'facilityId gereklidir.' });
     }

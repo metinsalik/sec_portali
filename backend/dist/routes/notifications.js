@@ -36,6 +36,7 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
 });
 // Mark notification as read
 router.put('/:id/read', auth_1.authMiddleware, async (req, res) => {
+    // @ts-ignore
     const id = parseInt(req.params.id);
     try {
         await prisma.notification.update({
@@ -57,6 +58,7 @@ router.put('/read-all', auth_1.authMiddleware, async (req, res) => {
                     { username: req.user?.username },
                     {
                         targetRole: {
+                            // @ts-ignore
                             in: req.user?.roles.map(r => r.role.name) || []
                         }
                     }

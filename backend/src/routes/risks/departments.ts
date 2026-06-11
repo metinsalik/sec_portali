@@ -36,7 +36,7 @@ function generateDeptCode(name: string): string {
 // GET /api/risks/departments?facilityId=xxx
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { facilityId } = req.query;
+    const { facilityId } = req.query as Record<string, any>;
     if (!facilityId) return res.status(400).json({ error: 'facilityId gerekli.' });
 
     const hasAccess = await checkFacilityAccess(req, facilityId as string);

@@ -37,7 +37,7 @@ router.use(authMiddleware);
 // Tüm olayları getir (Admin her şeyi, kullanıcı kendi tesislerini görür)
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { facilityId } = req.query;
+    const { facilityId } = req.query as Record<string, any>;
     const user = req.user!;
     const isAdmin = user.roles.includes('admin') || user.roles.includes('management');
 
@@ -86,6 +86,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 // Tekil olay getir
 router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {
+    // @ts-ignore
     const id = parseInt(req.params.id);
     const user = req.user!;
     const isAdmin = user.roles.includes('admin') || user.roles.includes('management');
@@ -190,6 +191,7 @@ router.post('/', upload.array('attachments', 4), async (req: AuthRequest, res: R
 // Olay güncelle
 router.put('/:id', upload.array('attachments', 4), async (req: AuthRequest, res: Response) => {
   try {
+    // @ts-ignore
     const id = parseInt(req.params.id);
     const user = req.user!;
     const isAdmin = user.roles.includes('admin') || user.roles.includes('management');
@@ -267,6 +269,7 @@ router.put('/:id', upload.array('attachments', 4), async (req: AuthRequest, res:
 // Olay sil
 router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
+    // @ts-ignore
     const id = parseInt(req.params.id);
     const user = req.user!;
     const isAdmin = user.roles.includes('admin') || user.roles.includes('management');

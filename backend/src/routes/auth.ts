@@ -31,32 +31,7 @@ router.post('/login', async (req: any, res: Response) => {
       }
     });
 
-    // Development auto-registration
-    if (!user && process.env.NODE_ENV === 'development') {
-      console.log(`Development mode: Auto-creating user ${username}`);
-      
-      // Ensure 'admin' and 'user' roles exist
-      await prisma.role.upsert({ where: { name: 'admin' }, update: {}, create: { name: 'admin' } });
-      await prisma.role.upsert({ where: { name: 'user' }, update: {}, create: { name: 'user' } });
-      
-      const adminRole = await prisma.role.findUnique({ where: { name: 'admin' } });
-
-      user = await prisma.user.create({
-        data: {
-          username,
-          fullName: username.split('.').map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join(' '),
-          roles: {
-            create: {
-              roleId: adminRole!.id
-            }
-          }
-        },
-        include: {
-          roles: { include: { role: true } },
-          facilities: true,
-        }
-      });
-    }
+    // Removed Development auto-registration block to restrict login to defined users only.
 
     if (!user) {
       return res.status(401).json({ error: 'Kullanıcı bulunamadı. Lütfen sistem yöneticinizle iletişime geçin.' });

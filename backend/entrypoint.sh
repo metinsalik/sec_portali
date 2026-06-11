@@ -18,4 +18,4 @@ npx prisma db push --accept-data-loss
 
 echo "Starting application..."
 # Start the application
-exec npm run dev
+exec node dist/index.js

@@ -154,6 +154,7 @@ router.post('/import', auth_1.authMiddleware, async (req, res) => {
                         affectedPeople: row.affectedPeople || null,
                         improvementResponsible: row.improvementResponsible || null,
                         dueDate: parseDate(row.dueDate),
+                        dueDatePeriod: row.dueDatePeriod || null,
                         postImprovementResponsible: row.postImprovementResponsible || null,
                         postImprovementDueDate: parseDate(row.postImprovementDueDate),
                         effectivenessMethod: row.effectivenessMethod || null,
@@ -225,7 +226,8 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
         const risks = await prisma.riskLifecycle.findMany({
             where,
             include: {
-                department: { select: { id: true, name: true, facilityId: true } },
+                department: { select: { id: true, name: true, facilityId: true, code: true } },
+                auditLogs: { orderBy: { createdAt: 'desc' } }
             },
             orderBy: [{ status: 'asc' }, { riskNo: 'asc' }],
         });
@@ -241,7 +243,10 @@ router.get('/:id', auth_1.authMiddleware, async (req, res) => {
     try {
         const risk = await prisma.riskLifecycle.findUnique({
             where: { id: req.params.id },
-            include: { department: true },
+            include: {
+                department: true,
+                auditLogs: { orderBy: { createdAt: 'desc' } }
+            },
         });
         if (!risk)
             return res.status(404).json({ error: 'Risk bulunamadı.' });
@@ -262,21 +267,35 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
         const username = req.user?.username;
         const { departmentId, riskNo, riskCategory, subCategory, area, method, activity, hazard, riskDescription, initialCondition, initialImage, initialProb, initialFreq, initialSev, initialScore, status, 
         // New fields
-        detectionDate, impactDamage, affectedPeople, improvementResponsible, dueDate, actionsTaken, actionDate, actionImage, finalProb, finalFreq, finalSev, finalScore, postImprovementResponsible, postImprovementDueDate, effectivenessMethod, controlResponsible, controlResult, legislation } = req.body;
-        const dept = await prisma.riskDepartment.findUnique({
+        detectionDate, impactDamage, affectedPeople, improvementResponsible, dueDate, actionsTaken, actionDate, actionImage, finalProb, finalFreq, finalSev, finalScore, postImprovementResponsible, postImprovementDueDate, effectivenessMethod, controlResponsible, controlResult, legislation, dueDatePeriod, } = req.body;
+        let dept = await prisma.riskDepartment.findUnique({
             where: { id: parseInt(departmentId) },
-            select: { facilityId: true }
+            select: { id: true, facilityId: true, name: true, code: true }
         });
         if (!dept)
             return res.status(404).json({ error: 'Departman bulunamadı.' });
+        // Eğer departmanın kodu yoksa, isminden oluşturup kaydet
+        if (!dept.code) {
+            const generatedCode = dept.name.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, '') || 'GEN';
+            await prisma.riskDepartment.update({
+                where: { id: dept.id },
+                data: { code: generatedCode }
+            });
+        }
         const hasAccess = await checkFacilityAccess(req, dept.facilityId);
         if (!hasAccess) {
             return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
         }
+        // Dinamik Risk No oluşturma
+        const maxRisk = await prisma.riskLifecycle.findFirst({
+            where: { departmentId: parseInt(departmentId) },
+            orderBy: { riskNo: 'desc' }
+        });
+        const nextRiskNo = maxRisk ? maxRisk.riskNo + 1 : 1;
         const risk = await prisma.riskLifecycle.create({
             data: {
                 departmentId: parseInt(departmentId),
-                riskNo: parseInt(riskNo) || 1,
+                riskNo: nextRiskNo,
                 riskCategory: riskCategory || 'Genel',
                 subCategory: subCategory || null,
                 area: area || '',
@@ -313,14 +332,22 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
                 affectedPeople: affectedPeople || null,
                 improvementResponsible: improvementResponsible || null,
                 dueDate: parseDate(dueDate),
+                dueDatePeriod: dueDatePeriod || null,
                 postImprovementResponsible: postImprovementResponsible || null,
                 postImprovementDueDate: parseDate(postImprovementDueDate),
                 effectivenessMethod: effectivenessMethod || null,
                 controlResponsible: controlResponsible || null,
                 controlResult: controlResult || null,
                 legislation: legislation || null,
+                auditLogs: {
+                    create: {
+                        action: 'Oluşturuldu',
+                        details: 'Yeni risk kaydı oluşturuldu.',
+                        username: username || 'Sistem',
+                    }
+                }
             },
-            include: { department: true },
+            include: { department: true, auditLogs: { orderBy: { createdAt: 'desc' } } },
         });
         res.status(201).json(risk);
     }
@@ -387,8 +414,37 @@ router.put('/:id', auth_1.authMiddleware, async (req, res) => {
         const updatedRisk = await prisma.riskLifecycle.update({
             where: { id: req.params.id },
             data,
-            include: { department: true },
+            include: { department: true, auditLogs: { orderBy: { createdAt: 'desc' } } },
         });
+        // Audit Log oluşturma mantığı
+        const changedFields = {};
+        const trackFields = ['status', 'detectionDate', 'dueDate', 'improvementResponsible', 'initialScore', 'finalScore', 'actionDate', 'actionsTaken', 'hazard', 'riskCategory'];
+        trackFields.forEach(f => {
+            const oldVal = risk[f];
+            const newVal = updatedRisk[f];
+            // Date objeleri için özel kontrol
+            if (oldVal instanceof Date || newVal instanceof Date) {
+                if (new Date(oldVal || 0).getTime() !== new Date(newVal || 0).getTime()) {
+                    changedFields[f] = { old: oldVal, new: newVal };
+                }
+            }
+            else if (oldVal !== newVal) {
+                changedFields[f] = { old: oldVal, new: newVal };
+            }
+        });
+        if (Object.keys(changedFields).length > 0) {
+            const newLog = await prisma.riskAuditLog.create({
+                data: {
+                    riskId: updatedRisk.id,
+                    action: 'Güncellendi',
+                    details: 'Risk detayları güncellendi.',
+                    changedFields,
+                    // @ts-ignore
+                    username: req.user?.username || 'Sistem',
+                }
+            });
+            updatedRisk.auditLogs.unshift(newLog);
+        }
         res.json(updatedRisk);
     }
     catch (error) {

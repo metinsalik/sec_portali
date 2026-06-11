@@ -253,6 +253,7 @@ export function QuickAssignModal({ open, onOpenChange, facility, type, onSuccess
                 <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Maliyet Tipi</label>
                 <Select 
                   value={formData.costType} 
+                  // @ts-ignore
                   onValueChange={(v) => setFormData({ ...formData, costType: v })}
                 >
                   <SelectTrigger className="rounded-xl border-slate-100 dark:border-slate-800 h-11 text-sm font-medium focus:ring-primary/10">

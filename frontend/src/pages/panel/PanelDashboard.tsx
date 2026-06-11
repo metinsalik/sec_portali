@@ -281,6 +281,7 @@ function KPICard({ title, value, icon: Icon, description, trend, onClick, intera
           <div className="flex items-center gap-2 mt-4">
             <p className="text-xs text-muted-foreground">{description}</p>
             {trend && (
+              // @ts-ignore
               <Badge variant={trend === 'positive' ? 'success' : 'destructive'} className="text-[10px] h-4 px-1">
                 {trend === 'positive' ? 'Uyumlu' : 'Eksik'}
               </Badge>

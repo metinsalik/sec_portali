@@ -4,6 +4,7 @@ const express_1 = require("express");
 const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
 const isgCalculator_1 = require("../services/isgCalculator");
+const date_fns_1 = require("date-fns"); // Import format for date operations
 const dashboardService_1 = require("../services/dashboardService");
 const reconciliationService_1 = require("../services/reconciliationService");
 const router = (0, express_1.Router)();
@@ -140,7 +141,7 @@ router.get('/facilities/:id/compliance', async (req, res) => {
             include: {
                 assignments: {
                     where: { status: 'Aktif' },
-                    include: { professional: true },
+                    include: { professional: true, employerRep: true }, // Include employerRep
                 },
             },
         });
@@ -162,6 +163,9 @@ router.get('/facilities/:id/compliance', async (req, res) => {
         const dspAssignments = activeAssignments
             .filter((a) => a.type === 'DSP')
             .map((a) => ({ durationMinutes: a.durationMinutes }));
+        const vekilAssignments = activeAssignments
+            .filter((a) => a.type === 'Vekil' && a.employerRep)
+            .map((a) => ({ name: a.employerRep.fullName })); // Add vekilAssignments
         const result = (0, isgCalculator_1.analyzeFacilityCompliance)({
             facilityId: facility.id,
             facilityName: facility.name,
@@ -170,11 +174,12 @@ router.get('/facilities/:id/compliance', async (req, res) => {
             iguAssignments,
             hekimAssignments,
             dspAssignments,
-        });
+            vekilAssignments, // Pass vekilAssignments
+        }); // Closing the analyzeFacilityCompliance call
         res.json(result);
     }
     catch (error) {
-        console.error(error);
+        console.error('Facility Compliance Error:', error);
         res.status(500).json({ error: 'Uyumluluk analizi yapılamadı.' });
     }
 });
@@ -299,9 +304,14 @@ router.get('/professionals/:id', async (req, res) => {
             return res.status(404).json({ error: 'Profesyonel bulunamadı.' });
         // Sertifika durumu
         const certificateStatus = (0, isgCalculator_1.getCertificateStatus)(professional.certificateDate);
-        // Aktivite loglarını bul (Email üzerinden User eşleştirmesi ile)
-        let activityLogs = [];
-        if (professional.email) {
+        // Aktivite loglarını bul (ProfessionalId veya Email üzerinden User eşleştirmesi ile)
+        let activityLogs = await prisma.activityLog.findMany({
+            where: { professionalId: id },
+            include: { facility: true },
+            orderBy: { createdAt: 'desc' },
+            take: 50,
+        });
+        if (activityLogs.length === 0 && professional.email) {
             const user = await prisma.user.findFirst({
                 where: { email: professional.email },
             });
@@ -321,7 +331,7 @@ router.get('/professionals/:id', async (req, res) => {
         });
     }
     catch (error) {
-        console.error(error);
+        console.error('Professional Detail Error:', error);
         res.status(500).json({ error: 'Profesyonel detayları getirilemedi.' });
     }
 });
@@ -559,46 +569,67 @@ router.post('/assignments', async (req, res) => {
         return res.status(400).json({ error: 'Tesis, tip ve başlangıç tarihi zorunludur.' });
     }
     try {
-        // Kapasite kontrolü (profesyonel için)
+        // Profesyonel kontrolleri
         if (professionalId) {
-            const existingAssignments = await prisma.assignment.findMany({
-                where: { professionalId: parseInt(professionalId), status: 'Aktif' },
+            const profId = parseInt(professionalId);
+            const activeAssignments = await prisma.assignment.findMany({
+                where: { professionalId: profId, status: 'Aktif' },
+                include: { facility: true },
             });
-            const currentMinutes = existingAssignments.reduce((sum, a) => sum + a.durationMinutes, 0);
-            const capacity = (0, isgCalculator_1.checkCapacity)(currentMinutes, parseInt(durationMinutes));
+            // 1. Aynı tesise mükerrer atama kontrolü
+            const isAlreadyAssignedToThisFacility = activeAssignments.some(a => a.facilityId === facilityId);
+            if (isAlreadyAssignedToThisFacility) {
+                return res.status(409).json({ error: 'Bu profesyonel zaten bu tesise atanmış durumda.' });
+            }
+            // 2. Tam zamanlılık kontrolü (Herhangi bir yerde tam zamanlıysa yeni atama yapılamaz)
+            const isFullTimeElsewhere = activeAssignments.some(a => a.isFullTime);
+            if (isFullTimeElsewhere) {
+                return res.status(409).json({ error: 'Bu profesyonel başka bir tesiste tam zamanlı olarak atanmış durumda, yeni atama yapılamaz.' });
+            }
+            // 3. Kapasite kontrolü (11700 dk sınırı)
+            const currentMinutes = activeAssignments.reduce((sum, a) => sum + a.durationMinutes, 0);
+            const newMinutes = isFullTime ? 11700 : parseInt(String(durationMinutes || 0));
+            const capacity = (0, isgCalculator_1.checkCapacity)(currentMinutes, newMinutes);
             if (capacity.wouldExceed) {
                 return res.status(409).json({
-                    error: `Kapasite aşımı: Bu profesyonelin kalan kapasitesi ${capacity.remaining} dk/ay. Girilen: ${durationMinutes} dk.`,
+                    error: `Kapasite aşımı: Bu profesyonelin toplam süresi ${currentMinutes} dk. Yeni atama ile ${currentMinutes + newMinutes} dk olacak (Sınır: 11700 dk).`,
+                });
+            }
+            // 4. Başka tesiste atama uyarısı (Onaylanmamışsa)
+            const { confirmed } = req.body;
+            if (!confirmed && activeAssignments.length > 0) {
+                const otherFacility = activeAssignments[0].facility;
+                return res.status(409).json({
+                    code: 'PROFESSIONAL_ASSIGNED_ELSEWHERE',
+                    error: `${otherFacility?.name || 'Bir'} tesisinde bu İSG profesyoneli atanmış durumda. Buraya da eklemek istiyor musunuz?`,
                 });
             }
         }
-        const [assignment] = await prisma.$transaction([
-            prisma.assignment.create({
-                data: {
-                    facilityId,
-                    professionalId: professionalId ? parseInt(professionalId) : null,
-                    employerRepId: employerRepId ? parseInt(String(employerRepId)) : null,
-                    type,
-                    durationMinutes: isFullTime ? 11700 : parseInt(String(durationMinutes || 0)),
-                    isFullTime: isFullTime ?? false,
-                    startDate: new Date(startDate),
-                    status: 'Aktif',
-                    costType,
-                    unitPrice: unitPrice ? parseFloat(unitPrice) : null,
-                },
-                include: { facility: true, professional: true },
-            }),
-            prisma.activityLog.create({
-                data: {
-                    facilityId,
-                    username: req.user.username,
-                    action: 'Yeni Atama Yapıldı',
-                    details: `${type} tipi atama yapıldı. (${durationMinutes} dk)`
-                }
-            })
-        ]);
+        const assignment = await prisma.assignment.create({
+            data: {
+                facilityId,
+                professionalId: professionalId ? parseInt(professionalId) : null,
+                employerRepId: employerRepId ? parseInt(String(employerRepId)) : null,
+                type,
+                durationMinutes: isFullTime ? 11700 : parseInt(String(durationMinutes || 0)),
+                isFullTime: isFullTime ?? false,
+                startDate: new Date(startDate),
+                status: 'Aktif',
+                costType,
+                unitPrice: unitPrice ? parseFloat(unitPrice) : null,
+            },
+            include: { facility: true, professional: true, employerRep: true }, // Include employerRep
+        });
+        await prisma.activityLog.create({
+            data: {
+                facilityId,
+                username: req.user.username,
+                action: 'Yeni Atama Yapıldı',
+                details: `${(0, date_fns_1.format)(new Date(startDate), 'dd.MM.yyyy')} tarihinde ${assignment.professional?.fullName || assignment.employerRep?.fullName || 'Bilinmiyor'} - ${type} tipi atama yapıldı. (${durationMinutes} dk.)`
+            }
+        });
         // Atama değişikliği sonrası mutabakatı tetikle
-        const month = format(new Date(startDate), 'yyyy-MM');
+        const month = (0, date_fns_1.format)(new Date(startDate), 'yyyy-MM');
         await (0, reconciliationService_1.syncReconciliation)(month);
         res.status(201).json(assignment);
     }
@@ -609,30 +640,78 @@ router.post('/assignments', async (req, res) => {
 });
 router.put('/assignments/:id', async (req, res) => {
     const id = parseInt(String(req.params.id));
-    const { durationMinutes, isFullTime, costType, unitPrice, updatedAt } = req.body;
+    const { durationMinutes, isFullTime, costType, unitPrice, startDate, endDate, updatedAt } = req.body;
     try {
         // Optimistic locking
-        const existing = await prisma.assignment.findUnique({ where: { id } });
+        const existing = await prisma.assignment.findUnique({
+            where: { id },
+            include: {
+                professional: true,
+                employerRep: true,
+                facility: true,
+            }
+        });
         if (!existing)
             return res.status(404).json({ error: 'Atama bulunamadı.' });
         if (updatedAt && existing.updatedAt.toISOString() !== updatedAt) {
             return res.status(409).json({ error: 'Atama başka bir kullanıcı tarafından güncellenmiş. Lütfen sayfayı yenileyin.' });
         }
+        const updateData = {
+            durationMinutes: isFullTime ? 11700 : parseInt(String(durationMinutes || 0)),
+            isFullTime,
+            costType,
+            unitPrice: unitPrice ? parseFloat(unitPrice) : null
+        };
+        if (startDate) {
+            updateData.startDate = new Date(startDate);
+        }
+        if (endDate) {
+            updateData.endDate = new Date(endDate);
+        }
         const assignment = await prisma.assignment.update({
             where: { id },
+            data: updateData,
+            include: { facility: true, professional: true, employerRep: true },
+        });
+        // Log kaydı oluştur
+        const updatedBy = req.user.fullName || req.user.username;
+        const assignedTo = assignment.professional?.fullName || assignment.employerRep?.fullName || 'Bilinmiyor';
+        const facilityName = assignment.facility?.name || 'Bilinmiyor';
+        let details = `${assignedTo}'in ${facilityName} tesisindeki ${assignment.type} ataması ${updatedBy} tarafından güncellendi.`;
+        if (existing.durationMinutes !== assignment.durationMinutes) {
+            details += ` Süre: ${existing.durationMinutes} dk -> ${assignment.durationMinutes} dk.`;
+        }
+        if (existing.isFullTime !== assignment.isFullTime) {
+            details += ` Tam zamanlı durumu: ${existing.isFullTime} -> ${assignment.isFullTime}.`;
+        }
+        if (startDate && existing.startDate.toISOString() !== new Date(startDate).toISOString()) {
+            details += ` Başlangıç tarihi: ${(0, date_fns_1.format)(existing.startDate, 'dd.MM.yyyy')} -> ${(0, date_fns_1.format)(new Date(startDate), 'dd.MM.yyyy')}.`;
+        }
+        if (endDate && existing.endDate?.toISOString() !== new Date(endDate).toISOString()) {
+            details += ` Bitiş tarihi: ${existing.endDate ? (0, date_fns_1.format)(existing.endDate, 'dd.MM.yyyy') : 'Yok'} -> ${(0, date_fns_1.format)(new Date(endDate), 'dd.MM.yyyy')}.`;
+        }
+        await prisma.activityLog.create({
             data: {
-                durationMinutes: isFullTime ? 11700 : parseInt(String(durationMinutes || 0)),
-                isFullTime,
-                costType,
-                unitPrice: unitPrice ? parseFloat(unitPrice) : null
-            },
+                facilityId: existing.facilityId,
+                username: req.user.username,
+                professionalId: existing.professionalId,
+                action: 'Atama Güncellendi',
+                details: details
+            }
         });
         // Atama değişikliği sonrası mutabakatı tetikle
-        const month = format(new Date(existing.startDate), 'yyyy-MM');
+        const month = (0, date_fns_1.format)(new Date(existing.startDate), 'yyyy-MM');
         await (0, reconciliationService_1.syncReconciliation)(month);
+        if (startDate && (0, date_fns_1.format)(new Date(startDate), 'yyyy-MM') !== month) {
+            await (0, reconciliationService_1.syncReconciliation)((0, date_fns_1.format)(new Date(startDate), 'yyyy-MM'));
+        }
+        if (endDate && (0, date_fns_1.format)(new Date(endDate), 'yyyy-MM') !== month) {
+            await (0, reconciliationService_1.syncReconciliation)((0, date_fns_1.format)(new Date(endDate), 'yyyy-MM'));
+        }
         res.json(assignment);
     }
-    catch {
+    catch (error) {
+        console.error('Assignment Update Error:', error);
         res.status(500).json({ error: 'Atama güncellenemedi.' });
     }
 });
@@ -640,7 +719,14 @@ router.post('/assignments/:id/terminate', async (req, res) => {
     const id = parseInt(String(req.params.id));
     const { endDate } = req.body;
     try {
-        const existing = await prisma.assignment.findUnique({ where: { id } });
+        const existing = await prisma.assignment.findUnique({
+            where: { id },
+            include: {
+                professional: true,
+                employerRep: true,
+                facility: true,
+            }
+        });
         if (!existing)
             return res.status(404).json({ error: 'Atama bulunamadı.' });
         const [assignment] = await prisma.$transaction([
@@ -656,15 +742,15 @@ router.post('/assignments/:id/terminate', async (req, res) => {
                     facilityId: existing.facilityId,
                     username: req.user.username,
                     action: 'Atama Sonlandırıldı',
-                    details: `${existing.type} tipi atama sonlandırıldı.`
+                    details: `${existing.professional?.fullName || existing.employerRep?.fullName || 'Bilinmiyor'}'in ${existing.facility?.name || 'Bilinmiyor'} tesisindeki ${existing.type} ataması ${(0, date_fns_1.format)(endDate ? new Date(endDate) : new Date(), 'dd.MM.yyyy')} tarihinde ${req.user.fullName || req.user.username} tarafından sonlandırıldı.`
                 }
             })
         ]);
         // Atama değişikliği sonrası mutabakatı tetikle
-        const month = format(new Date(existing.startDate), 'yyyy-MM');
+        const month = (0, date_fns_1.format)(new Date(existing.startDate), 'yyyy-MM');
         await (0, reconciliationService_1.syncReconciliation)(month);
         if (endDate) {
-            const endMonth = format(new Date(endDate), 'yyyy-MM');
+            const endMonth = (0, date_fns_1.format)(new Date(endDate), 'yyyy-MM');
             if (endMonth !== month)
                 await (0, reconciliationService_1.syncReconciliation)(endMonth);
         }
@@ -769,7 +855,7 @@ router.post('/reconciliation', async (req, res) => {
     }
 });
 router.put('/reconciliation/:id', async (req, res) => {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id)); // Cast to string
     const { invoiceAmount, status, note, amount } = req.body;
     try {
         const existing = await prisma.reconciliation.findUnique({ where: { id } });

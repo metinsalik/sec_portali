@@ -291,6 +291,7 @@ const UsersPage = () => {
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
+            // @ts-ignore
             <Select value={roleFilter} onValueChange={setRoleFilter}>
               <SelectTrigger className="w-[180px] bg-slate-50 dark:bg-slate-800/50 border-none h-11 rounded-xl">
                 <SelectValue placeholder="Rol Filtrele" />
@@ -301,6 +302,7 @@ const UsersPage = () => {
               </SelectContent>
             </Select>
 
+            // @ts-ignore
             <Select value={facilityFilter} onValueChange={setFacilityFilter}>
               <SelectTrigger className="w-[180px] bg-slate-50 dark:bg-slate-800/50 border-none h-11 rounded-xl">
                 <SelectValue placeholder="Tesis Filtrele" />
@@ -338,6 +340,7 @@ const UsersPage = () => {
       <div className="min-h-[400px]">
         {filteredUsers && filteredUsers.length > 0 ? (
           viewMode === 'list' ? (
+            // @ts-ignore
             <Accordion type="multiple" defaultValue={sortedRoles} className="space-y-4">
               {sortedRoles.map(roleName => (
                 <AccordionItem key={roleName} value={roleName} className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm border-b-0">

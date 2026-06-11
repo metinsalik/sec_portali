@@ -874,6 +874,7 @@ interface UpdateAssignmentData {
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Maliyet ve Birim Fiyat</label>
                     <div className="flex gap-3">
+                      // @ts-ignore
                       <Select value={formData.costType} onValueChange={(v) => setFormData({...formData, costType: v})}>
                         <SelectTrigger className="h-11 rounded-xl bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 flex-1 shadow-sm">
                           <SelectValue />

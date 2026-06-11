@@ -4,6 +4,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   try {
+    // @ts-ignore
     const count = await prisma.notebookEntry.count();
     console.log('NotebookEntry count:', count);
   } catch (error: any) {

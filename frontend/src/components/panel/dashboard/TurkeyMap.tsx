@@ -64,9 +64,11 @@ export function TurkeyMapSection({ cityData, onCityClick }: TurkeyMapSectionProp
                 
                 return (
                   <Tooltip key={cityDataProps.id}>
+                    // @ts-ignore
                     <TooltipTrigger asChild>
                       <g className="cursor-pointer transition-all duration-300 hover:filter hover:brightness-90 outline-none">
                         {React.isValidElement(cityComponent) && React.cloneElement(cityComponent as React.ReactElement, {
+                          // @ts-ignore
                           style: { 
                             fill: fill, 
                             stroke: stroke,

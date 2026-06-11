@@ -206,7 +206,7 @@ router.get('/facilities/:id/compliance', async (req: AuthRequest, res: Response)
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/professionals', async (req: AuthRequest, res: Response) => {
   try {
-    const { archived } = req.query;
+    const { archived } = req.query as Record<string, any>;
     const professionals = await prisma.professional.findMany({
       where: { isActive: archived === 'true' ? false : true },
       include: {
@@ -589,7 +589,7 @@ router.get('/assignments/compliance-status', async (req: AuthRequest, res: Respo
 
 router.get('/assignments', async (req: AuthRequest, res: Response) => {
   try {
-    const { facilityId, status } = req.query;
+    const { facilityId, status } = req.query as Record<string, any>;
     const assignments = await prisma.assignment.findMany({
       where: {
         ...(facilityId ? { facilityId: facilityId as string } : {}),
@@ -849,7 +849,7 @@ router.get('/reconciliation', async (req: AuthRequest, res: Response) => {
 
 // Mutabakat hesaplama önizleme
 router.get('/reconciliation/calculate', async (req: AuthRequest, res: Response) => {
-  const { month } = req.query;
+  const { month } = req.query as Record<string, any>;
   if (!month) return res.status(400).json({ error: 'Ay (month) parametresi gereklidir.' });
   
   try {
@@ -888,7 +888,7 @@ router.post('/reconciliation/auto-sync', async (req: AuthRequest, res: Response)
 
 // Excel Export
 router.get('/reconciliation/export', async (req: AuthRequest, res: Response) => {
-  const { osgbId, month } = req.query;
+  const { osgbId, month } = req.query as Record<string, any>;
   try {
     const items = await prisma.reconciliation.findMany({
       where: {

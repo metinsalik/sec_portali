@@ -55,7 +55,7 @@ router.get('/stats/summary', authMiddleware, async (req: Request, res: Response)
     // @ts-ignore
     const user = req.user;
     const isAdminOrMgmt = user?.isAdmin || user?.isManagement;
-    const { facilityId } = req.query;
+    const { facilityId } = req.query as Record<string, any>;
 
     let where: any = {};
     if (facilityId) {
@@ -191,7 +191,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     // @ts-ignore
     const user = req.user;
     const isAdminOrMgmt = user?.isAdmin || user?.isManagement;
-    const { departmentId, facilityId, status, search } = req.query;
+    const { departmentId, facilityId, status, search } = req.query as Record<string, any>;
     const where: any = {};
 
     if (departmentId) {
