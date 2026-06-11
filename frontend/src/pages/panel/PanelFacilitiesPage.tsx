@@ -254,7 +254,6 @@ export default function PanelFacilitiesPage() {
           />
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          // @ts-ignore
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="w-[160px] h-10 bg-muted/30 border-none">
               <SelectValue placeholder="Tesis Tipi" />
@@ -265,7 +264,6 @@ export default function PanelFacilitiesPage() {
             </SelectContent>
           </Select>
 
-          // @ts-ignore
           <Select value={dangerFilter} onValueChange={setDangerFilter}>
             <SelectTrigger className="w-[160px] h-10 bg-muted/30 border-none">
               <SelectValue placeholder="Tehlike Sınıfı" />
@@ -276,7 +274,6 @@ export default function PanelFacilitiesPage() {
             </SelectContent>
           </Select>
 
-          // @ts-ignore
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[140px] h-10 bg-muted/30 border-none">
               <SelectValue placeholder="Durum" />
@@ -288,7 +285,6 @@ export default function PanelFacilitiesPage() {
             </SelectContent>
           </Select>
 
-          // @ts-ignore
           <Select value={complianceFilter} onValueChange={setComplianceFilter}>
             <SelectTrigger className="w-[160px] h-10 bg-muted/30 border-none">
               <SelectValue placeholder="Uyumluluk" />
@@ -303,7 +299,6 @@ export default function PanelFacilitiesPage() {
       </div>
 
       {viewMode === 'list' ? (
-        // @ts-ignore
         <Accordion type="multiple" defaultValue={sortedTypes} className="space-y-4">
           {sortedTypes.map(type => (
             <AccordionItem key={type} value={type} className="border rounded-xl bg-card overflow-hidden shadow-sm border-none">

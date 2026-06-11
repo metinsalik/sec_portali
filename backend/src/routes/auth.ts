@@ -1,5 +1,4 @@
 import { Router, Response } from 'express';
-// @ts-ignore
 import ntlm from 'express-ntlm';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';

@@ -14,7 +14,6 @@ const ROLE_HIERARCHY = {
 const requireWorkflowRole = (allowedRoles) => {
     return async (req, res, next) => {
         try {
-            // @ts-ignore - req.user will be populated by standard auth middleware
             const username = req.user?.username;
             if (!username) {
                 return res.status(401).json({ error: 'Yetkisiz erişim' });
@@ -28,8 +27,8 @@ const requireWorkflowRole = (allowedRoles) => {
             if (allowedRoles.length > 0 && !allowedRoles.includes(userRole.moduleRole)) {
                 return res.status(403).json({ error: 'Bu işlem için modül yetkiniz yetersiz.' });
             }
-            // @ts-ignore
-            req.workflowRole = userRole.moduleRole;
+            if (req.user)
+                req.user.workflowRole = userRole.moduleRole;
             next();
         }
         catch (error) {

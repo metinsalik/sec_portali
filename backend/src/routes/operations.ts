@@ -78,7 +78,7 @@ router.get('/dashboard', async (req: AuthRequest, res: Response) => {
 router.get('/hr/:facilityId/monthly', async (req: AuthRequest, res: Response) => {
   try {
     const facilityId = String(req.params.facilityId);
-    const month = req.query.month as string | undefined;
+    const month = req.query.month as string;
 
     const where: { facilityId: string; month?: string } = { facilityId };
     if (month) where.month = month;
@@ -167,7 +167,7 @@ router.put('/hr/:facilityId/monthly/:month', async (req: AuthRequest, res: Respo
 router.get('/accidents/:facilityId/monthly', async (req: AuthRequest, res: Response) => {
   try {
     const facilityId = String(req.params.facilityId);
-    const month = req.query.month as string | undefined;
+    const month = req.query.month as string;
 
     const where: { facilityId: string; month?: string } = { facilityId };
     if (month) where.month = month;
@@ -269,18 +269,16 @@ router.get('/facilities', async (req: AuthRequest, res: Response) => {
 
 router.get('/facilities/:id', async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const { id } = (req.params as Record<string, string>);
     const user = getUser(req);
 
     // Yetki kontrolü (admin/management değilse ve tesise atanmamışsa)
-    // @ts-ignore
     const isAssigned = user.isAdmin || user.isManagement || user.facilities?.includes(id);
     if (!isAssigned) {
       return res.status(403).json({ error: 'Bu tesise erişim yetkiniz bulunmamaktadır.' });
     }
 
     const facility = await prisma.facility.findUnique({
-      // @ts-ignore
       where: { id },
       include: {
         buildings: true,
@@ -302,7 +300,7 @@ router.get('/facilities/:id', async (req: AuthRequest, res: Response) => {
 
 router.put('/facilities/:id', async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const { id } = (req.params as Record<string, string>);
     const user = getUser(req);
     const {
       name, shortName, type, city, district, fullAddress,
@@ -311,18 +309,15 @@ router.put('/facilities/:id', async (req: AuthRequest, res: Response) => {
     } = req.body;
 
     // Yetki kontrolü
-    // @ts-ignore
     const isAssigned = user.isAdmin || user.isManagement || user.facilities?.includes(id);
     if (!isAssigned) {
       return res.status(403).json({ error: 'Bu tesisi güncelleme yetkiniz bulunmamaktadır.' });
     }
 
     // Mevcut binaları temizle ve yenilerini ekle (Settings rotasındaki mantığın aynısı)
-    // @ts-ignore
     await prisma.facilityBuilding.deleteMany({ where: { facilityId: id } });
 
     const facility = await prisma.facility.update({
-      // @ts-ignore
       where: { id },
       data: {
         name, shortName, type, city, district, fullAddress,
@@ -350,7 +345,6 @@ router.put('/facilities/:id', async (req: AuthRequest, res: Response) => {
     // Aktivite günlüğü ekle
     await prisma.activityLog.create({
       data: {
-        // @ts-ignore
         facilityId: id,
         username: user.username,
         action: 'Tesis Bilgileri Güncellendi',

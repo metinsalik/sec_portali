@@ -82,7 +82,6 @@ router.get('/', async (req, res) => {
 // Tekil olay getir
 router.get('/:id', async (req, res) => {
     try {
-        // @ts-ignore
         const id = parseInt(req.params.id);
         const user = req.user;
         const isAdmin = user.roles.includes('admin') || user.roles.includes('management');
@@ -173,7 +172,6 @@ router.post('/', upload.array('attachments', 4), async (req, res) => {
 // Olay güncelle
 router.put('/:id', upload.array('attachments', 4), async (req, res) => {
     try {
-        // @ts-ignore
         const id = parseInt(req.params.id);
         const user = req.user;
         const isAdmin = user.roles.includes('admin') || user.roles.includes('management');
@@ -239,7 +237,6 @@ router.put('/:id', upload.array('attachments', 4), async (req, res) => {
 // Olay sil
 router.delete('/:id', async (req, res) => {
     try {
-        // @ts-ignore
         const id = parseInt(req.params.id);
         const user = req.user;
         const isAdmin = user.roles.includes('admin') || user.roles.includes('management');

@@ -38,14 +38,13 @@ router.use(authMiddleware);
 
 // Tesis ve Yıla göre sayfaları ve maddelerini getir
 router.get('/:facilityId', async (req: AuthRequest, res: Response) => {
-  const { facilityId } = req.params;
+  const { facilityId } = (req.params as Record<string, string>);
   const year = parseInt(req.query.year as string) || new Date().getFullYear();
   const includeArchived = req.query.includeArchived === 'true';
 
   try {
     const pages = await prisma.notebookPage.findMany({
       where: { 
-        // @ts-ignore
         facilityId, 
         year,
         ...(includeArchived ? {} : { isArchived: false })
@@ -70,7 +69,7 @@ router.get('/:facilityId', async (req: AuthRequest, res: Response) => {
 
 // Yeni sayfa ve maddeler ekle
 router.post('/:facilityId', upload.single('document'), async (req: AuthRequest, res: Response) => {
-  const { facilityId } = req.params;
+  const { facilityId } = (req.params as Record<string, string>);
   const { date, items } = req.body;
 
   try {
@@ -80,7 +79,6 @@ router.post('/:facilityId', upload.single('document'), async (req: AuthRequest, 
 
     const page = await prisma.notebookPage.create({
       data: {
-        // @ts-ignore
         facilityId,
         year,
         date: new Date(date),
@@ -106,7 +104,6 @@ router.post('/:facilityId', upload.single('document'), async (req: AuthRequest, 
 
     await prisma.activityLog.create({
       data: {
-        // @ts-ignore
         facilityId,
         username: req.user!.username,
         action: 'Yeni Defter Sayfası Eklendi',
@@ -123,20 +120,18 @@ router.post('/:facilityId', upload.single('document'), async (req: AuthRequest, 
 
 // Sayfayı ve maddeleri güncelle
 router.put('/:facilityId/:pageId', upload.single('document'), async (req: AuthRequest, res: Response) => {
-  const { facilityId, pageId } = req.params;
+  const { facilityId, pageId } = (req.params as Record<string, string>);
   const { date, items } = req.body;
 
   try {
     const existingPage = await prisma.notebookPage.findUnique({
-      // @ts-ignore
       where: { id: parseInt(pageId) }
     });
 
     if (!existingPage) return res.status(404).json({ error: 'Kayıt bulunamadı.' });
 
     // Kısıtlama Kontrolleri (Admin değilse)
-    // @ts-ignore
-    if (req.user!.role !== 'ADMIN') {
+    if (!req.user!.isAdmin) {
       if (existingPage.isLocked) return res.status(403).json({ error: 'Bu kayıt kilitlenmiştir.' });
       
       const now = new Date();
@@ -164,12 +159,10 @@ router.put('/:facilityId/:pageId', upload.single('document'), async (req: AuthRe
 
     const result = await prisma.$transaction(async (tx) => {
       await tx.notebookItem.deleteMany({
-        // @ts-ignore
         where: { pageId: parseInt(pageId) }
       });
 
       return await tx.notebookPage.update({
-        // @ts-ignore
         where: { id: parseInt(pageId) },
         data: {
           date: date ? new Date(date) : undefined,
@@ -194,7 +187,6 @@ router.put('/:facilityId/:pageId', upload.single('document'), async (req: AuthRe
 
     await prisma.activityLog.create({
       data: {
-        // @ts-ignore
         facilityId,
         username: req.user!.username,
         action: 'Defter Sayfası Güncellendi',
@@ -211,19 +203,17 @@ router.put('/:facilityId/:pageId', upload.single('document'), async (req: AuthRe
 
 // Silme işlemi (Soft Delete)
 router.delete('/:facilityId/:pageId', async (req: AuthRequest, res: Response) => {
-  const { facilityId, pageId } = req.params;
+  const { facilityId, pageId } = (req.params as Record<string, string>);
 
   try {
     const existingPage = await prisma.notebookPage.findUnique({
-      // @ts-ignore
       where: { id: parseInt(pageId) }
     });
 
     if (!existingPage) return res.status(404).json({ error: 'Kayıt bulunamadı.' });
 
     // Kısıtlama Kontrolleri
-    // @ts-ignore
-    if (req.user!.role !== 'ADMIN') {
+    if (!req.user!.isAdmin) {
       if (existingPage.isLocked) return res.status(403).json({ error: 'Kilitli kayıt silinemez.' });
       
       if (existingPage.documentUploadedAt) {
@@ -237,14 +227,12 @@ router.delete('/:facilityId/:pageId', async (req: AuthRequest, res: Response) =>
     }
 
     await prisma.notebookPage.update({
-      // @ts-ignore
       where: { id: parseInt(pageId) },
       data: { isArchived: true }
     });
 
     await prisma.activityLog.create({
       data: {
-        // @ts-ignore
         facilityId,
         username: req.user!.username,
         action: 'Defter Sayfası Silindi',
@@ -261,17 +249,14 @@ router.delete('/:facilityId/:pageId', async (req: AuthRequest, res: Response) =>
 
 // Kilidi aç/kapat (Sadece Admin)
 router.patch('/:facilityId/:pageId/toggle-lock', async (req: AuthRequest, res: Response) => {
-  const { pageId } = req.params;
-  // @ts-ignore
-  if (req.user!.role !== 'ADMIN') return res.status(403).json({ error: 'Yetkiniz yok.' });
+  const { pageId } = (req.params as Record<string, string>);
+  if (!req.user!.isAdmin) return res.status(403).json({ error: 'Yetkiniz yok.' });
 
   try {
-    // @ts-ignore
     const page = await prisma.notebookPage.findUnique({ where: { id: parseInt(pageId) } });
     if (!page) return res.status(404).json({ error: 'Kayıt bulunamadı.' });
 
     const updated = await prisma.notebookPage.update({
-      // @ts-ignore
       where: { id: parseInt(pageId) },
       data: { isLocked: !page.isLocked }
     });
@@ -284,14 +269,12 @@ router.patch('/:facilityId/:pageId/toggle-lock', async (req: AuthRequest, res: R
 
 // Profesyonelleri getir (TitleClass bazlı filtreleme için frontend'e data sağlar)
 router.get('/:facilityId/professionals', async (req: AuthRequest, res: Response) => {
-  const { facilityId } = req.params;
+  const { facilityId } = (req.params as Record<string, string>);
   try {
     const assignments = await prisma.assignment.findMany({
-      // @ts-ignore
       where: { facilityId, status: 'Aktif', professionalId: { not: null } },
       include: { professional: true }
     });
-    // @ts-ignore
     res.json(assignments.map(a => a.professional));
   } catch (error) {
     res.status(500).json({ error: 'Profesyoneller getirilemedi.' });

@@ -105,7 +105,7 @@ router.get('/departments', authMiddleware, async (req: AuthRequest, res) => {
 
 // Get materials for a specific department
 router.get('/department/:id', authMiddleware, async (req: AuthRequest, res) => {
-  const { id } = req.params;
+  const { id } = (req.params as Record<string, string>);
   const { facilityId } = req.query as Record<string, any>;
 
   if (!facilityId) {
@@ -118,7 +118,6 @@ router.get('/department/:id', authMiddleware, async (req: AuthRequest, res) => {
 
   try {
     const department = await prisma.hazmatDepartment.findUnique({
-      // @ts-ignore
       where: { id }
     });
 
@@ -127,7 +126,6 @@ router.get('/department/:id', authMiddleware, async (req: AuthRequest, res) => {
     }
 
     const inventoryItems = await prisma.hazmatInventoryItem.findMany({
-      // @ts-ignore
       where: { departmentId: id, facilityId: String(facilityId) },
       include: {
         material: {

@@ -5,14 +5,8 @@ const prisma = new client_1.PrismaClient();
 async function test() {
     try {
         console.log('Testing Notebooks query...');
-        // @ts-ignore
-        const entries = await prisma.notebookEntry.findMany({
+        const entries = await prisma.notebookPage.findMany({
             where: { facilityId: 'MLP-MERKEZ', year: 2026 },
-            include: {
-                category: true,
-                subCategory: true,
-                department: true,
-            },
         });
         console.log('Success! Entries found:', entries.length);
     }

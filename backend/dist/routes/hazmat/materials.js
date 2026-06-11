@@ -200,14 +200,12 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
 // Remove a material from a facility (does not delete the global material)
 router.delete('/facility/:facilityId/:materialId', auth_1.authMiddleware, async (req, res) => {
     const { facilityId, materialId } = req.params;
-    // @ts-ignore
     if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(facilityId)) {
         return res.status(403).json({ error: 'Access denied' });
     }
     try {
         await prisma.facilityHazmatItem.delete({
             where: {
-                // @ts-ignore
                 facilityId_materialId: { facilityId, materialId }
             }
         });
@@ -224,7 +222,6 @@ router.get('/:materialId', auth_1.authMiddleware, async (req, res) => {
     const { facilityId } = req.query; // to also get facility item details
     try {
         const material = await prisma.hazmatMaterial.findUnique({
-            // @ts-ignore
             where: { id: materialId },
             include: {
                 hazardLabels: { include: { label: true } },
@@ -240,7 +237,6 @@ router.get('/:materialId', auth_1.authMiddleware, async (req, res) => {
         let facilityItem = null;
         if (facilityId) {
             facilityItem = await prisma.facilityHazmatItem.findUnique({
-                // @ts-ignore
                 where: { facilityId_materialId: { facilityId: String(facilityId), materialId } },
                 include: { unit: true }
             });
@@ -266,15 +262,11 @@ router.put('/:materialId', auth_1.authMiddleware, async (req, res) => {
     try {
         const { facilityId, amountValue, unitId, hazardLabels, adrLabels, ppes, ...materialData } = data;
         // Delete existing relations to recreate them
-        // @ts-ignore
         await prisma.hazmatMaterialHazardLabel.deleteMany({ where: { materialId } });
-        // @ts-ignore
         await prisma.hazmatMaterialAdrLabel.deleteMany({ where: { materialId } });
-        // @ts-ignore
         await prisma.hazmatMaterialPpe.deleteMany({ where: { materialId } });
         // Update the global material
         const updatedMaterial = await prisma.hazmatMaterial.update({
-            // @ts-ignore
             where: { id: materialId },
             data: {
                 productName: materialData.productName,
@@ -317,7 +309,6 @@ router.put('/:materialId', auth_1.authMiddleware, async (req, res) => {
         });
         // Upsert the facility item to update amount
         await prisma.facilityHazmatItem.upsert({
-            // @ts-ignore
             where: { facilityId_materialId: { facilityId, materialId } },
             update: {
                 amountValue: amountValue ? Number(amountValue) : null,
@@ -325,7 +316,6 @@ router.put('/:materialId', auth_1.authMiddleware, async (req, res) => {
             },
             create: {
                 facilityId,
-                // @ts-ignore
                 materialId,
                 amountValue: amountValue ? Number(amountValue) : null,
                 unitId: unitId || null
@@ -334,7 +324,6 @@ router.put('/:materialId', auth_1.authMiddleware, async (req, res) => {
         // Create Audit Log
         await prisma.hazmatAuditLog.create({
             data: {
-                // @ts-ignore
                 materialId,
                 action: 'UPDATE',
                 details: 'Kullanıcı ürün içeriğini veya miktarını güncelledi.',

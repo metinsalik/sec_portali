@@ -12,7 +12,6 @@ const prisma = new client_1.PrismaClient();
 // Admin/Management → tüm tesisler; Specialist → atandığı tesisler
 router.get('/', auth_1.authMiddleware, async (req, res) => {
     try {
-        // @ts-ignore
         const user = req.user;
         const isAdminOrMgmt = user?.isAdmin || user?.isManagement;
         let facilities;

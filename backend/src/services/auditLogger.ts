@@ -17,9 +17,8 @@ export interface AuditLogEntry {
  */
 export async function logAudit(entry: AuditLogEntry) {
   try {
-    await prisma.activityLog.create({
+    await (prisma as any).activityLog.create({
       data: {
-        // @ts-ignore
         entityType: entry.entityType,
         entityId: entry.entityId,
         action: entry.action,

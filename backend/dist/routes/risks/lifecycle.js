@@ -10,7 +10,6 @@ const router = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
 // Helper to check facility access
 async function checkFacilityAccess(req, facilityId) {
-    // @ts-ignore
     const user = req.user;
     if (!user)
         return false;
@@ -58,7 +57,6 @@ function parseDate(val) {
 // GET /api/risks/lifecycle/stats/summary
 router.get('/stats/summary', auth_1.authMiddleware, async (req, res) => {
     try {
-        // @ts-ignore
         const user = req.user;
         const isAdminOrMgmt = user?.isAdmin || user?.isManagement;
         const { facilityId } = req.query;
@@ -91,7 +89,6 @@ router.get('/stats/summary', auth_1.authMiddleware, async (req, res) => {
 // POST /api/risks/lifecycle/import — Excel/JSON toplu yükleme
 router.post('/import', auth_1.authMiddleware, async (req, res) => {
     try {
-        // @ts-ignore
         const username = req.user?.username;
         const { facilityId, rows } = req.body;
         if (!facilityId || !Array.isArray(rows) || rows.length === 0) {
@@ -180,7 +177,6 @@ router.post('/import', auth_1.authMiddleware, async (req, res) => {
 // GET /api/risks/lifecycle?departmentId=N&facilityId=X&status=Y&search=Z
 router.get('/', auth_1.authMiddleware, async (req, res) => {
     try {
-        // @ts-ignore
         const user = req.user;
         const isAdminOrMgmt = user?.isAdmin || user?.isManagement;
         const { departmentId, facilityId, status, search } = req.query;
@@ -263,7 +259,6 @@ router.get('/:id', auth_1.authMiddleware, async (req, res) => {
 // POST /api/risks/lifecycle
 router.post('/', auth_1.authMiddleware, async (req, res) => {
     try {
-        // @ts-ignore
         const username = req.user?.username;
         const { departmentId, riskNo, riskCategory, subCategory, area, method, activity, hazard, riskDescription, initialCondition, initialImage, initialProb, initialFreq, initialSev, initialScore, status, 
         // New fields
@@ -439,7 +434,6 @@ router.put('/:id', auth_1.authMiddleware, async (req, res) => {
                     action: 'Güncellendi',
                     details: 'Risk detayları güncellendi.',
                     changedFields,
-                    // @ts-ignore
                     username: req.user?.username || 'Sistem',
                 }
             });

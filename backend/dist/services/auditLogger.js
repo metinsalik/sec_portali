@@ -13,7 +13,6 @@ async function logAudit(entry) {
     try {
         await prisma.activityLog.create({
             data: {
-                // @ts-ignore
                 entityType: entry.entityType,
                 entityId: entry.entityId,
                 action: entry.action,

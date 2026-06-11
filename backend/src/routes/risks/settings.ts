@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import { AuthRequest } from "../../middleware/auth";
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../../middleware/auth';
 
@@ -6,8 +7,7 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // Helper to check facility access
-async function checkFacilityAccess(req: Request, facilityId: string): Promise<boolean> {
-  // @ts-ignore
+async function checkFacilityAccess(req: AuthRequest, facilityId: string): Promise<boolean> {
   const user = req.user;
   if (!user) return false;
   if (user.isAdmin || user.isManagement) return true;
@@ -152,7 +152,7 @@ async function initializeFacilityRiskSettings(facilityId: string) {
 }
 
 // GET /api/risks/settings?facilityId=xxx
-router.get('/', authMiddleware, async (req: Request, res: Response) => {
+router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { facilityId } = req.query as Record<string, any>;
     if (!facilityId) {
@@ -187,7 +187,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 });
 
 // POST /api/risks/settings/departments
-router.post('/departments', authMiddleware, async (req: Request, res: Response) => {
+router.post('/departments', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { facilityId, name } = req.body;
     if (!facilityId || !name) {
@@ -217,7 +217,7 @@ router.post('/departments', authMiddleware, async (req: Request, res: Response) 
 });
 
 // PUT /api/risks/settings/departments/:id
-router.put('/departments/:id', authMiddleware, async (req: Request, res: Response) => {
+router.put('/departments/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const { name } = req.body;
@@ -245,7 +245,7 @@ router.put('/departments/:id', authMiddleware, async (req: Request, res: Respons
 });
 
 // DELETE /api/risks/settings/departments/:id
-router.delete('/departments/:id', authMiddleware, async (req: Request, res: Response) => {
+router.delete('/departments/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const dept = await prisma.riskDepartmentSetting.findUnique({ where: { id } });
@@ -265,7 +265,7 @@ router.delete('/departments/:id', authMiddleware, async (req: Request, res: Resp
 });
 
 // POST /api/risks/settings/categories
-router.post('/categories', authMiddleware, async (req: Request, res: Response) => {
+router.post('/categories', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { facilityId, name } = req.body;
     if (!facilityId || !name) {
@@ -295,7 +295,7 @@ router.post('/categories', authMiddleware, async (req: Request, res: Response) =
 });
 
 // PUT /api/risks/settings/categories/:id
-router.put('/categories/:id', authMiddleware, async (req: Request, res: Response) => {
+router.put('/categories/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const { name } = req.body;
@@ -323,7 +323,7 @@ router.put('/categories/:id', authMiddleware, async (req: Request, res: Response
 });
 
 // DELETE /api/risks/settings/categories/:id
-router.delete('/categories/:id', authMiddleware, async (req: Request, res: Response) => {
+router.delete('/categories/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const cat = await prisma.riskCategorySetting.findUnique({ where: { id } });
@@ -343,7 +343,7 @@ router.delete('/categories/:id', authMiddleware, async (req: Request, res: Respo
 });
 
 // POST /api/risks/settings/subcategories
-router.post('/subcategories', authMiddleware, async (req: Request, res: Response) => {
+router.post('/subcategories', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { categoryId, name } = req.body;
     if (!categoryId || !name) {
@@ -376,7 +376,7 @@ router.post('/subcategories', authMiddleware, async (req: Request, res: Response
 });
 
 // PUT /api/risks/settings/subcategories/:id
-router.put('/subcategories/:id', authMiddleware, async (req: Request, res: Response) => {
+router.put('/subcategories/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const { name } = req.body;
@@ -407,7 +407,7 @@ router.put('/subcategories/:id', authMiddleware, async (req: Request, res: Respo
 });
 
 // DELETE /api/risks/settings/subcategories/:id
-router.delete('/subcategories/:id', authMiddleware, async (req: Request, res: Response) => {
+router.delete('/subcategories/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const sub = await prisma.riskSubCategorySetting.findUnique({

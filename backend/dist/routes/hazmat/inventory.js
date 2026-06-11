@@ -105,14 +105,12 @@ router.get('/department/:id', auth_1.authMiddleware, async (req, res) => {
     }
     try {
         const department = await prisma.hazmatDepartment.findUnique({
-            // @ts-ignore
             where: { id }
         });
         if (!department) {
             return res.status(404).json({ error: 'Department not found' });
         }
         const inventoryItems = await prisma.hazmatInventoryItem.findMany({
-            // @ts-ignore
             where: { departmentId: id, facilityId: String(facilityId) },
             include: {
                 material: {

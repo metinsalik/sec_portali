@@ -235,7 +235,6 @@ const ExtraordinaryIncidentsPage = () => {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {(isAdmin || (user?.facilities && user.facilities.length > 1)) && (
-                // @ts-ignore
                 <Select value={selectedFacility} onValueChange={setSelectedFacility}>
                   <SelectTrigger className="w-[200px] h-10">
                     <SelectValue>
@@ -254,7 +253,6 @@ const ExtraordinaryIncidentsPage = () => {
                 </Select>
               )}
               
-              // @ts-ignore
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-[160px] h-10">
                   <SelectValue>
@@ -269,7 +267,6 @@ const ExtraordinaryIncidentsPage = () => {
                 </SelectContent>
               </Select>
 
-              // @ts-ignore
               <Select value={rootCauseFilter} onValueChange={setRootCauseFilter}>
                 <SelectTrigger className="w-[160px] h-10">
                   <SelectValue>
@@ -284,7 +281,6 @@ const ExtraordinaryIncidentsPage = () => {
                 </SelectContent>
               </Select>
 
-              // @ts-ignore
               <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
                 <SelectTrigger className="w-[160px] h-10">
                   <SelectValue>
@@ -599,7 +595,6 @@ const ExtraordinaryIncidentsPage = () => {
                     {viewingIncident.attachments.map((file: any, i: number) => (
                       <a 
                         key={i} 
-                        // @ts-ignore
                         href={`${api.baseUrl}${file.url}`} 
                         target="_blank" 
                         rel="noreferrer"

@@ -212,7 +212,6 @@ export default function RiskFacilityPage() {
       {/* DISTRIBUTION SECTION (Stitch Style Donut & CSS Bars) */}
       {!risksLoading && facilityRisks.length > 0 && (() => {
         const total = filteredFacilityRisks.length;
-        // @ts-ignore
         const acikCount = filteredFacilityRisks.filter(r => r.status === 'ACIK_TEHLIKE').length;
         const kapaliCount = total - acikCount;
         const acikPercent = total > 0 ? Math.round((acikCount / total) * 100) : 0;
@@ -258,15 +257,10 @@ export default function RiskFacilityPage() {
               <div className="space-y-6 pt-4">
                 
                 {[
-                  // @ts-ignore
                   { label: 'Tolere Gösterilemez Risk', count: tolere, barClass: 'risk-bar-unbearable', width: pct(tolere) },
-                  // @ts-ignore
                   { label: 'Yüksek Risk', count: yuksek, barClass: 'risk-bar-high', width: pct(yuksek) },
-                  // @ts-ignore
                   { label: 'Önemli Risk', count: onemli, barClass: 'risk-bar-significant', width: pct(onemli) },
-                  // @ts-ignore
                   { label: 'Olası Risk', count: olasi, barClass: 'risk-bar-probable', width: pct(olasi) },
-                  // @ts-ignore
                   { label: 'Önemsiz Risk', count: onemsiz, barClass: 'risk-bar-insignificant', width: pct(onemsiz) }
                 ].map((item, idx) => (
                   <div key={idx} className="relative">
@@ -278,7 +272,6 @@ export default function RiskFacilityPage() {
                           style={{ width: `${item.width}%` }}
                         ></div>
                       </div>
-                      // @ts-ignore
                       <span className="w-8 font-bold text-foreground dark:text-slate-100 text-sm">{item.count}</span>
                     </div>
                   </div>

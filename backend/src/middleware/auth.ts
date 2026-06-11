@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-export interface AuthRequest extends Request {
+export interface AuthRequest<P = Record<string, string>, ReqBody = any, ReqQuery = Record<string, string | undefined>> extends Request<P, any, ReqBody, ReqQuery> {
   user?: {
     username: string;
     fullName: string;
@@ -9,6 +9,7 @@ export interface AuthRequest extends Request {
     facilities: string[];
     isAdmin: boolean;
     isManagement: boolean;
+    workflowRole?: string;
   };
 }
 

@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import { AuthRequest } from "../../middleware/auth";
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../../middleware/auth';
 
@@ -6,8 +7,7 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // Helper to check facility access
-async function checkFacilityAccess(req: Request, facilityId: string): Promise<boolean> {
-  // @ts-ignore
+async function checkFacilityAccess(req: AuthRequest, facilityId: string): Promise<boolean> {
   const user = req.user;
   if (!user) return false;
   if (user.isAdmin || user.isManagement) return true;
@@ -50,9 +50,8 @@ function parseDate(val: any): Date | null {
 // ─── STATIK ENDPOINT'LER (/:id'den ÖNCE) ─────────────────────────────────────
 
 // GET /api/risks/lifecycle/stats/summary
-router.get('/stats/summary', authMiddleware, async (req: Request, res: Response) => {
+router.get('/stats/summary', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    // @ts-ignore
     const user = req.user;
     const isAdminOrMgmt = user?.isAdmin || user?.isManagement;
     const { facilityId } = req.query as Record<string, any>;
@@ -66,7 +65,7 @@ router.get('/stats/summary', authMiddleware, async (req: Request, res: Response)
       where = { department: { facilityId: facilityId as string } };
     } else if (!isAdminOrMgmt) {
       const userFacilities = await prisma.userFacility.findMany({
-        where: { username: user.username },
+        where: { username: user!.username },
         select: { facilityId: true }
       });
       const facilityIds = userFacilities.map(f => f.facilityId);
@@ -85,9 +84,8 @@ router.get('/stats/summary', authMiddleware, async (req: Request, res: Response)
 });
 
 // POST /api/risks/lifecycle/import — Excel/JSON toplu yükleme
-router.post('/import', authMiddleware, async (req: Request, res: Response) => {
+router.post('/import', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    // @ts-ignore
     const username = req.user?.username;
     const { facilityId, rows } = req.body;
 
@@ -186,9 +184,8 @@ router.post('/import', authMiddleware, async (req: Request, res: Response) => {
 // ─── DİNAMİK ENDPOINT'LER ────────────────────────────────────────────────────
 
 // GET /api/risks/lifecycle?departmentId=N&facilityId=X&status=Y&search=Z
-router.get('/', authMiddleware, async (req: Request, res: Response) => {
+router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    // @ts-ignore
     const user = req.user;
     const isAdminOrMgmt = user?.isAdmin || user?.isManagement;
     const { departmentId, facilityId, status, search } = req.query as Record<string, any>;
@@ -216,7 +213,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       where.department = { facilityId: facilityId as string };
     } else if (!isAdminOrMgmt) {
       const userFacilities = await prisma.userFacility.findMany({
-        where: { username: user.username },
+        where: { username: user!.username },
         select: { facilityId: true }
       });
       const facilityIds = userFacilities.map(f => f.facilityId);
@@ -251,7 +248,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 });
 
 // GET /api/risks/lifecycle/:id
-router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
+router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const risk = await prisma.riskLifecycle.findUnique({
       where: { id: req.params.id as string },
@@ -274,9 +271,8 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
 });
 
 // POST /api/risks/lifecycle
-router.post('/', authMiddleware, async (req: Request, res: Response) => {
+router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    // @ts-ignore
     const username = req.user?.username;
     const {
       departmentId, riskNo, riskCategory, subCategory, area, method,
@@ -387,7 +383,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 });
 
 // PUT /api/risks/lifecycle/:id
-router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
+router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const risk = await prisma.riskLifecycle.findUnique({
       where: { id: req.params.id as string },
@@ -478,7 +474,6 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
           action: 'Güncellendi',
           details: 'Risk detayları güncellendi.',
           changedFields,
-          // @ts-ignore
           username: req.user?.username || 'Sistem',
         }
       });
@@ -493,7 +488,7 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
 });
 
 // DELETE /api/risks/lifecycle/:id
-router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
+router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const risk = await prisma.riskLifecycle.findUnique({
       where: { id: req.params.id as string },

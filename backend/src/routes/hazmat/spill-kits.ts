@@ -68,7 +68,7 @@ router.post('/', async (req, res) => {
 // Update items for a kit template
 router.post('/:id/items', async (req, res) => {
   try {
-    const kitId = req.params.id;
+    const kitId = (req.params as Record<string, string>).id;
     const items = req.body.items || [];
 
     // Delete existing items
@@ -101,7 +101,7 @@ router.post('/:id/items', async (req, res) => {
 // Add a placement (Department mapping)
 router.post('/:id/placements', async (req, res) => {
   try {
-    const kitId = req.params.id;
+    const kitId = (req.params as Record<string, string>).id;
     const data = req.body;
 
     const placement = await prisma.hazmatSpillKitDepartment.create({
@@ -132,7 +132,7 @@ router.delete('/:id/placements/:placementId', async (req, res) => {
 // Add a check to a placement
 router.post('/placements/:id/checks', async (req, res) => {
   try {
-    const placementId = req.params.id;
+    const placementId = (req.params as Record<string, string>).id;
     const data = req.body;
 
     const check = await prisma.hazmatSpillKitCheck.create({
@@ -154,7 +154,7 @@ router.post('/placements/:id/checks', async (req, res) => {
 // Add an incident to a placement
 router.post('/placements/:id/incidents', async (req, res) => {
   try {
-    const placementId = req.params.id;
+    const placementId = (req.params as Record<string, string>).id;
     const data = req.body;
 
     const incident = await prisma.hazmatSpillKitIncident.create({
@@ -183,7 +183,7 @@ router.post('/placements/:id/incidents', async (req, res) => {
 // Add an action to a placement
 router.post('/placements/:id/actions', async (req, res) => {
   try {
-    const placementId = req.params.id;
+    const placementId = (req.params as Record<string, string>).id;
     const data = req.body;
 
     const action = await prisma.hazmatSpillKitAction.create({
@@ -204,7 +204,7 @@ router.post('/placements/:id/actions', async (req, res) => {
 // Update action status
 router.put('/actions/:actionId', async (req, res) => {
   try {
-    const { actionId } = req.params;
+    const { actionId } = (req.params as Record<string, string>);
     const { status } = req.body;
 
     const action = await prisma.hazmatSpillKitAction.update({

@@ -304,7 +304,6 @@ export default function ProfessionalsPage() {
             </div>
 
             {activeTab === 'OSGB Kadrosu' && (
-              // @ts-ignore
               <Select value={selectedOSGB} onValueChange={setSelectedOSGB}>
                 <SelectTrigger className="w-[180px] h-10 bg-slate-50/50 border-slate-100 rounded-xl text-[11px] font-bold">
                   <SelectValue placeholder="OSGB Seçin" />
@@ -316,7 +315,6 @@ export default function ProfessionalsPage() {
               </Select>
             )}
 
-            // @ts-ignore
             <Select value={filterClass} onValueChange={setFilterClass}>
               <SelectTrigger className="w-[160px] h-10 bg-slate-50/50 border-slate-100 rounded-xl text-[11px] font-bold">
                 <Filter className="w-3.5 h-3.5 mr-2 text-slate-400" />
@@ -359,7 +357,6 @@ export default function ProfessionalsPage() {
             <p className="text-slate-400 font-semibold text-xs tracking-wide">Kayıt Bulunamadı</p>
           </div>
         ) : (
-          // @ts-ignore
           <Accordion type="multiple" defaultValue={TITLE_CLASSES} className="space-y-4 border-none">
             {TITLE_CLASSES.map((title) => grouped[title] && (
               <AccordionItem key={title} value={title} className="border-none">
@@ -470,7 +467,6 @@ export default function ProfessionalsPage() {
                       <div className="space-y-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 animate-in slide-in-from-top-2 duration-300">
                         <div className="space-y-2">
                           <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">OSGB Firma Adı</label>
-                          // @ts-ignore
                           <Select value={form.osgbName} onValueChange={(v) => setForm({ ...form, osgbName: v })}>
                             <SelectTrigger className="rounded-xl border-white dark:border-slate-700 bg-white dark:bg-slate-900 h-11 text-sm font-medium focus:ring-primary/10"><SelectValue placeholder="OSGB Seçin" /></SelectTrigger>
                             <SelectContent className="rounded-xl">{osgbCompanies.map((c) => <SelectItem key={c.id} value={c.name} className="text-xs font-medium">{c.name}</SelectItem>)}</SelectContent>

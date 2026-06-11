@@ -126,7 +126,6 @@ const EmailTemplatesPage = () => {
         </div>
 
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          // @ts-ignore
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="w-4 h-4" />

@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import { AuthRequest } from "../../middleware/auth";
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../../middleware/auth';
 
@@ -7,9 +8,8 @@ const prisma = new PrismaClient();
 
 // GET /api/risks/facilities
 // Admin/Management → tüm tesisler; Specialist → atandığı tesisler
-router.get('/', authMiddleware, async (req: Request, res: Response) => {
+router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    // @ts-ignore
     const user = req.user;
     const isAdminOrMgmt = user?.isAdmin || user?.isManagement;
 
@@ -37,7 +37,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     } else {
       // Uzman: sadece atandığı tesisler
       const userFacilities = await prisma.userFacility.findMany({
-        where: { username: user.username },
+        where: { username: user!.username },
         select: { facilityId: true },
       });
       const facilityIds = userFacilities.map((f: any) => f.facilityId);

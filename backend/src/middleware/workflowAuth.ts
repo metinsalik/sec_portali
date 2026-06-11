@@ -1,4 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
+import { AuthRequest } from './auth';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -13,9 +14,8 @@ const ROLE_HIERARCHY = {
 };
 
 export const requireWorkflowRole = (allowedRoles: string[]) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      // @ts-ignore - req.user will be populated by standard auth middleware
       const username = req.user?.username;
       
       if (!username) {
@@ -34,8 +34,7 @@ export const requireWorkflowRole = (allowedRoles: string[]) => {
         return res.status(403).json({ error: 'Bu işlem için modül yetkiniz yetersiz.' });
       }
 
-      // @ts-ignore
-      req.workflowRole = userRole.moduleRole;
+      if (req.user) req.user.workflowRole = userRole.moduleRole;
       next();
     } catch (error) {
       console.error('Workflow Auth Error:', error);

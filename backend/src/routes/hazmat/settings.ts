@@ -35,7 +35,6 @@ router.post('/units', authMiddleware, async (req: AuthRequest, res) => {
 
 router.delete('/units/:id', authMiddleware, async (req: AuthRequest, res) => {
   try {
-    // @ts-ignore
     await prisma.hazmatUnit.delete({ where: { id: req.params.id } });
     res.json({ message: 'Unit deleted successfully' });
   } catch (error) {
@@ -78,7 +77,6 @@ router.post('/departments', authMiddleware, async (req: AuthRequest, res) => {
 
 router.delete('/departments/:id', authMiddleware, async (req: AuthRequest, res) => {
   try {
-    // @ts-ignore
     await prisma.hazmatDepartment.delete({ where: { id: req.params.id } });
     res.json({ message: 'Department deleted successfully' });
   } catch (error) {
@@ -119,7 +117,6 @@ router.put('/hazard-labels/:id', authMiddleware, async (req: AuthRequest, res) =
   const { code, name, description, imageUrl } = req.body;
   try {
     const label = await prisma.hazmatHazardLabel.update({
-      // @ts-ignore
       where: { id: req.params.id },
       data: { code, name, description, imageUrl }
     });
@@ -132,7 +129,6 @@ router.put('/hazard-labels/:id', authMiddleware, async (req: AuthRequest, res) =
 
 router.delete('/hazard-labels/:id', authMiddleware, async (req: AuthRequest, res) => {
   try {
-    // @ts-ignore
     await prisma.hazmatHazardLabel.delete({ where: { id: req.params.id } });
     res.json({ message: 'Label deleted successfully' });
   } catch (error) {
@@ -173,7 +169,6 @@ router.put('/adr-labels/:id', authMiddleware, async (req: AuthRequest, res) => {
   const { code, name, description, imageUrl } = req.body;
   try {
     const label = await prisma.hazmatAdrLabel.update({
-      // @ts-ignore
       where: { id: req.params.id },
       data: { code, name, description, imageUrl }
     });
@@ -186,7 +181,6 @@ router.put('/adr-labels/:id', authMiddleware, async (req: AuthRequest, res) => {
 
 router.delete('/adr-labels/:id', authMiddleware, async (req: AuthRequest, res) => {
   try {
-    // @ts-ignore
     await prisma.hazmatAdrLabel.delete({ where: { id: req.params.id } });
     res.json({ message: 'ADR Label deleted successfully' });
   } catch (error) {
@@ -227,7 +221,6 @@ router.put('/ppes/:id', authMiddleware, async (req: AuthRequest, res) => {
   const { name, description, imageUrl } = req.body;
   try {
     const ppe = await prisma.hazmatPpe.update({
-      // @ts-ignore
       where: { id: req.params.id },
       data: { name, description, imageUrl }
     });
@@ -240,7 +233,6 @@ router.put('/ppes/:id', authMiddleware, async (req: AuthRequest, res) => {
 
 router.delete('/ppes/:id', authMiddleware, async (req: AuthRequest, res) => {
   try {
-    // @ts-ignore
     await prisma.hazmatPpe.delete({ where: { id: req.params.id } });
     res.json({ message: 'PPE deleted successfully' });
   } catch (error) {
@@ -281,7 +273,6 @@ router.put('/categories/:id', authMiddleware, async (req: AuthRequest, res) => {
   const { name, scope, examples } = req.body;
   try {
     const category = await prisma.hazmatCategory.update({
-      // @ts-ignore
       where: { id: req.params.id },
       data: { name, scope, examples }
     });
@@ -294,7 +285,6 @@ router.put('/categories/:id', authMiddleware, async (req: AuthRequest, res) => {
 
 router.delete('/categories/:id', authMiddleware, async (req: AuthRequest, res) => {
   try {
-    // @ts-ignore
     await prisma.hazmatCategory.delete({ where: { id: req.params.id } });
     res.json({ message: 'Category deleted successfully' });
   } catch (error) {

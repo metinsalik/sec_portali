@@ -6,7 +6,7 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // Get all tasks (filtered by role/department in the future)
-router.get('/', async (req, res) => {
+router.get('/', async (req: any, res) => {
   try {
     const tasks = await prisma.workflowTask.findMany({
       include: {
@@ -24,7 +24,7 @@ router.get('/', async (req, res) => {
 });
 
 // Create task
-router.post('/', async (req, res) => {
+router.post('/', async (req: any, res) => {
   try {
     const { title, description, priority, categoryId, departmentId, isPool } = req.body;
     // @ts-ignore
@@ -50,7 +50,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update task status
-router.patch('/:id/status', async (req, res) => {
+router.patch('/:id/status', async (req: any, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;

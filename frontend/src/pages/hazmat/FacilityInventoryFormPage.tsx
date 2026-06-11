@@ -161,7 +161,6 @@ export default function FacilityInventoryFormPage() {
       if (!res.ok) throw new Error('Failed to save');
     },
     onSuccess: () => {
-      // @ts-ignore
       toast.success('Envanter başarıyla güncellendi');
       queryClient.invalidateQueries({ queryKey: ['inventory-matrix', activeFacilityId, selectedMaterialId] });
       queryClient.invalidateQueries({ queryKey: ['inventory-summary', activeFacilityId] });
@@ -169,7 +168,6 @@ export default function FacilityInventoryFormPage() {
       navigate('/hazmat/inventory');
     },
     onError: () => {
-      // @ts-ignore
       toast.error('Kaydedilirken bir hata oluştu');
     }
   });

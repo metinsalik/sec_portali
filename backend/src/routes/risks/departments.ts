@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import { AuthRequest } from "../../middleware/auth";
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../../middleware/auth';
 
@@ -6,8 +7,7 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // Helper to check facility access
-async function checkFacilityAccess(req: Request, facilityId: string): Promise<boolean> {
-  // @ts-ignore
+async function checkFacilityAccess(req: AuthRequest, facilityId: string): Promise<boolean> {
   const user = req.user;
   if (!user) return false;
   if (user.isAdmin || user.isManagement) return true;
@@ -34,7 +34,7 @@ function generateDeptCode(name: string): string {
 }
 
 // GET /api/risks/departments?facilityId=xxx
-router.get('/', authMiddleware, async (req: Request, res: Response) => {
+router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { facilityId } = req.query as Record<string, any>;
     if (!facilityId) return res.status(400).json({ error: 'facilityId gerekli.' });
@@ -82,7 +82,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 });
 
 // GET /api/risks/departments/:id
-router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
+router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const dept = await prisma.riskDepartment.findUnique({ where: { id } });
@@ -101,7 +101,7 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
 });
 
 // POST /api/risks/departments — yeni departman oluştur
-router.post('/', authMiddleware, async (req: Request, res: Response) => {
+router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { facilityId, name } = req.body;
     if (!facilityId || !name) return res.status(400).json({ error: 'facilityId ve name gerekli.' });
@@ -127,7 +127,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 });
 
 // PUT /api/risks/departments/:id
-router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
+router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
     const { name } = req.body;
@@ -151,7 +151,7 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
 });
 
 // DELETE /api/risks/departments/:id
-router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
+router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
 

@@ -10,7 +10,6 @@ const router = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
 // Helper to check facility access
 async function checkFacilityAccess(req, facilityId) {
-    // @ts-ignore
     const user = req.user;
     if (!user)
         return false;
