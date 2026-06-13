@@ -56,6 +56,7 @@ interface Facility {
   dangerClass: string;
   employeeCount: number;
   isActive: boolean;
+  logoUrl?: string;
   buildings: BuildingBlock[];
   assignments: Assignment[];
 }
@@ -105,9 +106,11 @@ const FacilitiesPage = () => {
     naceCode: '',
     dangerClass: 'Az Tehlikeli',
     employeeCount: '',
+    logoUrl: '',
     buildings: [initialBuilding]
   });
 
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [view, setView] = useState<'list' | 'detail'>('list');
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
@@ -209,17 +212,21 @@ const FacilitiesPage = () => {
       naceCode: '',
       dangerClass: 'Az Tehlikeli',
       employeeCount: '',
+      logoUrl: '',
       buildings: [initialBuilding]
     });
+    setLogoFile(null);
     setIsEditing(false);
     setIsModalOpen(false);
   };
 
   const populateForm = (facility: Facility) => {
+    setLogoFile(null);
     setFormData({
       ...facility,
       city: facility.city as City,
       employeeCount: facility.employeeCount.toString(),
+      logoUrl: facility.logoUrl || '',
       buildings: facility.buildings.length > 0 ? facility.buildings.map(b => ({
         ...b,
         constructionYear: b.constructionYear?.toString() || '',
@@ -267,12 +274,33 @@ const FacilitiesPage = () => {
     setFormData(prev => ({ ...prev, buildings: newBuildings }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    let currentLogoUrl = formData.logoUrl;
+
+    if (logoFile) {
+      try {
+        const fileData = new FormData();
+        fileData.append('file', logoFile);
+        const res = await api.customFetch('/settings/facilities/upload-logo', {
+          method: 'POST',
+          body: fileData
+        });
+        if (res.ok) {
+          const data = await res.json();
+          currentLogoUrl = data.url;
+        }
+      } catch (err) {
+        console.error('Logo yukleme hatasi:', err);
+      }
+    }
+
+    const submitData = { ...formData, logoUrl: currentLogoUrl };
+
     if (isEditing) {
-      updateMutation.mutate(formData);
+      updateMutation.mutate(submitData);
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(submitData);
     }
   };
 
@@ -540,8 +568,8 @@ const FacilitiesPage = () => {
                 <Card key={facility.id} className="hover:shadow-xl transition-all border border-slate-200/60 shadow-sm group overflow-hidden rounded-2xl bg-white dark:bg-slate-900 flex flex-col hover:-translate-y-1 duration-300">
                    <CardHeader className="p-5 pb-0">
                      <div className="flex justify-between items-start">
-                       <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-primary/70 border border-slate-100 dark:border-slate-800 group-hover:scale-110 transition-transform">
-                         <Building2 className="w-6 h-6" />
+                       <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-primary/70 border border-slate-100 dark:border-slate-800 group-hover:scale-110 transition-transform overflow-hidden">
+                         {facility.logoUrl ? <img src={facility.logoUrl} alt="Logo" className="w-full h-full object-contain" /> : <Building2 className="w-6 h-6" />}
                        </div>
                        <div className="flex items-center gap-1">
                         <Button 
@@ -791,6 +819,30 @@ const FacilitiesPage = () => {
                       <h4 className="text-base font-semibold text-slate-800 dark:text-slate-100">Kurumsal Bilgiler</h4>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-3 col-span-2">
+                        <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Logo Yükle</label>
+                        <div className="flex items-center gap-4">
+                          <Input 
+                            type="file"
+                            accept="image/*"
+                            onChange={e => {
+                              if (e.target.files && e.target.files[0]) {
+                                setLogoFile(e.target.files[0]);
+                              }
+                            }}
+                            className="bg-secondary/40 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/50 h-12 rounded-xl text-base cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                          />
+                          {(logoFile || formData.logoUrl) && (
+                            <div className="w-12 h-12 rounded-xl border border-slate-200 overflow-hidden shrink-0 bg-slate-50 flex items-center justify-center">
+                              {logoFile ? (
+                                <img src={URL.createObjectURL(logoFile)} alt="Yeni Logo" className="w-full h-full object-contain" />
+                              ) : (
+                                <img src={formData.logoUrl} alt="Mevcut Logo" className="w-full h-full object-contain" />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                       <div className="space-y-3 col-span-2">
                         <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Ticari Unvan</label>
                         <Input 
@@ -1047,8 +1099,8 @@ const LifeCardView = ({ facility, onBack, onEdit, complianceData }: {
           <div className="p-8 border-b border-slate-100 dark:border-slate-800/50">
              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="flex items-center gap-6">
-                  <div className="w-20 h-20 bg-primary/5 rounded-2xl flex items-center justify-center border border-primary/10 text-primary">
-                    <Building2 className="w-10 h-10" />
+                  <div className="w-20 h-20 bg-primary/5 rounded-2xl flex items-center justify-center border border-primary/10 text-primary overflow-hidden">
+                    {facility.logoUrl ? <img src={facility.logoUrl} alt="Logo" className="w-full h-full object-contain" /> : <Building2 className="w-10 h-10" />}
                   </div>
                   <div>
                     <div className="flex items-center gap-3 mb-2">

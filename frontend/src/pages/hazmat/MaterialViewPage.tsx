@@ -1,15 +1,18 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Clock, User, Edit } from 'lucide-react';
+import { ArrowLeft, Clock, User, Edit, FileText } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
+import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
 import { BASE_URL } from '@/lib/api';
 
 export default function MaterialViewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const activeFacilityId = localStorage.getItem('activeFacilityId');
+  const [printModalOpen, setPrintModalOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['material-details', id, activeFacilityId],
@@ -62,9 +65,14 @@ export default function MaterialViewPage() {
               <p className="text-muted-foreground">{material.brandName || 'Marka Belirtilmemiş'}</p>
             </div>
           </div>
-          <Button onClick={() => navigate(`/hazmat/materials/edit/${id}`)} className="gap-2">
-            <Edit className="w-4 h-4" /> Düzenle
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button onClick={() => setPrintModalOpen(true)} variant="outline" className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+              <FileText className="w-4 h-4" /> Bilgi Kartı Yazdır
+            </Button>
+            <Button onClick={() => navigate(`/hazmat/materials/edit/${id}`)} className="gap-2">
+              <Edit className="w-4 h-4" /> Düzenle
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -216,6 +224,14 @@ export default function MaterialViewPage() {
             </div>
           </div>
         </div>
+        
+        {material && (
+          <PrintCardModal 
+            isOpen={printModalOpen} 
+            onClose={() => setPrintModalOpen(false)} 
+            material={material} 
+          />
+        )}
       </div>
     </AppLayout>
   );

@@ -6,20 +6,29 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxEmpty } from '@/components/ui/combobox';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Save, AlertTriangle, Layers, Pencil, CheckCircle2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Save, AlertTriangle, Layers, Pencil, CheckCircle2, Check, ChevronsUpDown } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 
 export default function FacilityInventoryFormPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialDepartmentId = searchParams.get('departmentId');
   const activeFacilityId = localStorage.getItem('activeFacilityId');
   const queryClient = useQueryClient();
 
   const [selectedMaterialId, setSelectedMaterialId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>(initialDepartmentId ? [initialDepartmentId] : []);
   
+  const [openMaterial, setOpenMaterial] = useState(false);
+  const [openDept, setOpenDept] = useState(false);
+  const [deptSearch, setDeptSearch] = useState('');
+
   // Matrix data state: departmentId -> { minQuantity, maxQuantity }
   const [matrixState, setMatrixState] = useState<Record<string, { minQuantity: string, maxQuantity: string }>>({});
 
@@ -110,10 +119,14 @@ export default function FacilityInventoryFormPage() {
         };
       });
 
+      if (initialDepartmentId && !preSelectedDepts.includes(initialDepartmentId)) {
+        preSelectedDepts.push(initialDepartmentId);
+      }
+
       setSelectedDepartments(preSelectedDepts);
       setMatrixState(initialState);
     }
-  }, [matrixData]);
+  }, [matrixData, initialDepartmentId]);
 
   // 3. Fetch summary for the summary table
   const { data: summaryData } = useQuery({
@@ -256,36 +269,57 @@ export default function FacilityInventoryFormPage() {
             <CardDescription>Departmanlara dağıtmak istediğiniz tehlikeli maddeyi seçin.</CardDescription>
           </CardHeader>
         <CardContent>
-          <Combobox value={selectedMaterialId} onValueChange={(val) => {
-            const newVal = Array.isArray(val) ? val[0] : val;
-            if (newVal) {
-              setSelectedMaterialId(newVal);
-              const selectedItem = materialsData.find((item: any) => item.id === newVal);
-              if (selectedItem) {
-                setSearchQuery(`${selectedItem.productName} ${selectedItem.brandName ? `(${selectedItem.brandName})` : ''}`.trim());
-              }
-            }
-          }}>
-            <ComboboxInput 
-              placeholder="Tehlikeli Madde Ara ve Seç..." 
-              className="w-full md:w-[400px]" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <ComboboxContent>
-              {filteredMaterials.length === 0 ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">Kayıtlı tehlikeli madde bulunamadı.</div>
-              ) : (
-                <ComboboxList>
-                  {filteredMaterials.map((item: any) => (
-                    <ComboboxItem key={item.id} value={item.id}>
-                      {item.productName} {item.brandName ? `(${item.brandName})` : ''}
-                    </ComboboxItem>
-                  ))}
-                </ComboboxList>
-              )}
-            </ComboboxContent>
-          </Combobox>
+          <Popover open={openMaterial} onOpenChange={setOpenMaterial}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={openMaterial}
+                className="w-full md:w-[600px] justify-between text-left font-normal"
+              >
+                {selectedMaterialId
+                  ? `${selectedMaterialItem?.productName} ${selectedMaterialItem?.brandName ? `(${selectedMaterialItem.brandName})` : ''}`
+                  : "Tehlikeli Madde Ara ve Seç..."}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[600px] p-0" align="start">
+              <Command shouldFilter={false}>
+                <CommandInput 
+                  placeholder="Madde ara..." 
+                  value={searchQuery}
+                  onValueChange={setSearchQuery}
+                />
+                <CommandList>
+                  {filteredMaterials.length === 0 ? (
+                    <CommandEmpty>Madde bulunamadı.</CommandEmpty>
+                  ) : (
+                    <CommandGroup>
+                      {filteredMaterials.map((item: any) => (
+                        <CommandItem
+                          key={item.id}
+                          value={item.id}
+                          onSelect={() => {
+                            setSelectedMaterialId(item.id);
+                            setOpenMaterial(false);
+                            setSearchQuery("");
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedMaterialId === item.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {item.productName} {item.brandName ? `(${item.brandName})` : ''}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  )}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
 
           {selectedMaterialItem && (
             <div className="mt-4 p-4 bg-primary/5 rounded-lg border border-primary/20 flex items-center gap-3">
@@ -352,30 +386,57 @@ export default function FacilityInventoryFormPage() {
                   <p>Tesisinize ait hiç departman bulunamadı. Lütfen ayarlardan departman ekleyin.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {matrixData.departments?.map((dept: any) => (
-                    <div 
-                      key={dept.id} 
-                      className={`flex items-center space-x-3 border rounded-lg p-3 transition-colors cursor-pointer ${
-                        selectedDepartments.includes(dept.id) ? 'bg-primary/5 border-primary/30' : 'hover:bg-muted'
-                      }`}
-                      onClick={() => handleDepartmentToggle(dept.id)}
+                <Popover open={openDept} onOpenChange={setOpenDept}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openDept}
+                      className="w-full md:w-[600px] justify-between font-normal"
                     >
-                      <Checkbox 
-                        id={`dept-${dept.id}`} 
-                        checked={selectedDepartments.includes(dept.id)} 
-                        onCheckedChange={() => handleDepartmentToggle(dept.id)}
+                      {selectedDepartments.length > 0
+                        ? `${selectedDepartments.length} departman seçildi`
+                        : "Departman Ara ve Seç..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[600px] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput 
+                        placeholder="Departman ara..." 
+                        value={deptSearch}
+                        onValueChange={setDeptSearch}
                       />
-                      <label 
-                        htmlFor={`dept-${dept.id}`} 
-                        className="text-sm font-medium leading-none cursor-pointer flex-1"
-                        onClick={(e) => e.preventDefault()}
-                      >
-                        {dept.name}
-                      </label>
-                    </div>
-                  ))}
-                </div>
+                      <CommandList>
+                        {matrixData.departments?.filter((d: any) => d.name.toLowerCase().includes(deptSearch.toLowerCase())).length === 0 ? (
+                          <CommandEmpty>Departman bulunamadı.</CommandEmpty>
+                        ) : (
+                          <CommandGroup>
+                            {matrixData.departments
+                              ?.filter((d: any) => d.name.toLowerCase().includes(deptSearch.toLowerCase()))
+                              .map((dept: any) => (
+                              <CommandItem
+                                key={dept.id}
+                                value={dept.id}
+                                onSelect={() => {
+                                  handleDepartmentToggle(dept.id);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedDepartments.includes(dept.id) ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {dept.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               )}
             </CardContent>
           </Card>

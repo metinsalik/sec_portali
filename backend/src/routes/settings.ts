@@ -6,6 +6,32 @@ import {
   managementMiddleware,
   AuthRequest,
 } from '../middleware/auth';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const dir = path.join(process.cwd(), 'uploads', 'facilities');
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (_req, file, cb) => {
+    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    cb(null, `${unique}${path.extname(file.originalname)}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = /jpeg|jpg|png|gif|webp|svg/;
+    const ok = allowed.test(path.extname(file.originalname).toLowerCase());
+    if (ok) cb(null, true);
+    else cb(new Error('Sadece resim dosyaları yüklenebilir.'));
+  },
+});
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -30,6 +56,13 @@ async function ensureRolesExist() {
 // ──────────────────────────────────────────────────────────────────────────────
 // TESİS YÖNETİMİ - Admin + Management
 // ──────────────────────────────────────────────────────────────────────────────
+router.post('/facilities/upload-logo', upload.single('file'), (req: AuthRequest, res: Response) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Dosya bulunamadı.' });
+  }
+  const filePath = `/uploads/facilities/${req.file.filename}`;
+  res.json({ url: filePath });
+});
 router.get('/facilities', async (req: AuthRequest, res: Response) => {
   try {
     const facilities = await prisma.facility.findMany({
@@ -75,7 +108,7 @@ router.get('/facilities/:id', async (req: AuthRequest, res: Response) => {
 router.post('/facilities', managementMiddleware, async (req: AuthRequest, res: Response) => {
   const { 
     id, name, shortName, type, city, district, fullAddress, 
-    phone, email, website, commercialTitle, taxOffice, 
+    phone, email, website, logoUrl, commercialTitle, taxOffice, 
     taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings 
   } = req.body;
 
@@ -83,7 +116,7 @@ router.post('/facilities', managementMiddleware, async (req: AuthRequest, res: R
     const facility = await prisma.facility.create({
       data: {
         id, name, shortName, type, city, district, fullAddress,
-        phone, email, website, commercialTitle, taxOffice,
+        phone, email, website, logoUrl: logoUrl || '/mlpcare.jpg', commercialTitle, taxOffice,
         taxNumber, sgkNumber, naceCode, dangerClass, 
         employeeCount: parseInt(employeeCount) || 0,
         buildings: {
@@ -117,7 +150,7 @@ router.put('/facilities/:id', managementMiddleware, async (req: AuthRequest, res
   const oldId = (req.params as Record<string, string>).id as any;
   const { 
     id: newId, name, shortName, type, city, district, fullAddress, 
-    phone, email, website, commercialTitle, taxOffice, 
+    phone, email, website, logoUrl, commercialTitle, taxOffice, 
     taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings 
   } = req.body;
 
@@ -130,7 +163,7 @@ router.put('/facilities/:id', managementMiddleware, async (req: AuthRequest, res
       data: {
         id: (newId as string) || oldId,
         name, shortName, type, city, district, fullAddress,
-        phone, email, website, commercialTitle, taxOffice,
+        phone, email, website, logoUrl, commercialTitle, taxOffice,
         taxNumber, sgkNumber, naceCode, dangerClass,
         employeeCount: parseInt(employeeCount) || 0,
         isActive: req.body.isActive !== undefined ? req.body.isActive : true,

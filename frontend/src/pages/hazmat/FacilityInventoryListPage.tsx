@@ -4,9 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, AlertTriangle, Filter } from 'lucide-react';
+import { Plus, Search, Filter, Printer } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
 
 export default function FacilityInventoryListPage() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ export default function FacilityInventoryListPage() {
 
   const [searchMaterial, setSearchMaterial] = useState('');
   const [searchDepartment, setSearchDepartment] = useState('');
+  const [printMaterial, setPrintMaterial] = useState<any>(null);
 
   // 1. Fetch summary for the list
   const { data: summaryData, isLoading } = useQuery({
@@ -53,7 +55,8 @@ export default function FacilityInventoryListPage() {
           brandName: item.material.brandName,
           hazardLabels: item.material.hazardLabels || [],
           ppes: item.material.ppes || [],
-          departments: []
+          departments: [],
+          material: item.material
         };
       }
       groups[matId].departments.push(item.department.name);
@@ -148,6 +151,7 @@ export default function FacilityInventoryListPage() {
                     <th className="px-4 py-3 font-medium">Miktar / Birim</th>
                     <th className="px-4 py-3 font-medium">Etiketler / KKD</th>
                     <th className="px-4 py-3 font-medium">Bulunduğu Departmanlar</th>
+                    <th className="px-4 py-3 font-medium text-right">İşlemler</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -157,7 +161,7 @@ export default function FacilityInventoryListPage() {
                   </tr>
                 ) : filteredGroups.length === 0 ? (
                   <tr>
-                    <td colSpan={4}>
+                    <td colSpan={5}>
                       <div className="py-8 text-center text-muted-foreground bg-muted/20">
                         {groupedSummary.length === 0 
                           ? "Henüz departmanlara atanmış bir tehlikeli madde bulunmuyor."
@@ -220,6 +224,17 @@ export default function FacilityInventoryListPage() {
                           ))}
                         </div>
                       </td>
+                      <td className="px-4 py-3 text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0"
+                          title="Bilgi Kartı Oluştur"
+                          onClick={() => setPrintMaterial(item.material)}
+                        >
+                          <Printer className="h-4 w-4 text-blue-600" />
+                        </Button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -229,6 +244,12 @@ export default function FacilityInventoryListPage() {
           </div>
         </CardContent>
       </Card>
+
+      <PrintCardModal 
+        isOpen={!!printMaterial}
+        onClose={() => setPrintMaterial(null)}
+        material={printMaterial}
+      />
     </div>
   );
 }

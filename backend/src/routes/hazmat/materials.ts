@@ -210,6 +210,99 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
+// Bulk import materials from Excel
+router.post('/import', authMiddleware, async (req: AuthRequest, res) => {
+  const { facilityId, materials } = req.body;
+
+  if (!facilityId || !Array.isArray(materials) || materials.length === 0) {
+    return res.status(400).json({ error: 'facilityId and a non-empty materials array are required' });
+  }
+
+  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(facilityId)) {
+    return res.status(403).json({ error: 'Access denied to this facility' });
+  }
+
+  try {
+    const username = req.user?.username || 'System';
+    let adetUnit = await prisma.hazmatUnit.findFirst({
+      where: { name: { contains: 'adet', mode: 'insensitive' } }
+    });
+
+    if (!adetUnit) {
+      adetUnit = await prisma.hazmatUnit.create({ data: { name: 'Adet', symbol: 'ad' } });
+    }
+
+    const results = { created: 0, updated: 0, errors: 0 };
+
+    for (const data of materials) {
+      if (!data.productName) {
+        results.errors++;
+        continue;
+      }
+
+      // Check if global material exists
+      let material = await prisma.hazmatMaterial.findFirst({
+        where: { productName: { equals: data.productName, mode: 'insensitive' } }
+      });
+
+      if (!material) {
+        // Create new global material
+        material = await prisma.hazmatMaterial.create({
+          data: {
+            productName: data.productName,
+            usageMethod: data.usageMethod || null,
+            composition: data.composition || null,
+            hazardDescription: data.hazardDescription || null,
+            firstAid: data.firstAid || null,
+            fireFightingMeasures: data.fireFightingMeasures || null,
+            accidentalReleaseMeasures: data.accidentalReleaseMeasures || null,
+            handlingAndStorage: data.handlingAndStorage || null,
+            exposureControlsPpe: data.exposureControls || null,
+            physicalAndChemicalProperties: data.physicalProperties || null,
+            stabilityAndReactivity: data.stabilityAndReactivity || null,
+            toxicologicalInformation: data.toxicologicalInfo || null,
+            disposalConsiderations: data.disposalConsiderations || null,
+          }
+        });
+
+        await prisma.hazmatAuditLog.create({
+          data: {
+            materialId: material.id,
+            action: 'CREATE',
+            details: 'Excel içe aktarımı ile oluşturuldu.',
+            username
+          }
+        });
+        results.created++;
+      } else {
+        results.updated++;
+      }
+
+      // Add to facility
+      await prisma.facilityHazmatItem.upsert({
+        where: {
+          facilityId_materialId: { facilityId, materialId: material.id }
+        },
+        update: {
+          amountValue: data.amountValue || 1,
+          unitId: adetUnit.id
+        },
+        create: {
+          facilityId,
+          materialId: material.id,
+          amountValue: data.amountValue || 1,
+          unitId: adetUnit.id
+        }
+      });
+    }
+
+    res.json({ message: 'Import completed', results });
+  } catch (error) {
+    console.error('Error during bulk import:', error);
+    res.status(500).json({ error: 'Internal server error during import' });
+  }
+});
+
 // Remove a material from a facility (does not delete the global material)
 router.delete('/facility/:facilityId/:materialId', authMiddleware, async (req: AuthRequest, res) => {
   const { facilityId, materialId } = (req.params as Record<string, string>);

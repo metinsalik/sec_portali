@@ -705,6 +705,7 @@ ALTER TABLE public."HazmatPpe" OWNER TO isguser;
 
 CREATE TABLE public."HazmatSpillKit" (
     id text NOT NULL,
+    code text,
     "facilityId" text NOT NULL,
     purpose text NOT NULL,
     risk text DEFAULT 'Orta'::text NOT NULL,

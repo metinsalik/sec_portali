@@ -94,7 +94,7 @@ const hazmatNavItems = [
   { label: 'Envanter', icon: ClipboardList, to: '/hazmat/inventory' },
   { label: 'Departmanlar', icon: LayoutGrid, to: '/hazmat/departments' },
   { label: 'EKİPMAN YÖNETİMİ', type: 'group' },
-  { label: 'Göz Yıkama / Boy Duşu', icon: Droplets, to: '/hazmat/eye-wash' },
+  { label: 'Göz Duşu Risk Analizi', icon: FileText, to: '/hazmat/eyewash-risk' },
   { label: 'Dökülme Saçılma Kiti', icon: LifeBuoy, to: '/hazmat/spill-kits' },
   { label: 'AYARLAR', type: 'group' },
   { label: 'Kategoriler', icon: FolderTree, to: '/hazmat/settings/categories' },

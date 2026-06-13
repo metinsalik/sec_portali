@@ -3,8 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api, { BASE_URL } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Search, LayoutGrid, List } from 'lucide-react';
+import { ArrowLeft, Search, LayoutGrid, List, Printer, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
+import { DepartmentPrintModal } from '@/components/hazmat/DepartmentPrintModal';
 
 export default function HazmatDepartmentViewPage() {
   const { id } = useParams();
@@ -12,6 +14,8 @@ export default function HazmatDepartmentViewPage() {
   const activeFacilityId = localStorage.getItem('activeFacilityId');
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [searchTerm, setSearchTerm] = useState('');
+  const [printMaterial, setPrintMaterial] = useState<any>(null);
+  const [isDepartmentPrintOpen, setIsDepartmentPrintOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['hazmat-department-details', id, activeFacilityId],
@@ -40,13 +44,32 @@ export default function HazmatDepartmentViewPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12">
-      <div className="flex items-center gap-4 border-b pb-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/hazmat/departments')}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">{department.name}</h1>
-          <p className="text-muted-foreground">Departmana atanan tehlikeli maddeler</p>
+      <div className="flex items-center justify-between border-b pb-4 gap-4 flex-wrap">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/hazmat/departments')}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">{department.name}</h1>
+            <p className="text-muted-foreground">Departmana atanan tehlikeli maddeler</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button 
+            className="shadow-sm"
+            onClick={() => navigate(`/hazmat/inventory/new?departmentId=${id}`)}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Envanter Ekle
+          </Button>
+          <Button 
+            variant="outline" 
+            className="shadow-sm border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+            onClick={() => setIsDepartmentPrintOpen(true)}
+          >
+            <Printer className="w-4 h-4 mr-2" />
+            Departman Envanteri Çıktısı Al
+          </Button>
         </div>
       </div>
 
@@ -142,7 +165,10 @@ export default function HazmatDepartmentViewPage() {
                   </div>
                 </div>
 
-                <div className="p-4 border-t bg-muted/10 flex justify-end">
+                <div className="p-4 border-t bg-muted/10 flex justify-end gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setPrintMaterial(mat)} className="text-blue-600 hover:text-blue-700" title="Bilgi Kartı">
+                    <Printer className="w-4 h-4" />
+                  </Button>
                   <Button variant="ghost" size="sm" onClick={() => navigate(`/hazmat/materials/view/${mat.id}`)} className="text-blue-600 hover:text-blue-700">
                     Detayları Gör
                   </Button>
@@ -203,7 +229,10 @@ export default function HazmatDepartmentViewPage() {
                     )}
                   </div>
                   
-                  <div className="col-span-2 text-right">
+                  <div className="col-span-2 text-right flex items-center justify-end gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => setPrintMaterial(mat)} className="text-blue-600 hover:text-blue-700 h-8 w-8 p-0" title="Bilgi Kartı">
+                      <Printer className="w-4 h-4" />
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => navigate(`/hazmat/materials/view/${mat.id}`)} className="text-blue-600 hover:text-blue-700">
                       Detay
                     </Button>
@@ -214,6 +243,19 @@ export default function HazmatDepartmentViewPage() {
           </div>
         </div>
       )}
+
+      <PrintCardModal 
+        isOpen={!!printMaterial}
+        onClose={() => setPrintMaterial(null)}
+        material={printMaterial}
+      />
+
+      <DepartmentPrintModal
+        isOpen={isDepartmentPrintOpen}
+        onClose={() => setIsDepartmentPrintOpen(false)}
+        department={department}
+        inventoryItems={filteredItems}
+      />
     </div>
   );
 }

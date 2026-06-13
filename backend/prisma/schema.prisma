@@ -62,6 +62,7 @@ model Facility {
   taxOffice              String?
   type                   String?
   website                String?
+  logoUrl                String?                 @default("/mlpcare.jpg")
   activityLogs           ActivityLog[]
   assignments            Assignment[]
   employeeCountHistory   EmployeeCountHistory[]
@@ -81,6 +82,7 @@ model Facility {
   spillKits     HazmatSpillKit[]
   spillKitMasterItems HazmatSpillKitMasterItem[]
   hazmatInventoryItems   HazmatInventoryItem[]
+  hazmatEyewashAnalyses  HazmatEyewashRiskAnalysis[]
 }
 
 model IncidentCategory {
@@ -904,12 +906,14 @@ model HazmatAuditLog {
 
 model HazmatSpillKit {
   id           String   @id @default(uuid())
+  code         String?  // Auto-generated like DCK-001
   facilityId   String
   purpose      String
   risk         String   @default("Orta")
   kitName      String
   needReason   String?
   worstCase    String?
+  period       Int      @default(30)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -974,6 +978,7 @@ model HazmatSpillKitCheck {
   qtyOk         Boolean  @default(false)
   packageOk     Boolean  @default(false)
   note          String?
+  itemChecks    Json?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -1028,3 +1033,50 @@ model HazmatSpillKitMasterItem {
 
   @@index([facilityId])
 }
+
+model HazmatEyewashRiskAnalysis {
+  id               String   @id @default(uuid())
+  facilityId       String
+  analysisDate     DateTime
+  department       String
+  areaSquareMeters Float
+  maxPersonnel     Int
+
+  chemicalDetails  Json?
+  chemicalTotalLiters Float @default(0)
+
+  chemExposureCount   Int @default(0)
+  chemNearMissCount   Int @default(0)
+  bioExposureCount    Int @default(0)
+  bioNearMissCount    Int @default(0)
+
+  chemProbability Float @default(0)
+  chemFrequency   Float @default(0)
+  chemSeverity    Float @default(0)
+  chemScore       Float @default(0)
+  chemRiskLevel   String?
+
+  bioProbability  Float @default(0)
+  bioFrequency    Float @default(0)
+  bioSeverity     Float @default(0)
+  bioScore        Float @default(0)
+  bioRiskLevel    String?
+
+  evaluationNotes         String?
+  eyewashRequirementLevel String?
+  actionPlan              String?
+
+  improvementDescription  String?
+  improvementTargetDate   DateTime?
+  improvementImageUrl     String?
+  effectivenessMethod     String?
+  improvementController   String?
+  improvementResult       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  @@index([facilityId])
+}
+

@@ -80,6 +80,10 @@ import FacilityInventoryFormPage from './pages/hazmat/FacilityInventoryFormPage'
 import HazmatDepartmentsPage from './pages/hazmat/HazmatDepartmentsPage';
 import HazmatDepartmentViewPage from './pages/hazmat/HazmatDepartmentViewPage';
 import SpillKitsPage from './pages/hazmat/SpillKitsPage';
+import EyewashRiskAnalysisPage from './pages/hazmat/EyewashRiskAnalysisPage';
+import EyewashRiskAnalysisFormPage from './pages/hazmat/EyewashRiskAnalysisFormPage';
+import EyewashRiskAnalysisViewPage from './pages/hazmat/EyewashRiskAnalysisViewPage';
+import EyewashRiskAnalysisReportPage from './pages/hazmat/EyewashRiskAnalysisReportPage';
 
 // Placeholder for future modules
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -532,10 +536,42 @@ function App() {
                   }
                 />
                 <Route
-                  path="/hazmat/eye-wash"
+                  path="/hazmat/eyewash-risk"
                   element={
                     <ProtectedRoute>
-                      <AppLayout><PlaceholderPage title="Göz Solüsyonu İhtiyaç Analizi" /></AppLayout>
+                      <AppLayout><EyewashRiskAnalysisPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/eyewash-risk/new"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><EyewashRiskAnalysisFormPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/eyewash-risk/edit/:id"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><EyewashRiskAnalysisFormPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/eyewash-risk/view/:id"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><EyewashRiskAnalysisViewPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/eyewash-risk/report"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><EyewashRiskAnalysisReportPage /></AppLayout>
                     </ProtectedRoute>
                   }
                 />
