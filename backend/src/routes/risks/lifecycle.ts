@@ -23,6 +23,16 @@ async function checkFacilityAccess(req: AuthRequest, facilityId: string): Promis
   return !!access;
 }
 
+// Helper to generate a 3-letter code from a department name
+function generateDeptCode(name: string): string {
+  const charMap: Record<string, string> = {
+    'ı': 'i', 'i': 'i', 'ş': 's', 'ğ': 'g', 'ü': 'u', 'ö': 'o', 'ç': 'c',
+    'I': 'I', 'İ': 'I', 'Ş': 'S', 'Ğ': 'G', 'Ü': 'U', 'Ö': 'O', 'Ç': 'C'
+  };
+  const str = name.replace(/[ıişğüöçIİŞĞÜÖÇ]/g, (m) => charMap[m]);
+  return str.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase() || 'GEN';
+}
+
 // ─── Yardımcı Fonksiyonlar ────────────────────────────────────────────────────
 function scoreToLevel(score: number): string {
   if (score > 400) return 'Tolere Gösterilmez Risk';
@@ -43,8 +53,44 @@ function deriveStatus(row: any): string {
 
 function parseDate(val: any): Date | null {
   if (!val || val === '') return null;
+  
+  // Excel numeric date check (e.g. 44123)
+  if (typeof val === 'number' || (!isNaN(Number(val)) && String(val).trim() !== '')) {
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+    const d = new Date(excelEpoch.getTime() + Number(val) * 86400 * 1000);
+    // Sanity check for realistic dates (e.g., between 2000 and 2100)
+    if (!isNaN(d.getTime()) && d.getFullYear() > 2000 && d.getFullYear() < 2100) {
+      return d;
+    }
+  }
+
+  // Handle DD.MM.YYYY string
+  if (typeof val === 'string' && val.includes('.')) {
+    const parts = val.split('.');
+    if (parts.length === 3) {
+      const d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+  
+  // Handle DD/MM/YYYY string
+  if (typeof val === 'string' && val.includes('/')) {
+    const parts = val.split('/');
+    if (parts.length === 3) {
+      const d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+
   const d = new Date(val);
   return isNaN(d.getTime()) ? null : d;
+}
+
+function parsePeriod(val: any): string | null {
+  if (!val || val === '') return null;
+  const d = parseDate(val);
+  if (d) return null; // Date means it's not a period text
+  return String(val).trim();
 }
 
 // ─── STATIK ENDPOINT'LER (/:id'den ÖNCE) ─────────────────────────────────────
@@ -98,7 +144,10 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res: Response) =
       return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
     }
 
-
+    const existingSettings = await prisma.riskDepartmentSetting.findMany({
+      where: { facilityId }
+    });
+    const settingNames = new Set(existingSettings.map(s => s.name.toLowerCase().trim()));
 
     let created = 0;
     let skipped = 0;
@@ -112,9 +161,37 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res: Response) =
       });
 
       if (!dept) {
-        dept = await prisma.riskDepartment.create({
-          data: { facilityId, name: deptName },
+        // Global Department senkronizasyonu
+        const globalDept = await prisma.department.findFirst({
+          where: { name: { equals: deptName.trim(), mode: 'insensitive' } }
         });
+        
+        if (!globalDept) {
+          await prisma.department.create({ data: { name: deptName.trim() } });
+        }
+
+        dept = await prisma.riskDepartment.create({
+          data: { facilityId, name: deptName, code: generateDeptCode(deptName) },
+        });
+      } else if (!dept.code) {
+        dept = await prisma.riskDepartment.update({
+          where: { id: dept.id },
+          data: { code: generateDeptCode(deptName) },
+        });
+      }
+
+      // Auto-create responsibles in settings if they don't exist
+      for (const field of ['improvementResponsible', 'controlResponsible']) {
+        const val = row[field];
+        if (val && typeof val === 'string' && val.trim() !== '') {
+          const lowerVal = val.trim().toLowerCase();
+          if (!settingNames.has(lowerVal)) {
+            await prisma.riskDepartmentSetting.create({
+              data: { facilityId, name: val.trim() }
+            });
+            settingNames.add(lowerVal);
+          }
+        }
       }
 
       const initialScore = Number(row.initialScore) || 0;
@@ -140,7 +217,7 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res: Response) =
             initialScore,
             initialLevel:     scoreToLevel(initialScore),
             firstActionPlan:  row.firstActionPlan || null,
-            actionsTaken:     row.actionsTaken || null,
+            actionsTaken:     [row.actionsTaken, parsePeriod(row.actionDate) ? `Tamamlanma Periyodu: ${parsePeriod(row.actionDate)}` : ''].filter(Boolean).join('\n') || null,
             actionDate:       parseDate(row.actionDate),
             actionBy:         row.actionBy || null,
             followUpMeasure:  row.followUpMeasure || null,
@@ -159,7 +236,7 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res: Response) =
             affectedPeople:             row.affectedPeople || null,
             improvementResponsible:     row.improvementResponsible || null,
             dueDate:                    parseDate(row.dueDate),
-            dueDatePeriod:              row.dueDatePeriod || null,
+            dueDatePeriod:              row.dueDatePeriod || parsePeriod(row.dueDate) || null,
             postImprovementResponsible: row.postImprovementResponsible || null,
             postImprovementDueDate:     parseDate(row.postImprovementDueDate),
             effectivenessMethod:        row.effectivenessMethod || null,
@@ -294,11 +371,12 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     // Eğer departmanın kodu yoksa, isminden oluşturup kaydet
     if (!dept.code) {
-      const generatedCode = dept.name.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, '') || 'GEN';
+      const generatedCode = generateDeptCode(dept.name);
       await prisma.riskDepartment.update({
         where: { id: dept.id },
         data: { code: generatedCode }
       });
+      dept.code = generatedCode;
     }
 
     const hasAccess = await checkFacilityAccess(req, dept.facilityId);

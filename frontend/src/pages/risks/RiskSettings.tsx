@@ -23,24 +23,17 @@ export default function RiskSettings() {
   const token = localStorage.getItem('token');
 
   // ── Facility Selection ───────────────────────────────────────
-  const [selectedFacilityId, setSelectedFacilityId] = useState<string>('');
-
-  const { data: facilities = [], isLoading: facsLoading } = useQuery<any[]>({
-    queryKey: ['risks-facilities'],
-    queryFn: async () => {
-      const res = await fetch(`${API}/api/risks/facilities`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error();
-      return res.json();
-    }
-  });
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string>(
+    localStorage.getItem('activeFacilityId') || ''
+  );
 
   useEffect(() => {
-    if (facilities.length > 0 && !selectedFacilityId) {
-      setSelectedFacilityId(facilities[0].id);
-    }
-  }, [facilities, selectedFacilityId]);
+    const handleFacilityChange = () => {
+      setSelectedFacilityId(localStorage.getItem('activeFacilityId') || '');
+    };
+    window.addEventListener('facilityChanged', handleFacilityChange);
+    return () => window.removeEventListener('facilityChanged', handleFacilityChange);
+  }, []);
 
   // ── Modals & Form State ──────────────────────────────────────
   // 1. Hastane Bölümleri (Hospital Departments)
@@ -275,27 +268,6 @@ export default function RiskSettings() {
           <p className="text-sm text-muted-foreground mt-1">
             Seçili tesis için Hastane Bölümleri, Departmanlar ve Kategori tanımlarını özelleştirin.
           </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Landmark className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm font-medium text-muted-foreground">Aktif Tesis:</span>
-          {facsLoading ? (
-            <Skeleton className="h-9 w-[220px]" />
-          ) : (
-            <Select value={selectedFacilityId} onValueChange={setSelectedFacilityId}>
-              <SelectTrigger className="w-[240px]">
-                <SelectValue placeholder="Tesis seçiniz" />
-              </SelectTrigger>
-              <SelectContent>
-                {facilities.map((fac) => (
-                  <SelectItem key={fac.id} value={fac.id}>
-                    {fac.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
         </div>
       </div>
 

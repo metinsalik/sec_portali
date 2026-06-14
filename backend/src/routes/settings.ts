@@ -565,7 +565,13 @@ router.post('/definitions/departments', managementMiddleware, async (req: AuthRe
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: 'Departman adı zorunludur.' });
   try {
-    const dept = await prisma.department.create({ data: { name } });
+    const trimmedName = name.trim();
+    let dept = await prisma.department.findFirst({
+      where: { name: { equals: trimmedName, mode: 'insensitive' } }
+    });
+    if (!dept) {
+      dept = await prisma.department.create({ data: { name: trimmedName } });
+    }
     res.status(201).json(dept);
   } catch {
     res.status(500).json({ error: 'Departman oluşturulamadı.' });

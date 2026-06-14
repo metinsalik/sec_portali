@@ -33,6 +33,79 @@ router.get('/search', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
+// GET all global materials, and check if they exist in a specific facility
+router.get('/global', authMiddleware, async (req: AuthRequest, res) => {
+  const { facilityId } = req.query as Record<string, any>;
+  
+  try {
+    const allMaterials = await prisma.hazmatMaterial.findMany({
+      include: {
+        category: true,
+        hazardLabels: { include: { label: true } },
+        adrLabels: { include: { label: true } },
+        ppes: { include: { ppe: true } }
+      },
+      orderBy: { productName: 'asc' }
+    });
+
+    if (!facilityId) {
+      return res.json(allMaterials.map(m => ({ material: m, isInFacility: false })));
+    }
+
+    // If facilityId is provided, check which ones are in the facility
+    const facilityItems = await prisma.facilityHazmatItem.findMany({
+      where: { facilityId: String(facilityId) },
+      include: { unit: true }
+    });
+
+    const result = allMaterials.map(m => {
+      const fItem = facilityItems.find(f => f.materialId === m.id);
+      return { material: m, isInFacility: !!fItem, facilityAmount: fItem?.amountValue || null, facilityUnit: fItem?.unit?.name || null };
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching global materials:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST add a global material to a facility
+router.post('/add-to-facility', authMiddleware, async (req: AuthRequest, res) => {
+  const { facilityId, materialId, amountValue, unitId } = req.body;
+  if (!facilityId || !materialId) {
+    return res.status(400).json({ error: 'facilityId and materialId are required' });
+  }
+
+  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(facilityId)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  try {
+    const existing = await prisma.facilityHazmatItem.findFirst({
+      where: { facilityId, materialId }
+    });
+
+    if (existing) {
+      return res.status(400).json({ error: 'Bu madde zaten tesiste mevcut' });
+    }
+
+    const newItem = await prisma.facilityHazmatItem.create({
+      data: {
+        facilityId,
+        materialId,
+        amountValue: amountValue || 0,
+        unitId: unitId || null
+      }
+    });
+
+    res.json(newItem);
+  } catch (error) {
+    console.error('Error adding material to facility:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get materials for a specific facility
 router.get('/', authMiddleware, async (req: AuthRequest, res) => {
   const { facilityId } = req.query as Record<string, any>;
@@ -454,6 +527,57 @@ router.put('/:materialId', authMiddleware, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error('Error updating material:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE a specific material globally (Admin only)
+router.delete('/:id', authMiddleware, async (req: AuthRequest, res) => {
+  if (!req.user?.isAdmin && !req.user?.isManagement) {
+    return res.status(403).json({ error: 'Bu işlemi sadece yöneticiler yapabilir.' });
+  }
+
+  try {
+    const { id } = req.params;
+    
+    // Check if material exists
+    const material = await prisma.hazmatMaterial.findUnique({ where: { id } });
+    if (!material) {
+      return res.status(404).json({ error: 'Malzeme bulunamadı.' });
+    }
+
+    // Material silinince inventory vs. cascade silinmeli (schema.prisma'da ayarli ise). 
+    // Ayarli degilse once inventory silmek gerekebilir. Prisma'daki cascade kurallarina gore:
+    await prisma.hazmatMaterial.delete({
+      where: { id }
+    });
+
+    res.json({ success: true, message: 'Malzeme başarıyla silindi.' });
+  } catch (error) {
+    console.error('Error deleting material:', error);
+    res.status(500).json({ error: 'Malzeme silinirken bir hata oluştu.' });
+  }
+});
+
+// BULK DELETE materials globally (Admin only)
+router.post('/bulk-delete', authMiddleware, async (req: AuthRequest, res) => {
+  if (!req.user?.isAdmin && !req.user?.isManagement) {
+    return res.status(403).json({ error: 'Bu işlemi sadece yöneticiler yapabilir.' });
+  }
+
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'Silinecek materyaller belirtilmedi.' });
+    }
+
+    await prisma.hazmatMaterial.deleteMany({
+      where: { id: { in: ids } }
+    });
+
+    res.json({ success: true, message: `${ids.length} malzeme başarıyla silindi.` });
+  } catch (error) {
+    console.error('Error bulk deleting materials:', error);
+    res.status(500).json({ error: 'Malzemeler silinirken bir hata oluştu.' });
   }
 });
 

@@ -73,6 +73,17 @@ export default function RiskFacilityPage() {
     enabled: !!facilityId,
   });
 
+  const { data: globalDepartments = [] } = useQuery({
+    queryKey: ['global-departments'],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/settings/definitions/departments`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
   const facility = facilities.find((f: any) => f.id === facilityId);
 
   // Departman listesi artık burada search edilmeyecek, tümünü göstereceğiz
@@ -169,13 +180,19 @@ export default function RiskFacilityPage() {
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="p-4 flex gap-2 items-center">
             <input
+              list="global-departments"
               value={newDeptName}
               onChange={e => setNewDeptName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAddDept()}
-              placeholder="Departman adı (Örn: Acil Servis)"
+              placeholder="Departman seçin veya yazın (Örn: Acil Servis)"
               className="flex-1 h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               autoFocus
             />
+            <datalist id="global-departments">
+              {globalDepartments.map((d: any) => (
+                <option key={d.id} value={d.name} />
+              ))}
+            </datalist>
             <Button size="sm" onClick={handleAddDept} disabled={adding || !newDeptName.trim()}>
               {adding ? 'Ekleniyor...' : 'Ekle'}
             </Button>

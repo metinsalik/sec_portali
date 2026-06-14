@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -25,21 +26,28 @@ export default function MaterialsListPage() {
   const [printMaterial, setPrintMaterial] = useState<any>(null);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
+  const isGlobalAdmin = user?.isAdmin || user?.isManagement;
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [globalDeleteId, setGlobalDeleteId] = useState<string | null>(null);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+
   const { data: items = [], isLoading } = useQuery<any[]>({
     queryKey: ['facility-materials', activeFacilityId],
     queryFn: async () => {
       if (!activeFacilityId) return [];
       
-      const res = await api.get(`/hazmat/materials?facilityId=${activeFacilityId}`);
+      const res = await api.get(`/hazmat/materials/global?facilityId=${activeFacilityId}`);
       if (!res.ok) throw new Error('Sunucu hatası');
       
-      const facData = await res.json();
+      const data = await res.json();
       
-      return facData.map((item: any) => ({
+      return data.map((item: any) => ({
         ...item.material,
-        facilityAmount: item.amountValue || null,
-        facilityUnit: item.unit?.name || null,
-        facilityUnitSymbol: item.unit?.symbol || null,
+        isInFacility: item.isInFacility,
+        facilityAmount: item.facilityAmount,
+        facilityUnit: item.facilityUnit,
       }));
     },
     enabled: !!activeFacilityId
@@ -57,6 +65,49 @@ export default function MaterialsListPage() {
       queryClient.invalidateQueries({ queryKey: ['facility-materials', activeFacilityId] });
     },
     onError: () => toast.error('Silme işlemi başarısız.')
+  });
+
+  const globalDeleteMutation = useMutation({
+    mutationFn: async (materialId: string) => {
+      const res = await api.delete(`/hazmat/materials/${materialId}`);
+      if (!res.ok) throw new Error('Kalıcı silinemedi');
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success('Tehlikeli madde sistemden kalıcı olarak silindi.');
+      setGlobalDeleteId(null);
+      setSelectedIds(prev => prev.filter(id => id !== globalDeleteId));
+      queryClient.invalidateQueries({ queryKey: ['facility-materials', activeFacilityId] });
+    },
+    onError: () => toast.error('Kalıcı silme işlemi başarısız.')
+  });
+
+  const bulkGlobalDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await api.post(`/hazmat/materials/bulk-delete`, { ids });
+      if (!res.ok) throw new Error('Toplu silinemedi');
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success('Seçili maddeler kalıcı olarak silindi.');
+      setBulkDeleteConfirm(false);
+      setSelectedIds([]);
+      queryClient.invalidateQueries({ queryKey: ['facility-materials', activeFacilityId] });
+    },
+    onError: () => toast.error('Toplu silme işlemi başarısız.')
+  });
+
+  const addToFacilityMutation = useMutation({
+    mutationFn: async (materialId: string) => {
+      const res = await api.post(`/hazmat/materials/add-to-facility`, { facilityId: activeFacilityId, materialId });
+      if (!res.ok) throw new Error('Tesise eklenemedi');
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success('Tehlikeli madde tesis envanterine eklendi. Miktar ve birimi "Envanter" sayfasından veya buradaki düzenle butonundan güncelleyebilirsiniz.');
+      queryClient.invalidateQueries({ queryKey: ['facility-materials', activeFacilityId] });
+    },
+    onError: () => toast.error('Tesise ekleme işlemi başarısız.')
   });
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -220,6 +271,12 @@ export default function MaterialsListPage() {
           <p className="text-muted-foreground">Tesisinizde bulunan tehlikeli maddelerin listesi.</p>
         </div>
         <div className="flex items-center gap-2">
+          {isGlobalAdmin && selectedIds.length > 0 && (
+            <Button onClick={() => setBulkDeleteConfirm(true)} variant="destructive" className="gap-2">
+              <Trash2 className="w-4 h-4" />
+              Seçilenleri Kalıcı Sil ({selectedIds.length})
+            </Button>
+          )}
           <input 
             type="file" 
             accept=".xlsx, .xls" 
@@ -291,6 +348,19 @@ export default function MaterialsListPage() {
             <table className="w-full text-sm text-left">
               <thead className="bg-muted/50 text-muted-foreground">
                 <tr>
+                  {isGlobalAdmin && (
+                    <th className="px-4 py-3 w-10">
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-muted-foreground/30 text-primary focus:ring-primary cursor-pointer"
+                        checked={filteredItems.length > 0 && selectedIds.length === filteredItems.length}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedIds(filteredItems.map(i => i.id));
+                          else setSelectedIds([]);
+                        }}
+                      />
+                    </th>
+                  )}
                   <th 
                     className="px-4 py-3 font-medium cursor-pointer hover:bg-muted/80 transition-colors"
                     onClick={() => {
@@ -330,11 +400,30 @@ export default function MaterialsListPage() {
               <tbody className="divide-y">
                 {filteredItems.map((item) => (
                   <tr key={item.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3 font-medium text-foreground">
+                    {isGlobalAdmin && (
+                      <td className="px-4 py-3">
+                        <input 
+                          type="checkbox" 
+                          className="rounded border-muted-foreground/30 text-primary focus:ring-primary cursor-pointer"
+                          checked={selectedIds.includes(item.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) setSelectedIds(prev => [...prev, item.id]);
+                            else setSelectedIds(prev => prev.filter(id => id !== item.id));
+                          }}
+                        />
+                      </td>
+                    )}
+                    <td className="px-4 py-3 font-medium text-foreground flex items-center gap-2">
                       {item.brandName ? `${item.brandName} - ` : ''}{item.productName}
-                      <span className="text-muted-foreground font-normal ml-1">
-                        ( {item.facilityAmount ? item.facilityAmount : '-'} - {item.facilityUnit ? `${item.facilityUnit}` : '-'} )
-                      </span>
+                      {item.isInFacility ? (
+                        <span className="bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
+                          Tesisimde Var
+                        </span>
+                      ) : (
+                        <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
+                          Havuzda
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {item.category?.name || '-'}
@@ -370,17 +459,39 @@ export default function MaterialsListPage() {
                         >
                           <Eye className="w-4 h-4 text-muted-foreground" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          title="Düzenle"
-                          onClick={() => navigate(`/hazmat/materials/edit/${item.id}`)}
-                        >
-                          <Pencil className="w-4 h-4 text-blue-500" />
-                        </Button>
-                        <Button variant="ghost" size="icon" title="Sil" onClick={() => setDeleteId(item.id)}>
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
+                        
+                        {!item.isInFacility ? (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="ml-2 gap-1 text-primary border-primary/50 hover:bg-primary/10"
+                            onClick={() => addToFacilityMutation.mutate(item.id)}
+                            disabled={addToFacilityMutation.isLoading}
+                          >
+                            <Plus className="w-4 h-4" />
+                            Tesise Ekle
+                          </Button>
+                        ) : (
+                          <>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              title="Düzenle"
+                              onClick={() => navigate(`/hazmat/materials/edit/${item.id}`)}
+                            >
+                              <Pencil className="w-4 h-4 text-blue-500" />
+                            </Button>
+                            <Button variant="ghost" size="icon" title="Tesisten Çıkar" onClick={() => setDeleteId(item.id)}>
+                              <Trash2 className="w-4 h-4 text-orange-500" />
+                            </Button>
+                          </>
+                        )}
+
+                        {isGlobalAdmin && (
+                          <Button variant="ghost" size="icon" title="Kalıcı Sil" onClick={() => setGlobalDeleteId(item.id)}>
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -406,6 +517,46 @@ export default function MaterialsListPage() {
               onClick={() => deleteId && deleteMutation.mutate(deleteId)}
             >
               {deleteMutation.isLoading ? 'Siliniyor...' : 'Sil'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!globalDeleteId} onOpenChange={(open) => !open && setGlobalDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tehlikeli Maddeyi Kalıcı Olarak Sil</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bu tehlikeli maddeyi SİSTEMDEN TAMAMEN silmek istediğinize emin misiniz? Bu işlem geri alınamaz ve madde diğer tüm tesislerden de kaldırılabilir.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-red-600 hover:bg-red-700 text-white" 
+              onClick={() => globalDeleteId && globalDeleteMutation.mutate(globalDeleteId)}
+            >
+              {globalDeleteMutation.isLoading ? 'Siliniyor...' : 'Kalıcı Sil'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkDeleteConfirm} onOpenChange={(open) => !open && setBulkDeleteConfirm(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Seçili Maddeleri Kalıcı Olarak Sil</AlertDialogTitle>
+            <AlertDialogDescription>
+              Seçilen {selectedIds.length} tehlikeli maddeyi SİSTEMDEN TAMAMEN silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-red-600 hover:bg-red-700 text-white" 
+              onClick={() => bulkGlobalDeleteMutation.mutate(selectedIds)}
+            >
+              {bulkGlobalDeleteMutation.isLoading ? 'Siliniyor...' : 'Kalıcı Sil'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

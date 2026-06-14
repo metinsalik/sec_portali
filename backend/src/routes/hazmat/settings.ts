@@ -65,8 +65,17 @@ router.post('/departments', authMiddleware, async (req: AuthRequest, res) => {
   if (!facilityId || !name) return res.status(400).json({ error: 'facilityId and name are required' });
 
   try {
+    // Global Department senkronizasyonu
+    const globalDept = await prisma.department.findFirst({
+      where: { name: { equals: name.trim(), mode: 'insensitive' } }
+    });
+    
+    if (!globalDept) {
+      await prisma.department.create({ data: { name: name.trim() } });
+    }
+
     const department = await prisma.hazmatDepartment.create({
-      data: { facilityId, name }
+      data: { facilityId, name: name.trim() }
     });
     res.status(201).json(department);
   } catch (error) {

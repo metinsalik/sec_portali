@@ -22,7 +22,7 @@ interface AppLayoutProps {
 
 const panelNavItems = [
   { label: 'GENEL', type: 'group' },
-  { label: 'Dashboard', icon: LayoutDashboard, to: '/panel/dashboard' },
+  { label: 'Dashboard', icon: LayoutDashboard, to: '/panel/dashboard', end: true },
   { label: 'Tesis Yönetimi', icon: Building2, to: '/panel/facilities' },
   { label: 'PERSONEL', type: 'group' },
   { label: 'İSG Profesyonelleri', icon: Users, to: '/panel/professionals' },
@@ -79,16 +79,14 @@ const workflowNavItems = (hasAdminAccess: boolean) => [
 
 const riskNavItems = [
   { label: 'GENEL', type: 'group' },
-  { label: 'Dashboard', icon: LayoutDashboard, to: '/risks' },
-  { label: 'TESİSLER', type: 'group' },
-  { label: 'Tesis Listesi', icon: Building2, to: '/risks' },
+  { label: 'Dashboard', icon: LayoutDashboard, to: '/risks', end: true },
   { label: 'AYARLAR', type: 'group' },
   { label: 'Modül Ayarları', icon: Settings, to: '/risks/settings' },
 ];
 
 const hazmatNavItems = [
   { label: 'GENEL', type: 'group' },
-  { label: 'Dashboard', icon: LayoutDashboard, to: '/hazmat/dashboard' },
+  { label: 'Dashboard', icon: LayoutDashboard, to: '/hazmat/dashboard', end: true },
   { label: 'TEHLİKELİ MADDE YÖNETİMİ', type: 'group' },
   { label: 'Tehlikeli Maddeler', icon: AlertTriangle, to: '/hazmat/materials' },
   { label: 'Envanter', icon: ClipboardList, to: '/hazmat/inventory' },
@@ -155,11 +153,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
         {/* Logo & Module Name */}
         <div className="h-16 flex flex-col justify-center px-5 border-b">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-primary rounded flex items-center justify-center">
-              <Shield className="w-3.5 h-3.5 text-primary-foreground" />
+            <div className="w-6 h-6 flex items-center justify-center">
+              <img src="/mlpcare.jpg" alt="MLP Care Logo" className="w-full h-full object-contain rounded" />
             </div>
             <span className="font-semibold tracking-tight text-sm">
-              SEÇ PORTALI
+              HSE Portalı
             </span>
           </div>
           <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mt-0.5 ml-8">
@@ -187,6 +185,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <NavLink
                 key={item.label + '-' + i}
                 to={item.to!}
+                end={!!(item as any).end}
                 className={({ isActive }) =>
                   cn(
                     'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors group',

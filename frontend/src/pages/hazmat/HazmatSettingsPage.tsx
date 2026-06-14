@@ -147,8 +147,17 @@ function DeptsTab() {
     enabled: !!activeFacilityId
   });
 
+  const { data: globalDepartments = [] } = useQuery({
+    queryKey: ['global-departments'],
+    queryFn: async () => {
+      const res = await api.get('/settings/definitions/departments');
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
   const createDept = useMutation({
-    mutationFn: async () => await api.post('/hazmat/settings/departments', { facilityId: activeFacilityId, name: deptName }),
+    mutationFn: async () => await api.post('/hazmat/settings/departments', { facilityId: activeFacilityId, name: deptName.trim() }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hazmat-departments', activeFacilityId] });
       setDeptName('');
@@ -169,8 +178,21 @@ function DeptsTab() {
       ) : (
         <>
           <div className="flex gap-4 mb-6">
-            <Input placeholder="Departman Adı (Örn: Acil Servis, Radyoloji)" value={deptName} onChange={e => setDeptName(e.target.value)} />
-            <Button onClick={() => createDept.mutate()} disabled={!deptName}>Departman Ekle</Button>
+            <Input 
+              list="hazmat-global-departments"
+              placeholder="Departman seçin veya yazın (Örn: Acil Servis)" 
+              value={deptName} 
+              onChange={e => setDeptName(e.target.value)} 
+              onKeyDown={e => e.key === 'Enter' && deptName.trim() && createDept.mutate()}
+            />
+            <datalist id="hazmat-global-departments">
+              {globalDepartments.map((d: any) => (
+                <option key={d.id} value={d.name} />
+              ))}
+            </datalist>
+            <Button onClick={() => createDept.mutate()} disabled={!deptName.trim() || createDept.isPending}>
+              {createDept.isPending ? 'Ekleniyor...' : 'Departman Ekle'}
+            </Button>
           </div>
           {depts.length === 0 ? (
             <p className="text-sm text-muted-foreground">Bu tesise ait departman bulunmuyor. Yeni ekleyebilirsiniz.</p>

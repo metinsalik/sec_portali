@@ -17,48 +17,71 @@ interface Props {
 const COL_MAP: Record<string, string> = {
   // 1. Bölüm Genel Bilgiler
   'tespit tarihi': 'detectionDate',
+  'alt risk kategorisi': 'subCategory', // Matches first due to string length sorting
   'risk kategorisi': 'riskCategory',
-  'alt risk kategorisi': 'subCategory',
-  'bölüm': 'department', 'departman': 'department',
+  'bölüm': 'department', 'departman': 'department', 'birim / bölüm': 'department', 'birim': 'department',
   'alan': 'area',
   'faaliyet': 'activity',
 
   // 2. Bölüm : Mevcut Durum Değerlendirmesi:
   'tehlike': 'hazard',
-  'risk': 'riskDescription',
   'sonuç/ olası etki zarar': 'impactDamage',
+  'sonuç / olası etki zarar': 'impactDamage',
+  'olası etki zarar': 'impactDamage',
   'riskten etkilenecek kişiler': 'affectedPeople',
+  'etkilenecek kişiler': 'affectedPeople',
   'mevcut durum açıklaması (tespit edilen riske ilişkin mevcut önlemler)': 'initialCondition',
   'mevcut durum açıklaması': 'initialCondition',
+  'mevcut durum görseli (varsa tespit edilen riske ilişkin görsel)': 'initialImage',
   'mevcut durum görseli': 'initialImage',
+  
+  // 3. Mevcut Risk Skoru (Parent + Sub)
+  'mevcut risk skoru olasılık': 'initialProb',
+  'mevcut risk skoru frekans': 'initialFreq',
+  'mevcut risk skoru şiddet': 'initialSev',
+  'mevcut risk skoru risk puanı': 'initialScore',
+  'mevcut risk skoru risk seviyesi': 'initialLevel',
+  // Fallbacks for initial score
   'olasılık': 'initialProb',
   'frekans': 'initialFreq',
   'şiddet': 'initialSev',
   'risk puanı': 'initialScore',
   'risk seviyesi': 'initialLevel',
+  
   'ilgili mevzuat': 'legislation',
+  'mevzuat': 'legislation',
 
-  // 3. Bölüm İyileştirme Planı / Uygulama
+  // 4. Bölüm İyileştirme Planı / Uygulama
+  'iyileştirme planı': 'firstActionPlan',
   'alınacak önlemler / iyileştirici faaliyet': 'firstActionPlan',
+  'alınacak önlemler': 'firstActionPlan',
+  'iyileştirici faaliyet': 'firstActionPlan',
   'iyileştirme sorumlusu': 'improvementResponsible',
   'termin tarihi': 'dueDate',
   'termin': 'dueDate',
   'iyileştirme açıklaması (tespit edilen riske ilişkin yapılan iyileştirmeler)': 'actionsTaken',
   'iyileştirme açıklaması': 'actionsTaken',
   'iyileştirme tamamlanma tarihi': 'actionDate',
+  'tamamlanma tarihi': 'actionDate',
   'iyileştirme sonrası görseli (yapılan iyileştirme sonrasını gösteren görsel)': 'actionImage',
   'iyileştirme sonrası görseli': 'actionImage',
+
+  // 5. İyileştirme Sonrası Risk Skoru
   'iyileştirme sonrası risk skoru olasılık': 'finalProb',
   'iyileştirme sonrası risk skoru frekans': 'finalFreq',
   'iyileştirme sonrası risk skoru şiddet': 'finalSev',
   'iyileştirme sonrası risk skoru risk puanı': 'finalScore',
   'iyileştirme sonrası risk skoru risk seviyesi': 'finalLevel',
 
-  // 4. Bölüm İyileştirme Etkinlik Ölçümü
+  // 6. Bölüm İyileştirme Etkinlik Ölçümü
   'etkinlik ölçüm yöntemi': 'effectivenessMethod',
   'iyileştirme kontrol sorumlusu': 'controlResponsible',
   'kontrol sorumlusu': 'controlResponsible',
+  'etkinlik ölçümü sonuç': 'controlResult', // If parent is combined
   'sonuç': 'controlResult',
+
+  // The most generic one must be at the end, but the matching uses string length sorting anyway.
+  'risk': 'riskDescription',
 
   // Fallbacks and exact match handles
   'no': 'riskNo', 'sıra no': 'riskNo', 'risk no': 'riskNo',
@@ -181,11 +204,41 @@ export default function RiskExcelImport({ facilityId, departmentName, onClose, o
         const obj: any = {};
         const sortedKeys = Object.keys(COL_MAP).sort((a, b) => b.length - a.length);
 
+        let seenOlasilik = 0;
+        let seenFrekans = 0;
+        let seenSiddet = 0;
+        let seenPuan = 0;
+        let seenSeviye = 0;
+
         headers.forEach((h, i) => {
           const matchedKey = sortedKeys.find(k => h.includes(k));
           if (matchedKey) {
-            const field = COL_MAP[matchedKey];
-            obj[field] = row[i] ?? '';
+            let field = COL_MAP[matchedKey];
+
+            if (field === 'initialProb') {
+              if (seenOlasilik === 1) field = 'finalProb';
+              seenOlasilik++;
+            }
+            if (field === 'initialFreq') {
+              if (seenFrekans === 1) field = 'finalFreq';
+              seenFrekans++;
+            }
+            if (field === 'initialSev') {
+              if (seenSiddet === 1) field = 'finalSev';
+              seenSiddet++;
+            }
+            if (field === 'initialScore') {
+              if (seenPuan === 1) field = 'finalScore';
+              seenPuan++;
+            }
+            if (field === 'initialLevel') {
+              if (seenSeviye === 1) field = 'finalLevel';
+              seenSeviye++;
+            }
+
+            if (obj[field] === undefined) {
+              obj[field] = row[i] ?? '';
+            }
           }
         });
         

@@ -11,6 +11,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import RiskExcelImport from './RiskExcelImport';
 import FacilityAdvancedDashboard from '@/components/risks/FacilityAdvancedDashboard';
+import { RiskPrintModal } from '@/components/risks/RiskPrintModal';
+import { Printer } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -65,6 +67,7 @@ export default function RiskDepartmentPage() {
   const token = localStorage.getItem('token');
 
   const [showImport, setShowImport] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [filterResponsible, setFilterResponsible] = useState<string>('');
@@ -222,6 +225,9 @@ export default function RiskDepartmentPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowPrintModal(true)} className="shadow-sm border-blue-200 text-blue-700 hover:bg-blue-50">
+            <Printer className="w-4 h-4 mr-1.5" /> Çıktı Önizleme
+          </Button>
           <Button size="sm" variant="outline" onClick={() => setShowImport(true)} className="shadow-sm">
             <Upload className="w-4 h-4 mr-1.5" /> Excel İçe Aktar
           </Button>
@@ -460,6 +466,15 @@ export default function RiskDepartmentPage() {
           }}
         />
       )}
+
+      {/* Modal: Print Preview */}
+      <RiskPrintModal
+        isOpen={showPrintModal}
+        onClose={() => setShowPrintModal(false)}
+        risks={risks}
+        department={department}
+        deptCode={deptCode}
+      />
     </div>
   );
 }

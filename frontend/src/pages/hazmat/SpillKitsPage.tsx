@@ -50,6 +50,7 @@ export default function SpillKitsPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isKitModalOpen, setIsKitModalOpen] = useState(false);
   const [isPlacementModalOpen, setIsPlacementModalOpen] = useState(false);
+  const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
   const [selectedKitId, setSelectedKitId] = useState<string | null>(null);
 
   const { data: kits = [], isLoading } = useQuery({
@@ -172,6 +173,18 @@ export default function SpillKitsPage() {
     }
   });
 
+  const addIncidentMutation = useMutation({
+    mutationFn: async ({ placementId, data }: { placementId: string, data: any }) => {
+      const res = await api.post(`/hazmat/spill-kits/placements/${placementId}/incidents`, data);
+      if (!res.ok) throw new Error('Hata');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spill-kits'] });
+      setIsIncidentModalOpen(false);
+    }
+  });
+
   const updateItemMutation = useMutation({
     mutationFn: async ({ itemId, exp }: { itemId: string, exp: string }) => {
       const res = await api.put(`/hazmat/spill-kits/items/${itemId}`, { exp });
@@ -202,6 +215,7 @@ export default function SpillKitsPage() {
   const [isCheckModalOpen, setIsCheckModalOpen] = useState(false);
   const [selectedPlacement, setSelectedPlacement] = useState<any>(null);
   const [checkForm, setCheckForm] = useState<any>({});
+  const [incidentForm, setIncidentForm] = useState<any>({ usedItemsMap: {} });
   
   const [isKitViewModalOpen, setIsKitViewModalOpen] = useState(false);
   const [selectedKitToView, setSelectedKitToView] = useState<any>(null);
@@ -276,6 +290,12 @@ export default function SpillKitsPage() {
 
     return latestCheck?.result === 'Eksik (Müdahale Gerekli)' || p.status === 'Eksik (Müdahale Gerekli)' || (latestCheck?.note && latestCheck.note.length > 0) || (latestCheck?.itemChecks && Object.values(latestCheck.itemChecks).some((ic: any) => !ic.ok)) || hasSktWarning;
   });
+
+  const allIncidents = allPlacements.flatMap((p: any) => 
+    (p.incidents || []).map((inc: any) => ({ ...inc, placement: p }))
+  ).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const selectedIncidentPlacement = allPlacements.find((p: any) => p.id === incidentForm.placementId);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
@@ -640,13 +660,51 @@ export default function SpillKitsPage() {
         {/* 5. Olay Kayıtları */}
         <TabsContent value="incidents" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Olay Kayıtları</CardTitle>
-              <CardDescription>Sahada gerçekleşen kullanım ve eksilmeler.</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Olay Kayıtları</CardTitle>
+                <CardDescription>Sahada gerçekleşen kullanım ve eksilmeler.</CardDescription>
+              </div>
+              <Button onClick={() => { setIncidentForm({ usedItemsMap: {} }); setIsIncidentModalOpen(true); }}><Plus className="w-4 h-4 mr-2" /> Yeni Olay Ekle</Button>
             </CardHeader>
             <CardContent>
-              <div className="p-8 text-center text-muted-foreground border rounded-lg bg-card">
-                Burada olay kaydı modülü listelenecektir. (Yakında)
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-muted/50 text-muted-foreground font-medium">
+                    <tr>
+                      <th className="p-3 border-b">Tarih</th>
+                      <th className="p-3 border-b">Kit & Departman</th>
+                      <th className="p-3 border-b">Dökülme Türü</th>
+                      <th className="p-3 border-b">Kullanım Durumu</th>
+                      <th className="p-3 border-b">Açıklama</th>
+                      <th className="p-3 border-b">Sonuç</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allIncidents.map((inc: any) => (
+                      <tr key={inc.id} className="border-b last:border-0 hover:bg-muted/30">
+                        <td className="p-3 whitespace-nowrap">{inc.incidentDate ? new Date(inc.incidentDate).toLocaleString('tr-TR') : '-'}</td>
+                        <td className="p-3 font-medium">
+                          {inc.placement?.kit?.kitName} <br />
+                          <span className="text-muted-foreground text-xs">{inc.placement?.unit} {inc.placement?.location ? `(${inc.placement.location})` : ''}</span>
+                        </td>
+                        <td className="p-3">{inc.incidentType || '-'}</td>
+                        <td className="p-3">
+                          {inc.kitUsed === 'Kullanıldı' ? <Badge variant="destructive">Kullanıldı</Badge> :
+                           inc.kitUsed === 'Kısmen Kullanıldı' ? <Badge variant="warning" className="bg-orange-500 text-white">Kısmen Kullanıldı</Badge> :
+                           <Badge variant="outline">{inc.kitUsed || '-'}</Badge>}
+                        </td>
+                        <td className="p-3 text-xs max-w-xs truncate" title={inc.incidentDesc || ''}>{inc.incidentDesc || '-'}</td>
+                        <td className="p-3 text-xs max-w-xs truncate" title={inc.incidentOutcome || ''}>{inc.incidentOutcome || '-'}</td>
+                      </tr>
+                    ))}
+                    {allIncidents.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="p-6 text-center text-muted-foreground">Olay kaydı bulunamadı.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>
@@ -1020,6 +1078,143 @@ export default function SpillKitsPage() {
           </div>
           <div className="flex justify-end">
             <Button onClick={() => setIsKitViewModalOpen(false)}>Kapat</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Incident Modal */}
+      <Dialog open={isIncidentModalOpen} onOpenChange={setIsIncidentModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Yeni Olay Kaydı</DialogTitle>
+            <DialogDescription>Dökülme/saçılma olayını ve kit kullanım durumunu kaydedin.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Kit Seç (Departman / Lokasyon)</Label>
+              <Select value={incidentForm.placementId || ''} onValueChange={(val) => {
+                setIncidentForm({...incidentForm, placementId: val, usedItemsMap: {}});
+              }}>
+                <SelectTrigger><SelectValue placeholder="Kit Seçin" /></SelectTrigger>
+                <SelectContent>
+                  {allPlacements.map((p: any) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.kit?.kitName} - {p.unit} {p.location ? `(${p.location})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Olay Tarihi</Label>
+                <Input type="datetime-local" value={incidentForm.incidentDate || ''} onChange={e => setIncidentForm({...incidentForm, incidentDate: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label>Dökülme Türü</Label>
+                <Input placeholder="Örn: Kimyasal, Biyolojik..." value={incidentForm.incidentType || ''} onChange={e => setIncidentForm({...incidentForm, incidentType: e.target.value})} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Kit Kullanım Durumu</Label>
+              <Select value={incidentForm.kitUsed || ''} onValueChange={(val) => setIncidentForm({...incidentForm, kitUsed: val})}>
+                <SelectTrigger><SelectValue placeholder="Durum Seçin" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Kullanılmadı">Kullanılmadı</SelectItem>
+                  <SelectItem value="Kısmen Kullanıldı">Kısmen Kullanıldı</SelectItem>
+                  <SelectItem value="Kullanıldı">Tamamen Kullanıldı</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Olay Açıklaması</Label>
+              <Textarea placeholder="Olay nasıl gerçekleşti?" value={incidentForm.incidentDesc || ''} onChange={e => setIncidentForm({...incidentForm, incidentDesc: e.target.value})} rows={3} />
+            </div>
+            
+            {selectedIncidentPlacement && (
+              <div className="space-y-3 pt-2">
+                <Label className="text-base font-bold">Kullanılan / Eksilen Malzemeler</Label>
+                <div className="border rounded-md divide-y">
+                  {selectedIncidentPlacement.kit?.items?.map((item: any) => (
+                    <div key={item.id} className="flex items-center justify-between p-3 gap-3 hover:bg-muted/20">
+                      <div className="flex items-center space-x-3 w-1/2">
+                        <Checkbox 
+                          checked={!!incidentForm.usedItemsMap?.[item.id]?.used} 
+                          onCheckedChange={c => {
+                            setIncidentForm((prev: any) => ({
+                              ...prev,
+                              usedItemsMap: {
+                                ...prev.usedItemsMap,
+                                [item.id]: { ...prev.usedItemsMap?.[item.id], used: !!c }
+                              }
+                            }));
+                          }} 
+                        />
+                        <div>
+                          <p className="text-sm font-medium leading-none">{item.name}</p>
+                          <span className="text-xs text-muted-foreground">Mevcut Miktar: {item.qty}</span>
+                        </div>
+                      </div>
+                      {incidentForm.usedItemsMap?.[item.id]?.used && (
+                        <div className="w-1/2 flex items-center gap-2">
+                          <Label className="text-xs shrink-0">Kullanılan Adet:</Label>
+                          <Input 
+                            type="number"
+                            placeholder="Miktar"
+                            className="h-8 w-24"
+                            value={incidentForm.usedItemsMap?.[item.id]?.qty || ''}
+                            onChange={e => {
+                              setIncidentForm((prev: any) => ({
+                                ...prev,
+                                usedItemsMap: {
+                                  ...prev.usedItemsMap,
+                                  [item.id]: { ...prev.usedItemsMap?.[item.id], qty: e.target.value }
+                                }
+                              }));
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {(!selectedIncidentPlacement.kit?.items || selectedIncidentPlacement.kit.items.length === 0) && (
+                    <div className="p-4 text-center text-sm text-muted-foreground">Bu kite ait malzeme bulunamadı.</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2 pt-2">
+              <Label>Sonuç / Değerlendirme</Label>
+              <Textarea placeholder="Olayın sonucu, alınan önlemler vb." value={incidentForm.incidentOutcome || ''} onChange={e => setIncidentForm({...incidentForm, incidentOutcome: e.target.value})} rows={3} />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsIncidentModalOpen(false)}>İptal</Button>
+            <Button 
+              onClick={() => {
+                const usedItemsSummary = Object.keys(incidentForm.usedItemsMap || {})
+                  .filter(k => incidentForm.usedItemsMap[k].used)
+                  .map(k => {
+                    const itemName = selectedIncidentPlacement?.kit?.items?.find((i: any) => i.id === k)?.name;
+                    const qty = incidentForm.usedItemsMap[k].qty;
+                    return `${itemName}: ${qty} adet`;
+                  }).join(', ');
+                  
+                const payload = {
+                  incidentDate: incidentForm.incidentDate,
+                  incidentType: incidentForm.incidentType,
+                  kitUsed: incidentForm.kitUsed,
+                  incidentDesc: incidentForm.incidentDesc,
+                  usedItems: usedItemsSummary,
+                  incidentOutcome: incidentForm.incidentOutcome
+                };
+                addIncidentMutation.mutate({ placementId: incidentForm.placementId, data: payload });
+              }}
+              disabled={!incidentForm.placementId || addIncidentMutation.isPending}
+            >
+              Kaydet
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

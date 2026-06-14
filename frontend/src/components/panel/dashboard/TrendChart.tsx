@@ -24,8 +24,14 @@ interface TrendChartProps {
   companyName?: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RechartsFormatter = (value: any, name: any, props: any, index: number) => [string, string];
+
+const formatMonth = (monthStr: string) => {
+  if (!monthStr || !monthStr.includes("-")) return monthStr;
+  const [year, month] = monthStr.split("-");
+  const months = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+  return `${months[parseInt(month, 10) - 1]} ${year}`;
+};
 
 export function EmployeeTrendChart({ data, companyName }: TrendChartProps) {
   const title = companyName
@@ -37,7 +43,7 @@ export function EmployeeTrendChart({ data, companyName }: TrendChartProps) {
     const index = props?.dataIndex ?? 0;
     const currentMonthData = data[index];
 
-    if (!currentMonthData) return [String(value), String(name)];
+    if (!currentMonthData) return [String(value), formatMonth(String(name))];
 
     if (name === "percentChange") {
       const pct = currentMonthData.percentChange;
@@ -50,7 +56,7 @@ export function EmployeeTrendChart({ data, companyName }: TrendChartProps) {
       return [`${currentMonthData.totalCount}`, "Toplam Çalışan"];
     }
 
-    return [String(value), String(name)];
+    return [String(value), formatMonth(String(name))];
   };
 
   return (
@@ -74,6 +80,7 @@ export function EmployeeTrendChart({ data, companyName }: TrendChartProps) {
                 dataKey="month"
                 axisLine={false}
                 tickLine={false}
+                tickFormatter={formatMonth}
                 tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                 dy={10}
               />
@@ -109,6 +116,7 @@ export function EmployeeTrendChart({ data, companyName }: TrendChartProps) {
                   borderColor: "hsl(var(--border))",
                   borderRadius: "8px",
                 }}
+                labelFormatter={(label) => formatMonth(label)}
                 formatter={tooltipFormatter}
               />
               <Legend

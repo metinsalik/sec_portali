@@ -58,8 +58,14 @@ export function FacilitySwitcher() {
     localStorage.setItem('activeFacilityId', facilityId);
     setOpen(false);
     
-    // Dispatch event to trigger re-renders where necessary
     window.dispatchEvent(new Event('facilityChanged'));
+
+    const path = window.location.pathname;
+    if (path === '/risks' || path.startsWith('/risks/facility')) {
+      window.location.href = `/risks/facility/${facilityId}`;
+    } else {
+      window.location.reload();
+    }
   };
 
   if (isLoading || accessibleFacilities.length === 0) {

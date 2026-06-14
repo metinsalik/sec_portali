@@ -464,7 +464,7 @@ export default function RiskFormPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Bölüm *</label>
+                <label className="text-xs font-semibold text-muted-foreground">Birim / Bölüm *</label>
                 <Input value={department?.name || ''} disabled className="bg-muted" />
               </div>
               <div className="space-y-1.5">
@@ -475,13 +475,13 @@ export default function RiskFormPage() {
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Faaliyet (Yapılan İş) *</label>
+                <label className="text-xs font-semibold text-muted-foreground">Faaliyet *</label>
                 <Input value={form.activity} onChange={(e) => updateField('activity', e.target.value)} placeholder="Örn: Kimyasal atıkların taşınması" />
               </div>
             </div>
             {isEdit && (
               <div className="w-1/3 space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Sıra No (Risk No)</label>
+                <label className="text-xs font-semibold text-muted-foreground">No</label>
                 <Input type="number" value={form.riskNo} onChange={(e) => updateField('riskNo', e.target.value)} placeholder="Örn: 1" />
               </div>
             )}
@@ -507,7 +507,7 @@ export default function RiskFormPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Sonuç / Olası Etki Zarar</label>
+                <label className="text-xs font-semibold text-muted-foreground">Sonuç/ Olası Etki Zarar</label>
                 <Input value={form.impactDamage} onChange={(e) => updateField('impactDamage', e.target.value)} placeholder="Örn: Yaralanma, İş gücü kaybı" />
               </div>
               <div className="space-y-1.5">
@@ -522,7 +522,7 @@ export default function RiskFormPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-muted-foreground block">Mevcut Durum Görseli</label>
+              <label className="text-xs font-semibold text-muted-foreground block">Mevcut Durum Görseli (Varsa tespit edilen riske ilişkin görsel)</label>
               <div className="flex flex-wrap items-center gap-4 border p-3 rounded-lg bg-muted/10">
                 {form.initialImage ? (
                   <div className="relative group w-28 h-20 rounded-md overflow-hidden border">
@@ -633,7 +633,7 @@ export default function RiskFormPage() {
                 <Input type="date" value={form.actionDate} onChange={(e) => updateField('actionDate', e.target.value)} />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-muted-foreground block">İyileştirme Sonrası Görseli</label>
+                <label className="text-xs font-semibold text-muted-foreground block">İyileştirme Sonrası Görseli (Yapılan iyileştirme sonrasını gösteren görsel)</label>
                 <div className="flex items-center gap-3">
                   {form.actionImage && (
                     <div className="relative group w-20 h-10 rounded border overflow-hidden shrink-0">

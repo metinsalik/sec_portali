@@ -48,10 +48,10 @@ export default function PortalPage() {
       <header className="hidden md:block bg-white dark:bg-[#171c20] border-b border-[#c2c7cc] dark:border-[#73787c] shadow-sm sticky top-0 z-50">
         <div className="flex justify-between items-center h-16 px-6 w-full max-w-[1440px] mx-auto">
           <div className="flex items-center gap-4">
-            <div className="bg-[#011d2b] dark:bg-[#b0cadd] p-2 rounded-lg flex items-center justify-center">
-              <span className="text-white dark:text-[#011e2c] font-bold text-sm tracking-wider">SEÇ</span>
+            <div className="flex items-center justify-center h-10">
+              <img src="/mlpcare.jpg" alt="MLP Care Logo" className="h-full object-contain rounded-md" />
             </div>
-            <h1 className="text-2xl font-bold text-[#0051d5] dark:text-[#b4c5ff]">SEÇ PORTALI</h1>
+            <h1 className="text-2xl font-bold text-[#0051d5] dark:text-[#b4c5ff]">HSE Portalı</h1>
           </div>
           
           <div className="flex items-center gap-6">
@@ -104,8 +104,8 @@ export default function PortalPage() {
       <header className="md:hidden sticky top-0 z-50 bg-white dark:bg-[#171c20] border-b border-[#c2c7cc] dark:border-[#73787c] w-full">
         <div className="flex justify-between items-center w-full px-4 py-4 max-w-[1440px] mx-auto">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#011d2b] dark:text-[#cbe6fa] text-[28px]">medical_services</span>
-            <span className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] tracking-tight">MLP-CARE</span>
+            <img src="/mlpcare.jpg" alt="MLP Care Logo" className="h-8 object-contain rounded" />
+            <span className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] tracking-tight">HSE Portalı</span>
           </div>
           
           <div className="flex items-center gap-3">
@@ -431,7 +431,7 @@ export default function PortalPage() {
       {/* Mobile Footer */}
       <footer className="md:hidden fixed bottom-0 left-0 w-full z-40 bg-white dark:bg-[#2c3135] border-t border-[#c2c7cc] dark:border-[#73787c]/50 flex flex-col justify-center items-center py-3 px-4 gap-1">
         <span className="text-[10px] font-bold text-[#0051d5] dark:text-[#b4c5ff] uppercase tracking-tight text-center">
-          SEÇ PORTALI GÜVENLİĞİ YÖNETİM SİSTEMİ
+          HSE PORTALI GÜVENLİĞİ YÖNETİM SİSTEMİ
         </span>
         <span className="text-[10px] text-[#42474b] dark:text-[#949899] text-center">
           © 2026 MLP-CARE. Tüm hakları saklıdır.

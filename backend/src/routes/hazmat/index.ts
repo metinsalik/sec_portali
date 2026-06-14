@@ -5,6 +5,7 @@ import uploadRouter from './upload';
 import inventoryRouter from './inventory';
 import spillKitsRouter from './spill-kits';
 import eyewashRiskRouter from './eyewash-risk';
+import dashboardRouter from './dashboard';
 
 const router = express.Router();
 
@@ -14,5 +15,6 @@ router.use('/upload', uploadRouter);
 router.use('/inventory', inventoryRouter);
 router.use('/spill-kits', spillKitsRouter);
 router.use('/eyewash-risk', eyewashRiskRouter);
+router.use('/dashboard', dashboardRouter);
 
 export default router;

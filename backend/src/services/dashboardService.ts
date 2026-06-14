@@ -159,30 +159,36 @@ export async function getEmployeeTrend() {
   });
 
   const monthlyTrendData: { month: string; totalCount: number; percentChange: number | null }[] = [];
+  
+  // Tum tarihcelerden essiz y/ay listesini alip sirala
+  const allMonths = Array.from(new Set(history.map(h => h.effectiveDate.toISOString().substring(0, 7)))).sort();
+  const facilityCounts: Record<string, number> = {};
+  
   let previousMonthTotalCount: number | null = null;
 
-  // Group by month and get the latest count for each month
-  const monthlyData: Record<string, number> = {};
-  history.forEach(h => {
-    const monthKey = h.effectiveDate.toISOString().substring(0, 7); // YYYY-MM
-    monthlyData[monthKey] = h.count; // Assuming the latest entry for a month is the most accurate
-  });
+  allMonths.forEach(month => {
+    // Sadece bu aya ait kayitlar
+    const monthHistory = history.filter(h => h.effectiveDate.toISOString().substring(0, 7) === month);
+    
+    // Her tesisin bu aydaki son guncellenen sayisini al
+    monthHistory.forEach(h => {
+      facilityCounts[h.facilityId] = h.count;
+    });
 
-  const sortedMonths = Object.keys(monthlyData).sort();
+    // O ay itibariyle sistemde kayitli (ve daha once guncellenmis) TUM tesislerin toplam calisan sayisi
+    const currentMonthTotalCount = Object.values(facilityCounts).reduce((acc, count) => acc + count, 0);
 
-  sortedMonths.forEach(month => {
-    const currentMonthTotalCount = monthlyData[month];
     let percentChange: number | null = null;
-
-    if (previousMonthTotalCount !== null) {
+    if (previousMonthTotalCount !== null && previousMonthTotalCount > 0) {
       percentChange = ((currentMonthTotalCount - previousMonthTotalCount) / previousMonthTotalCount) * 100;
     }
-    
+
     monthlyTrendData.push({ 
       month, 
       totalCount: currentMonthTotalCount, 
       percentChange 
     });
+    
     previousMonthTotalCount = currentMonthTotalCount;
   });
 
