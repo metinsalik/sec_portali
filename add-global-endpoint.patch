@@ -1,0 +1,45 @@
+--- backend/src/routes/hazmat/materials.ts
++++ backend/src/routes/hazmat/materials.ts
+@@ -34,6 +34,42 @@
+   }
+ });
+ 
++// GET all global materials, and check if they exist in a specific facility
++router.get('/global', authMiddleware, async (req: AuthRequest, res) => {
++  const { facilityId } = req.query as Record<string, any>;
++  
++  try {
++    const allMaterials = await prisma.hazmatMaterial.findMany({
++      include: {
++        category: true,
++        hazardLabels: { include: { label: true } },
++        adrLabels: { include: { label: true } },
++        ppes: { include: { ppe: true } }
++      },
++      orderBy: { productName: 'asc' }
++    });
++
++    if (!facilityId) {
++      return res.json(allMaterials.map(m => ({ material: m, isInFacility: false })));
++    }
++
++    // If facilityId is provided, check which ones are in the facility
++    const facilityItems = await prisma.facilityHazmatItem.findMany({
++      where: { facilityId: String(facilityId) },
++      include: { unit: true }
++    });
++
++    const result = allMaterials.map(m => {
++      const fItem = facilityItems.find(f => f.materialId === m.id);
++      return { material: m, isInFacility: !!fItem, facilityAmount: fItem?.amountValue || null, facilityUnit: fItem?.unit?.name || null };
++    });
++
++    res.json(result);
++  } catch (error) {
++    console.error('Error fetching global materials:', error);
++    res.status(500).json({ error: 'Internal server error' });
++  }
++});
++
+ // GET all materials for a facility (Returns FacilityHazmatItems)
+ router.get('/', authMiddleware, async (req: AuthRequest, res) => {

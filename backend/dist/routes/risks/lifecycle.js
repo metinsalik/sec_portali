@@ -25,6 +25,15 @@ async function checkFacilityAccess(req, facilityId) {
     });
     return !!access;
 }
+// Helper to generate a 3-letter code from a department name
+function generateDeptCode(name) {
+    const charMap = {
+        'ı': 'i', 'i': 'i', 'ş': 's', 'ğ': 'g', 'ü': 'u', 'ö': 'o', 'ç': 'c',
+        'I': 'I', 'İ': 'I', 'Ş': 'S', 'Ğ': 'G', 'Ü': 'U', 'Ö': 'O', 'Ç': 'C'
+    };
+    const str = name.replace(/[ıişğüöçIİŞĞÜÖÇ]/g, (m) => charMap[m]);
+    return str.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase() || 'GEN';
+}
 // ─── Yardımcı Fonksiyonlar ────────────────────────────────────────────────────
 function scoreToLevel(score) {
     if (score > 400)
@@ -108,7 +117,13 @@ router.post('/import', auth_1.authMiddleware, async (req, res) => {
             });
             if (!dept) {
                 dept = await prisma.riskDepartment.create({
-                    data: { facilityId, name: deptName },
+                    data: { facilityId, name: deptName, code: generateDeptCode(deptName) },
+                });
+            }
+            else if (!dept.code) {
+                dept = await prisma.riskDepartment.update({
+                    where: { id: dept.id },
+                    data: { code: generateDeptCode(deptName) },
                 });
             }
             const initialScore = Number(row.initialScore) || 0;
@@ -271,11 +286,12 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
             return res.status(404).json({ error: 'Departman bulunamadı.' });
         // Eğer departmanın kodu yoksa, isminden oluşturup kaydet
         if (!dept.code) {
-            const generatedCode = dept.name.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, '') || 'GEN';
+            const generatedCode = generateDeptCode(dept.name);
             await prisma.riskDepartment.update({
                 where: { id: dept.id },
                 data: { code: generatedCode }
             });
+            dept.code = generatedCode;
         }
         const hasAccess = await checkFacilityAccess(req, dept.facilityId);
         if (!hasAccess) {

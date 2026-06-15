@@ -14,7 +14,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (username?: string) => Promise<void>;
+  login: (username: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -42,12 +42,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = async (username?: string) => {
+  const login = async (username: string) => {
     setIsLoading(true);
     try {
-      const res = username
-        ? await api.post('/auth/login', { username })
-        : await api.get('/auth/login');
+      const res = await api.post('/auth/login', { username });
 
       if (res.ok) {
         const data = await res.json();
@@ -105,10 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (token) {
       fetchMe();
     } else {
-      login()
-        .catch(() => {
-          setIsLoading(false);
-        });
+      setIsLoading(false);
     }
   }, []);
 

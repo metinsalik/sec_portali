@@ -83,7 +83,10 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
 router.get('/:id', auth_1.authMiddleware, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
-        const dept = await prisma.riskDepartment.findUnique({ where: { id } });
+        const dept = await prisma.riskDepartment.findUnique({
+            where: { id },
+            include: { facility: true }
+        });
         if (!dept)
             return res.status(404).json({ error: 'Departman bulunamadı.' });
         const hasAccess = await checkFacilityAccess(req, dept.facilityId);

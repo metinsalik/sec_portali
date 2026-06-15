@@ -84,6 +84,7 @@ import EyewashRiskAnalysisPage from './pages/hazmat/EyewashRiskAnalysisPage';
 import EyewashRiskAnalysisFormPage from './pages/hazmat/EyewashRiskAnalysisFormPage';
 import EyewashRiskAnalysisViewPage from './pages/hazmat/EyewashRiskAnalysisViewPage';
 import EyewashRiskAnalysisReportPage from './pages/hazmat/EyewashRiskAnalysisReportPage';
+import HazmatIncidentsPage from './pages/hazmat/HazmatIncidentsPage';
 
 // Placeholder for future modules
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -580,6 +581,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <AppLayout><SpillKitsPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/incidents"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><HazmatIncidentsPage /></AppLayout>
                     </ProtectedRoute>
                   }
                 />

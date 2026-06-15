@@ -46,11 +46,11 @@ router.delete('/units/:id', authMiddleware, async (req: AuthRequest, res) => {
 // Departments
 router.get('/departments', authMiddleware, async (req: AuthRequest, res) => {
   const { facilityId } = req.query as Record<string, any>;
-  if (!facilityId) return res.status(400).json({ error: 'facilityId is required' });
 
   try {
+    const whereClause = facilityId && facilityId !== 'all' ? { facilityId: String(facilityId) } : {};
     const departments = await prisma.hazmatDepartment.findMany({
-      where: { facilityId: String(facilityId) },
+      where: whereClause,
       orderBy: { name: 'asc' }
     });
     res.json(departments);

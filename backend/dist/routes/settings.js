@@ -1,8 +1,37 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
+const multer_1 = __importDefault(require("multer"));
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
+const storage = multer_1.default.diskStorage({
+    destination: (_req, _file, cb) => {
+        const dir = path_1.default.join(process.cwd(), 'uploads', 'facilities');
+        fs_1.default.mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+        const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+        cb(null, `${unique}${path_1.default.extname(file.originalname)}`);
+    },
+});
+const upload = (0, multer_1.default)({
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+    fileFilter: (_req, file, cb) => {
+        const allowed = /jpeg|jpg|png|gif|webp|svg/;
+        const ok = allowed.test(path_1.default.extname(file.originalname).toLowerCase());
+        if (ok)
+            cb(null, true);
+        else
+            cb(new Error('Sadece resim dosyaları yüklenebilir.'));
+    },
+});
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
 // Tüm settings rotaları kimlik doğrulama gerektirir
@@ -23,6 +52,13 @@ async function ensureRolesExist() {
 // ──────────────────────────────────────────────────────────────────────────────
 // TESİS YÖNETİMİ - Admin + Management
 // ──────────────────────────────────────────────────────────────────────────────
+router.post('/facilities/upload-logo', upload.single('file'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'Dosya bulunamadı.' });
+    }
+    const filePath = `/uploads/facilities/${req.file.filename}`;
+    res.json({ url: filePath });
+});
 router.get('/facilities', async (req, res) => {
     try {
         const facilities = await prisma.facility.findMany({
@@ -67,12 +103,12 @@ router.get('/facilities/:id', async (req, res) => {
     }
 });
 router.post('/facilities', auth_1.managementMiddleware, async (req, res) => {
-    const { id, name, shortName, type, city, district, fullAddress, phone, email, website, commercialTitle, taxOffice, taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings } = req.body;
+    const { id, name, shortName, type, city, district, fullAddress, phone, email, website, logoUrl, commercialTitle, taxOffice, taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings } = req.body;
     try {
         const facility = await prisma.facility.create({
             data: {
                 id, name, shortName, type, city, district, fullAddress,
-                phone, email, website, commercialTitle, taxOffice,
+                phone, email, website, logoUrl: logoUrl || '/mlpcare.jpg', commercialTitle, taxOffice,
                 taxNumber, sgkNumber, naceCode, dangerClass,
                 employeeCount: parseInt(employeeCount) || 0,
                 buildings: {
@@ -104,7 +140,7 @@ router.post('/facilities', auth_1.managementMiddleware, async (req, res) => {
 });
 router.put('/facilities/:id', auth_1.managementMiddleware, async (req, res) => {
     const oldId = req.params.id;
-    const { id: newId, name, shortName, type, city, district, fullAddress, phone, email, website, commercialTitle, taxOffice, taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings } = req.body;
+    const { id: newId, name, shortName, type, city, district, fullAddress, phone, email, website, logoUrl, commercialTitle, taxOffice, taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings } = req.body;
     try {
         // Once binalari temizle (basit yaklasim)
         await prisma.facilityBuilding.deleteMany({ where: { facilityId: oldId } });
@@ -113,7 +149,7 @@ router.put('/facilities/:id', auth_1.managementMiddleware, async (req, res) => {
             data: {
                 id: newId || oldId,
                 name, shortName, type, city, district, fullAddress,
-                phone, email, website, commercialTitle, taxOffice,
+                phone, email, website, logoUrl, commercialTitle, taxOffice,
                 taxNumber, sgkNumber, naceCode, dangerClass,
                 employeeCount: parseInt(employeeCount) || 0,
                 isActive: req.body.isActive !== undefined ? req.body.isActive : true,

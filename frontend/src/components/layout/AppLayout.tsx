@@ -89,6 +89,7 @@ const hazmatNavItems = [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/hazmat/dashboard', end: true },
   { label: 'TEHLİKELİ MADDE YÖNETİMİ', type: 'group' },
   { label: 'Tehlikeli Maddeler', icon: AlertTriangle, to: '/hazmat/materials' },
+  { label: 'Olağan Dışı Olay', icon: ShieldAlert, to: '/hazmat/incidents' },
   { label: 'Envanter', icon: ClipboardList, to: '/hazmat/inventory' },
   { label: 'Departmanlar', icon: LayoutGrid, to: '/hazmat/departments' },
   { label: 'EKİPMAN YÖNETİMİ', type: 'group' },

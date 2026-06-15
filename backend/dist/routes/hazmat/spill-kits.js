@@ -38,7 +38,7 @@ router.get('/', async (req, res) => {
 // Create or Update a kit template
 router.post('/', async (req, res) => {
     try {
-        const { id, facilityId, ...data } = req.body;
+        const { id, facilityId, items, placements, ...data } = req.body;
         if (!facilityId) {
             return res.status(400).json({ error: 'facilityId is required' });
         }
@@ -50,10 +50,23 @@ router.post('/', async (req, res) => {
             });
         }
         else {
+            // Auto-generate code like DCK-001
+            const lastKit = await prisma.hazmatSpillKit.findFirst({
+                where: { facilityId, code: { startsWith: 'DCK-' } },
+                orderBy: { createdAt: 'desc' }
+            });
+            let nextCode = 'DCK-001';
+            if (lastKit && lastKit.code) {
+                const lastNum = parseInt(lastKit.code.replace('DCK-', ''));
+                if (!isNaN(lastNum)) {
+                    nextCode = `DCK-${(lastNum + 1).toString().padStart(3, '0')}`;
+                }
+            }
             kit = await prisma.hazmatSpillKit.create({
                 data: {
                     ...data,
                     facilityId,
+                    code: nextCode
                 },
             });
         }
@@ -90,6 +103,22 @@ router.post('/:id/items', async (req, res) => {
     }
     catch (error) {
         console.error('Error saving items:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+// Update a single item (useful for updating SKT during a check)
+router.put('/items/:itemId', async (req, res) => {
+    try {
+        const { itemId } = req.params;
+        const data = req.body;
+        const item = await prisma.hazmatSpillKitItem.update({
+            where: { id: itemId },
+            data
+        });
+        res.json(item);
+    }
+    catch (error) {
+        console.error('Error updating item:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
