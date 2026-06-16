@@ -394,7 +394,10 @@ export default function FacilityRiskLevelPage() {
                     <div className="flex items-center gap-1">Sorumlu <ArrowUpDown className="w-3 h-3"/></div>
                   </th>
                   <th className="px-4 py-3 font-medium cursor-pointer hover:bg-muted/80 transition-colors" onClick={() => handleSort('initialScore')}>
-                    <div className="flex items-center gap-1">Seviye <ArrowUpDown className="w-3 h-3"/></div>
+                    <div className="flex items-center gap-1 whitespace-nowrap">Mevcut Risk <ArrowUpDown className="w-3 h-3"/></div>
+                  </th>
+                  <th className="px-4 py-3 font-medium cursor-pointer hover:bg-muted/80 transition-colors" onClick={() => handleSort('finalScore')}>
+                    <div className="flex items-center gap-1 whitespace-nowrap">Sonrası Risk <ArrowUpDown className="w-3 h-3"/></div>
                   </th>
                   <th className="px-4 py-3 font-medium cursor-pointer hover:bg-muted/80 transition-colors" onClick={() => handleSort('status')}>
                     <div className="flex items-center gap-1">Durum <ArrowUpDown className="w-3 h-3"/></div>
@@ -424,7 +427,10 @@ export default function FacilityRiskLevelPage() {
                         {risk.improvementResponsible || '-'}
                       </td>
                       <td className="px-4 py-3">
-                        <LevelBadge level={risk.finalLevel || risk.initialLevel} />
+                        <LevelBadge level={risk.initialLevel || 'Bilinmiyor'} />
+                      </td>
+                      <td className="px-4 py-3">
+                        {risk.finalLevel ? <LevelBadge level={risk.finalLevel} /> : <span className="text-muted-foreground ml-4">-</span>}
                       </td>
                       <td className="px-4 py-3">
                         <StatusBadge status={risk.status} />
