@@ -67,6 +67,8 @@ export default function RiskCategoryPage() {
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterDepartment, setFilterDepartment] = useState<string>('');
   const [filterResponsible, setFilterResponsible] = useState<string>('');
+  const [filterInitialLevel, setFilterInitialLevel] = useState<string>('');
+  const [filterFinalLevel, setFilterFinalLevel] = useState<string>('');
 
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'initialScore', direction: 'desc' });
 
@@ -172,6 +174,12 @@ export default function RiskCategoryPage() {
     if (filterResponsible) {
       sortableRisks = sortableRisks.filter(r => r.improvementResponsible === filterResponsible);
     }
+    if (filterInitialLevel) {
+      sortableRisks = sortableRisks.filter(r => (r.initialLevel || 'Bilinmiyor') === filterInitialLevel);
+    }
+    if (filterFinalLevel) {
+      sortableRisks = sortableRisks.filter(r => (r.finalLevel || r.initialLevel || 'Bilinmiyor') === filterFinalLevel);
+    }
     
     if (sortConfig !== null) {
       sortableRisks.sort((a, b) => {
@@ -196,7 +204,7 @@ export default function RiskCategoryPage() {
       });
     }
     return sortableRisks;
-  }, [categoryRisks, sortConfig, filterStatus, filterDepartment, filterResponsible]);
+  }, [categoryRisks, sortConfig, filterStatus, filterDepartment, filterResponsible, filterInitialLevel, filterFinalLevel]);
 
   const initialLevelCounts = useMemo(() => {
     return sortedRisks.reduce((acc: any, r: any) => {
@@ -217,7 +225,9 @@ export default function RiskCategoryPage() {
   const activeFiltersText = [
     filterStatus && `Durum: ${STATUS_CONFIG[filterStatus]?.label}`,
     filterDepartment && `Departman: ${departmentMap[filterDepartment]?.name}`,
-    filterResponsible && `İyileştirme Sorumlusu: ${filterResponsible}`
+    filterResponsible && `Sorumlu: ${filterResponsible}`,
+    filterInitialLevel && `İlk Tespit: ${filterInitialLevel}`,
+    filterFinalLevel && `Sonrası Risk: ${filterFinalLevel}`
   ].filter(Boolean).join(', ');
 
   const chartTitleSuffix = activeFiltersText ? ` - ${activeFiltersText}` : '';
@@ -312,7 +322,11 @@ export default function RiskCategoryPage() {
                     { label: 'Olası Risk', count: iOlasi, barClass: 'risk-bar-probable', width: pct(iOlasi) },
                     { label: 'Önemsiz Risk', count: iOnemsiz, barClass: 'risk-bar-insignificant', width: pct(iOnemsiz) }
                   ].map((item, idx) => (
-                    <div key={`init-${idx}`} className="relative group/bar">
+                    <div 
+                      key={`init-${idx}`} 
+                      className={`relative group/bar cursor-pointer ${filterInitialLevel === item.label ? 'ring-2 ring-primary ring-offset-1 rounded' : ''}`}
+                      onClick={() => setFilterInitialLevel(filterInitialLevel === item.label ? '' : item.label)}
+                    >
                       <div className="flex items-center gap-3 group-hover/bar:bg-muted/30 p-1 -mx-1 rounded transition-colors">
                         <span className="w-24 text-right text-[10px] font-medium text-muted-foreground dark:text-slate-400 leading-tight group-hover/bar:text-foreground transition-colors">{item.label}</span>
                         <div className="flex-1 h-6 bg-muted dark:bg-slate-800/50 rounded-sm overflow-hidden flex items-center">
@@ -334,7 +348,11 @@ export default function RiskCategoryPage() {
                     { label: 'Olası Risk', count: fOlasi, barClass: 'risk-bar-probable', width: pct(fOlasi) },
                     { label: 'Önemsiz Risk', count: fOnemsiz, barClass: 'risk-bar-insignificant', width: pct(fOnemsiz) }
                   ].map((item, idx) => (
-                    <div key={`final-${idx}`} className="relative group/bar">
+                    <div 
+                      key={`final-${idx}`} 
+                      className={`relative group/bar cursor-pointer ${filterFinalLevel === item.label ? 'ring-2 ring-primary ring-offset-1 rounded' : ''}`}
+                      onClick={() => setFilterFinalLevel(filterFinalLevel === item.label ? '' : item.label)}
+                    >
                       <div className="flex items-center gap-3 group-hover/bar:bg-muted/30 p-1 -mx-1 rounded transition-colors">
                         <span className="w-24 text-right text-[10px] font-medium text-muted-foreground dark:text-slate-400 leading-tight group-hover/bar:text-foreground transition-colors">{item.label}</span>
                         <div className="flex-1 h-6 bg-muted dark:bg-slate-800/50 rounded-sm overflow-hidden flex items-center">
@@ -379,6 +397,16 @@ export default function RiskCategoryPage() {
               </Button>
             );
           })}
+          {filterInitialLevel && (
+            <Button size="sm" variant="default" onClick={() => setFilterInitialLevel('')} className="h-8 text-xs rounded-full border-dashed bg-primary/20 text-primary hover:bg-primary/30">
+              İlk Tespit: {filterInitialLevel} ✕
+            </Button>
+          )}
+          {filterFinalLevel && (
+            <Button size="sm" variant="default" onClick={() => setFilterFinalLevel('')} className="h-8 text-xs rounded-full border-dashed bg-primary/20 text-primary hover:bg-primary/30">
+              Sonrası Risk: {filterFinalLevel} ✕
+            </Button>
+          )}
         </div>
         
         <div className="flex gap-2 flex-wrap ml-auto">
