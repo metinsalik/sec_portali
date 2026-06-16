@@ -63,6 +63,7 @@ import RiskDashboard from './pages/risks/RiskDashboard';
 import RiskFacilityPage from './pages/risks/RiskFacilityPage';
 import FacilityDepartmentsPage from './pages/risks/FacilityDepartmentsPage';
 import FacilityCategoriesPage from './pages/risks/FacilityCategoriesPage';
+import FacilityRiskLevelPage from './pages/risks/FacilityRiskLevelPage';
 import RiskCategoryPage from './pages/risks/RiskCategoryPage';
 import RiskDepartmentPage from './pages/risks/RiskDepartmentPage';
 import RiskFormPage from './pages/risks/RiskFormPage';
@@ -361,6 +362,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <AppLayout><FacilityCategoriesPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/risks/facility/:facilityId/levels"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><FacilityRiskLevelPage /></AppLayout>
                     </ProtectedRoute>
                   }
                 />

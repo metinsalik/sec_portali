@@ -288,9 +288,13 @@ export default function RiskFacilityPage() {
                   { label: 'Olası Risk', count: olasi, barClass: 'risk-bar-probable', width: pct(olasi) },
                   { label: 'Önemsiz Risk', count: onemsiz, barClass: 'risk-bar-insignificant', width: pct(onemsiz) }
                 ].map((item, idx) => (
-                  <div key={idx} className="relative">
-                    <div className="flex items-center gap-4 mb-1">
-                      <span className="w-36 text-right text-xs font-medium text-muted-foreground dark:text-slate-400">{item.label}</span>
+                  <div 
+                    key={idx} 
+                    className="relative cursor-pointer group/bar"
+                    onClick={() => navigate(`/risks/facility/${facilityId}/levels?level=${encodeURIComponent(item.label)}`)}
+                  >
+                    <div className="flex items-center gap-4 mb-1 group-hover/bar:bg-muted/30 p-1 -mx-1 rounded transition-colors">
+                      <span className="w-36 text-right text-xs font-medium text-muted-foreground dark:text-slate-400 group-hover/bar:text-foreground transition-colors">{item.label}</span>
                       <div className="flex-1 h-8 bg-muted dark:bg-slate-800/50 rounded-sm overflow-hidden flex items-center">
                         <div 
                           className={`${item.barClass} h-full transition-all duration-1000 ease-out`} 
@@ -466,6 +470,57 @@ export default function RiskFacilityPage() {
                   : 'Tüm kategorileri listele'}
               </p>
             </div>
+          </div>
+        )}
+      </section>
+
+      {/* Risk Seviyeleri */}
+      <section className="mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <h4 className="text-2xl text-foreground dark:text-slate-100 font-bold">Risk Seviyeleri</h4>
+        </div>
+
+        {risksLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+            {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-40 w-full rounded-xl bg-muted dark:bg-slate-800" />)}
+          </div>
+        ) : levelCounts.length === 0 ? (
+          <div className="col-span-full py-16 text-center text-muted-foreground dark:text-slate-400 bg-muted/30 dark:bg-slate-800/30 rounded-xl border border-dashed border-border dark:border-slate-700">
+            <AlertTriangle className="w-10 h-10 opacity-30 mx-auto mb-3" />
+            <p className="font-medium">Risk kaydı bulunamadı</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
+            {[
+              { label: 'Tolere Gösterilemez Risk', key: 'Tolere Gösterilmez Risk' },
+              { label: 'Yüksek Risk', key: 'Yüksek Risk' },
+              { label: 'Önemli Risk', key: 'Önemli Risk' },
+              { label: 'Olası Risk', key: 'Olası Risk' },
+              { label: 'Önemsiz Risk', key: 'Önemsiz Risk' }
+            ].map((lvl, idx) => {
+              const countObj = levelCounts.find((l: any) => l.name === lvl.key) || { count: 0, fill: LEVEL_COLORS[lvl.key] };
+              const riskCount = countObj.count;
+              
+              return (
+                <div
+                  key={idx}
+                  onClick={() => navigate(`/risks/facility/${facilityId}/levels?level=${encodeURIComponent(lvl.key)}`)}
+                  className="bg-card dark:bg-slate-900 p-6 rounded-xl border border-border dark:border-slate-800 form-shadow hover:border-secondary transition-colors cursor-pointer group flex flex-col h-full items-center text-center"
+                >
+                  <div 
+                    className="w-12 h-12 rounded-full flex items-center justify-center mb-4 text-white font-bold text-lg"
+                    style={{ backgroundColor: countObj.fill || '#9ca3af' }}
+                  >
+                    {riskCount}
+                  </div>
+                  <h5 className="text-sm font-bold text-foreground dark:text-slate-100 mb-2">{lvl.label}</h5>
+                  <div className="mt-auto pt-4 flex items-center justify-center text-secondary w-full">
+                    <span className="text-xs font-medium">Riskleri Gör</span>
+                    <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
