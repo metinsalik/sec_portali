@@ -123,17 +123,20 @@ export default function RiskFacilityPage() {
     return Object.entries(counts).map(([k, v]) => ({ name: STATUS_MAP[k]?.label || k, value: v }));
   }, [filteredFacilityRisks]);
 
-  const levelCounts = useMemo(() => {
-    const levels = filteredFacilityRisks.reduce((acc: any, r: any) => {
+  const initialLevelCounts = useMemo(() => {
+    return filteredFacilityRisks.reduce((acc: any, r: any) => {
       const lvl = r.initialLevel || 'Bilinmiyor';
       acc[lvl] = (acc[lvl] || 0) + 1;
       return acc;
     }, {});
-    return Object.entries(levels).map(([k, v]) => ({ 
-      name: k, 
-      count: v,
-      fill: LEVEL_COLORS[k] || LEVEL_COLORS['Bilinmiyor']
-    }));
+  }, [filteredFacilityRisks]);
+
+  const finalLevelCounts = useMemo(() => {
+    return filteredFacilityRisks.reduce((acc: any, r: any) => {
+      const lvl = r.finalLevel || r.initialLevel || 'Bilinmiyor';
+      acc[lvl] = (acc[lvl] || 0) + 1;
+      return acc;
+    }, {});
   }, [filteredFacilityRisks]);
 
   const handleAddDept = async () => {
@@ -244,12 +247,20 @@ export default function RiskFacilityPage() {
         const kapaliCount = total - acikCount;
         const acikPercent = total > 0 ? Math.round((acikCount / total) * 100) : 0;
         
-        const getLvlCount = (lvlName: string) => levelCounts.find((l: any) => l.name === lvlName)?.count || 0;
-        const tolere = getLvlCount('Tolere Gösterilmez Risk');
-        const yuksek = getLvlCount('Yüksek Risk');
-        const onemli = getLvlCount('Önemli Risk');
-        const olasi = getLvlCount('Olası Risk');
-        const onemsiz = getLvlCount('Önemsiz Risk');
+        const getInitCount = (lvlName: string) => initialLevelCounts[lvlName] || 0;
+        const getFinalCount = (lvlName: string) => finalLevelCounts[lvlName] || 0;
+        
+        const iTolere = getInitCount('Tolere Gösterilmez Risk');
+        const iYuksek = getInitCount('Yüksek Risk');
+        const iOnemli = getInitCount('Önemli Risk');
+        const iOlasi = getInitCount('Olası Risk');
+        const iOnemsiz = getInitCount('Önemsiz Risk');
+
+        const fTolere = getFinalCount('Tolere Gösterilmez Risk');
+        const fYuksek = getFinalCount('Yüksek Risk');
+        const fOnemli = getFinalCount('Önemli Risk');
+        const fOlasi = getFinalCount('Olası Risk');
+        const fOnemsiz = getFinalCount('Önemsiz Risk');
 
         const pct = (val: number) => total > 0 ? (val / total) * 100 : 0;
 
@@ -280,42 +291,69 @@ export default function RiskFacilityPage() {
               </div>
             </div>
 
-            <div className="lg:col-span-2 bg-card dark:bg-slate-900 p-6 rounded-xl border border-border dark:border-slate-800 form-shadow">
-              <h4 className="text-sm font-bold text-foreground dark:text-slate-100 mb-6">Tesis Geneli Risk Seviyesi Dağılımı</h4>
-              <div className="space-y-6 pt-4">
-                
-                {[
-                  { label: 'Tolere Gösterilemez Risk', count: tolere, barClass: 'risk-bar-unbearable', width: pct(tolere) },
-                  { label: 'Yüksek Risk', count: yuksek, barClass: 'risk-bar-high', width: pct(yuksek) },
-                  { label: 'Önemli Risk', count: onemli, barClass: 'risk-bar-significant', width: pct(onemli) },
-                  { label: 'Olası Risk', count: olasi, barClass: 'risk-bar-probable', width: pct(olasi) },
-                  { label: 'Önemsiz Risk', count: onemsiz, barClass: 'risk-bar-insignificant', width: pct(onemsiz) }
-                ].map((item, idx) => (
-                  <div 
-                    key={idx} 
-                    className="relative cursor-pointer group/bar"
-                    onClick={() => navigate(`/risks/facility/${facilityId}/levels?level=${encodeURIComponent(item.label)}`)}
-                  >
-                    <div className="flex items-center gap-4 mb-1 group-hover/bar:bg-muted/30 p-1 -mx-1 rounded transition-colors">
-                      <span className="w-36 text-right text-xs font-medium text-muted-foreground dark:text-slate-400 group-hover/bar:text-foreground transition-colors">{item.label}</span>
-                      <div className="flex-1 h-8 bg-muted dark:bg-slate-800/50 rounded-sm overflow-hidden flex items-center">
-                        <div 
-                          className={`${item.barClass} h-full transition-all duration-1000 ease-out`} 
-                          style={{ width: `${item.width}%` }}
-                        ></div>
+            <div className="lg:col-span-2 bg-card dark:bg-slate-900 p-6 rounded-xl border border-border dark:border-slate-800 form-shadow flex flex-col">
+              <h4 className="text-sm font-bold text-foreground dark:text-slate-100 mb-4">Tesis Geneli Risk Seviyesi Dağılımı</h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1">
+                {/* İlk Tespit */}
+                <div className="space-y-4">
+                  <h5 className="text-xs font-bold text-muted-foreground uppercase text-center border-b pb-2">İlk Tespit Risk Skoru</h5>
+                  {[
+                    { label: 'Tolere Gösterilemez Risk', count: iTolere, barClass: 'risk-bar-unbearable', width: pct(iTolere) },
+                    { label: 'Yüksek Risk', count: iYuksek, barClass: 'risk-bar-high', width: pct(iYuksek) },
+                    { label: 'Önemli Risk', count: iOnemli, barClass: 'risk-bar-significant', width: pct(iOnemli) },
+                    { label: 'Olası Risk', count: iOlasi, barClass: 'risk-bar-probable', width: pct(iOlasi) },
+                    { label: 'Önemsiz Risk', count: iOnemsiz, barClass: 'risk-bar-insignificant', width: pct(iOnemsiz) }
+                  ].map((item, idx) => (
+                    <div 
+                      key={`init-${idx}`} 
+                      className="relative cursor-pointer group/bar"
+                      onClick={() => navigate(`/risks/facility/${facilityId}/levels?level=${encodeURIComponent(item.label)}`)}
+                    >
+                      <div className="flex items-center gap-3 group-hover/bar:bg-muted/30 p-1 -mx-1 rounded transition-colors">
+                        <span className="w-24 text-right text-[10px] font-medium text-muted-foreground dark:text-slate-400 leading-tight group-hover/bar:text-foreground transition-colors">{item.label}</span>
+                        <div className="flex-1 h-6 bg-muted dark:bg-slate-800/50 rounded-sm overflow-hidden flex items-center">
+                          <div className={`${item.barClass} h-full transition-all duration-1000 ease-out`} style={{ width: `${item.width}%` }}></div>
+                        </div>
+                        <span className="w-6 font-bold text-foreground dark:text-slate-100 text-xs">{item.count}</span>
                       </div>
-                      <span className="w-8 font-bold text-foreground dark:text-slate-100 text-sm">{item.count}</span>
                     </div>
-                  </div>
-                ))}
-                
-                <div className="flex flex-wrap justify-center gap-6 pt-6 border-t border-border dark:border-slate-700 mt-4">
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full risk-bar-unbearable"></div><span className="text-[10px] font-medium text-muted-foreground dark:text-slate-400">Tolere G.</span></div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full risk-bar-high"></div><span className="text-[10px] font-medium text-muted-foreground dark:text-slate-400">Yüksek</span></div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full risk-bar-significant"></div><span className="text-[10px] font-medium text-muted-foreground dark:text-slate-400">Önemli</span></div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full risk-bar-probable"></div><span className="text-[10px] font-medium text-muted-foreground dark:text-slate-400">Olası</span></div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full risk-bar-insignificant"></div><span className="text-[10px] font-medium text-muted-foreground dark:text-slate-400">Önemsiz</span></div>
+                  ))}
                 </div>
+
+                {/* İyileştirme Sonrası */}
+                <div className="space-y-4">
+                  <h5 className="text-xs font-bold text-muted-foreground uppercase text-center border-b pb-2">İyileştirme Sonrası Risk Skoru</h5>
+                  {[
+                    { label: 'Tolere Gösterilemez Risk', count: fTolere, barClass: 'risk-bar-unbearable', width: pct(fTolere) },
+                    { label: 'Yüksek Risk', count: fYuksek, barClass: 'risk-bar-high', width: pct(fYuksek) },
+                    { label: 'Önemli Risk', count: fOnemli, barClass: 'risk-bar-significant', width: pct(fOnemli) },
+                    { label: 'Olası Risk', count: fOlasi, barClass: 'risk-bar-probable', width: pct(fOlasi) },
+                    { label: 'Önemsiz Risk', count: fOnemsiz, barClass: 'risk-bar-insignificant', width: pct(fOnemsiz) }
+                  ].map((item, idx) => (
+                    <div 
+                      key={`final-${idx}`} 
+                      className="relative cursor-pointer group/bar"
+                      onClick={() => navigate(`/risks/facility/${facilityId}/levels?level=${encodeURIComponent(item.label)}`)}
+                    >
+                      <div className="flex items-center gap-3 group-hover/bar:bg-muted/30 p-1 -mx-1 rounded transition-colors">
+                        <span className="w-24 text-right text-[10px] font-medium text-muted-foreground dark:text-slate-400 leading-tight group-hover/bar:text-foreground transition-colors">{item.label}</span>
+                        <div className="flex-1 h-6 bg-muted dark:bg-slate-800/50 rounded-sm overflow-hidden flex items-center">
+                          <div className={`${item.barClass} h-full transition-all duration-1000 ease-out`} style={{ width: `${item.width}%` }}></div>
+                        </div>
+                        <span className="w-6 font-bold text-foreground dark:text-slate-100 text-xs">{item.count}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex flex-wrap justify-center gap-4 pt-4 mt-auto">
+                <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full risk-bar-unbearable"></div><span className="text-[9px] font-medium text-muted-foreground dark:text-slate-400">Tolere G.</span></div>
+                <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full risk-bar-high"></div><span className="text-[9px] font-medium text-muted-foreground dark:text-slate-400">Yüksek</span></div>
+                <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full risk-bar-significant"></div><span className="text-[9px] font-medium text-muted-foreground dark:text-slate-400">Önemli</span></div>
+                <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full risk-bar-probable"></div><span className="text-[9px] font-medium text-muted-foreground dark:text-slate-400">Olası</span></div>
+                <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full risk-bar-insignificant"></div><span className="text-[9px] font-medium text-muted-foreground dark:text-slate-400">Önemsiz</span></div>
               </div>
             </div>
           </section>
