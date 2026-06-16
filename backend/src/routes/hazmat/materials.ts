@@ -106,6 +106,49 @@ router.post('/add-to-facility', authMiddleware, async (req: AuthRequest, res) =>
   }
 });
 
+// Bulk add existing global materials to a facility
+router.post('/bulk-add-to-facility', authMiddleware, async (req: AuthRequest, res) => {
+  const { facilityId, materialIds } = req.body;
+  if (!facilityId || !Array.isArray(materialIds) || materialIds.length === 0) {
+    return res.status(400).json({ error: 'facilityId and an array of materialIds are required' });
+  }
+
+  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(facilityId)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  try {
+    const existingLinks = await prisma.facilityHazmatItem.findMany({
+      where: {
+        facilityId,
+        materialId: { in: materialIds }
+      },
+      select: { materialId: true }
+    });
+
+    const existingMaterialIds = existingLinks.map(l => l.materialId);
+    const newMaterialIds = materialIds.filter(id => !existingMaterialIds.includes(id));
+
+    if (newMaterialIds.length === 0) {
+      return res.status(400).json({ error: 'Seçilen tüm maddeler zaten tesiste mevcut' });
+    }
+
+    await prisma.facilityHazmatItem.createMany({
+      data: newMaterialIds.map(materialId => ({
+        facilityId,
+        materialId,
+        amountValue: 0,
+        unitId: null
+      }))
+    });
+
+    res.json({ message: `${newMaterialIds.length} madde başarıyla tesise eklendi` });
+  } catch (error) {
+    console.error('Error bulk adding materials to facility:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get materials for a specific facility
 router.get('/', authMiddleware, async (req: AuthRequest, res) => {
   const { facilityId } = req.query as Record<string, any>;

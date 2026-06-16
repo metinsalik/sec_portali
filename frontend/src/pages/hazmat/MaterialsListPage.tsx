@@ -100,14 +100,40 @@ export default function MaterialsListPage() {
   const addToFacilityMutation = useMutation({
     mutationFn: async (materialId: string) => {
       const res = await api.post(`/hazmat/materials/add-to-facility`, { facilityId: activeFacilityId, materialId });
-      if (!res.ok) throw new Error('Tesise eklenemedi');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Madde tesise eklenemedi');
+      }
       return res.json();
     },
     onSuccess: () => {
-      toast.success('Tehlikeli madde tesis envanterine eklendi. Miktar ve birimi "Envanter" sayfasından veya buradaki düzenle butonundan güncelleyebilirsiniz.');
+      queryClient.invalidateQueries({ queryKey: ['global-materials'] });
       queryClient.invalidateQueries({ queryKey: ['facility-materials', activeFacilityId] });
+      toast.success('Madde tesise başarıyla eklendi');
     },
-    onError: () => toast.error('Tesise ekleme işlemi başarısız.')
+    onError: (error: any) => {
+      toast.error(error.message);
+    }
+  });
+
+  const bulkAddToFacilityMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.post(`/hazmat/materials/bulk-add-to-facility`, { facilityId: activeFacilityId, materialIds: selectedIds });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Maddeler tesise eklenemedi');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['global-materials'] });
+      queryClient.invalidateQueries({ queryKey: ['facility-materials', activeFacilityId] });
+      toast.success('Seçilen maddeler tesise başarıyla eklendi');
+      setSelectedIds([]);
+    },
+    onError: (error: any) => {
+      toast.error(error.message);
+    }
   });
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -347,12 +373,6 @@ export default function MaterialsListPage() {
           <p className="text-muted-foreground">Tesisinizde bulunan tehlikeli maddelerin listesi.</p>
         </div>
         <div className="flex items-center gap-2">
-          {isGlobalAdmin && selectedIds.length > 0 && (
-            <Button onClick={() => setBulkDeleteConfirm(true)} variant="destructive" className="gap-2">
-              <Trash2 className="w-4 h-4" />
-              Seçilenleri Kalıcı Sil ({selectedIds.length})
-            </Button>
-          )}
           <input 
             type="file" 
             accept=".xlsx, .xls" 
@@ -405,6 +425,35 @@ export default function MaterialsListPage() {
         </Select>
       </div>
 
+      {selectedIds.length > 0 && (
+          <div className="bg-muted/50 p-3 rounded-lg flex items-center justify-between border">
+            <span className="text-sm font-medium">{selectedIds.length} madde seçildi</span>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2 text-primary border-primary/50 hover:bg-primary/10"
+                onClick={() => bulkAddToFacilityMutation.mutate()}
+                disabled={bulkAddToFacilityMutation.isLoading}
+              >
+                <Plus className="w-4 h-4" />
+                Seçilenleri Tesise Ekle
+              </Button>
+              {isGlobalAdmin && (
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  className="gap-2"
+                  onClick={() => setBulkDeleteConfirm(true)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Seçilenleri Kalıcı Sil
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
       <div className="bg-card border rounded-lg overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-muted-foreground">Yükleniyor...</div>
@@ -423,20 +472,18 @@ export default function MaterialsListPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="bg-muted/50 text-muted-foreground">
-                <tr>
-                  {isGlobalAdmin && (
-                    <th className="px-4 py-3 w-10">
-                      <input 
-                        type="checkbox" 
-                        className="rounded border-muted-foreground/30 text-primary focus:ring-primary cursor-pointer"
-                        checked={filteredItems.length > 0 && selectedIds.length === filteredItems.length}
-                        onChange={(e) => {
-                          if (e.target.checked) setSelectedIds(filteredItems.map(i => i.id));
-                          else setSelectedIds([]);
-                        }}
-                      />
-                    </th>
-                  )}
+                <tr className="bg-muted/50 border-b">
+                  <th className="px-4 py-3 w-12">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-muted-foreground/30 text-primary focus:ring-primary cursor-pointer"
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedIds(filteredItems.map(i => i.id));
+                        else setSelectedIds([]);
+                      }}
+                      checked={selectedIds.length > 0 && selectedIds.length === filteredItems.length}
+                    />
+                  </th>
                   <th 
                     className="px-4 py-3 font-medium cursor-pointer hover:bg-muted/80 transition-colors"
                     onClick={() => {
@@ -476,19 +523,17 @@ export default function MaterialsListPage() {
               <tbody className="divide-y">
                 {filteredItems.map((item) => (
                   <tr key={item.id} className="hover:bg-muted/30 transition-colors">
-                    {isGlobalAdmin && (
-                      <td className="px-4 py-3">
-                        <input 
-                          type="checkbox" 
-                          className="rounded border-muted-foreground/30 text-primary focus:ring-primary cursor-pointer"
-                          checked={selectedIds.includes(item.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) setSelectedIds(prev => [...prev, item.id]);
-                            else setSelectedIds(prev => prev.filter(id => id !== item.id));
-                          }}
-                        />
-                      </td>
-                    )}
+                    <td className="px-4 py-3">
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-muted-foreground/30 text-primary focus:ring-primary cursor-pointer"
+                        checked={selectedIds.includes(item.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedIds(prev => [...prev, item.id]);
+                          else setSelectedIds(prev => prev.filter(id => id !== item.id));
+                        }}
+                      />
+                    </td>
                     <td className="px-4 py-3 font-medium text-foreground flex items-center gap-2">
                       {item.brandName ? `${item.brandName} - ` : ''}{item.productName}
                       {item.isInFacility ? (
