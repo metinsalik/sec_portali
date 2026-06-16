@@ -251,19 +251,39 @@ export default function MaterialsListPage() {
           return;
         }
 
-        const token = localStorage.getItem('token');
-        const response = await api.post(`/hazmat/materials/import?token=${token}`, {
-          facilityId: activeFacilityId,
-          materials: importedMaterials
-        });
+        // BATCHING: Send data in chunks of 100 to avoid corporate proxy 413 Payload Too Large limits
+        const BATCH_SIZE = 100;
+        let totalCreated = 0;
+        let totalUpdated = 0;
+        let hasError = false;
 
-        if (response.ok) {
-          const result = await response.json();
-          toast.success(`İçe aktarma tamamlandı: ${result.results?.created} yeni madde oluşturuldu, ${result.results?.updated} madde güncellendi.`);
-          queryClient.invalidateQueries({ queryKey: ['facility-materials', activeFacilityId] });
-        } else {
-          toast.error('İçe aktarma sırasında sunucu hatası oluştu.');
+        toast.info(`Excel verisi işleniyor... Toplam ${importedMaterials.length} kayıt ${Math.ceil(importedMaterials.length / BATCH_SIZE)} parça halinde gönderilecek.`);
+
+        for (let i = 0; i < importedMaterials.length; i += BATCH_SIZE) {
+          const batch = importedMaterials.slice(i, i + BATCH_SIZE);
+          
+          const token = localStorage.getItem('token');
+          const response = await api.post(`/hazmat/materials/import?token=${token}`, {
+            facilityId: activeFacilityId,
+            materials: batch
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            totalCreated += result.results?.created || 0;
+            totalUpdated += result.results?.updated || 0;
+          } else {
+            console.error(`Batch ${i / BATCH_SIZE + 1} failed:`, await response.text());
+            hasError = true;
+          }
         }
+
+        if (hasError) {
+          toast.error('İçe aktarma sırasında bazı kayıtlar gönderilirken sunucu hatası oluştu. Lütfen bağlantınızı kontrol edin.');
+        } else {
+          toast.success(`İçe aktarma tamamlandı: ${totalCreated} yeni madde oluşturuldu, ${totalUpdated} madde güncellendi.`);
+        }
+        queryClient.invalidateQueries({ queryKey: ['facility-materials', activeFacilityId] });
 
       } catch (err) {
         console.error("Excel parse error:", err);
