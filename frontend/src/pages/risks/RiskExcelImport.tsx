@@ -19,6 +19,7 @@ const COL_MAP: Record<string, string> = {
   // 1. Bölüm Genel Bilgiler
   'tespit tarihi': 'detectionDate',
   'alt risk kategorisi': 'subCategory', // Matches first due to string length sorting
+  'alt kategori': 'subCategory',
   'risk kategorisi': 'riskCategory',
   'bölüm': 'department', 'departman': 'department', 'birim / bölüm': 'department', 'birim': 'department',
   'alan': 'area',
@@ -28,7 +29,10 @@ const COL_MAP: Record<string, string> = {
   'tehlike': 'hazard',
   'sonuç/ olası etki zarar': 'impactDamage',
   'sonuç / olası etki zarar': 'impactDamage',
+  'sonuç /olası etki zarar': 'impactDamage',
+  'sonuç/olası etki zarar': 'impactDamage',
   'olası etki zarar': 'impactDamage',
+  'olası etki': 'impactDamage',
   'riskten etkilenecek kişiler': 'affectedPeople',
   'etkilenecek kişiler': 'affectedPeople',
   'mevcut durum açıklaması (tespit edilen riske ilişkin mevcut önlemler)': 'initialCondition',

@@ -365,7 +365,7 @@ export default function RiskFormPage() {
     !!form.initialFreq &&
     !!form.initialSev &&
     !!form.improvementResponsible &&
-    !!form.dueDate;
+    (!!form.dueDate || !!form.dueDatePeriod);
 
   const initialScoreNum = parseFloat(form.initialScore) || 0;
   const initialLevelInfo = getLevelInfo(initialScoreNum);
