@@ -149,6 +149,7 @@ export default function RiskSettings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['risk-hospital-departments', selectedFacilityId] });
+      queryClient.invalidateQueries({ queryKey: ['risk-department-details'] });
       setAreaModal({ open: false });
       setAreaName('');
       toast.success('Alan başarıyla kaydedildi.');
@@ -167,6 +168,7 @@ export default function RiskSettings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['risk-hospital-departments', selectedFacilityId] });
+      queryClient.invalidateQueries({ queryKey: ['risk-department-details'] });
       toast.success('Alan silindi.');
     },
     onError: (err: any) => toast.error(err.message || 'Alan silinemedi.'),
