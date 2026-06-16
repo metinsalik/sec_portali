@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Building2, Plus, ChevronRight, AlertTriangle, ShieldCheck, Clock, Activity, ArrowLeft, RefreshCcw, ArrowRight } from 'lucide-react';
+import { Building2, Plus, ChevronRight, AlertTriangle, ShieldCheck, Clock, Activity, ArrowLeft, RefreshCcw, ArrowRight, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import FacilityAdvancedDashboard from '@/components/risks/FacilityAdvancedDashboard';
+import RiskExcelImport from './RiskExcelImport';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -33,11 +34,13 @@ const STATUS_MAP: Record<string, { label: string; color: string; dot: string }> 
 export default function RiskFacilityPage() {
   const { facilityId } = useParams<{ facilityId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const token = localStorage.getItem('token');
   const [newDeptName, setNewDeptName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [adding, setAdding] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   const { data: departments = [], isLoading, refetch } = useQuery({
     queryKey: ['risk-departments', facilityId],
@@ -170,9 +173,14 @@ export default function RiskFacilityPage() {
           <h1 className="text-xl font-bold truncate">{facility?.name || 'Tesis'}</h1>
           <p className="text-xs text-muted-foreground">Departman bazlı risk yönetimi</p>
         </div>
-        <Button size="sm" onClick={() => setShowAdd(!showAdd)} className="shrink-0">
-          <Plus className="w-4 h-4 mr-1.5" /> Departman Ekle
-        </Button>
+        <div className="flex gap-2 shrink-0">
+          <Button size="sm" variant="outline" onClick={() => setShowImport(true)} className="shadow-sm">
+            <Upload className="w-4 h-4 mr-1.5" /> Konsolide Excel Aktar
+          </Button>
+          <Button size="sm" onClick={() => setShowAdd(!showAdd)}>
+            <Plus className="w-4 h-4 mr-1.5" /> Departman Ekle
+          </Button>
+        </div>
       </div>
 
       {/* Yeni Departman Formu */}
@@ -461,6 +469,20 @@ export default function RiskFacilityPage() {
           </div>
         )}
       </section>
+
+      {/* Modal: Excel Import */}
+      {showImport && (
+        <RiskExcelImport
+          facilityId={facilityId!}
+          onClose={() => setShowImport(false)}
+          onSuccess={() => {
+            setShowImport(false);
+            refetch();
+            queryClient.invalidateQueries({ queryKey: ['facility-risks', facilityId] });
+            queryClient.invalidateQueries({ queryKey: ['risk-departments', facilityId] });
+          }}
+        />
+      )}
     </div>
   );
 }
