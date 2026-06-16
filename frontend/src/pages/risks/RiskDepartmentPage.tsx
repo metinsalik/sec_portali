@@ -430,7 +430,7 @@ export default function RiskDepartmentPage() {
                     <div className="flex items-center gap-1 whitespace-nowrap">Mevcut Risk <ArrowUpDown className="w-3 h-3"/></div>
                   </th>
                   <th className="px-4 py-3 font-medium cursor-pointer hover:bg-muted/80 transition-colors" onClick={() => handleSort('finalScore')}>
-                    <div className="flex items-center gap-1 whitespace-nowrap">Sonrası Risk <ArrowUpDown className="w-3 h-3"/></div>
+                    <div className="flex items-center gap-1 whitespace-nowrap">İyileştirme Sonrası Risk <ArrowUpDown className="w-3 h-3"/></div>
                   </th>
                   <th className="px-4 py-3 font-medium cursor-pointer hover:bg-muted/80 transition-colors" onClick={() => handleSort('status')}>
                     <div className="flex items-center gap-1">Durum <ArrowUpDown className="w-3 h-3"/></div>
