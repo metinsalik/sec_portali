@@ -325,7 +325,10 @@ export default function RiskCategoryPage() {
                     <div 
                       key={`init-${idx}`} 
                       className={`relative group/bar cursor-pointer ${filterInitialLevel === item.label ? 'ring-2 ring-primary ring-offset-1 rounded' : ''}`}
-                      onClick={() => setFilterInitialLevel(filterInitialLevel === item.label ? '' : item.label)}
+                      onClick={() => {
+                        setFilterInitialLevel(filterInitialLevel === item.label ? '' : item.label);
+                        setFilterFinalLevel('');
+                      }}
                     >
                       <div className="flex items-center gap-3 group-hover/bar:bg-muted/30 p-1 -mx-1 rounded transition-colors">
                         <span className="w-24 text-right text-[10px] font-medium text-muted-foreground dark:text-slate-400 leading-tight group-hover/bar:text-foreground transition-colors">{item.label}</span>
@@ -351,7 +354,10 @@ export default function RiskCategoryPage() {
                     <div 
                       key={`final-${idx}`} 
                       className={`relative group/bar cursor-pointer ${filterFinalLevel === item.label ? 'ring-2 ring-primary ring-offset-1 rounded' : ''}`}
-                      onClick={() => setFilterFinalLevel(filterFinalLevel === item.label ? '' : item.label)}
+                      onClick={() => {
+                        setFilterFinalLevel(filterFinalLevel === item.label ? '' : item.label);
+                        setFilterInitialLevel('');
+                      }}
                     >
                       <div className="flex items-center gap-3 group-hover/bar:bg-muted/30 p-1 -mx-1 rounded transition-colors">
                         <span className="w-24 text-right text-[10px] font-medium text-muted-foreground dark:text-slate-400 leading-tight group-hover/bar:text-foreground transition-colors">{item.label}</span>
