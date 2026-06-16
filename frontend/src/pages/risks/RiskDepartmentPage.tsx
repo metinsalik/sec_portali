@@ -319,7 +319,7 @@ export default function RiskDepartmentPage() {
                 <div className="space-y-4">
                   <h5 className="text-xs font-bold text-muted-foreground uppercase text-center border-b pb-2">İlk Tespit Risk Skoru</h5>
                   {[
-                    { label: 'Tolere Gösterilemez Risk', count: iTolere, barClass: 'risk-bar-unbearable', width: pct(iTolere) },
+                    { label: 'Tolere Gösterilmez Risk', count: iTolere, barClass: 'risk-bar-unbearable', width: pct(iTolere) },
                     { label: 'Yüksek Risk', count: iYuksek, barClass: 'risk-bar-high', width: pct(iYuksek) },
                     { label: 'Önemli Risk', count: iOnemli, barClass: 'risk-bar-significant', width: pct(iOnemli) },
                     { label: 'Olası Risk', count: iOlasi, barClass: 'risk-bar-probable', width: pct(iOlasi) },
@@ -348,7 +348,7 @@ export default function RiskDepartmentPage() {
                 <div className="space-y-4">
                   <h5 className="text-xs font-bold text-muted-foreground uppercase text-center border-b pb-2">İyileştirme Sonrası Risk Skoru</h5>
                   {[
-                    { label: 'Tolere Gösterilemez Risk', count: fTolere, barClass: 'risk-bar-unbearable', width: pct(fTolere) },
+                    { label: 'Tolere Gösterilmez Risk', count: fTolere, barClass: 'risk-bar-unbearable', width: pct(fTolere) },
                     { label: 'Yüksek Risk', count: fYuksek, barClass: 'risk-bar-high', width: pct(fYuksek) },
                     { label: 'Önemli Risk', count: fOnemli, barClass: 'risk-bar-significant', width: pct(fOnemli) },
                     { label: 'Olası Risk', count: fOlasi, barClass: 'risk-bar-probable', width: pct(fOlasi) },

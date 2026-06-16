@@ -178,7 +178,11 @@ export default function FacilityInventoryFormPage() {
       queryClient.invalidateQueries({ queryKey: ['inventory-matrix', activeFacilityId, selectedMaterialId] });
       queryClient.invalidateQueries({ queryKey: ['inventory-summary', activeFacilityId] });
       queryClient.invalidateQueries({ queryKey: ['facility-material-item', activeFacilityId, selectedMaterialId] });
-      navigate('/hazmat/inventory');
+      if (initialDepartmentId) {
+        navigate(`/hazmat/departments/${initialDepartmentId}`);
+      } else {
+        navigate('/hazmat/inventory');
+      }
     },
     onError: () => {
       toast.error('Kaydedilirken bir hata oluştu');
@@ -253,7 +257,7 @@ export default function FacilityInventoryFormPage() {
             Tesise yeni bir tehlikeli madde tanımlayın ve departmanlara miktar atamalarını yapın.
           </p>
         </div>
-        <Button variant="outline" onClick={() => navigate('/hazmat/inventory')}>
+        <Button variant="outline" onClick={() => initialDepartmentId ? navigate(`/hazmat/departments/${initialDepartmentId}`) : navigate('/hazmat/inventory')}>
           İptal ve Geri Dön
         </Button>
       </div>
