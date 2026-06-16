@@ -83,7 +83,8 @@ const COL_MAP: Record<string, string> = {
   'iyileştirme kontrol sorumlusu': 'controlResponsible',
   'kontrol sorumlusu': 'controlResponsible',
   'etkinlik ölçümü sonuç': 'controlResult', // If parent is combined
-  'sonuç': 'controlResult',
+  'kontrol sonucu': 'controlResult',
+  'etkinlik sonucu': 'controlResult',
 
   // The most generic one must be at the end, but the matching uses string length sorting anyway.
   'risk': 'riskDescription',
