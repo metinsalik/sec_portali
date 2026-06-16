@@ -581,7 +581,7 @@ export default function RiskFacilityPage() {
           <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-40 w-full rounded-xl bg-muted dark:bg-slate-800" />)}
           </div>
-        ) : levelCounts.length === 0 ? (
+        ) : Object.keys(initialLevelCounts).length === 0 ? (
           <div className="col-span-full py-16 text-center text-muted-foreground dark:text-slate-400 bg-muted/30 dark:bg-slate-800/30 rounded-xl border border-dashed border-border dark:border-slate-700">
             <AlertTriangle className="w-10 h-10 opacity-30 mx-auto mb-3" />
             <p className="font-medium">Risk kaydı bulunamadı</p>
@@ -595,8 +595,7 @@ export default function RiskFacilityPage() {
               { label: 'Olası Risk', key: 'Olası Risk' },
               { label: 'Önemsiz Risk', key: 'Önemsiz Risk' }
             ].map((lvl, idx) => {
-              const countObj = levelCounts.find((l: any) => l.name === lvl.key) || { count: 0, fill: LEVEL_COLORS[lvl.key] };
-              const riskCount = countObj.count;
+              const riskCount = initialLevelCounts[lvl.key] || 0;
               
               return (
                 <div
