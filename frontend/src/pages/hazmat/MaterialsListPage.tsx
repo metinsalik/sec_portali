@@ -130,37 +130,91 @@ export default function MaterialsListPage() {
           
           if (data.length <= 1) return; // Skip if empty or only header
           
-          // Find header row indices based on common keywords
-          // Standard headers: Ürün Adı, Kullanım Şekli, Bileşimi/İçerik, vs.
-          const headerRow: any = data.find((row: any) => row && row.some && row.some((cell: string) => String(cell).toLowerCase().includes('ürün adı')));
-          if (!headerRow) return;
+          const keywords = [
+            'ürün adı', 'madde adı', 'malzeme adı', 'isim',
+            'miktar', 'adedi',
+            'birim',
+            'marka',
+            'kullanım şekli',
+            'bileşimi', 'içerik',
+            'tehlike tanımları',
+            'ilk yardım',
+            'yangınla', 'yangında', 'yangın',
+            'kaza sonucu', 'serbest kalması',
+            'kullanım ve depolama',
+            'maruz kalma', 'kişisel korunma',
+            'fiziksel ve kimyasal',
+            'stabilite', 'reaktivite', 'reaktiflik',
+            'toksikolojik',
+            'temizlik', 'imha',
+            'tehlikeli madde sınıfı'
+          ];
           
-          const getColIndex = (keywords: string[]) => {
-            return headerRow.findIndex((h: string) => h && keywords.some(k => String(h).toLowerCase().includes(k)));
-          };
+          let searchData = data;
+          let headerRow: any = searchData.find((row: any) => {
+             if (!row) return false;
+             let matchCount = 0;
+             for (const cell of row) {
+                 const c = String(cell).toLowerCase();
+                 if (keywords.some(k => c.includes(k))) matchCount++;
+             }
+             return matchCount >= 3;
+          });
 
-          const idxName = getColIndex(['ürün adı']);
-          const idxAmount = getColIndex(['adedi', 'miktarı']);
+          if (!headerRow) {
+             const maxCols = Math.max(...data.map((r: any) => r?.length || 0));
+             const transposed = [];
+             for (let c = 0; c < maxCols; c++) {
+                 transposed.push(data.map((r: any) => r[c]));
+             }
+             const transHeader = transposed.find((row: any) => {
+                 if (!row) return false;
+                 let matchCount = 0;
+                 for (const cell of row) {
+                     const c = String(cell).toLowerCase();
+                     if (keywords.some(k => c.includes(k))) matchCount++;
+                 }
+                 return matchCount >= 3;
+             });
+             if (transHeader) {
+                 searchData = transposed;
+                 headerRow = transHeader;
+             }
+          }
+
+          if (!headerRow) return;
+
+          const getColIndex = (kw: string[]) => headerRow.findIndex((h: string) => h && kw.some(k => String(h).toLowerCase().includes(k)));
+
+          const idxName = getColIndex(['ürün adı', 'madde adı', 'malzeme adı', 'isim']);
+          const idxBrand = getColIndex(['marka']);
+          const idxAmount = getColIndex(['miktar', 'adedi']);
+          const idxUnit = getColIndex(['birim']);
           const idxUsage = getColIndex(['kullanım şekli']);
           const idxComposition = getColIndex(['bileşimi', 'içerik']);
-          const idxHazard = getColIndex(['tehlike tanımları']);
+          const idxHazard = getColIndex(['tehlike tanımları', 'tehlike']);
           const idxFirstAid = getColIndex(['ilk yardım']);
-          const idxFire = getColIndex(['yangında', 'yangın']);
+          const idxFire = getColIndex(['yangınla', 'yangında', 'yangın']);
           const idxRelease = getColIndex(['kaza sonucu', 'serbest kalması']);
-          const idxHandling = getColIndex(['kullanım ve depolama']);
+          const idxHandling = getColIndex(['kullanım ve depolama', 'depolama']);
           const idxExposure = getColIndex(['maruz kalma', 'kişisel korunma']);
-          const idxPhysical = getColIndex(['fiziksel ve kimyasal']);
-          const idxStability = getColIndex(['stabilite', 'reaktiflik']);
+          const idxPhysical = getColIndex(['fiziksel ve kimyasal', 'fiziksel', 'kimyasal']);
+          const idxStability = getColIndex(['stabilite', 'reaktivite', 'reaktiflik']);
           const idxTox = getColIndex(['toksikolojik']);
           const idxDisposal = getColIndex(['temizlik', 'imha']);
 
-          const startIndex = data.indexOf(headerRow) + 1;
+          const startIndex = searchData.indexOf(headerRow) + 1;
           
-          for (let i = startIndex; i < data.length; i++) {
-            const row: any = data[i];
-            if (!row || !row[idxName]) continue;
+          for (let i = startIndex; i < searchData.length; i++) {
+            const row: any = searchData[i];
+            if (!row) continue;
             
-            const productName = String(row[idxName]).trim();
+            let productName = '';
+            if (idxName !== -1 && row[idxName]) productName = String(row[idxName]).trim();
+            else if (idxBrand !== -1 && row[idxBrand]) productName = String(row[idxBrand]).trim();
+            else if (idxComposition !== -1 && row[idxComposition]) productName = "Bilinmeyen Ürün (" + String(row[idxComposition]).substring(0,20) + ")";
+            else continue;
+
             if (!productName) continue;
             
             // Avoid adding duplicate in the payload
@@ -168,12 +222,13 @@ export default function MaterialsListPage() {
 
             let parsedAmount = 1;
             if (idxAmount !== -1 && row[idxAmount]) {
-               const match = String(row[idxAmount]).match(/\\d+/);
+               const match = String(row[idxAmount]).match(/\d+/);
                if (match) parsedAmount = parseInt(match[0], 10);
             }
 
             importedMaterials.push({
               productName,
+              brandName: idxBrand !== -1 ? row[idxBrand] : '',
               amountValue: parsedAmount,
               usageMethod: idxUsage !== -1 ? row[idxUsage] : '',
               composition: idxComposition !== -1 ? row[idxComposition] : '',
@@ -182,8 +237,8 @@ export default function MaterialsListPage() {
               fireFightingMeasures: idxFire !== -1 ? row[idxFire] : '',
               accidentalReleaseMeasures: idxRelease !== -1 ? row[idxRelease] : '',
               handlingAndStorage: idxHandling !== -1 ? row[idxHandling] : '',
-              exposureControls: idxExposure !== -1 ? row[idxExposure] : '',
-              physicalProperties: idxPhysical !== -1 ? row[idxPhysical] : '',
+              exposureControlsPpe: idxExposure !== -1 ? row[idxExposure] : '',
+              physicalAndChemicalProperties: idxPhysical !== -1 ? row[idxPhysical] : '',
               stabilityAndReactivity: idxStability !== -1 ? row[idxStability] : '',
               toxicologicalInfo: idxTox !== -1 ? row[idxTox] : '',
               disposalConsiderations: idxDisposal !== -1 ? row[idxDisposal] : ''

@@ -323,6 +323,7 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res) => {
         material = await prisma.hazmatMaterial.create({
           data: {
             productName: data.productName,
+            brandName: data.brandName || null,
             usageMethod: data.usageMethod || null,
             composition: data.composition || null,
             hazardDescription: data.hazardDescription || null,
@@ -330,8 +331,8 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res) => {
             fireFightingMeasures: data.fireFightingMeasures || null,
             accidentalReleaseMeasures: data.accidentalReleaseMeasures || null,
             handlingAndStorage: data.handlingAndStorage || null,
-            exposureControlsPpe: data.exposureControls || null,
-            physicalAndChemicalProperties: data.physicalProperties || null,
+            exposureControlsPpe: data.exposureControlsPpe || data.exposureControls || null,
+            physicalAndChemicalProperties: data.physicalAndChemicalProperties || data.physicalProperties || null,
             stabilityAndReactivity: data.stabilityAndReactivity || null,
             toxicologicalInformation: data.toxicologicalInfo || null,
             disposalConsiderations: data.disposalConsiderations || null,
