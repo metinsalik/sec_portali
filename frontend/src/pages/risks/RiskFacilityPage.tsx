@@ -605,7 +605,7 @@ export default function RiskFacilityPage() {
                 >
                   <div 
                     className="w-12 h-12 rounded-full flex items-center justify-center mb-4 text-white font-bold text-lg"
-                    style={{ backgroundColor: countObj.fill || '#9ca3af' }}
+                    style={{ backgroundColor: LEVEL_COLORS[lvl.key] || '#9ca3af' }}
                   >
                     {riskCount}
                   </div>
