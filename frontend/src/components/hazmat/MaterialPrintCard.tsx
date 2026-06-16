@@ -103,6 +103,15 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
                       ÜRÜN TİCARİ<br/>ADI
                     </span>
                     <span className="font-bold text-sm uppercase">{material?.productName}</span>
+                    {material?.imageUrl && (
+                      <div className="mt-4 flex items-center justify-center">
+                        <img 
+                          src={getAbsoluteUrl(material.imageUrl)} 
+                          alt={material.productName} 
+                          className="max-w-full max-h-[80px] object-contain rounded border border-slate-200 shadow-sm p-1 bg-white" 
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Middle Column (50%) */}
