@@ -251,7 +251,8 @@ export default function MaterialsListPage() {
           return;
         }
 
-        const response = await api.post('/hazmat/materials/import', {
+        const token = localStorage.getItem('token');
+        const response = await api.post(`/hazmat/materials/import?token=${token}`, {
           facilityId: activeFacilityId,
           materials: importedMaterials
         });

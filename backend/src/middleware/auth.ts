@@ -14,12 +14,18 @@ export interface AuthRequest<P = Record<string, string>, ReqBody = any, ReqQuery
 }
 
 export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Yetkilendirme başlığı eksik veya hatalı.' });
+  let authHeader = req.headers.authorization;
+  let token = '';
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.query.token) {
+    token = req.query.token as string;
   }
 
-  const token = authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Yetkilendirme başlığı eksik veya hatalı.' });
+  }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
