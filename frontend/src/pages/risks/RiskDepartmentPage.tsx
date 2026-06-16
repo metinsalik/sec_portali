@@ -188,7 +188,7 @@ export default function RiskDepartmentPage() {
 
   const levelCounts = useMemo(() => {
     const levels = sortedRisks.reduce((acc: any, r: any) => {
-      const lvl = r.finalLevel || r.initialLevel || 'Bilinmiyor';
+      const lvl = r.initialLevel || 'Bilinmiyor';
       acc[lvl] = (acc[lvl] || 0) + 1;
       return acc;
     }, {});

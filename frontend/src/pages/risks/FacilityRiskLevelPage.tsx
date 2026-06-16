@@ -119,7 +119,7 @@ export default function FacilityRiskLevelPage() {
   const levelRisks = useMemo(() => {
     return allRisks.filter((r: any) => {
       if (level) {
-        const rLvl = r.finalLevel || r.initialLevel || 'Bilinmiyor';
+        const rLvl = r.initialLevel || 'Bilinmiyor';
         if (rLvl !== level) return false;
       }
       return true;
@@ -201,7 +201,7 @@ export default function FacilityRiskLevelPage() {
 
   const levelCounts = useMemo(() => {
     const levels = sortedRisks.reduce((acc: any, r: any) => {
-      const lvl = r.finalLevel || r.initialLevel || 'Bilinmiyor';
+      const lvl = r.initialLevel || 'Bilinmiyor';
       acc[lvl] = (acc[lvl] || 0) + 1;
       return acc;
     }, {});
