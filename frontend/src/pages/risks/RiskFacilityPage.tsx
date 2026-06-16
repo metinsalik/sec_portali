@@ -99,12 +99,15 @@ export default function RiskFacilityPage() {
   }, [facilityRisks]);
 
   const categoryStats = useMemo(() => {
-    const stats: Record<string, { name: string, riskCount: number, acikCount: number }> = {};
+    const stats: Record<string, { name: string, riskCount: number, acikCount: number, mudahaleCount: number, takipCount: number, kapaliCount: number }> = {};
     facilityRisks.forEach((r: any) => {
       const cat = r.riskCategory || 'Belirtilmemiş';
-      if (!stats[cat]) stats[cat] = { name: cat, riskCount: 0, acikCount: 0 };
+      if (!stats[cat]) stats[cat] = { name: cat, riskCount: 0, acikCount: 0, mudahaleCount: 0, takipCount: 0, kapaliCount: 0 };
       stats[cat].riskCount++;
       if (r.status === 'ACIK_TEHLIKE') stats[cat].acikCount++;
+      else if (r.status === 'ILK_MUDAHALE_EDILDI') stats[cat].mudahaleCount++;
+      else if (r.status === 'TAKIP_SURECINDE') stats[cat].takipCount++;
+      else if (r.status === 'KAPATILDI_GUVENLI') stats[cat].kapaliCount++;
     });
     return Object.values(stats).sort((a, b) => b.riskCount - a.riskCount);
   }, [facilityRisks]);
@@ -360,13 +363,41 @@ export default function RiskFacilityPage() {
                     </span>
                   </div>
                   
-                  <div className="mb-6 flex-1">
+                  <div className="mb-6 flex-1 space-y-1.5">
                     {hasRisk ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-error"></div>
-                        <span className="text-sm text-muted-foreground dark:text-slate-400">Açık Tehlike</span>
-                        <span className="ml-auto font-bold text-error">{acikCount}</span>
-                      </div>
+                      <>
+                        {(dept.stats?.acik > 0) && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-red-600"></div>
+                            <span className="text-sm text-muted-foreground dark:text-slate-400">Açık Tehlike</span>
+                            <span className="ml-auto font-bold text-red-600">{dept.stats.acik}</span>
+                          </div>
+                        )}
+                        {(dept.stats?.mudahale > 0) && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                            <span className="text-sm text-muted-foreground dark:text-slate-400">İlk Müdahale</span>
+                            <span className="ml-auto font-bold text-orange-500">{dept.stats.mudahale}</span>
+                          </div>
+                        )}
+                        {(dept.stats?.takip > 0) && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+                            <span className="text-sm text-muted-foreground dark:text-slate-400">Takipte</span>
+                            <span className="ml-auto font-bold text-blue-600">{dept.stats.takip}</span>
+                          </div>
+                        )}
+                        {(dept.stats?.kapali > 0) && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-emerald-600"></div>
+                            <span className="text-sm text-muted-foreground dark:text-slate-400">Kapatıldı</span>
+                            <span className="ml-auto font-bold text-emerald-600">{dept.stats.kapali}</span>
+                          </div>
+                        )}
+                        {!(dept.stats?.acik > 0) && !(dept.stats?.mudahale > 0) && !(dept.stats?.takip > 0) && !(dept.stats?.kapali > 0) && (
+                          <div className="italic text-muted-foreground dark:text-slate-400 text-sm">Durum bilgisi yok</div>
+                        )}
+                      </>
                     ) : (
                       <div className="italic text-muted-foreground dark:text-slate-400 text-sm">Risk kaydı yok</div>
                     )}
@@ -433,13 +464,41 @@ export default function RiskFacilityPage() {
                     </span>
                   </div>
                   
-                  <div className="mb-6 flex-1">
+                  <div className="mb-6 flex-1 space-y-1.5">
                     {hasRisk ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-error"></div>
-                        <span className="text-sm text-muted-foreground dark:text-slate-400">Açık Tehlike</span>
-                        <span className="ml-auto font-bold text-error">{cat.acikCount}</span>
-                      </div>
+                      <>
+                        {(cat.acikCount > 0) && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-red-600"></div>
+                            <span className="text-sm text-muted-foreground dark:text-slate-400">Açık Tehlike</span>
+                            <span className="ml-auto font-bold text-red-600">{cat.acikCount}</span>
+                          </div>
+                        )}
+                        {(cat.mudahaleCount > 0) && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                            <span className="text-sm text-muted-foreground dark:text-slate-400">İlk Müdahale</span>
+                            <span className="ml-auto font-bold text-orange-500">{cat.mudahaleCount}</span>
+                          </div>
+                        )}
+                        {(cat.takipCount > 0) && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+                            <span className="text-sm text-muted-foreground dark:text-slate-400">Takipte</span>
+                            <span className="ml-auto font-bold text-blue-600">{cat.takipCount}</span>
+                          </div>
+                        )}
+                        {(cat.kapaliCount > 0) && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-emerald-600"></div>
+                            <span className="text-sm text-muted-foreground dark:text-slate-400">Kapatıldı</span>
+                            <span className="ml-auto font-bold text-emerald-600">{cat.kapaliCount}</span>
+                          </div>
+                        )}
+                        {!(cat.acikCount > 0) && !(cat.mudahaleCount > 0) && !(cat.takipCount > 0) && !(cat.kapaliCount > 0) && (
+                          <div className="italic text-muted-foreground dark:text-slate-400 text-sm">Durum bilgisi yok</div>
+                        )}
+                      </>
                     ) : (
                       <div className="italic text-muted-foreground dark:text-slate-400 text-sm">Risk kaydı yok</div>
                     )}

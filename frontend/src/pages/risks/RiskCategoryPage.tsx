@@ -97,7 +97,8 @@ export default function RiskCategoryPage() {
   const departmentMap = useMemo(() => {
     const map: Record<string, { name: string, code: string }> = {};
     departments.forEach((d: any) => {
-      map[d.id] = { name: d.name, code: d.code };
+      const code = d.name ? d.name.replace(/i/g, 'İ').replace(/ı/g, 'I').toUpperCase().substring(0, 3) : 'GEN';
+      map[d.id] = { name: d.name, code: code };
     });
     return map;
   }, [departments]);

@@ -68,7 +68,7 @@ export default function FacilityCategoriesPage() {
 
   // Kategori İstatistikleri (Liste ve Kartlar için veri)
   const categoryStats = useMemo(() => {
-    const stats: Record<string, { name: string, mainCategory: string, riskCount: number, acikCount: number }> = {};
+    const stats: Record<string, { name: string, mainCategory: string, riskCount: number, acikCount: number, mudahaleCount: number, takipCount: number, kapaliCount: number }> = {};
     
     facilityRisks.forEach((r: any) => {
       const mainCat = r.riskCategory || 'Belirtilmemiş';
@@ -101,13 +101,14 @@ export default function FacilityCategoriesPage() {
       }
 
       if (!stats[key]) {
-        stats[key] = { name: displayName, mainCategory: mainCat, riskCount: 0, acikCount: 0 };
+        stats[key] = { name: displayName, mainCategory: mainCat, riskCount: 0, acikCount: 0, mudahaleCount: 0, takipCount: 0, kapaliCount: 0 };
       }
       
       stats[key].riskCount++;
-      if (r.status === 'ACIK_TEHLIKE') {
-        stats[key].acikCount++;
-      }
+      if (r.status === 'ACIK_TEHLIKE') stats[key].acikCount++;
+      else if (r.status === 'ILK_MUDAHALE_EDILDI') stats[key].mudahaleCount++;
+      else if (r.status === 'TAKIP_SURECINDE') stats[key].takipCount++;
+      else if (r.status === 'KAPATILDI_GUVENLI') stats[key].kapaliCount++;
     });
 
     let result = Object.values(stats);
@@ -219,13 +220,41 @@ export default function FacilityCategoriesPage() {
                   </span>
                 </div>
                 
-                <div className="mb-6 flex-1">
+                <div className="mb-6 flex-1 space-y-1.5 mt-2">
                   {hasRisk ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-error"></div>
-                      <span className="text-sm text-muted-foreground">Açık Tehlike</span>
-                      <span className="ml-auto font-bold text-error">{cat.acikCount}</span>
-                    </div>
+                    <>
+                      {(cat.acikCount > 0) && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-red-600"></div>
+                          <span className="text-sm text-muted-foreground">Açık Tehlike</span>
+                          <span className="ml-auto font-bold text-red-600">{cat.acikCount}</span>
+                        </div>
+                      )}
+                      {(cat.mudahaleCount > 0) && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                          <span className="text-sm text-muted-foreground">İlk Müdahale</span>
+                          <span className="ml-auto font-bold text-orange-500">{cat.mudahaleCount}</span>
+                        </div>
+                      )}
+                      {(cat.takipCount > 0) && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+                          <span className="text-sm text-muted-foreground">Takipte</span>
+                          <span className="ml-auto font-bold text-blue-600">{cat.takipCount}</span>
+                        </div>
+                      )}
+                      {(cat.kapaliCount > 0) && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-emerald-600"></div>
+                          <span className="text-sm text-muted-foreground">Kapatıldı</span>
+                          <span className="ml-auto font-bold text-emerald-600">{cat.kapaliCount}</span>
+                        </div>
+                      )}
+                      {!(cat.acikCount > 0) && !(cat.mudahaleCount > 0) && !(cat.takipCount > 0) && !(cat.kapaliCount > 0) && (
+                        <div className="italic text-muted-foreground text-sm">Durum bilgisi yok</div>
+                      )}
+                    </>
                   ) : (
                     <div className="italic text-muted-foreground text-sm">Risk kaydı yok</div>
                   )}

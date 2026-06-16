@@ -200,7 +200,7 @@ export default function RiskDepartmentPage() {
   }, [sortedRisks]);
 
   const deptName = department?.name || 'Departman';
-  const deptCode = department?.code || 'GEN';
+  const deptCode = department?.name ? department.name.replace(/i/g, 'İ').replace(/ı/g, 'I').toUpperCase().substring(0, 3) : 'GEN';
   const facilityId = department?.facilityId;
 
   // Dinamik Filtre Metni
