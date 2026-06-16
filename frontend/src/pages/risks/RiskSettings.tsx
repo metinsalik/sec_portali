@@ -16,7 +16,8 @@ const API = import.meta.env.VITE_API_URL || '';
 interface SubCategory { id: number; name: string; categoryId: number }
 interface Category { id: number; name: string; subCategories: SubCategory[] }
 interface Department { id: number; name: string }
-interface HospitalDepartment { id: number; name: string; riskCount: number }
+interface Area { id: number; name: string; departmentId: number }
+interface HospitalDepartment { id: number; name: string; riskCount: number; areas: Area[] }
 
 export default function RiskSettings() {
   const queryClient = useQueryClient();
@@ -39,6 +40,10 @@ export default function RiskSettings() {
   // 1. Hastane Bölümleri (Hospital Departments)
   const [hospModal, setHospModal] = useState<{ open: boolean; edit?: HospitalDepartment }>({ open: false });
   const [hospName, setHospName] = useState('');
+
+  // 1.5 Alanlar (Areas)
+  const [areaModal, setAreaModal] = useState<{ open: boolean; departmentId?: number; edit?: Area }>({ open: false });
+  const [areaName, setAreaName] = useState('');
 
   // 2. Departmanlar (RiskDepartmentSetting)
   const [deptModal, setDeptModal] = useState<{ open: boolean; edit?: Department }>({ open: false });
@@ -123,6 +128,48 @@ export default function RiskSettings() {
       toast.success('Bölüm silindi.');
     },
     onError: (err: any) => toast.error(err.message || 'Bölüm silinemedi.'),
+  });
+
+  // Alanlar (Areas) Mutations
+  const saveAreaMutation = useMutation({
+    mutationFn: async ({ name, departmentId, id }: { name: string; departmentId?: number; id?: number }) => {
+      const res = id
+        ? await fetch(`${API}/api/risks/departments/areas/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ name })
+          })
+        : await fetch(`${API}/api/risks/departments/areas`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ departmentId, name })
+          });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['risk-hospital-departments', selectedFacilityId] });
+      setAreaModal({ open: false });
+      setAreaName('');
+      toast.success('Alan başarıyla kaydedildi.');
+    },
+    onError: (err: any) => toast.error(err.message || 'Alan kaydedilemedi.'),
+  });
+
+  const deleteAreaMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`${API}/api/risks/departments/areas/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['risk-hospital-departments', selectedFacilityId] });
+      toast.success('Alan silindi.');
+    },
+    onError: (err: any) => toast.error(err.message || 'Alan silinemedi.'),
   });
 
   // Departmanlar Mutations
@@ -253,6 +300,7 @@ export default function RiskSettings() {
 
   // Open Edit Dialog Helpers
   const openHospEdit = (h: HospitalDepartment) => { setHospName(h.name); setHospModal({ open: true, edit: h }); };
+  const openAreaEdit = (a: Area) => { setAreaName(a.name); setAreaModal({ open: true, edit: a }); };
   const openDeptEdit = (d: Department) => { setDeptName(d.name); setDeptModal({ open: true, edit: d }); };
   const openCatEdit = (cat: Category) => { setCatName(cat.name); setCatModal({ open: true, edit: cat }); };
   const openSubEdit = (sub: SubCategory) => { setSubName(sub.name); setSubModal({ open: true, edit: sub }); };
@@ -308,33 +356,80 @@ export default function RiskSettings() {
                 {[1, 2, 3].map((i) => <div key={i} className="h-14 bg-muted rounded-xl animate-pulse" />)}
               </div>
             ) : (
-              <div className="bg-card border rounded-xl overflow-hidden divide-y">
+              <div className="space-y-4">
                 {hospitalDepartments.map((hdept) => (
-                  <div key={hdept.id} className="flex items-center justify-between px-5 py-4 hover:bg-muted/30 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <Building2 className="w-4.5 h-4.5 text-primary/70" />
-                      <span className="text-sm font-semibold text-foreground">{hdept.name}</span>
-                      <Badge variant="outline" className="text-xs font-normal bg-background">
-                        {hdept.riskCount} aktif risk
-                      </Badge>
+                  <div key={hdept.id} className="bg-card border rounded-xl overflow-hidden shadow-sm">
+                    {/* Departman Başlığı */}
+                    <div className="flex items-center justify-between px-5 py-4 bg-muted/40 border-b">
+                      <div className="flex items-center gap-3">
+                        <Building2 className="w-4.5 h-4.5 text-primary/70" />
+                        <span className="font-bold text-sm text-foreground">{hdept.name}</span>
+                        <Badge variant="outline" className="text-xs font-normal bg-background">
+                          {hdept.riskCount} aktif risk
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => openHospEdit(hdept)} className="h-8 px-3 text-xs text-muted-foreground">
+                          <Edit className="w-3.5 h-3.5 mr-1" /> Düzenle
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => {
+                            if (confirm('Bu bölümü silmek istediğinize emin misiniz? Bölüm altındaki tüm riskler silinecektir!')) {
+                              deleteHospMutation.mutate(hdept.id);
+                            }
+                          }} 
+                          className="h-8 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                        <div className="h-4 w-px bg-border mx-1" />
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="h-8 px-3 text-xs bg-primary/5 text-primary hover:bg-primary/10 border border-primary/20"
+                          onClick={() => { setAreaName(''); setAreaModal({ open: true, departmentId: hdept.id }); }}
+                        >
+                          <Plus className="w-3.5 h-3.5 mr-1" /> Alan Ekle
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <Button variant="ghost" size="sm" onClick={() => openHospEdit(hdept)} className="h-8 px-3 text-xs text-muted-foreground">
-                        <Edit className="w-3.5 h-3.5 mr-1" /> Düzenle
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => {
-                          if (confirm('Bu bölümü silmek istediğinize emin misiniz? Bölüm altındaki tüm riskler silinecektir!')) {
-                            deleteHospMutation.mutate(hdept.id);
-                          }
-                        }} 
-                        className="h-8 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
+
+                    {/* Alt Alanlar Listesi */}
+                    {hdept.areas && hdept.areas.length > 0 ? (
+                      <div className="divide-y divide-border">
+                        {hdept.areas.map((area) => (
+                          <div key={area.id} className="flex items-center justify-between px-5 py-3 hover:bg-muted/20 transition-colors">
+                            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                              <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
+                              <span className="text-foreground font-medium">{area.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Button variant="ghost" size="sm" onClick={() => openAreaEdit(area)} className="h-7 px-2 text-xs text-muted-foreground">
+                                <Edit className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => {
+                                  if (confirm('Bu alanı silmek istediğinize emin misiniz?')) {
+                                    deleteAreaMutation.mutate(area.id);
+                                  }
+                                }} 
+                                className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="px-5 py-4 text-sm text-muted-foreground/60 italic bg-card text-center">
+                        Alan tanımlanmamış. Risks formunda "Alan" doğrudan bölüm adı ({hdept.name}) olarak gelecektir.
+                      </div>
+                    )}
                   </div>
                 ))}
                 {hospitalDepartments.length === 0 && (
@@ -531,6 +626,43 @@ export default function RiskSettings() {
               <Button type="button" variant="outline" onClick={() => setHospModal({ open: false })}>Vazgeç</Button>
               <Button type="submit" disabled={saveHospMutation.isPending}>
                 {saveHospMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Kaydet
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 1.5. Alan Ekle/Düzenle */}
+      <Dialog open={areaModal.open} onOpenChange={(v) => setAreaModal({ open: v })}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{areaModal.edit ? 'Alan Düzenle' : 'Yeni Alan Ekle'}</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              saveAreaMutation.mutate({ 
+                name: areaName, 
+                departmentId: areaModal.departmentId, 
+                id: areaModal.edit?.id 
+              });
+            }}
+            className="space-y-4 pt-4"
+          >
+            <div className="space-y-2">
+              <label className="text-sm font-semibold">Alan Adı *</label>
+              <Input 
+                value={areaName} 
+                onChange={(e) => setAreaName(e.target.value)} 
+                placeholder="Örn: MR, Röntgen" 
+                required 
+                autoFocus 
+              />
+            </div>
+            <DialogFooter className="mt-6">
+              <Button type="button" variant="outline" onClick={() => setAreaModal({ open: false })}>Vazgeç</Button>
+              <Button type="submit" disabled={saveAreaMutation.isPending}>
+                {saveAreaMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Kaydet
               </Button>
             </DialogFooter>
           </form>

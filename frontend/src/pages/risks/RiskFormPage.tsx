@@ -150,19 +150,8 @@ export default function RiskFormPage() {
   });
 
   const facilityId = department?.facilityId;
-
-  // 2. Fetch Hospital Departments for "Alan" Selection
-  const { data: hospitalDepartments = [] } = useQuery<any[]>({
-    queryKey: ['risk-hospital-departments', facilityId],
-    queryFn: async () => {
-      const res = await fetch(`${API}/api/risks/departments?facilityId=${facilityId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error();
-      return res.json();
-    },
-    enabled: !!facilityId,
-  });
+  const departmentAreas = department?.areas || [];
+  const hasAreas = departmentAreas.length > 0;
 
   // 3. Fetch Settings (Categories and custom Departments)
   const { data: settingsData } = useQuery<{
@@ -342,7 +331,7 @@ export default function RiskFormPage() {
       const res = await fetch(url, {
         method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ...form, departmentId }),
+        body: JSON.stringify({ ...form, departmentId, area: hasAreas ? form.area : (department?.name || '') }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -367,7 +356,7 @@ export default function RiskFormPage() {
     !!form.detectionDate &&
     !!form.riskCategory &&
     (!subCategoryOptions.length || !!form.subCategory) &&
-    !!form.area &&
+    (!hasAreas || !!form.area) &&
     !!form.activity &&
     !!form.hazard &&
     !!form.riskDescription &&
@@ -469,10 +458,14 @@ export default function RiskFormPage() {
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground">Alan *</label>
-                <select value={form.area} onChange={(e) => updateField('area', e.target.value)} className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                  <option value="">Seçiniz...</option>
-                  {hospitalDepartments.map((h: any) => <option key={h.id} value={h.name}>{h.name}</option>)}
-                </select>
+                {hasAreas ? (
+                  <select value={form.area} onChange={(e) => updateField('area', e.target.value)} className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                    <option value="">Seçiniz...</option>
+                    {departmentAreas.map((a: any) => <option key={a.id} value={a.name}>{a.name}</option>)}
+                  </select>
+                ) : (
+                  <Input value={department?.name || ''} disabled className="bg-muted text-muted-foreground" />
+                )}
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground">Faaliyet *</label>

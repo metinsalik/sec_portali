@@ -622,8 +622,20 @@ model RiskDepartment {
   code       String?
   facility   Facility        @relation(fields: [facilityId], references: [id], onDelete: Cascade)
   risks      RiskLifecycle[]
+  areas      RiskDepartmentArea[]
 
   @@unique([facilityId, name])
+}
+
+model RiskDepartmentArea {
+  id           Int            @id @default(autoincrement())
+  name         String
+  departmentId Int
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  department   RiskDepartment @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@unique([departmentId, name])
 }
 
 model RiskLifecycle {

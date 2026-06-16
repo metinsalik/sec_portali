@@ -71,6 +71,7 @@ export default function RiskDepartmentPage() {
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [filterResponsible, setFilterResponsible] = useState<string>('');
+  const [filterArea, setFilterArea] = useState<string>('');
 
   // Sorting State
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'initialScore', direction: 'desc' });
@@ -142,6 +143,9 @@ export default function RiskDepartmentPage() {
     if (filterCategory) {
       sortableRisks = sortableRisks.filter(r => r.riskCategory === filterCategory);
     }
+    if (filterArea) {
+      sortableRisks = sortableRisks.filter(r => r.area === filterArea);
+    }
     if (filterResponsible) {
       sortableRisks = sortableRisks.filter(r => r.improvementResponsible === filterResponsible);
     }
@@ -169,7 +173,7 @@ export default function RiskDepartmentPage() {
       });
     }
     return sortableRisks;
-  }, [risks, sortConfig, filterStatus, filterCategory, filterResponsible]);
+  }, [risks, sortConfig, filterStatus, filterCategory, filterArea, filterResponsible]);
 
   // Dashboard Metrics Computations (Dinamik)
   const statusCounts = useMemo(() => {
@@ -202,6 +206,7 @@ export default function RiskDepartmentPage() {
   // Dinamik Filtre Metni
   const activeFiltersText = [
     filterStatus && `Durum: ${STATUS_CONFIG[filterStatus]?.label}`,
+    filterArea && `Alan: ${filterArea}`,
     filterCategory && `Kategori: ${filterCategory}`,
     filterResponsible && `Sorumlu: ${filterResponsible}`
   ].filter(Boolean).join(', ');
@@ -349,6 +354,19 @@ export default function RiskDepartmentPage() {
         </div>
         
         <div className="flex gap-2 flex-wrap ml-auto">
+          {department?.areas && department.areas.length > 0 && (
+            <select 
+              value={filterArea} 
+              onChange={(e) => setFilterArea(e.target.value)}
+              className="h-8 text-xs bg-background border border-border rounded-full px-3 focus:outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              <option value="">Tüm Alanlar</option>
+              {department.areas.map((a: any) => (
+                <option key={a.id} value={a.name}>{a.name}</option>
+              ))}
+            </select>
+          )}
+
           <select 
             value={filterCategory} 
             onChange={(e) => setFilterCategory(e.target.value)}
@@ -399,6 +417,9 @@ export default function RiskDepartmentPage() {
                   <th className="px-4 py-3 font-medium cursor-pointer hover:bg-muted/80 transition-colors" onClick={() => handleSort('riskNo')}>
                     <div className="flex items-center gap-1">Risk No <ArrowUpDown className="w-3 h-3"/></div>
                   </th>
+                  <th className="px-4 py-3 font-medium cursor-pointer hover:bg-muted/80 transition-colors" onClick={() => handleSort('area')}>
+                    <div className="flex items-center gap-1">Alan <ArrowUpDown className="w-3 h-3"/></div>
+                  </th>
                   <th className="px-4 py-3 font-medium cursor-pointer hover:bg-muted/80 transition-colors" onClick={() => handleSort('riskCategory')}>
                     <div className="flex items-center gap-1">Kategori - Alt Kategori <ArrowUpDown className="w-3 h-3"/></div>
                   </th>
@@ -419,6 +440,9 @@ export default function RiskDepartmentPage() {
                   <tr key={risk.id} className="hover:bg-muted/20 transition-colors group">
                     <td className="px-4 py-3 font-mono font-medium text-muted-foreground">
                       {deptCode}-{String(risk.riskNo).padStart(3, '0')}
+                    </td>
+                    <td className="px-4 py-3 min-w-[120px] font-medium text-foreground">
+                      {risk.area || department?.name}
                     </td>
                     <td className="px-4 py-3 min-w-[200px]">
                       <div className="font-medium text-foreground">{risk.riskCategory}</div>
@@ -459,6 +483,7 @@ export default function RiskDepartmentPage() {
         <RiskExcelImport
           facilityId={facilityId}
           departmentName={department?.name}
+          areaName={filterArea || undefined}
           onClose={() => setShowImport(false)}
           onSuccess={() => {
             setShowImport(false);

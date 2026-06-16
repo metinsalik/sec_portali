@@ -9,6 +9,7 @@ const API = import.meta.env.VITE_API_URL || '';
 interface Props {
   facilityId: string;
   departmentName?: string;
+  areaName?: string;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -91,7 +92,7 @@ function normalizeHeader(h: string): string {
   return h.toLowerCase().trim().replace(/\s+/g, ' ');
 }
 
-export default function RiskExcelImport({ facilityId, departmentName, onClose, onSuccess }: Props) {
+export default function RiskExcelImport({ facilityId, departmentName, areaName, onClose, onSuccess }: Props) {
   const token = localStorage.getItem('token');
   const fileRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<any[]>([]);
@@ -246,8 +247,8 @@ export default function RiskExcelImport({ facilityId, departmentName, onClose, o
         const finalDept = departmentName || obj.department || extractedDept || 'Genel';
         obj.department = finalDept;
         
-        // As requested: Alan: Departmanla aynı olarak gelsin
-        obj.area = obj.area || finalDept;
+        // As requested: Alan: Departmanla aynı veya seçilen alan olarak gelsin
+        obj.area = areaName || obj.area || finalDept;
         
         return obj;
       }).filter(r => r.department || r.hazard || r.riskDescription || r.riskCategory);
