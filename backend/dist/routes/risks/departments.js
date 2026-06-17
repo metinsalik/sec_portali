@@ -48,6 +48,7 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
             where: { facilityId: facilityId },
             include: {
                 _count: { select: { risks: true } },
+                areas: true,
                 risks: {
                     select: { status: true },
                 },
@@ -64,6 +65,7 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
                 facilityId: d.facilityId,
                 name: d.name,
                 riskCount: d._count.risks,
+                areas: d.areas || [],
                 stats: {
                     acik: statusMap['ACIK_TEHLIKE'] || 0,
                     mudahale: statusMap['ILK_MUDAHALE_EDILDI'] || 0,
@@ -85,7 +87,7 @@ router.get('/:id', auth_1.authMiddleware, async (req, res) => {
         const id = parseInt(req.params.id);
         const dept = await prisma.riskDepartment.findUnique({
             where: { id },
-            include: { facility: true }
+            include: { facility: true, areas: true }
         });
         if (!dept)
             return res.status(404).json({ error: 'Departman bulunamadı.' });
@@ -100,6 +102,53 @@ router.get('/:id', auth_1.authMiddleware, async (req, res) => {
         res.status(500).json({ error: 'Departman alınamadı.' });
     }
 });
+// POST /api/risks/departments/areas — yeni alan oluştur
+router.post('/areas', auth_1.authMiddleware, async (req, res) => {
+    try {
+        const { departmentId, name } = req.body;
+        if (!departmentId || !name)
+            return res.status(400).json({ error: 'departmentId ve name gerekli.' });
+        const existing = await prisma.riskDepartmentArea.findFirst({
+            where: { departmentId, name: { equals: name.trim(), mode: 'insensitive' } }
+        });
+        if (existing)
+            return res.status(409).json({ error: 'Bu alan zaten mevcut.' });
+        const area = await prisma.riskDepartmentArea.create({
+            data: { departmentId, name: name.trim() }
+        });
+        res.status(201).json(area);
+    }
+    catch (error) {
+        console.error('Risk department area create error:', error);
+        res.status(500).json({ error: 'Alan oluşturulamadı.' });
+    }
+});
+// PUT /api/risks/departments/areas/:id
+router.put('/areas/:id', auth_1.authMiddleware, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const { name } = req.body;
+        const area = await prisma.riskDepartmentArea.update({
+            where: { id },
+            data: { name: name.trim() }
+        });
+        res.json(area);
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Alan güncellenemedi.' });
+    }
+});
+// DELETE /api/risks/departments/areas/:id
+router.delete('/areas/:id', auth_1.authMiddleware, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        await prisma.riskDepartmentArea.delete({ where: { id } });
+        res.json({ success: true });
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Alan silinemedi.' });
+    }
+});
 // POST /api/risks/departments — yeni departman oluştur
 router.post('/', auth_1.authMiddleware, async (req, res) => {
     try {
@@ -110,13 +159,23 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
         if (!hasAccess) {
             return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
         }
-        const existing = await prisma.riskDepartment.findUnique({
-            where: { facilityId_name: { facilityId, name } },
+        // Global Department senkronizasyonu
+        const globalDept = await prisma.department.findFirst({
+            where: { name: { equals: name.trim(), mode: 'insensitive' } }
+        });
+        if (!globalDept) {
+            await prisma.department.create({ data: { name: name.trim() } });
+        }
+        const existing = await prisma.riskDepartment.findFirst({
+            where: {
+                facilityId,
+                name: { equals: name.trim(), mode: 'insensitive' }
+            },
         });
         if (existing)
             return res.status(409).json({ error: 'Bu departman zaten mevcut.' });
         const dept = await prisma.riskDepartment.create({
-            data: { facilityId, name, code: generateDeptCode(name) },
+            data: { facilityId, name: name.trim(), code: generateDeptCode(name.trim()) },
         });
         res.status(201).json(dept);
     }

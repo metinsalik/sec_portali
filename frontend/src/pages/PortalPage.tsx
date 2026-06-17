@@ -2,14 +2,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuGroup, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -43,7 +43,7 @@ export default function PortalPage() {
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[#f8f9ff] dark:bg-[#171c20] bg-[radial-gradient(#d3e4fe_1px,transparent_1px)] dark:bg-[radial-gradient(#2c3135_1px,transparent_1px)] bg-[size:32px_32px] text-[#171c20] dark:text-[#edf1f6] transition-colors duration-300">
-      
+
       {/* Desktop Header (hidden on mobile) */}
       <header className="hidden md:block bg-white dark:bg-[#171c20] border-b border-[#c2c7cc] dark:border-[#73787c] shadow-sm sticky top-0 z-50">
         <div className="flex justify-between items-center h-16 px-6 w-full max-w-[1440px] mx-auto">
@@ -53,14 +53,14 @@ export default function PortalPage() {
             </div>
             <h1 className="text-2xl font-bold text-[#0051d5] dark:text-[#b4c5ff]">HSE Portalı</h1>
           </div>
-          
+
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 text-[#42474b] dark:text-[#949899] text-sm">
               <span>Hoş geldin, <span className="font-bold text-[#171c20] dark:text-[#edf1f6]">{user?.fullName || user?.username || 'Metin Salık'}</span></span>
             </div>
-            
+
             {hasAdminAccess && (
-              <button 
+              <button
                 onClick={() => navigate('/settings')}
                 className="flex items-center gap-1.5 text-[#42474b] dark:text-[#949899] hover:text-[#0051d5] dark:hover:text-[#b4c5ff] transition-colors text-sm font-medium active:scale-95 duration-150"
               >
@@ -68,11 +68,11 @@ export default function PortalPage() {
                 <span>Sistem Ayarları</span>
               </button>
             )}
-            
+
             <div className="flex items-center gap-3">
               <ThemeToggle />
               <NotificationBell />
-              
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="px-4 py-2 border border-[#c2c7cc] dark:border-[#73787c] rounded-lg text-sm font-medium text-[#171c20] dark:text-[#edf1f6] hover:bg-[#f0f4f9] dark:hover:bg-[#181c1d] transition-all active:scale-95">
@@ -107,11 +107,11 @@ export default function PortalPage() {
             <img src="/mlpcare.jpg" alt="MLP Care Logo" className="h-8 object-contain rounded" />
             <span className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] tracking-tight">HSE Portalı</span>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <NotificationBell />
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="h-10 w-10 rounded-full bg-[#346cef] text-white flex items-center justify-center font-bold cursor-pointer active:scale-95 transition-transform">
@@ -140,7 +140,7 @@ export default function PortalPage() {
 
       {/* Main Content */}
       <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-6 py-8 md:py-10 flex flex-col pb-36 md:pb-10">
-        
+
         {/* Header Section */}
         <div className="mb-8">
           <h2 className="text-3xl md:text-4xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">Uygulamalar</h2>
@@ -149,10 +149,10 @@ export default function PortalPage() {
 
         {/* Bento Grid layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          
+
           {/* Card 1: İSG Atama Paneli (Only shown to admin/management) */}
           {hasAdminAccess && (
-            <div 
+            <div
               onClick={() => navigate('/panel')}
               className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
             >
@@ -193,7 +193,7 @@ export default function PortalPage() {
           )}
 
           {/* Card 2: Aylık Veri Sistemi */}
-          <div 
+          <div
             onClick={() => navigate('/operations')}
             className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
           >
@@ -233,7 +233,7 @@ export default function PortalPage() {
           </div>
 
           {/* Card 3: İş Takip */}
-          <div 
+          <div
             onClick={() => navigate('/workflow')}
             className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
           >
@@ -273,7 +273,7 @@ export default function PortalPage() {
           </div>
 
           {/* Card 4: Risk Değerlendirmesi */}
-          <div 
+          <div
             onClick={() => navigate('/risks')}
             className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
           >
@@ -313,7 +313,7 @@ export default function PortalPage() {
           </div>
 
           {/* Card 5: Tehlikeli Madde Yönetimi */}
-          <div 
+          <div
             onClick={() => navigate('/hazmat/dashboard')}
             className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
           >
@@ -353,7 +353,7 @@ export default function PortalPage() {
           </div>
 
           {/* Card 6: Fire Equipment */}
-          <div 
+          <div
             onClick={() => navigate('/fire-equipment')}
             className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
           >
@@ -380,7 +380,7 @@ export default function PortalPage() {
                 <div className="w-14 h-14 rounded-xl bg-red-50 dark:bg-red-950/20 flex items-center justify-center mb-6 text-[#d32f2f] dark:text-red-500 transition-transform group-hover:scale-110">
                   <span className="material-symbols-outlined text-[32px]">local_fire_department</span>
                 </div>
-                <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">FireTrack 360</h3>
+                <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">Yangın Envanter Yönetimi</h3>
                 <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
                   Yangın ekipmanları envanter, lokasyon ve periyodik bakım yönetimi.
                 </p>
@@ -436,14 +436,14 @@ export default function PortalPage() {
 
       {/* Mobile Bottom Nav Bar */}
       <nav className="md:hidden fixed bottom-[72px] left-0 w-full z-40 bg-[#f0f4f9] dark:bg-[#2c3031] border-t border-[#c2c7cc] dark:border-[#73787c]/30 flex justify-around py-2.5 px-2 shadow-md">
-        <button 
+        <button
           onClick={() => navigate('/portal')}
           className="flex flex-col items-center gap-0.5 text-[#0051d5] dark:text-[#b4c5ff] font-bold active:scale-95 transition-transform"
         >
           <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>grid_view</span>
           <span className="text-[10px] uppercase tracking-tighter">Modüller</span>
         </button>
-        <button 
+        <button
           onClick={() => navigate('/notifications')}
           className="flex flex-col items-center gap-0.5 text-[#42474b] dark:text-[#949899] hover:text-[#0051d5] dark:hover:text-[#b4c5ff] active:scale-95 transition-transform"
         >
@@ -451,7 +451,7 @@ export default function PortalPage() {
           <span className="text-[10px] uppercase tracking-tighter">Bildirimler</span>
         </button>
         {hasAdminAccess && (
-          <button 
+          <button
             onClick={() => navigate('/settings')}
             className="flex flex-col items-center gap-0.5 text-[#42474b] dark:text-[#949899] hover:text-[#0051d5] dark:hover:text-[#b4c5ff] active:scale-95 transition-transform"
           >
@@ -459,7 +459,7 @@ export default function PortalPage() {
             <span className="text-[10px] uppercase tracking-tighter">Ayarlar</span>
           </button>
         )}
-        <button 
+        <button
           onClick={() => navigate('/profile')}
           className="flex flex-col items-center gap-0.5 text-[#42474b] dark:text-[#949899] hover:text-[#0051d5] dark:hover:text-[#b4c5ff] active:scale-95 transition-transform"
         >

@@ -49,11 +49,10 @@ router.delete('/units/:id', auth_1.authMiddleware, async (req, res) => {
 // Departments
 router.get('/departments', auth_1.authMiddleware, async (req, res) => {
     const { facilityId } = req.query;
-    if (!facilityId)
-        return res.status(400).json({ error: 'facilityId is required' });
     try {
+        const whereClause = facilityId && facilityId !== 'all' ? { facilityId: String(facilityId) } : {};
         const departments = await prisma.hazmatDepartment.findMany({
-            where: { facilityId: String(facilityId) },
+            where: whereClause,
             orderBy: { name: 'asc' }
         });
         res.json(departments);
@@ -68,8 +67,15 @@ router.post('/departments', auth_1.authMiddleware, async (req, res) => {
     if (!facilityId || !name)
         return res.status(400).json({ error: 'facilityId and name are required' });
     try {
+        // Global Department senkronizasyonu
+        const globalDept = await prisma.department.findFirst({
+            where: { name: { equals: name.trim(), mode: 'insensitive' } }
+        });
+        if (!globalDept) {
+            await prisma.department.create({ data: { name: name.trim() } });
+        }
         const department = await prisma.hazmatDepartment.create({
-            data: { facilityId, name }
+            data: { facilityId, name: name.trim() }
         });
         res.status(201).json(department);
     }

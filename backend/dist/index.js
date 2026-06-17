@@ -19,13 +19,14 @@ const incidents_1 = __importDefault(require("./routes/incidents"));
 const workflow_1 = __importDefault(require("./routes/workflow"));
 const risks_1 = __importDefault(require("./routes/risks"));
 const hazmat_1 = __importDefault(require("./routes/hazmat"));
+const fire_equipment_1 = __importDefault(require("./routes/fire_equipment"));
 // Middleware
 const errorHandler_1 = require("./middleware/errorHandler");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3005;
-app.use(express_1.default.json({ limit: '50mb' }));
-app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
+app.use(express_1.default.json({ limit: '500mb' }));
+app.use(express_1.default.urlencoded({ limit: '500mb', extended: true }));
 app.use((0, cors_1.default)({
     origin: process.env.FRONTEND_URL || '*',
     credentials: true,
@@ -47,6 +48,7 @@ app.use('/api/incidents', incidents_1.default);
 app.use('/api/workflow', workflow_1.default);
 app.use('/api/risks', risks_1.default);
 app.use('/api/hazmat', hazmat_1.default);
+app.use('/api/fire-equipment', fire_equipment_1.default);
 // Sağlık kontrolü
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

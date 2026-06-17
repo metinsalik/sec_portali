@@ -88,6 +88,7 @@ model Facility {
   fireEquipments         FireEquipment[]
   fireEquipmentLocations FireEquipmentLocation[]
   fireResponsibles       FireEquipmentResponsible[]
+  fireEquipmentCompanies FireEquipmentCompany[]
 }
 
 model IncidentCategory {
@@ -1153,6 +1154,8 @@ model FireEquipmentCategory {
   description          String?
   parentId             String? // Alt kategori ise üst kategorinin ID'si
   maintenanceFrequency String? // 'AYLIK', '3_AYLIK', '6_AYLIK', 'YILLIK'
+  inventoryParameters  Json?   // Dinamik envanter şeması
+  maintenanceParameters Json?  // Dinamik bakım şeması
   isActive             Boolean  @default(true)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
@@ -1195,6 +1198,21 @@ model FireEquipmentResponsible {
   @@index([facilityId])
 }
 
+model FireEquipmentCompany {
+  id         String   @id @default(uuid())
+  facilityId String
+  name       String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  facility   Facility        @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  equipments FireEquipment[]
+  maintenances FireEquipmentMaintenance[]
+
+  @@index([facilityId])
+}
+
 model FireEquipment {
   id             String  @id @default(uuid())
   equipmentNo    String  @unique // Ekipman No
@@ -1202,17 +1220,19 @@ model FireEquipment {
   serialNo       String? // Seri No
   brand          String? // Marka
   model          String? // Model
-  productionYear Int? // Üretim Yılı
+  productionDate DateTime? // Üretim Tarihi
 
   categoryId    String
   locationId    String?
   facilityId    String
   responsibleId String? // Sorumlu Kişi ID'si
+  companyId     String? // Firma ID'si
 
   capacity        String? // Kapasite (Örn: 6kg)
   standard        String? // Standart
   criticality     String? // Kritiklik Seviyesi (Düşük, Orta, Yüksek)
   responsibleUnit String? // Sorumlu Birim (Opsiyonel, metin olarak kalabilir)
+  inventoryData   Json?   // Dinamik envanter özellikleri
 
   status String @default("AKTIF") // AKTIF, DEGISIME_GIDEN, ARIZALI, HURDA, KULLANIM_DISI, DEPODA
 
@@ -1225,6 +1245,7 @@ model FireEquipment {
   location    FireEquipmentLocation?    @relation(fields: [locationId], references: [id])
   facility    Facility                  @relation(fields: [facilityId], references: [id], onDelete: Cascade)
   responsible FireEquipmentResponsible? @relation(fields: [responsibleId], references: [id], onDelete: SetNull)
+  company     FireEquipmentCompany?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   movements    FireEquipmentMovement[]
   maintenances FireEquipmentMaintenance[]
@@ -1251,14 +1272,18 @@ model FireEquipmentMaintenance {
   id              String   @id @default(uuid())
   equipmentId     String
   maintenanceDate DateTime
-  company         String? // Firma
+  companyId       String? // Yeni Company ilişkisi
+  company         String? // Firma (Legacy)
   technician      String? // Teknisyen
   result          String // UYGUN, SARTLI_UYGUN, UYGUN_DEGIL
   description     String?
+  maintenanceData Json?   // Dinamik bakım özellikleri
+  attachmentUrl   String? // Yüklenen fotoğraf/belge yolu
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  equipment FireEquipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  equipment    FireEquipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  companyRel   FireEquipmentCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   @@index([equipmentId])
 }

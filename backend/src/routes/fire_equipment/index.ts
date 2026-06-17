@@ -1,9 +1,23 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../../middleware/auth';
+import multer from 'multer';
+import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/')
+  },
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname);
+    cb(null, `${uuidv4()}${ext}`);
+  }
+});
+const upload = multer({ storage: storage });
 
 // Tüm route'lar auth gerektirir
 router.use(authMiddleware);
@@ -120,6 +134,64 @@ router.delete('/responsibles/:id', async (req, res) => {
   } catch (error) {
     console.error('Error deleting responsible:', error);
     res.status(500).json({ error: 'Sorumlu silinemedi.' });
+  }
+});
+
+// --- COMPANIES ---
+router.get('/companies/:facilityId', async (req, res) => {
+  try {
+    const { facilityId } = req.params;
+    const companies = await prisma.fireEquipmentCompany.findMany({
+      where: { facilityId, isActive: true },
+      orderBy: { name: 'asc' }
+    });
+    res.json(companies);
+  } catch (error) {
+    console.error('Error fetching companies:', error);
+    res.status(500).json({ error: 'Firmalar alınamadı.' });
+  }
+});
+
+router.post('/companies/:facilityId', async (req, res) => {
+  try {
+    const { facilityId } = req.params;
+    const { name } = req.body;
+    const company = await prisma.fireEquipmentCompany.create({
+      data: { facilityId, name }
+    });
+    res.status(201).json(company);
+  } catch (error) {
+    console.error('Error creating company:', error);
+    res.status(500).json({ error: 'Firma oluşturulamadı.' });
+  }
+});
+
+router.put('/companies/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    const company = await prisma.fireEquipmentCompany.update({
+      where: { id },
+      data: { name }
+    });
+    res.json(company);
+  } catch (error) {
+    console.error('Error updating company:', error);
+    res.status(500).json({ error: 'Firma güncellenemedi.' });
+  }
+});
+
+router.delete('/companies/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.fireEquipmentCompany.update({
+      where: { id },
+      data: { isActive: false }
+    });
+    res.json({ message: 'Firma silindi.' });
+  } catch (error) {
+    console.error('Error deleting company:', error);
+    res.status(500).json({ error: 'Firma silinemedi.' });
   }
 });
 
@@ -246,46 +318,80 @@ router.get('/equipment/detail/:id', async (req, res) => {
   }
 });
 
+router.get('/equipment/qr/:code', async (req, res) => {
+  try {
+    const { code } = req.params;
+    const equipment = await prisma.fireEquipment.findUnique({
+      where: { qrCode: code }
+    });
+    
+    if (!equipment) {
+      return res.status(404).json({ error: 'Bu QR koda ait ekipman bulunamadı.' });
+    }
+    
+    res.json(equipment);
+  } catch (error) {
+    console.error('Error finding equipment by QR:', error);
+    res.status(500).json({ error: 'Ekipman aranırken hata oluştu.' });
+  }
+});
+
 router.post('/equipment/:facilityId', async (req, res) => {
   try {
     const { facilityId } = req.params;
     const { 
-      equipmentNo, qrCode, serialNo, brand, model, productionYear, 
-      categoryId, locationId, capacity, standard, criticality, responsibleId, responsibleUnit, status 
+      equipmentNo, qrCode, serialNo, brand, model, productionDate, lastMaintenanceDate,
+      categoryId, locationId, capacity, standard, criticality, responsibleId, companyId, responsibleUnit, status,
+      inventoryData
     } = req.body;
     
     // @ts-ignore - Assuming req.user is set by authMiddleware
     const username = req.user?.username || 'System';
 
-    // Calculate initial nextMaintenanceDate based on category
+    const finalQrCode = qrCode || `EQP-${uuidv4().substring(0,8).toUpperCase()}`;
+
+    // Calculate initial nextMaintenanceDate based on category and lastMaintenanceDate
     let nextMaintenanceDate = null;
     const category = await prisma.fireEquipmentCategory.findUnique({ where: { id: categoryId } });
     if (category && category.maintenanceFrequency) {
       const freq = category.maintenanceFrequency;
-      const date = new Date();
+      const date = lastMaintenanceDate ? new Date(lastMaintenanceDate) : new Date();
       if (freq === 'AYLIK') date.setMonth(date.getMonth() + 1);
       else if (freq === '3_AYLIK') date.setMonth(date.getMonth() + 3);
       else if (freq === '6_AYLIK') date.setMonth(date.getMonth() + 6);
       else if (freq === 'YILLIK') date.setFullYear(date.getFullYear() + 1);
       nextMaintenanceDate = date;
+    } else if (lastMaintenanceDate) {
+      // Default to 1 year if no category freq is set but lastMaintenanceDate is provided
+      const date = new Date(lastMaintenanceDate);
+      date.setFullYear(date.getFullYear() + 1);
+      nextMaintenanceDate = date;
+    }
+
+    // Preserve lastMaintenanceDate in inventoryData
+    const finalInventoryData = inventoryData ? { ...inventoryData } : {};
+    if (lastMaintenanceDate) {
+      finalInventoryData.lastMaintenanceDate = lastMaintenanceDate;
     }
 
     const equipment = await prisma.fireEquipment.create({
       data: {
         facilityId,
         equipmentNo,
-        qrCode,
+        qrCode: finalQrCode,
         serialNo,
         brand,
         model,
-        productionYear: productionYear ? parseInt(productionYear) : null,
+        productionDate: productionDate ? new Date(productionDate) : null,
         categoryId,
         locationId,
         capacity,
         standard,
         criticality,
         responsibleId,
+        companyId: companyId || null,
         responsibleUnit,
+        inventoryData: finalInventoryData,
         status: status || 'AKTIF',
         nextMaintenanceDate,
         movements: locationId ? {
@@ -306,11 +412,54 @@ router.post('/equipment/:facilityId', async (req, res) => {
   }
 });
 
+router.delete('/equipment/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.fireEquipment.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting equipment:', error);
+    res.status(500).json({ error: 'Ekipman silinemedi.' });
+  }
+});
+
 router.put('/equipment/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const data = req.body;
     
+    if (data.productionDate) {
+      data.productionDate = new Date(data.productionDate);
+    }
+
+    if (data.lastMaintenanceDate) {
+      const date = new Date(data.lastMaintenanceDate);
+      // Try to fetch category to get freq
+      const equipment = await prisma.fireEquipment.findUnique({ where: { id }, include: { category: true } });
+      const freq = equipment?.category?.maintenanceFrequency;
+      if (freq === 'AYLIK') date.setMonth(date.getMonth() + 1);
+      else if (freq === '3_AYLIK') date.setMonth(date.getMonth() + 3);
+      else if (freq === '6_AYLIK') date.setMonth(date.getMonth() + 6);
+      else date.setFullYear(date.getFullYear() + 1);
+      
+      data.nextMaintenanceDate = date;
+      
+      // Update inventoryData
+      const invData = typeof data.inventoryData === 'object' && data.inventoryData !== null ? data.inventoryData : (equipment?.inventoryData || {});
+      data.inventoryData = { ...(invData as any), lastMaintenanceDate: data.lastMaintenanceDate };
+      delete data.lastMaintenanceDate;
+    }
+    
+    // Temizlik: Relational objeleri sil ki Prisma update hata vermesin
+    delete data.category;
+    delete data.location;
+    delete data.responsible;
+    delete data.company;
+    delete data.movements;
+    delete data.maintenances;
+    delete data.facility;
+    delete data.subcategoryId; // Frontend gönderebilir, DB'de yok
+
     const equipment = await prisma.fireEquipment.update({
       where: { id },
       data
@@ -324,34 +473,51 @@ router.put('/equipment/:id', async (req, res) => {
 });
 
 // --- MAINTENANCE ---
-router.post('/equipment/:id/maintenance', async (req, res) => {
+router.post('/equipment/:id/maintenance', upload.single('attachment'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { maintenanceDate, company, technician, result, description, nextMaintenanceDate } = req.body;
+    const { maintenanceDate, companyId, company, technician, result, description, nextMaintenanceDate, maintenanceData, equipmentStatus } = req.body;
+
+    let attachmentUrl = null;
+    if (req.file) {
+      attachmentUrl = `/uploads/${req.file.filename}`;
+    }
+
+    let maintenanceDataParsed = null;
+    if (maintenanceData) {
+      try {
+        maintenanceDataParsed = typeof maintenanceData === 'string' ? JSON.parse(maintenanceData) : maintenanceData;
+      } catch (e) {
+        console.error('Error parsing maintenanceData:', e);
+      }
+    }
 
     const maintenance = await prisma.$transaction(async (tx) => {
       // Create maintenance record
       const record = await tx.fireEquipmentMaintenance.create({
         data: {
-          equipmentId: id,
-          maintenanceDate: new Date(maintenanceDate),
-          company,
-          technician,
-          result,
-          description
+          equipmentId: id as string,
+          maintenanceDate: new Date(maintenanceDate as string),
+          companyId: (companyId as string) || null,
+          company: company as string,
+          technician: technician as string,
+          result: result as string,
+          description: description as string,
+          maintenanceData: maintenanceDataParsed,
+          attachmentUrl
         }
       });
 
       // Calculate nextMaintenanceDate if not provided explicitly, based on frequency
-      let calculatedNextDate = nextMaintenanceDate ? new Date(nextMaintenanceDate) : null;
+      let calculatedNextDate = nextMaintenanceDate ? new Date(nextMaintenanceDate as string) : null;
       if (!calculatedNextDate) {
         const eq = await tx.fireEquipment.findUnique({ 
-          where: { id },
+          where: { id: id as string },
           include: { category: true }
-        });
+        }) as any;
         if (eq?.category?.maintenanceFrequency) {
           const freq = eq.category.maintenanceFrequency;
-          const date = new Date(maintenanceDate);
+          const date = new Date(maintenanceDate as string);
           if (freq === 'AYLIK') date.setMonth(date.getMonth() + 1);
           else if (freq === '3_AYLIK') date.setMonth(date.getMonth() + 3);
           else if (freq === '6_AYLIK') date.setMonth(date.getMonth() + 6);
@@ -360,11 +526,15 @@ router.post('/equipment/:id/maintenance', async (req, res) => {
         }
       }
 
-      // Update equipment next maintenance date
-      if (calculatedNextDate) {
+      const updateData: any = {};
+      if (calculatedNextDate) updateData.nextMaintenanceDate = calculatedNextDate;
+      if (equipmentStatus) updateData.status = equipmentStatus as string;
+
+      // Update equipment next maintenance date and status
+      if (Object.keys(updateData).length > 0) {
         await tx.fireEquipment.update({
-          where: { id },
-          data: { nextMaintenanceDate: calculatedNextDate }
+          where: { id: id as string },
+          data: updateData
         });
       }
 
@@ -419,6 +589,95 @@ router.post('/equipment/:id/movement', async (req, res) => {
   } catch (error) {
     console.error('Error creating movement:', error);
     res.status(500).json({ error: 'Hareket kaydı oluşturulamadı.' });
+  }
+});
+// --- SWAP (DEĞİŞİM) ---
+router.post('/equipment/:id/swap', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { replacementEquipmentId, brokenStatus = 'ARIZALI', isReverseSwap = false } = req.body;
+    
+    // @ts-ignore
+    const username = req.user?.username || 'System';
+
+    const currentEquipment = await prisma.fireEquipment.findUnique({ where: { id }});
+    if (!currentEquipment) {
+      return res.status(404).json({ error: 'Mevcut ekipman bulunamadı.' });
+    }
+
+    const replacementEquipment = await prisma.fireEquipment.findUnique({ where: { id: replacementEquipmentId }});
+    if (!replacementEquipment) {
+      return res.status(404).json({ error: 'Yedek ekipman bulunamadı.' });
+    }
+
+    // Determine target location for the old equipment
+    const targetLocName = isReverseSwap ? 'Merkez Depo' : 'Arıza Deposu / Hurdalık';
+    const targetStatus = isReverseSwap ? 'DEPODA' : brokenStatus;
+
+    let targetLocation = await prisma.fireEquipmentLocation.findFirst({
+      where: { facilityId: currentEquipment.facilityId, building: targetLocName }
+    });
+
+    if (!targetLocation) {
+      targetLocation = await prisma.fireEquipmentLocation.create({
+        data: {
+          facilityId: currentEquipment.facilityId,
+          building: targetLocName,
+          description: isReverseSwap ? 'Otomatik oluşturulan merkez depo.' : 'Otomatik oluşturulan arızalı/hurda ekipman deposu.'
+        }
+      });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Update replacement equipment to AKTIF and move to old location
+      const newEq = await tx.fireEquipment.update({
+        where: { id: replacementEquipmentId },
+        data: { 
+          status: 'AKTIF', 
+          locationId: currentEquipment.locationId 
+        }
+      });
+
+      // 2. Create movement for new equipment
+      await tx.fireEquipmentMovement.create({
+        data: {
+          equipmentId: replacementEquipmentId,
+          oldLocationId: replacementEquipment.locationId,
+          newLocationId: currentEquipment.locationId,
+          reason: 'Değişim (Swap) - Yeni',
+          movedBy: username,
+          description: `Arızalanan ${currentEquipment.equipmentNo} yerine sahaya alındı.`
+        }
+      });
+
+      // 3. Update old equipment to targetStatus and move to target location
+      const oldEq = await tx.fireEquipment.update({
+        where: { id },
+        data: { 
+          status: targetStatus, 
+          locationId: targetLocation.id 
+        }
+      });
+
+      // 4. Create movement for old equipment
+      await tx.fireEquipmentMovement.create({
+        data: {
+          equipmentId: id,
+          oldLocationId: currentEquipment.locationId,
+          newLocationId: targetLocation.id,
+          reason: isReverseSwap ? 'Değişim (Swap) - İade' : `Değişim (Swap) - ${targetStatus}`,
+          movedBy: username,
+          description: `Yerine ${replacementEquipment.equipmentNo} yerleştirilerek ${targetLocName}'ya alındı.`
+        }
+      });
+
+      return { oldEq, newEq };
+    });
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error swapping equipment:', error);
+    res.status(500).json({ error: 'Ekipman değişimi sırasında bir hata oluştu.' });
   }
 });
 
@@ -490,6 +749,58 @@ router.post('/maintenances', async (req, res) => {
   } catch (error) {
     console.error('Error creating maintenance:', error);
     res.status(500).json({ error: 'Bakım oluşturulamadı.' });
+  }
+});
+
+// --- RETURN FROM SERVICE ---
+router.post('/equipment/:id/return-from-service', async (req, res) => {
+  try {
+    const { id } = req.params;
+    // @ts-ignore
+    const username = req.user?.username || 'System';
+
+    const currentEquipment = await prisma.fireEquipment.findUnique({
+      where: { id },
+      include: { category: true }
+    });
+
+    if (!currentEquipment) {
+      return res.status(404).json({ error: 'Ekipman bulunamadı.' });
+    }
+
+    // Set next maintenance date to 1 year from now
+    const nextDate = new Date();
+    nextDate.setFullYear(nextDate.getFullYear() + 1);
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Update equipment status and nextMaintenanceDate
+      const updatedEquipment = await tx.fireEquipment.update({
+        where: { id },
+        data: {
+          status: 'DEPODA',
+          nextMaintenanceDate: nextDate
+        }
+      });
+
+      // 2. Log movement
+      await tx.fireEquipmentMovement.create({
+        data: {
+          equipmentId: id,
+          oldLocationId: currentEquipment.locationId,
+          newLocationId: currentEquipment.locationId, // usually null since it was in depot
+          reason: 'Servisten Döndü',
+          movedBy: username,
+          description: 'Cihaz servisten döndü ve depoya sağlam olarak alındı.'
+        }
+      });
+
+      return updatedEquipment;
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error returning from service:', error);
+    res.status(500).json({ error: 'Servis dönüş işlemi yapılamadı.' });
   }
 });
 

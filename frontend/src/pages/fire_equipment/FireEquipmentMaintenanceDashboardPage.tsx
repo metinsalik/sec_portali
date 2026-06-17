@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import api from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,27 +8,15 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PenTool, CheckCircle, AlertTriangle, Plus, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
 export default function FireEquipmentMaintenanceDashboardPage() {
   const facilityId = localStorage.getItem('activeFacilityId');
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [filter, setFilter] = useState('ALL'); // ALL, OVERDUE, UPCOMING
   const [searchTerm, setSearchTerm] = useState('');
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedEquipmentId, setSelectedEquipmentId] = useState('');
-  const [maintenanceForm, setMaintenanceForm] = useState({
-    maintenanceDate: new Date().toISOString().split('T')[0],
-    company: '',
-    technician: '',
-    result: 'UYGUN',
-    description: ''
-  });
-
   const { data: equipmentList, isLoading } = useQuery({
     queryKey: ['fire-equipment', facilityId],
     queryFn: async () => {
@@ -38,33 +27,6 @@ export default function FireEquipmentMaintenanceDashboardPage() {
     },
     enabled: !!facilityId
   });
-
-  const addMaintenanceMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return api.post('/fire-equipment/maintenances', data);
-    },
-    onSuccess: () => {
-      toast.success('Bakım kaydı başarıyla eklendi.');
-      setIsModalOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['fire-equipment', facilityId] });
-      setMaintenanceForm({
-        maintenanceDate: new Date().toISOString().split('T')[0],
-        company: '',
-        technician: '',
-        result: 'UYGUN',
-        description: ''
-      });
-    }
-  });
-
-  const handleAddMaintenance = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedEquipmentId) return;
-    addMaintenanceMutation.mutate({
-      equipmentId: selectedEquipmentId,
-      ...maintenanceForm
-    });
-  };
 
   const getMaintenanceStatus = (dateString: string | null) => {
     if (!dateString) return { status: 'UNKNOWN', text: 'Tarih Yok', color: 'text-gray-500' };
@@ -98,6 +60,42 @@ export default function FireEquipmentMaintenanceDashboardPage() {
     return <div className="p-8 text-center text-muted-foreground">Lütfen bir tesis seçin.</div>;
   }
 
+  const total = activeEquipment.length;
+  let overdueCount = 0;
+  let upcomingCount = 0;
+  let okCount = 0;
+  
+  let uygunCount = 0;
+  let sartliUygunCount = 0;
+  let uygunDegilCount = 0;
+  let noMaintenanceCount = 0;
+
+  activeEquipment.forEach((item: any) => {
+    const status = getMaintenanceStatus(item.nextMaintenanceDate).status;
+    if (status === 'OVERDUE') overdueCount++;
+    else if (status === 'UPCOMING') upcomingCount++;
+    else okCount++;
+
+    const lastResult = item.maintenances?.[0]?.result;
+    if (lastResult === 'UYGUN') uygunCount++;
+    else if (lastResult === 'SARTLI_UYGUN') sartliUygunCount++;
+    else if (lastResult === 'UYGUN_DEGIL') uygunDegilCount++;
+    else noMaintenanceCount++;
+  });
+
+  const pieDataStatus = [
+    { name: 'Süresi Geçen', value: overdueCount, color: '#ef4444' },
+    { name: 'Yaklaşan', value: upcomingCount, color: '#f97316' },
+    { name: 'Zamanı Var', value: okCount, color: '#22c55e' }
+  ].filter(d => d.value > 0);
+
+  const pieDataResult = [
+    { name: 'Uygun', value: uygunCount, color: '#22c55e' },
+    { name: 'Şartlı Uygun', value: sartliUygunCount, color: '#eab308' },
+    { name: 'Uygun Değil', value: uygunDegilCount, color: '#ef4444' },
+    { name: 'Kayıt Yok', value: noMaintenanceCount, color: '#94a3b8' }
+  ].filter(d => d.value > 0);
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12 p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -107,6 +105,88 @@ export default function FireEquipmentMaintenanceDashboardPage() {
           </h1>
           <p className="text-muted-foreground mt-1">Ekipmanların periyodik bakım tarihlerini takip edin ve kayıt girin.</p>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-slate-900 border-blue-100 dark:border-blue-900">
+          <CardContent className="p-4 flex justify-between items-center">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Aktif Ekipman</p>
+              <h3 className="text-3xl font-black text-blue-600 dark:text-blue-400">{total}</h3>
+            </div>
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-full"><PenTool className="w-5 h-5 text-blue-600 dark:text-blue-300" /></div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-red-50 to-white dark:from-red-950 dark:to-slate-900 border-red-100 dark:border-red-900">
+          <CardContent className="p-4 flex justify-between items-center">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Süresi Geçen Bakım</p>
+              <h3 className="text-3xl font-black text-red-600 dark:text-red-400">{overdueCount}</h3>
+            </div>
+            <div className="p-2 bg-red-100 dark:bg-red-900/50 rounded-full"><AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-300" /></div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-orange-50 to-white dark:from-orange-950 dark:to-slate-900 border-orange-100 dark:border-orange-900">
+          <CardContent className="p-4 flex justify-between items-center">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Yaklaşan (30 Gün)</p>
+              <h3 className="text-3xl font-black text-orange-600 dark:text-orange-400">{upcomingCount}</h3>
+            </div>
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/50 rounded-full"><AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-300" /></div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-rose-50 to-white dark:from-rose-950 dark:to-slate-900 border-rose-100 dark:border-rose-900">
+          <CardContent className="p-4 flex justify-between items-center">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Uygun Değil</p>
+              <h3 className="text-3xl font-black text-rose-600 dark:text-rose-400">{uygunDegilCount}</h3>
+            </div>
+            <div className="p-2 bg-rose-100 dark:bg-rose-900/50 rounded-full"><AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-300" /></div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <h3 className="font-semibold text-sm mb-4">Bakım Zaman Çizelgesi</h3>
+            <div className="h-[250px] w-full">
+              {pieDataStatus.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={pieDataStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5}>
+                      {pieDataStatus.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                    </Pie>
+                    <RechartsTooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                 <div className="h-full flex items-center justify-center text-muted-foreground">Veri Yok</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <h3 className="font-semibold text-sm mb-4">Son Bakım Sonuçları</h3>
+            <div className="h-[250px] w-full">
+              {pieDataResult.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={pieDataResult} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5}>
+                      {pieDataResult.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                    </Pie>
+                    <RechartsTooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                 <div className="h-full flex items-center justify-center text-muted-foreground">Veri Yok</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -160,7 +240,7 @@ export default function FireEquipmentMaintenanceDashboardPage() {
                         <td className="px-6 py-4 font-medium">{item.equipmentNo}</td>
                         <td className="px-6 py-4">{item.category?.name || '-'}</td>
                         <td className="px-6 py-4 text-muted-foreground">
-                          {item.location ? `${item.location.building} / ${item.location.floor}` : 'Lokasyon Yok'}
+                          {item.location ? `${item.location.building}${item.location.floor ? ` / ${item.location.floor}` : ''}${item.location.department ? ` - ${item.location.department}` : ''}` : 'Lokasyon Yok'}
                         </td>
                         <td className="px-6 py-4">
                           <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}>
@@ -168,57 +248,14 @@ export default function FireEquipmentMaintenanceDashboardPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <Dialog open={isModalOpen && selectedEquipmentId === item.id} onOpenChange={(open) => {
-                            setIsModalOpen(open);
-                            if (open) setSelectedEquipmentId(item.id);
-                            else setSelectedEquipmentId('');
-                          }}>
-                            <DialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="h-8">
-                                <Plus className="w-4 h-4 mr-1" /> Bakım Gir
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Bakım Kaydı Ekle - {item.equipmentNo}</DialogTitle>
-                              </DialogHeader>
-                              <form onSubmit={handleAddMaintenance} className="space-y-4 mt-4">
-                                <div className="space-y-2">
-                                  <Label>Bakım Tarihi *</Label>
-                                  <Input type="date" required value={maintenanceForm.maintenanceDate} onChange={e => setMaintenanceForm({...maintenanceForm, maintenanceDate: e.target.value})} />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div className="space-y-2">
-                                    <Label>Firma (Opsiyonel)</Label>
-                                    <Input placeholder="Bakımı Yapan Firma" value={maintenanceForm.company} onChange={e => setMaintenanceForm({...maintenanceForm, company: e.target.value})} />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label>Teknisyen (Opsiyonel)</Label>
-                                    <Input placeholder="Ad Soyad" value={maintenanceForm.technician} onChange={e => setMaintenanceForm({...maintenanceForm, technician: e.target.value})} />
-                                  </div>
-                                </div>
-                                <div className="space-y-2">
-                                  <Label>Sonuç *</Label>
-                                  <Select value={maintenanceForm.result} onValueChange={val => setMaintenanceForm({...maintenanceForm, result: val})}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="UYGUN">Uygun</SelectItem>
-                                      <SelectItem value="SARTLI_UYGUN">Şartlı Uygun</SelectItem>
-                                      <SelectItem value="UYGUN_DEGIL">Uygun Değil</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <div className="space-y-2">
-                                  <Label>Açıklama (Opsiyonel)</Label>
-                                  <Input placeholder="Yapılan işlemler, değişen parçalar vb." value={maintenanceForm.description} onChange={e => setMaintenanceForm({...maintenanceForm, description: e.target.value})} />
-                                </div>
-                                <div className="pt-4 flex justify-end gap-2">
-                                  <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>İptal</Button>
-                                  <Button type="submit" disabled={addMaintenanceMutation.isPending}>Kaydet</Button>
-                                </div>
-                              </form>
-                            </DialogContent>
-                          </Dialog>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-8"
+                            onClick={() => navigate(`/fire-equipment/maintenance/${item.id}`)}
+                          >
+                            <Plus className="w-4 h-4 mr-1" /> Bakım Gir
+                          </Button>
                         </td>
                       </tr>
                     );

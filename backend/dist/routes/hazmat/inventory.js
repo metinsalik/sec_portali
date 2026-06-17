@@ -178,4 +178,28 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+// Delete specific inventory item
+router.delete('/:id', auth_1.authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const item = await prisma.hazmatInventoryItem.findUnique({
+            where: { id },
+            include: { facility: true }
+        });
+        if (!item) {
+            return res.status(404).json({ error: 'Item not found' });
+        }
+        if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(item.facilityId)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+        await prisma.hazmatInventoryItem.delete({
+            where: { id }
+        });
+        res.json({ message: 'Inventory item removed successfully' });
+    }
+    catch (error) {
+        console.error('Error deleting inventory item:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 exports.default = router;

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
-import { Flame, MapPin, AlertTriangle, PenTool, CheckCircle, Plus } from 'lucide-react';
+import { Flame, MapPin, AlertTriangle, PenTool, CheckCircle, Plus, QrCode } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
@@ -88,6 +88,9 @@ export default function FireEquipmentDashboard() {
           <p className="text-muted-foreground mt-1">Yangın tüpleri, dolapları ve sistemlerinin envanter ve bakım takibi.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => navigate('/fire-equipment/scanner')} className="hidden md:flex">
+            <QrCode className="w-4 h-4 mr-2" /> QR Tara
+          </Button>
           <Button variant="outline" onClick={() => navigate('/fire-equipment/list')}>Tüm Envanter</Button>
           <Button onClick={() => navigate('/fire-equipment/new')} className="bg-red-600 hover:bg-red-700 text-white border-0">
             <Plus className="w-4 h-4 mr-2" /> Yeni Ekipman Ekle
@@ -238,6 +241,18 @@ export default function FireEquipmentDashboard() {
         </Card>
       </div>
 
+
+      {/* Mobile Floating QR Scanner Button */}
+      <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+        <Button 
+          size="lg" 
+          className="rounded-full shadow-xl bg-red-600 hover:bg-red-700 text-white px-6 h-14 flex items-center gap-2"
+          onClick={() => navigate('/fire-equipment/scanner')}
+        >
+          <QrCode className="w-6 h-6" />
+          <span className="font-bold text-base">QR Okut</span>
+        </Button>
+      </div>
     </div>
   );
 }

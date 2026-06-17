@@ -35,6 +35,106 @@ router.get('/search', auth_1.authMiddleware, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+// GET all global materials, and check if they exist in a specific facility
+router.get('/global', auth_1.authMiddleware, async (req, res) => {
+    const { facilityId } = req.query;
+    try {
+        const allMaterials = await prisma.hazmatMaterial.findMany({
+            include: {
+                category: true,
+                hazardLabels: { include: { label: true } },
+                adrLabels: { include: { label: true } },
+                ppes: { include: { ppe: true } }
+            },
+            orderBy: { productName: 'asc' }
+        });
+        if (!facilityId) {
+            return res.json(allMaterials.map(m => ({ material: m, isInFacility: false })));
+        }
+        // If facilityId is provided, check which ones are in the facility
+        const facilityItems = await prisma.facilityHazmatItem.findMany({
+            where: { facilityId: String(facilityId) },
+            include: { unit: true }
+        });
+        const result = allMaterials.map(m => {
+            const fItem = facilityItems.find(f => f.materialId === m.id);
+            return { material: m, isInFacility: !!fItem, facilityAmount: fItem?.amountValue || null, facilityUnit: fItem?.unit?.name || null };
+        });
+        res.json(result);
+    }
+    catch (error) {
+        console.error('Error fetching global materials:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+// POST add a global material to a facility
+router.post('/add-to-facility', auth_1.authMiddleware, async (req, res) => {
+    const { facilityId, materialId, amountValue, unitId } = req.body;
+    if (!facilityId || !materialId) {
+        return res.status(400).json({ error: 'facilityId and materialId are required' });
+    }
+    if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(facilityId)) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
+    try {
+        const existing = await prisma.facilityHazmatItem.findFirst({
+            where: { facilityId, materialId }
+        });
+        if (existing) {
+            return res.status(400).json({ error: 'Bu madde zaten tesiste mevcut' });
+        }
+        const newItem = await prisma.facilityHazmatItem.create({
+            data: {
+                facilityId,
+                materialId,
+                amountValue: amountValue || 0,
+                unitId: unitId || null
+            }
+        });
+        res.json(newItem);
+    }
+    catch (error) {
+        console.error('Error adding material to facility:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+// Bulk add existing global materials to a facility
+router.post('/bulk-add-to-facility', auth_1.authMiddleware, async (req, res) => {
+    const { facilityId, materialIds } = req.body;
+    if (!facilityId || !Array.isArray(materialIds) || materialIds.length === 0) {
+        return res.status(400).json({ error: 'facilityId and an array of materialIds are required' });
+    }
+    if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(facilityId)) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
+    try {
+        const existingLinks = await prisma.facilityHazmatItem.findMany({
+            where: {
+                facilityId,
+                materialId: { in: materialIds }
+            },
+            select: { materialId: true }
+        });
+        const existingMaterialIds = existingLinks.map(l => l.materialId);
+        const newMaterialIds = materialIds.filter(id => !existingMaterialIds.includes(id));
+        if (newMaterialIds.length === 0) {
+            return res.status(400).json({ error: 'Seçilen tüm maddeler zaten tesiste mevcut' });
+        }
+        await prisma.facilityHazmatItem.createMany({
+            data: newMaterialIds.map(materialId => ({
+                facilityId,
+                materialId,
+                amountValue: 0,
+                unitId: null
+            }))
+        });
+        res.json({ message: `${newMaterialIds.length} madde başarıyla tesise eklendi` });
+    }
+    catch (error) {
+        console.error('Error bulk adding materials to facility:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 // Get materials for a specific facility
 router.get('/', auth_1.authMiddleware, async (req, res) => {
     const { facilityId } = req.query;
@@ -229,6 +329,7 @@ router.post('/import', auth_1.authMiddleware, async (req, res) => {
                 material = await prisma.hazmatMaterial.create({
                     data: {
                         productName: data.productName,
+                        brandName: data.brandName || null,
                         usageMethod: data.usageMethod || null,
                         composition: data.composition || null,
                         hazardDescription: data.hazardDescription || null,
@@ -236,8 +337,8 @@ router.post('/import', auth_1.authMiddleware, async (req, res) => {
                         fireFightingMeasures: data.fireFightingMeasures || null,
                         accidentalReleaseMeasures: data.accidentalReleaseMeasures || null,
                         handlingAndStorage: data.handlingAndStorage || null,
-                        exposureControlsPpe: data.exposureControls || null,
-                        physicalAndChemicalProperties: data.physicalProperties || null,
+                        exposureControlsPpe: data.exposureControlsPpe || data.exposureControls || null,
+                        physicalAndChemicalProperties: data.physicalAndChemicalProperties || data.physicalProperties || null,
                         stabilityAndReactivity: data.stabilityAndReactivity || null,
                         toxicologicalInformation: data.toxicologicalInfo || null,
                         disposalConsiderations: data.disposalConsiderations || null,
@@ -418,6 +519,50 @@ router.put('/:materialId', auth_1.authMiddleware, async (req, res) => {
     catch (error) {
         console.error('Error updating material:', error);
         res.status(500).json({ error: 'Internal server error' });
+    }
+});
+// DELETE a specific material globally (Admin only)
+router.delete('/:id', auth_1.authMiddleware, async (req, res) => {
+    if (!req.user?.isAdmin && !req.user?.isManagement) {
+        return res.status(403).json({ error: 'Bu işlemi sadece yöneticiler yapabilir.' });
+    }
+    try {
+        const { id } = req.params;
+        // Check if material exists
+        const material = await prisma.hazmatMaterial.findUnique({ where: { id } });
+        if (!material) {
+            return res.status(404).json({ error: 'Malzeme bulunamadı.' });
+        }
+        // Material silinince inventory vs. cascade silinmeli (schema.prisma'da ayarli ise). 
+        // Ayarli degilse once inventory silmek gerekebilir. Prisma'daki cascade kurallarina gore:
+        await prisma.hazmatMaterial.delete({
+            where: { id }
+        });
+        res.json({ success: true, message: 'Malzeme başarıyla silindi.' });
+    }
+    catch (error) {
+        console.error('Error deleting material:', error);
+        res.status(500).json({ error: 'Malzeme silinirken bir hata oluştu.' });
+    }
+});
+// BULK DELETE materials globally (Admin only)
+router.post('/bulk-delete', auth_1.authMiddleware, async (req, res) => {
+    if (!req.user?.isAdmin && !req.user?.isManagement) {
+        return res.status(403).json({ error: 'Bu işlemi sadece yöneticiler yapabilir.' });
+    }
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: 'Silinecek materyaller belirtilmedi.' });
+        }
+        await prisma.hazmatMaterial.deleteMany({
+            where: { id: { in: ids } }
+        });
+        res.json({ success: true, message: `${ids.length} malzeme başarıyla silindi.` });
+    }
+    catch (error) {
+        console.error('Error bulk deleting materials:', error);
+        res.status(500).json({ error: 'Malzemeler silinirken bir hata oluştu.' });
     }
 });
 exports.default = router;

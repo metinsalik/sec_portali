@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Settings, FolderTree, MapPin, Plus, Trash2, Users, Pencil, X, Check, ChevronDown, ChevronRight } from 'lucide-react';
+import { Settings, FolderTree, MapPin, Plus, Trash2, Users, Pencil, X, Check, ChevronDown, ChevronRight, Briefcase } from 'lucide-react';
 
 export default function FireEquipmentSettingsPage() {
   const facilityId = localStorage.getItem('activeFacilityId');
@@ -21,6 +21,9 @@ export default function FireEquipmentSettingsPage() {
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [editingLocation, setEditingLocation] = useState<any>(null);
   const [editingResponsible, setEditingResponsible] = useState<any>(null);
+  const [editingCompany, setEditingCompany] = useState<any>(null);
+
+  const [newCompany, setNewCompany] = useState({ name: '' });
 
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
   const toggleCat = (id: string) => setExpandedCats(prev => ({ ...prev, [id]: !prev[id] }));
@@ -158,6 +161,49 @@ export default function FireEquipmentSettingsPage() {
     }
   });
 
+  // Firmalar
+  const { data: companies, isLoading: isCompLoading } = useQuery({
+    queryKey: ['fire-companies', facilityId],
+    queryFn: async () => {
+      if (!facilityId) return [];
+      const res = await api.get(`/fire-equipment/companies/${facilityId}`);
+      return res.json();
+    },
+    enabled: !!facilityId
+  });
+
+  const createCompanyMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return api.post(`/fire-equipment/companies/${facilityId}`, data);
+    },
+    onSuccess: () => {
+      toast.success('Firma eklendi.');
+      setNewCompany({ name: '' });
+      queryClient.invalidateQueries({ queryKey: ['fire-companies', facilityId] });
+    }
+  });
+
+  const updateCompanyMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return api.put(`/fire-equipment/companies/${data.id}`, data);
+    },
+    onSuccess: () => {
+      toast.success('Firma güncellendi.');
+      setEditingCompany(null);
+      queryClient.invalidateQueries({ queryKey: ['fire-companies', facilityId] });
+    }
+  });
+
+  const deleteCompanyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return api.delete(`/fire-equipment/companies/${id}`);
+    },
+    onSuccess: () => {
+      toast.success('Firma silindi.');
+      queryClient.invalidateQueries({ queryKey: ['fire-companies', facilityId] });
+    }
+  });
+
   if (!facilityId) {
     return <div className="p-8 text-center text-muted-foreground">Lütfen bir tesis seçin.</div>;
   }
@@ -172,11 +218,12 @@ export default function FireEquipmentSettingsPage() {
       </div>
 
       <Tabs defaultValue="categories" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="categories" className="flex items-center gap-2"><FolderTree className="w-4 h-4" /> Kategoriler</TabsTrigger>
-          <TabsTrigger value="locations" className="flex items-center gap-2"><MapPin className="w-4 h-4" /> Lokasyonlar</TabsTrigger>
-          <TabsTrigger value="responsibles" className="flex items-center gap-2"><Users className="w-4 h-4" /> Sorumlular</TabsTrigger>
-        </TabsList>
+          <TabsList className="bg-muted w-full justify-start h-auto p-1 flex-wrap">
+            <TabsTrigger value="categories" className="flex-1 min-w-[120px] py-2.5"><FolderTree className="w-4 h-4 mr-2" /> Kategoriler</TabsTrigger>
+            <TabsTrigger value="locations" className="flex-1 min-w-[120px] py-2.5"><MapPin className="w-4 h-4 mr-2" /> Lokasyonlar</TabsTrigger>
+            <TabsTrigger value="responsibles" className="flex-1 min-w-[120px] py-2.5"><Users className="w-4 h-4 mr-2" /> Sorumlular</TabsTrigger>
+            <TabsTrigger value="companies" className="flex-1 min-w-[120px] py-2.5"><Briefcase className="w-4 h-4 mr-2" /> Firmalar</TabsTrigger>
+          </TabsList>
 
         <TabsContent value="categories">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -209,7 +256,7 @@ export default function FireEquipmentSettingsPage() {
                     onChange={e => setNewCategory({...newCategory, parentId: e.target.value})}
                   >
                     <option value="none">Ana Kategori (Üst Kategori Yok)</option>
-                    {categories?.map((cat: any) => (
+                    {categories?.filter((c: any) => !c.parentId).map((cat: any) => (
                       <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
                   </select>
@@ -371,6 +418,14 @@ export default function FireEquipmentSettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label>Mahal</Label>
+                  <Input 
+                    value={newLocation.department || ''} 
+                    onChange={e => setNewLocation({...newLocation, department: e.target.value})} 
+                    placeholder="Örn: Elektrik Odası" 
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label>Açıklama / Detay</Label>
                   <Input 
                     value={newLocation.description} 
@@ -401,6 +456,7 @@ export default function FireEquipmentSettingsPage() {
                           <div className="space-y-3">
                             <Input value={editingLocation.building} onChange={e => setEditingLocation({...editingLocation, building: e.target.value})} placeholder="Bina / Blok" />
                             <Input value={editingLocation.floor || ''} onChange={e => setEditingLocation({...editingLocation, floor: e.target.value})} placeholder="Kat" />
+                            <Input value={editingLocation.department || ''} onChange={e => setEditingLocation({...editingLocation, department: e.target.value})} placeholder="Mahal" />
                             <Input value={editingLocation.description || ''} onChange={e => setEditingLocation({...editingLocation, description: e.target.value})} placeholder="Açıklama" />
                             <div className="flex gap-2">
                               <Button size="sm" onClick={() => updateLocationMutation.mutate(editingLocation)}><Check className="w-4 h-4 mr-1" /> Kaydet</Button>
@@ -410,7 +466,7 @@ export default function FireEquipmentSettingsPage() {
                         ) : (
                           <div className="flex justify-between items-start">
                             <div>
-                              <p className="font-semibold text-sm">{loc.building} {loc.floor && `/ ${loc.floor}`}</p>
+                              <p className="font-semibold text-sm">{loc.building} {loc.floor && `/ ${loc.floor}`} {loc.department && `- ${loc.department}`}</p>
                               <p className="text-xs text-muted-foreground">{loc.description || 'Açıklama yok'}</p>
                             </div>
                             <div className="flex gap-1">
@@ -501,6 +557,75 @@ export default function FireEquipmentSettingsPage() {
                       </div>
                     ))}
                     {responsibles?.length === 0 && <p className="text-sm text-muted-foreground text-center p-4">Henüz sorumlu eklenmemiş.</p>}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="companies">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="md:col-span-1 h-fit shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Yeni Firma Ekle</CardTitle>
+                <CardDescription>Bakım ve dolum yapan firmaları ekleyin.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Firma Adı</Label>
+                  <Input 
+                    value={newCompany.name} 
+                    onChange={e => setNewCompany({...newCompany, name: e.target.value})} 
+                    placeholder="Örn: XYZ Yangın A.Ş." 
+                  />
+                </div>
+                <Button 
+                  className="w-full" 
+                  onClick={() => createCompanyMutation.mutate(newCompany)}
+                  disabled={!newCompany.name || createCompanyMutation.isPending}
+                >
+                  <Plus className="w-4 h-4 mr-2" /> Ekle
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="md:col-span-2 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Kayıtlı Firmalar</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isCompLoading ? <p>Yükleniyor...</p> : (
+                  <div className="space-y-3">
+                    {companies?.map((comp: any) => (
+                      <div key={comp.id} className="p-3 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        {editingCompany?.id === comp.id ? (
+                          <div className="space-y-3">
+                            <Input value={editingCompany.name} onChange={e => setEditingCompany({...editingCompany, name: e.target.value})} placeholder="Firma Adı" />
+                            <div className="flex gap-2">
+                              <Button size="sm" onClick={() => updateCompanyMutation.mutate(editingCompany)}><Check className="w-4 h-4 mr-1" /> Kaydet</Button>
+                              <Button size="sm" variant="ghost" onClick={() => setEditingCompany(null)}>İptal</Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                                <Briefcase className="w-4 h-4 text-slate-500" />
+                              </div>
+                              <div>
+                                <p className="font-semibold text-sm">{comp.name}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setEditingCompany({ ...comp })}><Pencil className="w-4 h-4" /></Button>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500" onClick={() => { if(window.confirm('Bu firma silinsin mi?')) deleteCompanyMutation.mutate(comp.id); }}><Trash2 className="w-4 h-4" /></Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {companies?.length === 0 && <p className="text-sm text-muted-foreground text-center p-4">Henüz firma eklenmemiş.</p>}
                   </div>
                 )}
               </CardContent>

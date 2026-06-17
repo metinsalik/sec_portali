@@ -16,6 +16,9 @@ npx prisma generate
 # --accept-data-loss is used here to allow rapid development changes
 npx prisma db push --accept-data-loss
 
+echo "Seeding database..."
+npx prisma db seed
+
 echo "Starting application..."
 # Start the application
 exec node dist/index.js

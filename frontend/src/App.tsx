@@ -95,6 +95,7 @@ import FireEquipmentDetailPage from './pages/fire_equipment/FireEquipmentDetailP
 import FireEquipmentMaintenancePage from './pages/fire_equipment/FireEquipmentMaintenancePage';
 import FireEquipmentMaintenanceDashboardPage from './pages/fire_equipment/FireEquipmentMaintenanceDashboardPage';
 import FireEquipmentSettingsPage from './pages/fire_equipment/FireEquipmentSettingsPage';
+import QRScannerPage from './pages/fire_equipment/QRScannerPage';
 
 // Placeholder for future modules
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -725,6 +726,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <AppLayout><FireEquipmentSettingsPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/fire-equipment/scanner"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><QRScannerPage /></AppLayout>
                     </ProtectedRoute>
                   }
                 />

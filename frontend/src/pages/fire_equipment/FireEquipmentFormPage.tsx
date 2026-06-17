@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Flame, ArrowLeft, Save } from 'lucide-react';
+import { Flame, ArrowLeft, Save, Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export default function FireEquipmentFormPage() {
   const { id } = useParams();
@@ -22,18 +22,26 @@ export default function FireEquipmentFormPage() {
     qrCode: '',
     serialNo: '',
     brand: '',
-    model: '',
-    productionYear: '',
+    productionDate: '',
+    lastMaintenanceDate: '',
     categoryId: '',
     subcategoryId: 'none',
     locationId: '',
     capacity: '',
     standard: '',
     criticality: 'Orta',
-    responsibleId: 'none',
+    companyId: 'none',
     responsibleUnit: '',
     status: 'AKTIF'
   });
+
+  const locationHook = useLocation();
+  const searchParams = new URLSearchParams(locationHook.search);
+  const cloneId = searchParams.get('cloneId');
+
+  const [inventoryData, setInventoryData] = useState<any>({});
+  const [newCompanyName, setNewCompanyName] = useState('');
+  const [isCompanyDialogOpen, setIsCompanyDialogOpen] = useState(false);
 
   const { data: categories } = useQuery({
     queryKey: ['fire-categories'],
@@ -61,13 +69,29 @@ export default function FireEquipmentFormPage() {
     enabled: !!facilityId
   });
 
-  useQuery({
-    queryKey: ['fire-equipment', id],
+  const { data: companies } = useQuery({
+    queryKey: ['fire-companies', facilityId],
     queryFn: async () => {
-      if (!id) return null;
-      const res = await api.get(`/fire-equipment/equipment/detail/${id}`);
-      const data = await res.json();
-      
+      const res = await api.get(`/fire-equipment/companies/${facilityId}`);
+      return res.json();
+    },
+    enabled: !!facilityId
+  });
+
+  const { data: equipmentData, isSuccess } = useQuery({
+    queryKey: ['fire-equipment', id || cloneId],
+    queryFn: async () => {
+      const fetchId = id || cloneId;
+      if (!fetchId) return null;
+      const res = await api.get(`/fire-equipment/equipment/detail/${fetchId}`);
+      return res.json();
+    },
+    enabled: isEdit || !!cloneId
+  });
+
+  useEffect(() => {
+    if (isSuccess && equipmentData) {
+      const data = equipmentData;
       let catId = data.categoryId;
       let subCatId = 'none';
       if (data.category?.parentId) {
@@ -75,26 +99,47 @@ export default function FireEquipmentFormPage() {
         subCatId = data.category.id;
       }
 
-      setFormData({
-        ...data,
-        categoryId: catId,
-        subcategoryId: subCatId,
-        responsibleId: data.responsibleId || 'none',
-        productionYear: data.productionYear?.toString() || ''
-      });
-      return data;
-    },
-    enabled: isEdit
-  });
+      const prodDate = data.productionDate ? new Date(data.productionDate).toISOString().split('T')[0] : '';
+
+      if (cloneId) {
+        setFormData({
+          ...data,
+          equipmentNo: '',
+          qrCode: '',
+          locationId: '',
+          categoryId: catId,
+          subcategoryId: subCatId,
+          companyId: data.companyId || 'none',
+          responsibleUnit: data.responsibleUnit || '',
+          productionDate: prodDate,
+          id: undefined // Don't copy id
+        });
+      } else {
+        setFormData({
+          ...data,
+          categoryId: catId,
+          subcategoryId: subCatId,
+          companyId: data.companyId || 'none',
+          responsibleUnit: data.responsibleUnit || '',
+          productionDate: prodDate,
+          lastMaintenanceDate: data.inventoryData?.lastMaintenanceDate ? new Date(data.inventoryData.lastMaintenanceDate).toISOString().split('T')[0] : ''
+        });
+      }
+
+      if (data.inventoryData) {
+        setInventoryData(data.inventoryData);
+      }
+    }
+  }, [equipmentData, isSuccess, cloneId]);
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
-      const payload = { ...data };
+      const payload = { ...data, inventoryData };
       if (payload.subcategoryId !== 'none') {
         payload.categoryId = payload.subcategoryId;
       }
-      if (payload.responsibleId === 'none') {
-        payload.responsibleId = null;
+      if (payload.companyId === 'none') {
+        payload.companyId = null;
       }
       if (!payload.qrCode || payload.qrCode.trim() === '') {
         payload.qrCode = null;
@@ -116,6 +161,21 @@ export default function FireEquipmentFormPage() {
     }
   });
 
+  const createCompanyMutation = useMutation({
+    mutationFn: async () => {
+      return api.post(`/fire-equipment/companies/${facilityId}`, { name: newCompanyName });
+    },
+    onSuccess: (res: any) => {
+      toast.success('Firma başarıyla eklendi.');
+      queryClient.invalidateQueries({ queryKey: ['fire-companies', facilityId] });
+      setIsCompanyDialogOpen(false);
+      setNewCompanyName('');
+      res.json().then(data => {
+        setFormData(prev => ({ ...prev, companyId: data.id }));
+      });
+    }
+  });
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -128,12 +188,22 @@ export default function FireEquipmentFormPage() {
     }
   };
 
+  const handleInventoryDataChange = (name: string, value: string) => {
+    setInventoryData(prev => ({ ...prev, [name]: value }));
+  };
+
   const parentCategories = categories?.filter((c: any) => !c.parentId) || [];
   const activeSubcategories = formData.categoryId 
     ? categories?.find((c: any) => c.id === formData.categoryId)?.subcategories || []
     : [];
 
   const uniqueDepartments = Array.from(new Set(responsibles?.map((r: any) => r.department).filter(Boolean))) as string[];
+
+  const activeCategoryData = formData.subcategoryId !== 'none'
+    ? activeSubcategories.find((s: any) => s.id === formData.subcategoryId)
+    : categories?.find((c: any) => c.id === formData.categoryId);
+
+  const inventoryParams = activeCategoryData?.inventoryParameters || [];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,7 +243,7 @@ export default function FireEquipmentFormPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="qrCode">Barkod / QR Kod</Label>
-                <Input id="qrCode" name="qrCode" value={formData.qrCode || ''} onChange={handleChange} placeholder="Sisteme okutun..." />
+                <Input id="qrCode" name="qrCode" value={formData.qrCode || ''} onChange={handleChange} placeholder="Boş bırakılırsa otomatik üretilir" />
               </div>
             </div>
 
@@ -181,7 +251,7 @@ export default function FireEquipmentFormPage() {
               <div className="space-y-2">
                 <Label>Kategori *</Label>
                 <select 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
                   value={formData.categoryId || ''} 
                   onChange={(e) => handleSelectChange('categoryId', e.target.value)} 
                   required
@@ -195,7 +265,7 @@ export default function FireEquipmentFormPage() {
               <div className="space-y-2">
                 <Label>Alt Kategori</Label>
                 <select 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
                   value={formData.subcategoryId} 
                   onChange={(e) => handleSelectChange('subcategoryId', e.target.value)} 
                   disabled={!formData.categoryId || activeSubcategories.length === 0}
@@ -207,27 +277,87 @@ export default function FireEquipmentFormPage() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>Sorumlu Kişi</Label>
+                <Label>Sorumlu Departman</Label>
                 <select 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={formData.responsibleId} 
-                  onChange={(e) => handleSelectChange('responsibleId', e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.responsibleUnit || ''} 
+                  onChange={(e) => handleSelectChange('responsibleUnit', e.target.value)}
                 >
-                  <option value="none">Seçilmedi</option>
-                  {responsibles?.map((resp: any) => (
-                    <option key={resp.id} value={resp.id}>
-                      {resp.department ? `${resp.department} - ` : ''}{resp.name}
-                    </option>
+                  <option value="">Seçilmedi</option>
+                  {uniqueDepartments.map((dep, idx) => (
+                    <option key={idx} value={dep}>{dep}</option>
                   ))}
                 </select>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Dinamik Envanter Parametreleri */}
+            {inventoryParams.length > 0 && (
+              <div className="p-4 bg-muted/30 rounded-lg space-y-4 border">
+                <h3 className="font-semibold text-sm">Kategori Özellikleri</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {inventoryParams.map((param: any, idx: number) => (
+                    <div key={idx} className="space-y-2">
+                      <Label>{param.name}</Label>
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                        value={inventoryData[param.name] || ''}
+                        onChange={(e) => handleInventoryDataChange(param.name, e.target.value)}
+                      >
+                        <option value="">Seçiniz...</option>
+                        {param.options.map((opt: string, oidx: number) => (
+                          <option key={oidx} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <Label>Firma</Label>
+                <div className="flex gap-2">
+                  <select 
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
+                    value={formData.companyId} 
+                    onChange={(e) => handleSelectChange('companyId', e.target.value)}
+                  >
+                    <option value="none">Seçilmedi</option>
+                    {companies?.map((comp: any) => (
+                      <option key={comp.id} value={comp.id}>{comp.name}</option>
+                    ))}
+                  </select>
+                  <Dialog open={isCompanyDialogOpen} onOpenChange={setIsCompanyDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="icon" type="button"><Plus className="w-4 h-4" /></Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Yeni Firma Ekle</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 pt-4">
+                        <div className="space-y-2">
+                          <Label>Firma Adı</Label>
+                          <Input value={newCompanyName} onChange={(e) => setNewCompanyName(e.target.value)} placeholder="Örn: X Yangın Söndürme" />
+                        </div>
+                        <Button 
+                          className="w-full" 
+                          onClick={() => createCompanyMutation.mutate()} 
+                          disabled={!newCompanyName || createCompanyMutation.isPending}
+                        >
+                          Kaydet
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label>Durum *</Label>
                 <select 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
                   value={formData.status} 
                   onChange={(e) => handleSelectChange('status', e.target.value)} 
                   required
@@ -243,17 +373,16 @@ export default function FireEquipmentFormPage() {
               <div className="space-y-2">
                 <Label>Lokasyon (İlk Kayıt)</Label>
                 <select 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
                   value={formData.locationId || ''} 
                   onChange={(e) => handleSelectChange('locationId', e.target.value)} 
                   disabled={isEdit}
                 >
                   <option value="" disabled>Seçiniz...</option>
                   {locations?.map((loc: any) => (
-                    <option key={loc.id} value={loc.id}>{loc.building} - {loc.floor} ({loc.description})</option>
+                    <option key={loc.id} value={loc.id}>{`${loc.building}${loc.floor ? ` / ${loc.floor}` : ''}${loc.department ? ` - ${loc.department}` : ''}${loc.description ? ` (${loc.description})` : ''}`}</option>
                   ))}
                 </select>
-                {isEdit && <p className="text-xs text-muted-foreground">Lokasyon değiştirmek için hareket geçmişini kullanın.</p>}
               </div>
             </div>
 
@@ -267,30 +396,13 @@ export default function FireEquipmentFormPage() {
                 <Input id="model" name="model" value={formData.model || ''} onChange={handleChange} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="productionYear">Üretim Yılı</Label>
-                <Input id="productionYear" name="productionYear" type="number" value={formData.productionYear || ''} onChange={handleChange} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="capacity">Kapasite (Örn: 6kg)</Label>
-                <Input id="capacity" name="capacity" value={formData.capacity || ''} onChange={handleChange} />
+                <Label htmlFor="productionDate">İmal Tarihi</Label>
+                <Input type="date" id="productionDate" name="productionDate" value={formData.productionDate} onChange={handleChange} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="responsibleUnit">Sorumlu Birim</Label>
-                <select 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={formData.responsibleUnit || ''} 
-                  onChange={(e) => handleChange(e as any)}
-                  name="responsibleUnit"
-                  id="responsibleUnit"
-                >
-                  <option value="">Seçiniz...</option>
-                  {uniqueDepartments.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
-                </select>
+                <Label htmlFor="lastMaintenanceDate">Son Bakım Tarihi <span className="text-muted-foreground text-xs font-normal">(İlk kayıt için)</span></Label>
+                <Input type="date" id="lastMaintenanceDate" name="lastMaintenanceDate" value={formData.lastMaintenanceDate || ''} onChange={handleChange} />
+                <p className="text-[10px] text-muted-foreground">Girilirse sonraki bakım otomatik hesaplanır.</p>
               </div>
             </div>
 

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -5,7 +6,7 @@ import {
   Shield, LayoutDashboard, Building2, Users, Briefcase, UserCheck,
   ClipboardList, FileText, Settings, Bell, ChevronDown, LogOut,
   User, BarChart3, ChevronRight, LayoutGrid, Database, Users2, Mail,
-  BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame, PenTool
+  BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame, PenTool, Menu, X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -124,6 +125,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Route'a göre sidebar menüsünü belirle
   const path = location.pathname;
@@ -162,10 +164,21 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden">
+      {/* Mobile/Tablet Backdrop */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-card border-r flex flex-col shrink-0 shadow-sm">
+      <aside className={cn(
+        "w-64 bg-card border-r flex flex-col shrink-0 shadow-sm fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 print:hidden",
+        isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
         {/* Logo & Module Name */}
-        <div className="h-16 flex flex-col justify-center px-5 border-b">
+        <div className="h-16 flex flex-col justify-center px-5 border-b relative">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 flex items-center justify-center">
               <img src="/mlpcare.jpg" alt="MLP Care Logo" className="w-full h-full object-contain rounded" />
@@ -200,6 +213,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 key={item.label + '-' + i}
                 to={item.to!}
                 end={!!(item as any).end}
+                onClick={() => setIsSidebarOpen(false)}
                 className={({ isActive }) =>
                   cn(
                     'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors group',
@@ -250,10 +264,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-muted/20">
+      <div className="flex-1 flex flex-col overflow-hidden bg-muted/20 print:bg-white">
         {/* Top Header */}
-        <header className="h-16 bg-card border-b flex items-center justify-between px-6 shrink-0">
-          <div className="flex items-center gap-4">
+        <header className="h-16 bg-card border-b flex items-center justify-between px-4 lg:px-6 shrink-0 print:hidden">
+          <div className="flex items-center gap-2 lg:gap-4">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setIsSidebarOpen(true)}
+              className="lg:hidden"
+            >
+              <Menu className="w-5 h-5" />
+            </Button>
             <Button 
               variant="outline" 
               size="sm" 
@@ -290,7 +312,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-6 print:p-0 print:overflow-visible">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>
