@@ -92,7 +92,12 @@ const COL_MAP: Record<string, string> = {
 };
 
 function normalizeHeader(h: string): string {
-  return h.toLowerCase().trim().replace(/\s+/g, ' ');
+  return h
+    .replace(/İ/g, 'i')
+    .replace(/I/g, 'ı')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ');
 }
 
 export default function RiskExcelImport({ facilityId, departmentName, areaName, onClose, onSuccess }: Props) {
