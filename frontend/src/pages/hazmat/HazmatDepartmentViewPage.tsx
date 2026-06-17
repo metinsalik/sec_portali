@@ -29,14 +29,6 @@ export default function HazmatDepartmentViewPage() {
     enabled: !!id && !!activeFacilityId
   });
 
-  if (isLoading) {
-    return <div className="p-8 text-center text-muted-foreground">Yükleniyor...</div>;
-  }
-
-  if (!data?.department) {
-    return <div className="p-8 text-center text-red-500">Departman bulunamadı.</div>;
-  }
-
   const deleteMutation = useMutation({
     mutationFn: async (itemId: string) => {
       const res = await api.delete(`/hazmat/inventory/${itemId}`);
@@ -57,6 +49,14 @@ export default function HazmatDepartmentViewPage() {
       deleteMutation.mutate(itemId);
     }
   };
+
+  if (isLoading) {
+    return <div className="p-8 text-center text-muted-foreground">Yükleniyor...</div>;
+  }
+
+  if (!data?.department) {
+    return <div className="p-8 text-center text-red-500">Departman bulunamadı.</div>;
+  }
 
   const { department, inventoryItems = [] } = data;
 
