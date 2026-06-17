@@ -87,6 +87,13 @@ import EyewashRiskAnalysisViewPage from './pages/hazmat/EyewashRiskAnalysisViewP
 import EyewashRiskAnalysisReportPage from './pages/hazmat/EyewashRiskAnalysisReportPage';
 import HazmatIncidentsPage from './pages/hazmat/HazmatIncidentsPage';
 
+// Fire Equipment
+import FireEquipmentDashboard from './pages/fire_equipment/FireEquipmentDashboard';
+import FireEquipmentListPage from './pages/fire_equipment/FireEquipmentListPage';
+import FireEquipmentFormPage from './pages/fire_equipment/FireEquipmentFormPage';
+import FireEquipmentDetailPage from './pages/fire_equipment/FireEquipmentDetailPage';
+import FireEquipmentMaintenancePage from './pages/fire_equipment/FireEquipmentMaintenancePage';
+
 // Placeholder for future modules
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="flex flex-col items-center justify-center h-64 bg-card rounded-2xl border-2 border-dashed border-border">
@@ -646,6 +653,60 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <AppLayout><HazmatKitItemsPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* ── FIRE EQUIPMENT (YANGIN EKİPMANLARI) ─────────── */}
+                <Route
+                  path="/fire-equipment"
+                  element={<Navigate to="/fire-equipment/dashboard" replace />}
+                />
+                <Route
+                  path="/fire-equipment/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><FireEquipmentDashboard /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/fire-equipment/list"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><FireEquipmentListPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/fire-equipment/new"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><FireEquipmentFormPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/fire-equipment/edit/:id"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><FireEquipmentFormPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/fire-equipment/view/:id"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><FireEquipmentDetailPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/fire-equipment/maintenance/:id"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><FireEquipmentMaintenancePage /></AppLayout>
                     </ProtectedRoute>
                   }
                 />

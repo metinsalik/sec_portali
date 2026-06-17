@@ -15,6 +15,7 @@ import incidentRoutes from './routes/incidents';
 import workflowRoutes from './routes/workflow';
 import riskRoutes from './routes/risks';
 import hazmatRoutes from './routes/hazmat';
+import fireEquipmentRoutes from './routes/fire_equipment';
 
 // Middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
@@ -49,6 +50,7 @@ app.use('/api/incidents', incidentRoutes);
 app.use('/api/workflow', workflowRoutes);
 app.use('/api/risks', riskRoutes);
 app.use('/api/hazmat', hazmatRoutes);
+app.use('/api/fire-equipment', fireEquipmentRoutes);
 
 // Sağlık kontrolü
 app.get('/health', (req, res) => {

@@ -27,8 +27,9 @@ export const DepartmentPrintTable = forwardRef<HTMLDivElement, DepartmentPrintTa
     <div ref={ref} className="bg-white text-black p-2 text-[10px] w-full" style={{ fontFamily: 'Arial, sans-serif' }}>
       <style>{`
         @page { size: landscape; margin: 10mm; }
-        table { page-break-inside: auto; }
+        table { page-break-inside: auto; table-layout: fixed; width: 100%; word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; }
         tr { page-break-inside: avoid; page-break-after: auto; }
+        td, th { word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; }
         thead { display: table-header-group; }
         .vert-col { width: 3%; }
       `}</style>
@@ -117,18 +118,42 @@ export const DepartmentPrintTable = forwardRef<HTMLDivElement, DepartmentPrintTa
                 <td className="border border-slate-800 p-1 align-middle text-center">(-)</td>
                 <td className="border border-slate-800 p-1 align-middle text-center">
                   <div className="flex flex-col gap-1 items-center justify-center">
-                    {m.hazardLabels?.map((hl: any, i: number) => (
-                       <div key={i} className="flex flex-col items-center p-0.5 bg-white border border-slate-200">
-                         {hl.label?.imageUrl ? (
-                           <img src={getAbsoluteUrl(hl.label.imageUrl)} alt={hl.label.name} className="w-10 h-10 object-contain" />
-                         ) : (
-                           <span className="font-bold text-[8px] uppercase">{hl.label?.code}</span>
-                         )}
-                         <span className="text-[6px] font-bold text-red-600 mt-0.5 max-w-[40px] text-center leading-tight">
+                    {m.adrLabels && m.adrLabels.length > 0 ? (
+                      m.adrLabels.map((al: any, i: number) => (
+                        <div key={i} className="flex flex-col items-center p-0.5 bg-white border border-slate-200">
+                          {al.label?.imageUrl ? (
+                            <img src={getAbsoluteUrl(al.label.imageUrl)} alt={al.label.name} className="w-10 h-10 object-contain" />
+                          ) : (
+                            <span className="font-bold text-[8px] uppercase">{al.label?.code}</span>
+                          )}
+                          <span className="text-[6px] font-bold text-red-600 mt-0.5 max-w-[40px] text-center leading-tight">
+                            {al.label?.name}
+                          </span>
+                        </div>
+                      ))
+                    ) : m.hazardLabels && m.hazardLabels.length > 0 ? (
+                      m.hazardLabels.map((hl: any, i: number) => (
+                        <div key={i} className="flex flex-col items-center p-0.5 bg-white border border-slate-200">
+                          {hl.label?.imageUrl ? (
+                            <img src={getAbsoluteUrl(hl.label.imageUrl)} alt={hl.label.name} className="w-10 h-10 object-contain" />
+                          ) : (
+                            <span className="font-bold text-[8px] uppercase">{hl.label?.code}</span>
+                          )}
+                          <span className="text-[6px] font-bold text-red-600 mt-0.5 max-w-[40px] text-center leading-tight">
                             {hl.label?.name}
-                         </span>
-                       </div>
-                    ))}
+                          </span>
+                        </div>
+                      ))
+                    ) : m.imageUrl ? (
+                      <div className="flex flex-col items-center p-0.5 bg-white border border-slate-200">
+                        <img src={getAbsoluteUrl(m.imageUrl)} alt={m.productName} className="w-12 h-12 object-contain" />
+                        <span className="text-[6px] font-bold text-slate-600 mt-0.5 max-w-[40px] text-center leading-tight">
+                          Ürün Görseli
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 text-xs">-</span>
+                    )}
                   </div>
                 </td>
               </tr>

@@ -85,22 +85,24 @@ model Facility {
   hazmatInventoryItems   HazmatInventoryItem[]
   hazmatEyewashAnalyses  HazmatEyewashRiskAnalysis[]
   hazmatIncidents        HazmatIncident[]
+  fireEquipments         FireEquipment[]
+  fireEquipmentLocations FireEquipmentLocation[]
 }
 
 model IncidentCategory {
-  id              Int                     @id @default(autoincrement())
-  name            String                  @unique
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
-  incidents       ExtraordinaryIncident[]
+  id        Int                     @id @default(autoincrement())
+  name      String                  @unique
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  incidents ExtraordinaryIncident[]
 }
 
 model IncidentRootCause {
-  id              Int                     @id @default(autoincrement())
-  name            String                  @unique
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
-  incidents       ExtraordinaryIncident[]
+  id        Int                     @id @default(autoincrement())
+  name      String                  @unique
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  incidents ExtraordinaryIncident[]
 }
 
 model IncidentSupportUnit {
@@ -614,13 +616,13 @@ model RiskExpertFacility {
 }
 
 model RiskDepartment {
-  id         Int             @id @default(autoincrement())
+  id         Int                  @id @default(autoincrement())
   facilityId String
   name       String
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
   code       String?
-  facility   Facility        @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  facility   Facility             @relation(fields: [facilityId], references: [id], onDelete: Cascade)
   risks      RiskLifecycle[]
   areas      RiskDepartmentArea[]
 
@@ -794,7 +796,7 @@ model HazmatCategory {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  materials HazmatMaterial[]
+  materials       HazmatMaterial[]
   hazmatIncidents HazmatIncident[]
 }
 
@@ -1140,4 +1142,101 @@ model HazmatIncident {
   materials     HazmatMaterial[]
 
   @@index([facilityId])
+}
+
+// --- FIRE EQUIPMENT MODULE (FireTrack 360) ---
+
+model FireEquipmentCategory {
+  id          String   @id @default(uuid())
+  name        String // Yangın Tüpü, Yangın Dolabı, vb.
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  equipments FireEquipment[]
+}
+
+model FireEquipmentLocation {
+  id          String   @id @default(uuid())
+  facilityId  String
+  building    String? // Bina
+  block       String? // Blok
+  floor       String? // Kat
+  department  String? // Bölüm
+  description String? // Konum Açıklaması
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  facility   Facility        @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  equipments FireEquipment[]
+
+  @@index([facilityId])
+}
+
+model FireEquipment {
+  id             String  @id @default(uuid())
+  equipmentNo    String  @unique // Ekipman No
+  qrCode         String? @unique // Barkod / QR Kod
+  serialNo       String? // Seri No
+  brand          String? // Marka
+  model          String? // Model
+  productionYear Int? // Üretim Yılı
+
+  categoryId String
+  locationId String?
+  facilityId String
+
+  capacity        String? // Kapasite (Örn: 6kg)
+  standard        String? // Standart
+  criticality     String? // Kritiklik Seviyesi (Düşük, Orta, Yüksek)
+  responsibleUnit String? // Sorumlu Birim
+
+  status String @default("AKTIF") // AKTIF, DEPODA, ARIZALI, HURDA, KULLANIM_DISI
+
+  nextMaintenanceDate DateTime? // Sonraki Bakım Tarihi
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category FireEquipmentCategory  @relation(fields: [categoryId], references: [id])
+  location FireEquipmentLocation? @relation(fields: [locationId], references: [id])
+  facility Facility               @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  movements    FireEquipmentMovement[]
+  maintenances FireEquipmentMaintenance[]
+
+  @@index([facilityId])
+}
+
+model FireEquipmentMovement {
+  id            String   @id @default(uuid())
+  equipmentId   String
+  oldLocationId String?
+  newLocationId String?
+  reason        String?
+  movedBy       String // İşlemi Yapan Kişi (username)
+  description   String?
+  movementDate  DateTime @default(now())
+
+  equipment FireEquipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@index([equipmentId])
+}
+
+model FireEquipmentMaintenance {
+  id              String   @id @default(uuid())
+  equipmentId     String
+  maintenanceDate DateTime
+  company         String? // Firma
+  technician      String? // Teknisyen
+  result          String // UYGUN, SARTLI_UYGUN, UYGUN_DEGIL
+  description     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  equipment FireEquipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@index([equipmentId])
 }
