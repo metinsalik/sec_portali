@@ -133,6 +133,8 @@ export default function FireEquipmentFormPage() {
     ? categories?.find((c: any) => c.id === formData.categoryId)?.subcategories || []
     : [];
 
+  const uniqueDepartments = Array.from(new Set(responsibles?.map((r: any) => r.department).filter(Boolean))) as string[];
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.equipmentNo || !formData.categoryId) {
@@ -206,49 +208,51 @@ export default function FireEquipmentFormPage() {
               </div>
               <div className="space-y-2">
                 <Label>Sorumlu Kişi</Label>
-                <Select value={formData.responsibleId} onValueChange={(val) => handleSelectChange('responsibleId', val)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seçiniz..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Seçilmedi</SelectItem>
-                    {responsibles?.map((resp: any) => (
-                      <SelectItem key={resp.id} value={resp.id}>
-                        {resp.department ? `${resp.department} - ` : ''}{resp.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.responsibleId} 
+                  onChange={(e) => handleSelectChange('responsibleId', e.target.value)}
+                >
+                  <option value="none">Seçilmedi</option>
+                  {responsibles?.map((resp: any) => (
+                    <option key={resp.id} value={resp.id}>
+                      {resp.department ? `${resp.department} - ` : ''}{resp.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label>Durum *</Label>
-                <Select value={formData.status} onValueChange={(val) => handleSelectChange('status', val)} required>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="AKTIF">Aktif</SelectItem>
-                    <SelectItem value="DEGISIME_GIDEN">Değişime Giden</SelectItem>
-                    <SelectItem value="ARIZALI">Arızalı</SelectItem>
-                    <SelectItem value="HURDA">Hurdaya Çıkan</SelectItem>
-                    <SelectItem value="KULLANIM_DISI">Kullanım Dışı</SelectItem>
-                    <SelectItem value="DEPODA">Depoda</SelectItem>
-                  </SelectContent>
-                </Select>
+                <select 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.status} 
+                  onChange={(e) => handleSelectChange('status', e.target.value)} 
+                  required
+                >
+                  <option value="AKTIF">Aktif</option>
+                  <option value="DEGISIME_GIDEN">Değişime Giden</option>
+                  <option value="ARIZALI">Arızalı</option>
+                  <option value="HURDA">Hurdaya Çıkan</option>
+                  <option value="KULLANIM_DISI">Kullanım Dışı</option>
+                  <option value="DEPODA">Depoda</option>
+                </select>
               </div>
               <div className="space-y-2">
                 <Label>Lokasyon (İlk Kayıt)</Label>
-                <Select value={formData.locationId || ''} onValueChange={(val) => handleSelectChange('locationId', val)} disabled={isEdit}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seçiniz..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locations?.map((loc: any) => (
-                      <SelectItem key={loc.id} value={loc.id}>{loc.building} - {loc.floor} ({loc.description})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.locationId || ''} 
+                  onChange={(e) => handleSelectChange('locationId', e.target.value)} 
+                  disabled={isEdit}
+                >
+                  <option value="" disabled>Seçiniz...</option>
+                  {locations?.map((loc: any) => (
+                    <option key={loc.id} value={loc.id}>{loc.building} - {loc.floor} ({loc.description})</option>
+                  ))}
+                </select>
                 {isEdit && <p className="text-xs text-muted-foreground">Lokasyon değiştirmek için hareket geçmişini kullanın.</p>}
               </div>
             </div>
@@ -275,7 +279,18 @@ export default function FireEquipmentFormPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="responsibleUnit">Sorumlu Birim</Label>
-                <Input id="responsibleUnit" name="responsibleUnit" value={formData.responsibleUnit || ''} onChange={handleChange} />
+                <select 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.responsibleUnit || ''} 
+                  onChange={(e) => handleChange(e as any)}
+                  name="responsibleUnit"
+                  id="responsibleUnit"
+                >
+                  <option value="">Seçiniz...</option>
+                  {uniqueDepartments.map(dept => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))}
+                </select>
               </div>
             </div>
 

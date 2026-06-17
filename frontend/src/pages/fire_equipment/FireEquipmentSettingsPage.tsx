@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Settings, FolderTree, MapPin, Plus, Trash2, Users, Pencil, X, Check } from 'lucide-react';
+import { Settings, FolderTree, MapPin, Plus, Trash2, Users, Pencil, X, Check, ChevronDown, ChevronRight } from 'lucide-react';
 
 export default function FireEquipmentSettingsPage() {
   const facilityId = localStorage.getItem('activeFacilityId');
@@ -21,6 +21,9 @@ export default function FireEquipmentSettingsPage() {
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [editingLocation, setEditingLocation] = useState<any>(null);
   const [editingResponsible, setEditingResponsible] = useState<any>(null);
+
+  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
+  const toggleCat = (id: string) => setExpandedCats(prev => ({ ...prev, [id]: !prev[id] }));
 
   // Kategoriler
   const { data: categories, isLoading: isCatLoading } = useQuery({
@@ -265,14 +268,21 @@ export default function FireEquipmentSettingsPage() {
                             </div>
                           ) : (
                             <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-semibold text-sm flex items-center gap-2">
-                                  {cat.name}
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {cat.description || 'Açıklama yok'} 
-                                  {cat.maintenanceFrequency && <span className="ml-2 font-medium text-blue-600 bg-blue-50 px-1.5 rounded border border-blue-100">Periyot: {cat.maintenanceFrequency.replace('_', ' ')}</span>}
-                                </p>
+                              <div className="flex items-center gap-2 cursor-pointer" onClick={() => toggleCat(cat.id)}>
+                                {categories?.filter((subCat: any) => subCat.parentId === cat.id).length > 0 ? (
+                                  expandedCats[cat.id] ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                                ) : (
+                                  <div className="w-4 h-4" />
+                                )}
+                                <div>
+                                  <p className="font-semibold text-sm flex items-center gap-2 hover:text-blue-600 transition-colors">
+                                    {cat.name}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {cat.description || 'Açıklama yok'} 
+                                    {cat.maintenanceFrequency && <span className="ml-2 font-medium text-blue-600 bg-blue-50 px-1.5 rounded border border-blue-100">Periyot: {cat.maintenanceFrequency.replace('_', ' ')}</span>}
+                                  </p>
+                                </div>
                               </div>
                               <div className="flex gap-1">
                                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setEditingCategory({ ...cat, parentId: cat.parentId || 'none', maintenanceFrequency: cat.maintenanceFrequency || 'none' })}><Pencil className="w-4 h-4" /></Button>
@@ -283,7 +293,7 @@ export default function FireEquipmentSettingsPage() {
                         </div>
                         
                         {/* Alt Kategoriler */}
-                        {categories?.filter((subCat: any) => subCat.parentId === cat.id).length > 0 && (
+                        {expandedCats[cat.id] && categories?.filter((subCat: any) => subCat.parentId === cat.id).length > 0 && (
                           <div className="pl-6 space-y-2 border-l-2 border-slate-100 dark:border-slate-800 ml-4">
                             {categories?.filter((subCat: any) => subCat.parentId === cat.id).map((subCat: any) => (
                               <div key={subCat.id} className="p-2 border rounded-lg bg-slate-50 dark:bg-slate-800/50">
