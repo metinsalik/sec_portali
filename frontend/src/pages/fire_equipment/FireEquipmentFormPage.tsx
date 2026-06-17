@@ -96,6 +96,9 @@ export default function FireEquipmentFormPage() {
       if (payload.responsibleId === 'none') {
         payload.responsibleId = null;
       }
+      if (!payload.qrCode || payload.qrCode.trim() === '') {
+        payload.qrCode = null;
+      }
 
       if (isEdit) {
         return api.put(`/fire-equipment/equipment/${id}`, payload);
@@ -175,30 +178,31 @@ export default function FireEquipmentFormPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <Label>Kategori *</Label>
-                <Select value={formData.categoryId || ''} onValueChange={(val) => handleSelectChange('categoryId', val)} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seçiniz..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {parentCategories.map((cat: any) => (
-                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.categoryId || ''} 
+                  onChange={(e) => handleSelectChange('categoryId', e.target.value)} 
+                  required
+                >
+                  <option value="" disabled>Seçiniz...</option>
+                  {parentCategories.map((cat: any) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-2">
                 <Label>Alt Kategori</Label>
-                <Select value={formData.subcategoryId} onValueChange={(val) => handleSelectChange('subcategoryId', val)} disabled={!formData.categoryId || activeSubcategories.length === 0}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Alt Kategori Seçiniz..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Seçilmedi</SelectItem>
-                    {activeSubcategories.map((cat: any) => (
-                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.subcategoryId} 
+                  onChange={(e) => handleSelectChange('subcategoryId', e.target.value)} 
+                  disabled={!formData.categoryId || activeSubcategories.length === 0}
+                >
+                  <option value="none">Seçilmedi</option>
+                  {activeSubcategories.map((cat: any) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-2">
                 <Label>Sorumlu Kişi</Label>

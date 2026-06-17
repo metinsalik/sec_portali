@@ -240,49 +240,95 @@ export default function FireEquipmentSettingsPage() {
               </CardHeader>
               <CardContent>
                 {isCatLoading ? <p>Yükleniyor...</p> : (
-                  <div className="space-y-3">
-                    {categories?.map((cat: any) => (
-                      <div key={cat.id} className="p-3 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        {editingCategory?.id === cat.id ? (
-                          <div className="space-y-3">
-                            <Input value={editingCategory.name} onChange={e => setEditingCategory({...editingCategory, name: e.target.value})} placeholder="Adı" />
-                            <Input value={editingCategory.description || ''} onChange={e => setEditingCategory({...editingCategory, description: e.target.value})} placeholder="Açıklama" />
-                            <select 
-                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                              value={editingCategory.parentId || 'none'} 
-                              onChange={e => setEditingCategory({...editingCategory, parentId: e.target.value})}
-                            >
-                              <option value="none">Ana Kategori</option>
-                              {categories.filter((c:any) => c.id !== cat.id).map((c: any) => (
-                                <option key={c.id} value={c.id}>{c.name}</option>
-                              ))}
-                            </select>
-                            <div className="flex gap-2">
-                              <Button size="sm" onClick={() => updateCategoryMutation.mutate(editingCategory)}><Check className="w-4 h-4 mr-1" /> Kaydet</Button>
-                              <Button size="sm" variant="ghost" onClick={() => setEditingCategory(null)}>İptal</Button>
+                  <div className="space-y-4">
+                    {categories?.filter((c: any) => !c.parentId).map((cat: any) => (
+                      <div key={cat.id} className="space-y-2">
+                        <div className="p-3 border rounded-lg bg-white dark:bg-slate-900 shadow-sm">
+                          {editingCategory?.id === cat.id ? (
+                            <div className="space-y-3">
+                              <Input value={editingCategory.name} onChange={e => setEditingCategory({...editingCategory, name: e.target.value})} placeholder="Adı" />
+                              <Input value={editingCategory.description || ''} onChange={e => setEditingCategory({...editingCategory, description: e.target.value})} placeholder="Açıklama" />
+                              <select 
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                value={editingCategory.parentId || 'none'} 
+                                onChange={e => setEditingCategory({...editingCategory, parentId: e.target.value})}
+                              >
+                                <option value="none">Ana Kategori</option>
+                                {categories.filter((c:any) => c.id !== cat.id && !c.parentId).map((c: any) => (
+                                  <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                              </select>
+                              <div className="flex gap-2">
+                                <Button size="sm" onClick={() => updateCategoryMutation.mutate(editingCategory)}><Check className="w-4 h-4 mr-1" /> Kaydet</Button>
+                                <Button size="sm" variant="ghost" onClick={() => setEditingCategory(null)}>İptal</Button>
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-semibold text-sm flex items-center gap-2">
-                                {cat.name} 
-                                {cat.parentId && <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border">Alt Kategori</span>}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {cat.description || 'Açıklama yok'} 
-                                {cat.maintenanceFrequency && <span className="ml-2 font-medium text-blue-600 bg-blue-50 px-1.5 rounded">Periyot: {cat.maintenanceFrequency.replace('_', ' ')}</span>}
-                              </p>
+                          ) : (
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-semibold text-sm flex items-center gap-2">
+                                  {cat.name}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {cat.description || 'Açıklama yok'} 
+                                  {cat.maintenanceFrequency && <span className="ml-2 font-medium text-blue-600 bg-blue-50 px-1.5 rounded border border-blue-100">Periyot: {cat.maintenanceFrequency.replace('_', ' ')}</span>}
+                                </p>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setEditingCategory({ ...cat, parentId: cat.parentId || 'none', maintenanceFrequency: cat.maintenanceFrequency || 'none' })}><Pencil className="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500" onClick={() => { if(window.confirm('Kategori silinsin mi?')) deleteCategoryMutation.mutate(cat.id); }}><Trash2 className="w-4 h-4" /></Button>
+                              </div>
                             </div>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setEditingCategory({ ...cat, parentId: cat.parentId || 'none', maintenanceFrequency: cat.maintenanceFrequency || 'none' })}><Pencil className="w-4 h-4" /></Button>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500" onClick={() => { if(window.confirm('Kategori silinsin mi?')) deleteCategoryMutation.mutate(cat.id); }}><Trash2 className="w-4 h-4" /></Button>
-                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Alt Kategoriler */}
+                        {categories?.filter((subCat: any) => subCat.parentId === cat.id).length > 0 && (
+                          <div className="pl-6 space-y-2 border-l-2 border-slate-100 dark:border-slate-800 ml-4">
+                            {categories?.filter((subCat: any) => subCat.parentId === cat.id).map((subCat: any) => (
+                              <div key={subCat.id} className="p-2 border rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                                {editingCategory?.id === subCat.id ? (
+                                  <div className="space-y-3">
+                                    <Input value={editingCategory.name} onChange={e => setEditingCategory({...editingCategory, name: e.target.value})} placeholder="Adı" />
+                                    <Input value={editingCategory.description || ''} onChange={e => setEditingCategory({...editingCategory, description: e.target.value})} placeholder="Açıklama" />
+                                    <select 
+                                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                      value={editingCategory.parentId || 'none'} 
+                                      onChange={e => setEditingCategory({...editingCategory, parentId: e.target.value})}
+                                    >
+                                      <option value="none">Ana Kategori</option>
+                                      {categories.filter((c:any) => c.id !== subCat.id && !c.parentId).map((c: any) => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                      ))}
+                                    </select>
+                                    <div className="flex gap-2">
+                                      <Button size="sm" onClick={() => updateCategoryMutation.mutate(editingCategory)}><Check className="w-4 h-4 mr-1" /> Kaydet</Button>
+                                      <Button size="sm" variant="ghost" onClick={() => setEditingCategory(null)}>İptal</Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <p className="font-semibold text-sm flex items-center gap-2">
+                                        <span className="text-muted-foreground">↳</span> {subCat.name}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground mt-1 ml-4">
+                                        {subCat.description || 'Açıklama yok'} 
+                                      </p>
+                                    </div>
+                                    <div className="flex gap-1">
+                                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditingCategory({ ...subCat, parentId: subCat.parentId || 'none', maintenanceFrequency: subCat.maintenanceFrequency || 'none' })}><Pencil className="w-3.5 h-3.5" /></Button>
+                                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500" onClick={() => { if(window.confirm('Alt kategori silinsin mi?')) deleteCategoryMutation.mutate(subCat.id); }}><Trash2 className="w-3.5 h-3.5" /></Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
                     ))}
-                    {categories?.length === 0 && <p className="text-sm text-muted-foreground text-center p-4">Henüz kategori eklenmemiş.</p>}
+                    {categories?.filter((c: any) => !c.parentId).length === 0 && <p className="text-sm text-muted-foreground text-center p-4">Henüz kategori eklenmemiş.</p>}
                   </div>
                 )}
               </CardContent>
