@@ -1183,6 +1183,7 @@ model FireEquipmentLocation {
 model FireEquipmentResponsible {
   id         String   @id @default(uuid())
   facilityId String
+  department String?  // Departman
   name       String
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())

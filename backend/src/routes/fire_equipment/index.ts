@@ -36,6 +36,35 @@ router.post('/categories', async (req, res) => {
   }
 });
 
+router.put('/categories/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, parentId, maintenanceFrequency } = req.body;
+    const category = await prisma.fireEquipmentCategory.update({
+      where: { id },
+      data: { name, description, parentId, maintenanceFrequency }
+    });
+    res.json(category);
+  } catch (error) {
+    console.error('Error updating category:', error);
+    res.status(500).json({ error: 'Kategori güncellenemedi.' });
+  }
+});
+
+router.delete('/categories/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.fireEquipmentCategory.update({
+      where: { id },
+      data: { isActive: false }
+    });
+    res.json({ message: 'Kategori silindi.' });
+  } catch (error) {
+    console.error('Error deleting category:', error);
+    res.status(500).json({ error: 'Kategori silinemedi.' });
+  }
+});
+
 // --- RESPONSIBLES ---
 router.get('/responsibles/:facilityId', async (req, res) => {
   try {
@@ -54,14 +83,29 @@ router.get('/responsibles/:facilityId', async (req, res) => {
 router.post('/responsibles/:facilityId', async (req, res) => {
   try {
     const { facilityId } = req.params;
-    const { name } = req.body;
+    const { name, department } = req.body;
     const responsible = await prisma.fireEquipmentResponsible.create({
-      data: { facilityId, name }
+      data: { facilityId, name, department }
     });
     res.status(201).json(responsible);
   } catch (error) {
     console.error('Error creating responsible:', error);
     res.status(500).json({ error: 'Sorumlu oluşturulamadı.' });
+  }
+});
+
+router.put('/responsibles/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, department } = req.body;
+    const responsible = await prisma.fireEquipmentResponsible.update({
+      where: { id },
+      data: { name, department }
+    });
+    res.json(responsible);
+  } catch (error) {
+    console.error('Error updating responsible:', error);
+    res.status(500).json({ error: 'Sorumlu güncellenemedi.' });
   }
 });
 
@@ -119,6 +163,35 @@ router.post('/locations/:facilityId', async (req, res) => {
   } catch (error) {
     console.error('Error creating location:', error);
     res.status(500).json({ error: 'Lokasyon oluşturulamadı.' });
+  }
+});
+
+router.put('/locations/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { building, block, floor, department, description } = req.body;
+    const location = await prisma.fireEquipmentLocation.update({
+      where: { id },
+      data: { building, block, floor, department, description }
+    });
+    res.json(location);
+  } catch (error) {
+    console.error('Error updating location:', error);
+    res.status(500).json({ error: 'Lokasyon güncellenemedi.' });
+  }
+});
+
+router.delete('/locations/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.fireEquipmentLocation.update({
+      where: { id },
+      data: { isActive: false }
+    });
+    res.json({ message: 'Lokasyon silindi.' });
+  } catch (error) {
+    console.error('Error deleting location:', error);
+    res.status(500).json({ error: 'Lokasyon silinemedi.' });
   }
 });
 

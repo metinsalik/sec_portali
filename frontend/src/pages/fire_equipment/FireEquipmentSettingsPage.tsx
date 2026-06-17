@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Settings, FolderTree, MapPin, Plus, Trash2, Users } from 'lucide-react';
+import { Settings, FolderTree, MapPin, Plus, Trash2, Users, Pencil, X, Check } from 'lucide-react';
 
 export default function FireEquipmentSettingsPage() {
   const facilityId = localStorage.getItem('activeFacilityId');
@@ -16,7 +16,11 @@ export default function FireEquipmentSettingsPage() {
 
   const [newCategory, setNewCategory] = useState({ name: '', description: '', parentId: 'none', maintenanceFrequency: 'none' });
   const [newLocation, setNewLocation] = useState({ building: '', floor: '', description: '' });
-  const [newResponsible, setNewResponsible] = useState({ name: '' });
+  const [newResponsible, setNewResponsible] = useState({ name: '', department: '' });
+
+  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [editingLocation, setEditingLocation] = useState<any>(null);
+  const [editingResponsible, setEditingResponsible] = useState<any>(null);
 
   // Kategoriler
   const { data: categories, isLoading: isCatLoading } = useQuery({
@@ -37,6 +41,30 @@ export default function FireEquipmentSettingsPage() {
     onSuccess: () => {
       toast.success('Kategori eklendi.');
       setNewCategory({ name: '', description: '', parentId: 'none', maintenanceFrequency: 'none' });
+      queryClient.invalidateQueries({ queryKey: ['fire-categories'] });
+    }
+  });
+
+  const updateCategoryMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const payload: any = { name: data.name, description: data.description };
+      payload.parentId = data.parentId !== 'none' ? data.parentId : null;
+      payload.maintenanceFrequency = data.maintenanceFrequency !== 'none' ? data.maintenanceFrequency : null;
+      return api.put(`/fire-equipment/categories/${data.id}`, payload);
+    },
+    onSuccess: () => {
+      toast.success('Kategori güncellendi.');
+      setEditingCategory(null);
+      queryClient.invalidateQueries({ queryKey: ['fire-categories'] });
+    }
+  });
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return api.delete(`/fire-equipment/categories/${id}`);
+    },
+    onSuccess: () => {
+      toast.success('Kategori silindi.');
       queryClient.invalidateQueries({ queryKey: ['fire-categories'] });
     }
   });
@@ -63,6 +91,27 @@ export default function FireEquipmentSettingsPage() {
     }
   });
 
+  const updateLocationMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return api.put(`/fire-equipment/locations/${data.id}`, data);
+    },
+    onSuccess: () => {
+      toast.success('Lokasyon güncellendi.');
+      setEditingLocation(null);
+      queryClient.invalidateQueries({ queryKey: ['fire-locations', facilityId] });
+    }
+  });
+
+  const deleteLocationMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return api.delete(`/fire-equipment/locations/${id}`);
+    },
+    onSuccess: () => {
+      toast.success('Lokasyon silindi.');
+      queryClient.invalidateQueries({ queryKey: ['fire-locations', facilityId] });
+    }
+  });
+
   // Sorumlular
   const { data: responsibles, isLoading: isRespLoading } = useQuery({
     queryKey: ['fire-responsibles', facilityId],
@@ -80,7 +129,18 @@ export default function FireEquipmentSettingsPage() {
     },
     onSuccess: () => {
       toast.success('Sorumlu eklendi.');
-      setNewResponsible({ name: '' });
+      setNewResponsible({ name: '', department: '' });
+      queryClient.invalidateQueries({ queryKey: ['fire-responsibles', facilityId] });
+    }
+  });
+
+  const updateResponsibleMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return api.put(`/fire-equipment/responsibles/${data.id}`, data);
+    },
+    onSuccess: () => {
+      toast.success('Sorumlu güncellendi.');
+      setEditingResponsible(null);
       queryClient.invalidateQueries({ queryKey: ['fire-responsibles', facilityId] });
     }
   });
@@ -181,17 +241,43 @@ export default function FireEquipmentSettingsPage() {
                 {isCatLoading ? <p>Yükleniyor...</p> : (
                   <div className="space-y-3">
                     {categories?.map((cat: any) => (
-                      <div key={cat.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <div>
-                          <p className="font-semibold text-sm flex items-center gap-2">
-                            {cat.name} 
-                            {cat.parentId && <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border">Alt Kategori</span>}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {cat.description || 'Açıklama yok'} 
-                            {cat.maintenanceFrequency && <span className="ml-2 font-medium text-blue-600 bg-blue-50 px-1.5 rounded">Periyot: {cat.maintenanceFrequency.replace('_', ' ')}</span>}
-                          </p>
-                        </div>
+                      <div key={cat.id} className="p-3 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        {editingCategory?.id === cat.id ? (
+                          <div className="space-y-3">
+                            <Input value={editingCategory.name} onChange={e => setEditingCategory({...editingCategory, name: e.target.value})} placeholder="Adı" />
+                            <Input value={editingCategory.description || ''} onChange={e => setEditingCategory({...editingCategory, description: e.target.value})} placeholder="Açıklama" />
+                            <Select key={`edit-parent-${categories?.length}`} value={editingCategory.parentId || 'none'} onValueChange={val => setEditingCategory({...editingCategory, parentId: val})}>
+                              <SelectTrigger><SelectValue placeholder="Üst Kategori" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Ana Kategori</SelectItem>
+                                {categories.filter((c:any) => c.id !== cat.id).map((c: any) => (
+                                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <div className="flex gap-2">
+                              <Button size="sm" onClick={() => updateCategoryMutation.mutate(editingCategory)}><Check className="w-4 h-4 mr-1" /> Kaydet</Button>
+                              <Button size="sm" variant="ghost" onClick={() => setEditingCategory(null)}>İptal</Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-semibold text-sm flex items-center gap-2">
+                                {cat.name} 
+                                {cat.parentId && <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border">Alt Kategori</span>}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {cat.description || 'Açıklama yok'} 
+                                {cat.maintenanceFrequency && <span className="ml-2 font-medium text-blue-600 bg-blue-50 px-1.5 rounded">Periyot: {cat.maintenanceFrequency.replace('_', ' ')}</span>}
+                              </p>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setEditingCategory({ ...cat, parentId: cat.parentId || 'none', maintenanceFrequency: cat.maintenanceFrequency || 'none' })}><Pencil className="w-4 h-4" /></Button>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500" onClick={() => { if(window.confirm('Kategori silinsin mi?')) deleteCategoryMutation.mutate(cat.id); }}><Trash2 className="w-4 h-4" /></Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                     {categories?.length === 0 && <p className="text-sm text-muted-foreground text-center p-4">Henüz kategori eklenmemiş.</p>}
@@ -252,11 +338,29 @@ export default function FireEquipmentSettingsPage() {
                 {isLocLoading ? <p>Yükleniyor...</p> : (
                   <div className="space-y-3">
                     {locations?.map((loc: any) => (
-                      <div key={loc.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <div>
-                          <p className="font-semibold text-sm">{loc.building} {loc.floor && `/ ${loc.floor}`}</p>
-                          <p className="text-xs text-muted-foreground">{loc.description || 'Açıklama yok'}</p>
-                        </div>
+                      <div key={loc.id} className="p-3 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        {editingLocation?.id === loc.id ? (
+                          <div className="space-y-3">
+                            <Input value={editingLocation.building} onChange={e => setEditingLocation({...editingLocation, building: e.target.value})} placeholder="Bina / Blok" />
+                            <Input value={editingLocation.floor || ''} onChange={e => setEditingLocation({...editingLocation, floor: e.target.value})} placeholder="Kat" />
+                            <Input value={editingLocation.description || ''} onChange={e => setEditingLocation({...editingLocation, description: e.target.value})} placeholder="Açıklama" />
+                            <div className="flex gap-2">
+                              <Button size="sm" onClick={() => updateLocationMutation.mutate(editingLocation)}><Check className="w-4 h-4 mr-1" /> Kaydet</Button>
+                              <Button size="sm" variant="ghost" onClick={() => setEditingLocation(null)}>İptal</Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-semibold text-sm">{loc.building} {loc.floor && `/ ${loc.floor}`}</p>
+                              <p className="text-xs text-muted-foreground">{loc.description || 'Açıklama yok'}</p>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setEditingLocation({ ...loc })}><Pencil className="w-4 h-4" /></Button>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500" onClick={() => { if(window.confirm('Lokasyon silinsin mi?')) deleteLocationMutation.mutate(loc.id); }}><Trash2 className="w-4 h-4" /></Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                     {locations?.length === 0 && <p className="text-sm text-muted-foreground text-center p-4">Henüz lokasyon eklenmemiş.</p>}
@@ -283,6 +387,14 @@ export default function FireEquipmentSettingsPage() {
                     placeholder="Örn: Ahmet Yılmaz" 
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label>Departmanı</Label>
+                  <Input 
+                    value={newResponsible.department} 
+                    onChange={e => setNewResponsible({...newResponsible, department: e.target.value})} 
+                    placeholder="Örn: İnsan Kaynakları" 
+                  />
+                </div>
                 <Button 
                   className="w-full" 
                   onClick={() => createResponsibleMutation.mutate(newResponsible)}
@@ -301,23 +413,33 @@ export default function FireEquipmentSettingsPage() {
                 {isRespLoading ? <p>Yükleniyor...</p> : (
                   <div className="space-y-3">
                     {responsibles?.map((resp: any) => (
-                      <div key={resp.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                            <Users className="w-4 h-4 text-slate-500" />
+                      <div key={resp.id} className="p-3 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        {editingResponsible?.id === resp.id ? (
+                          <div className="space-y-3">
+                            <Input value={editingResponsible.name} onChange={e => setEditingResponsible({...editingResponsible, name: e.target.value})} placeholder="Adı Soyadı" />
+                            <Input value={editingResponsible.department || ''} onChange={e => setEditingResponsible({...editingResponsible, department: e.target.value})} placeholder="Departman" />
+                            <div className="flex gap-2">
+                              <Button size="sm" onClick={() => updateResponsibleMutation.mutate(editingResponsible)}><Check className="w-4 h-4 mr-1" /> Kaydet</Button>
+                              <Button size="sm" variant="ghost" onClick={() => setEditingResponsible(null)}>İptal</Button>
+                            </div>
                           </div>
-                          <p className="font-semibold text-sm">{resp.name}</p>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => {
-                            if (window.confirm('Bu sorumlu silinsin mi?')) deleteResponsibleMutation.mutate(resp.id);
-                          }}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        ) : (
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                                <Users className="w-4 h-4 text-slate-500" />
+                              </div>
+                              <div>
+                                <p className="font-semibold text-sm">{resp.name}</p>
+                                {resp.department && <p className="text-xs text-muted-foreground">{resp.department}</p>}
+                              </div>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setEditingResponsible({ ...resp })}><Pencil className="w-4 h-4" /></Button>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500" onClick={() => { if(window.confirm('Bu sorumlu silinsin mi?')) deleteResponsibleMutation.mutate(resp.id); }}><Trash2 className="w-4 h-4" /></Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                     {responsibles?.length === 0 && <p className="text-sm text-muted-foreground text-center p-4">Henüz sorumlu eklenmemiş.</p>}

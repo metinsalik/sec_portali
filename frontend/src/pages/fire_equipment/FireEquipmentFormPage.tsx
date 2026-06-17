@@ -209,7 +209,9 @@ export default function FireEquipmentFormPage() {
                   <SelectContent>
                     <SelectItem value="none">Seçilmedi</SelectItem>
                     {responsibles?.map((resp: any) => (
-                      <SelectItem key={resp.id} value={resp.id}>{resp.name}</SelectItem>
+                      <SelectItem key={resp.id} value={resp.id}>
+                        {resp.department ? `${resp.department} - ` : ''}{resp.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
