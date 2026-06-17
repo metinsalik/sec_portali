@@ -17,10 +17,11 @@ interface Props {
 // Excel sütun eşleme (esnek — Türkçe başlıkları destekler)
 const COL_MAP: Record<string, string> = {
   // 1. Bölüm Genel Bilgiler
+  'no': 'riskNo', 'sıra no': 'riskNo', 'risk no': 'riskNo',
   'tespit tarihi': 'detectionDate',
-  'alt risk kategorisi': 'subCategory', // Matches first due to string length sorting
-  'alt kategori': 'subCategory',
   'risk kategorisi': 'riskCategory',
+  'alt risk kategorisi': 'subCategory',
+  'alt kategori': 'subCategory',
   'bölüm': 'department', 'departman': 'department', 'birim / bölüm': 'department', 'birim': 'department',
   'alan': 'area',
   'faaliyet': 'activity',
@@ -29,10 +30,8 @@ const COL_MAP: Record<string, string> = {
   'tehlike': 'hazard',
   'sonuç/ olası etki zarar': 'impactDamage',
   'sonuç / olası etki zarar': 'impactDamage',
-  'sonuç /olası etki zarar': 'impactDamage',
-  'sonuç/olası etki zarar': 'impactDamage',
+  'olası risk etki zarar': 'impactDamage',
   'olası etki zarar': 'impactDamage',
-  'olası etki': 'impactDamage',
   'riskten etkilenecek kişiler': 'affectedPeople',
   'etkilenecek kişiler': 'affectedPeople',
   'mevcut durum açıklaması (tespit edilen riske ilişkin mevcut önlemler)': 'initialCondition',
@@ -57,11 +56,11 @@ const COL_MAP: Record<string, string> = {
   'mevzuat': 'legislation',
 
   // 4. Bölüm İyileştirme Planı / Uygulama
-  'iyileştirme planı': 'firstActionPlan',
   'alınacak önlemler / iyileştirici faaliyet': 'firstActionPlan',
   'alınacak önlemler': 'firstActionPlan',
   'iyileştirici faaliyet': 'firstActionPlan',
   'iyileştirme sorumlusu': 'improvementResponsible',
+  'termin periyodu': 'dueDatePeriod',
   'termin tarihi': 'dueDate',
   'termin': 'dueDate',
   'iyileştirme açıklaması (tespit edilen riske ilişkin yapılan iyileştirmeler)': 'actionsTaken',
@@ -79,18 +78,17 @@ const COL_MAP: Record<string, string> = {
   'iyileştirme sonrası risk skoru risk seviyesi': 'finalLevel',
 
   // 6. Bölüm İyileştirme Etkinlik Ölçümü
+  'iyileştirme planı': 'effectivenessMethod',
   'etkinlik ölçüm yöntemi': 'effectivenessMethod',
   'iyileştirme kontrol sorumlusu': 'controlResponsible',
   'kontrol sorumlusu': 'controlResponsible',
-  'etkinlik ölçümü sonuç': 'controlResult', // If parent is combined
+  'sonuç': 'controlResult',
+  'etkinlik ölçümü sonuç': 'controlResult',
   'kontrol sonucu': 'controlResult',
   'etkinlik sonucu': 'controlResult',
 
   // The most generic one must be at the end, but the matching uses string length sorting anyway.
   'risk': 'riskDescription',
-
-  // Fallbacks and exact match handles
-  'no': 'riskNo', 'sıra no': 'riskNo', 'risk no': 'riskNo',
 };
 
 function normalizeHeader(h: string): string {
@@ -181,7 +179,7 @@ export default function RiskExcelImport({ facilityId, departmentName, areaName, 
       const subHeaders = raw[headerRowIdx + 1] || [];
       const hasSubHeaders = subHeaders.some(cell => {
         const str = String(cell || '').toLowerCase().trim();
-        return str === 'olasılık' || str === 'şiddet' || str === 'frekans';
+        return str === 'olasılık' || str === 'şiddet' || str === 'frekans' || str === 'o' || str === 'f' || str === 'ş';
       });
 
       // 4. Build flat headers
@@ -198,7 +196,12 @@ export default function RiskExcelImport({ facilityId, departmentName, areaName, 
         const subVal = hasSubHeaders ? subHeaders[colIdx] : null;
         let combined = currentParent;
         if (subVal !== undefined && subVal !== null && String(subVal).trim() !== '') {
-          combined = `${currentParent} ${String(subVal).trim()}`;
+          let normalizedSub = String(subVal).trim().toLowerCase();
+          if (normalizedSub === 'o') normalizedSub = 'olasılık';
+          else if (normalizedSub === 'f') normalizedSub = 'frekans';
+          else if (normalizedSub === 'ş') normalizedSub = 'şiddet';
+          
+          combined = `${currentParent} ${normalizedSub}`;
         }
         
         headers[colIdx] = normalizeHeader(combined);
