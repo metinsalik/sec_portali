@@ -87,6 +87,7 @@ model Facility {
   hazmatIncidents        HazmatIncident[]
   fireEquipments         FireEquipment[]
   fireEquipmentLocations FireEquipmentLocation[]
+  fireResponsibles       FireEquipmentResponsible[]
 }
 
 model IncidentCategory {
