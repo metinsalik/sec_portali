@@ -198,6 +198,22 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res: Response) =
       const finalScore   = row.finalScore ? Number(row.finalScore) : null;
       const status = deriveStatus(row);
 
+      // Aynı kaydın tekrar eklenmesini önlemek için mükerrer kontrolü
+      const isDuplicate = await prisma.riskLifecycle.findFirst({
+        where: {
+          departmentId: dept.id,
+          area: row.area || deptName,
+          activity: row.activity || '',
+          hazard: row.hazard || '',
+          riskDescription: row.riskDescription || ''
+        }
+      });
+
+      if (isDuplicate) {
+        skipped++;
+        continue;
+      }
+
       try {
         await prisma.riskLifecycle.create({
           data: {
