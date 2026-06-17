@@ -28,9 +28,26 @@ export default function FireEquipmentListPage() {
       case 'AKTIF': return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Aktif</Badge>;
       case 'DEPODA': return <Badge variant="secondary">Depoda</Badge>;
       case 'ARIZALI': return <Badge variant="destructive">Arızalı</Badge>;
-      case 'HURDA': return <Badge variant="outline">Hurda</Badge>;
+      case 'HURDA': return <Badge variant="outline" className="bg-slate-200">Hurda</Badge>;
+      case 'KULLANIM_DISI': return <Badge variant="outline">Kullanım Dışı</Badge>;
+      case 'DEGISIME_GIDEN': return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">Değişime Giden</Badge>;
       default: return <Badge>{status}</Badge>;
     }
+  };
+
+  const getMaintenanceWarning = (dateString: string | null) => {
+    if (!dateString) return null;
+    const nextDate = new Date(dateString);
+    const today = new Date();
+    const diffTime = nextDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return <span className="text-red-600 font-medium text-xs block">Süresi Geçti ({Math.abs(diffDays)} gün)</span>;
+    } else if (diffDays <= 30) {
+      return <span className="text-orange-600 font-medium text-xs block">Yaklaşıyor ({diffDays} gün)</span>;
+    }
+    return <span className="text-muted-foreground text-xs block">{nextDate.toLocaleDateString('tr-TR')}</span>;
   };
 
   return (
@@ -70,7 +87,9 @@ export default function FireEquipmentListPage() {
                     <th className="px-6 py-4 font-medium">Kategori</th>
                     <th className="px-6 py-4 font-medium">Marka / Model</th>
                     <th className="px-6 py-4 font-medium">Lokasyon</th>
+                    <th className="px-6 py-4 font-medium">Sorumlu</th>
                     <th className="px-6 py-4 font-medium">Durum</th>
+                    <th className="px-6 py-4 font-medium">Sonraki Bakım</th>
                     <th className="px-6 py-4 font-medium text-right">İşlem</th>
                   </tr>
                 </thead>
@@ -88,8 +107,14 @@ export default function FireEquipmentListPage() {
                       <td className="px-6 py-4 text-muted-foreground">
                         {item.location ? `${item.location.building} / ${item.location.floor}` : 'Lokasyon Yok'}
                       </td>
+                      <td className="px-6 py-4 text-muted-foreground">
+                        {item.responsible ? item.responsible.name : (item.responsibleUnit || '-')}
+                      </td>
                       <td className="px-6 py-4">
                         {getStatusBadge(item.status)}
+                      </td>
+                      <td className="px-6 py-4">
+                        {item.nextMaintenanceDate ? getMaintenanceWarning(item.nextMaintenanceDate) : <span className="text-muted-foreground text-xs">-</span>}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <Button 

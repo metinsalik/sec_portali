@@ -1147,14 +1147,18 @@ model HazmatIncident {
 // --- FIRE EQUIPMENT MODULE (FireTrack 360) ---
 
 model FireEquipmentCategory {
-  id          String   @id @default(uuid())
-  name        String // Yangın Tüpü, Yangın Dolabı, vb.
-  description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                   String   @id @default(uuid())
+  name                 String // Yangın Tüpü, Yangın Dolabı, vb.
+  description          String?
+  parentId             String? // Alt kategori ise üst kategorinin ID'si
+  maintenanceFrequency String? // 'AYLIK', '3_AYLIK', '6_AYLIK', 'YILLIK'
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
-  equipments FireEquipment[]
+  parent        FireEquipmentCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  subcategories FireEquipmentCategory[] @relation("CategoryHierarchy")
+  equipments    FireEquipment[]
 }
 
 model FireEquipmentLocation {
@@ -1175,6 +1179,20 @@ model FireEquipmentLocation {
   @@index([facilityId])
 }
 
+model FireEquipmentResponsible {
+  id         String   @id @default(uuid())
+  facilityId String
+  name       String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  facility   Facility        @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  equipments FireEquipment[]
+
+  @@index([facilityId])
+}
+
 model FireEquipment {
   id             String  @id @default(uuid())
   equipmentNo    String  @unique // Ekipman No
@@ -1184,25 +1202,27 @@ model FireEquipment {
   model          String? // Model
   productionYear Int? // Üretim Yılı
 
-  categoryId String
-  locationId String?
-  facilityId String
+  categoryId    String
+  locationId    String?
+  facilityId    String
+  responsibleId String? // Sorumlu Kişi ID'si
 
   capacity        String? // Kapasite (Örn: 6kg)
   standard        String? // Standart
   criticality     String? // Kritiklik Seviyesi (Düşük, Orta, Yüksek)
-  responsibleUnit String? // Sorumlu Birim
+  responsibleUnit String? // Sorumlu Birim (Opsiyonel, metin olarak kalabilir)
 
-  status String @default("AKTIF") // AKTIF, DEPODA, ARIZALI, HURDA, KULLANIM_DISI
+  status String @default("AKTIF") // AKTIF, DEGISIME_GIDEN, ARIZALI, HURDA, KULLANIM_DISI, DEPODA
 
   nextMaintenanceDate DateTime? // Sonraki Bakım Tarihi
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  category FireEquipmentCategory  @relation(fields: [categoryId], references: [id])
-  location FireEquipmentLocation? @relation(fields: [locationId], references: [id])
-  facility Facility               @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  category    FireEquipmentCategory     @relation(fields: [categoryId], references: [id])
+  location    FireEquipmentLocation?    @relation(fields: [locationId], references: [id])
+  facility    Facility                  @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  responsible FireEquipmentResponsible? @relation(fields: [responsibleId], references: [id], onDelete: SetNull)
 
   movements    FireEquipmentMovement[]
   maintenances FireEquipmentMaintenance[]

@@ -145,7 +145,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     moduleName = 'Tehlikeli Madde Yönetimi';
   } else if (path.startsWith('/fire-equipment')) {
     navItems = fireEquipmentNavItems;
-    moduleName = 'FireTrack 360';
+    moduleName = 'Yangın Envanter Yönetimi';
   } else if (path.startsWith('/settings')) {
     navItems = settingsNavItems;
     moduleName = 'Sistem Ayarları';

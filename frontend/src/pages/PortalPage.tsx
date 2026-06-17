@@ -363,7 +363,7 @@ export default function PortalPage() {
                 <span className="material-symbols-outlined text-[28px]">local_fire_department</span>
               </div>
               <div className="flex-1">
-                <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">FireTrack 360</h2>
+                <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">Yangın Envanteri</h2>
                 <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
                   Yangın ekipmanları envanter, lokasyon ve bakım yönetimi.
                 </p>

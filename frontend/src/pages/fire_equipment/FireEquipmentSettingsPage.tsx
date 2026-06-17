@@ -5,16 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Settings, FolderTree, MapPin, Plus, Trash2 } from 'lucide-react';
+import { Settings, FolderTree, MapPin, Plus, Trash2, Users } from 'lucide-react';
 
 export default function FireEquipmentSettingsPage() {
   const facilityId = localStorage.getItem('activeFacilityId');
   const queryClient = useQueryClient();
 
-  const [newCategory, setNewCategory] = useState({ name: '', description: '' });
+  const [newCategory, setNewCategory] = useState({ name: '', description: '', parentId: 'none', maintenanceFrequency: 'none' });
   const [newLocation, setNewLocation] = useState({ building: '', floor: '', description: '' });
+  const [newResponsible, setNewResponsible] = useState({ name: '' });
 
   // Kategoriler
   const { data: categories, isLoading: isCatLoading } = useQuery({
@@ -27,11 +29,14 @@ export default function FireEquipmentSettingsPage() {
 
   const createCategoryMutation = useMutation({
     mutationFn: async (data: any) => {
-      return api.post('/fire-equipment/categories', data);
+      const payload: any = { name: data.name, description: data.description };
+      if (data.parentId !== 'none') payload.parentId = data.parentId;
+      if (data.maintenanceFrequency !== 'none') payload.maintenanceFrequency = data.maintenanceFrequency;
+      return api.post('/fire-equipment/categories', payload);
     },
     onSuccess: () => {
       toast.success('Kategori eklendi.');
-      setNewCategory({ name: '', description: '' });
+      setNewCategory({ name: '', description: '', parentId: 'none', maintenanceFrequency: 'none' });
       queryClient.invalidateQueries({ queryKey: ['fire-categories'] });
     }
   });
@@ -58,6 +63,38 @@ export default function FireEquipmentSettingsPage() {
     }
   });
 
+  // Sorumlular
+  const { data: responsibles, isLoading: isRespLoading } = useQuery({
+    queryKey: ['fire-responsibles', facilityId],
+    queryFn: async () => {
+      if (!facilityId) return [];
+      const res = await api.get(`/fire-equipment/responsibles/${facilityId}`);
+      return res.json();
+    },
+    enabled: !!facilityId
+  });
+
+  const createResponsibleMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return api.post(`/fire-equipment/responsibles/${facilityId}`, data);
+    },
+    onSuccess: () => {
+      toast.success('Sorumlu eklendi.');
+      setNewResponsible({ name: '' });
+      queryClient.invalidateQueries({ queryKey: ['fire-responsibles', facilityId] });
+    }
+  });
+
+  const deleteResponsibleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return api.delete(`/fire-equipment/responsibles/${id}`);
+    },
+    onSuccess: () => {
+      toast.success('Sorumlu silindi.');
+      queryClient.invalidateQueries({ queryKey: ['fire-responsibles', facilityId] });
+    }
+  });
+
   if (!facilityId) {
     return <div className="p-8 text-center text-muted-foreground">Lütfen bir tesis seçin.</div>;
   }
@@ -75,6 +112,7 @@ export default function FireEquipmentSettingsPage() {
         <TabsList className="mb-4">
           <TabsTrigger value="categories" className="flex items-center gap-2"><FolderTree className="w-4 h-4" /> Kategoriler</TabsTrigger>
           <TabsTrigger value="locations" className="flex items-center gap-2"><MapPin className="w-4 h-4" /> Lokasyonlar</TabsTrigger>
+          <TabsTrigger value="responsibles" className="flex items-center gap-2"><Users className="w-4 h-4" /> Sorumlular</TabsTrigger>
         </TabsList>
 
         <TabsContent value="categories">
@@ -100,7 +138,32 @@ export default function FireEquipmentSettingsPage() {
                     onChange={e => setNewCategory({...newCategory, description: e.target.value})} 
                   />
                 </div>
-                <Button 
+                <div className="space-y-2">
+                  <Label>Üst Kategori</Label>
+                  <Select value={newCategory.parentId} onValueChange={val => setNewCategory({...newCategory, parentId: val})}>
+                    <SelectTrigger><SelectValue placeholder="Seçiniz..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Ana Kategori (Üst Kategori Yok)</SelectItem>
+                      {categories?.map((cat: any) => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Bakım Periyodu</Label>
+                  <Select value={newCategory.maintenanceFrequency} onValueChange={val => setNewCategory({...newCategory, maintenanceFrequency: val})}>
+                    <SelectTrigger><SelectValue placeholder="Seçiniz..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Belirtilmemiş</SelectItem>
+                      <SelectItem value="AYLIK">Aylık</SelectItem>
+                      <SelectItem value="3_AYLIK">3 Aylık</SelectItem>
+                      <SelectItem value="6_AYLIK">6 Aylık</SelectItem>
+                      <SelectItem value="YILLIK">Yıllık</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button  
                   className="w-full" 
                   onClick={() => createCategoryMutation.mutate(newCategory)}
                   disabled={!newCategory.name || createCategoryMutation.isPending}
@@ -120,10 +183,15 @@ export default function FireEquipmentSettingsPage() {
                     {categories?.map((cat: any) => (
                       <div key={cat.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50">
                         <div>
-                          <p className="font-semibold text-sm">{cat.name}</p>
-                          <p className="text-xs text-muted-foreground">{cat.description || 'Açıklama yok'}</p>
+                          <p className="font-semibold text-sm flex items-center gap-2">
+                            {cat.name} 
+                            {cat.parentId && <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border">Alt Kategori</span>}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {cat.description || 'Açıklama yok'} 
+                            {cat.maintenanceFrequency && <span className="ml-2 font-medium text-blue-600 bg-blue-50 px-1.5 rounded">Periyot: {cat.maintenanceFrequency.replace('_', ' ')}</span>}
+                          </p>
                         </div>
-                        {/* Status/Actions placeholder */}
                       </div>
                     ))}
                     {categories?.length === 0 && <p className="text-sm text-muted-foreground text-center p-4">Henüz kategori eklenmemiş.</p>}
@@ -192,6 +260,67 @@ export default function FireEquipmentSettingsPage() {
                       </div>
                     ))}
                     {locations?.length === 0 && <p className="text-sm text-muted-foreground text-center p-4">Henüz lokasyon eklenmemiş.</p>}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="responsibles">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="md:col-span-1 h-fit shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Yeni Sorumlu Ekle</CardTitle>
+                <CardDescription>Ekipmanlardan sorumlu personeli belirleyin.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Sorumlu Adı / Unvanı</Label>
+                  <Input 
+                    value={newResponsible.name} 
+                    onChange={e => setNewResponsible({...newResponsible, name: e.target.value})} 
+                    placeholder="Örn: Ahmet Yılmaz" 
+                  />
+                </div>
+                <Button 
+                  className="w-full" 
+                  onClick={() => createResponsibleMutation.mutate(newResponsible)}
+                  disabled={!newResponsible.name || createResponsibleMutation.isPending}
+                >
+                  <Plus className="w-4 h-4 mr-2" /> Ekle
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="md:col-span-2 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Kayıtlı Sorumlular</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isRespLoading ? <p>Yükleniyor...</p> : (
+                  <div className="space-y-3">
+                    {responsibles?.map((resp: any) => (
+                      <div key={resp.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                            <Users className="w-4 h-4 text-slate-500" />
+                          </div>
+                          <p className="font-semibold text-sm">{resp.name}</p>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => {
+                            if (window.confirm('Bu sorumlu silinsin mi?')) deleteResponsibleMutation.mutate(resp.id);
+                          }}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    {responsibles?.length === 0 && <p className="text-sm text-muted-foreground text-center p-4">Henüz sorumlu eklenmemiş.</p>}
                   </div>
                 )}
               </CardContent>

@@ -25,10 +25,12 @@ export default function FireEquipmentFormPage() {
     model: '',
     productionYear: '',
     categoryId: '',
+    subcategoryId: 'none',
     locationId: '',
     capacity: '',
     standard: '',
     criticality: 'Orta',
+    responsibleId: 'none',
     responsibleUnit: '',
     status: 'AKTIF'
   });
@@ -50,14 +52,34 @@ export default function FireEquipmentFormPage() {
     enabled: !!facilityId
   });
 
+  const { data: responsibles } = useQuery({
+    queryKey: ['fire-responsibles', facilityId],
+    queryFn: async () => {
+      const res = await api.get(`/fire-equipment/responsibles/${facilityId}`);
+      return res.json();
+    },
+    enabled: !!facilityId
+  });
+
   useQuery({
     queryKey: ['fire-equipment', id],
     queryFn: async () => {
       if (!id) return null;
       const res = await api.get(`/fire-equipment/equipment/detail/${id}`);
       const data = await res.json();
+      
+      let catId = data.categoryId;
+      let subCatId = 'none';
+      if (data.category?.parentId) {
+        catId = data.category.parentId;
+        subCatId = data.category.id;
+      }
+
       setFormData({
         ...data,
+        categoryId: catId,
+        subcategoryId: subCatId,
+        responsibleId: data.responsibleId || 'none',
         productionYear: data.productionYear?.toString() || ''
       });
       return data;
@@ -67,10 +89,18 @@ export default function FireEquipmentFormPage() {
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
+      const payload = { ...data };
+      if (payload.subcategoryId !== 'none') {
+        payload.categoryId = payload.subcategoryId;
+      }
+      if (payload.responsibleId === 'none') {
+        payload.responsibleId = null;
+      }
+
       if (isEdit) {
-        return api.put(`/fire-equipment/equipment/${id}`, data);
+        return api.put(`/fire-equipment/equipment/${id}`, payload);
       } else {
-        return api.post(`/fire-equipment/equipment/${facilityId}`, data);
+        return api.post(`/fire-equipment/equipment/${facilityId}`, payload);
       }
     },
     onSuccess: () => {
@@ -88,8 +118,17 @@ export default function FireEquipmentFormPage() {
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData({ ...formData, [name]: value });
+    if (name === 'categoryId') {
+      setFormData({ ...formData, categoryId: value, subcategoryId: 'none' });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
+
+  const parentCategories = categories?.filter((c: any) => !c.parentId) || [];
+  const activeSubcategories = formData.categoryId 
+    ? categories?.find((c: any) => c.id === formData.categoryId)?.subcategories || []
+    : [];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,7 +172,7 @@ export default function FireEquipmentFormPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <Label>Kategori *</Label>
                 <Select value={formData.categoryId || ''} onValueChange={(val) => handleSelectChange('categoryId', val)} required>
@@ -141,9 +180,54 @@ export default function FireEquipmentFormPage() {
                     <SelectValue placeholder="Seçiniz..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories?.map((cat: any) => (
+                    {parentCategories.map((cat: any) => (
                       <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Alt Kategori</Label>
+                <Select value={formData.subcategoryId} onValueChange={(val) => handleSelectChange('subcategoryId', val)} disabled={!formData.categoryId || activeSubcategories.length === 0}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Alt Kategori Seçiniz..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Seçilmedi</SelectItem>
+                    {activeSubcategories.map((cat: any) => (
+                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Sorumlu Kişi</Label>
+                <Select value={formData.responsibleId} onValueChange={(val) => handleSelectChange('responsibleId', val)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seçiniz..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Seçilmedi</SelectItem>
+                    {responsibles?.map((resp: any) => (
+                      <SelectItem key={resp.id} value={resp.id}>{resp.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label>Durum *</Label>
+                <Select value={formData.status} onValueChange={(val) => handleSelectChange('status', val)} required>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="AKTIF">Aktif</SelectItem>
+                    <SelectItem value="DEGISIME_GIDEN">Değişime Giden</SelectItem>
+                    <SelectItem value="ARIZALI">Arızalı</SelectItem>
+                    <SelectItem value="HURDA">Hurdaya Çıkan</SelectItem>
+                    <SelectItem value="KULLANIM_DISI">Kullanım Dışı</SelectItem>
+                    <SelectItem value="DEPODA">Depoda</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

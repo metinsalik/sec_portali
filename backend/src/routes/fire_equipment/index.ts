@@ -13,7 +13,8 @@ router.get('/categories', async (req, res) => {
   try {
     const categories = await prisma.fireEquipmentCategory.findMany({
       where: { isActive: true },
-      orderBy: { name: 'asc' }
+      orderBy: { name: 'asc' },
+      include: { subcategories: true }
     });
     res.json(categories);
   } catch (error) {
@@ -24,14 +25,57 @@ router.get('/categories', async (req, res) => {
 
 router.post('/categories', async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, parentId, maintenanceFrequency } = req.body;
     const category = await prisma.fireEquipmentCategory.create({
-      data: { name, description }
+      data: { name, description, parentId, maintenanceFrequency }
     });
     res.status(201).json(category);
   } catch (error) {
     console.error('Error creating category:', error);
     res.status(500).json({ error: 'Kategori oluşturulamadı.' });
+  }
+});
+
+// --- RESPONSIBLES ---
+router.get('/responsibles/:facilityId', async (req, res) => {
+  try {
+    const { facilityId } = req.params;
+    const responsibles = await prisma.fireEquipmentResponsible.findMany({
+      where: { facilityId, isActive: true },
+      orderBy: { name: 'asc' }
+    });
+    res.json(responsibles);
+  } catch (error) {
+    console.error('Error fetching responsibles:', error);
+    res.status(500).json({ error: 'Sorumlular alınamadı.' });
+  }
+});
+
+router.post('/responsibles/:facilityId', async (req, res) => {
+  try {
+    const { facilityId } = req.params;
+    const { name } = req.body;
+    const responsible = await prisma.fireEquipmentResponsible.create({
+      data: { facilityId, name }
+    });
+    res.status(201).json(responsible);
+  } catch (error) {
+    console.error('Error creating responsible:', error);
+    res.status(500).json({ error: 'Sorumlu oluşturulamadı.' });
+  }
+});
+
+router.delete('/responsibles/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.fireEquipmentResponsible.update({
+      where: { id },
+      data: { isActive: false }
+    });
+    res.json({ message: 'Sorumlu silindi.' });
+  } catch (error) {
+    console.error('Error deleting responsible:', error);
+    res.status(500).json({ error: 'Sorumlu silinemedi.' });
   }
 });
 
@@ -85,8 +129,11 @@ router.get('/equipment/:facilityId', async (req, res) => {
     const equipment = await prisma.fireEquipment.findMany({
       where: { facilityId },
       include: {
-        category: true,
+        category: {
+          include: { parent: true }
+        },
         location: true,
+        responsible: true,
         movements: { orderBy: { movementDate: 'desc' }, take: 1 },
         maintenances: { orderBy: { maintenanceDate: 'desc' }, take: 1 }
       },
@@ -105,8 +152,11 @@ router.get('/equipment/detail/:id', async (req, res) => {
     const equipment = await prisma.fireEquipment.findUnique({
       where: { id },
       include: {
-        category: true,
+        category: {
+          include: { parent: true }
+        },
         location: true,
+        responsible: true,
         movements: { orderBy: { movementDate: 'desc' } },
         maintenances: { orderBy: { maintenanceDate: 'desc' } }
       }
@@ -128,11 +178,24 @@ router.post('/equipment/:facilityId', async (req, res) => {
     const { facilityId } = req.params;
     const { 
       equipmentNo, qrCode, serialNo, brand, model, productionYear, 
-      categoryId, locationId, capacity, standard, criticality, responsibleUnit, status 
+      categoryId, locationId, capacity, standard, criticality, responsibleId, responsibleUnit, status 
     } = req.body;
     
     // @ts-ignore - Assuming req.user is set by authMiddleware
     const username = req.user?.username || 'System';
+
+    // Calculate initial nextMaintenanceDate based on category
+    let nextMaintenanceDate = null;
+    const category = await prisma.fireEquipmentCategory.findUnique({ where: { id: categoryId } });
+    if (category && category.maintenanceFrequency) {
+      const freq = category.maintenanceFrequency;
+      const date = new Date();
+      if (freq === 'AYLIK') date.setMonth(date.getMonth() + 1);
+      else if (freq === '3_AYLIK') date.setMonth(date.getMonth() + 3);
+      else if (freq === '6_AYLIK') date.setMonth(date.getMonth() + 6);
+      else if (freq === 'YILLIK') date.setFullYear(date.getFullYear() + 1);
+      nextMaintenanceDate = date;
+    }
 
     const equipment = await prisma.fireEquipment.create({
       data: {
@@ -148,8 +211,10 @@ router.post('/equipment/:facilityId', async (req, res) => {
         capacity,
         standard,
         criticality,
+        responsibleId,
         responsibleUnit,
         status: status || 'AKTIF',
+        nextMaintenanceDate,
         movements: locationId ? {
           create: {
             newLocationId: locationId,
@@ -204,11 +269,29 @@ router.post('/equipment/:id/maintenance', async (req, res) => {
         }
       });
 
+      // Calculate nextMaintenanceDate if not provided explicitly, based on frequency
+      let calculatedNextDate = nextMaintenanceDate ? new Date(nextMaintenanceDate) : null;
+      if (!calculatedNextDate) {
+        const eq = await tx.fireEquipment.findUnique({ 
+          where: { id },
+          include: { category: true }
+        });
+        if (eq?.category?.maintenanceFrequency) {
+          const freq = eq.category.maintenanceFrequency;
+          const date = new Date(maintenanceDate);
+          if (freq === 'AYLIK') date.setMonth(date.getMonth() + 1);
+          else if (freq === '3_AYLIK') date.setMonth(date.getMonth() + 3);
+          else if (freq === '6_AYLIK') date.setMonth(date.getMonth() + 6);
+          else if (freq === 'YILLIK') date.setFullYear(date.getFullYear() + 1);
+          calculatedNextDate = date;
+        }
+      }
+
       // Update equipment next maintenance date
-      if (nextMaintenanceDate) {
+      if (calculatedNextDate) {
         await tx.fireEquipment.update({
           where: { id },
-          data: { nextMaintenanceDate: new Date(nextMaintenanceDate) }
+          data: { nextMaintenanceDate: calculatedNextDate }
         });
       }
 
