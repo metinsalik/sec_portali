@@ -13,6 +13,7 @@ import RiskExcelImport from './RiskExcelImport';
 import FacilityAdvancedDashboard from '@/components/risks/FacilityAdvancedDashboard';
 import { RiskPrintModal } from '@/components/risks/RiskPrintModal';
 import { Printer } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -65,6 +66,8 @@ export default function RiskDepartmentPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const token = localStorage.getItem('token');
+  const { user } = useAuth();
+  const isAdminOrMgmt = user?.isAdmin || user?.isManagement;
 
   const [showImport, setShowImport] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
@@ -246,9 +249,11 @@ export default function RiskDepartmentPage() {
           <Button size="sm" variant="outline" onClick={() => setShowPrintModal(true)} className="shadow-sm border-blue-200 text-blue-700 hover:bg-blue-50">
             <Printer className="w-4 h-4 mr-1.5" /> Çıktı Önizleme
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setShowImport(true)} className="shadow-sm">
-            <Upload className="w-4 h-4 mr-1.5" /> Excel İçe Aktar
-          </Button>
+          {isAdminOrMgmt && (
+            <Button size="sm" variant="outline" onClick={() => setShowImport(true)}>
+              <Upload className="w-4 h-4 mr-1.5" /> Excel İçe Aktar
+            </Button>
+          )}
           <Button size="sm" onClick={() => navigate(`/risks/department/${departmentId}/create`)} className="shadow-md">
             <Plus className="w-4 h-4 mr-1.5" /> Yeni Risk Ekle
           </Button>

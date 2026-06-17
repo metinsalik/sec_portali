@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import FacilityAdvancedDashboard from '@/components/risks/FacilityAdvancedDashboard';
 import RiskExcelImport from './RiskExcelImport';
+import { useAuth } from '@/context/AuthContext';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -36,6 +37,8 @@ export default function RiskFacilityPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const token = localStorage.getItem('token');
+  const { user } = useAuth();
+  const isAdminOrMgmt = user?.isAdmin || user?.isManagement;
   const [newDeptName, setNewDeptName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [adding, setAdding] = useState(false);
@@ -180,9 +183,11 @@ export default function RiskFacilityPage() {
           <p className="text-xs text-muted-foreground">Departman bazlı risk yönetimi</p>
         </div>
         <div className="flex gap-2 shrink-0">
-          <Button size="sm" variant="outline" onClick={() => setShowImport(true)} className="shadow-sm">
-            <Upload className="w-4 h-4 mr-1.5" /> Konsolide Excel Aktar
-          </Button>
+          {isAdminOrMgmt && (
+            <Button size="sm" variant="outline" onClick={() => setShowImport(true)} className="shadow-sm">
+              <Upload className="w-4 h-4 mr-1.5" /> Konsolide Excel Aktar
+            </Button>
+          )}
           <Button size="sm" onClick={() => setShowAdd(!showAdd)}>
             <Plus className="w-4 h-4 mr-1.5" /> Departman Ekle
           </Button>
