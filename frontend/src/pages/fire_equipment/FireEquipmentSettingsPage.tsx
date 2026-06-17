@@ -200,15 +200,16 @@ export default function FireEquipmentSettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Üst Kategori</Label>
-                  <Select value={newCategory.parentId} onValueChange={val => setNewCategory({...newCategory, parentId: val})}>
-                    <SelectTrigger><SelectValue placeholder="Seçiniz..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Ana Kategori (Üst Kategori Yok)</SelectItem>
-                      {categories?.map((cat: any) => (
-                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select 
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={newCategory.parentId} 
+                    onChange={e => setNewCategory({...newCategory, parentId: e.target.value})}
+                  >
+                    <option value="none">Ana Kategori (Üst Kategori Yok)</option>
+                    {categories?.map((cat: any) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <Label>Bakım Periyodu</Label>
@@ -246,15 +247,16 @@ export default function FireEquipmentSettingsPage() {
                           <div className="space-y-3">
                             <Input value={editingCategory.name} onChange={e => setEditingCategory({...editingCategory, name: e.target.value})} placeholder="Adı" />
                             <Input value={editingCategory.description || ''} onChange={e => setEditingCategory({...editingCategory, description: e.target.value})} placeholder="Açıklama" />
-                            <Select key={`edit-parent-${categories?.length}`} value={editingCategory.parentId || 'none'} onValueChange={val => setEditingCategory({...editingCategory, parentId: val})}>
-                              <SelectTrigger><SelectValue placeholder="Üst Kategori" /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">Ana Kategori</SelectItem>
-                                {categories.filter((c:any) => c.id !== cat.id).map((c: any) => (
-                                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <select 
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              value={editingCategory.parentId || 'none'} 
+                              onChange={e => setEditingCategory({...editingCategory, parentId: e.target.value})}
+                            >
+                              <option value="none">Ana Kategori</option>
+                              {categories.filter((c:any) => c.id !== cat.id).map((c: any) => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
                             <div className="flex gap-2">
                               <Button size="sm" onClick={() => updateCategoryMutation.mutate(editingCategory)}><Check className="w-4 h-4 mr-1" /> Kaydet</Button>
                               <Button size="sm" variant="ghost" onClick={() => setEditingCategory(null)}>İptal</Button>

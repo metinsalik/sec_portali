@@ -5,7 +5,7 @@ import {
   Shield, LayoutDashboard, Building2, Users, Briefcase, UserCheck,
   ClipboardList, FileText, Settings, Bell, ChevronDown, LogOut,
   User, BarChart3, ChevronRight, LayoutGrid, Database, Users2, Mail,
-  BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame
+  BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame, PenTool
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -106,7 +106,8 @@ const fireEquipmentNavItems = [
   { label: 'GENEL', type: 'group' },
   { label: 'Dashboard', icon: LayoutDashboard, to: '/fire-equipment/dashboard', end: true },
   { label: 'YANGIN EKİPMANLARI', type: 'group' },
-  { label: 'Envanter', icon: Flame, to: '/fire-equipment/list' },
+  { label: 'Ekipmanlar', icon: Flame, to: '/fire-equipment/list' },
+  { label: 'Bakım ve Kontroller', icon: PenTool, to: '/fire-equipment/maintenance' },
   { label: 'AYARLAR', type: 'group' },
   { label: 'Modül Ayarları', icon: Settings, to: '/fire-equipment/settings' },
 ];

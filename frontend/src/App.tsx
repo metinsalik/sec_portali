@@ -93,6 +93,7 @@ import FireEquipmentListPage from './pages/fire_equipment/FireEquipmentListPage'
 import FireEquipmentFormPage from './pages/fire_equipment/FireEquipmentFormPage';
 import FireEquipmentDetailPage from './pages/fire_equipment/FireEquipmentDetailPage';
 import FireEquipmentMaintenancePage from './pages/fire_equipment/FireEquipmentMaintenancePage';
+import FireEquipmentMaintenanceDashboardPage from './pages/fire_equipment/FireEquipmentMaintenanceDashboardPage';
 import FireEquipmentSettingsPage from './pages/fire_equipment/FireEquipmentSettingsPage';
 
 // Placeholder for future modules
@@ -708,6 +709,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <AppLayout><FireEquipmentMaintenancePage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/fire-equipment/maintenance"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><FireEquipmentMaintenanceDashboardPage /></AppLayout>
                     </ProtectedRoute>
                   }
                 />

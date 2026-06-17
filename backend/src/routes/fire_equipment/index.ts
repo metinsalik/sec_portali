@@ -422,4 +422,75 @@ router.post('/equipment/:id/movement', async (req, res) => {
   }
 });
 
+// --- MAINTENANCE ---
+router.get('/maintenances/:facilityId', async (req, res) => {
+  try {
+    const { facilityId } = req.params;
+    const maintenances = await prisma.fireEquipmentMaintenance.findMany({
+      where: {
+        equipment: {
+          facilityId
+        }
+      },
+      include: {
+        equipment: {
+          include: {
+            category: true,
+            location: true,
+            responsible: true
+          }
+        }
+      },
+      orderBy: { maintenanceDate: 'desc' }
+    });
+    res.json(maintenances);
+  } catch (error) {
+    console.error('Error fetching maintenances:', error);
+    res.status(500).json({ error: 'Bakımlar alınamadı.' });
+  }
+});
+
+router.post('/maintenances', async (req, res) => {
+  try {
+    const { equipmentId, maintenanceDate, company, technician, result, description } = req.body;
+    
+    // Create maintenance record
+    const maintenance = await prisma.fireEquipmentMaintenance.create({
+      data: {
+        equipmentId,
+        maintenanceDate: new Date(maintenanceDate),
+        company,
+        technician,
+        result,
+        description
+      }
+    });
+
+    // Update equipment's nextMaintenanceDate
+    const equipment = await prisma.fireEquipment.findUnique({
+      where: { id: equipmentId },
+      include: { category: true }
+    });
+
+    if (equipment && equipment.category && equipment.category.maintenanceFrequency !== 'none') {
+      const nextDate = new Date(maintenanceDate);
+      switch (equipment.category.maintenanceFrequency) {
+        case 'AYLIK': nextDate.setMonth(nextDate.getMonth() + 1); break;
+        case '3_AYLIK': nextDate.setMonth(nextDate.getMonth() + 3); break;
+        case '6_AYLIK': nextDate.setMonth(nextDate.getMonth() + 6); break;
+        case 'YILLIK': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
+      }
+      await prisma.fireEquipment.update({
+        where: { id: equipmentId },
+        data: { nextMaintenanceDate: nextDate }
+      });
+    }
+
+    res.status(201).json(maintenance);
+  } catch (error) {
+    console.error('Error creating maintenance:', error);
+    res.status(500).json({ error: 'Bakım oluşturulamadı.' });
+  }
+});
+
 export default router;
