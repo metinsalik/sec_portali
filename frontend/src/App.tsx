@@ -93,6 +93,7 @@ import FireEquipmentListPage from './pages/fire_equipment/FireEquipmentListPage'
 import FireEquipmentFormPage from './pages/fire_equipment/FireEquipmentFormPage';
 import FireEquipmentDetailPage from './pages/fire_equipment/FireEquipmentDetailPage';
 import FireEquipmentMaintenancePage from './pages/fire_equipment/FireEquipmentMaintenancePage';
+import FireEquipmentSettingsPage from './pages/fire_equipment/FireEquipmentSettingsPage';
 
 // Placeholder for future modules
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -707,6 +708,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <AppLayout><FireEquipmentMaintenancePage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/fire-equipment/settings"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><FireEquipmentSettingsPage /></AppLayout>
                     </ProtectedRoute>
                   }
                 />

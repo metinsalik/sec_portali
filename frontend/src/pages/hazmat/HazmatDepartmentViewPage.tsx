@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api, { BASE_URL } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Search, LayoutGrid, List, Printer, Plus } from 'lucide-react';
+import { ArrowLeft, Search, LayoutGrid, List, Printer, Plus, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
 import { DepartmentPrintModal } from '@/components/hazmat/DepartmentPrintModal';
 
@@ -16,6 +17,7 @@ export default function HazmatDepartmentViewPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [printMaterial, setPrintMaterial] = useState<any>(null);
   const [isDepartmentPrintOpen, setIsDepartmentPrintOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
     queryKey: ['hazmat-department-details', id, activeFacilityId],
@@ -34,6 +36,27 @@ export default function HazmatDepartmentViewPage() {
   if (!data?.department) {
     return <div className="p-8 text-center text-red-500">Departman bulunamadı.</div>;
   }
+
+  const deleteMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const res = await api.delete(`/hazmat/inventory/${itemId}`);
+      if (!res.ok) throw new Error('Silinemedi');
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success('Malzeme departmandan çıkarıldı.');
+      queryClient.invalidateQueries({ queryKey: ['hazmat-department-details', id, activeFacilityId] });
+    },
+    onError: () => {
+      toast.error('Malzeme çıkarılırken bir hata oluştu.');
+    }
+  });
+
+  const handleDelete = (itemId: string, productName: string) => {
+    if (window.confirm(`${productName} malzemesini bu departmandan çıkarmak istediğinize emin misiniz?`)) {
+      deleteMutation.mutate(itemId);
+    }
+  };
 
   const { department, inventoryItems = [] } = data;
 
@@ -166,6 +189,9 @@ export default function HazmatDepartmentViewPage() {
                 </div>
 
                 <div className="p-4 border-t bg-muted/10 flex justify-end gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, mat.productName)} className="text-red-600 hover:text-red-700 hover:bg-red-50" title="Departmandan Çıkar">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                   <Button variant="ghost" size="sm" onClick={() => setPrintMaterial(mat)} className="text-blue-600 hover:text-blue-700" title="Bilgi Kartı">
                     <Printer className="w-4 h-4" />
                   </Button>
@@ -230,6 +256,9 @@ export default function HazmatDepartmentViewPage() {
                   </div>
                   
                   <div className="col-span-2 text-right flex items-center justify-end gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, mat.productName)} className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0" title="Departmandan Çıkar">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => setPrintMaterial(mat)} className="text-blue-600 hover:text-blue-700 h-8 w-8 p-0" title="Bilgi Kartı">
                       <Printer className="w-4 h-4" />
                     </Button>

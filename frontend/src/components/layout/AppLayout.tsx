@@ -5,7 +5,7 @@ import {
   Shield, LayoutDashboard, Building2, Users, Briefcase, UserCheck,
   ClipboardList, FileText, Settings, Bell, ChevronDown, LogOut,
   User, BarChart3, ChevronRight, LayoutGrid, Database, Users2, Mail,
-  BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen
+  BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -102,6 +102,15 @@ const hazmatNavItems = [
   { label: 'Kit Malzemeleri', icon: PackageOpen, to: '/hazmat/settings/kit-items' },
 ];
 
+const fireEquipmentNavItems = [
+  { label: 'GENEL', type: 'group' },
+  { label: 'Dashboard', icon: LayoutDashboard, to: '/fire-equipment/dashboard', end: true },
+  { label: 'YANGIN EKİPMANLARI', type: 'group' },
+  { label: 'Envanter', icon: Flame, to: '/fire-equipment/list' },
+  { label: 'AYARLAR', type: 'group' },
+  { label: 'Modül Ayarları', icon: Settings, to: '/fire-equipment/settings' },
+];
+
 const profileNavItems = (hasAdminAccess: boolean) => [
   { label: 'UYGULAMALAR', type: 'group' },
   ...(hasAdminAccess ? [{ label: 'İSG Atama Paneli', icon: LayoutDashboard, to: '/panel' }] : []),
@@ -134,6 +143,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   } else if (path.startsWith('/hazmat')) {
     navItems = hazmatNavItems;
     moduleName = 'Tehlikeli Madde Yönetimi';
+  } else if (path.startsWith('/fire-equipment')) {
+    navItems = fireEquipmentNavItems;
+    moduleName = 'FireTrack 360';
   } else if (path.startsWith('/settings')) {
     navItems = settingsNavItems;
     moduleName = 'Sistem Ayarları';
@@ -167,7 +179,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* Facility Switcher (Show for modules that need it) */}
-        {(path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations')) && (
+        {(path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment')) && (
           <FacilitySwitcher />
         )}
 
