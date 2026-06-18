@@ -350,16 +350,21 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res) => {
 
     const results = { created: 0, updated: 0, errors: 0 };
 
+    // Fetch all existing materials once to do robust in-memory case-insensitive matching
+    const allGlobalMaterials = await prisma.hazmatMaterial.findMany();
+    
+    const normalizeText = (t: string) => (t || '').toLocaleLowerCase('tr-TR').trim();
+
     for (const data of materials) {
       if (!data.productName) {
         results.errors++;
         continue;
       }
 
-      // Check if global material exists
-      let material = await prisma.hazmatMaterial.findFirst({
-        where: { productName: { equals: data.productName, mode: 'insensitive' } }
-      });
+      const normalizedProductName = normalizeText(data.productName);
+
+      // Check if global material exists robustly using Turkish locale lowercasing
+      let material = allGlobalMaterials.find(m => normalizeText(m.productName) === normalizedProductName);
 
       if (!material) {
         // Create new global material
@@ -390,6 +395,8 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res) => {
             username
           }
         });
+        
+        allGlobalMaterials.push(material);
         results.created++;
       } else {
         // Update existing material with any new info provided in Excel
