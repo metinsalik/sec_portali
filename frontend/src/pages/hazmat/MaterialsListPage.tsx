@@ -173,7 +173,11 @@ export default function MaterialsListPage() {
             'stabilite', 'reaktivite', 'reaktiflik',
             'toksikolojik',
             'temizlik', 'imha',
-            'tehlikeli madde sınıfı'
+            'tehlikeli madde sınıfı',
+            'productname', 'brandname', 'amountvalue', 'usagemethod', 'composition',
+            'hazarddescription', 'firstaid', 'firefightingmeasures', 'accidentalreleasemeasures',
+            'handlingandstorage', 'exposurecontrolsppe', 'physicalandchemicalproperties',
+            'stabilityandreactivity', 'toxicologicalinformation', 'disposalconsiderations'
           ];
           
           let searchData = data;
@@ -210,24 +214,25 @@ export default function MaterialsListPage() {
 
           if (!headerRow) return;
 
-          const getColIndex = (kw: string[]) => headerRow.findIndex((h: string) => h && kw.some(k => String(h).toLowerCase().includes(k)));
+          const normalizeText = (text: any) => String(text || '').toLocaleLowerCase('tr-TR').trim();
+          const getColIndex = (kw: string[]) => headerRow.findIndex((h: string) => h && kw.some(k => normalizeText(h).includes(k)));
 
-          const idxName = getColIndex(['ürün adı', 'madde adı', 'malzeme adı', 'isim']);
-          const idxBrand = getColIndex(['marka']);
-          const idxAmount = getColIndex(['miktar', 'adedi']);
-          const idxUnit = getColIndex(['birim']);
-          const idxUsage = getColIndex(['kullanım şekli']);
-          const idxComposition = getColIndex(['bileşimi', 'içerik']);
-          const idxHazard = getColIndex(['tehlike tanımları', 'tehlike']);
-          const idxFirstAid = getColIndex(['ilk yardım', 'ilkyardım']);
-          const idxFire = getColIndex(['yangınla', 'yangında', 'yangın']);
-          const idxRelease = getColIndex(['kaza sonucu', 'serbest kalması']);
-          const idxHandling = getColIndex(['kullanım ve depolama', 'depolama']);
-          const idxExposure = getColIndex(['maruz kalma', 'kişisel korunma']);
-          const idxPhysical = getColIndex(['fiziksel ve kimyasal', 'fiziksel', 'kimyasal']);
-          const idxStability = getColIndex(['stabilite', 'reaktivite', 'reaktiflik']);
-          const idxTox = getColIndex(['toksikolojik']);
-          const idxDisposal = getColIndex(['temizlik', 'imha']);
+          const idxName = getColIndex(['ürün adı', 'madde adı', 'malzeme adı', 'isim', 'productname']);
+          const idxBrand = getColIndex(['marka', 'brandname']);
+          const idxAmount = getColIndex(['miktar', 'adedi', 'amountvalue']);
+          const idxUnit = getColIndex(['birim', 'unitid']);
+          const idxUsage = getColIndex(['kullanım şekli', 'usagemethod']);
+          const idxComposition = getColIndex(['bileşimi', 'içerik', 'composition']);
+          const idxHazard = getColIndex(['tehlike tanımları', 'tehlike', 'hazarddescription']);
+          const idxFirstAid = getColIndex(['ilk yardım', 'ilkyardım', 'firstaid']);
+          const idxFire = getColIndex(['yangınla', 'yangında', 'yangın', 'firefightingmeasures']);
+          const idxRelease = getColIndex(['kaza sonucu', 'serbest kalması', 'accidentalreleasemeasures']);
+          const idxHandling = getColIndex(['kullanım ve depolama', 'depolama', 'handlingandstorage']);
+          const idxExposure = getColIndex(['maruz kalma', 'kişisel korunma', 'exposurecontrolsppe']);
+          const idxPhysical = getColIndex(['fiziksel ve kimyasal', 'fiziksel', 'kimyasal', 'physicalandchemicalproperties']);
+          const idxStability = getColIndex(['stabilite', 'reaktivite', 'reaktiflik', 'stabilityandreactivity']);
+          const idxTox = getColIndex(['toksikolojik', 'toxicologicalinformation']);
+          const idxDisposal = getColIndex(['temizlik', 'imha', 'disposalconsiderations']);
 
           const startIndex = searchData.indexOf(headerRow) + 1;
           
@@ -244,7 +249,7 @@ export default function MaterialsListPage() {
             if (!productName) continue;
             
             // Avoid adding duplicate in the payload
-            if (importedMaterials.some(m => m.productName.toLowerCase() === productName.toLowerCase())) continue;
+            if (importedMaterials.some(m => normalizeText(m.productName) === normalizeText(productName))) continue;
 
             let parsedAmount = 1;
             if (idxAmount !== -1 && row[idxAmount]) {
