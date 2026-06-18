@@ -4,9 +4,11 @@ import api from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Flame, Plus, QrCode, ArrowRight, Filter, AlertTriangle, CheckCircle, PenTool, Printer } from 'lucide-react';
+import { Flame, Plus, QrCode, ArrowRight, Filter, AlertTriangle, CheckCircle, PenTool, Printer, Search } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function FireEquipmentListPage() {
@@ -21,6 +23,7 @@ export default function FireEquipmentListPage() {
   const [filterDescription, setFilterDescription] = useState<string>('all');
   const [filterResult, setFilterResult] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   const { data: equipment, isLoading } = useQuery({
     queryKey: ['fire-equipment', facilityId],
@@ -149,11 +152,24 @@ export default function FireEquipmentListPage() {
       }
     }
     if (filterStatus !== 'all') {
-      if (filterStatus === 'DEGISIM_BEKLEYEN') {
+      if (filterStatus === 'AKTIF_DEGISIM') {
+        match = match && (item.status === 'AKTIF' || item.status === 'DEGISIME_GIDEN');
+      } else if (filterStatus === 'DEGISIM_BEKLEYEN') {
         match = match && ['ARIZALI', 'HURDA', 'DEGISIME_GIDEN'].includes(item.status);
       } else {
         match = match && item.status === filterStatus;
       }
+    }
+    if (searchQuery.trim() !== '') {
+      const query = searchQuery.toLowerCase();
+      const searchableFields = [
+        item.equipmentNo,
+        item.serialNo,
+        item.brand,
+        item.qrCode,
+        item.model,
+      ].map(f => f?.toLowerCase() || '');
+      match = match && searchableFields.some(f => f.includes(query));
     }
     return match;
   }) || [];
@@ -261,8 +277,19 @@ export default function FireEquipmentListPage() {
       </div>
 
       <Card className="shadow-sm border-border print:hidden">
-        <CardContent className="p-4 bg-muted/20 border-b">
-          <div className="flex flex-col md:flex-row gap-4 items-end">
+        <CardContent className="p-4 bg-muted/20 border-b space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Ekipman No, Seri No, Marka, QR Kod ile ara..."
+                className="pl-9 h-9 w-full shadow-sm bg-white dark:bg-slate-900"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex flex-col md:flex-row gap-4 items-end flex-wrap">
             <div className="space-y-1 w-full md:w-1/4">
               <label className="text-xs font-medium text-muted-foreground">Kategori</label>
               <select 

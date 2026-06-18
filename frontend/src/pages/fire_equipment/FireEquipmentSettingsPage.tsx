@@ -586,7 +586,7 @@ export default function FireEquipmentSettingsPage() {
             </Card>
           </div>
           <Dialog open={isLocDialogOpen} onOpenChange={setIsLocDialogOpen}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>Yeni Alt Lokasyon Ekle</DialogTitle>
                 <DialogDescription>Hiyerarşiye yeni bir alan ekleyin.</DialogDescription>
