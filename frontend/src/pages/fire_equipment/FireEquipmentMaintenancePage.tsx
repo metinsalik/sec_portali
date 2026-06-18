@@ -65,9 +65,9 @@ export default function FireEquipmentMaintenancePage() {
         body: data
       });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('Bakım kaydı başarıyla oluşturuldu.');
-      queryClient.invalidateQueries({ queryKey: ['fire-equipment', id] });
+      await queryClient.invalidateQueries({ queryKey: ['fire-equipment', id] });
       navigate(`/fire-equipment/view/${id}`);
     },
     onError: (error: any) => {

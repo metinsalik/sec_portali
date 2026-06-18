@@ -255,10 +255,10 @@ export default function MaterialFormPage() {
         return res.json();
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['facility-materials'] });
-      queryClient.invalidateQueries({ queryKey: ['material-details'] });
-      queryClient.invalidateQueries({ queryKey: ['global-materials'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['facility-materials'] });
+      await queryClient.invalidateQueries({ queryKey: ['material-details'] });
+      await queryClient.invalidateQueries({ queryKey: ['global-materials'] });
       toast.success(isEditMode ? 'Tehlikeli Madde güncellendi!' : 'Tehlikeli Madde başarıyla tesise eklendi!');
       navigate('/hazmat/materials');
     },
