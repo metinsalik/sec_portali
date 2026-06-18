@@ -43,6 +43,11 @@ export default function FireEquipmentFormPage() {
   const [newCompanyName, setNewCompanyName] = useState('');
   const [isCompanyDialogOpen, setIsCompanyDialogOpen] = useState(false);
 
+  // Cascaded Location Filters
+  const [locBlock, setLocBlock] = useState('all');
+  const [locFloor, setLocFloor] = useState('all');
+  const [locDepartment, setLocDepartment] = useState('all');
+
   const { data: categories } = useQuery({
     queryKey: ['fire-categories'],
     queryFn: async () => {
@@ -214,6 +219,20 @@ export default function FireEquipmentFormPage() {
     mutation.mutate(formData);
   };
 
+  const getFilteredLocations = () => {
+    return locations?.filter((l: any) => {
+      let match = true;
+      if (locBlock !== 'all') match = match && l.building === locBlock;
+      if (locFloor !== 'all') match = match && l.floor === locFloor;
+      if (locDepartment !== 'all') match = match && l.department === locDepartment;
+      return match;
+    }) || [];
+  };
+
+  const blocks = Array.from(new Set(locations?.map((l: any) => l.building).filter(Boolean))).sort();
+  const floors = Array.from(new Set(locations?.filter((l:any) => locBlock === 'all' || l.building === locBlock).map((l: any) => l.floor).filter(Boolean))).sort();
+  const departments = Array.from(new Set(locations?.filter((l:any) => (locBlock === 'all' || l.building === locBlock) && (locFloor === 'all' || l.floor === locFloor)).map((l: any) => l.department).filter(Boolean))).sort();
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12 p-6">
       <div className="flex items-center gap-4">
@@ -370,19 +389,45 @@ export default function FireEquipmentFormPage() {
                   <option value="DEPODA">Depoda</option>
                 </select>
               </div>
-              <div className="space-y-2">
-                <Label>Lokasyon (İlk Kayıt)</Label>
-                <select 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
-                  value={formData.locationId || ''} 
-                  onChange={(e) => handleSelectChange('locationId', e.target.value)} 
-                  disabled={isEdit}
-                >
-                  <option value="" disabled>Seçiniz...</option>
-                  {locations?.map((loc: any) => (
-                    <option key={loc.id} value={loc.id}>{`${loc.building}${loc.floor ? ` / ${loc.floor}` : ''}${loc.department ? ` - ${loc.department}` : ''}${loc.description ? ` (${loc.description})` : ''}`}</option>
-                  ))}
-                </select>
+              <div className="md:col-span-3 border rounded-lg p-4 bg-slate-50 dark:bg-slate-900/50 space-y-4">
+                <Label className="text-muted-foreground font-medium">Lokasyon Seçimi (İlk Kayıt)</Label>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Blok Filtresi</Label>
+                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm" disabled={isEdit} value={locBlock} onChange={e => {setLocBlock(e.target.value); setLocFloor('all'); setLocDepartment('all');}}>
+                      <option value="all">Tümü</option>
+                      {blocks.map((b: any) => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Kat Filtresi</Label>
+                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm disabled:opacity-50" disabled={isEdit || floors.length === 0} value={locFloor} onChange={e => {setLocFloor(e.target.value); setLocDepartment('all');}}>
+                      <option value="all">Tümü</option>
+                      {floors.map((f: any) => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Birim Filtresi</Label>
+                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm disabled:opacity-50" disabled={isEdit || departments.length === 0} value={locDepartment} onChange={e => setLocDepartment(e.target.value)}>
+                      <option value="all">Tümü</option>
+                      {departments.map((d: any) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Nihai Seçim (Mahal) *</Label>
+                    <select 
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm disabled:opacity-50 ring-2 ring-red-500/20"
+                      value={formData.locationId || ''} 
+                      onChange={(e) => handleSelectChange('locationId', e.target.value)} 
+                      disabled={isEdit}
+                    >
+                      <option value="" disabled>Seçiniz...</option>
+                      {getFilteredLocations().map((loc: any) => (
+                        <option key={loc.id} value={loc.id}>{`${loc.building}${loc.floor ? ` / ${loc.floor}` : ''}${loc.department ? ` - ${loc.department}` : ''}${loc.description ? ` > ${loc.description}` : ''}`}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
             </div>
 

@@ -406,8 +406,12 @@ export default function FireEquipmentSettingsPage() {
                   <Input 
                     value={newLocation.building} 
                     onChange={e => setNewLocation({...newLocation, building: e.target.value})} 
-                    placeholder="Örn: A Blok" 
+                    placeholder="Örn: A Blok"
+                    list="blocks-list"
                   />
+                  <datalist id="blocks-list">
+                    {Array.from(new Set(locations?.map((l:any) => l.building).filter(Boolean))).sort().map((val: any) => <option key={val} value={val} />)}
+                  </datalist>
                 </div>
                 <div className="space-y-2">
                   <Label>Kat</Label>
@@ -415,23 +419,35 @@ export default function FireEquipmentSettingsPage() {
                     value={newLocation.floor} 
                     onChange={e => setNewLocation({...newLocation, floor: e.target.value})} 
                     placeholder="Örn: 2. Kat" 
+                    list="floors-list"
                   />
+                  <datalist id="floors-list">
+                    {Array.from(new Set(locations?.filter((l:any) => !newLocation.building || l.building === newLocation.building).map((l:any) => l.floor).filter(Boolean))).sort().map((val: any) => <option key={val} value={val} />)}
+                  </datalist>
+                </div>
+                <div className="space-y-2">
+                  <Label>Birim</Label>
+                  <Input 
+                    value={newLocation.department || ''} 
+                    onChange={e => setNewLocation({...newLocation, department: e.target.value})} 
+                    placeholder="Örn: Acil Servis" 
+                    list="depts-list"
+                  />
+                  <datalist id="depts-list">
+                    {Array.from(new Set(locations?.filter((l:any) => (!newLocation.building || l.building === newLocation.building) && (!newLocation.floor || l.floor === newLocation.floor)).map((l:any) => l.department).filter(Boolean))).sort().map((val: any) => <option key={val} value={val} />)}
+                  </datalist>
                 </div>
                 <div className="space-y-2">
                   <Label>Mahal</Label>
                   <Input 
-                    value={newLocation.department || ''} 
-                    onChange={e => setNewLocation({...newLocation, department: e.target.value})} 
-                    placeholder="Örn: Elektrik Odası" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Açıklama / Detay</Label>
-                  <Input 
                     value={newLocation.description} 
                     onChange={e => setNewLocation({...newLocation, description: e.target.value})} 
-                    placeholder="Örn: Acil çıkış kapısı yanı" 
+                    placeholder="Örn: Kirli Oda" 
+                    list="desc-list"
                   />
+                  <datalist id="desc-list">
+                    {Array.from(new Set(locations?.filter((l:any) => (!newLocation.building || l.building === newLocation.building) && (!newLocation.floor || l.floor === newLocation.floor) && (!newLocation.department || l.department === newLocation.department)).map((l:any) => l.description).filter(Boolean))).sort().map((val: any) => <option key={val} value={val} />)}
+                  </datalist>
                 </div>
                 <Button 
                   className="w-full" 
@@ -454,10 +470,35 @@ export default function FireEquipmentSettingsPage() {
                       <div key={loc.id} className="p-3 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50">
                         {editingLocation?.id === loc.id ? (
                           <div className="space-y-3">
-                            <Input value={editingLocation.building} onChange={e => setEditingLocation({...editingLocation, building: e.target.value})} placeholder="Bina / Blok" />
-                            <Input value={editingLocation.floor || ''} onChange={e => setEditingLocation({...editingLocation, floor: e.target.value})} placeholder="Kat" />
-                            <Input value={editingLocation.department || ''} onChange={e => setEditingLocation({...editingLocation, department: e.target.value})} placeholder="Mahal" />
-                            <Input value={editingLocation.description || ''} onChange={e => setEditingLocation({...editingLocation, description: e.target.value})} placeholder="Açıklama" />
+                            <div className="space-y-1">
+                                  <Label className="text-xs">Blok</Label>
+                                  <Input value={editingLocation.building} onChange={e => setEditingLocation({...editingLocation, building: e.target.value})} list="blocks-list-edit" />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Kat</Label>
+                                  <Input value={editingLocation.floor || ''} onChange={e => setEditingLocation({...editingLocation, floor: e.target.value})} list="floors-list-edit" />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Birim</Label>
+                                  <Input value={editingLocation.department || ''} onChange={e => setEditingLocation({...editingLocation, department: e.target.value})} list="depts-list-edit" />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Mahal</Label>
+                                  <Input value={editingLocation.description || ''} onChange={e => setEditingLocation({...editingLocation, description: e.target.value})} list="desc-list-edit" />
+                                </div>
+                                
+                                <datalist id="blocks-list-edit">
+                                  {Array.from(new Set(locations?.map((l:any) => l.building).filter(Boolean))).sort().map((val: any) => <option key={val} value={val} />)}
+                                </datalist>
+                                <datalist id="floors-list-edit">
+                                  {Array.from(new Set(locations?.map((l:any) => l.floor).filter(Boolean))).sort().map((val: any) => <option key={val} value={val} />)}
+                                </datalist>
+                                <datalist id="depts-list-edit">
+                                  {Array.from(new Set(locations?.map((l:any) => l.department).filter(Boolean))).sort().map((val: any) => <option key={val} value={val} />)}
+                                </datalist>
+                                <datalist id="desc-list-edit">
+                                  {Array.from(new Set(locations?.map((l:any) => l.description).filter(Boolean))).sort().map((val: any) => <option key={val} value={val} />)}
+                                </datalist>
                             <div className="flex gap-2">
                               <Button size="sm" onClick={() => updateLocationMutation.mutate(editingLocation)}><Check className="w-4 h-4 mr-1" /> Kaydet</Button>
                               <Button size="sm" variant="ghost" onClick={() => setEditingLocation(null)}>İptal</Button>
@@ -466,8 +507,8 @@ export default function FireEquipmentSettingsPage() {
                         ) : (
                           <div className="flex justify-between items-start">
                             <div>
-                              <p className="font-semibold text-sm">{loc.building} {loc.floor && `/ ${loc.floor}`} {loc.department && `- ${loc.department}`}</p>
-                              <p className="text-xs text-muted-foreground">{loc.description || 'Açıklama yok'}</p>
+                                  <p className="font-semibold">{loc.building} {loc.floor && <span className="text-muted-foreground font-normal">/ {loc.floor}</span>}</p>
+                                  <p className="text-sm text-muted-foreground">{loc.department || '-'} {loc.description && `> ${loc.description}`}</p>
                             </div>
                             <div className="flex gap-1">
                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setEditingLocation({ ...loc })}><Pencil className="w-4 h-4" /></Button>

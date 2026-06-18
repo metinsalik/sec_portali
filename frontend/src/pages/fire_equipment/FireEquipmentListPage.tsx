@@ -15,7 +15,10 @@ export default function FireEquipmentListPage() {
 
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterSubcategory, setFilterSubcategory] = useState<string>('all');
-  const [filterLocation, setFilterLocation] = useState<string>('all');
+  const [filterBlock, setFilterBlock] = useState<string>('all');
+  const [filterFloor, setFilterFloor] = useState<string>('all');
+  const [filterDepartment, setFilterDepartment] = useState<string>('all');
+  const [filterDescription, setFilterDescription] = useState<string>('all');
   const [filterResult, setFilterResult] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
@@ -61,6 +64,34 @@ export default function FireEquipmentListPage() {
   const selectedCategoryObj = parentCategories.find((c: any) => c.id === filterCategory);
   const availableSubcategories = selectedCategoryObj?.subcategories || [];
 
+  // Hierarchical Locations Data Extraction
+  const blocks = Array.from(new Set(locations?.map((l: any) => l.building).filter(Boolean))).sort();
+  
+  const availableFloors = Array.from(new Set(
+    locations?.filter((l: any) => filterBlock === 'all' || l.building === filterBlock)
+    .map((l: any) => l.floor)
+    .filter(Boolean)
+  )).sort();
+
+  const availableDepartments = Array.from(new Set(
+    locations?.filter((l: any) => 
+      (filterBlock === 'all' || l.building === filterBlock) &&
+      (filterFloor === 'all' || l.floor === filterFloor)
+    )
+    .map((l: any) => l.department)
+    .filter(Boolean)
+  )).sort();
+
+  const availableDescriptions = Array.from(new Set(
+    locations?.filter((l: any) => 
+      (filterBlock === 'all' || l.building === filterBlock) &&
+      (filterFloor === 'all' || l.floor === filterFloor) &&
+      (filterDepartment === 'all' || l.department === filterDepartment)
+    )
+    .map((l: any) => l.description)
+    .filter(Boolean)
+  )).sort();
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'AKTIF': return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Aktif</Badge>;
@@ -97,8 +128,17 @@ export default function FireEquipmentListPage() {
         match = match && (item.categoryId === filterCategory || item.category?.parentId === filterCategory);
       }
     }
-    if (filterLocation !== 'all') {
-      match = match && item.locationId === filterLocation;
+    if (filterBlock !== 'all') {
+      match = match && item.location?.building === filterBlock;
+    }
+    if (filterFloor !== 'all') {
+      match = match && item.location?.floor === filterFloor;
+    }
+    if (filterDepartment !== 'all') {
+      match = match && item.location?.department === filterDepartment;
+    }
+    if (filterDescription !== 'all') {
+      match = match && item.location?.description === filterDescription;
     }
     if (filterResult !== 'all') {
       const result = item.maintenances?.[0]?.result;
@@ -255,21 +295,78 @@ export default function FireEquipmentListPage() {
               </select>
             </div>
 
-            <div className="space-y-1 w-full md:w-1/5">
-              <label className="text-xs font-medium text-muted-foreground">Lokasyon</label>
+            <div className="space-y-1 w-full md:w-1/4">
+              <label className="text-xs font-medium text-muted-foreground">Blok</label>
               <select 
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
-                value={filterLocation}
-                onChange={(e) => setFilterLocation(e.target.value)}
+                value={filterBlock}
+                onChange={(e) => {
+                  setFilterBlock(e.target.value);
+                  setFilterFloor('all');
+                  setFilterDepartment('all');
+                  setFilterDescription('all');
+                }}
               >
-                <option value="all">Tüm Lokasyonlar</option>
-                {locations?.map((loc: any) => (
-                  <option key={loc.id} value={loc.id}>{`${loc.building}${loc.floor ? ` / ${loc.floor}` : ''}${loc.department ? ` - ${loc.department}` : ''}${loc.description ? ` (${loc.description})` : ''}`}</option>
+                <option value="all">Tüm Bloklar</option>
+                {blocks.map((b: any) => (
+                  <option key={b} value={b}>{b}</option>
                 ))}
               </select>
             </div>
 
-            <div className="space-y-1 w-full md:w-1/5">
+            <div className="space-y-1 w-full md:w-1/4">
+              <label className="text-xs font-medium text-muted-foreground">Kat</label>
+              <select 
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm disabled:opacity-50"
+                value={filterFloor}
+                onChange={(e) => {
+                  setFilterFloor(e.target.value);
+                  setFilterDepartment('all');
+                  setFilterDescription('all');
+                }}
+                disabled={availableFloors.length === 0}
+              >
+                <option value="all">Tüm Katlar</option>
+                {availableFloors.map((f: any) => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1 w-full md:w-1/4">
+              <label className="text-xs font-medium text-muted-foreground">Birim</label>
+              <select 
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm disabled:opacity-50"
+                value={filterDepartment}
+                onChange={(e) => {
+                  setFilterDepartment(e.target.value);
+                  setFilterDescription('all');
+                }}
+                disabled={availableDepartments.length === 0}
+              >
+                <option value="all">Tüm Birimler</option>
+                {availableDepartments.map((d: any) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1 w-full md:w-1/4">
+              <label className="text-xs font-medium text-muted-foreground">Mahal</label>
+              <select 
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm disabled:opacity-50"
+                value={filterDescription}
+                onChange={(e) => setFilterDescription(e.target.value)}
+                disabled={availableDescriptions.length === 0}
+              >
+                <option value="all">Tüm Mahaller</option>
+                {availableDescriptions.map((d: any) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="space-y-1 w-full md:w-1/4">
               <label className="text-xs font-medium text-muted-foreground">Bakım Durumu</label>
               <select 
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
