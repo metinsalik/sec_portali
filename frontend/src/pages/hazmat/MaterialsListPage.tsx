@@ -164,7 +164,7 @@ export default function MaterialsListPage() {
             'kullanım şekli',
             'bileşimi', 'içerik',
             'tehlike tanımları',
-            'ilk yardım',
+            'ilk yardım', 'ilkyardım',
             'yangınla', 'yangında', 'yangın',
             'kaza sonucu', 'serbest kalması',
             'kullanım ve depolama',
@@ -219,7 +219,7 @@ export default function MaterialsListPage() {
           const idxUsage = getColIndex(['kullanım şekli']);
           const idxComposition = getColIndex(['bileşimi', 'içerik']);
           const idxHazard = getColIndex(['tehlike tanımları', 'tehlike']);
-          const idxFirstAid = getColIndex(['ilk yardım']);
+          const idxFirstAid = getColIndex(['ilk yardım', 'ilkyardım']);
           const idxFire = getColIndex(['yangınla', 'yangında', 'yangın']);
           const idxRelease = getColIndex(['kaza sonucu', 'serbest kalması']);
           const idxHandling = getColIndex(['kullanım ve depolama', 'depolama']);

@@ -392,6 +392,34 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res) => {
         });
         results.created++;
       } else {
+        // Update existing material with any new info provided in Excel
+        await prisma.hazmatMaterial.update({
+          where: { id: material.id },
+          data: {
+            brandName: data.brandName || material.brandName,
+            usageMethod: data.usageMethod || material.usageMethod,
+            composition: data.composition || material.composition,
+            hazardDescription: data.hazardDescription || material.hazardDescription,
+            firstAid: data.firstAid || material.firstAid,
+            fireFightingMeasures: data.fireFightingMeasures || material.fireFightingMeasures,
+            accidentalReleaseMeasures: data.accidentalReleaseMeasures || material.accidentalReleaseMeasures,
+            handlingAndStorage: data.handlingAndStorage || material.handlingAndStorage,
+            exposureControlsPpe: data.exposureControlsPpe || data.exposureControls || material.exposureControlsPpe,
+            physicalAndChemicalProperties: data.physicalAndChemicalProperties || data.physicalProperties || material.physicalAndChemicalProperties,
+            stabilityAndReactivity: data.stabilityAndReactivity || material.stabilityAndReactivity,
+            toxicologicalInformation: data.toxicologicalInfo || material.toxicologicalInformation,
+            disposalConsiderations: data.disposalConsiderations || material.disposalConsiderations,
+          }
+        });
+        
+        await prisma.hazmatAuditLog.create({
+          data: {
+            materialId: material.id,
+            action: 'UPDATE',
+            details: 'Excel içe aktarımı ile mevcut bilgiler güncellendi.',
+            username
+          }
+        });
         results.updated++;
       }
 
