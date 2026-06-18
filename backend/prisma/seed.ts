@@ -4,6 +4,13 @@ const prisma = new PrismaClient();
 const checklists = {
   "Yangın Kapısı": {
     altKategoriler: ["Tek Kanatlı", "Çift Kanatlı", "Kayar Kapı"],
+    inventoryParameters: [
+      { name: "Yangın Dayanımı", options: ["30 dk", "60 dk", "90 dk", "120 dk"] },
+      { name: "Özellik", options: ["E", "EI", "EW"] },
+      { name: "Manyetik Tutucu", options: ["Var", "Yok"] },
+      { name: "Kapatma Sistemi", options: ["Kendiliğinden Kapanır", "Harici Hidrolik Kapatıcı"] },
+      { name: "Yangın Sistemi Entegrasyonu", options: ["Var", "Yok"] }
+    ],
     bakimKontrolleri: [
       { id: "kapanmaKontrol", label: "Kapı kendiliğinden kapanıyor mu?", type: "checkbox" },
       { id: "contaKontrol", label: "Conta ve sızdırmazlık elemanları sağlam mı?", type: "checkbox" },
@@ -14,6 +21,13 @@ const checklists = {
   },
   "Yangın Tüpü": {
     altKategoriler: ["Kuru Kimyevi Tozlu", "CO₂", "Köpüklü", "Sulu", "Temiz Gazlı"],
+    inventoryParameters: [
+      { name: "Söndürme Maddesi", options: ["KKT", "CO₂", "Köpük", "Su", "Temiz Gaz"] },
+      { name: "Kapasite", options: ["2 kg", "5 kg", "6 kg", "9 kg", "12 kg", "25 kg", "50 kg"] },
+      { name: "Kullanım Tipi", options: ["Taşınabilir", "Arabalı"] },
+      { name: "Basınç Durumu", options: ["Basınçlı", "Kartuşlu"] },
+      { name: "Manometre", options: ["Var", "Yok"] }
+    ],
     bakimKontrolleri: [
       { id: "manometreOkuma", label: "Manometre yeşil bölgede mi?", type: "checkbox" },
       { id: "guvenlikPimi", label: "Güvenlik pimi yerinde mi?", type: "checkbox" },
@@ -25,6 +39,14 @@ const checklists = {
   },
   "Dedektör": {
     altKategoriler: ["Duman Dedektörü", "Isı Dedektörü", "Alev Dedektörü", "Gaz Dedektörü", "Kombine Dedektör"],
+    inventoryParameters: [
+      { name: "Algılama Tipi", options: ["Optik Duman", "İyonize Duman", "Sabit Isı", "Isı Artış Hızı", "UV Alev", "IR Alev", "Gaz", "Kombine"] },
+      { name: "Çalışma Prensibi", options: ["Adresli", "Konvansiyonel", "Kablosuz"] },
+      { name: "Besleme Tipi", options: ["Panel Beslemeli", "Bataryalı", "Harici Güç Kaynaklı"] },
+      { name: "Yangın Paneli Entegrasyonu", options: ["Var", "Yok"] },
+      { name: "Alarm Göstergesi", options: ["LED Var", "LED Yok"] },
+      { name: "Kullanım Alanı", options: ["İç Ortam", "Dış Ortam", "Patlayıcı Ortam / Ex-proof"] }
+    ],
     bakimKontrolleri: [
       { id: "ledKontrol", label: "LED göstergesi yanıyor mu?", type: "checkbox" },
       { id: "temizlikKontrol", label: "Dedektör yüzeyi temiz mi?", type: "checkbox" },
@@ -35,6 +57,15 @@ const checklists = {
   },
   "Yangın Dolabı": {
     altKategoriler: ["Hortumlu Yangın Dolabı", "Tüplü Yangın Dolabı", "Kombine Yangın Dolabı", "Köpüklü Sistem Dolabı"],
+    inventoryParameters: [
+      { name: "Hortum Tipi", options: ["Yassı Hortum", "Kauçuk Hortum", "Yarı Sert Hortum"] },
+      { name: "Hortum Uzunluğu", options: ["20 m", "25 m", "30 m"] },
+      { name: "Hortum Çapı", options: ["1”", "1½”", "2”"] },
+      { name: "Lans Tipi", options: ["Açma-Kapama Lanslı", "Sis / Jet Ayarlı Lanslı"] },
+      { name: "Vana Tipi", options: ["Köşe Vana", "Küresel Vana", "Basınç Düşürücü Vana"] },
+      { name: "Yangın Tüpü Entegrasyonu", options: ["Var", "Yok"] },
+      { name: "Cam / Kapak Tipi", options: ["Camlı", "Metal Kapaklı", "Kilitli", "Kilitsiz"] }
+    ],
     bakimKontrolleri: [
       { id: "hortumKontrol", label: "Hortum hasarsız ve tam uzunlukta mı?", type: "checkbox" },
       { id: "vanaKontrol", label: "Vana açılıp kapanıyor mu?", type: "checkbox" },
@@ -45,6 +76,11 @@ const checklists = {
   },
   "Yangın Battaniyesi": {
     altKategoriler: ["Duvar Tipi", "Çanta Tipi", "Kabinli Tip"],
+    inventoryParameters: [
+      { name: "Ölçü", options: ["100x100 cm", "120x120 cm", "120x180 cm", "180x180 cm"] },
+      { name: "Malzeme", options: ["Cam Elyaf", "Silikon Kaplı Cam Elyaf", "Isıya Dayanıklı Kumaş"] },
+      { name: "Muhafaza Tipi", options: ["Çanta", "Sert Kutu", "Dolap İçi"] }
+    ],
     bakimKontrolleri: [
       { id: "fizikselKontrol", label: "Battaniye fiziksel olarak sağlam mı?", type: "checkbox" },
       { id: "muhafazaKontrol", label: "Muhafaza/çanta hasarsız mı?", type: "checkbox" },
@@ -54,6 +90,12 @@ const checklists = {
   },
   "Hidrant": {
     altKategoriler: ["Yer Üstü Hidrant", "Yer Altı Hidrant"],
+    inventoryParameters: [
+      { name: "Hidrant Tipi", options: ["Yer Üstü", "Yer Altı"] },
+      { name: "Çıkış Sayısı", options: ["Tek Çıkışlı", "Çift Çıkışlı", "Üç Çıkışlı"] },
+      { name: "Çıkış Çapı", options: ["DN65", "DN80", "DN100"] },
+      { name: "Donmaya Karşı Koruma", options: ["Var", "Yok", "Gerekli Değil"] }
+    ],
     bakimKontrolleri: [
       { id: "vanaKontrol", label: "Vana açılıp kapanıyor mu?", type: "checkbox" },
       { id: "sizintiKontrol", label: "Sızıntı yok mu?", type: "checkbox" },
@@ -64,6 +106,12 @@ const checklists = {
   },
   "İtfaiye Su Verme Bağlantısı": {
     altKategoriler: ["Cephe Tipi", "Serbest Dikili Tip", "Duvar Tipi"],
+    inventoryParameters: [
+      { name: "Bağlantı Tipi", options: ["Tek Ağızlı", "Çift Ağızlı"] },
+      { name: "Bağlantı Çapı", options: ["DN65", "DN80", "DN100"] },
+      { name: "Kaplin Tipi", options: ["Storz", "İtfaiye Standardına Uygun Kaplin", "Diğer"] },
+      { name: "Çekvalf", options: ["Var", "Yok"] }
+    ],
     bakimKontrolleri: [
       { id: "kaplinKontrol", label: "Kaplin hasarsız ve temiz mi?", type: "checkbox" },
       { id: "kapakKontrol", label: "Kör tapa/kapak yerinde mi?", type: "checkbox" },
@@ -74,6 +122,17 @@ const checklists = {
   },
   "Otomatik Gazlı Söndürme Sistemleri": {
     altKategoriler: ["FM-200", "Novec 1230 / FK-5-1-12", "CO₂", "İnert Gazlı Sistem", "Aerosol Sistem"],
+    inventoryParameters: [
+      { name: "Söndürme Gazı Tipi", options: ["FM-200", "Novec 1230 / FK-5-1-12", "CO₂", "Argon", "Azot", "IG-541", "Aerosol"] },
+      { name: "Sistem Tipi", options: ["Total Flooding", "Lokal Uygulama"] },
+      { name: "Tüp Sayısı", options: ["1", "2", "3", "4 ve Üzeri"] },
+      { name: "Otomatik Aktivasyon", options: ["Var", "Yok"] },
+      { name: "Manuel Aktivasyon", options: ["Var", "Yok"] },
+      { name: "Gecikme Süresi", options: ["Yok", "10 sn", "30 sn", "60 sn"] },
+      { name: "Tahliye Uyarısı", options: ["Sesli", "Işıklı", "Sesli ve Işıklı", "Yok"] },
+      { name: "Yangın Paneli Entegrasyonu", options: ["Var", "Yok"] },
+      { name: "Korunan Mahal", options: ["Server Odası", "Elektrik Odası", "Arşiv", "Laboratuvar", "UPS Odası", "Diğer"] }
+    ],
     bakimKontrolleri: [
       { id: "basincKontrol", label: "Tüp basıncı uygun aralıkta mı?", type: "checkbox" },
       { id: "aktivasyonKontrol", label: "Aktivasyon mekanizması çalışıyor mu?", type: "checkbox" },
@@ -84,6 +143,14 @@ const checklists = {
   },
   "Yangın Perdesi": {
     altKategoriler: ["Duman Perdesi", "Alev Perdesi", "Yangın Dayanımlı Perde"],
+    inventoryParameters: [
+      { name: "Yangın Dayanımı", options: ["30 dk", "60 dk", "90 dk", "120 dk"] },
+      { name: "Özellik", options: ["E", "EW", "EI"] },
+      { name: "Çalışma Tipi", options: ["Motorlu", "Ağırlık Kontrollü", "Yaylı Sistem"] },
+      { name: "Aktivasyon Tipi", options: ["Otomatik", "Manuel", "Otomatik ve Manuel"] },
+      { name: "Yangın Sistemi Entegrasyonu", options: ["Var", "Yok"] },
+      { name: "Güç Kaynağı", options: ["Şebeke", "UPS Destekli", "Akü Destekli"] }
+    ],
     bakimKontrolleri: [
       { id: "motorKontrol", label: "Motor/mekanizma çalışıyor mu?", type: "checkbox" },
       { id: "aktivasyonKontrol", label: "Aktivasyon testi yapıldı mı?", type: "checkbox" },
@@ -94,6 +161,14 @@ const checklists = {
   },
   "Flaşör": {
     altKategoriler: ["İç Ortam Flaşör", "Dış Ortam Flaşör", "Sirenli Flaşör"],
+    inventoryParameters: [
+      { name: "Uyarı Tipi", options: ["Işıklı", "Sesli-Işıklı"] },
+      { name: "Işık Rengi", options: ["Kırmızı", "Beyaz", "Amber"] },
+      { name: "Çalışma Prensibi", options: ["Adresli", "Konvansiyonel"] },
+      { name: "Kullanım Alanı", options: ["İç Ortam", "Dış Ortam", "Islak Hacim", "Ex-proof Alan"] },
+      { name: "Besleme Tipi", options: ["Panel Beslemeli", "Harici Güç Kaynaklı"] },
+      { name: "Yangın Paneli Entegrasyonu", options: ["Var", "Yok"] }
+    ],
     bakimKontrolleri: [
       { id: "isikKontrol", label: "Işık yanıyor mu?", type: "checkbox" },
       { id: "sesKontrol", label: "Ses çıkışı çalışıyor mu?", type: "checkbox" },
@@ -104,6 +179,14 @@ const checklists = {
   },
   "Alarm Butonu": {
     altKategoriler: ["Kırılabilir Camlı Buton", "Resetlenebilir Buton", "Dış Ortam Butonu", "Ex-proof Buton"],
+    inventoryParameters: [
+      { name: "Çalışma Prensibi", options: ["Adresli", "Konvansiyonel"] },
+      { name: "Buton Tipi", options: ["Kırılabilir Camlı", "Resetlenebilir"] },
+      { name: "Koruma Kapağı", options: ["Var", "Yok"] },
+      { name: "Kullanım Alanı", options: ["İç Ortam", "Dış Ortam", "Islak Hacim", "Ex-proof Alan"] },
+      { name: "Yangın Paneli Entegrasyonu", options: ["Var", "Yok"] },
+      { name: "Test Anahtarı", options: ["Var", "Yok"] }
+    ],
     bakimKontrolleri: [
       { id: "camKontrol", label: "Cam/kapak hasarsız mı?", type: "checkbox" },
       { id: "testKontrol", label: "Test anahtarı ile test yapıldı mı?", type: "checkbox" },
@@ -114,6 +197,16 @@ const checklists = {
   },
   "Yangın Paneli": {
     altKategoriler: ["Konvansiyonel Panel", "Adresli Panel", "Tekrarlayıcı Panel", "Söndürme Paneli"],
+    inventoryParameters: [
+      { name: "Panel Tipi", options: ["Konvansiyonel", "Adresli", "Tekrarlayıcı", "Söndürme Kontrol Paneli"] },
+      { name: "Zon / Loop Kapasitesi", options: ["2 Zon", "4 Zon", "8 Zon", "1 Loop", "2 Loop", "4 Loop ve Üzeri"] },
+      { name: "Bağlı Cihaz Tipleri", options: ["Dedektör", "Alarm Butonu", "Flaşör", "Siren", "Modül", "Söndürme Sistemi"] },
+      { name: "Akü Yedeklemesi", options: ["Var", "Yok"] },
+      { name: "Hata İzleme", options: ["Var", "Yok"] },
+      { name: "Yangın Senaryosu Entegrasyonu", options: ["Var", "Yok"] },
+      { name: "BMS / Otomasyon Entegrasyonu", options: ["Var", "Yok"] },
+      { name: "Log / Olay Kaydı", options: ["Var", "Yok"] }
+    ],
     bakimKontrolleri: [
       { id: "ekranKontrol", label: "Ekran/gösterge çalışıyor mu?", type: "checkbox" },
       { id: "akuKontrol", label: "Akü testi yapıldı mı?", type: "checkbox" },
@@ -137,15 +230,19 @@ async function main() {
       category = await prisma.fireEquipmentCategory.create({
         data: {
           name: mainCat,
-          maintenanceParameters: checklists[mainCat as keyof typeof checklists].bakimKontrolleri
+          maintenanceParameters: checklists[mainCat as keyof typeof checklists].bakimKontrolleri,
+          inventoryParameters: checklists[mainCat as keyof typeof checklists].inventoryParameters
         }
       });
       console.log(`Created Main Category: ${mainCat}`);
     } else {
-      // Update maintenance parameters just in case
+      // Update parameters just in case
       await prisma.fireEquipmentCategory.update({
         where: { id: category.id },
-        data: { maintenanceParameters: checklists[mainCat as keyof typeof checklists].bakimKontrolleri }
+        data: { 
+          maintenanceParameters: checklists[mainCat as keyof typeof checklists].bakimKontrolleri,
+          inventoryParameters: checklists[mainCat as keyof typeof checklists].inventoryParameters
+        }
       });
     }
 
@@ -161,14 +258,18 @@ async function main() {
           data: {
             name: subCatName,
             parentId: category.id,
-            maintenanceParameters: checklists[mainCat as keyof typeof checklists].bakimKontrolleri
+            maintenanceParameters: checklists[mainCat as keyof typeof checklists].bakimKontrolleri,
+            inventoryParameters: checklists[mainCat as keyof typeof checklists].inventoryParameters
           }
         });
         console.log(`Created Subcategory: ${subCatName} under ${mainCat}`);
       } else {
         await prisma.fireEquipmentCategory.update({
           where: { id: subCategory.id },
-          data: { maintenanceParameters: checklists[mainCat as keyof typeof checklists].bakimKontrolleri }
+          data: { 
+            maintenanceParameters: checklists[mainCat as keyof typeof checklists].bakimKontrolleri,
+            inventoryParameters: checklists[mainCat as keyof typeof checklists].inventoryParameters
+          }
         });
       }
     }
