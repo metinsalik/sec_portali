@@ -384,6 +384,7 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res) => {
             stabilityAndReactivity: data.stabilityAndReactivity || null,
             toxicologicalInformation: data.toxicologicalInfo || null,
             disposalConsiderations: data.disposalConsiderations || null,
+            transportInfo: data.transportInfo || null,
           }
         });
 
@@ -416,6 +417,7 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res) => {
             stabilityAndReactivity: data.stabilityAndReactivity || material.stabilityAndReactivity,
             toxicologicalInformation: data.toxicologicalInfo || material.toxicologicalInformation,
             disposalConsiderations: data.disposalConsiderations || material.disposalConsiderations,
+            transportInfo: data.transportInfo || material.transportInfo,
           }
         });
         
