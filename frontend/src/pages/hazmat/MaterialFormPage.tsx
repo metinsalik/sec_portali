@@ -257,6 +257,8 @@ export default function MaterialFormPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['facility-materials'] });
+      queryClient.invalidateQueries({ queryKey: ['material-details'] });
+      queryClient.invalidateQueries({ queryKey: ['global-materials'] });
       toast.success(isEditMode ? 'Tehlikeli Madde güncellendi!' : 'Tehlikeli Madde başarıyla tesise eklendi!');
       navigate('/hazmat/materials');
     },

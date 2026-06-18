@@ -69,6 +69,26 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
       ));
     };
 
+    const renderADR = () => {
+      if (!material?.adrLabels || material.adrLabels.length === 0) return null;
+      return material.adrLabels.map((al: any, idx: number) => (
+        <div key={`adr-${idx}`} className="flex flex-col items-center justify-center gap-1 mb-1">
+          <div className="w-16 h-16 p-1 rounded flex items-center justify-center bg-white border border-slate-200">
+            {al.label?.imageUrl ? (
+              <img src={getAbsoluteUrl(al.label.imageUrl)} alt={al.label.name} className="w-full h-full object-contain" />
+            ) : (
+              <span className="text-[10px] font-bold text-orange-600 text-center leading-none">
+                ADR<br/>{al.label?.name || ''}
+              </span>
+            )}
+          </div>
+          <span className="text-[9px] font-bold text-orange-600 text-center leading-tight">
+            {al.label?.name}
+          </span>
+        </div>
+      ));
+    };
+
     return (
       <div 
         ref={ref}
@@ -128,6 +148,7 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
                   <div className="w-1/4 p-2 relative flex flex-col items-center justify-center">
                     <div className="flex flex-wrap items-center justify-center gap-2">
                        {renderGHS()}
+                       {renderADR()}
                     </div>
                   </div>
 
