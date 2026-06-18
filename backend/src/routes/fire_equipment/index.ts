@@ -345,6 +345,10 @@ router.post('/equipment/:facilityId', async (req, res) => {
       inventoryData
     } = req.body;
     
+    // Clean empty strings to undefined/null for Prisma
+    const cleanLocationId = locationId === '' ? undefined : locationId;
+    const cleanCompanyId = companyId === '' ? null : companyId;
+    
     // @ts-ignore - Assuming req.user is set by authMiddleware
     const username = req.user?.username || 'System';
 
@@ -384,19 +388,19 @@ router.post('/equipment/:facilityId', async (req, res) => {
         model,
         productionDate: productionDate ? new Date(productionDate) : null,
         categoryId,
-        locationId,
+        locationId: cleanLocationId,
         capacity,
         standard,
         criticality,
         responsibleId,
-        companyId: companyId || null,
+        companyId: cleanCompanyId,
         responsibleUnit,
         inventoryData: finalInventoryData,
         status: status || 'AKTIF',
         nextMaintenanceDate,
-        movements: locationId ? {
+        movements: cleanLocationId ? {
           create: {
-            newLocationId: locationId,
+            newLocationId: cleanLocationId,
             reason: 'İlk Kayıt',
             movedBy: username,
             description: 'Ekipman sisteme eklendi ve ilk konumu belirlendi.'
