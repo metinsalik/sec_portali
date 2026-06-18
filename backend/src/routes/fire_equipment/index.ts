@@ -321,7 +321,7 @@ router.get('/equipment/detail/:id', async (req, res) => {
 router.get('/equipment/qr/:code', async (req, res) => {
   try {
     const { code } = req.params;
-    const equipment = await prisma.fireEquipment.findUnique({
+    const equipment = await prisma.fireEquipment.findFirst({
       where: { qrCode: code }
     });
     
