@@ -59,7 +59,11 @@ router.get('/summary', authMiddleware, async (req: AuthRequest, res) => {
           include: {
             hazardLabels: { include: { label: true } },
             adrLabels: { include: { label: true } },
-            ppes: { include: { ppe: true } }
+            ppes: { include: { ppe: true } },
+            facilityItems: { 
+              where: { facilityId: String(facilityId) },
+              include: { unit: true }
+            }
           }
         },
         department: true
@@ -132,7 +136,11 @@ router.get('/department/:id', authMiddleware, async (req: AuthRequest, res) => {
           include: {
             hazardLabels: { include: { label: true } },
             adrLabels: { include: { label: true } },
-            ppes: { include: { ppe: true } }
+            ppes: { include: { ppe: true } },
+            facilityItems: {
+              where: { facilityId: String(facilityId) },
+              include: { unit: true }
+            }
           }
         }
       }

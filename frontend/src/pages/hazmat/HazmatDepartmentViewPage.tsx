@@ -159,14 +159,24 @@ export default function HazmatDepartmentViewPage() {
                 </div>
                 
                 <div className="px-4 py-3 bg-muted/20 border-y grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground text-xs block mb-1">Min. Miktar</span>
-                    <span className="font-medium">{item.minQuantity !== null ? item.minQuantity : '-'}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground text-xs block mb-1">Maks. Miktar</span>
-                    <span className="font-medium">{item.maxQuantity !== null ? item.maxQuantity : '-'}</span>
-                  </div>
+                  {(() => {
+                    const facItem = mat.facilityItems?.[0];
+                    const amountValue = facItem?.amountValue || 1;
+                    const unitName = facItem?.unit?.name || 'Birim Yok';
+                    const formatQty = (q: number | null) => q !== null ? `${+(q * amountValue).toFixed(2)} ${unitName}` : '-';
+                    return (
+                      <>
+                        <div>
+                          <span className="text-muted-foreground text-xs block mb-1">Min. Miktar</span>
+                          <span className="font-medium" title={item.minQuantity !== null ? `${item.minQuantity} Kutu` : undefined}>{formatQty(item.minQuantity)}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs block mb-1">Maks. Miktar</span>
+                          <span className="font-medium" title={item.maxQuantity !== null ? `${item.maxQuantity} Kutu` : undefined}>{formatQty(item.maxQuantity)}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <div className="p-4 flex-1">
@@ -247,9 +257,17 @@ export default function HazmatDepartmentViewPage() {
                   
                   <div className="col-span-2 text-right text-sm">
                     {item.minQuantity !== null || item.maxQuantity !== null ? (
-                      <span className="text-muted-foreground">
-                        {item.minQuantity ?? '-'} / {item.maxQuantity ?? '-'}
-                      </span>
+                      (() => {
+                        const facItem = mat.facilityItems?.[0];
+                        const amountValue = facItem?.amountValue || 1;
+                        const unitName = facItem?.unit?.name || 'Birim Yok';
+                        const formatQty = (q: number | null) => q !== null ? `${+(q * amountValue).toFixed(2)}` : '-';
+                        return (
+                          <span className="text-muted-foreground" title={`Min: ${item.minQuantity ?? '-'} kutu, Maks: ${item.maxQuantity ?? '-'} kutu`}>
+                            {formatQty(item.minQuantity)} / {formatQty(item.maxQuantity)} {unitName}
+                          </span>
+                        );
+                      })()
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}

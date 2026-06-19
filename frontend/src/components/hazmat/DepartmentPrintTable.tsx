@@ -78,7 +78,13 @@ export const DepartmentPrintTable = forwardRef<HTMLDivElement, DepartmentPrintTa
                   <VertText>{m.productName}</VertText>
                 </td>
                 <td className="border border-slate-800 p-1 align-middle whitespace-nowrap">
-                  <VertText>{item.minQuantity ?? '-'} - {item.maxQuantity ?? '-'} L</VertText>
+                  {(() => {
+                    const facItem = m.facilityItems?.[0];
+                    const amountValue = facItem?.amountValue || 1;
+                    const unitName = facItem?.unit?.name || 'Birim Yok';
+                    const formatQty = (q: number | null) => q !== null ? +(q * amountValue).toFixed(2) : '-';
+                    return <VertText>{formatQty(item.minQuantity)} - {formatQty(item.maxQuantity)} {unitName}</VertText>;
+                  })()}
                 </td>
                 <td className="border border-slate-800 p-1 align-middle">
                   <VertText>{m.brandName || '-'}</VertText>
