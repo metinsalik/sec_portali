@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Settings, FolderTree, MapPin, Plus, Trash2, Users, Pencil, X, Check, ChevronDown, ChevronRight, Briefcase } from 'lucide-react';
+import { Settings, FolderTree, MapPin, Plus, Trash2, Users, Pencil, X, Check, ChevronDown, ChevronRight, Briefcase, List } from 'lucide-react';
 
 export default function FireEquipmentSettingsPage() {
   const facilityId = localStorage.getItem('activeFacilityId');
@@ -34,6 +34,7 @@ export default function FireEquipmentSettingsPage() {
 
   const [isLocDialogOpen, setIsLocDialogOpen] = useState(false);
   const [quickAddLoc, setQuickAddLoc] = useState({ building: '', floor: '', department: '', description: '' });
+  const [viewModeLoc, setViewModeLoc] = useState<'tree' | 'list'>('list');
 
   // Kategoriler
   const { data: categories, isLoading: isCatLoading } = useQuery({
@@ -493,11 +494,59 @@ export default function FireEquipmentSettingsPage() {
             </Card>
 
             <Card className="md:col-span-2 shadow-sm">
-              <CardHeader>
+              <CardHeader className="flex flex-row justify-between items-center space-y-0 pb-2">
                 <CardTitle className="text-lg">Kayıtlı Lokasyonlar</CardTitle>
+                <div className="flex bg-muted p-1 rounded-md">
+                  <Button variant={viewModeLoc === 'tree' ? 'secondary' : 'ghost'} size="sm" className="h-8 px-2" onClick={() => setViewModeLoc('tree')}><FolderTree className="w-4 h-4 mr-2"/>Ağaç</Button>
+                  <Button variant={viewModeLoc === 'list' ? 'secondary' : 'ghost'} size="sm" className="h-8 px-2" onClick={() => setViewModeLoc('list')}><List className="w-4 h-4 mr-2"/>Liste</Button>
+                </div>
               </CardHeader>
               <CardContent>
-                {isLocLoading ? <p>Yükleniyor...</p> : (
+                {isLocLoading ? <p>Yükleniyor...</p> : viewModeLoc === 'list' ? (
+                  <div className="border rounded-lg bg-card overflow-hidden">
+                    <div className="grid grid-cols-12 gap-4 p-3 font-medium text-sm text-muted-foreground border-b bg-muted/30">
+                      <div className="col-span-10">Lokasyon Yolu</div>
+                      <div className="col-span-2 text-right">İşlemler</div>
+                    </div>
+                    <div className="divide-y max-h-[600px] overflow-auto">
+                      {locations?.length === 0 ? (
+                        <div className="p-4 text-center text-muted-foreground">Henüz lokasyon eklenmemiş.</div>
+                      ) : (
+                        locations?.map((loc: any) => (
+                          <div key={loc.id} className="p-3 flex items-center justify-between hover:bg-muted/10 transition-colors">
+                            {editingLocation?.id === loc.id ? (
+                              <div className="flex-1 space-y-2 mr-4">
+                                <div className="grid grid-cols-4 gap-2">
+                                  <Input value={editingLocation.building} onChange={e => setEditingLocation({...editingLocation, building: e.target.value})} placeholder="Blok" />
+                                  <Input value={editingLocation.floor || ''} onChange={e => setEditingLocation({...editingLocation, floor: e.target.value})} placeholder="Kat" />
+                                  <Input value={editingLocation.department || ''} onChange={e => setEditingLocation({...editingLocation, department: e.target.value})} placeholder="Birim" />
+                                  <Input value={editingLocation.description || ''} onChange={e => setEditingLocation({...editingLocation, description: e.target.value})} placeholder="Mahal" />
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button size="sm" onClick={() => updateLocationMutation.mutate(editingLocation)}><Check className="w-4 h-4 mr-1" /> Kaydet</Button>
+                                  <Button size="sm" variant="ghost" onClick={() => setEditingLocation(null)}>İptal</Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="col-span-10">
+                                  <div className="font-semibold text-slate-800 dark:text-slate-200">{loc.description || 'İsimsiz Mahal'}</div>
+                                  <div className="text-xs text-muted-foreground mt-0.5">
+                                    {loc.building || 'Blok Yok'} {loc.floor ? `> ${loc.floor}` : ''} {loc.department ? `> ${loc.department}` : ''}
+                                  </div>
+                                </div>
+                                <div className="col-span-2 text-right flex justify-end gap-1">
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setEditingLocation({ ...loc })}><Pencil className="w-4 h-4 text-muted-foreground hover:text-primary" /></Button>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => { if(window.confirm('Lokasyon silinsin mi?')) deleteLocationMutation.mutate(loc.id); }}><Trash2 className="w-4 h-4 text-muted-foreground hover:text-red-500" /></Button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                ) : (
                   <div className="space-y-3">
                     {Object.keys(locationTree).sort().map(block => (
                       <div key={block} className="border rounded-lg overflow-hidden bg-white dark:bg-slate-900">

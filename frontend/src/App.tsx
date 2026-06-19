@@ -78,8 +78,10 @@ import MaterialViewPage from './pages/hazmat/MaterialViewPage';
 import HazmatSettingsPage from './pages/hazmat/HazmatSettingsPage';
 import FacilityInventoryListPage from './pages/hazmat/FacilityInventoryListPage';
 import FacilityInventoryFormPage from './pages/hazmat/FacilityInventoryFormPage';
+import HazmatFacilityMaterialPage from './pages/hazmat/HazmatFacilityMaterialPage';
 import HazmatDepartmentsPage from './pages/hazmat/HazmatDepartmentsPage';
 import HazmatDepartmentViewPage from './pages/hazmat/HazmatDepartmentViewPage';
+import HazmatCleaningCartsPage from './pages/hazmat/HazmatCleaningCartsPage';
 import SpillKitsPage from './pages/hazmat/SpillKitsPage';
 import EyewashRiskAnalysisPage from './pages/hazmat/EyewashRiskAnalysisPage';
 import EyewashRiskAnalysisFormPage from './pages/hazmat/EyewashRiskAnalysisFormPage';
@@ -532,6 +534,14 @@ function App() {
                   }
                 />
                 <Route
+                  path="/hazmat/inventory/material/:id"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><HazmatFacilityMaterialPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/hazmat/inventory/new"
                   element={
                     <ProtectedRoute>
@@ -600,6 +610,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <AppLayout><SpillKitsPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/cleaning-carts"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><HazmatCleaningCartsPage /></AppLayout>
                     </ProtectedRoute>
                   }
                 />

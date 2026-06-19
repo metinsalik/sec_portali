@@ -6,7 +6,7 @@ import {
   Shield, LayoutDashboard, Building2, Users, Briefcase, UserCheck,
   ClipboardList, FileText, Settings, Bell, ChevronDown, LogOut,
   User, BarChart3, ChevronRight, LayoutGrid, Database, Users2, Mail,
-  BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame, PenTool, Menu, X
+  BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame, PenTool, Menu, X, ShoppingCart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -89,14 +89,15 @@ const hazmatNavItems = [
   { label: 'GENEL', type: 'group' },
   { label: 'Dashboard', icon: LayoutDashboard, to: '/hazmat/dashboard', end: true },
   { label: 'TEHLİKELİ MADDE YÖNETİMİ', type: 'group' },
-  { label: 'Tehlikeli Maddeler', icon: AlertTriangle, to: '/hazmat/materials' },
-  { label: 'Olağan Dışı Olay', icon: ShieldAlert, to: '/hazmat/incidents' },
   { label: 'Envanter', icon: ClipboardList, to: '/hazmat/inventory' },
   { label: 'Departmanlar', icon: LayoutGrid, to: '/hazmat/departments' },
+  { label: 'Temizlik Arabaları', icon: ShoppingCart, to: '/hazmat/cleaning-carts' },
+  { label: 'Olağan Dışı Olay', icon: ShieldAlert, to: '/hazmat/incidents' },
   { label: 'EKİPMAN YÖNETİMİ', type: 'group' },
   { label: 'Göz Duşu Risk Analizi', icon: FileText, to: '/hazmat/eyewash-risk' },
   { label: 'Dökülme Saçılma Kiti', icon: LifeBuoy, to: '/hazmat/spill-kits' },
   { label: 'AYARLAR', type: 'group' },
+  { label: 'Tehlikeli Madde Havuzu', icon: AlertTriangle, to: '/hazmat/materials' },
   { label: 'Kategoriler', icon: FolderTree, to: '/hazmat/settings/categories' },
   { label: 'Miktar Cinsi', icon: Database, to: '/hazmat/settings/units' },
   { label: 'Bölüm - Departman', icon: Settings, to: '/hazmat/settings/departments' },

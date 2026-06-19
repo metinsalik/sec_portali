@@ -872,8 +872,13 @@ model HazmatDepartment {
   id              String                @id @default(uuid())
   facilityId      String
   facility        Facility              @relation(fields: [facilityId], references: [id], onDelete: Cascade)
-  name            String
-  isActive        Boolean               @default(true)
+  name            String? // Birim / Temizlik Arabası Adı
+  building        String? // Bina
+  block           String? // Blok
+  floor           String? // Kat
+  description     String? // Mahal / Ek Detay
+  isCleaningCart  Boolean @default(false)
+  isActive        Boolean @default(true)
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
   inventory       HazmatInventoryItem[]
@@ -1215,8 +1220,8 @@ model FireEquipmentCompany {
 
 model FireEquipment {
   id             String  @id @default(uuid())
-  equipmentNo    String  @unique // Ekipman No
-  qrCode         String? @unique // Barkod / QR Kod
+  equipmentNo    String  // Ekipman No (tesis bazında benzersiz)
+  qrCode         String? // Barkod / QR Kod (tesis bazında benzersiz)
   serialNo       String? // Seri No
   brand          String? // Marka
   model          String? // Model
@@ -1250,6 +1255,8 @@ model FireEquipment {
   movements    FireEquipmentMovement[]
   maintenances FireEquipmentMaintenance[]
 
+  @@unique([facilityId, equipmentNo])
+  @@unique([facilityId, qrCode])
   @@index([facilityId])
 }
 

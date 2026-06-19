@@ -69,7 +69,7 @@ export default function HazmatDepartmentViewPage() {
     <div className="max-w-6xl mx-auto space-y-6 pb-12">
       <div className="flex items-center justify-between border-b pb-4 gap-4 flex-wrap">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/hazmat/departments')}>
+          <Button variant="ghost" onClick={() => navigate(-1)} className="pl-0 hover:bg-transparent">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>

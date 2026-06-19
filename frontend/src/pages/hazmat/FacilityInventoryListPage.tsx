@@ -1,13 +1,15 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import api from '@/lib/api';
+import api, { BASE_URL } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Filter, Printer } from 'lucide-react';
+import { Plus, Search, Filter, Printer, ExternalLink, Download, LayoutGrid } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
+import { HazmatMaterialSummaryDialog } from '@/components/hazmat/HazmatMaterialSummaryDialog';
 
 export default function FacilityInventoryListPage() {
   const navigate = useNavigate();
@@ -16,6 +18,9 @@ export default function FacilityInventoryListPage() {
   const [searchMaterial, setSearchMaterial] = useState('');
   const [searchDepartment, setSearchDepartment] = useState('');
   const [printMaterial, setPrintMaterial] = useState<any>(null);
+  
+  // Dialog state
+  const [selectedGroup, setSelectedGroup] = useState<any>(null);
 
   // 1. Fetch summary for the list
   const { data: summaryData, isLoading } = useQuery({
@@ -25,7 +30,7 @@ export default function FacilityInventoryListPage() {
       const res = await api.get(`/hazmat/inventory/summary?facilityId=${activeFacilityId}`);
       if (!res.ok) throw new Error('Failed to fetch summary');
       const data = await res.json();
-      return data.inventoryItems;
+      return data.facilityItems;
     },
     enabled: !!activeFacilityId
   });
@@ -45,36 +50,34 @@ export default function FacilityInventoryListPage() {
   const groupedSummary = useMemo(() => {
     if (!summaryData) return [];
     
-    const groups: Record<string, any> = {};
-    summaryData.forEach((item: any) => {
-      const matId = item.material.id;
-      if (!groups[matId]) {
-        groups[matId] = {
-          materialId: matId,
-          productName: item.material.productName,
-          brandName: item.material.brandName,
-          hazardLabels: item.material.hazardLabels || [],
-          ppes: item.material.ppes || [],
-          departments: [],
-          material: item.material
+    return summaryData.map((facItem: any) => {
+      const mat = facItem.material;
+      
+      const departments = (mat.inventory || []).map((invItem: any) => {
+        const dept = invItem.department;
+        const deptName = `${dept.isCleaningCart ? '[Temizlik Arabası] ' : ''}${dept.building ? dept.building + ' / ' : ''}${dept.floor ? dept.floor + ' / ' : ''}${dept.name || ''} ${dept.description ? '/ ' + dept.description : ''}`.trim() || 'İsimsiz Lokasyon';
+        return {
+          id: dept.id,
+          name: deptName
         };
-      }
-      groups[matId].departments.push(item.department.name);
-    });
+      });
 
-    // Merge facility quantity/unit
-    const enrichedGroups = Object.values(groups).map((g: any) => {
-      const facItem = facilityItems.find((fi: any) => fi.materialId === g.materialId);
       return {
-        ...g,
-        amountValue: facItem?.amountValue || null,
-        unitName: facItem?.unit?.name || null,
-        unitSymbol: facItem?.unit?.symbol || null,
+        materialId: mat.id,
+        productName: mat.productName,
+        brandName: mat.brandName,
+        categoryName: mat.category?.name || 'Kategorisiz',
+        hazardLabels: mat.hazardLabels || [],
+        ppes: mat.ppes || [],
+        sdsUrl: mat.sdsUrl,
+        departments,
+        material: mat,
+        amountValue: facItem.amountValue,
+        unitName: facItem.unit?.name,
+        unitSymbol: facItem.unit?.symbol
       };
     });
-    
-    return enrichedGroups;
-  }, [summaryData, facilityItems]);
+  }, [summaryData]);
 
   // Apply filters
   const filteredGroups = useMemo(() => {
@@ -92,7 +95,7 @@ export default function FacilityInventoryListPage() {
     if (searchDepartment) {
       const q = searchDepartment.toLowerCase();
       filtered = filtered.filter((g: any) => 
-        g.departments.some((d: string) => d.toLowerCase().includes(q))
+        g.departments.some((d: any) => d.name.toLowerCase().includes(q))
       );
     }
 
@@ -108,10 +111,16 @@ export default function FacilityInventoryListPage() {
             Tesisteki tehlikeli maddeleri ve atandıkları departmanları listeleyin.
           </p>
         </div>
-        <Button onClick={() => navigate('/hazmat/inventory/new')} className="shadow-md shrink-0">
-          <Plus className="w-4 h-4 mr-2" />
-          Envanter Ekle
-        </Button>
+        <div className="flex gap-2 shrink-0">
+          <Button onClick={() => navigate('/hazmat/inventory/new', { state: { returnTo: '/hazmat/inventory' } })} className="shadow-md">
+            <Plus className="w-4 h-4 mr-2" />
+            Tesise Ekle (Envantere Ekle)
+          </Button>
+          <Button onClick={() => navigate('/hazmat/materials/new', { state: { returnTo: '/hazmat/inventory' } })} variant="outline" className="shadow-md">
+            <Plus className="w-4 h-4 mr-2" />
+            Havuza Yeni Madde
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 bg-muted/30 p-4 rounded-lg border border-border/50">
@@ -139,7 +148,7 @@ export default function FacilityInventoryListPage() {
         <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
         <CardHeader>
           <CardTitle>Envanter Listesi</CardTitle>
-          <CardDescription>Departmanlara dağıtımı yapılmış tehlikeli maddelerin özet tablosu.</CardDescription>
+          <CardDescription>Maddenin detaylarını görmek için satıra tıklayın.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border overflow-hidden">
@@ -148,8 +157,8 @@ export default function FacilityInventoryListPage() {
                 <thead className="bg-muted/50 text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3 font-medium">Tehlikeli Madde</th>
-                    <th className="px-4 py-3 font-medium">Miktar / Birim</th>
-                    <th className="px-4 py-3 font-medium">Etiketler / KKD</th>
+                    <th className="px-4 py-3 font-medium">Kategori</th>
+                    <th className="px-4 py-3 font-medium">Birim / Ambalaj</th>
                     <th className="px-4 py-3 font-medium">Bulunduğu Departmanlar</th>
                     <th className="px-4 py-3 font-medium text-right">İşlemler</th>
                   </tr>
@@ -157,7 +166,7 @@ export default function FacilityInventoryListPage() {
                 <tbody className="divide-y">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={4} className="py-8 text-center text-muted-foreground">Yükleniyor...</td>
+                    <td colSpan={5} className="py-8 text-center text-muted-foreground">Yükleniyor...</td>
                   </tr>
                 ) : filteredGroups.length === 0 ? (
                   <tr>
@@ -171,7 +180,11 @@ export default function FacilityInventoryListPage() {
                   </tr>
                 ) : (
                   filteredGroups.map((item: any, i: number) => (
-                    <tr key={i} className="hover:bg-muted/30 transition-colors">
+                    <tr 
+                      key={i} 
+                      className="hover:bg-muted/30 transition-colors cursor-pointer group"
+                      onClick={() => setSelectedGroup(item)}
+                    >
                       <td className="px-4 py-3 font-medium text-foreground">
                         <div className="flex items-center gap-3">
                           <div className="flex -space-x-2">
@@ -186,12 +199,17 @@ export default function FacilityInventoryListPage() {
                             ))}
                           </div>
                           <div>
-                            {item.productName}
+                            <span className="group-hover:text-primary transition-colors">{item.productName}</span>
                             <div className="text-xs text-muted-foreground font-normal">
                               {item.brandName || 'Marka Belirtilmemiş'}
                             </div>
                           </div>
                         </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant="outline" className="font-normal bg-muted/50">
+                          {item.categoryName}
+                        </Badge>
                       </td>
                       <td className="px-4 py-3">
                         <div className="font-medium">
@@ -203,34 +221,31 @@ export default function FacilityInventoryListPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
-                          {item.ppes?.slice(0, 3).map((p: any) => (
-                            <span key={p.ppe.id} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
-                              {p.ppe.name}
-                            </span>
-                          ))}
-                          {item.ppes?.length > 3 && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
-                              +{item.ppes.length - 3}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {item.departments.map((dName: string, idx: number) => (
+                          {item.departments.slice(0, 3).map((d: any, idx: number) => (
                             <Badge key={idx} variant="secondary" className="font-normal text-xs bg-primary/5 hover:bg-primary/10 transition-colors">
-                              {dName}
+                              {d.name.split(' / ').pop()}
                             </Badge>
                           ))}
+                          {item.departments.length > 3 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
+                              +{item.departments.length - 3} departman
+                            </span>
+                          )}
+                          {item.departments.length === 0 && (
+                            <span className="text-xs text-muted-foreground italic">Atanmamış</span>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className="h-8 w-8 p-0"
+                          className="h-8 w-8 p-0 z-10 relative"
                           title="Bilgi Kartı Oluştur"
-                          onClick={() => setPrintMaterial(item.material)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPrintMaterial(item.material);
+                          }}
                         >
                           <Printer className="h-4 w-4 text-blue-600" />
                         </Button>
@@ -249,6 +264,27 @@ export default function FacilityInventoryListPage() {
         isOpen={!!printMaterial}
         onClose={() => setPrintMaterial(null)}
         material={printMaterial}
+      />
+
+      <HazmatMaterialSummaryDialog 
+        material={selectedGroup?.material}
+        isOpen={!!selectedGroup}
+        onOpenChange={(open) => !open && setSelectedGroup(null)}
+        amountValue={selectedGroup?.amountValue}
+        unitName={selectedGroup?.unitName}
+        departments={selectedGroup?.departments}
+        onPrint={() => {
+          setSelectedGroup(null);
+          setPrintMaterial(selectedGroup?.material);
+        }}
+        onNavigateToPool={() => {
+          setSelectedGroup(null);
+          navigate(`/hazmat/materials/view/${selectedGroup?.materialId}`);
+        }}
+        onNavigateToLocations={() => {
+          setSelectedGroup(null);
+          navigate(`/hazmat/inventory/material/${selectedGroup?.materialId}`);
+        }}
       />
     </div>
   );

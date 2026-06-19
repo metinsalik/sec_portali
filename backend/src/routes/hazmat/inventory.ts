@@ -52,25 +52,26 @@ router.get('/summary', authMiddleware, async (req: AuthRequest, res) => {
   }
 
   try {
-    const inventoryItems = await prisma.hazmatInventoryItem.findMany({
+    const facilityItems = await prisma.facilityHazmatItem.findMany({
       where: { facilityId: String(facilityId) },
       include: {
+        unit: true,
         material: {
           include: {
+            category: true,
             hazardLabels: { include: { label: true } },
             adrLabels: { include: { label: true } },
             ppes: { include: { ppe: true } },
-            facilityItems: { 
+            inventory: {
               where: { facilityId: String(facilityId) },
-              include: { unit: true }
+              include: { department: true }
             }
           }
-        },
-        department: true
+        }
       }
     });
 
-    res.json({ inventoryItems });
+    res.json({ facilityItems });
   } catch (error) {
     console.error('Error fetching inventory summary:', error);
     res.status(500).json({ error: 'Internal server error' });

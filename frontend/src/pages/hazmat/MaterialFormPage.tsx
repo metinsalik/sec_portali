@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api, { API_URL, BASE_URL } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 export default function MaterialFormPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
+  const returnTo = location.state?.returnTo || '/hazmat/materials';
   const isEditMode = !!id;
   const queryClient = useQueryClient();
   const activeFacilityId = localStorage.getItem('activeFacilityId');
@@ -260,7 +262,7 @@ export default function MaterialFormPage() {
       await queryClient.invalidateQueries({ queryKey: ['material-details'] });
       await queryClient.invalidateQueries({ queryKey: ['global-materials'] });
       toast.success(isEditMode ? 'Tehlikeli Madde güncellendi!' : 'Tehlikeli Madde başarıyla tesise eklendi!');
-      navigate('/hazmat/materials');
+      navigate(returnTo);
     },
     onError: (err: any) => {
       toast.error('Bir hata oluştu. Veritabanı bağlantınızı kontrol edin.');
@@ -594,7 +596,7 @@ export default function MaterialFormPage() {
         </div>
 
         <div className="flex justify-end gap-4 pb-12">
-          <Button variant="outline" type="button" onClick={() => navigate('/hazmat/materials')}>İptal</Button>
+          <Button variant="outline" type="button" onClick={() => navigate(returnTo)}>İptal</Button>
           <Button type="submit" disabled={createMutation.isLoading} className="px-8">
             <Save className="w-4 h-4 mr-2" />
             {createMutation.isLoading ? 'Kaydediliyor...' : 'Kaydet'}

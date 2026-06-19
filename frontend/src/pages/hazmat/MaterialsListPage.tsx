@@ -177,7 +177,7 @@ export default function MaterialsListPage() {
             'productname', 'brandname', 'amountvalue', 'usagemethod', 'composition',
             'hazarddescription', 'firstaid', 'firefightingmeasures', 'accidentalreleasemeasures',
             'handlingandstorage', 'exposurecontrolsppe', 'physicalandchemicalproperties',
-            'stabilityandreactivity', 'toxicologicalinformation', 'disposalconsiderations'
+            'stabilityandreactivity', 'toxicologicalinformation', 'disposalconsiderations', 'transportinfo'
           ];
           
           let searchData = data;
@@ -233,6 +233,7 @@ export default function MaterialsListPage() {
           const idxStability = getColIndex(['stabilite', 'reaktivite', 'reaktiflik', 'stabilityandreactivity']);
           const idxTox = getColIndex(['toksikolojik', 'toxicologicalinformation']);
           const idxDisposal = getColIndex(['temizlik', 'imha', 'disposalconsiderations']);
+          const idxTransport = getColIndex(['tehlikeli madde sınıfı', 'transportinfo']);
 
           const startIndex = searchData.indexOf(headerRow) + 1;
           
@@ -272,7 +273,8 @@ export default function MaterialsListPage() {
               physicalAndChemicalProperties: idxPhysical !== -1 ? row[idxPhysical] : '',
               stabilityAndReactivity: idxStability !== -1 ? row[idxStability] : '',
               toxicologicalInfo: idxTox !== -1 ? row[idxTox] : '',
-              disposalConsiderations: idxDisposal !== -1 ? row[idxDisposal] : ''
+              disposalConsiderations: idxDisposal !== -1 ? row[idxDisposal] : '',
+              transportInfo: idxTransport !== -1 ? row[idxTransport] : ''
             });
           }
         });

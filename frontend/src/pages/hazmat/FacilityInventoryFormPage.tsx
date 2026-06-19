@@ -11,13 +11,15 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, Command
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Save, AlertTriangle, Layers, Pencil, CheckCircle2, Check, ChevronsUpDown } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 export default function FacilityInventoryFormPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const initialDepartmentId = searchParams.get('departmentId');
+  const returnTo = location.state?.returnTo || (initialDepartmentId ? `/hazmat/departments/${initialDepartmentId}` : '/hazmat/inventory');
   const activeFacilityId = localStorage.getItem('activeFacilityId');
   const queryClient = useQueryClient();
 
@@ -36,14 +38,17 @@ export default function FacilityInventoryFormPage() {
   const [newAmountValue, setNewAmountValue] = useState('1');
   const [newUnitId, setNewUnitId] = useState('');
 
-  // 1. Fetch ALL global materials for the combobox
+  // 1. Fetch facility materials for the combobox
   const { data: materialsData = [], isLoading: isLoadingMaterials } = useQuery<any[]>({
-    queryKey: ['global-materials'],
+    queryKey: ['facility-inventory-summary', activeFacilityId],
     queryFn: async () => {
-      const res = await api.get('/hazmat/materials/search');
-      if (!res.ok) throw new Error('Failed to fetch global materials');
-      return res.json();
-    }
+      if (!activeFacilityId) return [];
+      const res = await api.get(`/hazmat/inventory/summary?facilityId=${activeFacilityId}`);
+      if (!res.ok) throw new Error('Failed to fetch facility inventory');
+      const data = await res.json();
+      return data.facilityItems.map((fi: any) => fi.material);
+    },
+    enabled: !!activeFacilityId
   });
 
   // Fetch specific facility item for the selected material to get amountValue and unit
@@ -128,18 +133,7 @@ export default function FacilityInventoryFormPage() {
     }
   }, [matrixData, initialDepartmentId]);
 
-  // 3. Fetch summary for the summary table
-  const { data: summaryData } = useQuery({
-    queryKey: ['inventory-summary', activeFacilityId],
-    queryFn: async () => {
-      if (!activeFacilityId) return [];
-      const res = await api.get(`/hazmat/inventory/summary?facilityId=${activeFacilityId}`);
-      if (!res.ok) throw new Error('Failed to fetch summary');
-      const data = await res.json();
-      return data.inventoryItems;
-    },
-    enabled: !!activeFacilityId
-  });
+
 
   // 4. Save mutation
   const saveMutation = useMutation({
@@ -178,11 +172,7 @@ export default function FacilityInventoryFormPage() {
       queryClient.invalidateQueries({ queryKey: ['inventory-matrix', activeFacilityId, selectedMaterialId] });
       queryClient.invalidateQueries({ queryKey: ['inventory-summary', activeFacilityId] });
       queryClient.invalidateQueries({ queryKey: ['facility-material-item', activeFacilityId, selectedMaterialId] });
-      if (initialDepartmentId) {
-        navigate(`/hazmat/departments/${initialDepartmentId}`);
-      } else {
-        navigate('/hazmat/inventory');
-      }
+      navigate(returnTo);
     },
     onError: () => {
       toast.error('Kaydedilirken bir hata oluştu');
@@ -220,27 +210,6 @@ export default function FacilityInventoryFormPage() {
     return `${(qty * amountValue).toFixed(2)} ${unitName}`;
   };
 
-  const groupedSummary = useMemo(() => {
-    if (!summaryData) return [];
-    
-    const groups: Record<string, any> = {};
-    summaryData.forEach((item: any) => {
-      const matId = item.material.id;
-      if (!groups[matId]) {
-        groups[matId] = {
-          materialId: matId,
-          productName: item.material.productName,
-          brandName: item.material.brandName,
-          hazardLabels: item.material.hazardLabels || [],
-          ppes: item.material.ppes || [],
-          departments: []
-        };
-      }
-      groups[matId].departments.push(item.department.name);
-    });
-    
-    return Object.values(groups);
-  }, [summaryData]);
 
   // Derived filtered departments based on selection
   const selectedDepartmentsData = useMemo(() => {
@@ -257,7 +226,7 @@ export default function FacilityInventoryFormPage() {
             Tesise yeni bir tehlikeli madde tanımlayın ve departmanlara miktar atamalarını yapın.
           </p>
         </div>
-        <Button variant="outline" onClick={() => initialDepartmentId ? navigate(`/hazmat/departments/${initialDepartmentId}`) : navigate('/hazmat/inventory')}>
+        <Button variant="outline" onClick={() => navigate(returnTo)}>
           İptal ve Geri Dön
         </Button>
       </div>
@@ -367,8 +336,7 @@ export default function FacilityInventoryFormPage() {
       </Card>
       </div>
 
-      {selectedMaterialId && matrixData && (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Card className="border-primary/20 shadow-sm relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
             <CardHeader>
@@ -379,7 +347,12 @@ export default function FacilityInventoryFormPage() {
               <CardDescription>Bu ürünün bulunacağı departmanları işaretleyin.</CardDescription>
             </CardHeader>
             <CardContent>
-              {!matrixData ? (
+              {!selectedMaterialId ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <AlertTriangle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p>Lütfen departman atamalarını yapmak için önce yukarıdan bir tehlikeli madde seçin.</p>
+                </div>
+              ) : !matrixData ? (
                 <div className="text-center py-6 text-muted-foreground">
                   <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-destructive" />
                   <p>Departmanlar yüklenirken bir sorun oluştu (Yetki eksiği olabilir).</p>
@@ -417,24 +390,33 @@ export default function FacilityInventoryFormPage() {
                         ) : (
                           <CommandGroup>
                             {matrixData.departments
-                              ?.filter((d: any) => d.name.toLowerCase().includes(deptSearch.toLowerCase()))
-                              .map((dept: any) => (
-                              <CommandItem
-                                key={dept.id}
-                                value={dept.id}
-                                onSelect={() => {
-                                  handleDepartmentToggle(dept.id);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    selectedDepartments.includes(dept.id) ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                {dept.name}
-                              </CommandItem>
-                            ))}
+                              ?.filter((d: any) => {
+                                // Exclude cleaning carts unless it is specifically the pre-selected one
+                                if (d.isCleaningCart && d.id !== initialDepartmentId) return false;
+                                
+                                const fullName = `${d.isCleaningCart ? '[Temizlik Arabası] ' : ''}${d.building ? d.building + ' / ' : ''}${d.floor ? d.floor + ' / ' : ''}${d.name || ''} ${d.description ? '/ ' + d.description : ''}`.toLowerCase();
+                                return fullName.includes(deptSearch.toLowerCase());
+                              })
+                              .map((dept: any) => {
+                                const displayName = `${dept.isCleaningCart ? '[Temizlik Arabası] ' : ''}${dept.building ? dept.building + ' / ' : ''}${dept.floor ? dept.floor + ' / ' : ''}${dept.name || 'İsimsiz'}${dept.description ? ' / ' + dept.description : ''}`;
+                                return (
+                                  <CommandItem
+                                    key={dept.id}
+                                    value={dept.id}
+                                    onSelect={() => {
+                                      handleDepartmentToggle(dept.id);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        selectedDepartments.includes(dept.id) ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    {displayName}
+                                  </CommandItem>
+                                );
+                            })}
                           </CommandGroup>
                         )}
                       </CommandList>
@@ -517,7 +499,6 @@ export default function FacilityInventoryFormPage() {
             </Card>
           )}
         </div>
-      )}
     </div>
   );
 }
