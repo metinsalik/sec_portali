@@ -48,12 +48,21 @@ router.delete('/units/:id', auth_1.authMiddleware, async (req, res) => {
 });
 // Departments
 router.get('/departments', auth_1.authMiddleware, async (req, res) => {
-    const { facilityId } = req.query;
+    const { facilityId, isCleaningCart } = req.query;
     try {
         const whereClause = facilityId && facilityId !== 'all' ? { facilityId: String(facilityId) } : {};
+        if (isCleaningCart !== undefined) {
+            whereClause.isCleaningCart = isCleaningCart === 'true';
+        }
         const departments = await prisma.hazmatDepartment.findMany({
             where: whereClause,
-            orderBy: { name: 'asc' }
+            orderBy: [
+                { building: 'asc' },
+                { block: 'asc' },
+                { floor: 'asc' },
+                { name: 'asc' },
+                { description: 'asc' }
+            ]
         });
         res.json(departments);
     }
@@ -63,24 +72,55 @@ router.get('/departments', auth_1.authMiddleware, async (req, res) => {
     }
 });
 router.post('/departments', auth_1.authMiddleware, async (req, res) => {
-    const { facilityId, name } = req.body;
-    if (!facilityId || !name)
-        return res.status(400).json({ error: 'facilityId and name are required' });
+    const { facilityId, name, building, block, floor, description, isCleaningCart } = req.body;
+    if (!facilityId)
+        return res.status(400).json({ error: 'facilityId is required' });
     try {
-        // Global Department senkronizasyonu
-        const globalDept = await prisma.department.findFirst({
-            where: { name: { equals: name.trim(), mode: 'insensitive' } }
-        });
-        if (!globalDept) {
-            await prisma.department.create({ data: { name: name.trim() } });
+        // Only try to sync to global Department if it's not a cleaning cart and has a name
+        if (!isCleaningCart && name) {
+            const globalDept = await prisma.department.findFirst({
+                where: { name: { equals: name.trim(), mode: 'insensitive' } }
+            });
+            if (!globalDept) {
+                await prisma.department.create({ data: { name: name.trim() } });
+            }
         }
         const department = await prisma.hazmatDepartment.create({
-            data: { facilityId, name: name.trim() }
+            data: {
+                facilityId,
+                name: name ? name.trim() : null,
+                building,
+                block,
+                floor,
+                description,
+                isCleaningCart: !!isCleaningCart
+            }
         });
         res.status(201).json(department);
     }
     catch (error) {
         console.error('Error creating department:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+router.put('/departments/:id', auth_1.authMiddleware, async (req, res) => {
+    const { name, building, block, floor, description, isCleaningCart } = req.body;
+    try {
+        const department = await prisma.hazmatDepartment.update({
+            where: { id: req.params.id },
+            data: {
+                name: name ? name.trim() : null,
+                building,
+                block,
+                floor,
+                description,
+                isCleaningCart: !!isCleaningCart
+            }
+        });
+        res.json(department);
+    }
+    catch (error) {
+        console.error('Error updating department:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

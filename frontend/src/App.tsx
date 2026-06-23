@@ -99,6 +99,12 @@ import FireEquipmentMaintenanceDashboardPage from './pages/fire_equipment/FireEq
 import FireEquipmentSettingsPage from './pages/fire_equipment/FireEquipmentSettingsPage';
 import QRScannerPage from './pages/fire_equipment/QRScannerPage';
 
+// Build Management
+import BuildDashboard from './pages/build_management/BuildDashboard';
+import BuildProjectList from './pages/build_management/BuildProjectList';
+import BuildProjectDetail from './pages/build_management/BuildProjectDetail';
+import BuildProjectForm from './pages/build_management/BuildProjectForm';
+
 // Placeholder for future modules
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="flex flex-col items-center justify-center h-64 bg-card rounded-2xl border-2 border-dashed border-border">
@@ -752,6 +758,84 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <AppLayout><QRScannerPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* ── BUILD MANAGEMENT (İNŞAAT VE RENOVASYON) ─────────── */}
+                <Route
+                  path="/build-management"
+                  element={<Navigate to="/build-management/dashboard" replace />}
+                />
+                <Route
+                  path="/build-management/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><BuildDashboard /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/build-management/list"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><BuildProjectList /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/build-management/new"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><BuildProjectForm /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/build-management/project/:id"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><BuildProjectDetail /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/build-management/inspections"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><PlaceholderPage title="Saha Denetimleri" /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/build-management/findings"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><PlaceholderPage title="Bulgu Takibi" /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/build-management/handover"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><PlaceholderPage title="Teslim Alma" /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/build-management/reports"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><PlaceholderPage title="Raporlar" /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/build-management/settings"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><PlaceholderPage title="Modül Ayarları" /></AppLayout>
                     </ProtectedRoute>
                   }
                 />

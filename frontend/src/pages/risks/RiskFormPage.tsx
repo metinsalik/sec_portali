@@ -67,6 +67,7 @@ interface FormState {
   dueDatePeriod: string;
 
   // İyileştirme Planı
+  firstActionPlan: string;
   actionsTaken: string;
   actionDate: string;
   actionImage: string;
@@ -118,6 +119,7 @@ export default function RiskFormPage() {
     improvementResponsible: '',
     dueDate: '',
     dueDatePeriod: '',
+    firstActionPlan: '',
     actionsTaken: '',
     actionDate: '',
     actionImage: '',
@@ -208,6 +210,7 @@ export default function RiskFormPage() {
         improvementResponsible: existingRisk.improvementResponsible || '',
         dueDate: existingRisk.dueDate ? existingRisk.dueDate.slice(0, 10) : '',
         dueDatePeriod: existingRisk.dueDatePeriod || '',
+        firstActionPlan: existingRisk.firstActionPlan || '',
         actionsTaken: existingRisk.actionsTaken || '',
         actionDate: existingRisk.actionDate ? existingRisk.actionDate.slice(0, 10) : '',
         actionImage: existingRisk.actionImage || '',
@@ -587,7 +590,7 @@ export default function RiskFormPage() {
           <CardContent className="space-y-4 pt-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground">Alınacak Önlemler / İyileştirici Faaliyet</label>
-              <Textarea value={form.actionsTaken} onChange={(e) => updateField('actionsTaken', e.target.value)} placeholder="Açıklama giriniz..." rows={2} />
+              <Textarea value={form.firstActionPlan} onChange={(e) => updateField('firstActionPlan', e.target.value)} placeholder="Açıklama giriniz..." rows={2} />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

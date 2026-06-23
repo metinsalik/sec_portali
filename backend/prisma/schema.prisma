@@ -24,6 +24,11 @@ model User {
   workflowNotifications WorkflowNotificationSettings?
   workflowRole          WorkflowUserRole?
   hazmatIncidents       HazmatIncident[]
+  BuildProject          BuildProject[]
+  BuildApproval         BuildApproval[]
+  BuildPermit           BuildPermit[]
+  BuildDocument         BuildDocument[]
+  BuildHandover         BuildHandover[]
 }
 
 model Role {
@@ -89,6 +94,7 @@ model Facility {
   fireEquipmentLocations FireEquipmentLocation[]
   fireResponsibles       FireEquipmentResponsible[]
   fireEquipmentCompanies FireEquipmentCompany[]
+  BuildProject           BuildProject[]
 }
 
 model IncidentCategory {
@@ -877,8 +883,8 @@ model HazmatDepartment {
   block           String? // Blok
   floor           String? // Kat
   description     String? // Mahal / Ek Detay
-  isCleaningCart  Boolean @default(false)
-  isActive        Boolean @default(true)
+  isCleaningCart  Boolean               @default(false)
+  isActive        Boolean               @default(true)
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
   inventory       HazmatInventoryItem[]
@@ -1154,16 +1160,16 @@ model HazmatIncident {
 // --- FIRE EQUIPMENT MODULE (FireTrack 360) ---
 
 model FireEquipmentCategory {
-  id                   String   @id @default(uuid())
-  name                 String // Yangın Tüpü, Yangın Dolabı, vb.
-  description          String?
-  parentId             String? // Alt kategori ise üst kategorinin ID'si
-  maintenanceFrequency String? // 'AYLIK', '3_AYLIK', '6_AYLIK', 'YILLIK'
-  inventoryParameters  Json?   // Dinamik envanter şeması
-  maintenanceParameters Json?  // Dinamik bakım şeması
-  isActive             Boolean  @default(true)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                    String   @id @default(uuid())
+  name                  String // Yangın Tüpü, Yangın Dolabı, vb.
+  description           String?
+  parentId              String? // Alt kategori ise üst kategorinin ID'si
+  maintenanceFrequency  String? // 'AYLIK', '3_AYLIK', '6_AYLIK', 'YILLIK'
+  inventoryParameters   Json? // Dinamik envanter şeması
+  maintenanceParameters Json? // Dinamik bakım şeması
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   parent        FireEquipmentCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   subcategories FireEquipmentCategory[] @relation("CategoryHierarchy")
@@ -1191,7 +1197,7 @@ model FireEquipmentLocation {
 model FireEquipmentResponsible {
   id         String   @id @default(uuid())
   facilityId String
-  department String?  // Departman
+  department String? // Departman
   name       String
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
@@ -1211,16 +1217,16 @@ model FireEquipmentCompany {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  facility   Facility        @relation(fields: [facilityId], references: [id], onDelete: Cascade)
-  equipments FireEquipment[]
+  facility     Facility                   @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  equipments   FireEquipment[]
   maintenances FireEquipmentMaintenance[]
 
   @@index([facilityId])
 }
 
 model FireEquipment {
-  id             String  @id @default(uuid())
-  equipmentNo    String  // Ekipman No (tesis bazında benzersiz)
+  id             String    @id @default(uuid())
+  equipmentNo    String // Ekipman No (tesis bazında benzersiz)
   qrCode         String? // Barkod / QR Kod (tesis bazında benzersiz)
   serialNo       String? // Seri No
   brand          String? // Marka
@@ -1237,7 +1243,7 @@ model FireEquipment {
   standard        String? // Standart
   criticality     String? // Kritiklik Seviyesi (Düşük, Orta, Yüksek)
   responsibleUnit String? // Sorumlu Birim (Opsiyonel, metin olarak kalabilir)
-  inventoryData   Json?   // Dinamik envanter özellikleri
+  inventoryData   Json? // Dinamik envanter özellikleri
 
   status String @default("AKTIF") // AKTIF, DEGISIME_GIDEN, ARIZALI, HURDA, KULLANIM_DISI, DEPODA
 
@@ -1284,13 +1290,261 @@ model FireEquipmentMaintenance {
   technician      String? // Teknisyen
   result          String // UYGUN, SARTLI_UYGUN, UYGUN_DEGIL
   description     String?
-  maintenanceData Json?   // Dinamik bakım özellikleri
+  maintenanceData Json? // Dinamik bakım özellikleri
   attachmentUrl   String? // Yüklenen fotoğraf/belge yolu
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  equipment    FireEquipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-  companyRel   FireEquipmentCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  equipment  FireEquipment         @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  companyRel FireEquipmentCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   @@index([equipmentId])
 }
+
+// --- BUILD MANAGEMENT MODULE ---
+
+model BuildProject {
+  id                String    @id @default(uuid())
+  facilityId        String
+  name              String
+  location          String?
+  floor             String?
+  department        String?
+  workType          String // Renovasyon, İnşaat, Yıkım, Tadilat vb.
+  buildType         String // A, B, C, D
+  riskGroup         String // 1, 2, 3, 4
+  icraClass         String // Sınıf I, II, III, IV (Otomatik)
+  plannedStartDate  DateTime?
+  plannedEndDate    DateTime?
+  contractorCompany String?
+  projectManager    String?
+  description       String?
+  status            String    @default("Taslak") // Taslak, Ön İnceleme, Risk Değerlendirme, Onay Bekliyor, Başlatılamaz, Başlamaya Uygun, Devam Ediyor, Durduruldu, Teslim Bekliyor, Tamamlandı, Arşivlendi
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  createdById       String?
+
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  creator  User?    @relation(fields: [createdById], references: [username])
+
+  designForm           BuildDesignForm?
+  riskAssessment       BuildRiskAssessment?
+  icra                 BuildICRA?
+  approvals            BuildApproval[]
+  permits              BuildPermit[]
+  inspectionsOHS       BuildInspectionOHS[]
+  inspectionsInfection BuildInspectionInfection[]
+  findings             BuildFinding[]
+  documents            BuildDocument[]
+  handover             BuildHandover?
+  BuildAction          BuildAction[]
+
+  @@index([facilityId])
+}
+
+model BuildDesignForm {
+  id                  String   @id @default(uuid())
+  projectId           String   @unique
+  formType            String // Tasarım, Geliştirme, Tasarım ve Geliştirme
+  formDate            DateTime
+  description         String?
+  requester           String?
+  projectSponsor      String?
+  notes               String?
+  relatedDepartments  String?
+  projectManager      String?
+  otherTeamMembers    String?
+  projectGoal         String?
+  projectPlan         String?
+  inputs              String?
+  outputs             String?
+  verification        String?
+  review              String?
+  validityCheck       String?
+  validityStudies     String?
+  postServiceValidity String?
+  changeControl       String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  project BuildProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model BuildRiskAssessment {
+  id                   String   @id @default(uuid())
+  projectId            String   @unique
+  patientCareProximity Boolean  @default(false)
+  dustNoiseVibration   Boolean  @default(false)
+  criticalAreaAffected Boolean  @default(false)
+  hvacAffected         Boolean  @default(false)
+  medicalGasAffected   Boolean  @default(false)
+  fireSafetyAffected   Boolean  @default(false)
+  powerOutageRisk      Boolean  @default(false)
+  waterLeakRisk        Boolean  @default(false)
+  riskScore            Int      @default(0)
+  riskLevel            String   @default("Düşük Risk") // Düşük, Orta, Yüksek, Kritik
+  patientSafetyNotes   String?
+  infectionNotes       String?
+  fireSafetyNotes      String?
+  infrastructureNotes  String?
+  ohsNotes             String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  project BuildProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model BuildICRA {
+  id              String   @id @default(uuid())
+  projectId       String   @unique
+  calculatedClass String // Sınıf I, II, III, IV
+  precautions     Json? // Sınıfa göre otomatik gelen maddelerin listesi
+  customNotes     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project BuildProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model BuildApproval {
+  id           String    @id @default(uuid())
+  projectId    String
+  approvalType String // Teknik Hizmetler, İSG, Enfeksiyon Kontrol, Yangın Güvenliği, Klinik Birim vb.
+  status       String    @default("Bekliyor") // Bekliyor, Onaylandı, Reddedildi
+  approvedBy   String? // Username
+  approvedAt   DateTime?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  project  BuildProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  approver User?        @relation(fields: [approvedBy], references: [username])
+
+  @@unique([projectId, approvalType])
+}
+
+model BuildPermit {
+  id         String    @id @default(uuid())
+  projectId  String
+  permitType String // Sıcak, Elektrik, Yüksek, Kapalı Alan, Medikal Gaz vb.
+  startDate  DateTime
+  endDate    DateTime
+  status     String    @default("Bekliyor") // Bekliyor, Onaylandı, Reddedildi, İptal
+  approvedBy String?
+  approvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  project  BuildProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  approver User?        @relation(fields: [approvedBy], references: [username])
+
+  @@index([projectId])
+}
+
+model BuildInspectionOHS {
+  id             String   @id @default(uuid())
+  projectId      String
+  inspectionDate DateTime
+  inspector      String?
+  checklistData  Json // 18 sorunun cevapları U/UD/KD
+  result         String   @default("UYGUNDUR") // UYGUNDUR, UYGUN DEĞİLDİR
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  project BuildProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model BuildInspectionInfection {
+  id             String   @id @default(uuid())
+  projectId      String
+  inspectionDate DateTime
+  inspector      String?
+  checklistData  Json // 10 sorunun cevapları
+  result         String   @default("UYGUNDUR")
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  project BuildProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model BuildFinding {
+  id          String   @id @default(uuid())
+  projectId   String
+  sourceType  String // İSG Denetimi, Enfeksiyon Denetimi, Genel vb.
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project BuildProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  actions BuildAction[]
+
+  @@index([projectId])
+}
+
+model BuildAction {
+  id           String    @id @default(uuid())
+  findingId    String?
+  projectId    String
+  description  String
+  sourceType   String // İSG, Enfeksiyon Kontrol, Genel Denetim
+  riskLevel    String // Kritik, Yüksek, Orta, Düşük
+  assignedTo   String?
+  dueDate      DateTime?
+  status       String    @default("Açık") // Açık, Kapatıldı
+  proofFileUrl String?
+  closedAt     DateTime?
+  closeNotes   String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  project BuildProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  finding BuildFinding? @relation(fields: [findingId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+}
+
+model BuildDocument {
+  id           String   @id @default(uuid())
+  projectId    String
+  documentType String // ENF-F15-02, Sözleşme, Risk Analizi vb.
+  name         String
+  fileUrl      String
+  uploadedBy   String?
+  status       String   @default("Yüklendi") // Yüklendi, Onaylandı, Reddedildi
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project  BuildProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploader User?        @relation(fields: [uploadedBy], references: [username])
+
+  @@index([projectId])
+}
+
+model BuildHandover {
+  id                 String    @id @default(uuid())
+  projectId          String    @unique
+  cleanAndSafe       Boolean   @default(false)
+  technicalTestsOk   Boolean   @default(false)
+  infectionFinalOk   Boolean   @default(false)
+  fireSafetyFinalOk  Boolean   @default(false)
+  clinicalApprovalOk Boolean   @default(false)
+  noCriticalAction   Boolean   @default(false)
+  notes              String?
+  status             String    @default("Taslak") // Taslak, Onaylandı
+  approvedBy         String?
+  approvedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  project  BuildProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  approver User?        @relation(fields: [approvedBy], references: [username])
+}
+
+// Additional Relation added to User model for BuildProject creator/approver
+// (Will require manual addition of missing inverse relations to User if Prisma complains, but since we specify `@relation` with `fields` and `references`, it should work if we let Prisma generate inverse models, or we can just specify them in User model. For safety, let's just make sure Prisma schema is valid.)

@@ -114,6 +114,22 @@ const fireEquipmentNavItems = [
   { label: 'Modül Ayarları', icon: Settings, to: '/fire-equipment/settings' },
 ];
 
+const buildManagementNavItems = [
+  { label: 'GENEL', type: 'group' },
+  { label: 'Dashboard', icon: LayoutDashboard, to: '/build-management/dashboard', end: true },
+  { label: '1. BÖLÜM: PLANLAMA', type: 'group' },
+  { label: 'Tüm Projeler', icon: ClipboardList, to: '/build-management/list' },
+  { label: 'Yeni Proje', icon: FileText, to: '/build-management/new' },
+  { label: '2. BÖLÜM: DENETİM VE KONTROL', type: 'group' },
+  { label: 'Saha Denetimleri', icon: ShieldAlert, to: '/build-management/inspections' },
+  { label: 'Bulgu Takibi', icon: AlertTriangle, to: '/build-management/findings' },
+  { label: '3. BÖLÜM: TESLİM ALMA VE RAPOR', type: 'group' },
+  { label: 'Teslim Alma', icon: UserCheck, to: '/build-management/handover' },
+  { label: 'Raporlar', icon: Layers, to: '/build-management/reports' },
+  { label: 'AYARLAR', type: 'group' },
+  { label: 'Modül Ayarları', icon: Settings, to: '/build-management/settings' },
+];
+
 const profileNavItems = (hasAdminAccess: boolean) => [
   { label: 'UYGULAMALAR', type: 'group' },
   ...(hasAdminAccess ? [{ label: 'İSG Atama Paneli', icon: LayoutDashboard, to: '/panel' }] : []),
@@ -150,6 +166,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   } else if (path.startsWith('/fire-equipment')) {
     navItems = fireEquipmentNavItems;
     moduleName = 'Yangın Envanter Yönetimi';
+  } else if (path.startsWith('/build-management')) {
+    navItems = buildManagementNavItems;
+    moduleName = 'İnşaat ve Renovasyon Yönetimi';
   } else if (path.startsWith('/settings')) {
     navItems = settingsNavItems;
     moduleName = 'Sistem Ayarları';
@@ -194,7 +213,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* Facility Switcher (Show for modules that need it) */}
-        {(path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment')) && (
+        {(path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management')) && (
           <FacilitySwitcher />
         )}
 

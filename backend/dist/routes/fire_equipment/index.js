@@ -318,7 +318,7 @@ router.get('/equipment/detail/:id', async (req, res) => {
 router.get('/equipment/qr/:code', async (req, res) => {
     try {
         const { code } = req.params;
-        const equipment = await prisma.fireEquipment.findUnique({
+        const equipment = await prisma.fireEquipment.findFirst({
             where: { qrCode: code }
         });
         if (!equipment) {
@@ -335,6 +335,9 @@ router.post('/equipment/:facilityId', async (req, res) => {
     try {
         const { facilityId } = req.params;
         const { equipmentNo, qrCode, serialNo, brand, model, productionDate, lastMaintenanceDate, categoryId, locationId, capacity, standard, criticality, responsibleId, companyId, responsibleUnit, status, inventoryData } = req.body;
+        // Clean empty strings to undefined/null for Prisma
+        const cleanLocationId = locationId === '' ? undefined : locationId;
+        const cleanCompanyId = companyId === '' ? null : companyId;
         // @ts-ignore - Assuming req.user is set by authMiddleware
         const username = req.user?.username || 'System';
         const finalQrCode = qrCode || `EQP-${(0, uuid_1.v4)().substring(0, 8).toUpperCase()}`;
@@ -375,19 +378,19 @@ router.post('/equipment/:facilityId', async (req, res) => {
                 model,
                 productionDate: productionDate ? new Date(productionDate) : null,
                 categoryId,
-                locationId,
+                locationId: cleanLocationId,
                 capacity,
                 standard,
                 criticality,
                 responsibleId,
-                companyId: companyId || null,
+                companyId: cleanCompanyId,
                 responsibleUnit,
                 inventoryData: finalInventoryData,
                 status: status || 'AKTIF',
                 nextMaintenanceDate,
-                movements: locationId ? {
+                movements: cleanLocationId ? {
                     create: {
-                        newLocationId: locationId,
+                        newLocationId: cleanLocationId,
                         reason: 'İlk Kayıt',
                         movedBy: username,
                         description: 'Ekipman sisteme eklendi ve ilk konumu belirlendi.'

@@ -47,20 +47,25 @@ router.get('/summary', auth_1.authMiddleware, async (req, res) => {
         return res.status(403).json({ error: 'Access denied' });
     }
     try {
-        const inventoryItems = await prisma.hazmatInventoryItem.findMany({
+        const facilityItems = await prisma.facilityHazmatItem.findMany({
             where: { facilityId: String(facilityId) },
             include: {
+                unit: true,
                 material: {
                     include: {
+                        category: true,
                         hazardLabels: { include: { label: true } },
                         adrLabels: { include: { label: true } },
-                        ppes: { include: { ppe: true } }
+                        ppes: { include: { ppe: true } },
+                        inventory: {
+                            where: { facilityId: String(facilityId) },
+                            include: { department: true }
+                        }
                     }
-                },
-                department: true
+                }
             }
         });
-        res.json({ inventoryItems });
+        res.json({ facilityItems });
     }
     catch (error) {
         console.error('Error fetching inventory summary:', error);
@@ -117,7 +122,11 @@ router.get('/department/:id', auth_1.authMiddleware, async (req, res) => {
                     include: {
                         hazardLabels: { include: { label: true } },
                         adrLabels: { include: { label: true } },
-                        ppes: { include: { ppe: true } }
+                        ppes: { include: { ppe: true } },
+                        facilityItems: {
+                            where: { facilityId: String(facilityId) },
+                            include: { unit: true }
+                        }
                     }
                 }
             }

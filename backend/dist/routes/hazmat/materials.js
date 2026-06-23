@@ -315,15 +315,17 @@ router.post('/import', auth_1.authMiddleware, async (req, res) => {
             adetUnit = await prisma.hazmatUnit.create({ data: { name: 'Adet', symbol: 'ad' } });
         }
         const results = { created: 0, updated: 0, errors: 0 };
+        // Fetch all existing materials once to do robust in-memory case-insensitive matching
+        const allGlobalMaterials = await prisma.hazmatMaterial.findMany();
+        const normalizeText = (t) => (t || '').toLocaleLowerCase('tr-TR').trim();
         for (const data of materials) {
             if (!data.productName) {
                 results.errors++;
                 continue;
             }
-            // Check if global material exists
-            let material = await prisma.hazmatMaterial.findFirst({
-                where: { productName: { equals: data.productName, mode: 'insensitive' } }
-            });
+            const normalizedProductName = normalizeText(data.productName);
+            // Check if global material exists robustly using Turkish locale lowercasing
+            let material = allGlobalMaterials.find(m => normalizeText(m.productName) === normalizedProductName);
             if (!material) {
                 // Create new global material
                 material = await prisma.hazmatMaterial.create({
@@ -342,6 +344,7 @@ router.post('/import', auth_1.authMiddleware, async (req, res) => {
                         stabilityAndReactivity: data.stabilityAndReactivity || null,
                         toxicologicalInformation: data.toxicologicalInfo || null,
                         disposalConsiderations: data.disposalConsiderations || null,
+                        transportInfo: data.transportInfo || null,
                     }
                 });
                 await prisma.hazmatAuditLog.create({
@@ -352,9 +355,38 @@ router.post('/import', auth_1.authMiddleware, async (req, res) => {
                         username
                     }
                 });
+                allGlobalMaterials.push(material);
                 results.created++;
             }
             else {
+                // Update existing material with any new info provided in Excel
+                await prisma.hazmatMaterial.update({
+                    where: { id: material.id },
+                    data: {
+                        brandName: data.brandName || material.brandName,
+                        usageMethod: data.usageMethod || material.usageMethod,
+                        composition: data.composition || material.composition,
+                        hazardDescription: data.hazardDescription || material.hazardDescription,
+                        firstAid: data.firstAid || material.firstAid,
+                        fireFightingMeasures: data.fireFightingMeasures || material.fireFightingMeasures,
+                        accidentalReleaseMeasures: data.accidentalReleaseMeasures || material.accidentalReleaseMeasures,
+                        handlingAndStorage: data.handlingAndStorage || material.handlingAndStorage,
+                        exposureControlsPpe: data.exposureControlsPpe || data.exposureControls || material.exposureControlsPpe,
+                        physicalAndChemicalProperties: data.physicalAndChemicalProperties || data.physicalProperties || material.physicalAndChemicalProperties,
+                        stabilityAndReactivity: data.stabilityAndReactivity || material.stabilityAndReactivity,
+                        toxicologicalInformation: data.toxicologicalInfo || material.toxicologicalInformation,
+                        disposalConsiderations: data.disposalConsiderations || material.disposalConsiderations,
+                        transportInfo: data.transportInfo || material.transportInfo,
+                    }
+                });
+                await prisma.hazmatAuditLog.create({
+                    data: {
+                        materialId: material.id,
+                        action: 'UPDATE',
+                        details: 'Excel içe aktarımı ile mevcut bilgiler güncellendi.',
+                        username
+                    }
+                });
                 results.updated++;
             }
             // Add to facility

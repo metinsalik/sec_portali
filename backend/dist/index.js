@@ -20,6 +20,7 @@ const workflow_1 = __importDefault(require("./routes/workflow"));
 const risks_1 = __importDefault(require("./routes/risks"));
 const hazmat_1 = __importDefault(require("./routes/hazmat"));
 const fire_equipment_1 = __importDefault(require("./routes/fire_equipment"));
+const build_management_1 = __importDefault(require("./routes/build_management"));
 // Middleware
 const errorHandler_1 = require("./middleware/errorHandler");
 dotenv_1.default.config();
@@ -49,6 +50,7 @@ app.use('/api/workflow', workflow_1.default);
 app.use('/api/risks', risks_1.default);
 app.use('/api/hazmat', hazmat_1.default);
 app.use('/api/fire-equipment', fire_equipment_1.default);
+app.use('/api/build-management', build_management_1.default);
 // Sağlık kontrolü
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
