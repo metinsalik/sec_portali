@@ -104,6 +104,17 @@ import BuildDashboard from './pages/build_management/BuildDashboard';
 import BuildProjectList from './pages/build_management/BuildProjectList';
 import BuildProjectDetail from './pages/build_management/BuildProjectDetail';
 import BuildProjectForm from './pages/build_management/BuildProjectForm';
+import BuildDesignFormPage from './pages/build_management/BuildDesignFormPage';
+import BuildInspectionsPage from './pages/build_management/BuildInspectionsPage';
+import BuildProjectInspectionsDashboard from './pages/build_management/BuildProjectInspectionsDashboard';
+import BuildInspectionOHSFormPage from './pages/build_management/BuildInspectionOHSFormPage';
+import BuildInspectionInfectionFormPage from './pages/build_management/BuildInspectionInfectionFormPage';
+import BuildFindingsPage from './pages/build_management/BuildFindingsPage';
+import BuildRiskAssessmentPage from './pages/build_management/BuildRiskAssessmentPage';
+import BuildProjectHandoverPage from './pages/build_management/BuildProjectHandoverPage';
+import BuildHandoverListPage from './pages/build_management/BuildHandoverListPage';
+import BuildReportsPage from './pages/build_management/BuildReportsPage';
+import BuildSettings from './pages/build_management/BuildSettings';
 
 // Placeholder for future modules
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -112,7 +123,6 @@ const PlaceholderPage = ({ title }: { title: string }) => (
     <p className="text-sm text-muted-foreground">Bu modül yakında hazır olacak.</p>
   </div>
 );
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -350,6 +360,15 @@ function App() {
                   }
                 />
                 
+                <Route
+                  path="/build-management/project/:id/handover"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><BuildProjectHandoverPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
                 {/* ── RISK (RİSK YAŞAM DÖNGÜSÜ) ───────────────── */}
                 <Route
                   path="/risks"
@@ -803,7 +822,47 @@ function App() {
                   path="/build-management/inspections"
                   element={
                     <ProtectedRoute>
-                      <AppLayout><PlaceholderPage title="Saha Denetimleri" /></AppLayout>
+                      <AppLayout><BuildInspectionsPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/build-management/project/:id/design-form"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><BuildDesignFormPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/build-management/project/:id/risk-assessment"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><BuildRiskAssessmentPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/build-management/project/:id/inspections"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><BuildProjectInspectionsDashboard /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/build-management/project/:id/inspections/ohs/new"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><BuildInspectionOHSFormPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/build-management/project/:id/inspections/infection/new"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><BuildInspectionInfectionFormPage /></AppLayout>
                     </ProtectedRoute>
                   }
                 />
@@ -811,7 +870,15 @@ function App() {
                   path="/build-management/findings"
                   element={
                     <ProtectedRoute>
-                      <AppLayout><PlaceholderPage title="Bulgu Takibi" /></AppLayout>
+                      <AppLayout><BuildFindingsPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/build-management/project/:id/findings"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><BuildProjectDetail defaultTab="bulgular" /></AppLayout>
                     </ProtectedRoute>
                   }
                 />
@@ -819,7 +886,7 @@ function App() {
                   path="/build-management/handover"
                   element={
                     <ProtectedRoute>
-                      <AppLayout><PlaceholderPage title="Teslim Alma" /></AppLayout>
+                      <AppLayout><BuildHandoverListPage /></AppLayout>
                     </ProtectedRoute>
                   }
                 />
@@ -827,7 +894,7 @@ function App() {
                   path="/build-management/reports"
                   element={
                     <ProtectedRoute>
-                      <AppLayout><PlaceholderPage title="Raporlar" /></AppLayout>
+                      <AppLayout><BuildReportsPage /></AppLayout>
                     </ProtectedRoute>
                   }
                 />
@@ -835,7 +902,7 @@ function App() {
                   path="/build-management/settings"
                   element={
                     <ProtectedRoute>
-                      <AppLayout><PlaceholderPage title="Modül Ayarları" /></AppLayout>
+                      <AppLayout><BuildSettings /></AppLayout>
                     </ProtectedRoute>
                   }
                 />

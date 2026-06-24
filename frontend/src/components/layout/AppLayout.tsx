@@ -118,7 +118,6 @@ const buildManagementNavItems = [
   { label: 'GENEL', type: 'group' },
   { label: 'Dashboard', icon: LayoutDashboard, to: '/build-management/dashboard', end: true },
   { label: '1. BÖLÜM: PLANLAMA', type: 'group' },
-  { label: 'Tüm Projeler', icon: ClipboardList, to: '/build-management/list' },
   { label: 'Yeni Proje', icon: FileText, to: '/build-management/new' },
   { label: '2. BÖLÜM: DENETİM VE KONTROL', type: 'group' },
   { label: 'Saha Denetimleri', icon: ShieldAlert, to: '/build-management/inspections' },

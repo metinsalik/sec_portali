@@ -5,10 +5,28 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const client_1 = require("@prisma/client");
+const multer_1 = __importDefault(require("multer"));
+const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
 const buildManagementService_1 = require("../services/buildManagementService");
 const auth_1 = require("../middleware/auth");
 const router = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
+const uploadDir = path_1.default.join(__dirname, '../../uploads/build');
+if (!fs_1.default.existsSync(uploadDir)) {
+    fs_1.default.mkdirSync(uploadDir, { recursive: true });
+}
+const storage = multer_1.default.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const ext = path_1.default.extname(file.originalname);
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + ext);
+    }
+});
+const upload = (0, multer_1.default)({ storage });
 // Tüm router isteklerinde token doğrulaması yapıyoruz
 router.use(auth_1.authMiddleware);
 // --- PROJELER ---
@@ -22,7 +40,10 @@ router.get('/projects', async (req, res) => {
             where: whereClause,
             orderBy: { createdAt: 'desc' },
             include: {
-                creator: { select: { fullName: true } }
+                creator: { select: { fullName: true } },
+                location: true,
+                workType: true,
+                contractor: true
             }
         });
         res.json(projects);
@@ -35,8 +56,8 @@ router.get('/projects', async (req, res) => {
 // Proje oluştur
 router.post('/projects', async (req, res) => {
     try {
-        const { facilityId, name, location, floor, department, workType, buildType, riskGroup, plannedStartDate, plannedEndDate, contractorCompany, projectManager, description } = req.body;
-        if (!facilityId || !name || !workType || !buildType || !riskGroup) {
+        const { facilityId, name, locationId, workTypeId, contractorId, buildType, riskGroup, plannedStartDate, plannedEndDate, projectManager, description } = req.body;
+        if (!facilityId || !name || !workTypeId || !buildType || !riskGroup) {
             return res.status(400).json({ error: 'Eksik bilgi' });
         }
         const createdById = req.user?.username || '';
@@ -45,7 +66,7 @@ router.post('/projects', async (req, res) => {
         await prisma.buildICRA.create({
             data: {
                 projectId: project.id,
-                calculatedClass: project.icraClass,
+                calculatedClass: project.icraClass || 'Belirsiz',
                 precautions: []
             }
         });
@@ -63,6 +84,10 @@ router.get('/projects/:id', async (req, res) => {
         const project = await prisma.buildProject.findUnique({
             where: { id: id },
             include: {
+                creator: { select: { fullName: true } },
+                location: true,
+                workType: true,
+                contractor: true,
                 designForm: true,
                 riskAssessment: true,
                 icra: true,
@@ -148,6 +173,123 @@ router.post('/projects/:id/design-form', async (req, res) => {
     catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Tasarım formu kaydedilemedi' });
+    }
+});
+// --- HİZMET TASARIM FORMU ---
+// Tasarım formu getir
+router.get('/projects/:id/design-form', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const form = await prisma.buildDesignForm.findUnique({
+            where: { projectId: id }
+        });
+        // Eğer form yoksa 404 dönebilir veya boş dönebilir, UI boş olduğunu anlayıp dolduracak
+        res.json(form);
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Tasarım formu getirilirken hata oluştu' });
+    }
+});
+// Tasarım formu kaydet / güncelle
+router.post('/projects/:id/design-form', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const data = req.body;
+        const form = await prisma.buildDesignForm.upsert({
+            where: { projectId: id },
+            update: {
+                formType: data.formType || 'Tasarım',
+                formDate: new Date(data.formDate),
+                description: data.description,
+                requester: data.requester,
+                projectSponsor: data.projectSponsor,
+                notes: data.notes,
+                relatedDepartments: data.relatedDepartments, // JSON.stringify edilmiş array veya comma-separated string olabilir
+                projectManager: data.projectManager,
+                otherTeamMembers: data.otherTeamMembers,
+                projectGoal: data.projectGoal,
+                projectPlan: data.projectPlan,
+                inputs: data.inputs,
+                outputs: data.outputs,
+                verification: data.verification,
+                review: data.review,
+                validityCheck: data.validityCheck,
+                validityStudies: data.validityStudies,
+                postServiceValidity: data.postServiceValidity,
+                changeControl: data.changeControl
+            },
+            create: {
+                projectId: id,
+                formType: data.formType || 'Tasarım',
+                formDate: new Date(data.formDate),
+                description: data.description,
+                requester: data.requester,
+                projectSponsor: data.projectSponsor,
+                notes: data.notes,
+                relatedDepartments: data.relatedDepartments,
+                projectManager: data.projectManager,
+                otherTeamMembers: data.otherTeamMembers,
+                projectGoal: data.projectGoal,
+                projectPlan: data.projectPlan,
+                inputs: data.inputs,
+                outputs: data.outputs,
+                verification: data.verification,
+                review: data.review,
+                validityCheck: data.validityCheck,
+                validityStudies: data.validityStudies,
+                postServiceValidity: data.postServiceValidity,
+                changeControl: data.changeControl
+            }
+        });
+        res.json(form);
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Tasarım formu kaydedilirken hata oluştu' });
+    }
+});
+// --- DOKÜMANLAR ---
+// Doküman yükle
+router.post('/projects/:id/documents', upload.single('file'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { documentType, status } = req.body;
+        if (!req.file) {
+            return res.status(400).json({ error: 'Dosya yüklenmedi' });
+        }
+        const fileUrl = `/uploads/build/${req.file.filename}`;
+        const document = await prisma.buildDocument.create({
+            data: {
+                projectId: id,
+                documentType: documentType || 'Diğer',
+                name: req.file.originalname,
+                fileUrl,
+                uploadedBy: req.user?.username,
+                status: status || 'Yüklendi'
+            }
+        });
+        res.status(201).json(document);
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Doküman yüklenirken hata oluştu' });
+    }
+});
+// Dokümanları getir
+router.get('/projects/:id/documents', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const docs = await prisma.buildDocument.findMany({
+            where: { projectId: id },
+            orderBy: { createdAt: 'desc' },
+            include: { uploader: { select: { fullName: true } } }
+        });
+        res.json(docs);
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Dokümanlar getirilemedi' });
     }
 });
 exports.default = router;

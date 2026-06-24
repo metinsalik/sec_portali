@@ -6,26 +6,43 @@ import { BASE_URL } from '@/lib/api';
 interface MaterialPrintCardProps {
   material: any;
   facilityLogoUrl?: string;
-  size?: 'A4' | 'A5';
+  size?: 'A3' | 'A4' | 'A5';
 }
 
 export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardProps>(
   ({ material, facilityLogoUrl = '/mlpcare.jpg', size = 'A4' }, ref) => {
     
-    // Güvenlik Bilgi Kartı Stilleri
-    // A4: 210mm x 297mm
-    // A5: 148mm x 210mm
-    const sizeClasses = size === 'A4' 
-      ? 'w-[210mm] min-h-[297mm] text-sm' 
-      : 'w-[148mm] min-h-[210mm] text-[10px] leading-tight';
+    const pageHeight = size === 'A3' ? '410mm' : size === 'A4' ? '277mm' : '190mm';
+    const pageWidth = size === 'A3' ? '287mm' : size === 'A4' ? '200mm' : '138mm';
+
+    // Tüm text içeriklerinin toplam karakter sayısı
+    const totalChars = [
+      material?.firstAid, material?.fireFightingMeasures,
+      material?.accidentalReleaseMeasures, material?.handlingAndStorage,
+      material?.ecologicalInformation, material?.hazardDescription,
+      material?.usageMethod
+    ].filter(Boolean).join('').length;
+
+    // Base scale: 1 = normal, <1 = küçült, >1 = büyüt
+    const baseScale = size === 'A5'
+      ? totalChars > 1500 ? 0.7 : totalChars > 800 ? 0.85 : 1
+      : size === 'A4'
+      ? totalChars > 2000 ? 0.75 : totalChars > 1200 ? 0.9 : 1
+      : totalChars > 3000 ? 0.8 : totalChars > 1800 ? 0.9 : 1;
+
+    // Tüm boyutlar bu scale ile türetilsin:
+    const s = (base: number) => `${base * baseScale}px`;
+    const sp = (base: number) => `${base * baseScale}mm`; // padding/margin için
+
+    const rootFontSize = size === 'A5' ? s(8) : size === 'A4' ? s(10) : s(13);
 
     // Helper for table rows
     const SectionRow = ({ title, content, colSpan = 1 }: { title: string, content?: string | null, colSpan?: number }) => (
-      <tr className="border border-slate-800">
-        <td className="border-r border-slate-800 p-2 font-bold bg-slate-50 w-1/4 align-top">
+      <tr style={{ border: '1px solid #1e293b' }}>
+        <td style={{ borderRight: '1px solid #1e293b', padding: sp(1), fontWeight: 'bold', backgroundColor: '#f8fafc', width: '25%', verticalAlign: 'top', fontSize: 'inherit' }}>
           {title}
         </td>
-        <td className="p-2 align-top whitespace-pre-wrap" colSpan={colSpan}>
+        <td style={{ padding: sp(1), verticalAlign: 'top', whiteSpace: 'pre-wrap', fontSize: 'inherit' }} colSpan={colSpan}>
           {content || '-'}
         </td>
       </tr>
@@ -33,8 +50,8 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
 
     const HeaderSection = ({ title, icon, colSpan = 2 }: { title: string, icon?: React.ReactNode, colSpan?: number }) => (
       <tr>
-        <td colSpan={colSpan} className="border border-slate-800 p-2 font-bold text-center bg-slate-100 uppercase tracking-widest text-slate-800">
-          <div className="flex items-center justify-center gap-2">
+        <td colSpan={colSpan} style={{ border: '1px solid #1e293b', padding: sp(1), fontWeight: 'bold', textAlign: 'center', backgroundColor: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#1e293b', fontSize: s(10) }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: s(6) }}>
             {icon}
             {title}
           </div>
@@ -52,17 +69,17 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
     const renderGHS = () => {
       if (!material?.hazardLabels || material.hazardLabels.length === 0) return null;
       return material.hazardLabels.map((hl: any, idx: number) => (
-        <div key={idx} className="flex flex-col items-center justify-center gap-1 mb-1">
-          <div className="w-16 h-16 p-1 border border-slate-200 rounded flex items-center justify-center bg-white">
+        <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: sp(0.5) }}>
+          <div style={{ width: s(32), height: s(32), padding: s(2), border: '1px solid #e2e8f0', borderRadius: s(4), display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'white' }}>
             {hl.label?.imageUrl ? (
-              <img src={getAbsoluteUrl(hl.label.imageUrl)} alt={hl.label.name} className="w-full h-full object-contain" />
+              <img src={getAbsoluteUrl(hl.label.imageUrl)} alt={hl.label.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             ) : (
-              <span className="text-[10px] font-bold text-red-600 text-center leading-none">
+              <span style={{ fontWeight: 'bold', color: '#dc2626', textAlign: 'center', lineHeight: 1, fontSize: s(6) }}>
                 GHS<br/>{hl.label?.code || ''}
               </span>
             )}
           </div>
-          <span className="text-[9px] font-bold text-red-600 text-center leading-tight">
+          <span style={{ fontWeight: 'bold', color: '#dc2626', textAlign: 'center', lineHeight: 1.2, marginTop: s(2), maxWidth: s(32), fontSize: s(6) }}>
             {hl.label?.name}
           </span>
         </div>
@@ -72,17 +89,17 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
     const renderADR = () => {
       if (!material?.adrLabels || material.adrLabels.length === 0) return null;
       return material.adrLabels.map((al: any, idx: number) => (
-        <div key={`adr-${idx}`} className="flex flex-col items-center justify-center gap-1 mb-1">
-          <div className="w-16 h-16 p-1 rounded flex items-center justify-center bg-white border border-slate-200">
+        <div key={`adr-${idx}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginBottom: sp(0.5) }}>
+          <div style={{ width: s(32), height: s(32), padding: s(2), borderRadius: s(4), display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'white', border: '1px solid #e2e8f0' }}>
             {al.label?.imageUrl ? (
-              <img src={getAbsoluteUrl(al.label.imageUrl)} alt={al.label.name} className="w-full h-full object-contain" />
+              <img src={getAbsoluteUrl(al.label.imageUrl)} alt={al.label.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             ) : (
-              <span className="text-[10px] font-bold text-orange-600 text-center leading-none">
+              <span style={{ fontWeight: 'bold', color: '#ea580c', textAlign: 'center', lineHeight: 1, fontSize: s(6) }}>
                 ADR<br/>{al.label?.name || ''}
               </span>
             )}
           </div>
-          <span className="text-[9px] font-bold text-orange-600 text-center leading-tight">
+          <span style={{ fontWeight: 'bold', color: '#ea580c', textAlign: 'center', lineHeight: 1.2, marginTop: s(2), maxWidth: s(32), fontSize: s(6) }}>
             {al.label?.name}
           </span>
         </div>
@@ -92,61 +109,70 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
     return (
       <div 
         ref={ref}
-        className={cn(
-          "bg-white text-black p-8 mx-auto box-border",
-          sizeClasses
-        )}
-        style={{ fontFamily: 'Arial, sans-serif' }}
+        style={{ 
+          backgroundColor: 'white',
+          color: 'black',
+          padding: sp(2),
+          margin: '0 auto',
+          fontFamily: 'Arial, sans-serif',
+          width: pageWidth,
+          height: pageHeight,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          boxSizing: 'border-box',
+          fontSize: rootFontSize
+        }}
       >
-        <table className="w-full border-collapse border border-slate-800 table-fixed">
+        <table style={{flex: 1, width: '100%', borderCollapse: 'collapse', border: '1px solid #1e293b', tableLayout: 'fixed', marginBottom: sp(0.5) }}>
           <tbody>
             {/* Main Header */}
             <tr>
-              <td colSpan={2} className="border border-slate-800 p-3 relative h-20">
-                <div className="absolute left-4 top-0 bottom-0 flex items-center justify-center">
-                  <img src={getAbsoluteUrl(facilityLogoUrl)} alt="Logo" className="max-h-16 w-auto object-contain" />
+              <td colSpan={2} style={{ border: '1px solid #1e293b', padding: sp(1), position: 'relative', height: s(48) }}>
+                <div style={{ position: 'absolute', left: s(8), top: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img src={getAbsoluteUrl(facilityLogoUrl)} alt="Logo" style={{ maxHeight: s(32), width: 'auto', objectFit: 'contain' }} />
                 </div>
-                <div className="flex h-full items-center justify-center">
-                  <h1 className="text-xl font-bold uppercase tracking-widest text-center m-0">GÜVENLİK BİLGİ KARTI</h1>
+                <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                  <h1 style={{ fontSize: s(16), fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center', margin: 0 }}>GÜVENLİK BİLGİ KARTI</h1>
                 </div>
               </td>
             </tr>
 
             {/* Info Section */}
-            <tr className="border border-slate-800">
-              <td colSpan={2} className="p-0 align-top">
-                <div className="flex w-full h-full items-stretch">
+            <tr style={{ border: '1px solid #1e293b' }}>
+              <td colSpan={2} style={{ padding: 0, verticalAlign: 'top' }}>
+                <div style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'stretch' }}>
                   
                   {/* Left Column (25%) */}
-                  <div className="w-1/4 border-r border-slate-800 p-3 flex flex-col items-center justify-center text-center bg-slate-50">
-                    <span className="font-bold text-red-600 uppercase text-xs mb-4">
+                  <div style={{ width: '25%', borderRight: '1px solid #1e293b', padding: sp(1), display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', backgroundColor: '#f8fafc' }}>
+                    <span style={{ fontWeight: 'bold', color: '#dc2626', textTransform: 'uppercase', marginBottom: s(4), fontSize: s(8) }}>
                       ÜRÜN TİCARİ<br/>ADI
                     </span>
-                    <span className="font-bold text-sm uppercase">{material?.productName}</span>
+                    <span style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '1.2em' }}>{material?.productName}</span>
                     {material?.imageUrl && (
-                      <div className="mt-4 flex items-center justify-center">
+                      <div style={{ marginTop: s(4), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <img 
                           src={getAbsoluteUrl(material.imageUrl)} 
                           alt={material.productName} 
-                          className="max-w-full max-h-[80px] object-contain rounded border border-slate-200 shadow-sm p-1 bg-white" 
+                          style={{ maxWidth: '100%', maxHeight: s(40), objectFit: 'contain', borderRadius: s(4), border: '1px solid #e2e8f0', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', padding: s(2), backgroundColor: 'white' }} 
                         />
                       </div>
                     )}
                   </div>
 
                   {/* Middle Column (50%) */}
-                  <div className="w-1/2 border-r border-slate-800 p-3 flex flex-col gap-2 text-xs leading-relaxed">
-                    <div><span className="font-bold">Madde/Karışımın Kullanımı:</span><br/>{material?.usageMethod || '-'}</div>
-                    <div><span className="font-bold">Tedarikçi Firma:</span> {material?.brandName || '-'}</div>
-                    <div className="mt-auto pt-2">
-                      <div className="font-bold text-red-600">Telefon:</div>
-                      <div className="font-bold text-red-600 text-sm">ULUSAL ZEHİR DANIŞMA MERKEZİ: 114</div>
+                  <div style={{ width: '50%', borderRight: '1px solid #1e293b', padding: sp(1), display: 'flex', flexDirection: 'column', gap: s(2), lineHeight: 1.2, fontSize: 'inherit' }}>
+                    <div><span style={{ fontWeight: 'bold' }}>Madde/Karışımın Kullanımı:</span><br/>{material?.usageMethod || '-'}</div>
+                    <div><span style={{ fontWeight: 'bold' }}>Tedarikçi Firma:</span> {material?.brandName || '-'}</div>
+                    <div style={{ marginTop: 'auto', paddingTop: s(2) }}>
+                      <div style={{ fontWeight: 'bold', color: '#dc2626', fontSize: s(8) }}>Telefon:</div>
+                      <div style={{ fontWeight: 'bold', color: '#dc2626', fontSize: s(8 * 1.1) }}>ULUSAL ZEHİR DANIŞMA MERKEZİ: 114</div>
                     </div>
                   </div>
 
                   {/* Right Column (25%) */}
-                  <div className="w-1/4 p-2 relative flex flex-col items-center justify-center">
-                    <div className="flex flex-wrap items-center justify-center gap-2">
+                  <div style={{ width: '25%', padding: sp(1), position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: s(4) }}>
                        {renderGHS()}
                        {renderADR()}
                     </div>
@@ -161,68 +187,68 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
 
             <HeaderSection title="ZARARLILIK VE ÖNLEM İFADELERİ" />
             <tr>
-              <td colSpan={2} className="border border-slate-800 p-3 align-top whitespace-pre-wrap min-h-[100px]">
+              <td colSpan={2} style={{ border: '1px solid #1e293b', padding: sp(1), verticalAlign: 'top', whiteSpace: 'pre-wrap', fontSize: 'inherit' }}>
                 {material?.hazardDescription || '-'}
               </td>
             </tr>
 
             <HeaderSection 
               title="İLK YARDIM BİLGİLERİ" 
-              icon={<div className="w-5 h-5 bg-red-600 text-white rounded-full flex items-center justify-center font-bold text-sm leading-none">+</div>} 
+              icon={<div style={{ width: s(12), height: s(12), backgroundColor: '#dc2626', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: s(8), lineHeight: 1 }}>+</div>} 
             />
             
             {/* İlk yardım bilgileri */}
             <tr>
-              <td colSpan={2} className="border border-slate-800 p-3 align-top whitespace-pre-wrap min-h-[60px]">
+              <td colSpan={2} style={{ border: '1px solid #1e293b', padding: sp(1), verticalAlign: 'top', whiteSpace: 'pre-wrap', fontSize: 'inherit' }}>
                 {material?.firstAid || '-'}
               </td>
             </tr>
 
             <HeaderSection title="YANGIN DURUMUNDA" />
             <tr>
-              <td colSpan={2} className="border border-slate-800 p-3 align-top whitespace-pre-wrap min-h-[60px]">
+              <td colSpan={2} style={{ border: '1px solid #1e293b', padding: sp(1), verticalAlign: 'top', whiteSpace: 'pre-wrap', fontSize: 'inherit' }}>
                 {material?.fireFightingMeasures || '-'}
               </td>
             </tr>
 
             <HeaderSection title="KAZA SONUCU YAYILMAYA KARŞI ÖNLEMLER" />
             <tr>
-              <td colSpan={2} className="border border-slate-800 p-3 align-top whitespace-pre-wrap min-h-[60px]">
+              <td colSpan={2} style={{ border: '1px solid #1e293b', padding: sp(1), verticalAlign: 'top', whiteSpace: 'pre-wrap', fontSize: 'inherit' }}>
                 {material?.accidentalReleaseMeasures || '-'}
               </td>
             </tr>
 
             <HeaderSection title="ÇEVRESEL TEDBİRLER" />
             <tr>
-              <td colSpan={2} className="border border-slate-800 p-3 align-top whitespace-pre-wrap min-h-[60px]">
+              <td colSpan={2} style={{ border: '1px solid #1e293b', padding: sp(1), verticalAlign: 'top', whiteSpace: 'pre-wrap', fontSize: 'inherit' }}>
                 {material?.ecologicalInformation || '-'}
               </td>
             </tr>
 
             <HeaderSection title="ELLEÇLEME VE DEPOLAMA" />
             <tr>
-              <td colSpan={2} className="border border-slate-800 p-3 align-top whitespace-pre-wrap min-h-[60px]">
+              <td colSpan={2} style={{ border: '1px solid #1e293b', padding: sp(1), verticalAlign: 'top', whiteSpace: 'pre-wrap', fontSize: 'inherit' }}>
                 {material?.handlingAndStorage || '-'}
               </td>
             </tr>
 
             <HeaderSection title="KİŞİSEL KORUYUCU ÖNLEMLER" />
             <tr>
-              <td colSpan={2} className="border border-slate-800 p-4 align-top">
+              <td colSpan={2} style={{ border: '1px solid #1e293b', padding: sp(1.5), verticalAlign: 'top', fontSize: 'inherit' }}>
                 {(!material?.ppes || material.ppes.length === 0) ? (
-                  <span className="text-muted-foreground">-</span>
+                  <span style={{ color: '#64748b' }}>-</span>
                 ) : (
-                  <div className="flex flex-wrap gap-6 justify-center">
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: s(12), justifyContent: 'center' }}>
                     {material.ppes.map((p: any, idx: number) => (
-                      <div key={idx} className="flex flex-col items-center gap-2">
-                        <div className="w-14 h-14 rounded-full border-2 border-blue-600 flex items-center justify-center p-2 bg-blue-50 shadow-sm">
+                      <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: s(4) }}>
+                        <div style={{ width: s(32), height: s(32), borderRadius: '50%', border: '2px solid #2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: s(4), backgroundColor: '#eff6ff', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}>
                            {p.ppe?.imageUrl ? (
-                             <img src={getAbsoluteUrl(p.ppe.imageUrl)} alt={p.ppe.name} className="w-full h-full object-contain" />
+                             <img src={getAbsoluteUrl(p.ppe.imageUrl)} alt={p.ppe.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                            ) : (
-                             <span className="text-[10px] text-blue-600 font-bold uppercase text-center">{p.ppe?.name}</span>
+                             <span style={{ fontSize: s(6), color: '#2563eb', fontWeight: 'bold', textTransform: 'uppercase', textAlign: 'center' }}>{p.ppe?.name}</span>
                            )}
                         </div>
-                        <span className="text-[10px] font-bold text-slate-700 text-center uppercase max-w-[80px] leading-tight">
+                        <span style={{ fontSize: s(6), fontWeight: 'bold', color: '#334155', textAlign: 'center', textTransform: 'uppercase', maxWidth: s(50), lineHeight: 1.2 }}>
                           {p.ppe?.name}
                         </span>
                       </div>
@@ -233,7 +259,7 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
             </tr>
           </tbody>
         </table>
-        <div className="mt-2 text-left text-[8px] text-slate-500">
+        <div style={{ marginTop: sp(0.5), textAlign: 'left', fontSize: s(6), color: '#64748b' }}>
           İSG-YRD-47/00
         </div>
       </div>

@@ -59,20 +59,20 @@ const checkProjectGate = async (projectId) => {
     if (!project)
         return { success: false, message: 'Proje bulunamadı' };
     const startRequirements = [
-        { name: 'Tasarım / Geliştirme Formu', isMet: !!project.designForm },
-        { name: 'İnşaat Öncesi Risk Değerlendirmesi', isMet: !!project.riskAssessment },
-        { name: 'ENF-F15-02 Başlangıç Onayı (Evrak)', isMet: project.documents.some(d => d.documentType === 'ENF-F15-02' && d.status === 'Onaylandı') },
-        { name: 'Teknik Hizmetler Onayı', isMet: project.approvals.some(a => a.approvalType === 'Teknik Hizmetler' && a.status === 'Onaylandı') },
-        { name: 'İSG Uzmanı Onayı', isMet: project.approvals.some(a => a.approvalType === 'İSG Uzmanı' && a.status === 'Onaylandı') },
-        { name: 'Enfeksiyon Kontrol Onayı', isMet: project.approvals.some(a => a.approvalType === 'Enfeksiyon Kontrol' && a.status === 'Onaylandı') },
-        { name: 'Yangın Güvenliği Onayı', isMet: project.approvals.some(a => a.approvalType === 'Yangın Güvenliği' && a.status === 'Onaylandı') }
+        { name: 'Kapsam, Lokasyon ve Firma Tanımlı', isMet: !!project.locationId && !!project.contractorId && !!project.workTypeId },
+        { name: 'Hizmet Tasarım Formu', isMet: !!project.designForm },
+        { name: 'İnşaat Öncesi Risk Değerlendirmesi (5x5 Matris)', isMet: !!project.riskAssessment && (project.riskAssessment.likelihood > 0 && project.riskAssessment.severity > 0) },
+        { name: 'Geçici Görevlendirme Evrağı', isMet: project.documents.some(d => d.documentType === 'Geçici Görevlendirme Evrağı' && d.status === 'Onaylandı') },
+        { name: 'SGK Evrakları', isMet: project.documents.some(d => d.documentType === 'SGK Evrakları' && d.status === 'Onaylandı') },
+        { name: 'İSG Eğitim Kayıtları', isMet: project.documents.some(d => d.documentType === 'İSG Eğitim Kayıtları' && d.status === 'Onaylandı') },
+        { name: 'Yangın Güvenliği Planı', isMet: project.documents.some(d => d.documentType === 'Yangın Güvenliği Planı' && d.status === 'Onaylandı') },
+        { name: 'Enfeksiyon Kontrol Planı', isMet: project.documents.some(d => d.documentType === 'Enfeksiyon Kontrol Planı' && d.status === 'Onaylandı') }
     ];
     const canStart = startRequirements.every(req => req.isMet);
     // Handover Check
     const handoverRequirements = [
         { name: 'Kritik Açık Aksiyon Yok', isMet: !project.findings.some(f => f.actions.some(a => a.status === 'Açık' && a.riskLevel === 'Kritik')) },
-        { name: 'ENF-F76-00 Final Onayı (Evrak)', isMet: project.documents.some(d => d.documentType === 'ENF-F76-00' && d.status === 'Onaylandı') },
-        { name: 'Teslim Alma Kontrolleri (Handover Modeli)', isMet: project.handover?.status === 'Onaylandı' }
+        { name: 'Teslim Alma Kontrolleri', isMet: project.handover?.status === 'Onaylandı' }
     ];
     const canHandover = handoverRequirements.every(req => req.isMet);
     return {

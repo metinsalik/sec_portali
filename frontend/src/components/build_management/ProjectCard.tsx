@@ -46,7 +46,7 @@ export function ProjectCard({ project, className }: ProjectCardProps) {
             {project.name}
           </h3>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            {project.contractorCompany || 'Yüklenici Belirtilmedi'}
+            {project.contractor?.name || 'Yüklenici Belirtilmedi'}
           </p>
         </div>
         <StatusBadge status={project.status} />
@@ -71,7 +71,7 @@ export function ProjectCard({ project, className }: ProjectCardProps) {
         <div className="flex items-center gap-2">
           <span className="material-symbols-outlined text-[18px] text-slate-400">location_on</span>
           <span className="text-sm text-slate-600 dark:text-slate-300 truncate max-w-[150px]">
-            {project.location} {project.floor && `- ${project.floor}. Kat`}
+            {project.location ? `${project.location.block} - ${project.location.floor}` : 'Lokasyon Belirsiz'}
           </span>
         </div>
         <div className={cn("px-2.5 py-1 rounded text-xs font-bold", getIcraColor(project.icraClass))}>

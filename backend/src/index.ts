@@ -36,6 +36,8 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
+import buildSettingsRoutes from './routes/build_settings';
+
 // Servis statik dosyalar (Yüklemeler için)
 app.use('/uploads', express.static('uploads'));
 
@@ -53,6 +55,7 @@ app.use('/api/risks', riskRoutes);
 app.use('/api/hazmat', hazmatRoutes);
 app.use('/api/fire-equipment', fireEquipmentRoutes);
 app.use('/api/build-management', buildManagementRoutes);
+app.use('/api/build-management/settings', buildSettingsRoutes);
 
 // Sağlık kontrolü
 app.get('/health', (req, res) => {

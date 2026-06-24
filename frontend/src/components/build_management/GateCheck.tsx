@@ -16,7 +16,7 @@ export function GateCheck({ gateData, type }: GateCheckProps) {
 
   const requirements = type === 'start' ? gateData.startRequirements : gateData.handoverRequirements;
   const canPass = type === 'start' ? gateData.canStart : gateData.canHandover;
-  const title = type === 'start' ? 'Başlatma Kapısı (Gate Check)' : 'Teslim Alma Kapısı (Gate Check)';
+  const title = type === 'start' ? 'Proje Öncesi Yapılacaklar' : 'Teslim Alma ve Rapor';
 
   return (
     <div className={cn(
