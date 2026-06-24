@@ -25,7 +25,7 @@ export const BuildHandoverOHSPrintTemplate = forwardRef<HTMLDivElement, Props>(
             th, td { border: 1px solid #000; padding: 3px 4px; vertical-align: top; }
             th { background-color: #f1f2f5 !important; font-weight: bold; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .bg-gray { background-color: #f1f2f5 !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .no-border td { border: none; padding: 0; }
+            .no-border > th, .no-border > td { border: none !important; padding: 0; }
             .title-box { text-align: center; font-size: 14px; font-weight: bold; padding: 8px 0; position: relative; margin-bottom: 5px;}
             .title-box img { position: absolute; left: 0; top: 50%; transform: translateY(-50%); height: 35px; }
             .info-table td:nth-child(odd) { width: 20%; background-color: #f1f2f5 !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }

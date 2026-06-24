@@ -217,8 +217,8 @@ export default function BuildInspectionInfectionFormPage() {
 
         <div className="mt-8 flex justify-end gap-4">
           <Button variant="outline" onClick={() => navigate(`/build-management/project/${id}/inspections`)}>İptal</Button>
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSave} disabled={isSubmitting}>
-            {isSubmitting ? 'Kaydediliyor...' : 'Denetimi Tamamla ve Kaydet'}
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSave} disabled={mutation.isPending}>
+            {mutation.isPending ? 'Kaydediliyor...' : 'Denetimi Tamamla ve Kaydet'}
           </Button>
         </div>
       </div>
