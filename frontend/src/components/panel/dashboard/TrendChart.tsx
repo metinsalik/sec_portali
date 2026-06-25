@@ -17,6 +17,7 @@ interface EmployeeTrendData {
   count: number;
   totalCount: number;
   percentChange: number | null;
+  countChange?: number | null;
 }
 
 interface TrendChartProps {
@@ -47,9 +48,16 @@ export function EmployeeTrendChart({ data, companyName }: TrendChartProps) {
 
     if (name === "percentChange") {
       const pct = currentMonthData.percentChange;
-      if (pct === null) return ["—", "Aylık % Değişim"];
+      if (pct === null) return ["—", "Aylık Değişim"];
       const sign = pct > 0 ? "+" : "";
-      return [`${sign}${pct.toFixed(1)}%`, "Aylık % Değişim"];
+      
+      let changeText = `${sign}${pct.toFixed(1)}%`;
+      if (currentMonthData.countChange != null) {
+        const countSign = currentMonthData.countChange > 0 ? "+" : "";
+        changeText += ` (${countSign}${currentMonthData.countChange} kişi)`;
+      }
+      
+      return [changeText, "Aylık Değişim"];
     }
 
     if (name === "totalCount") {
