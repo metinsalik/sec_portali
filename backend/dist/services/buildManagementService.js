@@ -17,24 +17,35 @@ exports.calculateICRAClass = calculateICRAClass;
 // Risk Skoru ve Seviyesi Hesaplama
 const calculateRiskScoreAndLevel = (data) => {
     let score = 0;
-    if (data.patientCareProximity)
-        score += 3;
-    if (data.dustNoiseVibration)
-        score += 3;
-    if (data.criticalAreaAffected)
-        score += 4;
-    if (data.hvacAffected)
-        score += 3;
-    if (data.medicalGasAffected)
-        score += 3;
-    if (data.fireSafetyAffected)
-        score += 3;
-    if (data.powerOutageRisk)
-        score += 3;
-    if (data.waterLeakRisk)
-        score += 3;
+    if (data.matrixData && Array.isArray(data.matrixData)) {
+        data.matrixData.forEach((item) => {
+            const itemScore = (item.likelihood || 0) * (item.severity || 0);
+            if (itemScore > score) {
+                score = itemScore;
+            }
+        });
+    }
+    else {
+        // Fallback for old boolean logic
+        if (data.patientCareProximity)
+            score += 3;
+        if (data.dustNoiseVibration)
+            score += 3;
+        if (data.criticalAreaAffected)
+            score += 4;
+        if (data.hvacAffected)
+            score += 3;
+        if (data.medicalGasAffected)
+            score += 3;
+        if (data.fireSafetyAffected)
+            score += 3;
+        if (data.powerOutageRisk)
+            score += 3;
+        if (data.waterLeakRisk)
+            score += 3;
+    }
     let level = 'Düşük Risk';
-    if (score >= 16)
+    if (score >= 17)
         level = 'Kritik Risk';
     else if (score >= 10)
         level = 'Yüksek Risk';
@@ -53,26 +64,30 @@ const checkProjectGate = async (projectId) => {
             documents: true,
             approvals: true,
             handover: true,
-            findings: { include: { actions: true } }
+            findings: { include: { actions: true } },
+            inspectionsOHS: true,
+            inspectionsInfection: true,
+            handoverOHSInspections: true,
+            handoverInfectionInspections: true
         }
     });
     if (!project)
         return { success: false, message: 'Proje bulunamadı' };
     const startRequirements = [
-        { name: 'Kapsam, Lokasyon ve Firma Tanımlı', isMet: !!project.locationId && !!project.contractorId && !!project.workTypeId },
         { name: 'Hizmet Tasarım Formu', isMet: !!project.designForm },
-        { name: 'İnşaat Öncesi Risk Değerlendirmesi (5x5 Matris)', isMet: !!project.riskAssessment && (project.riskAssessment.likelihood > 0 && project.riskAssessment.severity > 0) },
-        { name: 'Geçici Görevlendirme Evrağı', isMet: project.documents.some(d => d.documentType === 'Geçici Görevlendirme Evrağı' && d.status === 'Onaylandı') },
-        { name: 'SGK Evrakları', isMet: project.documents.some(d => d.documentType === 'SGK Evrakları' && d.status === 'Onaylandı') },
-        { name: 'İSG Eğitim Kayıtları', isMet: project.documents.some(d => d.documentType === 'İSG Eğitim Kayıtları' && d.status === 'Onaylandı') },
-        { name: 'Yangın Güvenliği Planı', isMet: project.documents.some(d => d.documentType === 'Yangın Güvenliği Planı' && d.status === 'Onaylandı') },
-        { name: 'Enfeksiyon Kontrol Planı', isMet: project.documents.some(d => d.documentType === 'Enfeksiyon Kontrol Planı' && d.status === 'Onaylandı') }
+        { name: 'İnşaat Öncesi Risk Değerlendirmesi (PCRA)', isMet: !!project.riskAssessment &&
+                ((project.riskAssessment.matrixData && Array.isArray(project.riskAssessment.matrixData) && project.riskAssessment.matrixData.length > 0) ||
+                    !!project.riskAssessment.contractorCompliance)
+        },
+        { name: 'Yüklenici Evrakları', isMet: project.documents && project.documents.length > 0 && project.documents.every(d => d.status === 'Onaylandı') },
+        { name: 'Onay ve İzinler', isMet: project.approvals && project.approvals.length > 0 && project.approvals.every(a => a.status === 'Onaylandı') }
     ];
     const canStart = startRequirements.every(req => req.isMet);
     // Handover Check
     const handoverRequirements = [
         { name: 'Kritik Açık Aksiyon Yok', isMet: !project.findings.some(f => f.actions.some(a => a.status === 'Açık' && a.riskLevel === 'Kritik')) },
-        { name: 'Teslim Alma Kontrolleri', isMet: project.handover?.status === 'Onaylandı' }
+        { name: 'Saha Denetimleri', isMet: (project.inspectionsOHS && project.inspectionsOHS.length > 0) || (project.inspectionsInfection && project.inspectionsInfection.length > 0) },
+        { name: 'Teslim Alma ve Rapor', isMet: (project.handoverOHSInspections && project.handoverOHSInspections.length > 0) && (project.handoverInfectionInspections && project.handoverInfectionInspections.length > 0) }
     ];
     const canHandover = handoverRequirements.every(req => req.isMet);
     return {

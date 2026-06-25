@@ -408,21 +408,21 @@ export default function FireEquipmentFormPage() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="space-y-1">
                     <Label className="text-xs">Blok Seçimi *</Label>
-                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm" disabled={isEdit} value={locBlock} onChange={e => {setLocBlock(e.target.value); setLocFloor('all'); setLocDepartment('all');}}>
+                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm" value={locBlock} onChange={e => {setLocBlock(e.target.value); setLocFloor('all'); setLocDepartment('all');}}>
                       <option value="all">Seçiniz...</option>
                       {blocks.map((b: any) => <option key={b} value={b}>{b}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Kat Seçimi *</Label>
-                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm disabled:opacity-50" disabled={isEdit || floors.length === 0} value={locFloor} onChange={e => {setLocFloor(e.target.value); setLocDepartment('all');}}>
+                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm disabled:opacity-50" disabled={floors.length === 0} value={locFloor} onChange={e => {setLocFloor(e.target.value); setLocDepartment('all');}}>
                       <option value="all">Seçiniz...</option>
                       {floors.map((f: any) => <option key={f} value={f}>{f}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Birim Seçimi *</Label>
-                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm disabled:opacity-50" disabled={isEdit || departments.length === 0} value={locDepartment} onChange={e => handleDepartmentChange(e.target.value)}>
+                    <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm disabled:opacity-50" disabled={departments.length === 0} value={locDepartment} onChange={e => handleDepartmentChange(e.target.value)}>
                       <option value="all">Seçiniz...</option>
                       {departments.map((d: any) => <option key={d} value={d}>{d}</option>)}
                     </select>
@@ -433,7 +433,6 @@ export default function FireEquipmentFormPage() {
                       className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm disabled:opacity-50 ring-2 ring-red-500/20"
                       value={formData.locationId || ''} 
                       onChange={(e) => handleSelectChange('locationId', e.target.value)} 
-                      disabled={isEdit}
                     >
                       <option value="" disabled>Seçiniz...</option>
                       {getFilteredLocations().map((loc: any) => (

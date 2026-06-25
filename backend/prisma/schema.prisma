@@ -98,6 +98,14 @@ model Facility {
   BuildLocation          BuildLocation[]
   BuildContractor        BuildContractor[]
   BuildWorkType          BuildWorkType[]
+  btAnaGruplar           BTAnaGrup[]
+  btDenetlenenAlanlar    BTDenetlenenAlan[]
+  btKategoriler          BTKategori[]
+  btSoruBankasi          BTSoruBankasi[]
+  btSorumluBirimler      BTSorumluBirim[]
+  btSorumluKisiler       BTSorumluKisi[]
+  btTurler               BTTur[]
+  btUygunsuzluklar       BTUygunsuzluk[]
 }
 
 model IncidentCategory {
@@ -1376,19 +1384,19 @@ model BuildProject {
   workType   BuildWorkType?   @relation(fields: [workTypeId], references: [id], onDelete: SetNull)
   contractor BuildContractor? @relation(fields: [contractorId], references: [id], onDelete: SetNull)
 
-  designForm           BuildDesignForm?
-  riskAssessment       BuildRiskAssessment?
-  icra                 BuildICRA?
-  approvals            BuildApproval[]
-  permits              BuildPermit[]
-  inspectionsOHS       BuildInspectionOHS[]
-  inspectionsInfection BuildInspectionInfection[]
-  handoverOHSInspections BuildHandoverOHSInspection[]
+  designForm                   BuildDesignForm?
+  riskAssessment               BuildRiskAssessment?
+  icra                         BuildICRA?
+  approvals                    BuildApproval[]
+  permits                      BuildPermit[]
+  inspectionsOHS               BuildInspectionOHS[]
+  inspectionsInfection         BuildInspectionInfection[]
+  handoverOHSInspections       BuildHandoverOHSInspection[]
   handoverInfectionInspections BuildHandoverInfectionInspection[]
-  findings             BuildFinding[]
-  documents            BuildDocument[]
-  handover             BuildHandover?
-  BuildAction          BuildAction[]
+  findings                     BuildFinding[]
+  documents                    BuildDocument[]
+  handover                     BuildHandover?
+  BuildAction                  BuildAction[]
 
   @@index([facilityId])
 }
@@ -1441,8 +1449,8 @@ model BuildRiskAssessment {
   fireSafetyNotes      String?
   infrastructureNotes  String?
   ohsNotes             String?
-  matrixData           Json?    // 10 kategorilik 5x5 PCRA değerlendirme tablosu verileri
-  contractorCompliance String?  // Yüklenici uyumu ve takip dokümantasyonu notları
+  matrixData           Json? // 10 kategorilik 5x5 PCRA değerlendirme tablosu verileri
+  contractorCompliance String? // Yüklenici uyumu ve takip dokümantasyonu notları
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -1650,10 +1658,160 @@ model BuildPersonSetting {
   id         String   @id @default(uuid())
   facilityId String
   name       String
-  title      String?  // Ünvan / Rol (Örn: Proje Yöneticisi)
+  title      String? // Ünvan / Rol (Örn: Proje Yöneticisi)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   @@unique([facilityId, name])
   @@index([facilityId])
+}
+
+// --- BİNA TURU YÖNETİMİ MODÜLLERİ ---
+
+model BTAnaGrup {
+  id         Int             @id @default(autoincrement())
+  facilityId String
+  ad         String
+  sorular    BTSoruBankasi[]
+  facility   Facility        @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  createdAt  DateTime        @default(now())
+}
+
+model BTDenetlenenAlan {
+  id         Int             @id @default(autoincrement())
+  facilityId String
+  ad         String
+  sorular    BTSoruBankasi[]
+  facility   Facility        @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  createdAt  DateTime        @default(now())
+}
+
+model BTKategori {
+  id         Int             @id @default(autoincrement())
+  facilityId String
+  ad         String
+  sorular    BTSoruBankasi[]
+  facility   Facility        @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  createdAt  DateTime        @default(now())
+}
+
+model BTSoruBankasi {
+  id               Int              @id @default(autoincrement())
+  facilityId       String
+  anaGrupId        Int
+  denetlenenAlanId Int
+  kategoriId       Int
+  kriter           String
+  anaGrup          BTAnaGrup        @relation(fields: [anaGrupId], references: [id])
+  denetlenenAlan   BTDenetlenenAlan @relation(fields: [denetlenenAlanId], references: [id])
+  kategori         BTKategori       @relation(fields: [kategoriId], references: [id])
+  turSorulari      BTTurSorusu[]
+  facility         Facility         @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  createdAt        DateTime         @default(now())
+}
+
+model BTSorumluBirim {
+  id             Int             @id @default(autoincrement())
+  facilityId     String
+  ad             String
+  turler         BTTur[]
+  kisiler        BTSorumluKisi[]
+  uygunsuzluklar BTUygunsuzluk[]
+  facility       Facility        @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  createdAt      DateTime        @default(now())
+}
+
+model BTSorumluKisi {
+  id             Int             @id @default(autoincrement())
+  facilityId     String
+  ad             String
+  birimId        Int
+  birim          BTSorumluBirim  @relation(fields: [birimId], references: [id])
+  turler         BTTur[]
+  uygunsuzluklar BTUygunsuzluk[]
+  facility       Facility        @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  createdAt      DateTime        @default(now())
+}
+
+model BTTur {
+  id              Int              @id @default(autoincrement())
+  facilityId      String
+  ad              String
+  baslangicTarihi DateTime
+  bitisTarihi     DateTime
+  durum           BTTurDurum       @default(TASLAK)
+  sorumluBirimler BTSorumluBirim[]
+  sorumluKisiler  BTSorumluKisi[]
+  denetimEkibi    BTDenetimEkibi[]
+  turSorulari     BTTurSorusu[]
+  uygunsuzluklar  BTUygunsuzluk[]
+  facility        Facility         @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+enum BTTurDurum {
+  TASLAK
+  AKTIF
+  TAMAMLANDI
+}
+
+model BTDenetimEkibi {
+  id      Int    @id @default(autoincrement())
+  turId   Int
+  kisiAdi String
+  tur     BTTur  @relation(fields: [turId], references: [id], onDelete: Cascade)
+}
+
+model BTTurSorusu {
+  id     Int           @id @default(autoincrement())
+  turId  Int
+  soruId Int
+  tur    BTTur         @relation(fields: [turId], references: [id], onDelete: Cascade)
+  soru   BTSoruBankasi @relation(fields: [soruId], references: [id])
+  cevap  BTCevap?
+}
+
+model BTCevap {
+  id          Int            @id @default(autoincrement())
+  turSorusuId Int            @unique
+  sonuc       BTCevapSonuc
+  aciklama    String?
+  fotograflar String[]
+  dofGerekli  Boolean        @default(false)
+  turSorusu   BTTurSorusu    @relation(fields: [turSorusuId], references: [id], onDelete: Cascade)
+  uygunsuzluk BTUygunsuzluk?
+  createdAt   DateTime       @default(now())
+}
+
+enum BTCevapSonuc {
+  UYGUN
+  UYGUN_DEGIL
+}
+
+model BTUygunsuzluk {
+  id             Int                @id @default(autoincrement())
+  facilityId     String
+  turId          Int
+  cevapId        Int                @unique
+  sorumluBirimler BTSorumluBirim[]
+  sorumluKisiler  BTSorumluKisi[]
+  terminTarihi    DateTime?
+  yapilacaklar    String?
+  onleyiciFaaliyet String?
+  durum           BTUygunsuzlukDurum @default(ACIK)
+  kapatmaKaniti   String?
+  kapatmaTarihi   DateTime?
+  dofTakipNo      String?
+  tur             BTTur              @relation(fields: [turId], references: [id], onDelete: Cascade)
+  cevap           BTCevap            @relation(fields: [cevapId], references: [id], onDelete: Cascade)
+  facility        Facility           @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+enum BTUygunsuzlukDurum {
+  ACIK
+  DEVAM_EDIYOR
+  KAPALI
 }

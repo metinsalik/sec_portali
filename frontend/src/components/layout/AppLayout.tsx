@@ -114,6 +114,17 @@ const fireEquipmentNavItems = [
   { label: 'Modül Ayarları', icon: Settings, to: '/fire-equipment/settings' },
 ];
 
+const binaTuruNavItems = [
+  { label: 'GENEL', type: 'group' },
+  { label: 'Dashboard', icon: LayoutDashboard, to: '/bina-turu', end: true },
+  { label: 'Turlar', icon: Building2, to: '/bina-turu/turler', end: true },
+  { label: 'Yeni Tur Oluştur', icon: FileText, to: '/bina-turu/turler/olustur' },
+  { label: 'UYGUNSUZLUK', type: 'group' },
+  { label: 'Uygunsuzluk Takibi', icon: AlertTriangle, to: '/bina-turu/uygunsuzluklar' },
+  { label: 'AYARLAR', type: 'group' },
+  { label: 'Modül Ayarları', icon: Settings, to: '/bina-turu/ayarlar' },
+];
+
 const buildManagementNavItems = [
   { label: 'GENEL', type: 'group' },
   { label: 'Dashboard', icon: LayoutDashboard, to: '/build-management/dashboard', end: true },
@@ -165,6 +176,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   } else if (path.startsWith('/fire-equipment')) {
     navItems = fireEquipmentNavItems;
     moduleName = 'Yangın Envanter Yönetimi';
+  } else if (path.startsWith('/bina-turu')) {
+    navItems = binaTuruNavItems;
+    moduleName = 'Bina Turu Yönetimi';
   } else if (path.startsWith('/build-management')) {
     navItems = buildManagementNavItems;
     moduleName = 'İnşaat ve Renovasyon Yönetimi';
@@ -212,7 +226,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* Facility Switcher (Show for modules that need it) */}
-        {(path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management')) && (
+        {(path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management')) && (
           <FacilitySwitcher />
         )}
 

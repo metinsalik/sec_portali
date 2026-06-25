@@ -34,10 +34,21 @@ export const RiskPrintTable = forwardRef<HTMLDivElement, RiskPrintTableProps>(
     return (
       <div ref={ref} style={{ padding: '10px', fontFamily: 'Arial, sans-serif', color: '#000', backgroundColor: '#fff', width: '100%', boxSizing: 'border-box' }}>
         
-        {/* HEADER TITLE */}
-        <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-          <h1 style={{ fontSize: '14px', fontWeight: 'bold', margin: '0' }}>TEHLİKE BELİRLEME VE RİSK DEĞERLENDİRME TABLOSU (FINE KINNEY METODU)</h1>
-        </div>
+        <table style={{ width: '100%', border: 'none', borderSpacing: 0 }}>
+          <tfoot style={{ display: 'table-footer-group' }}>
+            <tr>
+              <td style={{ border: 'none', paddingTop: '15px', textAlign: 'left', fontSize: '12px', fontWeight: 'bold' }}>
+                İSG-F56-000
+              </td>
+            </tr>
+          </tfoot>
+          <tbody>
+            <tr>
+              <td style={{ border: 'none', padding: 0 }}>
+                {/* HEADER TITLE */}
+                <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+                  <h1 style={{ fontSize: '14px', fontWeight: 'bold', margin: '0' }}>TEHLİKE BELİRLEME VE RİSK DEĞERLENDİRME TABLOSU (FINE KINNEY METODU)</h1>
+                </div>
 
         {/* HEADER INFO TABLE */}
         <table style={{ width: '100%', marginBottom: '10px', borderCollapse: 'collapse', fontSize: '8px', border: '1px solid #000' }}>
@@ -237,6 +248,11 @@ export const RiskPrintTable = forwardRef<HTMLDivElement, RiskPrintTableProps>(
             </tbody>
           </table>
         </div>
+
+              </td>
+            </tr>
+          </tbody>
+        </table>
         
       </div>
     );

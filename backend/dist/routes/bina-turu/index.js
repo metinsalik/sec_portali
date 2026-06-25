@@ -1,0 +1,20 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const ayarlar_1 = __importDefault(require("./ayarlar"));
+const soru_bankasi_1 = __importDefault(require("./soru-bankasi"));
+const turler_1 = __importDefault(require("./turler"));
+const denetim_1 = __importDefault(require("./denetim"));
+const uygunsuzluklar_1 = __importDefault(require("./uygunsuzluklar"));
+const dashboard_1 = __importDefault(require("./dashboard"));
+const router = (0, express_1.Router)();
+router.use('/ayarlar', ayarlar_1.default);
+router.use('/soru-bankasi', soru_bankasi_1.default);
+router.use('/turler', turler_1.default);
+router.use('/denetim', denetim_1.default);
+router.use('/uygunsuzluklar', uygunsuzluklar_1.default);
+router.use('/dashboard', dashboard_1.default);
+exports.default = router;

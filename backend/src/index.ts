@@ -37,6 +37,7 @@ app.use(helmet({
 }));
 
 import buildSettingsRoutes from './routes/build_settings';
+import binaTuruRoutes from './routes/bina-turu';
 
 // Servis statik dosyalar (Yüklemeler için)
 app.use('/uploads', express.static('uploads'));
@@ -56,6 +57,7 @@ app.use('/api/hazmat', hazmatRoutes);
 app.use('/api/fire-equipment', fireEquipmentRoutes);
 app.use('/api/build-management', buildManagementRoutes);
 app.use('/api/build-management/settings', buildSettingsRoutes);
+app.use('/api/bina-turu', binaTuruRoutes);
 
 // Sağlık kontrolü
 app.get('/health', (req, res) => {

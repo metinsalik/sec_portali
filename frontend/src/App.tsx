@@ -116,6 +116,18 @@ import BuildHandoverListPage from './pages/build_management/BuildHandoverListPag
 import BuildReportsPage from './pages/build_management/BuildReportsPage';
 import BuildSettings from './pages/build_management/BuildSettings';
 
+// Bina Turu Yönetimi
+import BinaToruDashboard from './pages/bina-turu/BinaToruDashboard';
+import BinaToruListesi from './pages/bina-turu/BinaToruListesi';
+import BinaToruOlustur from './pages/bina-turu/BinaToruOlustur';
+import DenetimYap from './pages/bina-turu/DenetimYap';
+import UygunsuzlukTakibi from './pages/bina-turu/UygunsuzlukTakibi';
+import AyarlarIndex from './pages/bina-turu/ayarlar/AyarlarIndex';
+import BinaTuruRaporu from './pages/bina-turu/BinaTuruRaporu';
+import BinaTuruYillikRaporu from './pages/bina-turu/BinaTuruYillikRaporu';
+import UygunsuzlukRaporu from './pages/bina-turu/UygunsuzlukRaporu';
+import UygunsuzlukYillikRaporu from './pages/bina-turu/UygunsuzlukYillikRaporu';
+
 // Placeholder for future modules
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="flex flex-col items-center justify-center h-64 bg-card rounded-2xl border-2 border-dashed border-border">
@@ -928,6 +940,18 @@ function App() {
                   <Route path="reports" element={<ReportTemplatesPage />} />
                   <Route path="reports/edit/:id" element={<ReportEditorPage />} />
                 </Route>
+
+                {/* ── BİNA TURU YÖNETİMİ ───────────────────────────── */}
+                <Route path="/bina-turu" element={<ProtectedRoute><AppLayout><BinaToruDashboard /></AppLayout></ProtectedRoute>} />
+                <Route path="/bina-turu/turler" element={<ProtectedRoute><AppLayout><BinaToruListesi /></AppLayout></ProtectedRoute>} />
+                <Route path="/bina-turu/turler/olustur" element={<ProtectedRoute><AppLayout><BinaToruOlustur /></AppLayout></ProtectedRoute>} />
+                <Route path="/bina-turu/denetim/:id" element={<ProtectedRoute><AppLayout><DenetimYap /></AppLayout></ProtectedRoute>} />
+                <Route path="/bina-turu/rapor/:id" element={<ProtectedRoute><BinaTuruRaporu /></ProtectedRoute>} />
+                <Route path="/bina-turu/yillik-rapor/:year" element={<ProtectedRoute><BinaTuruYillikRaporu /></ProtectedRoute>} />
+                <Route path="/bina-turu/uygunsuzluk-rapor/:turId" element={<ProtectedRoute><UygunsuzlukRaporu /></ProtectedRoute>} />
+                <Route path="/bina-turu/uygunsuzluk-yillik-rapor/:year" element={<ProtectedRoute><UygunsuzlukYillikRaporu /></ProtectedRoute>} />
+                <Route path="/bina-turu/uygunsuzluklar" element={<ProtectedRoute><AppLayout><UygunsuzlukTakibi /></AppLayout></ProtectedRoute>} />
+                <Route path="/bina-turu/ayarlar" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AyarlarIndex /></AppLayout></ProtectedRoute>} />
 
                 {/* ── Redirects ──────────────────────────────────── */}
                 <Route path="/" element={<Navigate to="/portal" replace />} />

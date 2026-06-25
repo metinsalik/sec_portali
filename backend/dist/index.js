@@ -36,6 +36,7 @@ app.use((0, helmet_1.default)({
     crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 const build_settings_1 = __importDefault(require("./routes/build_settings"));
+const bina_turu_1 = __importDefault(require("./routes/bina-turu"));
 // Servis statik dosyalar (Yüklemeler için)
 app.use('/uploads', express_1.default.static('uploads'));
 // Route Entegrasyonu
@@ -53,6 +54,7 @@ app.use('/api/hazmat', hazmat_1.default);
 app.use('/api/fire-equipment', fire_equipment_1.default);
 app.use('/api/build-management', build_management_1.default);
 app.use('/api/build-management/settings', build_settings_1.default);
+app.use('/api/bina-turu', bina_turu_1.default);
 // Sağlık kontrolü
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
