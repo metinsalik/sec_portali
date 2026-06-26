@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/context/AuthContext';
 import { Loader2, Printer, Search, PieChart as PieChartIcon } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import FacilityAdvancedDashboard from '@/components/risks/FacilityAdvancedDashboard';
 
 export function RiskReportsPage() {
   const { facilities } = useAuth();
@@ -177,6 +178,11 @@ export function RiskReportsPage() {
                 ) : <div className="h-full flex items-center justify-center text-muted-foreground text-sm">Veri yok</div>}
               </CardContent>
             </Card>
+          </div>
+
+          {/* Gelişmiş Risk Analizleri (Dinamik Data) */}
+          <div className="print:break-inside-avoid">
+            <FacilityAdvancedDashboard facilityRisks={data.risks || []} defaultOpen={true} />
           </div>
 
           {/* Tablo */}

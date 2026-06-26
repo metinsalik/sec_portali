@@ -19,8 +19,8 @@ const LEVEL_COLORS: Record<string, string> = {
   'Önemsiz Risk':            '#16a34a', // Yeşil
 };
 
-export default function FacilityAdvancedDashboard({ facilityRisks }: { facilityRisks: any[] }) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function FacilityAdvancedDashboard({ facilityRisks, defaultOpen = false }: { facilityRisks: any[], defaultOpen?: boolean }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
 
   // ==========================================
   // 1. KATEGORİ VE ALT KATEGORİ HESAPLAMALARI
@@ -336,9 +336,9 @@ export default function FacilityAdvancedDashboard({ facilityRisks }: { facilityR
                 <YAxis tick={{ fontSize: 10, fill: 'var(--color-on-surface-variant)' }} />
                 <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '8px', border: '1px solid var(--color-outline-variant)' }} />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', color: 'var(--color-on-surface)' }} />
-                <Bar dataKey="Planlanan" fill="var(--color-error)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="DevamEden" fill="var(--color-secondary)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Tamamlanan" fill="var(--color-surface-tint)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Planlanan" fill="var(--color-error)" radius={[4, 4, 0, 0]} label={{ position: 'top', fontSize: 10, formatter: (val: number) => val > 0 ? val : '' }} />
+                <Bar dataKey="DevamEden" fill="var(--color-secondary)" radius={[4, 4, 0, 0]} label={{ position: 'top', fontSize: 10, formatter: (val: number) => val > 0 ? val : '' }} />
+                <Bar dataKey="Tamamlanan" fill="var(--color-surface-tint)" radius={[4, 4, 0, 0]} label={{ position: 'top', fontSize: 10, formatter: (val: number) => val > 0 ? val : '' }} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -401,7 +401,7 @@ export default function FacilityAdvancedDashboard({ facilityRisks }: { facilityR
                       <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '8px', border: '1px solid var(--color-outline-variant)' }} />
                       <Legend iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
                       {LEVELS.map(lvl => (
-                        <Bar key={lvl} dataKey={lvl} stackId="a" fill={LEVEL_COLORS[lvl]} barSize={20} />
+                        <Bar key={lvl} dataKey={lvl} stackId="a" fill={LEVEL_COLORS[lvl]} barSize={20} label={{ position: 'insideRight', fill: '#fff', fontSize: 10, formatter: (val: number) => val > 0 ? val : '' }} />
                       ))}
                     </BarChart>
                   </ResponsiveContainer>
@@ -418,7 +418,7 @@ export default function FacilityAdvancedDashboard({ facilityRisks }: { facilityR
                       <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '8px', border: '1px solid var(--color-outline-variant)' }} />
                       <Legend iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
                       {LEVELS.map(lvl => (
-                        <Bar key={lvl} dataKey={lvl} stackId="a" fill={LEVEL_COLORS[lvl]} barSize={20} />
+                        <Bar key={lvl} dataKey={lvl} stackId="a" fill={LEVEL_COLORS[lvl]} barSize={20} label={{ position: 'insideRight', fill: '#fff', fontSize: 10, formatter: (val: number) => val > 0 ? val : '' }} />
                       ))}
                     </BarChart>
                   </ResponsiveContainer>
