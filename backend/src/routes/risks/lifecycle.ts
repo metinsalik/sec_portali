@@ -43,6 +43,12 @@ function scoreToLevel(score: number): string {
 }
 
 function deriveStatus(row: any): string {
+  if (row.actionDate) {
+    const parsedAction = parseDate(row.actionDate);
+    if (parsedAction && parsedAction < new Date()) {
+      return 'KAPATILDI_GUVENLI';
+    }
+  }
   if (row.finalScore && Number(row.finalScore) > 0) {
     if (row.followUpMeasure || row.extraImprovement) return 'TAKIP_SURECINDE';
     return 'ILK_MUDAHALE_EDILDI';
@@ -263,6 +269,19 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res: Response) =
 // GET /api/risks/lifecycle?departmentId=N&facilityId=X&status=Y&search=Z
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
+    // Auto-close past actionDate risks globally before fetching
+    try {
+      await prisma.riskLifecycle.updateMany({
+        where: {
+          actionDate: { lt: new Date() },
+          status: { not: 'KAPATILDI_GUVENLI' }
+        },
+        data: { status: 'KAPATILDI_GUVENLI' }
+      });
+    } catch (e) {
+      console.error('Auto close risk error:', e);
+    }
+
     const user = req.user;
     const isAdminOrMgmt = user?.isAdmin || user?.isManagement;
     const { departmentId, facilityId, status, search } = req.query as Record<string, any>;
@@ -391,33 +410,39 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     });
     const nextRiskNo = maxRisk ? maxRisk.riskNo + 1 : 1;
 
-    const risk = await prisma.riskLifecycle.create({
-      data: {
-        departmentId:    parseInt(departmentId),
-        riskNo:          nextRiskNo,
-        riskCategory:    riskCategory || 'Genel',
-        subCategory:     subCategory || null,
-        area:            area || '',
-        method:          method || 'Fine Kinney',
-        activity:        activity || '',
-        hazard:          hazard || '',
-        riskDescription: riskDescription || '',
-        initialCondition: initialCondition || null,
-        initialImage:     initialImage || null,
-        initialProb:     Number(initialProb) || 0,
-        initialFreq:     initialFreq ? Number(initialFreq) : null,
-        initialSev:      Number(initialSev) || 0,
-        initialScore:    Number(initialScore) || 0,
-        initialLevel:    scoreToLevel(Number(initialScore) || 0),
-        status:          status || 'ACIK_TEHLIKE',
-        createdBy:       username,
+        const parsedActionDate = parseDate(actionDate);
+        let finalStatus = status || 'ACIK_TEHLIKE';
+        if (parsedActionDate && parsedActionDate < new Date()) {
+          finalStatus = 'KAPATILDI_GUVENLI';
+        }
 
-        // Action plan / Implementation fields
-        firstActionPlan:  req.body.firstActionPlan || null,
-        actionsTaken:     actionsTaken || null,
-        actionDate:       parseDate(actionDate),
-        actionBy:         req.body.actionBy || null,
-        actionImage:      actionImage || null,
+        const risk = await prisma.riskLifecycle.create({
+          data: {
+            departmentId:    parseInt(departmentId),
+            riskNo:          nextRiskNo,
+            riskCategory:    riskCategory || 'Genel',
+            subCategory:     subCategory || null,
+            area:            area || '',
+            method:          method || 'Fine Kinney',
+            activity:        activity || '',
+            hazard:          hazard || '',
+            riskDescription: riskDescription || '',
+            initialCondition: initialCondition || null,
+            initialImage:     initialImage || null,
+            initialProb:     Number(initialProb) || 0,
+            initialFreq:     initialFreq ? Number(initialFreq) : null,
+            initialSev:      Number(initialSev) || 0,
+            initialScore:    Number(initialScore) || 0,
+            initialLevel:    scoreToLevel(Number(initialScore) || 0),
+            status:          finalStatus,
+            createdBy:       username,
+
+            // Action plan / Implementation fields
+            firstActionPlan:  req.body.firstActionPlan || null,
+            actionsTaken:     actionsTaken || null,
+            actionDate:       parsedActionDate,
+            actionBy:         req.body.actionBy || null,
+            actionImage:      actionImage || null,
 
         // Follow up / final score fields
         followUpMeasure:  req.body.followUpMeasure || null,
@@ -520,6 +545,11 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
         data[f] = parseDate(data[f]);
       }
     });
+
+    const effectiveActionDate = data.actionDate !== undefined ? data.actionDate : risk.actionDate;
+    if (effectiveActionDate && effectiveActionDate < new Date() && data.status !== 'KAPATILDI_GUVENLI') {
+      data.status = 'KAPATILDI_GUVENLI';
+    }
 
     const updatedRisk = await prisma.riskLifecycle.update({
       where: { id: req.params.id as string },
