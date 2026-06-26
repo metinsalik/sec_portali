@@ -12,6 +12,9 @@ echo "Database is up - executing migrations/schema sync"
 # Ensure the client is generated
 npx prisma generate
 
+echo "Dropping any problematic constraints before push..."
+npx ts-node prisma/drop-constraint.ts || true
+
 # Sync schema to database
 # --accept-data-loss is used here to allow rapid development changes
 npx prisma db push --accept-data-loss
