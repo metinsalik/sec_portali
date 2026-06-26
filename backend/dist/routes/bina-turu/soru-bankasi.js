@@ -68,6 +68,39 @@ router.put('/:id', async (req, res) => {
         handleError(res, err);
     }
 });
+router.delete('/bulk', async (req, res) => {
+    try {
+        const { ids, facilityId, deleteAll } = req.body;
+        if (!facilityId) {
+            res.status(400).json({ error: 'FacilityId eksik.' });
+            return;
+        }
+        if (deleteAll) {
+            await prisma.bTSoruBankasi.deleteMany({
+                where: { facilityId }
+            });
+            res.json({ message: 'Tüm sorular silindi.' });
+        }
+        else if (ids && Array.isArray(ids) && ids.length > 0) {
+            await prisma.bTSoruBankasi.deleteMany({
+                where: { facilityId, id: { in: ids } }
+            });
+            res.json({ message: 'Seçili sorular silindi.' });
+        }
+        else {
+            res.status(400).json({ error: 'Silinecek soru seçilmedi.' });
+        }
+    }
+    catch (err) {
+        console.error(err);
+        if (err.code === 'P2003') {
+            res.status(400).json({ error: 'Bu sorular bir denetimde kullanıldığı için silinemez.' });
+        }
+        else {
+            res.status(500).json({ error: 'Toplu silme işleminde hata oluştu.' });
+        }
+    }
+});
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try {
@@ -120,9 +153,9 @@ router.post('/excel-yukle', upload.single('file'), async (req, res) => {
             if (!kategori) {
                 kategori = await prisma.bTKategori.create({ data: { facilityId, ad: q.kategoriAd } });
             }
-            // Create Soru
-            await prisma.bTSoruBankasi.create({
-                data: {
+            // Find or create Soru
+            const mevcutSoru = await prisma.bTSoruBankasi.findFirst({
+                where: {
                     facilityId,
                     anaGrupId: anaGrup.id,
                     denetlenenAlanId: denetlenenAlan.id,
@@ -130,6 +163,17 @@ router.post('/excel-yukle', upload.single('file'), async (req, res) => {
                     kriter: q.kriter
                 }
             });
+            if (!mevcutSoru) {
+                await prisma.bTSoruBankasi.create({
+                    data: {
+                        facilityId,
+                        anaGrupId: anaGrup.id,
+                        denetlenenAlanId: denetlenenAlan.id,
+                        kategoriId: kategori.id,
+                        kriter: q.kriter
+                    }
+                });
+            }
         }
         res.json({ message: 'Excel başarıyla yüklendi ve sorular eklendi.', count: questions.length });
     }
