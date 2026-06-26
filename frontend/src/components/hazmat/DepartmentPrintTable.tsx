@@ -26,13 +26,29 @@ export const DepartmentPrintTable = forwardRef<HTMLDivElement, DepartmentPrintTa
   return (
     <div ref={ref} className="bg-white text-black p-2 text-[10px] w-full" style={{ fontFamily: 'Arial, sans-serif' }}>
       <style>{`
-        @page { size: landscape; margin: 10mm; }
+        @page { size: landscape; margin: 10mm; margin-bottom: 15mm; }
         table { page-break-inside: auto; table-layout: fixed; width: 100%; word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; }
         tr { page-break-inside: avoid; page-break-after: auto; }
         td, th { word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; }
         thead { display: table-header-group; }
         .vert-col { width: 3%; }
+        .print-footer { display: none; }
+        @media print {
+          .print-footer {
+            display: block;
+            position: fixed;
+            bottom: 0px;
+            left: 0px;
+            font-size: 12px;
+            font-weight: bold;
+            color: black;
+          }
+        }
       `}</style>
+      
+      <div className="print-footer">
+        RSK-YRD-01/04
+      </div>
       
       {/* Header */}
       <div className="flex items-center justify-between mb-4 border-b-2 border-black pb-2">
