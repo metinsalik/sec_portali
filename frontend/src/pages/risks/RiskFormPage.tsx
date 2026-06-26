@@ -708,6 +708,28 @@ export default function RiskFormPage() {
               <label className="text-xs font-semibold text-muted-foreground">Sonuç</label>
               <Textarea value={form.controlResult} onChange={(e) => updateField('controlResult', e.target.value)} placeholder="Örn: Yapılan denetimlerde sorun görülmedi." rows={2} />
             </div>
+
+            <div className="space-y-1.5 pt-4 border-t border-border mt-4">
+              <label className="text-xs font-semibold text-muted-foreground">Risk Durumu</label>
+              <div className="flex gap-4">
+                <Button 
+                  type="button"
+                  variant={form.status === 'KAPATILDI_GUVENLI' ? 'default' : 'outline'}
+                  onClick={() => updateField('status', 'KAPATILDI_GUVENLI')}
+                  className={form.status === 'KAPATILDI_GUVENLI' ? 'bg-green-600 hover:bg-green-700 text-white' : ''}
+                >
+                  Kapatıldı
+                </Button>
+                <Button 
+                  type="button"
+                  variant={form.status === 'TAKIP_SURECINDE' ? 'default' : 'outline'}
+                  onClick={() => updateField('status', 'TAKIP_SURECINDE')}
+                  className={form.status === 'TAKIP_SURECINDE' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}
+                >
+                  Takip Sürecinde
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
