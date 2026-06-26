@@ -3,13 +3,16 @@ import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Upload, FileSpreadsheet } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Upload, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const SoruBankasiExcel = () => {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [questions, setQuestions] = useState<any[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchQuestions();
@@ -21,8 +24,59 @@ const SoruBankasiExcel = () => {
     try {
       const res = await api.get(`/bina-turu/soru-bankasi?facilityId=${facilityId}`);
       setQuestions(await res.json());
+      setSelectedIds([]);
     } catch (err) {
       toast.error('Sorular alınamadı.');
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(questions.map(q => q.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (checked: boolean, id: string) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, id]);
+    } else {
+      setSelectedIds(prev => prev.filter(item => item !== id));
+    }
+  };
+
+  const handleDeleteBulk = async (deleteAll = false) => {
+    const facilityId = localStorage.getItem('activeFacilityId');
+    if (!facilityId) return;
+
+    if (!deleteAll && selectedIds.length === 0) {
+      toast.error('Lütfen silinecek soruları seçin.');
+      return;
+    }
+
+    if (!confirm(deleteAll ? 'Tüm soru bankasını silmek istediğinize emin misiniz?' : 'Seçili soruları silmek istediğinize emin misiniz?')) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const res = await api.customFetch('/bina-turu/soru-bankasi/bulk', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ facilityId, ids: selectedIds, deleteAll })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || 'Sorular silindi.');
+        fetchQuestions();
+      } else {
+        toast.error(data.error || 'Silme işlemi başarısız.');
+      }
+    } catch (err) {
+      toast.error('Silme işlemi sırasında hata oluştu.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -93,17 +147,37 @@ const SoruBankasiExcel = () => {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileSpreadsheet className="w-5 h-5 text-green-600" />
-            Mevcut Soru Bankası ({questions.length} Soru)
-          </CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="w-5 h-5 text-green-600" />
+              Mevcut Soru Bankası ({questions.length} Soru)
+            </CardTitle>
+          </div>
+          <div className="flex gap-2">
+            {selectedIds.length > 0 && (
+              <Button variant="destructive" onClick={() => handleDeleteBulk(false)} disabled={deleting}>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Seçilileri Sil ({selectedIds.length})
+              </Button>
+            )}
+            <Button variant="destructive" onClick={() => handleDeleteBulk(true)} disabled={deleting || questions.length === 0}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Tüm Soruları Sil
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="border rounded-md max-h-[500px] overflow-y-auto">
             <table className="w-full text-sm text-left">
               <thead className="bg-muted sticky top-0">
                 <tr>
+                  <th className="p-3 w-[50px]">
+                    <Checkbox 
+                      checked={questions.length > 0 && selectedIds.length === questions.length}
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </th>
                   <th className="p-3 font-medium">Ana Grup</th>
                   <th className="p-3 font-medium">Denetlenen Alan</th>
                   <th className="p-3 font-medium">Kategori</th>
@@ -113,6 +187,12 @@ const SoruBankasiExcel = () => {
               <tbody>
                 {questions.map((q) => (
                   <tr key={q.id} className="border-t">
+                    <td className="p-3">
+                      <Checkbox 
+                        checked={selectedIds.includes(q.id)}
+                        onCheckedChange={(checked) => handleSelectOne(checked as boolean, q.id)}
+                      />
+                    </td>
                     <td className="p-3">{q.anaGrup?.ad}</td>
                     <td className="p-3">{q.denetlenenAlan?.ad}</td>
                     <td className="p-3">
@@ -125,7 +205,7 @@ const SoruBankasiExcel = () => {
                 ))}
                 {questions.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="p-4 text-center text-muted-foreground">Henüz soru eklenmemiş.</td>
+                    <td colSpan={5} className="p-4 text-center text-muted-foreground">Henüz soru eklenmemiş.</td>
                   </tr>
                 )}
               </tbody>

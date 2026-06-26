@@ -117,9 +117,9 @@ router.post('/excel-yukle', upload.single('file'), async (req: Request, res: Res
         kategori = await prisma.bTKategori.create({ data: { facilityId, ad: q.kategoriAd } });
       }
 
-      // Create Soru
-      await prisma.bTSoruBankasi.create({
-        data: {
+      // Find or create Soru
+      const mevcutSoru = await prisma.bTSoruBankasi.findFirst({
+        where: {
           facilityId,
           anaGrupId: anaGrup.id,
           denetlenenAlanId: denetlenenAlan.id,
@@ -127,12 +127,52 @@ router.post('/excel-yukle', upload.single('file'), async (req: Request, res: Res
           kriter: q.kriter
         }
       });
+
+      if (!mevcutSoru) {
+        await prisma.bTSoruBankasi.create({
+          data: {
+            facilityId,
+            anaGrupId: anaGrup.id,
+            denetlenenAlanId: denetlenenAlan.id,
+            kategoriId: kategori.id,
+            kriter: q.kriter
+          }
+        });
+      }
     }
 
     res.json({ message: 'Excel başarıyla yüklendi ve sorular eklendi.', count: questions.length });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Excel dosyası işlenirken hata oluştu.' });
+  }
+});
+
+router.delete('/bulk', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ids, facilityId, deleteAll } = req.body;
+    
+    if (!facilityId) {
+      res.status(400).json({ error: 'FacilityId eksik.' });
+      return;
+    }
+
+    if (deleteAll) {
+      await prisma.bTSoruBankasi.deleteMany({
+        where: { facilityId }
+      });
+      res.json({ message: 'Tüm sorular silindi.' });
+    } else if (ids && Array.isArray(ids) && ids.length > 0) {
+      await prisma.bTSoruBankasi.deleteMany({
+        where: { facilityId, id: { in: ids } }
+      });
+      res.json({ message: 'Seçili sorular silindi.' });
+    } else {
+      res.status(400).json({ error: 'Silinecek soru seçilmedi.' });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Toplu silme işleminde hata oluştu.' });
   }
 });
 
