@@ -53,6 +53,7 @@ export default function SpillKitsPage() {
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
   const [selectedKitId, setSelectedKitId] = useState<string | null>(null);
 
+  const [locBlock, setLocBlock] = useState('all');
   const [locFloor, setLocFloor] = useState('all');
   const [locDepartment, setLocDepartment] = useState('all');
 
@@ -90,11 +91,22 @@ export default function SpillKitsPage() {
     enabled: !!facilityId
   });
 
-  const floors = Array.from(new Set(departments.map((d: any) => d.floor).filter(Boolean))).sort();
-  const filteredDepts = Array.from(new Set(departments.filter((d: any) => locFloor === 'all' || d.floor === locFloor).map((d: any) => d.name).filter(Boolean))).sort();
+  useEffect(() => {
+    if (departments.length > 0) {
+      const uniqueBlocks = Array.from(new Set(departments.map((d: any) => d.building).filter(Boolean)));
+      if (uniqueBlocks.length === 1 && locBlock === 'all') {
+        setLocBlock(uniqueBlocks[0] as string);
+      }
+    }
+  }, [departments, locBlock]);
+
+  const blocks = Array.from(new Set(departments.map((d: any) => d.building).filter(Boolean))).sort();
+  const floors = Array.from(new Set(departments.filter((d: any) => locBlock === 'all' || d.building === locBlock).map((d: any) => d.floor).filter(Boolean))).sort();
+  const filteredDepts = Array.from(new Set(departments.filter((d: any) => (locBlock === 'all' || d.building === locBlock) && (locFloor === 'all' || d.floor === locFloor)).map((d: any) => d.name).filter(Boolean))).sort();
   
   const getFilteredLocations = () => {
     return departments.filter((d: any) => {
+      if (locBlock !== 'all' && d.building !== locBlock) return false;
       if (locFloor !== 'all' && d.floor !== locFloor) return false;
       if (locDepartment !== 'all' && d.name !== locDepartment) return false;
       return true;
@@ -104,7 +116,7 @@ export default function SpillKitsPage() {
   const handleLocationSelect = (locId: string) => {
     const loc = departments.find((d: any) => d.id === locId);
     if (loc) {
-      const str = `Kat: ${loc.floor || '-'} / Birim: ${loc.name || '-'}${loc.description ? ` / Mahal: ${loc.description}` : ''}`;
+      const str = `Blok: ${loc.building || '-'} / Kat: ${loc.floor || '-'} / Birim: ${loc.name || '-'}${loc.description ? ` / Mahal: ${loc.description}` : ''}`;
       setPlacementForm({...placementForm, unit: str});
     }
   };
@@ -866,7 +878,14 @@ export default function SpillKitsPage() {
               </div>
               <div className="space-y-2 col-span-2 p-4 bg-muted/20 rounded-md border">
                 <Label className="text-base font-semibold block mb-2">Hangi Departman (Lokasyon)?</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Blok Seçimi *</Label>
+                    <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-1 text-sm disabled:opacity-50" disabled={blocks.length === 0} value={locBlock} onChange={e => {setLocBlock(e.target.value); setLocFloor('all'); setLocDepartment('all');}}>
+                      <option value="all">Seçiniz...</option>
+                      {blocks.map((b: any) => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Kat Seçimi *</Label>
                     <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-1 text-sm disabled:opacity-50" disabled={floors.length === 0} value={locFloor} onChange={e => {setLocFloor(e.target.value); setLocDepartment('all');}}>
@@ -890,7 +909,7 @@ export default function SpillKitsPage() {
                     >
                       <option value="" disabled>Seçiniz...</option>
                       {getFilteredLocations().map((loc: any) => (
-                        <option key={loc.id} value={loc.id}>{`${loc.floor ? `${loc.floor} / ` : ''}${loc.name}${loc.description ? ` / ${loc.description}` : ''}`}</option>
+                        <option key={loc.id} value={loc.id}>{`${loc.building ? `${loc.building} / ` : ''}${loc.floor ? `${loc.floor} / ` : ''}${loc.name}${loc.description ? ` / ${loc.description}` : ''}`}</option>
                       ))}
                     </select>
                   </div>
