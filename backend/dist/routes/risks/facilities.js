@@ -24,6 +24,9 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
                     shortName: true,
                     city: true,
                     dangerClass: true,
+                    commercialTitle: true,
+                    fullAddress: true,
+                    district: true,
                     riskDepartments: {
                         select: {
                             id: true,
@@ -50,6 +53,9 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
                     shortName: true,
                     city: true,
                     dangerClass: true,
+                    commercialTitle: true,
+                    fullAddress: true,
+                    district: true,
                     riskDepartments: {
                         select: {
                             id: true,

@@ -1,10 +1,25 @@
 import express, { Request, Response } from 'express';
 import { AuthRequest, authMiddleware } from '../../middleware/auth';
 import { PrismaClient } from '@prisma/client';
-import { checkFacilityAccess } from '../../utils/facilityAccess';
 
-const router = express.Router();
 const prisma = new PrismaClient();
+const router = express.Router();
+// Helper to check facility access
+async function checkFacilityAccess(req: AuthRequest, facilityId: string): Promise<boolean> {
+  const user = req.user;
+  if (!user) return false;
+  if (user.isAdmin || user.isManagement) return true;
+  
+  const access = await prisma.userFacility.findUnique({
+    where: {
+      username_facilityId: {
+        username: user.username,
+        facilityId: facilityId
+      }
+    }
+  });
+  return !!access;
+}
 
 // GET /api/risks/reports
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {

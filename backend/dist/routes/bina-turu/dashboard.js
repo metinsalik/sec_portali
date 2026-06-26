@@ -8,51 +8,111 @@ const handleError = (res, error) => {
     console.error(error);
     res.status(500).json({ error: 'Bir hata oluştu' });
 };
-router.get('/ozet', async (req, res) => {
+// Dashboard Analizleri
+router.get('/', async (req, res) => {
     const facilityId = req.query.facilityId;
     try {
-        const turlar = await prisma.bTTur.count({ where: { facilityId } });
-        const acikUygunsuzluklar = await prisma.bTUygunsuzluk.count({ where: { facilityId, durum: 'ACIK' } });
-        const kapaliUygunsuzluklar = await prisma.bTUygunsuzluk.count({ where: { facilityId, durum: 'KAPALI' } });
-        const denetimSonuclari = await prisma.bTCevap.groupBy({
-            by: ['sonuc'],
-            where: { turSorusu: { tur: { facilityId } } },
-            _count: true
-        });
-        res.json({
-            turlar,
-            acikUygunsuzluklar,
-            kapaliUygunsuzluklar,
-            denetimSonuclari
-        });
-    }
-    catch (err) {
-        handleError(res, err);
-    }
-});
-router.get('/kategori-bazli', async (req, res) => {
-    const facilityId = req.query.facilityId;
-    try {
-        const data = await prisma.bTCevap.findMany({
-            where: { turSorusu: { tur: { facilityId } } },
+        // 1. Ana Gruplara göre uygunsuzluk/uygun oranları
+        const cevaplar = await prisma.bTCevap.findMany({
+            where: {
+                turSorusu: {
+                    tur: { facilityId }
+                }
+            },
             include: {
                 turSorusu: {
                     include: {
                         soru: {
-                            include: { kategori: true }
+                            include: {
+                                anaGrup: true,
+                                denetlenenAlan: true
+                            }
                         }
                     }
                 }
             }
         });
-        const result = {};
-        data.forEach(c => {
-            const katAd = c.turSorusu.soru.kategori.ad;
-            if (!result[katAd])
-                result[katAd] = { UYGUN: 0, UYGUN_DEGIL: 0 };
-            result[katAd][c.sonuc]++;
+        // 2. Uygunsuzluk (DÖF) Verileri
+        const uygunsuzluklar = await prisma.bTUygunsuzluk.findMany({
+            where: { facilityId },
+            include: {
+                sorumluBirimler: true
+            }
         });
-        res.json(Object.entries(result).map(([kategori, count]) => ({ kategori, ...count })));
+        const toplamTur = await prisma.bTTur.count({
+            where: { facilityId }
+        });
+        const analiz = {
+            genelDurum: {
+                toplamTur,
+                toplamSoru: cevaplar.length,
+                uygun: cevaplar.filter(c => c.sonuc === 'UYGUN').length,
+                uygunDegil: cevaplar.filter(c => c.sonuc === 'UYGUN_DEGIL').length
+            },
+            anaGrupBazli: [],
+            alanBazli: [],
+            birimBazli: []
+        };
+        // Ana Grup ve Alan bazlı gruplama
+        const grupMap = new Map();
+        const alanMap = new Map();
+        cevaplar.forEach(c => {
+            const gId = c.turSorusu.soru.anaGrupId || 0;
+            const gAd = c.turSorusu.soru.anaGrup?.ad || 'Genel';
+            const aId = c.turSorusu.soru.denetlenenAlanId || 0;
+            const aAd = c.turSorusu.soru.denetlenenAlan?.ad || 'Genel Alan';
+            if (!grupMap.has(gId))
+                grupMap.set(gId, { ad: gAd, uygun: 0, uygunDegil: 0, toplam: 0 });
+            if (!alanMap.has(aId))
+                alanMap.set(aId, { ad: aAd, uygun: 0, uygunDegil: 0, toplam: 0 });
+            const gData = grupMap.get(gId);
+            const aData = alanMap.get(aId);
+            gData.toplam++;
+            aData.toplam++;
+            if (c.sonuc === 'UYGUN') {
+                gData.uygun++;
+                aData.uygun++;
+            }
+            else if (c.sonuc === 'UYGUN_DEGIL') {
+                gData.uygunDegil++;
+                aData.uygunDegil++;
+            }
+        });
+        analiz.anaGrupBazli = Array.from(grupMap.values());
+        analiz.alanBazli = Array.from(alanMap.values());
+        // Birim bazlı DÖF Analizi
+        const birimMap = new Map();
+        uygunsuzluklar.forEach(u => {
+            if (u.sorumluBirimler && u.sorumluBirimler.length > 0) {
+                u.sorumluBirimler.forEach(b => {
+                    if (!birimMap.has(b.id)) {
+                        birimMap.set(b.id, { ad: b.ad, acik: 0, devam: 0, kapali: 0, toplam: 0 });
+                    }
+                    const bData = birimMap.get(b.id);
+                    bData.toplam++;
+                    if (u.durum === 'ACIK')
+                        bData.acik++;
+                    else if (u.durum === 'DEVAM_EDIYOR')
+                        bData.devam++;
+                    else if (u.durum === 'KAPALI')
+                        bData.kapali++;
+                });
+            }
+            else {
+                if (!birimMap.has(0))
+                    birimMap.set(0, { ad: 'Atanmadı', acik: 0, devam: 0, kapali: 0, toplam: 0 });
+                const bData = birimMap.get(0);
+                bData.toplam++;
+                if (u.durum === 'ACIK')
+                    bData.acik++;
+                else if (u.durum === 'DEVAM_EDIYOR')
+                    bData.devam++;
+                else if (u.durum === 'KAPALI')
+                    bData.kapali++;
+            }
+        });
+        analiz.birimBazli = Array.from(birimMap.values());
+        res.json(analiz);
     }
     catch (err) {
         handleError(res, err);

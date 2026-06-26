@@ -26,7 +26,6 @@ router.post('/:turSorusuId/cevap', upload.array('fotograflar'), async (req, res)
             res.status(404).json({ error: 'Soru bulunamadı.' });
             return;
         }
-        const isDofGerekli = dofGerekli === 'true' || dofGerekli === true;
         const fotograflar = files ? files.map(f => f.filename) : [];
         // Mevcut cevap varsa güncelle, yoksa oluştur
         const existingCevap = await prisma.bTCevap.findUnique({
@@ -39,7 +38,7 @@ router.post('/:turSorusuId/cevap', upload.array('fotograflar'), async (req, res)
                 data: {
                     sonuc: sonuc,
                     aciklama,
-                    dofGerekli: isDofGerekli,
+                    dofGerekli: sonuc === 'UYGUN_DEGIL', // DÖF gerekli mantığı artık sonuc'a bağlı
                     fotograflar: [...existingCevap.fotograflar, ...fotograflar]
                 }
             });
@@ -50,13 +49,13 @@ router.post('/:turSorusuId/cevap', upload.array('fotograflar'), async (req, res)
                     turSorusuId: Number(turSorusuId),
                     sonuc: sonuc,
                     aciklama,
-                    dofGerekli: isDofGerekli,
+                    dofGerekli: sonuc === 'UYGUN_DEGIL',
                     fotograflar
                 }
             });
         }
-        // DÖF Gerekliyse ve Uygunsuzluk henüz açılmamışsa oluştur
-        if (isDofGerekli) {
+        // UYGUN_DEGIL ise ve Uygunsuzluk henüz açılmamışsa oluştur
+        if (sonuc === 'UYGUN_DEGIL') {
             const existingUygunsuzluk = await prisma.bTUygunsuzluk.findUnique({
                 where: { cevapId: cevap.id }
             });
@@ -72,8 +71,7 @@ router.post('/:turSorusuId/cevap', upload.array('fotograflar'), async (req, res)
             }
         }
         else {
-            // Eğer önceden var ise ve şimdi gereksiz olduysa silinebilir (veya kapatılabilir)
-            // Şimdilik silmeyi tercih ediyoruz
+            // Eğer önceden UYGUN_DEGIL'di ve şimdi UYGUN olduysa, Uygunsuzluğu silebiliriz
             await prisma.bTUygunsuzluk.deleteMany({
                 where: { cevapId: cevap.id }
             });

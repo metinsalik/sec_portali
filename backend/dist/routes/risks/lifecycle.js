@@ -336,7 +336,7 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
         const username = req.user?.username;
         const { departmentId, riskNo, riskCategory, subCategory, area, method, activity, hazard, riskDescription, initialCondition, initialImage, initialProb, initialFreq, initialSev, initialScore, status, 
         // New fields
-        detectionDate, impactDamage, affectedPeople, improvementResponsible, dueDate, actionsTaken, actionDate, actionImage, finalProb, finalFreq, finalSev, finalScore, postImprovementResponsible, postImprovementDueDate, effectivenessMethod, controlResponsible, controlResult, legislation, dueDatePeriod, } = req.body;
+        detectionDate, impactDamage, affectedPeople, improvementResponsible, dueDate, actionsTaken, actionDate, actionImage, finalProb, finalFreq, finalSev, finalScore, postImprovementResponsible, postImprovementDueDate, effectivenessMethod, controlResponsible, controlResult, legislation, dueDatePeriod, statusDate, } = req.body;
         let dept = await prisma.riskDepartment.findUnique({
             where: { id: parseInt(departmentId) },
             select: { id: true, facilityId: true, name: true, code: true }
@@ -381,6 +381,7 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
                 initialScore: Number(initialScore) || 0,
                 initialLevel: scoreToLevel(Number(initialScore) || 0),
                 status: status || 'ACIK_TEHLIKE',
+                statusDate: statusDate ? parseDate(statusDate) : null,
                 createdBy: username,
                 // Action plan / Implementation fields
                 firstActionPlan: req.body.firstActionPlan || null,
@@ -475,7 +476,7 @@ router.put('/:id', auth_1.authMiddleware, async (req, res) => {
                 data[f] = null;
             }
         });
-        const dateFields = ['actionDate', 'detectionDate', 'dueDate', 'postImprovementDueDate'];
+        const dateFields = ['actionDate', 'detectionDate', 'dueDate', 'postImprovementDueDate', 'statusDate'];
         dateFields.forEach(f => {
             if (data[f] !== undefined) {
                 data[f] = parseDate(data[f]);

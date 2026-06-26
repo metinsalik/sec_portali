@@ -43,10 +43,10 @@ router.get('/', async (req, res) => {
         handleError(res, err);
     }
 });
-// Atama Yap ve DÖF Gir (Devam Ediyor)
+// Atama Yap (Devam Ediyor)
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { sorumluBirimIds, sorumluKisiIds, onleyiciFaaliyet, terminTarihi, yapilacaklar } = req.body;
+    const { sorumluBirimIds } = req.body;
     try {
         const uygunsuzluk = await prisma.bTUygunsuzluk.update({
             where: { id: Number(id) },
@@ -54,12 +54,6 @@ router.put('/:id', async (req, res) => {
                 sorumluBirimler: {
                     set: (sorumluBirimIds || []).map((bId) => ({ id: bId }))
                 },
-                sorumluKisiler: {
-                    set: (sorumluKisiIds || []).map((kId) => ({ id: kId }))
-                },
-                onleyiciFaaliyet,
-                yapilacaklar,
-                terminTarihi: terminTarihi ? new Date(terminTarihi) : null,
                 durum: 'DEVAM_EDIYOR'
             }
         });
@@ -72,18 +66,30 @@ router.put('/:id', async (req, res) => {
 // Uygunsuzluk Kapat
 router.put('/:id/kapat', upload.array('kanitDosyalari'), async (req, res) => {
     const { id } = req.params;
-    const { kapatmaKaniti } = req.body;
+    const { kapatmaKaniti, dofTakipNo } = req.body;
     const files = req.files;
     try {
+        if (!dofTakipNo) {
+            res.status(400).json({ error: 'DÖF Takip Numarası zorunludur.' });
+            return;
+        }
         const filePaths = files ? files.map(f => f.filename) : [];
-        // Kanıt metni ve dosya isimlerini birleştirerek kaydediyoruz (ya da sadece metni alıyoruz, dosya yolları için yeni alan eklenebilir ama şu an string? alanına JSON veya metin olarak birleştirebiliriz. veya sadece kapatmaKaniti alanını kullanırız.)
         const combinedKanit = [kapatmaKaniti, ...filePaths].filter(Boolean).join('\nDosya: ');
+        const existing = await prisma.bTUygunsuzluk.findUnique({
+            where: { id: Number(id) },
+            include: { tur: true }
+        });
+        if (!existing) {
+            res.status(404).json({ error: 'Uygunsuzluk bulunamadı.' });
+            return;
+        }
         const uygunsuzluk = await prisma.bTUygunsuzluk.update({
             where: { id: Number(id) },
             data: {
                 durum: 'KAPALI',
                 kapatmaKaniti: combinedKanit,
-                kapatmaTarihi: new Date()
+                dofTakipNo,
+                kapatmaTarihi: existing.tur.baslangicTarihi
             }
         });
         res.json(uygunsuzluk);
