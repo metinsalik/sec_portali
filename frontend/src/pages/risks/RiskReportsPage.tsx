@@ -76,7 +76,7 @@ export function RiskReportsPage() {
               <Select value={selectedFacility} onValueChange={setSelectedFacility}>
                 <SelectTrigger><SelectValue placeholder="Tesis Seçin" /></SelectTrigger>
                 <SelectContent>
-                  {facilities.map((f: any) => (
+                  {facilities?.map((f: any) => (
                     <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
                   ))}
                 </SelectContent>
