@@ -747,7 +747,7 @@ export default function SpillKitsPage() {
 
       {/* Kit Template Modal */}
       <Dialog open={isKitModalOpen} onOpenChange={setIsKitModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{kitForm.id ? 'Kiti Düzenle' : 'Yeni Kit Oluştur'}</DialogTitle>
             <DialogDescription>Kitin tipini, risk seviyesini ve ihtiyaç gerekçesini belirleyin.</DialogDescription>
@@ -860,7 +860,7 @@ export default function SpillKitsPage() {
 
       {/* Placement Modal */}
       <Dialog open={isPlacementModalOpen} onOpenChange={setIsPlacementModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Kiti Sahaya Ata</DialogTitle>
             <DialogDescription>Oluşturduğunuz bir kiti bir departmana atayarak sahadaki fiziksel çantayı oluşturun.</DialogDescription>
@@ -1092,7 +1092,7 @@ export default function SpillKitsPage() {
 
       {/* Kit View Modal */}
       <Dialog open={isKitViewModalOpen} onOpenChange={setIsKitViewModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Şablon Görüntüleme: {selectedKitToView?.kitName}</DialogTitle>
             <DialogDescription>Amaç: {PURPOSES.find(p=>p.id===selectedKitToView?.purpose)?.label || selectedKitToView?.purpose} | Risk: {selectedKitToView?.risk}</DialogDescription>
