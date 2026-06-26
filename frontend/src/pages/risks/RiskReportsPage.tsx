@@ -22,12 +22,24 @@ export function RiskReportsPage() {
     // Custom event dispatch might be needed if FacilitySwitcher dispatches one
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [status, setStatus] = useState('ALL');
+  const [startDate, setStartDate] = useState(sessionStorage.getItem('reports_startDate') || '');
+  const [endDate, setEndDate] = useState(sessionStorage.getItem('reports_endDate') || '');
+  const [status, setStatus] = useState(sessionStorage.getItem('reports_status') || 'ALL');
   
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc'|'desc' } | null>(null);
+  const [searchTerm, setSearchTerm] = useState(sessionStorage.getItem('reports_searchTerm') || '');
+  
+  const savedSort = sessionStorage.getItem('reports_sortConfig');
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc'|'desc' } | null>(
+    savedSort ? JSON.parse(savedSort) : null
+  );
+
+  useEffect(() => {
+    sessionStorage.setItem('reports_startDate', startDate);
+    sessionStorage.setItem('reports_endDate', endDate);
+    sessionStorage.setItem('reports_status', status);
+    sessionStorage.setItem('reports_searchTerm', searchTerm);
+    sessionStorage.setItem('reports_sortConfig', JSON.stringify(sortConfig));
+  }, [startDate, endDate, status, searchTerm, sortConfig]);
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -282,7 +294,7 @@ export function RiskReportsPage() {
                       <tr 
                         key={risk.id} 
                         className="hover:bg-muted/50 cursor-pointer transition-colors"
-                        onClick={() => navigate(`/risks/department/${risk.departmentId}/view/${risk.id}`)}
+                        onClick={() => navigate(`/risks/department/${risk.departmentId}/view/${risk.id}`, { state: { from: '/risks/reports' } })}
                       >
                         <td className="px-4 py-3 font-medium">#{risk.riskNo}</td>
                         <td className="px-4 py-3">{risk.department?.name}</td>

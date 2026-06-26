@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Pencil, Activity, Clock, ShieldCheck, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -41,6 +41,7 @@ function LevelBadge({ level }: { level: string }) {
 export default function RiskViewPage() {
   const { departmentId, riskId } = useParams<{ departmentId: string; riskId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const token = localStorage.getItem('token');
 
   const { data: risk, isLoading } = useQuery({
@@ -75,7 +76,7 @@ export default function RiskViewPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4 border-b pb-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate(`/risks/department/${departmentId}`)} className="h-8 px-2 -ml-2">
+          <Button variant="ghost" size="sm" onClick={() => navigate(location.state?.from || `/risks/department/${departmentId}`)} className="h-8 px-2 -ml-2">
             <ArrowLeft className="w-4 h-4 mr-1" /> Geri
           </Button>
           <div className="h-5 w-px bg-border" />
