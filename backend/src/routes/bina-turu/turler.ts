@@ -113,4 +113,24 @@ router.put('/:id/tamamla', async (req: Request, res: Response) => {
   }
 });
 
+// Tur Sil
+router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  try {
+    // Delete the tour. Prisma will cascade delete 'turSorulari' if configured, otherwise we must delete them manually or use cascade.
+    // Let's assume cascade is set up, but if not we can delete turSorulari first.
+    await prisma.bTTurSorusu.deleteMany({
+      where: { turId: Number(id) }
+    });
+    
+    await prisma.bTTur.delete({
+      where: { id: Number(id) }
+    });
+    
+    res.status(204).send();
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
 export default router;

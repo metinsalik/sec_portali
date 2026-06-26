@@ -4,7 +4,7 @@ import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { Building2, Users, Play, CheckCircle2, ArrowLeft, Calendar, FileText, BarChart3 } from 'lucide-react';
+import { Building2, Users, Play, CheckCircle2, ArrowLeft, Calendar, FileText, BarChart3, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import DetayliAnaliz from '@/components/bina-turu/DetayliAnaliz';
 
@@ -37,6 +37,21 @@ const BinaToruListesi = () => {
       toast.error('Turlar alınamadı.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteTour = async (id: number) => {
+    if (!window.confirm('Bu turu silmek istediğininize emin misiniz? Tüm cevaplar ve eşleşmeler kaybolacaktır.')) return;
+    try {
+      const res = await api.delete(`/bina-turu/turler/${id}`);
+      if (res.ok) {
+        toast.success('Tur başarıyla silindi.');
+        fetchTurlar();
+      } else {
+        toast.error('Tur silinirken hata oluştu.');
+      }
+    } catch (err) {
+      toast.error('Tur silinirken hata oluştu.');
     }
   };
 
@@ -213,7 +228,12 @@ const BinaToruListesi = () => {
             <CardHeader className="pb-3 border-b bg-slate-50/50 rounded-t-xl">
               <div className="flex justify-between items-start mb-2">
                 <CardTitle className="text-lg text-slate-800 line-clamp-1" title={tur.ad}>{tur.ad}</CardTitle>
-                {getDurumBadge(tur.durum)}
+                <div className="flex items-center gap-2">
+                  {getDurumBadge(tur.durum)}
+                  <Button variant="ghost" size="icon" onClick={() => handleDeleteTour(tur.id)} className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50 ml-1">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
               <p className="text-sm text-slate-500 font-medium">
                 Tarih: {format(new Date(tur.baslangicTarihi), 'dd.MM.yyyy')}

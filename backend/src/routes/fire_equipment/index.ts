@@ -195,18 +195,21 @@ router.delete('/companies/:id', async (req, res) => {
   }
 });
 
-// --- LOCATIONS ---
+// --- LOCATIONS (MAPPED TO HAZMAT DEPARTMENTS) ---
 router.get('/locations/:facilityId', async (req, res) => {
   try {
     const { facilityId } = req.params;
-    const locations = await prisma.fireEquipmentLocation.findMany({
-      where: { facilityId, isActive: true },
-      orderBy: { building: 'asc' }
+    const locations = await prisma.hazmatDepartment.findMany({
+      where: { facilityId, isActive: true }
     });
-    res.json(locations);
+    // Map 'name' to 'department' for frontend compatibility
+    res.json(locations.map(loc => ({
+      ...loc,
+      department: loc.name
+    })));
   } catch (error) {
     console.error('Error fetching locations:', error);
-    res.status(500).json({ error: 'Lokasyonlar alınamadı.' });
+    res.status(500).json({ error: 'Lokasyonlar getirilemedi' });
   }
 });
 
@@ -215,26 +218,21 @@ router.post('/locations/:facilityId', async (req, res) => {
     const { facilityId } = req.params;
     const { building, block, floor, department, description } = req.body;
     
-    // Check if facility exists
-    const facility = await prisma.facility.findUnique({ where: { id: facilityId }});
-    if (!facility) {
-      return res.status(404).json({ error: 'Tesis bulunamadı.' });
-    }
-
-    const location = await prisma.fireEquipmentLocation.create({
+    const location = await prisma.hazmatDepartment.create({
       data: {
         facilityId,
         building,
         block,
         floor,
-        department,
+        name: department,
         description
       }
     });
-    res.status(201).json(location);
+    
+    res.status(201).json({ ...location, department: location.name });
   } catch (error) {
     console.error('Error creating location:', error);
-    res.status(500).json({ error: 'Lokasyon oluşturulamadı.' });
+    res.status(500).json({ error: 'Lokasyon oluşturulamadı' });
   }
 });
 
@@ -242,28 +240,30 @@ router.put('/locations/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { building, block, floor, department, description } = req.body;
-    const location = await prisma.fireEquipmentLocation.update({
+    
+    const location = await prisma.hazmatDepartment.update({
       where: { id },
-      data: { building, block, floor, department, description }
+      data: { building, block, floor, name: department, description }
     });
-    res.json(location);
+    
+    res.json({ ...location, department: location.name });
   } catch (error) {
     console.error('Error updating location:', error);
-    res.status(500).json({ error: 'Lokasyon güncellenemedi.' });
+    res.status(500).json({ error: 'Lokasyon güncellenemedi' });
   }
 });
 
 router.delete('/locations/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    await prisma.fireEquipmentLocation.update({
+    await prisma.hazmatDepartment.update({
       where: { id },
       data: { isActive: false }
     });
-    res.json({ message: 'Lokasyon silindi.' });
+    res.json({ message: 'Lokasyon pasife alındı' });
   } catch (error) {
     console.error('Error deleting location:', error);
-    res.status(500).json({ error: 'Lokasyon silinemedi.' });
+    res.status(500).json({ error: 'Lokasyon silinemedi' });
   }
 });
 
@@ -618,16 +618,16 @@ router.post('/equipment/:id/swap', async (req, res) => {
     const targetLocName = isReverseSwap ? 'Merkez Depo' : 'Arıza Deposu / Hurdalık';
     const targetStatus = isReverseSwap ? 'DEPODA' : brokenStatus;
 
-    let targetLocation = await prisma.fireEquipmentLocation.findFirst({
-      where: { facilityId: currentEquipment.facilityId, building: targetLocName }
+    let targetLocation = await prisma.hazmatDepartment.findFirst({
+      where: { facilityId: currentEquipment.facilityId, name: 'HURDA/KULLANIM DIŞI DEPOT' }
     });
 
     if (!targetLocation) {
-      targetLocation = await prisma.fireEquipmentLocation.create({
+      targetLocation = await prisma.hazmatDepartment.create({
         data: {
           facilityId: currentEquipment.facilityId,
-          building: targetLocName,
-          description: isReverseSwap ? 'Otomatik oluşturulan merkez depo.' : 'Otomatik oluşturulan arızalı/hurda ekipman deposu.'
+          name: 'HURDA/KULLANIM DIŞI DEPOT',
+          description: 'Otomatik oluşturulan hurda/kullanım dışı alanı'
         }
       });
     }

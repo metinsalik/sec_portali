@@ -91,7 +91,6 @@ model Facility {
   hazmatEyewashAnalyses  HazmatEyewashRiskAnalysis[]
   hazmatIncidents        HazmatIncident[]
   fireEquipments         FireEquipment[]
-  fireEquipmentLocations FireEquipmentLocation[]
   fireResponsibles       FireEquipmentResponsible[]
   fireEquipmentCompanies FireEquipmentCompany[]
   BuildProject           BuildProject[]
@@ -900,6 +899,7 @@ model HazmatDepartment {
   updatedAt       DateTime              @updatedAt
   inventory       HazmatInventoryItem[]
   hazmatIncidents HazmatIncident[]
+  FireEquipment   FireEquipment[]
 }
 
 model FacilityHazmatItem {
@@ -1187,24 +1187,6 @@ model FireEquipmentCategory {
   equipments    FireEquipment[]
 }
 
-model FireEquipmentLocation {
-  id          String   @id @default(uuid())
-  facilityId  String
-  building    String? // Bina
-  block       String? // Blok
-  floor       String? // Kat
-  department  String? // Bölüm
-  description String? // Konum Açıklaması
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  facility   Facility        @relation(fields: [facilityId], references: [id], onDelete: Cascade)
-  equipments FireEquipment[]
-
-  @@index([facilityId])
-}
-
 model FireEquipmentResponsible {
   id         String   @id @default(uuid())
   facilityId String
@@ -1264,7 +1246,7 @@ model FireEquipment {
   updatedAt DateTime @updatedAt
 
   category    FireEquipmentCategory     @relation(fields: [categoryId], references: [id])
-  location    FireEquipmentLocation?    @relation(fields: [locationId], references: [id])
+  location    HazmatDepartment?         @relation(fields: [locationId], references: [id])
   facility    Facility                  @relation(fields: [facilityId], references: [id], onDelete: Cascade)
   responsible FireEquipmentResponsible? @relation(fields: [responsibleId], references: [id], onDelete: SetNull)
   company     FireEquipmentCompany?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1790,24 +1772,24 @@ enum BTCevapSonuc {
 }
 
 model BTUygunsuzluk {
-  id             Int                @id @default(autoincrement())
-  facilityId     String
-  turId          Int
-  cevapId        Int                @unique
-  sorumluBirimler BTSorumluBirim[]
-  sorumluKisiler  BTSorumluKisi[]
-  terminTarihi    DateTime?
-  yapilacaklar    String?
+  id               Int                @id @default(autoincrement())
+  facilityId       String
+  turId            Int
+  cevapId          Int                @unique
+  sorumluBirimler  BTSorumluBirim[]
+  sorumluKisiler   BTSorumluKisi[]
+  terminTarihi     DateTime?
+  yapilacaklar     String?
   onleyiciFaaliyet String?
-  durum           BTUygunsuzlukDurum @default(ACIK)
-  kapatmaKaniti   String?
-  kapatmaTarihi   DateTime?
-  dofTakipNo      String?
-  tur             BTTur              @relation(fields: [turId], references: [id], onDelete: Cascade)
-  cevap           BTCevap            @relation(fields: [cevapId], references: [id], onDelete: Cascade)
-  facility        Facility           @relation(fields: [facilityId], references: [id], onDelete: Cascade)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  durum            BTUygunsuzlukDurum @default(ACIK)
+  kapatmaKaniti    String?
+  kapatmaTarihi    DateTime?
+  dofTakipNo       String?
+  tur              BTTur              @relation(fields: [turId], references: [id], onDelete: Cascade)
+  cevap            BTCevap            @relation(fields: [cevapId], references: [id], onDelete: Cascade)
+  facility         Facility           @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 }
 
 enum BTUygunsuzlukDurum {

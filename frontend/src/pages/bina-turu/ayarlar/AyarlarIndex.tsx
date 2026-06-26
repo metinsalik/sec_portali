@@ -6,6 +6,7 @@ import KategoriYonetimi from './KategoriYonetimi';
 import SorumluBirimYonetimi from './SorumluBirimYonetimi';
 import SorumluKisiYonetimi from './SorumluKisiYonetimi';
 import SoruBankasiExcel from './SoruBankasiExcel';
+import SoruBankasi from './SoruBankasi';
 
 const AyarlarIndex = () => {
   return (
@@ -22,6 +23,7 @@ const AyarlarIndex = () => {
           <TabsTrigger value="kategori">Kategori</TabsTrigger>
           <TabsTrigger value="sorumlu-birim">Sorumlu Birim</TabsTrigger>
           <TabsTrigger value="sorumlu-kisi">Sorumlu Kişi</TabsTrigger>
+          <TabsTrigger value="soru-bankasi">Soru Bankası</TabsTrigger>
           <TabsTrigger value="soru-bankasi-excel">Soru Bankası (Excel)</TabsTrigger>
         </TabsList>
         
@@ -30,6 +32,7 @@ const AyarlarIndex = () => {
         <TabsContent value="kategori"><KategoriYonetimi /></TabsContent>
         <TabsContent value="sorumlu-birim"><SorumluBirimYonetimi /></TabsContent>
         <TabsContent value="sorumlu-kisi"><SorumluKisiYonetimi /></TabsContent>
+        <TabsContent value="soru-bankasi"><SoruBankasi /></TabsContent>
         <TabsContent value="soru-bankasi-excel"><SoruBankasiExcel /></TabsContent>
       </Tabs>
     </div>
