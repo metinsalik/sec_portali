@@ -53,6 +53,9 @@ export default function SpillKitsPage() {
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
   const [selectedKitId, setSelectedKitId] = useState<string | null>(null);
 
+  const [locFloor, setLocFloor] = useState('all');
+  const [locDepartment, setLocDepartment] = useState('all');
+
   const { data: kits = [], isLoading } = useQuery({
     queryKey: ['spill-kits', facilityId],
     queryFn: async () => {
@@ -86,6 +89,25 @@ export default function SpillKitsPage() {
     },
     enabled: !!facilityId
   });
+
+  const floors = Array.from(new Set(departments.map((d: any) => d.floor).filter(Boolean))).sort();
+  const filteredDepts = Array.from(new Set(departments.filter((d: any) => locFloor === 'all' || d.floor === locFloor).map((d: any) => d.name).filter(Boolean))).sort();
+  
+  const getFilteredLocations = () => {
+    return departments.filter((d: any) => {
+      if (locFloor !== 'all' && d.floor !== locFloor) return false;
+      if (locDepartment !== 'all' && d.name !== locDepartment) return false;
+      return true;
+    });
+  };
+
+  const handleLocationSelect = (locId: string) => {
+    const loc = departments.find((d: any) => d.id === locId);
+    if (loc) {
+      const str = `Kat: ${loc.floor || '-'} / Birim: ${loc.name || '-'}${loc.description ? ` / Mahal: ${loc.description}` : ''}`;
+      setPlacementForm({...placementForm, unit: str});
+    }
+  };
 
   const saveItemsMutation = useMutation({
     mutationFn: async ({ kitId, items }: { kitId: string, items: any[] }) => {
@@ -842,16 +864,41 @@ export default function SpillKitsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Hangi Departman?</Label>
-                <Select value={placementForm.unit || ''} onValueChange={(val) => setPlacementForm({...placementForm, unit: val})}>
-                  <SelectTrigger><SelectValue placeholder="Departman Seçiniz" /></SelectTrigger>
-                  <SelectContent>
-                    {departments.map((d: any) => (
-                      <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-2 col-span-2 p-4 bg-muted/20 rounded-md border">
+                <Label className="text-base font-semibold block mb-2">Hangi Departman (Lokasyon)?</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Kat Seçimi *</Label>
+                    <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-1 text-sm disabled:opacity-50" disabled={floors.length === 0} value={locFloor} onChange={e => {setLocFloor(e.target.value); setLocDepartment('all');}}>
+                      <option value="all">Seçiniz...</option>
+                      {floors.map((f: any) => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Birim Seçimi *</Label>
+                    <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-1 text-sm disabled:opacity-50" disabled={filteredDepts.length === 0} value={locDepartment} onChange={e => setLocDepartment(e.target.value)}>
+                      <option value="all">Seçiniz...</option>
+                      {filteredDepts.map((d: any) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Mahal Seçimi (Opsiyonel)</Label>
+                    <select 
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-1 text-sm disabled:opacity-50"
+                      onChange={(e) => handleLocationSelect(e.target.value)}
+                      value=""
+                    >
+                      <option value="" disabled>Seçiniz...</option>
+                      {getFilteredLocations().map((loc: any) => (
+                        <option key={loc.id} value={loc.id}>{`${loc.floor ? `${loc.floor} / ` : ''}${loc.name}${loc.description ? ` / ${loc.description}` : ''}`}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <Label className="text-xs text-muted-foreground">Seçilen Departman (Kaydedilecek)</Label>
+                  <Input value={placementForm.unit || ''} onChange={e => setPlacementForm({...placementForm, unit: e.target.value})} className="h-10 bg-slate-50 font-medium" />
+                </div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
