@@ -11,6 +11,8 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveCo
 import FacilityAdvancedDashboard from '@/components/risks/FacilityAdvancedDashboard';
 import RiskExcelImport from './RiskExcelImport';
 import { useAuth } from '@/context/AuthContext';
+import { FacilityRiskPrintModal } from '@/components/risks/FacilityRiskPrintModal';
+import { Printer } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -44,6 +46,7 @@ export default function RiskFacilityPage() {
   const [adding, setAdding] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showBulkPrint, setShowBulkPrint] = useState(false);
 
   const { data: departments = [], isLoading, refetch } = useQuery({
     queryKey: ['risk-departments', facilityId],
@@ -183,6 +186,9 @@ export default function RiskFacilityPage() {
           <p className="text-xs text-muted-foreground">Departman bazlı risk yönetimi</p>
         </div>
         <div className="flex gap-2 shrink-0">
+          <Button size="sm" variant="outline" onClick={() => setShowBulkPrint(true)} className="shadow-sm border-blue-200 text-blue-700 hover:bg-blue-50">
+            <Printer className="w-4 h-4 mr-1.5" /> Toplu Risk Çıktısı
+          </Button>
           {isAdminOrMgmt && (
             <Button size="sm" variant="outline" onClick={() => setShowImport(true)} className="shadow-sm">
               <Upload className="w-4 h-4 mr-1.5" /> Konsolide Excel Aktar
@@ -626,7 +632,6 @@ export default function RiskFacilityPage() {
         )}
       </section>
 
-      {/* Modal: Excel Import */}
       {showImport && (
         <RiskExcelImport
           facilityId={facilityId!}
@@ -637,6 +642,15 @@ export default function RiskFacilityPage() {
             queryClient.invalidateQueries({ queryKey: ['facility-risks', facilityId] });
             queryClient.invalidateQueries({ queryKey: ['risk-departments', facilityId] });
           }}
+        />
+      )}
+      
+      {showBulkPrint && (
+        <FacilityRiskPrintModal
+          isOpen={showBulkPrint}
+          onClose={() => setShowBulkPrint(false)}
+          departments={filteredDepartments}
+          facilityRisks={filteredFacilityRisks}
         />
       )}
     </div>
