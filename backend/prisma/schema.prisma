@@ -689,6 +689,7 @@ model RiskLifecycle {
   finalScore                 Float?
   finalLevel                 String?
   status                     String         @default("ACIK_TEHLIKE")
+  statusDate                 DateTime?
   createdBy                  String?
   createdAt                  DateTime       @default(now())
   updatedAt                  DateTime       @updatedAt

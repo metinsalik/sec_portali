@@ -710,8 +710,8 @@ export default function RiskFormPage() {
             </div>
 
             <div className="space-y-1.5 pt-4 border-t border-border mt-4">
-              <label className="text-xs font-semibold text-muted-foreground">Risk Durumu</label>
-              <div className="flex gap-4">
+              <label className="text-xs font-semibold text-muted-foreground">Risk Durumu ve Tarihi</label>
+              <div className="flex gap-4 items-center">
                 <Button 
                   type="button"
                   variant={form.status === 'KAPATILDI_GUVENLI' ? 'default' : 'outline'}
@@ -728,6 +728,14 @@ export default function RiskFormPage() {
                 >
                   Takip Sürecinde
                 </Button>
+                {(form.status === 'KAPATILDI_GUVENLI' || form.status === 'TAKIP_SURECINDE') && (
+                  <Input 
+                    type="date" 
+                    className="w-40 h-10"
+                    value={form.statusDate ? new Date(form.statusDate).toISOString().split('T')[0] : ''} 
+                    onChange={(e) => updateField('statusDate', e.target.value)} 
+                  />
+                )}
               </div>
             </div>
           </CardContent>

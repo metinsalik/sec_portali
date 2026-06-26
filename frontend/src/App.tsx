@@ -69,6 +69,7 @@ import RiskDepartmentPage from './pages/risks/RiskDepartmentPage';
 import RiskFormPage from './pages/risks/RiskFormPage';
 import RiskViewPage from './pages/risks/RiskViewPage';
 import RiskSettings from './pages/risks/RiskSettings';
+import { RiskReportsPage } from './pages/risks/RiskReportsPage';
 
 // HazMat
 import HazmatDashboardPage from './pages/hazmat/HazmatDashboardPage';
@@ -395,6 +396,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <AppLayout><RiskFacilityPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/risks/reports"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><RiskReportsPage /></AppLayout>
                     </ProtectedRoute>
                   }
                 />

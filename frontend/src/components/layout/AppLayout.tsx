@@ -6,7 +6,7 @@ import {
   Shield, LayoutDashboard, Building2, Users, Briefcase, UserCheck,
   ClipboardList, FileText, Settings, Bell, ChevronDown, LogOut,
   User, BarChart3, ChevronRight, LayoutGrid, Database, Users2, Mail,
-  BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame, PenTool, Menu, X, ShoppingCart
+  BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame, PenTool, Menu, X, ShoppingCart, PieChart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -81,6 +81,8 @@ const workflowNavItems = (hasAdminAccess: boolean) => [
 const riskNavItems = [
   { label: 'GENEL', type: 'group' },
   { label: 'Dashboard', icon: LayoutDashboard, to: '/risks', end: true },
+  { label: 'RAPORLAR', type: 'group' },
+  { label: 'Analiz ve Raporlar', icon: PieChart, to: '/risks/reports' },
   { label: 'AYARLAR', type: 'group' },
   { label: 'Modül Ayarları', icon: Settings, to: '/risks/settings' },
 ];

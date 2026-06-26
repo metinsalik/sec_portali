@@ -360,7 +360,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       actionsTaken, actionDate, actionImage,
       finalProb, finalFreq, finalSev, finalScore, postImprovementResponsible, postImprovementDueDate,
       effectivenessMethod, controlResponsible, controlResult, legislation,
-      dueDatePeriod,
+      dueDatePeriod, statusDate,
     } = req.body;
 
     let dept = await prisma.riskDepartment.findUnique({
@@ -410,6 +410,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
         initialScore:    Number(initialScore) || 0,
         initialLevel:    scoreToLevel(Number(initialScore) || 0),
         status:          status || 'ACIK_TEHLIKE',
+        statusDate:      statusDate ? parseDate(statusDate) : null,
         createdBy:       username,
 
         // Action plan / Implementation fields
@@ -514,7 +515,7 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
       }
     });
 
-    const dateFields = ['actionDate', 'detectionDate', 'dueDate', 'postImprovementDueDate'];
+    const dateFields = ['actionDate', 'detectionDate', 'dueDate', 'postImprovementDueDate', 'statusDate'];
     dateFields.forEach(f => {
       if (data[f] !== undefined) {
         data[f] = parseDate(data[f]);
