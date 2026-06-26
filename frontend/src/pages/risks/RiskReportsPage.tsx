@@ -9,7 +9,17 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 
 export function RiskReportsPage() {
   const { facilities } = useAuth();
-  const [selectedFacility, setSelectedFacility] = useState(facilities?.[0]?.id || '');
+  const [selectedFacility, setSelectedFacility] = useState(localStorage.getItem('activeFacilityId') || '');
+  
+  // Listen for activeFacilityId changes from FacilitySwitcher
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setSelectedFacility(localStorage.getItem('activeFacilityId') || '');
+    };
+    window.addEventListener('storage', handleStorageChange);
+    // Custom event dispatch might be needed if FacilitySwitcher dispatches one
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [status, setStatus] = useState('ALL');
@@ -72,17 +82,6 @@ export function RiskReportsPage() {
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Tesis</label>
-              <Select value={selectedFacility} onValueChange={setSelectedFacility}>
-                <SelectTrigger><SelectValue placeholder="Tesis Seçin" /></SelectTrigger>
-                <SelectContent>
-                  {facilities?.map((f: any) => (
-                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
               <label className="text-sm font-medium">Başlangıç (Tespit)</label>
               <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
             </div>
@@ -103,7 +102,7 @@ export function RiskReportsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="col-span-1 md:col-span-4 flex justify-end">
+            <div className="col-span-1 md:col-span-3 flex justify-end">
               <Button onClick={fetchReport} disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Search className="w-4 h-4 mr-2" />}
                 Filtrele
