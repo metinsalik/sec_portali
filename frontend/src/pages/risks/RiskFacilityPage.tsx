@@ -651,6 +651,7 @@ export default function RiskFacilityPage() {
           onClose={() => setShowBulkPrint(false)}
           departments={filteredDepartments}
           facilityRisks={filteredFacilityRisks}
+          facility={facility}
         />
       )}
     </div>

@@ -9,9 +9,10 @@ interface FacilityRiskPrintModalProps {
   onClose: () => void;
   departments: any[];
   facilityRisks: any[];
+  facility: any;
 }
 
-export function FacilityRiskPrintModal({ isOpen, onClose, departments, facilityRisks }: FacilityRiskPrintModalProps) {
+export function FacilityRiskPrintModal({ isOpen, onClose, departments, facilityRisks, facility }: FacilityRiskPrintModalProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -97,7 +98,7 @@ export function FacilityRiskPrintModal({ isOpen, onClose, departments, facilityR
                   <div key={dept.id} className="page-break-after w-full">
                     <RiskPrintTable 
                       risks={deptRisks}
-                      department={{...dept, facility: dept.facility || facilityRisks[0]?.department?.facility}} // Ensure facility is passed if available
+                      department={{...dept, facility: facility || dept.facility || facilityRisks[0]?.department?.facility}} // Use explicit facility prop
                       deptCode={dept.id}
                     />
                   </div>
