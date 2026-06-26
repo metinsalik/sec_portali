@@ -15,6 +15,9 @@ npx prisma generate
 echo "Dropping any problematic constraints before push..."
 npx ts-node prisma/drop-constraint.ts || true
 
+echo "Migrating data from old tables..."
+npx ts-node prisma/migrate-data.ts || true
+
 # Sync schema to database
 # --accept-data-loss is used here to allow rapid development changes
 npx prisma db push --accept-data-loss
