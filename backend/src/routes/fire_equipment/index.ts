@@ -422,11 +422,30 @@ router.post('/equipment/bulk/:facilityId', async (req, res) => {
         }
       }
 
+      let nextMaintenanceDate = null;
+      if (dolumTarihi) {
+        nextMaintenanceDate = new Date(dolumTarihi);
+        nextMaintenanceDate.setFullYear(nextMaintenanceDate.getFullYear() + 1);
+      }
+
+      let kapasite = eq.kapasite;
+      if (kapasite && !String(kapasite).toLowerCase().includes('kg')) {
+        kapasite = `${kapasite} kg`;
+      }
+
+      let manometre = eq.manometre;
+      if (manometre) {
+        const m = String(manometre).toLowerCase().trim();
+        if (m === 'var' || m === 'yok') {
+          manometre = m.charAt(0).toUpperCase() + m.slice(1);
+        }
+      }
+
       const inventoryData = {
         lastMaintenanceDate: dolumTarihi ? dolumTarihi.toISOString() : undefined,
         Açıklama: eq.not || undefined,
-        Kapasite: eq.kapasite || undefined,
-        Manometre: eq.manometre || undefined
+        Kapasite: kapasite || undefined,
+        Manometre: manometre || undefined
       };
 
       const newEq = await prisma.fireEquipment.create({
@@ -437,7 +456,8 @@ router.post('/equipment/bulk/:facilityId', async (req, res) => {
           companyId,
           equipmentNo: eq.ekipman_no || `YT-${Math.floor(Math.random()*10000)}`,
           productionDate: imalTarihi,
-          capacity: eq.kapasite ? String(eq.kapasite) : null,
+          nextMaintenanceDate,
+          capacity: kapasite ? String(kapasite) : null,
           responsibleUnit: eq.sorumlu_departman || null,
           inventoryData,
           notes: eq.not ? String(eq.not) : null

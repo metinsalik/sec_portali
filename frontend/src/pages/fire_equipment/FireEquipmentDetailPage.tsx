@@ -193,12 +193,22 @@ export default function FireEquipmentDetailPage() {
                   <dt className="text-muted-foreground font-medium mb-1">Sorumlu Departman</dt>
                   <dd>{equipment.responsibleUnit || '-'}</dd>
                 </div>
-                {equipment.inventoryData && Object.entries(equipment.inventoryData).map(([key, value]: any) => (
-                  <div key={key}>
-                    <dt className="text-muted-foreground font-medium mb-1">{key}</dt>
-                    <dd>{value}</dd>
-                  </div>
-                ))}
+                {equipment.inventoryData && Object.entries(equipment.inventoryData).map(([key, value]: any) => {
+                  let displayKey = key;
+                  let displayValue = value;
+
+                  if (key === 'lastMaintenanceDate') {
+                    displayKey = 'Son Bakım Tarihi';
+                    displayValue = value ? format(new Date(value), 'yyyy-MM') : '-';
+                  }
+
+                  return (
+                    <div key={key}>
+                      <dt className="text-muted-foreground font-medium mb-1">{displayKey}</dt>
+                      <dd>{displayValue}</dd>
+                    </div>
+                  );
+                })}
               </dl>
               
               {equipment.qrCode && (

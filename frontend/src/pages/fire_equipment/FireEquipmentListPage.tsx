@@ -119,7 +119,7 @@ export default function FireEquipmentListPage() {
     } else if (diffDays <= 30) {
       return <span className="text-orange-600 font-medium text-xs block">Yaklaşıyor ({diffDays} gün)</span>;
     }
-    return <span className="text-muted-foreground text-xs block">{nextDate.toLocaleDateString('tr-TR')}</span>;
+    return <span className="text-muted-foreground text-xs block">{nextDate.getFullYear()}-{String(nextDate.getMonth() + 1).padStart(2, '0')}</span>;
   };
 
   const filteredEquipment = equipment?.filter((item: any) => {
