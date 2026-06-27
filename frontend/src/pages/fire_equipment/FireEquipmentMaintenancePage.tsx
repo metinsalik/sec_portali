@@ -68,7 +68,7 @@ export default function FireEquipmentMaintenancePage() {
     onSuccess: async () => {
       toast.success('Bakım kaydı başarıyla oluşturuldu.');
       await queryClient.invalidateQueries({ queryKey: ['fire-equipment', id] });
-      navigate(`/fire-equipment/view/${id}`);
+      navigate(-1);
     },
     onError: (error: any) => {
       toast.error('İşlem sırasında bir hata oluştu: ' + error.message);

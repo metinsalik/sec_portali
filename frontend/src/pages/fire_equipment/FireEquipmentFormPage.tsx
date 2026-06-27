@@ -183,7 +183,7 @@ export default function FireEquipmentFormPage() {
       toast.success(isEdit ? 'Ekipman güncellendi.' : 'Ekipman başarıyla eklendi.');
       await queryClient.invalidateQueries({ queryKey: ['fire-equipment'] });
       await queryClient.invalidateQueries({ queryKey: ['fire-equipment', facilityId] });
-      navigate('/fire-equipment/list');
+      navigate(-1);
     },
     onError: (error: any) => {
       toast.error('İşlem sırasında bir hata oluştu: ' + error.message);
