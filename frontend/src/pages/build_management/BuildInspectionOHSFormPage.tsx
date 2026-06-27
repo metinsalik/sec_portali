@@ -38,6 +38,7 @@ export default function BuildInspectionOHSFormPage() {
   const [inspectionDate, setInspectionDate] = useState(new Date().toISOString().slice(0, 10));
   const [inspectorName, setInspectorName] = useState(user?.fullName || '');
   const [overallResult, setOverallResult] = useState('UYGUNDUR');
+  const [notes, setNotes] = useState('');
 
   // Get project info
   const { data: project } = useQuery({
@@ -90,6 +91,7 @@ export default function BuildInspectionOHSFormPage() {
       }
       setInspectorName(existingInspection.inspector || '');
       setOverallResult(existingInspection.result || 'UYGUNDUR');
+      setNotes(existingInspection.notes || '');
     }
   }, [existingInspection]);
 
@@ -125,7 +127,7 @@ export default function BuildInspectionOHSFormPage() {
       inspector: inspectorName,
       checklistData: answers,
       result: overallResult,
-      notes: ''
+      notes
     });
   };
 
@@ -232,6 +234,16 @@ export default function BuildInspectionOHSFormPage() {
           })}
         </div>
         
+        <div className="mt-8">
+          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Açıklama (Ek Notlar)</label>
+          <textarea
+            className="w-full px-4 py-3 bg-slate-50 dark:bg-[#202427] border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-blue-500 min-h-[100px]"
+            placeholder="Açıklama veya bulgular..."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          ></textarea>
+        </div>
+
         <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
           <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">Genel Değerlendirme Sonucu</label>
           <div className="flex gap-4">

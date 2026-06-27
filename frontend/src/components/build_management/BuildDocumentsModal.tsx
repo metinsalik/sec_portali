@@ -158,7 +158,7 @@ export function BuildDocumentsModal({ open, onOpenChange, project }: Props) {
                         </span>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-slate-400 mr-2">{new Date(doc.createdAt).toLocaleDateString('tr-TR')}</span>
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => window.open(import.meta.env.VITE_API_URL + doc.fileUrl, '_blank')}>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => window.open(doc.fileUrl, '_blank')}>
                             <Eye className="w-4 h-4 text-blue-600" />
                           </Button>
                           <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { if(window.confirm('Bu belgeyi silmek istediğinize emin misiniz?')) deleteMutation.mutate(doc.id); }}>

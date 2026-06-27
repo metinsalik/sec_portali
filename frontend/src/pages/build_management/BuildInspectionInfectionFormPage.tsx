@@ -132,7 +132,8 @@ export default function BuildInspectionInfectionFormPage() {
   };
 
   const handleSave = async () => {
-    if (Object.keys(answers).length !== questions.length) {
+    const answeredCount = Object.keys(answers).filter(k => !k.endsWith('_comment')).length;
+    if (answeredCount !== questions.length) {
       toast.error("Lütfen tüm soruları işaretleyiniz.");
       return;
     }
@@ -233,6 +234,15 @@ export default function BuildInspectionInfectionFormPage() {
                         KD
                       </button>
                     </div>
+                  </div>
+                  <div className="mt-3 border-t border-slate-100 dark:border-slate-700/50 pt-3">
+                    <input
+                      type="text"
+                      className="w-full text-sm px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded outline-none focus:border-blue-500"
+                      placeholder="Açıklama (İsteğe bağlı)..."
+                      value={answers[`${questionId}_comment`] || ''}
+                      onChange={(e) => setAnswers(prev => ({ ...prev, [`${questionId}_comment`]: e.target.value }))}
+                    />
                   </div>
                 </div>
               </React.Fragment>
