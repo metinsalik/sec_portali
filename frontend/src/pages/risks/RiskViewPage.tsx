@@ -3,10 +3,54 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Pencil, Activity, Clock, ShieldCheck, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import LevelBadge from '@/components/risks/LevelBadge';
+import type { RiskLevel } from '@/components/risks/LevelBadge';
 
 const API = import.meta.env.VITE_API_URL || '';
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
+const fieldNames: Record<string, string> = {
+  status: 'Durum',
+  dueDate: 'Termin Tarihi',
+  actionDate: 'İyileştirme Tarihi',
+  actionsTaken: 'İyileştirme Açıklaması',
+  initialScore: 'Mevcut Risk Skoru',
+  finalScore: 'İyileştirme Sonrası Skor',
+  detectionDate: 'Tespit Tarihi',
+  improvementResponsible: 'İyileştirme Sorumlusu',
+  subCategory: 'Alt Kategori',
+  riskCategory: 'Ana Kategori',
+  legislation: 'İlgili Mevzuat',
+  firstActionPlan: 'Alınacak Önlemler',
+  initialProb: 'Olasılık (P)',
+  initialFreq: 'Frekans (F)',
+  initialSev: 'Şiddet (S)',
+  finalProb: 'Sonrası Olasılık (P)',
+  finalFreq: 'Sonrası Frekans (F)',
+  finalSev: 'Sonrası Şiddet (S)',
+  effectivenessMethod: 'Etkinlik Ölçüm Yöntemi',
+  controlResponsible: 'Kontrol Sorumlusu',
+  controlResult: 'Kontrol Sonucu',
+  description: 'Tehlike Tanımı',
+  dueDatePeriod: 'Termin Periyodu'
+};
+
+const statusNames: Record<string, string> = {
+  ACIK_TEHLIKE: 'Açık Tehlike',
+  ILK_MUDAHALE_EDILDI: 'İlk Müdahale Edildi',
+  TAKIP_SURECINDE: 'Takip Sürecinde',
+  KAPATILDI_GUVENLI: 'Kapatıldı (Güvenli)'
+};
+
+const formatLogValue = (key: string, val: any) => {
+  if (!val) return '-';
+  if (key === 'status') return statusNames[val as string] || val;
+  if (typeof val === 'string' && val.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+    return new Date(val).toLocaleDateString('tr-TR');
+  }
+  return String(val);
+};
+
+export const STATUS_MAP: Record<string, { label: string, color: string, bg: string, border: string }> = {
   ACIK_TEHLIKE:        { label: 'Açık Tehlike',    color: 'text-red-600',    bg: 'bg-red-50 dark:bg-red-900/20',       border: 'border-red-200 dark:border-red-800' },
   ILK_MUDAHALE_EDILDI: { label: 'İlk Müdahale',    color: 'text-orange-600', bg: 'bg-orange-50 dark:bg-orange-900/20', border: 'border-orange-200 dark:border-orange-800' },
   TAKIP_SURECINDE:     { label: 'Takip Sürecinde', color: 'text-blue-600',   bg: 'bg-blue-50 dark:bg-blue-900/20',     border: 'border-blue-200 dark:border-blue-800' },
@@ -269,10 +313,10 @@ export default function RiskViewPage() {
                           <div className="mt-2 bg-muted/40 rounded-md p-2 text-[11px] space-y-1 border border-border/50">
                             {Object.entries(log.changedFields).map(([key, val]: any) => (
                               <div key={key} className="flex gap-1.5 flex-wrap">
-                                <span className="font-semibold text-muted-foreground">{key}:</span>
-                                <span className="line-through text-muted-foreground/70">{String(val.old || '-')}</span>
+                                <span className="font-semibold text-muted-foreground">{fieldNames[key] || key}:</span>
+                                <span className="line-through text-muted-foreground/70">{formatLogValue(key, val.old)}</span>
                                 <span className="text-muted-foreground">→</span>
-                                <span className="text-emerald-600 font-medium">{String(val.new || '-')}</span>
+                                <span className="text-emerald-600 font-medium">{formatLogValue(key, val.new)}</span>
                               </div>
                             ))}
                           </div>

@@ -210,11 +210,17 @@ export default function FacilityCategoriesPage() {
             return (
               <div
                 key={idx}
-                onClick={() => navigate(`/risks/facility/${facilityId}/category-details?mainCat=${encodeURIComponent(cat.mainCategory)}${filterMainCategory || filterSubCategory ? `&subCat=${encodeURIComponent(cat.name)}` : ''}`)}
+                onClick={() => {
+                  if (!filterMainCategory) {
+                    setFilterMainCategory(cat.name);
+                  } else {
+                    navigate(`/risks/facility/${facilityId}/category-details?mainCat=${encodeURIComponent(cat.mainCategory)}&subCat=${encodeURIComponent(cat.name)}`);
+                  }
+                }}
                 className="bg-card dark:bg-slate-900 p-6 rounded-xl border border-border dark:border-slate-800 form-shadow hover:border-primary transition-colors flex flex-col h-full cursor-pointer"
               >
                 <div className="flex justify-between items-start mb-4">
-                  <h5 className="text-lg font-bold text-foreground truncate pr-2" title={cat.name}>{cat.name}</h5>
+                  <h5 className="text-lg font-bold text-foreground line-clamp-2 pr-2 leading-tight" title={cat.name}>{cat.name}</h5>
                   <span className={`text-xs px-2 py-1 rounded shrink-0 ${hasRisk ? 'bg-error/10 text-error font-medium' : 'bg-muted text-muted-foreground'}`}>
                     {cat.riskCount} Risk
                   </span>
@@ -286,7 +292,13 @@ export default function FacilityCategoriesPage() {
                 return (
                   <tr 
                     key={idx} 
-                    onClick={() => navigate(`/risks/facility/${facilityId}/category-details?mainCat=${encodeURIComponent(cat.mainCategory)}${filterMainCategory || filterSubCategory ? `&subCat=${encodeURIComponent(cat.name)}` : ''}`)}
+                    onClick={() => {
+                      if (!filterMainCategory) {
+                        setFilterMainCategory(cat.name);
+                      } else {
+                        navigate(`/risks/facility/${facilityId}/category-details?mainCat=${encodeURIComponent(cat.mainCategory)}&subCat=${encodeURIComponent(cat.name)}`);
+                      }
+                    }}
                     className="hover:bg-muted/30 transition-colors group cursor-pointer"
                   >
                     <td className="px-6 py-4 font-medium text-foreground">
