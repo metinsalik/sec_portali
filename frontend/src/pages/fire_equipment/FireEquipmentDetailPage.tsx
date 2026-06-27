@@ -99,7 +99,10 @@ export default function FireEquipmentDetailPage() {
       if (equipment.status === 'DEPODA') {
         return list.filter((e: any) => e.status === 'AKTIF' && e.categoryId === equipment.categoryId);
       }
-      return list.filter((e: any) => e.status === 'DEPODA' && e.categoryId === equipment.categoryId);
+      return list.filter((e: any) => 
+        (e.status === 'DEPODA' || e.location?.department?.toLowerCase().includes('teknik depo') || e.location?.building?.toLowerCase().includes('teknik depo')) 
+        && e.categoryId === equipment.categoryId && e.id !== equipment.id
+      );
     },
     enabled: isSwapModalOpen && !!equipment?.categoryId
   });

@@ -452,6 +452,12 @@ router.post('/equipment/bulk/:facilityId', async (req, res) => {
         "Kullanım Tipi": "Taşınabilir"
       };
 
+      let initialStatus = 'AKTIF';
+      const locStr = `${eq.blok || ''} ${eq.kat || ''} ${eq.birim || ''} ${eq.mahal || ''}`.toLowerCase();
+      if (locStr.includes('teknik depo') || locStr.includes('yedek')) {
+        initialStatus = 'DEPODA';
+      }
+
       const newEq = await prisma.fireEquipment.create({
         data: {
           facilityId,
@@ -464,6 +470,7 @@ router.post('/equipment/bulk/:facilityId', async (req, res) => {
           capacity: kapasite ? String(kapasite) : null,
           responsibleUnit: eq.sorumlu_departman || null,
           inventoryData,
+          status: initialStatus,
           notes: eq.not ? String(eq.not) : null
         }
       });
