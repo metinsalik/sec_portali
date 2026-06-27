@@ -27,10 +27,11 @@ const INFECTION_CLASS_QUESTIONS: Record<string, string[]> = {
     "İnşaat atığı transport edilmeden önce kapağı sıkı kapalı kaplarda toplanır."
   ],
   "Sınıf IV": [
-    "Delik, kanal ve kablo girişleri uygun olarak kapatılır.",
-    "Çalışma bölgesine giren tüm personel galoş giyer. İşçilerin çalışma alanından çıktığı her seferde galoş değiştirilir.",
     "Çalışmanın uygulandığı bölgede mevcut havalandırma sistem izole edilir.",
-    "Çalışma bölgesini çalışma dışı bölgelere kapatmak için bariyerler tamamlanır."
+    "Delik, kanal ve kablo girişleri uygun olarak kapatılır.",
+    "Çalışma bölgesini çalışma dışı bölgelere kapatmak için bariyerler tamamlanır.",
+    "HEPA ile donatılı hava filtrasyon birimleri kullanılarak çalışma bölgesi içinde negatif basınç idame ettirilir.",
+    "Çalışma bölgesine giren tüm personel galoş giyer. İşçilerin çalışma alanından çıktığı her seferde galoş değiştirilir."
   ]
 };
 
