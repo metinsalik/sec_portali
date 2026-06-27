@@ -5,6 +5,7 @@ import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const OHS_QUESTIONS = [
   "Çalışma alanı yetkisiz girişe karşı kapatıldı mı?",
@@ -28,13 +29,15 @@ const OHS_QUESTIONS = [
 ];
 
 export default function BuildInspectionOHSFormPage() {
-  const { id } = useParams();
+  const { id, inspectionId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [inspectionDate, setInspectionDate] = useState(new Date().toISOString().slice(0, 10));
+  const [inspectorName, setInspectorName] = useState(user?.fullName || '');
+  const [overallResult, setOverallResult] = useState('UYGUNDUR');
 
   // Get project info
   const { data: project } = useQuery({
@@ -59,11 +62,48 @@ export default function BuildInspectionOHSFormPage() {
     .filter((f: any) => f.sourceType === 'İSG Denetimi' && f.actions?.some((a: any) => a.status === 'Açık'))
     .map((f: any) => f.sourceRef);
 
+  // Get users for inspector selection
+  const { data: users = [] } = useQuery({
+    queryKey: ['settings-users'],
+    queryFn: async () => {
+      const res = await api.get('/settings/users');
+      return res.json();
+    }
+  });
+
+  // Get inspection details if editing
+  const { data: existingInspection } = useQuery({
+    queryKey: ['ohsInspection', inspectionId],
+    queryFn: async () => {
+      const res = await api.get(`/build-management/projects/${id}/inspections/ohs`);
+      const all = await res.json();
+      return all.find((i: any) => i.id === inspectionId);
+    },
+    enabled: !!inspectionId
+  });
+
+  useEffect(() => {
+    if (existingInspection) {
+      setAnswers(existingInspection.checklistData || {});
+      if (existingInspection.inspectionDate) {
+        setInspectionDate(new Date(existingInspection.inspectionDate).toISOString().slice(0, 10));
+      }
+      setInspectorName(existingInspection.inspector || '');
+      setOverallResult(existingInspection.result || 'UYGUNDUR');
+    }
+  }, [existingInspection]);
+
   const saveMutation = useMutation({
     mutationFn: async (payload: any) => {
-      const res = await api.post(`/build-management/projects/${id}/inspections/ohs`, payload);
-      if (!res.ok) throw new Error('Kaydedilemedi');
-      return res.json();
+      if (inspectionId) {
+        const res = await api.put(`/build-management/projects/${id}/inspections/ohs/${inspectionId}`, payload);
+        if (!res.ok) throw new Error('Güncellenemedi');
+        return res.json();
+      } else {
+        const res = await api.post(`/build-management/projects/${id}/inspections/ohs`, payload);
+        if (!res.ok) throw new Error('Kaydedilemedi');
+        return res.json();
+      }
     },
     onSuccess: () => {
       toast.success('Denetim başarıyla kaydedildi.');
@@ -82,8 +122,9 @@ export default function BuildInspectionOHSFormPage() {
 
     saveMutation.mutate({
       inspectionDate,
-      inspector: user?.fullName || 'Bilinmeyen Kullanıcı',
+      inspector: inspectorName,
       checklistData: answers,
+      result: overallResult,
       notes: ''
     });
   };
@@ -111,14 +152,29 @@ export default function BuildInspectionOHSFormPage() {
             <strong>Proje Adı:</strong> {project?.name} <br />
             <strong>Çalışma Alanı:</strong> {project?.workArea}
           </div>
-          <div className="flex flex-col gap-1 w-64">
-            <label className="text-xs font-semibold text-slate-500">Tarih</label>
-            <input 
-              type="date" 
-              value={inspectionDate} 
-              onChange={e => setInspectionDate(e.target.value)}
-              className="w-full text-sm p-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-[#1a1d1f]"
-            />
+          <div className="flex gap-4">
+            <div className="flex flex-col gap-1 w-64">
+              <label className="text-xs font-semibold text-slate-500">Denetçi</label>
+              <Select value={inspectorName} onValueChange={setInspectorName}>
+                <SelectTrigger className="w-full text-sm bg-white dark:bg-[#1a1d1f]">
+                  <SelectValue placeholder="Denetçi Seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((u: any) => (
+                    <SelectItem key={u.username} value={u.fullName}>{u.fullName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1 w-48">
+              <label className="text-xs font-semibold text-slate-500">Tarih</label>
+              <input 
+                type="date" 
+                value={inspectionDate} 
+                onChange={e => setInspectionDate(e.target.value)}
+                className="w-full text-sm p-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-[#1a1d1f]"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -174,6 +230,38 @@ export default function BuildInspectionOHSFormPage() {
               </div>
             );
           })}
+        </div>
+        
+        <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
+          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">Genel Değerlendirme Sonucu</label>
+          <div className="flex gap-4">
+            <button
+              onClick={() => setOverallResult('UYGUNDUR')}
+              className={`flex-1 py-3 px-4 rounded-lg font-bold border transition-colors ${
+                overallResult === 'UYGUNDUR' 
+                  ? 'bg-emerald-50 border-emerald-500 text-emerald-700' 
+                  : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              <span className="flex items-center justify-center gap-2">
+                <span className={`material-symbols-outlined ${overallResult === 'UYGUNDUR' ? 'text-emerald-500' : 'text-slate-400'}`}>check_circle</span>
+                Uygun
+              </span>
+            </button>
+            <button
+              onClick={() => setOverallResult('UYGUN DEĞİLDİR')}
+              className={`flex-1 py-3 px-4 rounded-lg font-bold border transition-colors ${
+                overallResult === 'UYGUN DEĞİLDİR' 
+                  ? 'bg-red-50 border-red-500 text-red-700' 
+                  : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              <span className="flex items-center justify-center gap-2">
+                <span className={`material-symbols-outlined ${overallResult === 'UYGUN DEĞİLDİR' ? 'text-red-500' : 'text-slate-400'}`}>cancel</span>
+                Uygun Değil
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 

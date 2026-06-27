@@ -23,11 +23,14 @@ const INFECTION_CLASS_QUESTIONS: Record<string, string[]> = {
     "Mevcut havalandırma sistemi kanalın kontaminasyonunu engellemek için çalışma yapılan bölgede kaldırılır veya izole edilir.",
     "Çalışma bölgesini çalışma dışı bölgelere kapatmak için bariyerler tamamlanır.",
     "HEPA ile donanımlı hava filtrasyon birimleri kullanılarak çalışma bölgesi içinde negatif basıncı idame ettirilir.",
-    "İnşaat işçileri çalışma bölgesinden hasta bakım bölgelerine giderken koruyucu elbise (örn; önlük, galoş) giyilir."
+    "İnşaat işçileri çalışma bölgesinden hasta bakım bölgelerine giderken koruyucu elbise (örn; önlük, galoş) giyilir.",
+    "İnşaat atığı transport edilmeden önce kapağı sıkı kapalı kaplarda toplanır."
   ],
   "Sınıf IV": [
     "Delik, kanal ve kablo girişleri uygun olarak kapatılır.",
-    "Çalışma bölgesine giren tüm personel galoş giyer. İşçilerin çalışma alanından çıktığı her seferde galoş değiştirilir."
+    "Çalışma bölgesine giren tüm personel galoş giyer. İşçilerin çalışma alanından çıktığı her seferde galoş değiştirilir.",
+    "Çalışmanın uygulandığı bölgede mevcut havalandırma sistem izole edilir.",
+    "Çalışma bölgesini çalışma dışı bölgelere kapatmak için bariyerler tamamlanır."
   ]
 };
 
@@ -45,17 +48,20 @@ const getQuestionsForClass = (icraClass: string) => {
 };
 
 export default function BuildInspectionInfectionFormPage() {
-  const { id } = useParams();
+  const { id, inspectionId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState('');
+  const [inspectorName, setInspectorName] = useState(`${currentUser.firstName || ''} ${currentUser.lastName || ''}`);
+  const [overallResult, setOverallResult] = useState('UYGUNDUR');
+  
   const [questions, setQuestions] = useState<{className: string, text: string}[]>([]);
   const [openQuestions, setOpenQuestions] = useState<string[]>([]);
-
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
   const { data: project, isLoading } = useQuery({
     queryKey: ['buildProject', id],
@@ -66,11 +72,27 @@ export default function BuildInspectionInfectionFormPage() {
     }
   });
 
+  const { data: existingInspection } = useQuery({
+    queryKey: ['infectionInspection', inspectionId],
+    queryFn: async () => {
+      const res = await api.get(`/build-management/projects/${id}/inspections/infection`);
+      const all = await res.json();
+      return all.find((i: any) => i.id === inspectionId);
+    },
+    enabled: !!inspectionId
+  });
+
   const mutation = useMutation({
     mutationFn: async (payload: any) => {
-      const res = await api.post(`/build-management/projects/${id}/inspections/infection`, payload);
-      if (!res.ok) throw new Error('Kaydedilemedi');
-      return res.json();
+      if (inspectionId) {
+        const res = await api.put(`/build-management/projects/${id}/inspections/infection/${inspectionId}`, payload);
+        if (!res.ok) throw new Error('Güncellenemedi');
+        return res.json();
+      } else {
+        const res = await api.post(`/build-management/projects/${id}/inspections/infection`, payload);
+        if (!res.ok) throw new Error('Kaydedilemedi');
+        return res.json();
+      }
     },
     onSuccess: () => {
       toast.success('Denetim başarıyla kaydedildi.');
@@ -94,6 +116,17 @@ export default function BuildInspectionInfectionFormPage() {
     }
   }, [project]);
 
+  useEffect(() => {
+    if (existingInspection) {
+      setAnswers(existingInspection.checklistData || {});
+      if (existingInspection.inspectionDate) {
+        setDate(new Date(existingInspection.inspectionDate).toISOString().split('T')[0]);
+      }
+      setInspectorName(existingInspection.inspector || '');
+      setOverallResult(existingInspection.result || 'UYGUNDUR');
+    }
+  }, [existingInspection]);
+
   const handleAnswer = (qIndex: number, value: string) => {
     setAnswers(prev => ({ ...prev, [(qIndex + 1).toString()]: value }));
   };
@@ -106,8 +139,9 @@ export default function BuildInspectionInfectionFormPage() {
 
     mutation.mutate({
       inspectionDate: new Date(date).toISOString(),
-      inspector: `${currentUser.firstName} ${currentUser.lastName}`,
+      inspector: inspectorName,
       checklistData: answers,
+      result: overallResult,
       notes
     });
   };
@@ -135,12 +169,13 @@ export default function BuildInspectionInfectionFormPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Denetçi</label>
+            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Denetçi (Enfeksiyon Hemşiresi)</label>
             <input 
               type="text"
-              disabled
-              className="w-full px-4 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-500"
-              value={`${currentUser.firstName || ''} ${currentUser.lastName || ''}`}
+              placeholder="Ad Soyad giriniz..."
+              className="w-full px-4 py-2 bg-slate-50 dark:bg-[#202427] border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-blue-500"
+              value={inspectorName}
+              onChange={(e) => setInspectorName(e.target.value)}
             />
           </div>
         </div>
@@ -213,6 +248,38 @@ export default function BuildInspectionInfectionFormPage() {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           ></textarea>
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
+          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">Genel Değerlendirme Sonucu</label>
+          <div className="flex gap-4">
+            <button
+              onClick={() => setOverallResult('UYGUNDUR')}
+              className={`flex-1 py-3 px-4 rounded-lg font-bold border transition-colors ${
+                overallResult === 'UYGUNDUR' 
+                  ? 'bg-emerald-50 border-emerald-500 text-emerald-700' 
+                  : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              <span className="flex items-center justify-center gap-2">
+                <span className={`material-symbols-outlined ${overallResult === 'UYGUNDUR' ? 'text-emerald-500' : 'text-slate-400'}`}>check_circle</span>
+                Uygun
+              </span>
+            </button>
+            <button
+              onClick={() => setOverallResult('UYGUN DEĞİLDİR')}
+              className={`flex-1 py-3 px-4 rounded-lg font-bold border transition-colors ${
+                overallResult === 'UYGUN DEĞİLDİR' 
+                  ? 'bg-red-50 border-red-500 text-red-700' 
+                  : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              <span className="flex items-center justify-center gap-2">
+                <span className={`material-symbols-outlined ${overallResult === 'UYGUN DEĞİLDİR' ? 'text-red-500' : 'text-slate-400'}`}>cancel</span>
+                Uygun Değil
+              </span>
+            </button>
+          </div>
         </div>
 
         <div className="mt-8 flex justify-end gap-4">

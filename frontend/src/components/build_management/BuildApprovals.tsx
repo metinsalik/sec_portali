@@ -61,8 +61,6 @@ export function BuildApprovals({ project }: BuildApprovalsProps) {
                       <span className="material-symbols-outlined text-emerald-500 text-sm">check_circle</span>
                       <span className="font-semibold text-emerald-600">Onaylandı</span>
                     </div>
-                    <p><strong>Kişi:</strong> {approval.approvedBy}</p>
-                    <p><strong>Tarih:</strong> {format(new Date(approval.approvedAt), 'dd.MM.yyyy HH:mm', { locale: tr })}</p>
                   </div>
                 ) : (
                   <div className="text-xs text-amber-600 flex items-center gap-1 mt-2">

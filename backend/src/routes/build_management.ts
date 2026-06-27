@@ -540,7 +540,21 @@ router.get('/projects/:id/documents', async (req: AuthRequest, res: Response) =>
     res.json(docs);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Dokümanlar getirilemedi' });
+    res.status(500).json({ error: 'Dokümanlar getirilirken hata oluştu' });
+  }
+});
+
+// Doküman sil
+router.delete('/projects/:id/documents/:documentId', async (req: AuthRequest, res: Response) => {
+  try {
+    const { documentId } = req.params;
+    await prisma.buildDocument.delete({
+      where: { id: documentId }
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting document:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -581,7 +595,7 @@ router.get('/projects/:id/inspections/ohs', async (req, res) => {
 router.post('/projects/:id/inspections/ohs', async (req, res) => {
   try {
     const { id } = req.params;
-    const { inspectionDate, inspector, checklistData, notes } = req.body;
+    const { inspectionDate, inspector, checklistData, notes, result } = req.body;
     const activeDate = inspectionDate ? new Date(inspectionDate) : new Date();
 
     let hasUygunDegil = false;
@@ -657,7 +671,7 @@ router.post('/projects/:id/inspections/ohs', async (req, res) => {
       }
     }
 
-    const resultStatus = hasUygunDegil ? 'UYGUN DEĞİLDİR' : 'UYGUNDUR';
+    const resultStatus = result || (hasUygunDegil ? 'UYGUN DEĞİLDİR' : 'UYGUNDUR');
 
     const newInspection = await prisma.buildInspectionOHS.create({
       data: {
@@ -673,6 +687,29 @@ router.post('/projects/:id/inspections/ohs', async (req, res) => {
     res.json(newInspection);
   } catch (error) {
     console.error('Error creating OHS inspection:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PUT /projects/:id/inspections/ohs/:inspectionId - Update OHS inspection
+router.put('/projects/:id/inspections/ohs/:inspectionId', async (req, res) => {
+  try {
+    const { inspectionId } = req.params;
+    const { inspectionDate, inspector, checklistData, notes, result } = req.body;
+
+    const updated = await prisma.buildInspectionOHS.update({
+      where: { id: inspectionId },
+      data: {
+        inspectionDate: new Date(inspectionDate),
+        inspector,
+        checklistData,
+        result,
+        notes
+      }
+    });
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating OHS inspection:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -696,7 +733,7 @@ router.get('/projects/:id/inspections/infection', async (req, res) => {
 router.post('/projects/:id/inspections/infection', async (req, res) => {
   try {
     const { id } = req.params;
-    const { inspectionDate, inspector, checklistData, notes } = req.body;
+    const { inspectionDate, inspector, checklistData, notes, result } = req.body;
     const activeDate = inspectionDate ? new Date(inspectionDate) : new Date();
 
     let hasUygunDegil = false;
@@ -766,7 +803,7 @@ router.post('/projects/:id/inspections/infection', async (req, res) => {
       }
     }
 
-    const resultStatus = hasUygunDegil ? 'UYGUN DEĞİLDİR' : 'UYGUNDUR';
+    const resultStatus = result || (hasUygunDegil ? 'UYGUN DEĞİLDİR' : 'UYGUNDUR');
 
     const newInspection = await prisma.buildInspectionInfection.create({
       data: {
@@ -782,6 +819,29 @@ router.post('/projects/:id/inspections/infection', async (req, res) => {
     res.json(newInspection);
   } catch (error) {
     console.error('Error creating Infection inspection:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PUT /projects/:id/inspections/infection/:inspectionId - Update Infection inspection
+router.put('/projects/:id/inspections/infection/:inspectionId', async (req, res) => {
+  try {
+    const { inspectionId } = req.params;
+    const { inspectionDate, inspector, checklistData, notes, result } = req.body;
+
+    const updated = await prisma.buildInspectionInfection.update({
+      where: { id: inspectionId },
+      data: {
+        inspectionDate: new Date(inspectionDate),
+        inspector,
+        checklistData,
+        result,
+        notes
+      }
+    });
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating Infection inspection:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

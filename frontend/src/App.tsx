@@ -880,7 +880,39 @@ function App() {
                   }
                 />
                 <Route
+                  path="/build-management/project/:id/inspections/ohs"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><BuildInspectionOHSFormPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/build-management/project/:id/inspections/ohs/edit/:inspectionId"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><BuildInspectionOHSFormPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/build-management/project/:id/inspections/infection/new"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><BuildInspectionInfectionFormPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/build-management/project/:id/inspections/infection"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><BuildInspectionInfectionFormPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/build-management/project/:id/inspections/infection/edit/:inspectionId"
                   element={
                     <ProtectedRoute>
                       <AppLayout><BuildInspectionInfectionFormPage /></AppLayout>

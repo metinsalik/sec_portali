@@ -131,7 +131,16 @@ export default function BuildProjectInspectionsDashboard() {
                         {inspection.result}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right flex justify-end gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="text-orange-600 hover:text-orange-800 hover:bg-orange-50"
+                        onClick={() => navigate(`/build-management/project/${id}/inspections/ohs/edit/${inspection.id}`)}
+                      >
+                        <span className="material-symbols-outlined mr-1 text-[18px]">edit</span>
+                        Düzenle
+                      </Button>
                       <Button 
                         variant="ghost" 
                         size="sm"
@@ -142,7 +151,7 @@ export default function BuildProjectInspectionsDashboard() {
                         }}
                       >
                         <span className="material-symbols-outlined mr-1 text-[18px]">print</span>
-                        Rapor Görüntüle / Yazdır
+                        Görüntüle
                       </Button>
                     </td>
                   </tr>
@@ -189,7 +198,16 @@ export default function BuildProjectInspectionsDashboard() {
                         {inspection.result}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right flex justify-end gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="text-orange-600 hover:text-orange-800 hover:bg-orange-50"
+                        onClick={() => navigate(`/build-management/project/${id}/inspections/infection/edit/${inspection.id}`)}
+                      >
+                        <span className="material-symbols-outlined mr-1 text-[18px]">edit</span>
+                        Düzenle
+                      </Button>
                       <Button 
                         variant="ghost" 
                         size="sm"
@@ -200,7 +218,7 @@ export default function BuildProjectInspectionsDashboard() {
                         }}
                       >
                         <span className="material-symbols-outlined mr-1 text-[18px]">print</span>
-                        Rapor Görüntüle / Yazdır
+                        Görüntüle
                       </Button>
                     </td>
                   </tr>
