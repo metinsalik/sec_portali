@@ -302,9 +302,6 @@ export default function RiskViewPage() {
                       <div className="space-y-1">
                         <div className="flex justify-between items-start">
                           <span className="font-bold text-sm text-foreground">{log.action}</span>
-                          <span className="text-[10px] text-muted-foreground font-medium">
-                            {new Date(log.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}
-                          </span>
                         </div>
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <User className="w-3 h-3" /> {log.username}
