@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft, Plus, Upload, Pencil, X, Check, AlertTriangle,
   Eye, ArrowUpDown, Trash2, Search
@@ -70,18 +70,36 @@ export default function RiskDepartmentPage() {
   const { user } = useAuth();
   const isAdminOrMgmt = user?.isAdmin || user?.isManagement;
 
+  const storageKey = `risk_dept_filters_${departmentId}`;
+  const loadState = (key: string, defaultVal: any) => {
+    try {
+      const stored = sessionStorage.getItem(storageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed[key] !== undefined) return parsed[key];
+      }
+    } catch (e) {}
+    return defaultVal;
+  };
+
   const [showImport, setShowImport] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<string>('');
-  const [filterCategory, setFilterCategory] = useState<string>('');
-  const [filterResponsible, setFilterResponsible] = useState<string>('');
-  const [filterArea, setFilterArea] = useState<string>('');
-  const [filterInitialLevel, setFilterInitialLevel] = useState<string>('');
-  const [filterFinalLevel, setFilterFinalLevel] = useState<string>('');
-  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [filterStatus, setFilterStatus] = useState<string>(() => loadState('filterStatus', ''));
+  const [filterCategory, setFilterCategory] = useState<string>(() => loadState('filterCategory', ''));
+  const [filterResponsible, setFilterResponsible] = useState<string>(() => loadState('filterResponsible', ''));
+  const [filterArea, setFilterArea] = useState<string>(() => loadState('filterArea', ''));
+  const [filterInitialLevel, setFilterInitialLevel] = useState<string>(() => loadState('filterInitialLevel', ''));
+  const [filterFinalLevel, setFilterFinalLevel] = useState<string>(() => loadState('filterFinalLevel', ''));
+  const [searchTerm, setSearchTerm] = useState<string>(() => loadState('searchTerm', ''));
 
   // Sorting State
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'initialScore', direction: 'desc' });
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(() => loadState('sortConfig', { key: 'initialScore', direction: 'desc' }));
+
+  useEffect(() => {
+    sessionStorage.setItem(storageKey, JSON.stringify({
+      filterStatus, filterCategory, filterResponsible, filterArea, filterInitialLevel, filterFinalLevel, searchTerm, sortConfig
+    }));
+  }, [filterStatus, filterCategory, filterResponsible, filterArea, filterInitialLevel, filterFinalLevel, searchTerm, sortConfig, storageKey]);
 
   const { data: department } = useQuery({
     queryKey: ['risk-department-details', departmentId],

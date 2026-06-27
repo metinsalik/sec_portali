@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft, Search, Eye, Pencil, Trash2, ArrowUpDown, AlertTriangle, Building2
 } from 'lucide-react';
@@ -64,14 +64,32 @@ export default function RiskCategoryPage() {
   const queryClient = useQueryClient();
   const token = localStorage.getItem('token');
 
-  const [filterStatus, setFilterStatus] = useState<string>('');
-  const [filterDepartment, setFilterDepartment] = useState<string>('');
-  const [filterResponsible, setFilterResponsible] = useState<string>('');
-  const [filterInitialLevel, setFilterInitialLevel] = useState<string>('');
-  const [filterFinalLevel, setFilterFinalLevel] = useState<string>('');
-  const [searchTerm, setSearchTerm] = useState<string>('');
+  const storageKey = `risk_cat_filters_${facilityId}_${mainCat}_${subCat}`;
+  const loadState = (key: string, defaultVal: any) => {
+    try {
+      const stored = sessionStorage.getItem(storageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed[key] !== undefined) return parsed[key];
+      }
+    } catch (e) {}
+    return defaultVal;
+  };
 
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'initialScore', direction: 'desc' });
+  const [filterStatus, setFilterStatus] = useState<string>(() => loadState('filterStatus', ''));
+  const [filterDepartment, setFilterDepartment] = useState<string>(() => loadState('filterDepartment', ''));
+  const [filterResponsible, setFilterResponsible] = useState<string>(() => loadState('filterResponsible', ''));
+  const [filterInitialLevel, setFilterInitialLevel] = useState<string>(() => loadState('filterInitialLevel', ''));
+  const [filterFinalLevel, setFilterFinalLevel] = useState<string>(() => loadState('filterFinalLevel', ''));
+  const [searchTerm, setSearchTerm] = useState<string>(() => loadState('searchTerm', ''));
+
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(() => loadState('sortConfig', { key: 'initialScore', direction: 'desc' }));
+
+  useEffect(() => {
+    sessionStorage.setItem(storageKey, JSON.stringify({
+      filterStatus, filterDepartment, filterResponsible, filterInitialLevel, filterFinalLevel, searchTerm, sortConfig
+    }));
+  }, [filterStatus, filterDepartment, filterResponsible, filterInitialLevel, filterFinalLevel, searchTerm, sortConfig, storageKey]);
 
   // Tesis Bilgisi
   const { data: facilities = [] } = useQuery({
