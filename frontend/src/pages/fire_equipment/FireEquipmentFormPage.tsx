@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Flame, ArrowLeft, Save, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useAuth } from '@/context/AuthContext';
+import { ExcelBulkImportModal } from './components/ExcelBulkImportModal';
 
 export default function FireEquipmentFormPage() {
   const { id } = useParams();
@@ -16,6 +18,7 @@ export default function FireEquipmentFormPage() {
   const facilityId = localStorage.getItem('activeFacilityId');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const [formData, setFormData] = useState<any>({
     equipmentNo: '',
@@ -104,7 +107,7 @@ export default function FireEquipmentFormPage() {
         subCatId = data.category.id;
       }
 
-      const prodDate = data.productionDate ? new Date(data.productionDate).toISOString().split('T')[0] : '';
+      const prodDate = data.productionDate ? new Date(data.productionDate).toISOString().slice(0, 7) : '';
 
       if (cloneId) {
         setFormData({
@@ -127,7 +130,7 @@ export default function FireEquipmentFormPage() {
           companyId: data.companyId || 'none',
           responsibleUnit: data.responsibleUnit || '',
           productionDate: prodDate,
-          lastMaintenanceDate: data.inventoryData?.lastMaintenanceDate ? new Date(data.inventoryData.lastMaintenanceDate).toISOString().split('T')[0] : ''
+          lastMaintenanceDate: data.inventoryData?.lastMaintenanceDate ? new Date(data.inventoryData.lastMaintenanceDate).toISOString().slice(0, 7) : ''
         });
       }
 
@@ -317,7 +320,12 @@ export default function FireEquipmentFormPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <Label>Kategori *</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Kategori *</Label>
+                  {categories?.find((c: any) => c.id === formData.categoryId)?.name === 'Yangın Tüpü' && user?.isManagement && facilityId && (
+                    <ExcelBulkImportModal facilityId={facilityId} />
+                  )}
+                </div>
                 <select 
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
                   value={formData.categoryId || ''} 
@@ -367,16 +375,24 @@ export default function FireEquipmentFormPage() {
                   {inventoryParams.map((param: any, idx: number) => (
                     <div key={idx} className="space-y-2">
                       <Label>{param.name}</Label>
-                      <select
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                        value={inventoryData[param.name] || ''}
-                        onChange={(e) => handleInventoryDataChange(param.name, e.target.value)}
-                      >
-                        <option value="">Seçiniz...</option>
-                        {param.options.map((opt: string, oidx: number) => (
-                          <option key={oidx} value={opt}>{opt}</option>
-                        ))}
-                      </select>
+                      {param.type === 'text' || param.type === 'textarea' || !param.options || param.options.length === 0 ? (
+                        <Textarea
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background min-h-[40px]"
+                          value={inventoryData[param.name] || ''}
+                          onChange={(e) => handleInventoryDataChange(param.name, e.target.value)}
+                        />
+                      ) : (
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                          value={inventoryData[param.name] || ''}
+                          onChange={(e) => handleInventoryDataChange(param.name, e.target.value)}
+                        >
+                          <option value="">Seçiniz...</option>
+                          {param.options.map((opt: string, oidx: number) => (
+                            <option key={oidx} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -490,11 +506,11 @@ export default function FireEquipmentFormPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="productionDate">İmal Tarihi</Label>
-                <Input type="date" id="productionDate" name="productionDate" value={formData.productionDate} onChange={handleChange} />
+                <Input type="month" id="productionDate" name="productionDate" value={formData.productionDate} onChange={handleChange} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastMaintenanceDate">Son Bakım Tarihi <span className="text-muted-foreground text-xs font-normal">(İlk kayıt için)</span></Label>
-                <Input type="date" id="lastMaintenanceDate" name="lastMaintenanceDate" value={formData.lastMaintenanceDate || ''} onChange={handleChange} />
+                <Input type="month" id="lastMaintenanceDate" name="lastMaintenanceDate" value={formData.lastMaintenanceDate || ''} onChange={handleChange} />
                 <p className="text-[10px] text-muted-foreground">Girilirse sonraki bakım otomatik hesaplanır.</p>
               </div>
             </div>

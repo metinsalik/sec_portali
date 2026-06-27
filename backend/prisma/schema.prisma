@@ -1245,6 +1245,7 @@ model FireEquipment {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  notes     String?
 
   category    FireEquipmentCategory     @relation(fields: [categoryId], references: [id])
   location    HazmatDepartment?         @relation(fields: [locationId], references: [id])
@@ -1791,6 +1792,7 @@ model BTUygunsuzluk {
   facility         Facility           @relation(fields: [facilityId], references: [id], onDelete: Cascade)
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
+  notes            String?
 }
 
 enum BTUygunsuzlukDurum {

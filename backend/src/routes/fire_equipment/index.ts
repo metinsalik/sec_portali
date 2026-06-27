@@ -336,6 +336,123 @@ router.get('/equipment/qr/:code', async (req, res) => {
   }
 });
 
+router.post('/equipment/bulk/:facilityId', async (req, res) => {
+  try {
+    const { facilityId } = req.params;
+    const { equipments } = req.body;
+
+    if (!Array.isArray(equipments)) {
+      return res.status(400).json({ error: 'Geçersiz veri formatı.' });
+    }
+
+    const createdEquipments = [];
+
+    for (const eq of equipments) {
+      // Find or create company
+      let companyId = null;
+      if (eq.firma) {
+        let company = await prisma.fireEquipmentCompany.findFirst({
+          where: { facilityId, name: eq.firma }
+        });
+        if (!company) {
+          company = await prisma.fireEquipmentCompany.create({
+            data: { facilityId, name: eq.firma }
+          });
+        }
+        companyId = company.id;
+      }
+
+      // Find location by block, floor, unit, description
+      let locationId = null;
+      if (eq.blok || eq.kat || eq.birim || eq.mahal) {
+        let location = await prisma.hazmatDepartment.findFirst({
+          where: {
+            facilityId,
+            building: eq.blok || null,
+            floor: eq.kat || null,
+            name: eq.birim || null,
+            description: eq.mahal || null
+          }
+        });
+        
+        if (!location) {
+          location = await prisma.hazmatDepartment.create({
+            data: {
+              facilityId,
+              building: eq.blok || null,
+              floor: eq.kat || null,
+              name: eq.birim || null,
+              description: eq.mahal || null
+            }
+          });
+        }
+        locationId = location.id;
+      }
+
+      // Find Subcategory
+      let categoryId = null;
+      if (eq.kategori && eq.alt_kategori) {
+        const cat = await prisma.fireEquipmentCategory.findFirst({
+          where: { name: eq.alt_kategori }
+        });
+        if (cat) categoryId = cat.id;
+      } else if (eq.kategori) {
+        const cat = await prisma.fireEquipmentCategory.findFirst({
+          where: { name: eq.kategori, parentId: null }
+        });
+        if (cat) categoryId = cat.id;
+      }
+
+      if (!categoryId) {
+        continue; // Skip if no category could be matched
+      }
+
+      // Dates
+      let dolumTarihi = eq.dolum_tarihi ? new Date(eq.dolum_tarihi) : null;
+      let imalTarihi = eq.imal_tarihi ? new Date(eq.imal_tarihi) : null;
+      
+      if (!imalTarihi && dolumTarihi) {
+        const year = dolumTarihi.getFullYear();
+        if (year === 2025) {
+          imalTarihi = new Date(dolumTarihi);
+          imalTarihi.setFullYear(year - 1);
+        } else if (year === 2026) {
+          imalTarihi = new Date(dolumTarihi);
+          imalTarihi.setFullYear(year - 2);
+        }
+      }
+
+      const inventoryData = {
+        lastMaintenanceDate: dolumTarihi ? dolumTarihi.toISOString() : undefined,
+        Açıklama: eq.not || undefined,
+        Kapasite: eq.kapasite || undefined,
+        Manometre: eq.manometre || undefined
+      };
+
+      const newEq = await prisma.fireEquipment.create({
+        data: {
+          facilityId,
+          categoryId,
+          locationId,
+          companyId,
+          equipmentNo: eq.ekipman_no || `YT-${Math.floor(Math.random()*10000)}`,
+          productionDate: imalTarihi,
+          capacity: eq.kapasite ? String(eq.kapasite) : null,
+          responsibleUnit: eq.sorumlu_departman || null,
+          inventoryData,
+          notes: eq.not ? String(eq.not) : null
+        }
+      });
+      createdEquipments.push(newEq);
+    }
+
+    res.json({ message: `${createdEquipments.length} ekipman başarıyla eklendi.`, count: createdEquipments.length });
+  } catch (error) {
+    console.error('Error bulk importing equipment:', error);
+    res.status(500).json({ error: 'Toplu ekleme sırasında hata oluştu.' });
+  }
+});
+
 router.post('/equipment/:facilityId', async (req, res) => {
   try {
     const { facilityId } = req.params;

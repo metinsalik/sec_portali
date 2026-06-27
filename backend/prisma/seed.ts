@@ -20,13 +20,12 @@ const checklists = {
     ]
   },
   "Yangın Tüpü": {
-    altKategoriler: ["Kuru Kimyevi Tozlu", "CO₂", "Köpüklü", "Sulu", "Temiz Gazlı"],
+    altKategoriler: ["AFFF Köpük", "HFC-227", "Karbondioksit", "Kuru Kimyevi Tozlu"],
     inventoryParameters: [
-      { name: "Söndürme Maddesi", options: ["KKT", "CO₂", "Köpük", "Su", "Temiz Gaz"] },
       { name: "Kapasite", options: ["2 kg", "5 kg", "6 kg", "9 kg", "12 kg", "25 kg", "50 kg"] },
       { name: "Kullanım Tipi", options: ["Taşınabilir", "Arabalı"] },
-      { name: "Basınç Durumu", options: ["Basınçlı", "Kartuşlu"] },
-      { name: "Manometre", options: ["Var", "Yok"] }
+      { name: "Manometre", options: ["Var", "Yok"] },
+      { name: "Açıklama", type: "text" }
     ],
     bakimKontrolleri: [
       { id: "manometreOkuma", label: "Manometre yeşil bölgede mi?", type: "checkbox" },
