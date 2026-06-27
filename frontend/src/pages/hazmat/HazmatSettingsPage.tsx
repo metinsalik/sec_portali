@@ -69,10 +69,10 @@ export default function HazmatSettingsPage() {
           <DeptsTab />
         </TabsContent>
         <TabsContent value="ghs">
-          <ImageItemsTab type="hazard-labels" title="GHS Tehlike Etiketleri" queryKey="hazmat-hazard-labels" hasCode={true} />
+          <ImageItemsTab type="adr-labels" title="GHS Tehlike Etiketleri" queryKey="hazmat-adr-labels" hasCode={true} />
         </TabsContent>
         <TabsContent value="adr">
-          <ImageItemsTab type="adr-labels" title="ADR Tehlike Etiketleri" queryKey="hazmat-adr-labels" hasCode={true} />
+          <ImageItemsTab type="hazard-labels" title="ADR Tehlike Etiketleri" queryKey="hazmat-hazard-labels" hasCode={true} />
         </TabsContent>
         <TabsContent value="ppe">
           <ImageItemsTab type="ppes" title="Kişisel Koruyucu Donanımlar (KKD)" queryKey="hazmat-ppes" hasCode={false} />

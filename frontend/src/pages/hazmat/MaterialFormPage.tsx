@@ -438,9 +438,9 @@ export default function MaterialFormPage() {
               <Textarea value={formData.hazardDescription} onChange={e => setFormData({...formData, hazardDescription: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
             </div>
 
-            {/* 7. Tehlike Etiketleri (GHS) */}
+            {/* 7. Tehlike Etiketleri (ADR) */}
             <div className="space-y-2">
-              <Label className="text-base block mb-3">7. Tehlike Etiketleri (GHS)</Label>
+              <Label className="text-base block mb-3">7. Tehlike Etiketleri (ADR)</Label>
               <div className="flex flex-wrap gap-4">
                 {hazardLabels.map(hl => {
                   const isSelected = formData.hazardLabelIds.includes(hl.id);
@@ -521,9 +521,9 @@ export default function MaterialFormPage() {
               <Textarea value={formData.transportInfo} onChange={e => setFormData({...formData, transportInfo: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
             </div>
 
-            {/* 19. Tehlike Etiketleri (ADR) */}
+            {/* 19. Tehlike Etiketleri (GHS) */}
             <div className="space-y-2">
-              <Label className="text-base block mb-3">19. Tehlike Etiketleri (ADR)</Label>
+              <Label className="text-base block mb-3">19. Tehlike Etiketleri (GHS)</Label>
               <div className="flex flex-wrap gap-4">
                 {adrLabels.map(hl => {
                   const isSelected = formData.adrLabelIds.includes(hl.id);
