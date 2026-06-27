@@ -323,7 +323,7 @@ export default function FireEquipmentFormPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>Kategori *</Label>
-                  {categories?.find((c: any) => c.id === formData.categoryId)?.name === 'Yangın Tüpü' && user?.isManagement && facilityId && (
+                  {categories?.find((c: any) => c.id === formData.categoryId)?.name === 'Yangın Tüpü' && facilityId && (
                     <ExcelBulkImportModal facilityId={facilityId} />
                   )}
                 </div>
