@@ -429,8 +429,11 @@ router.post('/equipment/bulk/:facilityId', async (req, res) => {
       }
 
       let kapasite = eq.kapasite;
-      if (kapasite && !String(kapasite).toLowerCase().includes('kg')) {
-        kapasite = `${kapasite} kg`;
+      if (kapasite) {
+        let capStr = String(kapasite).toLowerCase().replace(/kg/g, '').replace(/[^0-9]/g, '');
+        if (capStr) {
+          kapasite = `${capStr} kg`;
+        }
       }
 
       let manometre = eq.manometre;
@@ -445,7 +448,8 @@ router.post('/equipment/bulk/:facilityId', async (req, res) => {
         lastMaintenanceDate: dolumTarihi ? dolumTarihi.toISOString() : undefined,
         Açıklama: eq.not || undefined,
         Kapasite: kapasite || undefined,
-        Manometre: manometre || undefined
+        Manometre: manometre || undefined,
+        "Kullanım Tipi": "Taşınabilir"
       };
 
       const newEq = await prisma.fireEquipment.create({

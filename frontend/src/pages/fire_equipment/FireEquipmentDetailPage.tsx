@@ -202,6 +202,8 @@ export default function FireEquipmentDetailPage() {
                     displayValue = value ? format(new Date(value), 'yyyy-MM') : '-';
                   }
 
+                  if (key === 'Kapasite' || key === 'kapasite') return null;
+
                   return (
                     <div key={key}>
                       <dt className="text-muted-foreground font-medium mb-1">{displayKey}</dt>
