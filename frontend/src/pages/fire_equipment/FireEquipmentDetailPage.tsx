@@ -257,12 +257,20 @@ export default function FireEquipmentDetailPage() {
                       
                       {m.maintenanceData && Object.keys(m.maintenanceData).length > 0 && (
                         <div className="mt-3 mb-3 bg-background rounded p-3 text-xs border grid grid-cols-2 gap-2">
-                          {Object.entries(m.maintenanceData).map(([key, val]: any) => (
-                            <div key={key}>
-                              <span className="text-muted-foreground block">{key}</span>
-                              <span className="font-medium">{val}</span>
-                            </div>
-                          ))}
+                          {Object.entries(m.maintenanceData).map(([key, val]: any) => {
+                            const paramDef = equipment?.category?.maintenanceParameters?.find((p: any) => p.id === key);
+                            const label = paramDef ? paramDef.label : key;
+                            let displayVal = val;
+                            if (paramDef?.type === 'date' && val) {
+                              try { displayVal = format(new Date(val), 'dd.MM.yyyy'); } catch(e){}
+                            }
+                            return (
+                              <div key={key}>
+                                <span className="text-muted-foreground block">{label}</span>
+                                <span className="font-medium">{displayVal}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                       
