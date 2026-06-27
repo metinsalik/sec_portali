@@ -118,7 +118,13 @@ export default function RiskViewPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4 border-b pb-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate(location.state?.from || `/risks/department/${departmentId}`)} className="h-8 px-2 -ml-2">
+          <Button variant="ghost" size="sm" onClick={() => {
+            if (window.history.state && window.history.state.idx > 0) {
+              navigate(-1);
+            } else {
+              navigate(location.state?.from || `/risks/department/${departmentId}`);
+            }
+          }} className="h-8 px-2 -ml-2">
             <ArrowLeft className="w-4 h-4 mr-1" /> Geri
           </Button>
           <div className="h-5 w-px bg-border" />
