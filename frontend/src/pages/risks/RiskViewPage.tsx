@@ -64,7 +64,7 @@ const LEVEL_BADGE: Record<string, string> = {
 };
 
 function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG['ACIK_TEHLIKE'];
+  const cfg = STATUS_MAP[status] || STATUS_MAP['ACIK_TEHLIKE'];
   return (
     <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${cfg.bg} ${cfg.color} ${cfg.border}`}>
       {cfg.label}
