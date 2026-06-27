@@ -255,16 +255,31 @@ export default function AppLayout({ children }: AppLayoutProps) {
               );
             }
             const Icon = item.icon!;
+            
+            const decodedSearch = decodeURIComponent(location.search);
+            let customIsActive = false;
+            
+            if (item.to?.includes('?category=')) {
+              customIsActive = (location.pathname + decodedSearch) === item.to;
+            } else if (item.to === '/fire-equipment/list') {
+              customIsActive = location.pathname === item.to && (!decodedSearch || !decodedSearch.includes('category='));
+            } else {
+              customIsActive = location.pathname.startsWith(item.to!) || (location.pathname === item.to); // React router default behavior approximation
+              if ((item as any).end && location.pathname !== item.to) {
+                customIsActive = false;
+              }
+            }
+
             return (
               <NavLink
                 key={item.label + '-' + i}
                 to={item.to!}
                 end={!!(item as any).end}
                 onClick={() => setIsSidebarOpen(false)}
-                className={({ isActive }) =>
+                className={() =>
                   cn(
                     'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors group',
-                    isActive
+                    customIsActive
                       ? 'bg-blue-600 text-white shadow-sm'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   )

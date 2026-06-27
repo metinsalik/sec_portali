@@ -59,12 +59,11 @@ export default function FireEquipmentListPage() {
   const currentFacilityName = facilities?.find((f: any) => f.id === facilityId)?.name || 'Tesis';
 
   const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const categoryNameQuery = searchParams.get('category');
   
   useEffect(() => {
     if (categories) {
-      const searchParams = new URLSearchParams(location.search);
-      const categoryNameQuery = searchParams.get('category');
-      
       if (categoryNameQuery) {
         const foundCat = categories.find((c: any) => c.name.toLowerCase() === categoryNameQuery.toLowerCase());
         if (foundCat) {
@@ -332,8 +331,9 @@ export default function FireEquipmentListPage() {
               <label className="text-xs font-medium text-muted-foreground">Kategori</label>
               <div className="flex gap-2">
                 <select 
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm disabled:opacity-50"
                   value={filterCategory}
+                  disabled={!!categoryNameQuery}
                   onChange={(e) => {
                     setFilterCategory(e.target.value);
                     setFilterSubcategory('all'); // reset sub
