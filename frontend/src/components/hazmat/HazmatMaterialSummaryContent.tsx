@@ -101,8 +101,8 @@ export function HazmatMaterialSummaryContent({
             <AlertTriangle className="w-4 h-4" /> GHS İşaretleri
           </h3>
           <div className="flex flex-wrap gap-2">
-            {material.hazardLabels?.length > 0 ? (
-              material.hazardLabels.map((hl: any) => (
+            {material.adrLabels?.length > 0 ? (
+              material.adrLabels.map((hl: any) => (
                 <div key={hl.label.id} className="flex flex-col items-center bg-muted/30 p-2 rounded-lg border w-[80px]">
                   <img src={hl.label.imageUrl} alt={hl.label.name} className="w-10 h-10 object-contain bg-white rounded-full border border-background shadow-sm" title={hl.label.name} />
                   <span className="text-[10px] text-center mt-1 text-muted-foreground leading-tight line-clamp-2">{hl.label.name}</span>
@@ -119,8 +119,8 @@ export function HazmatMaterialSummaryContent({
             <AlertTriangle className="w-4 h-4 text-orange-500" /> TDR (ADR) İşaretleri
           </h3>
           <div className="flex flex-wrap gap-2">
-            {material.adrLabels?.length > 0 ? (
-              material.adrLabels.map((al: any) => (
+            {material.hazardLabels?.length > 0 ? (
+              material.hazardLabels.map((al: any) => (
                 <div key={al.label.id} className="flex flex-col items-center bg-muted/30 p-2 rounded-lg border w-[80px]">
                   <img src={al.label.imageUrl} alt={al.label.name} className="w-10 h-10 object-contain bg-white rounded-full border border-background shadow-sm" title={al.label.name} />
                   <span className="text-[10px] text-center mt-1 text-muted-foreground leading-tight line-clamp-2">{al.label.name}</span>
