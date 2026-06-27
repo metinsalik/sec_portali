@@ -692,7 +692,15 @@ function App() {
                   }
                 />
                 <Route
-                  path="/hazmat/settings/labels"
+                  path="/hazmat/settings/ghs"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout><HazmatSettingsPage /></AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/hazmat/settings/adr"
                   element={
                     <ProtectedRoute>
                       <AppLayout><HazmatSettingsPage /></AppLayout>

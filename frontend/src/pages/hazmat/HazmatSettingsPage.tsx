@@ -19,7 +19,8 @@ export default function HazmatSettingsPage() {
     const path = location.pathname;
     if (path.includes('/departments')) return 'departments';
     if (path.includes('/units')) return 'units';
-    if (path.includes('/labels')) return 'ghs';
+    if (path.includes('/ghs')) return 'ghs';
+    if (path.includes('/adr')) return 'adr';
     if (path.includes('/ppe')) return 'ppe';
     if (path.includes('/categories')) return 'categories';
     return 'categories';
@@ -35,7 +36,8 @@ export default function HazmatSettingsPage() {
     setActiveTab(value);
     if (value === 'units') navigate('/hazmat/settings/units');
     else if (value === 'departments') navigate('/hazmat/settings/departments');
-    else if (value === 'ghs' || value === 'adr') navigate('/hazmat/settings/labels');
+    else if (value === 'ghs') navigate('/hazmat/settings/ghs');
+    else if (value === 'adr') navigate('/hazmat/settings/adr');
     else if (value === 'ppe') navigate('/hazmat/settings/ppe');
     else if (value === 'categories') navigate('/hazmat/settings/categories');
   };

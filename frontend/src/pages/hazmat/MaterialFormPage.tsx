@@ -438,17 +438,17 @@ export default function MaterialFormPage() {
               <Textarea value={formData.hazardDescription} onChange={e => setFormData({...formData, hazardDescription: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
             </div>
 
-            {/* 7. Tehlike Etiketleri (GHS) */}
+            {/* 7. Tehlike Etiketleri (ADR) */}
             <div className="space-y-2">
-              <Label className="text-base block mb-3">7. Tehlike Etiketleri</Label>
+              <Label className="text-base block mb-3">7. Tehlike Etiketleri (ADR)</Label>
               <div className="flex flex-wrap gap-4">
-                {hazardLabels.map(hl => {
-                  const isSelected = formData.hazardLabelIds.includes(hl.id);
+                {adrLabels.map(hl => {
+                  const isSelected = formData.adrLabelIds.includes(hl.id);
                   return (
-                    <div key={hl.id} onClick={() => toggleArrayItem('hazardLabelIds', hl.id)} className={`w-24 h-24 border rounded-lg flex flex-col items-center justify-center p-2 cursor-pointer transition-all ${isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md ring-2 ring-blue-500' : 'border-dashed hover:bg-muted'} ${!!selectedGlobalMaterial && !isEditMode && 'opacity-60 cursor-not-allowed'}`}>
+                    <div key={hl.id} onClick={() => toggleArrayItem('adrLabelIds', hl.id)} className={`w-24 h-24 border rounded-lg flex flex-col items-center justify-center p-2 cursor-pointer transition-all ${isSelected ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 shadow-md ring-2 ring-orange-500' : 'border-dashed hover:bg-muted'} ${!!selectedGlobalMaterial && !isEditMode && 'opacity-60 cursor-not-allowed'}`}>
                       {hl.imageUrl ? <img src={hl.imageUrl} alt={hl.name} className="w-12 h-12 object-contain mb-1" /> : <div className="w-12 h-12 bg-muted rounded flex items-center justify-center mb-1 text-xs">Yok</div>}
                       <span className="text-[10px] font-semibold text-center leading-tight">{hl.name}</span>
-                      {isSelected && <Check className="w-4 h-4 text-blue-500 absolute top-1 right-1" />}
+                      {isSelected && <Check className="w-4 h-4 text-orange-500 absolute top-1 right-1" />}
                     </div>
                   )
                 })}
@@ -521,17 +521,17 @@ export default function MaterialFormPage() {
               <Textarea value={formData.transportInfo} onChange={e => setFormData({...formData, transportInfo: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
             </div>
 
-            {/* 19. Tehlike Etiketleri (ADR) */}
+            {/* 19. Tehlike Etiketleri (GHS) */}
             <div className="space-y-2">
-              <Label className="text-base block mb-3">19. Tehlike Etiketleri (ADR)</Label>
+              <Label className="text-base block mb-3">19. Tehlike Etiketleri (GHS)</Label>
               <div className="flex flex-wrap gap-4">
-                {adrLabels.map(hl => {
-                  const isSelected = formData.adrLabelIds.includes(hl.id);
+                {hazardLabels.map(hl => {
+                  const isSelected = formData.hazardLabelIds.includes(hl.id);
                   return (
-                    <div key={hl.id} onClick={() => toggleArrayItem('adrLabelIds', hl.id)} className={`w-24 h-24 border rounded-lg flex flex-col items-center justify-center p-2 cursor-pointer transition-all ${isSelected ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 shadow-md ring-2 ring-orange-500' : 'border-dashed hover:bg-muted'} ${!!selectedGlobalMaterial && !isEditMode && 'opacity-60 cursor-not-allowed'}`}>
+                    <div key={hl.id} onClick={() => toggleArrayItem('hazardLabelIds', hl.id)} className={`w-24 h-24 border rounded-lg flex flex-col items-center justify-center p-2 cursor-pointer transition-all ${isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md ring-2 ring-blue-500' : 'border-dashed hover:bg-muted'} ${!!selectedGlobalMaterial && !isEditMode && 'opacity-60 cursor-not-allowed'}`}>
                       {hl.imageUrl ? <img src={hl.imageUrl} alt={hl.name} className="w-12 h-12 object-contain mb-1" /> : <div className="w-12 h-12 bg-muted rounded flex items-center justify-center mb-1 text-xs">Yok</div>}
                       <span className="text-[10px] font-semibold text-center leading-tight">{hl.name}</span>
-                      {isSelected && <Check className="w-4 h-4 text-orange-500 absolute top-1 right-1" />}
+                      {isSelected && <Check className="w-4 h-4 text-blue-500 absolute top-1 right-1" />}
                     </div>
                   )
                 })}
