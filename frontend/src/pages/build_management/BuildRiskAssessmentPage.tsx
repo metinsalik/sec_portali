@@ -235,7 +235,7 @@ export default function BuildRiskAssessmentPage() {
                   return (
                     <tr key={item.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                       <td className="p-3 font-medium text-slate-700 dark:text-slate-300 w-1/4">
-                        {item.category}
+                        {Array.isArray(item.category) ? item.category.join(', ') : item.category}
                       </td>
                       <td className="p-3 w-1/4">
                         <p className="font-semibold text-xs line-clamp-1" title={item.hazard}>{item.hazard || '-'}</p>

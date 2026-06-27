@@ -6,6 +6,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Controller } from 'react-hook-form';
 
 const CATEGORIES = [
   'Hava kalitesi',
@@ -35,10 +38,10 @@ type PCRAModalProps = {
 };
 
 export function PCRAModal({ open, onOpenChange, onSave, defaultValues, mode }: PCRAModalProps) {
-  const { register, handleSubmit, watch, reset, setValue } = useForm({
+  const { register, handleSubmit, watch, reset, setValue, control } = useForm({
     defaultValues: defaultValues || {
       id: generateId(),
-      category: '',
+      category: [],
       hazard: '',
       risk: '',
       activity: '',
@@ -85,7 +88,7 @@ export function PCRAModal({ open, onOpenChange, onSave, defaultValues, mode }: P
       } else {
         reset({
           id: generateId(),
-          category: '',
+          category: [],
           hazard: '',
           risk: '',
           activity: '',
@@ -138,10 +141,41 @@ export function PCRAModal({ open, onOpenChange, onSave, defaultValues, mode }: P
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-semibold mb-1 block">Kategori</label>
-                <select {...register('category', { required: true })} className="w-full rounded-md border border-input bg-background px-3 h-10 text-sm">
-                  <option value="">Seçiniz...</option>
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <Controller 
+                  control={control}
+                  name="category"
+                  render={({ field }) => {
+                    const selected = Array.isArray(field.value) ? field.value : (field.value ? [field.value] : []);
+                    return (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full justify-start h-10 px-3 text-left font-normal truncate" disabled={isView}>
+                            {selected.length > 0 ? selected.join(', ') : 'Seçiniz...'}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[400px] p-0" align="start">
+                          <div className="p-2 flex flex-col gap-1 max-h-60 overflow-y-auto">
+                            {CATEGORIES.map(c => (
+                               <label key={c} className="flex items-center gap-2 cursor-pointer p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors">
+                                 <Checkbox 
+                                   checked={selected.includes(c)} 
+                                   onCheckedChange={(checked) => {
+                                     if (checked) {
+                                       field.onChange([...selected, c]);
+                                     } else {
+                                       field.onChange(selected.filter((x: string) => x !== c));
+                                     }
+                                   }} 
+                                 />
+                                 <span className="text-sm leading-tight">{c}</span>
+                               </label>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    );
+                  }}
+                />
               </div>
               <div>
                 <label className="text-sm font-semibold mb-1 block">Faaliyet</label>
