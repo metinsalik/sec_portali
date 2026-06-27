@@ -76,7 +76,17 @@ export default function FireEquipmentMaintenancePage() {
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === 'maintenanceDate' && value) {
+      try {
+        const nextYearDate = format(add(new Date(value), { years: 1 }), 'yyyy-MM-dd');
+        setFormData({ ...formData, [name]: value, nextMaintenanceDate: nextYearDate });
+      } catch (err) {
+        setFormData({ ...formData, [name]: value });
+      }
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleSelectChange = (name: string, value: string) => {
@@ -163,7 +173,7 @@ export default function FireEquipmentMaintenancePage() {
       <form onSubmit={handleSubmit}>
         <Card className="shadow-sm border-border">
           <CardHeader>
-            <CardTitle className="text-lg">Bakım Bilgileri</CardTitle>
+            <CardTitle className="text-lg">Bakımı Gerçekleştiren Firma</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             
@@ -172,6 +182,22 @@ export default function FireEquipmentMaintenancePage() {
                 <Label htmlFor="maintenanceDate">Bakım Tarihi *</Label>
                 <Input type="date" id="maintenanceDate" name="maintenanceDate" value={formData.maintenanceDate} onChange={handleChange} required />
               </div>
+              <div className="space-y-2">
+                <Label>Firma</Label>
+                <select 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.companyId} 
+                  onChange={(e) => handleSelectChange('companyId', e.target.value)}
+                >
+                  <option value="none">Seçilmedi</option>
+                  {companies?.map((comp: any) => (
+                    <option key={comp.id} value={comp.id}>{comp.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label>Genel Sonuç</Label>
                 <select 
@@ -185,6 +211,21 @@ export default function FireEquipmentMaintenancePage() {
                   <option value="UYGUN_DEGIL">Uygun Değil</option>
                 </select>
                 <p className="text-xs text-muted-foreground mt-1">Sonuç, işaretlenen kontrollere göre otomatik hesaplanır.</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Bakımı Kontrol Eden</Label>
+                <select 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
+                  value={formData.technician} 
+                  onChange={(e) => handleSelectChange('technician', e.target.value)}
+                >
+                  <option value="">Seçilmedi</option>
+                  {responsibles?.map((resp: any) => (
+                    <option key={resp.id} value={resp.name}>
+                      {resp.department ? `${resp.department} - ` : ''}{resp.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {formData.result === 'UYGUN_DEGIL' && (
@@ -289,36 +330,6 @@ export default function FireEquipmentMaintenancePage() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label>Firma</Label>
-                <select 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
-                  value={formData.companyId} 
-                  onChange={(e) => handleSelectChange('companyId', e.target.value)}
-                >
-                  <option value="none">Seçilmedi</option>
-                  {companies?.map((comp: any) => (
-                    <option key={comp.id} value={comp.id}>{comp.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label>Nezaret Eden Sorumlu</Label>
-                <select 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
-                  value={formData.technician} 
-                  onChange={(e) => handleSelectChange('technician', e.target.value)}
-                >
-                  <option value="">Seçilmedi</option>
-                  {responsibles?.map((resp: any) => (
-                    <option key={resp.id} value={resp.name}>
-                      {resp.department ? `${resp.department} - ` : ''}{resp.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
 
             <div className="space-y-2">
               <Label>Fotoğraf / Dosya Yükle</Label>
