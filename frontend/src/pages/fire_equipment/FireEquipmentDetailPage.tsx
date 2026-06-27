@@ -102,7 +102,7 @@ export default function FireEquipmentDetailPage() {
 
       return list.filter((e: any) => {
         const isDepo = e.status === 'DEPODA' || e.equipmentNo?.toUpperCase().includes('YSC-YDK-');
-        return isDepo && e.categoryId === equipment.categoryId && e.id !== equipment.id;
+        return isDepo && e.id !== equipment.id;
       });
     },
     enabled: isSwapModalOpen && !!equipment?.categoryId
@@ -403,7 +403,7 @@ export default function FireEquipmentDetailPage() {
                 <Skeleton className="h-24 w-full" />
               ) : !availableEquipment || availableEquipment.length === 0 ? (
                 <div className="p-4 border rounded-md text-center text-muted-foreground bg-muted/20">
-                  {equipment.status === 'DEPODA' ? 'Sahada değiştirilebilecek aktif ekipman bulunmuyor.' : `Bu kategoride (${equipment.category?.name}) depoda bekleyen müsait bir ekipman bulunmuyor.`}
+                  {equipment.status === 'DEPODA' ? 'Sahada değiştirilebilecek aktif ekipman bulunmuyor.' : `Depoda bekleyen müsait bir yedek ekipman bulunmuyor.`}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-2">
