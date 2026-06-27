@@ -496,7 +496,7 @@ export default function FireEquipmentListPage() {
                         {item.brand || '-'} {item.model ? `/ ${item.model}` : ''}
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
-                        {item.status === 'DEPODA' ? 'Teknik Depo (Yedek)' : (item.location ? `${item.location.building}${item.location.floor ? ` / ${item.location.floor}` : ''}${item.location.department ? ` - ${item.location.department}` : ''}` : 'Lokasyon Yok')}
+                        {(item.status === 'DEPODA' || item.equipmentNo?.toUpperCase().includes('YSC-YDK-')) ? 'Teknik Depo (Yedek)' : (item.location ? `${item.location.building}${item.location.floor ? ` / ${item.location.floor}` : ''}${item.location.department ? ` - ${item.location.department}` : ''}` : 'Lokasyon Yok')}
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
                         {item.responsible ? item.responsible.name : (item.responsibleUnit || '-')}

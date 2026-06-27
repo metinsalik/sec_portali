@@ -453,8 +453,8 @@ router.post('/equipment/bulk/:facilityId', async (req, res) => {
       };
 
       let initialStatus = 'AKTIF';
-      const locStr = `${eq.blok || ''} ${eq.kat || ''} ${eq.birim || ''} ${eq.mahal || ''}`.toLowerCase();
-      if (locStr.includes('teknik depo') || locStr.includes('yedek')) {
+      const ekipmanNo = eq.ekipman_no ? String(eq.ekipman_no).toUpperCase() : '';
+      if (ekipmanNo.includes('YSC-YDK-')) {
         initialStatus = 'DEPODA';
       }
 

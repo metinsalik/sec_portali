@@ -96,15 +96,13 @@ export default function FireEquipmentDetailPage() {
       if (!res.ok) return [];
       const list = await res.json();
       
-      if (equipment.status === 'DEPODA' || equipment.location?.department?.toLowerCase().includes('teknik depo') || equipment.location?.building?.toLowerCase().includes('teknik depo') || equipment.location?.description?.toLowerCase().includes('teknik depo')) {
+      if (equipment.status === 'DEPODA' || equipment.equipmentNo?.toUpperCase().includes('YSC-YDK-')) {
         return list.filter((e: any) => e.status === 'AKTIF' && e.categoryId === equipment.categoryId && e.id !== equipment.id);
       }
 
       return list.filter((e: any) => {
-        const isDepo = e.status === 'DEPODA';
-        const locStr = `${e.location?.building || ''} ${e.location?.floor || ''} ${e.location?.department || ''} ${e.location?.description || ''}`.toLowerCase();
-        const locIsDepo = locStr.includes('teknik depo') || locStr.includes('yedek');
-        return (isDepo || locIsDepo) && e.categoryId === equipment.categoryId && e.id !== equipment.id;
+        const isDepo = e.status === 'DEPODA' || e.equipmentNo?.toUpperCase().includes('YSC-YDK-');
+        return isDepo && e.categoryId === equipment.categoryId && e.id !== equipment.id;
       });
     },
     enabled: isSwapModalOpen && !!equipment?.categoryId
