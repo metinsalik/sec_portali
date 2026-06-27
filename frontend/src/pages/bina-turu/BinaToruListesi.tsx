@@ -4,7 +4,7 @@ import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { Building2, Users, Play, CheckCircle2, ArrowLeft, Calendar, FileText, BarChart3, Trash2 } from 'lucide-react';
+import { Building2, Users, Play, CheckCircle2, ArrowLeft, Calendar, FileText, BarChart3, Trash2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import DetayliAnaliz from '@/components/bina-turu/DetayliAnaliz';
 
@@ -279,14 +279,23 @@ const BinaToruListesi = () => {
                     {tur.durum === 'TASLAK' ? 'Denetime Başla' : 'Denetime Devam Et'}
                   </Button>
                 ) : (
-                  <Button 
-                    variant="outline" 
-                    className="w-full text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100 font-bold h-11"
-                    onClick={() => window.open(`/bina-turu/rapor/${tur.id}`, '_blank')}
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    Raporu Görüntüle / Yazdır
-                  </Button>
+                  <div className="flex gap-2 w-full">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100 font-bold h-11"
+                      onClick={() => window.open(`/bina-turu/rapor/${tur.id}`, '_blank')}
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Rapor Al
+                    </Button>
+                    <Button 
+                      className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold h-11"
+                      onClick={() => navigate(`/bina-turu/denetim/${tur.id}`)}
+                    >
+                      <Pencil className="w-4 h-4 mr-2" />
+                      Düzenle
+                    </Button>
+                  </div>
                 )}
               </div>
             </CardContent>
