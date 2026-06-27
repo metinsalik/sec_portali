@@ -3,8 +3,6 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Pencil, Activity, Clock, ShieldCheck, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import LevelBadge from '@/components/risks/LevelBadge';
-import type { RiskLevel } from '@/components/risks/LevelBadge';
 
 const API = import.meta.env.VITE_API_URL || '';
 
