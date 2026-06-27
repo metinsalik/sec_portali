@@ -16,7 +16,8 @@ export default function FireEquipmentMaintenanceDashboardPage() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState('ALL'); // ALL, OVERDUE, UPCOMING
   const [searchTerm, setSearchTerm] = useState('');
-  
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
   const { data: equipmentList, isLoading } = useQuery({
     queryKey: ['fire-equipment', facilityId],
     queryFn: async () => {
@@ -26,6 +27,14 @@ export default function FireEquipmentMaintenanceDashboardPage() {
       return res.json();
     },
     enabled: !!facilityId
+  });
+
+  const { data: categories } = useQuery({
+    queryKey: ['fire-categories'],
+    queryFn: async () => {
+      const res = await api.get('/fire-equipment/categories');
+      return res.json();
+    }
   });
 
   const getMaintenanceStatus = (dateString: string | null) => {
@@ -42,13 +51,22 @@ export default function FireEquipmentMaintenanceDashboardPage() {
 
   const activeEquipment = equipmentList?.filter((e: any) => e.status !== 'HURDA' && e.status !== 'KULLANIM_DISI') || [];
 
-  const filteredEquipment = activeEquipment.filter((item: any) => {
+  const categoryFilteredEquipment = activeEquipment.filter((item: any) => {
     const matchesSearch = 
       item.equipmentNo.toLowerCase().includes(searchTerm.toLowerCase()) || 
       (item.category?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     if (!matchesSearch) return false;
 
+    if (selectedCategory !== 'all') {
+      const matchCategory = item.categoryId === selectedCategory || item.category?.parentId === selectedCategory;
+      if (!matchCategory) return false;
+    }
+
+    return true;
+  });
+
+  const filteredEquipment = categoryFilteredEquipment.filter((item: any) => {
     const status = getMaintenanceStatus(item.nextMaintenanceDate).status;
     if (filter === 'OVERDUE' && status !== 'OVERDUE') return false;
     if (filter === 'UPCOMING' && status !== 'UPCOMING') return false;
@@ -60,7 +78,7 @@ export default function FireEquipmentMaintenanceDashboardPage() {
     return <div className="p-8 text-center text-muted-foreground">Lütfen bir tesis seçin.</div>;
   }
 
-  const total = activeEquipment.length;
+  const total = categoryFilteredEquipment.length;
   let overdueCount = 0;
   let upcomingCount = 0;
   let okCount = 0;
@@ -70,7 +88,7 @@ export default function FireEquipmentMaintenanceDashboardPage() {
   let uygunDegilCount = 0;
   let noMaintenanceCount = 0;
 
-  activeEquipment.forEach((item: any) => {
+  categoryFilteredEquipment.forEach((item: any) => {
     const status = getMaintenanceStatus(item.nextMaintenanceDate).status;
     if (status === 'OVERDUE') overdueCount++;
     else if (status === 'UPCOMING') upcomingCount++;
@@ -190,7 +208,7 @@ export default function FireEquipmentMaintenanceDashboardPage() {
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
           <Button variant={filter === 'ALL' ? 'default' : 'outline'} onClick={() => setFilter('ALL')}>Tümü</Button>
           <Button variant={filter === 'OVERDUE' ? 'destructive' : 'outline'} onClick={() => setFilter('OVERDUE')}>
             <AlertTriangle className="w-4 h-4 mr-2" /> Süresi Geçenler
@@ -199,14 +217,26 @@ export default function FireEquipmentMaintenanceDashboardPage() {
             Yaklaşanlar
           </Button>
         </div>
-        <div className="relative w-full md:w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Ekipman No veya Kategori..."
-            className="pl-9"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+          <select 
+            className="flex h-9 w-full sm:w-48 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+          >
+            <option value="all">Tüm Kategoriler</option>
+            {categories?.filter((c: any) => !c.parentId)?.map((cat: any) => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Ekipman No veya Kategori..."
+              className="pl-9 h-9"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
