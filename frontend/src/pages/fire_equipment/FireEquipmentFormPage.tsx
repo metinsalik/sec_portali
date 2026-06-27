@@ -161,11 +161,19 @@ export default function FireEquipmentFormPage() {
         payload.qrCode = null;
       }
 
+      let res;
       if (isEdit) {
-        return api.put(`/fire-equipment/equipment/${id}`, payload);
+        res = await api.put(`/fire-equipment/equipment/${id}`, payload);
       } else {
-        return api.post(`/fire-equipment/equipment/${facilityId}`, payload);
+        res = await api.post(`/fire-equipment/equipment/${facilityId}`, payload);
       }
+      
+      if (!res.ok) {
+        let errStr = 'İşlem başarısız.';
+        try { const errData = await res.json(); errStr = errData.error || errStr; } catch(e){}
+        throw new Error(errStr);
+      }
+      return res.json();
     },
     onSuccess: async () => {
       toast.success(isEdit ? 'Ekipman güncellendi.' : 'Ekipman başarıyla eklendi.');

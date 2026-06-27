@@ -432,11 +432,12 @@ router.put('/equipment/:id', async (req, res) => {
     const { id } = req.params;
     const data = req.body;
     
-    if (data.productionDate) {
-      data.productionDate = new Date(data.productionDate);
-    }
+    if (data.productionDate === "") data.productionDate = null;
+    else if (data.productionDate) data.productionDate = new Date(data.productionDate);
 
-    if (data.lastMaintenanceDate) {
+    if (data.lastMaintenanceDate === "") {
+      delete data.lastMaintenanceDate;
+    } else if (data.lastMaintenanceDate) {
       const date = new Date(data.lastMaintenanceDate);
       // Try to fetch category to get freq
       const equipment = await prisma.fireEquipment.findUnique({ where: { id }, include: { category: true } });
@@ -463,6 +464,13 @@ router.put('/equipment/:id', async (req, res) => {
     delete data.maintenances;
     delete data.facility;
     delete data.subcategoryId; // Frontend gönderebilir, DB'de yok
+    delete data.id; // Sil, bazen id update hata verir veya string gelir
+    delete data.createdAt;
+    delete data.updatedAt;
+    
+    if (data.locationId === "") data.locationId = null;
+
+    console.log("UPDATING EQUIPMENT", id, data);
 
     const equipment = await prisma.fireEquipment.update({
       where: { id },
