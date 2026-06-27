@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileText, ArrowLeft, Edit, Copy, Trash2, MapPin, Activity, Download, Wrench, Printer, RefreshCcw, Check } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { FileText, ArrowLeft, Edit, Copy, Trash2, MapPin, Activity, Download, Wrench, Printer, RefreshCcw, Check, Search } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -31,8 +32,9 @@ export default function FireEquipmentDetailPage() {
   });
 
   const [isSwapModalOpen, setSwapModalOpen] = useState(false);
-  const [brokenStatus, setBrokenStatus] = useState('ARIZALI');
-  const [replacementEquipmentId, setReplacementEquipmentId] = useState('');
+  const [replacementEquipmentId, setReplacementEquipmentId] = useState<string>('');
+  const [brokenStatus, setBrokenStatus] = useState<string>('ARIZALI'); // Default for swap
+  const [swapSearch, setSwapSearch] = useState<string>('');
 
   const swapMutation = useMutation({
     mutationFn: async () => {
@@ -384,6 +386,15 @@ export default function FireEquipmentDetailPage() {
               <label className="text-sm font-medium">
                 {equipment.status === 'DEPODA' ? 'Değiştirilecek Sahadaki Ekipmanı Seçin' : 'Yerine Takılacak Ekipmanı Seçin (Sadece Depodakiler)'}
               </label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Ekipman No ile ara..."
+                  className="pl-9 h-9 w-full shadow-sm"
+                  value={swapSearch}
+                  onChange={(e) => setSwapSearch(e.target.value)}
+                />
+              </div>
               {isAvailableLoading ? (
                 <Skeleton className="h-24 w-full" />
               ) : !availableEquipment || availableEquipment.length === 0 ? (
@@ -392,7 +403,9 @@ export default function FireEquipmentDetailPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-2">
-                  {availableEquipment.map((eq: any) => (
+                  {availableEquipment
+                    .filter((eq: any) => eq.equipmentNo.toLowerCase().includes(swapSearch.toLowerCase()))
+                    .map((eq: any) => (
                     <div 
                       key={eq.id} 
                       onClick={() => setReplacementEquipmentId(eq.id)}
