@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -57,6 +57,26 @@ export default function FireEquipmentListPage() {
     }
   });
   const currentFacilityName = facilities?.find((f: any) => f.id === facilityId)?.name || 'Tesis';
+
+  const location = useLocation();
+  
+  useEffect(() => {
+    if (categories) {
+      const searchParams = new URLSearchParams(location.search);
+      const categoryNameQuery = searchParams.get('category');
+      
+      if (categoryNameQuery) {
+        const foundCat = categories.find((c: any) => c.name.toLowerCase() === categoryNameQuery.toLowerCase());
+        if (foundCat) {
+          setFilterCategory(foundCat.id);
+        } else {
+          setFilterCategory('all');
+        }
+      } else {
+        setFilterCategory('all');
+      }
+    }
+  }, [categories, location.search]);
 
   const { data: locations } = useQuery({
     queryKey: ['fire-locations', facilityId],
