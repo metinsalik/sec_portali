@@ -553,6 +553,33 @@ router.post('/equipment/:facilityId', async (req, res) => {
   }
 });
 
+router.delete('/equipment/bulk/:facilityId', async (req, res) => {
+  try {
+    const { facilityId } = req.params;
+    const { categoryId } = req.query;
+
+    if (!categoryId) {
+      return res.status(400).json({ error: 'Kategori ID gereklidir.' });
+    }
+
+    // Include subcategories too
+    const subcats = await prisma.fireEquipmentCategory.findMany({
+      where: { parentId: categoryId as string }
+    });
+    const catIds = [categoryId as string, ...subcats.map(c => c.id)];
+
+    await prisma.fireEquipment.deleteMany({
+      where: {
+        facilityId,
+        categoryId: { in: catIds }
+      }
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error bulk deleting equipment:', error);
+    res.status(500).json({ error: 'Toplu silme başarısız oldu.' });
+  }
+});
 router.delete('/equipment/:id', async (req, res) => {
   try {
     const { id } = req.params;

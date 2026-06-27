@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,12 +8,16 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Flame, Plus, QrCode, ArrowRight, Filter, AlertTriangle, CheckCircle, PenTool, Printer, Search } from 'lucide-react';
+import { Flame, Plus, QrCode, ArrowRight, Filter, AlertTriangle, CheckCircle, PenTool, Printer, Search, Trash2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { useAuth } from '@/context/AuthContext';
+import { toast } from 'sonner';
 
 export default function FireEquipmentListPage() {
   const facilityId = localStorage.getItem('activeFacilityId');
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterSubcategory, setFilterSubcategory] = useState<string>('all');
@@ -104,6 +108,20 @@ export default function FireEquipmentListPage() {
       case 'KULLANIM_DISI': return <Badge variant="outline">Kullanım Dışı</Badge>;
       case 'DEGISIME_GIDEN': return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">Değişime Giden</Badge>;
       default: return <Badge>{status}</Badge>;
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (filterCategory === 'all') return;
+    if (!window.confirm('Bu kategori altındaki tüm ekipmanları silmek istediğinize emin misiniz? Bu işlem geri alınamaz!')) return;
+
+    try {
+      const res = await api.delete(`/fire-equipment/equipment/bulk/${facilityId}?categoryId=${filterCategory}`);
+      if (!res.ok) throw new Error('Toplu silme işlemi başarısız oldu.');
+      toast.success('Seçilen kategori altındaki tüm ekipmanlar silindi.');
+      queryClient.invalidateQueries({ queryKey: ['fire-equipment', facilityId] });
+    } catch (error: any) {
+      toast.error(error.message || 'Bir hata oluştu.');
     }
   };
 
@@ -292,19 +310,26 @@ export default function FireEquipmentListPage() {
           <div className="flex flex-col md:flex-row gap-4 items-end flex-wrap">
             <div className="space-y-1 w-full md:w-1/4">
               <label className="text-xs font-medium text-muted-foreground">Kategori</label>
-              <select 
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
-                value={filterCategory}
-                onChange={(e) => {
-                  setFilterCategory(e.target.value);
-                  setFilterSubcategory('all'); // reset sub
-                }}
-              >
-                <option value="all">Tüm Kategoriler</option>
-                {parentCategories?.map((cat: any) => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
+              <div className="flex gap-2">
+                <select 
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                  value={filterCategory}
+                  onChange={(e) => {
+                    setFilterCategory(e.target.value);
+                    setFilterSubcategory('all'); // reset sub
+                  }}
+                >
+                  <option value="all">Tüm Kategoriler</option>
+                  {parentCategories?.map((cat: any) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+                {filterCategory !== 'all' && (user?.isManagement || user?.isAdmin || user?.roles?.some((r: string) => r.includes('MERKEZ'))) && (
+                  <Button variant="destructive" size="sm" onClick={handleBulkDelete} title="Bu kategorideki tüm kayıtları sil">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div className="space-y-1 w-full md:w-1/4">
@@ -471,7 +496,7 @@ export default function FireEquipmentListPage() {
                         {item.brand || '-'} {item.model ? `/ ${item.model}` : ''}
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
-                        {item.location ? `${item.location.building}${item.location.floor ? ` / ${item.location.floor}` : ''}${item.location.department ? ` - ${item.location.department}` : ''}` : 'Lokasyon Yok'}
+                        {item.status === 'DEPODA' ? 'Teknik Depo (Yedek)' : (item.location ? `${item.location.building}${item.location.floor ? ` / ${item.location.floor}` : ''}${item.location.department ? ` - ${item.location.department}` : ''}` : 'Lokasyon Yok')}
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
                         {item.responsible ? item.responsible.name : (item.responsibleUnit || '-')}
