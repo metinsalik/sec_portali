@@ -278,6 +278,7 @@ router.get('/equipment/:facilityId', async (req, res) => {
           include: { parent: true }
         },
         location: true,
+        company: true,
         responsible: true,
         movements: { orderBy: { movementDate: 'desc' }, take: 1 },
         maintenances: { orderBy: { maintenanceDate: 'desc' }, take: 1 }

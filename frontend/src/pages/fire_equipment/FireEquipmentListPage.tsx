@@ -468,7 +468,7 @@ export default function FireEquipmentListPage() {
                   <tr>
                     <th className="px-6 py-4 font-medium">Ekipman No</th>
                     <th className="px-6 py-4 font-medium">Kategori</th>
-                    <th className="px-6 py-4 font-medium">Marka / Model</th>
+                    <th className="px-6 py-4 font-medium">Firma</th>
                     <th className="px-6 py-4 font-medium">Lokasyon</th>
                     <th className="px-6 py-4 font-medium">Sorumlu</th>
                     <th className="px-6 py-4 font-medium">Durum</th>
@@ -493,7 +493,7 @@ export default function FireEquipmentListPage() {
                       </td>
                       <td className="px-6 py-4">{item.category?.name || '-'}</td>
                       <td className="px-6 py-4 text-muted-foreground">
-                        {item.brand || '-'} {item.model ? `/ ${item.model}` : ''}
+                        {item.company?.name || '-'}
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
                         {(item.status === 'DEPODA' || item.equipmentNo?.toUpperCase().includes('YSC-YDK-')) ? 'Teknik Depo (Yedek)' : (item.location ? `${item.location.building}${item.location.floor ? ` / ${item.location.floor}` : ''}${item.location.department ? ` - ${item.location.department}` : ''}` : 'Lokasyon Yok')}
