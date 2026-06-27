@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useState, useMemo } from 'react';
 import {
-  ArrowLeft, Plus, Upload, Pencil, Eye, ArrowUpDown, Trash2, AlertTriangle, Building2
+  ArrowLeft, Search, Eye, Pencil, Trash2, ArrowUpDown, AlertTriangle, Building2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -69,6 +69,7 @@ export default function RiskCategoryPage() {
   const [filterResponsible, setFilterResponsible] = useState<string>('');
   const [filterInitialLevel, setFilterInitialLevel] = useState<string>('');
   const [filterFinalLevel, setFilterFinalLevel] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'initialScore', direction: 'desc' });
 
@@ -180,6 +181,18 @@ export default function RiskCategoryPage() {
     if (filterFinalLevel) {
       sortableRisks = sortableRisks.filter(r => (r.finalLevel || r.initialLevel || 'Bilinmiyor') === filterFinalLevel);
     }
+
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase();
+      sortableRisks = sortableRisks.filter(r => 
+        r.riskCategory?.toLowerCase().includes(lower) ||
+        r.subCategory?.toLowerCase().includes(lower) ||
+        r.area?.toLowerCase().includes(lower) ||
+        r.hazard?.toLowerCase().includes(lower) ||
+        r.riskDescription?.toLowerCase().includes(lower) ||
+        r.riskNo?.toString().includes(lower)
+      );
+    }
     
     if (sortConfig !== null) {
       sortableRisks.sort((a, b) => {
@@ -204,7 +217,7 @@ export default function RiskCategoryPage() {
       });
     }
     return sortableRisks;
-  }, [categoryRisks, sortConfig, filterStatus, filterDepartment, filterResponsible, filterInitialLevel, filterFinalLevel]);
+  }, [categoryRisks, sortConfig, filterStatus, filterDepartment, filterResponsible, filterInitialLevel, filterFinalLevel, searchTerm]);
 
   const initialLevelCounts = useMemo(() => {
     return sortedRisks.reduce((acc: any, r: any) => {
@@ -437,6 +450,17 @@ export default function RiskCategoryPage() {
               <option key={resp} value={resp}>{resp}</option>
             ))}
           </select>
+
+          <div className="flex items-center gap-2 bg-background border border-border rounded-full px-3 h-8 focus-within:ring-2 focus-within:ring-primary/20 overflow-hidden">
+            <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+            <input 
+              type="text"
+              placeholder="Ara (Tehlike, Risk, Bölge)..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="text-xs bg-transparent border-none outline-none focus:ring-0 w-48"
+            />
+          </div>
         </div>
       </div>
 
@@ -487,7 +511,11 @@ export default function RiskCategoryPage() {
                   const dept = departmentMap[risk.departmentId];
                   const dCode = dept?.code || 'GEN';
                   return (
-                    <tr key={risk.id} className="hover:bg-muted/20 transition-colors group">
+                    <tr 
+                      key={risk.id} 
+                      className="hover:bg-muted/50 cursor-pointer transition-colors group"
+                      onClick={() => navigate(`/risks/department/${risk.departmentId}/view/${risk.id}`)}
+                    >
                       <td className="px-4 py-3 font-mono font-medium text-muted-foreground">
                         {dCode}-{String(risk.riskNo).padStart(3, '0')}
                       </td>
@@ -512,7 +540,7 @@ export default function RiskCategoryPage() {
                       <td className="px-4 py-3">
                         <StatusBadge status={risk.status} />
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-blue-600" onClick={() => navigate(`/risks/department/${risk.departmentId}/view/${risk.id}`)}>
                             <Eye className="w-4 h-4" />
