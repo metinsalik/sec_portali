@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import LocationSelector from '@/components/hazmat/LocationSelector';
 
 interface HazmatIncidentFormPageProps {
   initialData?: any;
@@ -22,9 +23,11 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
   const { user } = useAuth();
   const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('management');
 
+  const [materialSearch, setMaterialSearch] = useState('');
+  const [kitLocationId, setKitLocationId] = useState('');
   const [formData, setFormData] = useState<any>({
-    facilityId: '',
-    categoryId: '',
+    facilityId: initialData?.facilityId || '',
+    incidentTypeId: '',
     rootCause: '',
     departmentId: '',
     materialIds: [],
@@ -81,7 +84,7 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
 
   // Queries for definitions
   const { data: facilities = [] } = useQuery<any[]>({ queryKey: ['facilities'], queryFn: async () => (await api.get('/settings/facilities')).json() });
-  const { data: categories = [] } = useQuery<any[]>({ queryKey: ['hazmat-categories'], queryFn: async () => (await api.get('/hazmat/settings/categories')).json() });
+  const { data: incidentTypes = [] } = useQuery<any[]>({ queryKey: ['hazmat-incident-types'], queryFn: async () => (await api.get('/hazmat/settings/incident-types')).json() });
   
   const { data: departments = [] } = useQuery<any[]>({ 
     queryKey: ['hazmat-departments', formData.facilityId], 
@@ -115,18 +118,16 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
   });
   const materials = facilityItems.map((item: any) => item.material);
 
-  // Extract relevant placements for the selected department
-  const selectedDepartmentName = departments.find(d => d.id === formData.departmentId)?.name || '';
-  const availableKits: { placementId: string, kitName: string, location: string, code: string }[] = [];
+  // Extract relevant placements
+  const availableKits: { placementId: string, departmentId: string, kitName: string, location: string, code: string }[] = [];
   
   kits.forEach(kit => {
     if (kit.placements) {
       kit.placements.forEach((p: any) => {
-        // If department name matches placement unit (text match) or if no department is selected, we could show all.
-        // For strictness, let's only show if it matches or if the user hasn't selected a department yet (to be safe).
-        if (!selectedDepartmentName || p.unit?.toLowerCase() === selectedDepartmentName.toLowerCase()) {
+        if (p.status === 'Aktif' || p.status === 'Sahada') {
           availableKits.push({
             placementId: p.id,
+            departmentId: p.departmentId,
             kitName: kit.kitName,
             location: p.location || p.area || p.unit,
             code: kit.code || ''
@@ -160,7 +161,7 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
     setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
 
-  const isDefinitionsLoading = !facilities.length || !categories.length;
+  const isDefinitionsLoading = !facilities.length || !incidentTypes.length;
 
   if (isDefinitionsLoading && !initialData) {
     return (
@@ -202,16 +203,16 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
           <div className="space-y-2">
             <Label>Olay Türü *</Label>
             <Select 
-              value={String(formData.categoryId || '')} 
-              onValueChange={v => updateField('categoryId', v)}
+              value={String(formData.incidentTypeId || '')} 
+              onValueChange={v => updateField('incidentTypeId', v)}
             >
               <SelectTrigger>
                 <SelectValue>
-                  {categories.find(c => String(c.id) === String(formData.categoryId))?.name || "Kategori seçin"}
+                  {incidentTypes.find(c => String(c.id) === String(formData.incidentTypeId))?.name || "Olay Türü seçin"}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {categories.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+                {incidentTypes.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -226,51 +227,49 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Olayın Gerçekleştiği Departman *</Label>
-            <Select 
-              value={String(formData.departmentId || '')} 
-              onValueChange={v => {
-                updateField('departmentId', v);
-                updateField('kitUsed', false);
-                updateField('spillKitId', '');
-              }}
+          <div className="space-y-2 md:col-span-2">
+            <Label>Lokasyon *</Label>
+            <LocationSelector
+              departments={departments}
+              value={String(formData.departmentId || '')}
+              onChange={v => updateField('departmentId', v)}
               disabled={!formData.facilityId}
-            >
-              <SelectTrigger>
-                <SelectValue>
-                  {departments.find(d => String(d.id) === String(formData.departmentId))?.name || "Departman seçin"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {departments.map(d => <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            />
           </div>
 
           <div className="space-y-2 md:col-span-2">
             <Label>İlgili Tehlikeli Madde(ler) (Opsiyonel)</Label>
+            <Input 
+              placeholder="Tehlikeli madde ara..." 
+              value={materialSearch}
+              onChange={(e) => setMaterialSearch(e.target.value)}
+              className="mb-2"
+            />
             <div className="border rounded-md p-2 max-h-48 overflow-y-auto bg-background space-y-1">
               {materials.length === 0 ? (
                 <p className="text-xs text-muted-foreground p-2">Bu tesise tanımlı tehlikeli madde bulunamadı.</p>
               ) : (
-                materials.map((m: any) => (
-                  <div key={m.id} className="flex items-center space-x-2 p-1.5 hover:bg-muted/50 rounded transition-colors">
-                    <Checkbox 
-                      id={`mat-${m.id}`}
-                      checked={formData.materialIds?.includes(m.id)}
-                      onCheckedChange={(checked) => {
-                        const current = formData.materialIds || [];
-                        if (checked) {
-                          updateField('materialIds', [...current, m.id]);
-                        } else {
-                          updateField('materialIds', current.filter((id: string) => id !== m.id));
-                        }
-                      }}
-                    />
-                    <Label htmlFor={`mat-${m.id}`} className="text-sm cursor-pointer flex-1">{m.productName}</Label>
-                  </div>
-                ))
+                materials.filter((m: any) => m.productName?.toLowerCase().includes(materialSearch.toLowerCase())).length === 0 ? (
+                  <p className="text-xs text-muted-foreground p-2">Aramaya uygun madde bulunamadı.</p>
+                ) : (
+                  materials.filter((m: any) => m.productName?.toLowerCase().includes(materialSearch.toLowerCase())).map((m: any) => (
+                    <div key={m.id} className="flex items-center space-x-2 p-1.5 hover:bg-muted/50 rounded transition-colors">
+                      <Checkbox 
+                        id={`mat-${m.id}`}
+                        checked={formData.materialIds?.includes(m.id)}
+                        onCheckedChange={(checked) => {
+                          const current = formData.materialIds || [];
+                          if (checked) {
+                            updateField('materialIds', [...current, m.id]);
+                          } else {
+                            updateField('materialIds', current.filter((id: string) => id !== m.id));
+                          }
+                        }}
+                      />
+                      <Label htmlFor={`mat-${m.id}`} className="text-sm cursor-pointer flex-1">{m.productName}</Label>
+                    </div>
+                  ))
+                )
               )}
             </div>
           </div>
@@ -281,41 +280,64 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
           </div>
 
           {/* Döküntü Kiti Alanı */}
-          <div className="p-4 bg-blue-50/50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-900/30 space-y-3">
+          <div className="p-4 bg-blue-50/50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-900/30 space-y-3 md:col-span-2">
              <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="kitUsed" 
                   checked={formData.kitUsed} 
-                  onCheckedChange={v => updateField('kitUsed', !!v)} 
+                  onCheckedChange={v => {
+                    updateField('kitUsed', !!v);
+                    if (!!v && formData.departmentId) {
+                      setKitLocationId(formData.departmentId);
+                    } else {
+                      setKitLocationId('');
+                    }
+                    updateField('spillKitId', '');
+                  }} 
                 />
                 <Label htmlFor="kitUsed" className="text-sm font-semibold text-blue-800 dark:text-blue-300">Döküntü Kiti Kullanıldı Mı?</Label>
               </div>
               {formData.kitUsed && (
-                <div className="space-y-2 pl-6">
-                  <Label className="text-xs text-blue-700 dark:text-blue-400">Kullanılan Kiti Seçin *</Label>
-                  <Select 
-                    value={formData.spillKitId} 
-                    onValueChange={v => updateField('spillKitId', v)}
-                  >
-                    <SelectTrigger className="h-8 border-blue-200 dark:border-blue-800">
-                      <SelectValue>
-                        {availableKits.find(k => k.placementId === formData.spillKitId) 
-                          ? `${availableKits.find(k => k.placementId === formData.spillKitId)?.code} - ${availableKits.find(k => k.placementId === formData.spillKitId)?.kitName}`
-                          : "Kit seçin"}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableKits.length === 0 ? (
-                        <div className="p-2 text-xs text-muted-foreground text-center">Bu departmanda tanımlı kit bulunamadı.</div>
-                      ) : (
-                        availableKits.map(k => (
-                          <SelectItem key={k.placementId} value={k.placementId}>
-                            {k.code} - {k.kitName} ({k.location})
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-4 pl-6 border-l-2 border-blue-200 ml-2 mt-2">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-blue-700 dark:text-blue-400">Kitin Bulunduğu Lokasyon</Label>
+                    <LocationSelector
+                      departments={departments}
+                      value={kitLocationId}
+                      onChange={v => {
+                        setKitLocationId(v);
+                        updateField('spillKitId', '');
+                      }}
+                      disabled={!formData.facilityId}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-blue-700 dark:text-blue-400">Kullanılan Kiti Seçin *</Label>
+                    <Select 
+                      value={formData.spillKitId} 
+                      onValueChange={v => updateField('spillKitId', v)}
+                      disabled={!kitLocationId}
+                    >
+                      <SelectTrigger className="h-8 border-blue-200 dark:border-blue-800">
+                        <SelectValue>
+                          {availableKits.find(k => k.placementId === formData.spillKitId) 
+                            ? `${availableKits.find(k => k.placementId === formData.spillKitId)?.code} - ${availableKits.find(k => k.placementId === formData.spillKitId)?.kitName}`
+                            : "Kit seçin"}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableKits.filter(k => k.departmentId === kitLocationId).length === 0 ? (
+                          <div className="p-2 text-xs text-muted-foreground text-center">Bu lokasyonda aktif kit bulunamadı.</div>
+                        ) : (
+                          availableKits.filter(k => k.departmentId === kitLocationId).map(k => (
+                            <SelectItem key={k.placementId} value={k.placementId}>
+                              {k.code} - {k.kitName}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <p className="text-[10px] text-blue-600/70 italic">Not: Kit kullanıldığında, kiti yeniden tamamlamak için otomatik eksik kontrol kaydı oluşturulacaktır.</p>
                 </div>
               )}

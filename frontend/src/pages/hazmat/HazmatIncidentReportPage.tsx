@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { useReactToPrint } from 'react-to-print';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -15,21 +16,16 @@ const HazmatIncidentReportPage = ({ incident, onCancel }: HazmatIncidentReportPa
 
   if (!incident) return null;
 
-  const handlePrint = () => {
-    const printContent = printRef.current?.innerHTML;
-    const originalContent = document.body.innerHTML;
-
-    if (printContent) {
-      document.body.innerHTML = `
-        <div style="padding: 20px; font-family: sans-serif; max-width: 800px; margin: 0 auto; color: #000; background: #fff;">
-          ${printContent}
-        </div>
-      `;
-      window.print();
-      document.body.innerHTML = originalContent;
-      window.location.reload(); // Reload to restore React state bindings after print
-    }
-  };
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Olagan_Disi_Olay_Raporu_${incident.id.substring(0, 8)}`,
+    pageStyle: `
+      @page { size: A4 portrait; margin: 15mm; }
+      @media print {
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      }
+    `
+  });
 
   const safeFormatDate = (date: any, formatStr: string) => {
     if (!date) return '-';
@@ -67,12 +63,12 @@ const HazmatIncidentReportPage = ({ incident, onCancel }: HazmatIncidentReportPa
 
       <div className="flex-1 p-6 flex justify-center overflow-y-auto">
         {/* Printable Area */}
-        <div 
-          ref={printRef} 
-          className="bg-white text-black p-8 shadow-xl border rounded-lg max-w-4xl mx-auto"
-          style={{ minHeight: '1123px', width: '100%', maxWidth: '794px' }} // Approximate A4
-        >
-          {/* Print Header */}
+        <div className="bg-white text-black p-8 shadow-xl border rounded-lg max-w-4xl mx-auto w-full">
+          <div 
+            ref={printRef} 
+            className="w-full bg-white print:p-0 print:shadow-none print:border-none print:max-w-none print:mx-0"
+          >
+            {/* Print Header */}
           <div className="border-b-2 border-purple-800 pb-4 mb-6 flex justify-between items-start">
             <div className="flex gap-4 items-center">
               {incident.facility?.logoUrl && (
@@ -264,6 +260,7 @@ const HazmatIncidentReportPage = ({ incident, onCancel }: HazmatIncidentReportPa
               </div>
             </div>
 
+          </div>
           </div>
         </div>
       </div>

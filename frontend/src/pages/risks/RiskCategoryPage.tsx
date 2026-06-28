@@ -139,9 +139,12 @@ export default function RiskCategoryPage() {
 
   // Kategoriye Göre Filtrele
   const categoryRisks = useMemo(() => {
+    const mainCatLower = mainCat.trim().toLocaleLowerCase('tr');
+    const subCatLower = subCat.trim().toLocaleLowerCase('tr');
+    
     return allRisks.filter((r: any) => {
-      if (mainCat && r.riskCategory !== mainCat) return false;
-      if (subCat && r.subCategory !== subCat) return false;
+      if (mainCatLower && (r.riskCategory || '').trim().toLocaleLowerCase('tr') !== mainCatLower) return false;
+      if (subCatLower && (r.subCategory || '').trim().toLocaleLowerCase('tr') !== subCatLower) return false;
       return true;
     });
   }, [allRisks, mainCat, subCat]);

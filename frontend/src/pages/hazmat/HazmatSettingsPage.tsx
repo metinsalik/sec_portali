@@ -22,8 +22,9 @@ export default function HazmatSettingsPage() {
     if (path.includes('/ghs')) return 'ghs';
     if (path.includes('/adr')) return 'adr';
     if (path.includes('/ppe')) return 'ppe';
+    if (path.includes('/events')) return 'events';
     if (path.includes('/categories')) return 'categories';
-    return 'categories';
+    return 'events';
   };
 
   const [activeTab, setActiveTab] = useState(getTabFromPath());
@@ -39,6 +40,7 @@ export default function HazmatSettingsPage() {
     else if (value === 'ghs') navigate('/hazmat/settings/ghs');
     else if (value === 'adr') navigate('/hazmat/settings/adr');
     else if (value === 'ppe') navigate('/hazmat/settings/ppe');
+    else if (value === 'events') navigate('/hazmat/settings/events');
     else if (value === 'categories') navigate('/hazmat/settings/categories');
   };
 
@@ -50,7 +52,8 @@ export default function HazmatSettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-6 h-auto py-2">
+        <TabsList className="grid w-full grid-cols-7 h-auto py-2">
+          <TabsTrigger value="events" className="py-2">Olay Türleri</TabsTrigger>
           <TabsTrigger value="categories" className="py-2">Kategoriler</TabsTrigger>
           <TabsTrigger value="units" className="py-2">Miktar Cinsleri</TabsTrigger>
           <TabsTrigger value="departments" className="py-2">Bölüm - Departman</TabsTrigger>
@@ -59,6 +62,9 @@ export default function HazmatSettingsPage() {
           <TabsTrigger value="ppe" className="py-2">KKD'ler</TabsTrigger>
         </TabsList>
         
+        <TabsContent value="events">
+          <EventsTab />
+        </TabsContent>
         <TabsContent value="categories">
           <CategoriesTab />
         </TabsContent>
@@ -662,6 +668,86 @@ function CategoriesTab() {
             {categories.length === 0 && !isLoading && (
               <tr>
                 <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">Henüz kategori eklenmemiş.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function EventsTab() {
+  const [name, setName] = useState('');
+  const queryClient = useQueryClient();
+
+  const { data: types = [], isLoading } = useQuery({
+    queryKey: ['hazmat-incident-types'],
+    queryFn: async () => {
+      const res = await api.get('/hazmat/settings/incident-types');
+      if (!res.ok) throw new Error('Hata');
+      return res.json();
+    }
+  });
+
+  const createType = useMutation({
+    mutationFn: async () => {
+      const res = await api.post('/hazmat/settings/incident-types', { name });
+      if (!res.ok) throw new Error('Hata');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hazmat-incident-types'] });
+      setName('');
+      toast.success('Olay Türü eklendi');
+    }
+  });
+
+  const deleteType = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.delete(`/hazmat/settings/incident-types/${id}`);
+      if (!res.ok) throw new Error('Hata');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hazmat-incident-types'] });
+      toast.success('Olay Türü silindi');
+    }
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-muted/30 p-4 rounded-lg border flex gap-4 items-end">
+        <div className="space-y-2 flex-1 max-w-sm">
+          <Label>Olay Türü Adı</Label>
+          <Input placeholder="Örn: Kimyasal dökülme" value={name} onChange={e => setName(e.target.value)} />
+        </div>
+        <Button onClick={() => createType.mutate()} disabled={!name}>
+          <Plus className="w-4 h-4 mr-2" /> Ekle
+        </Button>
+      </div>
+
+      <div className="rounded-lg border overflow-hidden">
+        <table className="w-full text-sm text-left">
+          <thead className="bg-muted/50 text-muted-foreground">
+            <tr>
+              <th className="px-4 py-3 font-medium">Olay Türü</th>
+              <th className="px-4 py-3 font-medium text-right">İşlemler</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {types.map((t: any) => (
+              <tr key={t.id} className="hover:bg-muted/30 transition-colors">
+                <td className="px-4 py-3 font-medium">{t.name}</td>
+                <td className="px-4 py-3 text-right">
+                  <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => deleteType.mutate(t.id)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </td>
+              </tr>
+            ))}
+            {types.length === 0 && !isLoading && (
+              <tr>
+                <td colSpan={2} className="px-4 py-8 text-center text-muted-foreground">Henüz olay türü eklenmemiş.</td>
               </tr>
             )}
           </tbody>

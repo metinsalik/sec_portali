@@ -346,7 +346,7 @@ export default function SpillKitsPage() {
           <TabsTrigger value="templates" className="py-2">Kit Oluştur</TabsTrigger>
           <TabsTrigger value="placements" className="py-2">Departman Ataması</TabsTrigger>
           <TabsTrigger value="checks" className="py-2">Kontroller</TabsTrigger>
-          <TabsTrigger value="incidents" className="py-2">Olay Kayıtları</TabsTrigger>
+          
         </TabsList>
 
         <TabsContent value="dashboard" className="space-y-6">
@@ -691,59 +691,7 @@ export default function SpillKitsPage() {
           </Card>
         </TabsContent>
 
-        {/* 5. Olay Kayıtları */}
-        <TabsContent value="incidents" className="space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Olay Kayıtları</CardTitle>
-                <CardDescription>Sahada gerçekleşen kullanım ve eksilmeler.</CardDescription>
-              </div>
-              <Button onClick={() => { setIncidentForm({ usedItemsMap: {} }); setIsIncidentModalOpen(true); }}><Plus className="w-4 h-4 mr-2" /> Yeni Olay Ekle</Button>
-            </CardHeader>
-            <CardContent>
-              <div className="border rounded-lg overflow-hidden">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-muted/50 text-muted-foreground font-medium">
-                    <tr>
-                      <th className="p-3 border-b">Tarih</th>
-                      <th className="p-3 border-b">Kit & Departman</th>
-                      <th className="p-3 border-b">Dökülme Türü</th>
-                      <th className="p-3 border-b">Kullanım Durumu</th>
-                      <th className="p-3 border-b">Açıklama</th>
-                      <th className="p-3 border-b">Sonuç</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allIncidents.map((inc: any) => (
-                      <tr key={inc.id} className="border-b last:border-0 hover:bg-muted/30">
-                        <td className="p-3 whitespace-nowrap">{inc.incidentDate ? new Date(inc.incidentDate).toLocaleString('tr-TR') : '-'}</td>
-                        <td className="p-3 font-medium">
-                          {inc.placement?.kit?.kitName} <br />
-                          <span className="text-muted-foreground text-xs">{inc.placement?.unit} {inc.placement?.location ? `(${inc.placement.location})` : ''}</span>
-                        </td>
-                        <td className="p-3">{inc.incidentType || '-'}</td>
-                        <td className="p-3">
-                          {inc.kitUsed === 'Kullanıldı' ? <Badge variant="destructive">Kullanıldı</Badge> :
-                           inc.kitUsed === 'Kısmen Kullanıldı' ? <Badge variant="warning" className="bg-orange-500 text-white">Kısmen Kullanıldı</Badge> :
-                           <Badge variant="outline">{inc.kitUsed || '-'}</Badge>}
-                        </td>
-                        <td className="p-3 text-xs max-w-xs truncate" title={inc.incidentDesc || ''}>{inc.incidentDesc || '-'}</td>
-                        <td className="p-3 text-xs max-w-xs truncate" title={inc.incidentOutcome || ''}>{inc.incidentOutcome || '-'}</td>
-                      </tr>
-                    ))}
-                    {allIncidents.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="p-6 text-center text-muted-foreground">Olay kaydı bulunamadı.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        </Tabs>
 
       {/* Kit Template Modal */}
       <Dialog open={isKitModalOpen} onOpenChange={setIsKitModalOpen}>

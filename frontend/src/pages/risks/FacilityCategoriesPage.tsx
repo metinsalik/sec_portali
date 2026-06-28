@@ -47,61 +47,72 @@ export default function FacilityCategoriesPage() {
 
   // Filtre Seçenekleri
   const uniqueMainCategories = useMemo(() => {
-    return Array.from(new Set(facilityRisks.map((r: any) => r.riskCategory).filter(Boolean))) as string[];
+    const map = new Map<string, string>();
+    facilityRisks.forEach((r: any) => {
+      const cat = (r.riskCategory || '').trim();
+      if (cat) map.set(cat.toLocaleLowerCase('tr'), cat); // Overwrites with last seen or keeps. Actually, let's keep first seen: if (!map.has(key)) map.set(key, cat)
+    });
+    const finalMap = new Map<string, string>();
+    facilityRisks.forEach((r: any) => {
+      const cat = (r.riskCategory || '').trim();
+      if (cat && !finalMap.has(cat.toLocaleLowerCase('tr'))) finalMap.set(cat.toLocaleLowerCase('tr'), cat);
+    });
+    return Array.from(finalMap.values()).sort();
   }, [facilityRisks]);
 
   const uniqueSubCategories = useMemo(() => {
-    let list = facilityRisks;
-    if (filterMainCategory) {
-      list = list.filter((r: any) => r.riskCategory === filterMainCategory);
-    }
-    return Array.from(new Set(list.map((r: any) => r.subCategory).filter(Boolean))) as string[];
+    const finalMap = new Map<string, string>();
+    facilityRisks.forEach((r: any) => {
+      const mainCat = (r.riskCategory || '').trim();
+      if (filterMainCategory && mainCat.toLocaleLowerCase('tr') !== filterMainCategory.trim().toLocaleLowerCase('tr')) return;
+      const subCat = (r.subCategory || '').trim();
+      if (subCat && !finalMap.has(subCat.toLocaleLowerCase('tr'))) finalMap.set(subCat.toLocaleLowerCase('tr'), subCat);
+    });
+    return Array.from(finalMap.values()).sort();
   }, [facilityRisks, filterMainCategory]);
 
   // Alt kategori ana kategori değişince sıfırlansın
   useEffect(() => {
     if (filterMainCategory && filterSubCategory) {
-      const subExists = facilityRisks.some((r: any) => r.riskCategory === filterMainCategory && r.subCategory === filterSubCategory);
+      const subExists = facilityRisks.some((r: any) => 
+        (r.riskCategory || '').trim().toLocaleLowerCase('tr') === filterMainCategory.trim().toLocaleLowerCase('tr') && 
+        (r.subCategory || '').trim().toLocaleLowerCase('tr') === filterSubCategory.trim().toLocaleLowerCase('tr')
+      );
       if (!subExists) setFilterSubCategory('');
     }
-  }, [filterMainCategory]);
+  }, [filterMainCategory, filterSubCategory, facilityRisks]);
 
   // Kategori İstatistikleri (Liste ve Kartlar için veri)
   const categoryStats = useMemo(() => {
     const stats: Record<string, { name: string, mainCategory: string, riskCount: number, acikCount: number, mudahaleCount: number, takipCount: number, kapaliCount: number }> = {};
     
     facilityRisks.forEach((r: any) => {
-      const mainCat = r.riskCategory || 'Belirtilmemiş';
-      const subCat = r.subCategory || 'Diğer';
+      const mainCat = (r.riskCategory || 'Belirtilmemiş').trim();
+      const subCat = (r.subCategory || 'Diğer').trim();
       
-      // Gruplama mantığı: Eğer alt kategori filtresi varsa sadece o alt kategoriyi göster.
-      // Eğer sadece ana kategori filtresi varsa o ana kategorideki alt kategorileri veya genel olarak göster?
-      // Biz burada her Ana Kategori - Alt Kategori kombinasyonunu ayrı bir kart olarak gösterebiliriz veya
-      // Ana Kategorileri gösterip içine tıklayınca altları listeleyebiliriz.
-      // Kullanıcı isteği: "Her Ana kategori için bir kart yapalım. O Kategori sayfasında Ana Kategori ve Alt Kategorilere göre filitre olsun."
-      // O halde her satır/kart = Ana Kategori (veya filtrelenmişse Alt Kategori detayı)
-      // En iyisi, Ana Kategori bazlı istatistikleri göstermek. Eğer alt kategori seçilirse sadece o alt kategoriyi göster.
+      const mainCatLower = mainCat.toLocaleLowerCase('tr');
+      const subCatLower = subCat.toLocaleLowerCase('tr');
       
-      let key = mainCat;
+      // Gruplama mantığı
+      let key = mainCatLower;
       let displayName = mainCat;
+      let passMainCategory = mainCat; // To preserve original case in URL
       
       if (filterSubCategory) {
-        if (r.subCategory !== filterSubCategory) return;
-        key = `${mainCat} - ${subCat}`;
+        if (subCatLower !== filterSubCategory.trim().toLocaleLowerCase('tr')) return;
+        key = `${mainCatLower} - ${subCatLower}`;
         displayName = subCat;
       } else if (filterMainCategory && !filterSubCategory) {
-        if (r.riskCategory !== filterMainCategory) return;
-        // Sadece bir ana kategori seçiliyse alt kategorileri listeleyelim
-        key = subCat;
+        if (mainCatLower !== filterMainCategory.trim().toLocaleLowerCase('tr')) return;
+        key = subCatLower;
         displayName = subCat;
       } else {
-        // Hiçbir filtre yoksa ana kategorileri göster
-        key = mainCat;
+        key = mainCatLower;
         displayName = mainCat;
       }
 
       if (!stats[key]) {
-        stats[key] = { name: displayName, mainCategory: mainCat, riskCount: 0, acikCount: 0, mudahaleCount: 0, takipCount: 0, kapaliCount: 0 };
+        stats[key] = { name: displayName, mainCategory: passMainCategory, riskCount: 0, acikCount: 0, mudahaleCount: 0, takipCount: 0, kapaliCount: 0 };
       }
       
       stats[key].riskCount++;

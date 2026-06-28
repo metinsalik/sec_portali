@@ -95,7 +95,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
     const {
-      facilityId, categoryId, rootCause, departmentId,
+      facilityId, categoryId, incidentTypeId, rootCause, departmentId,
       incidentDate, interventionRequired, interventionTime, controlTime,
       supportReceived, supportUnitId, announcementMade, emergencyCodeId,
       serviceInterrupted, interruptionDuration,
@@ -118,7 +118,8 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     const incident = await prisma.hazmatIncident.create({
       data: {
         facilityId,
-        categoryId,
+        categoryId: categoryId || null,
+        incidentTypeId: incidentTypeId || null,
         rootCause,
         departmentId,
         incidentDate: new Date(incidentDate),
@@ -190,7 +191,7 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     const isAdmin = user.roles.includes('admin') || user.roles.includes('management');
     
     const {
-      categoryId, rootCause, departmentId,
+      categoryId, incidentTypeId, rootCause, departmentId,
       incidentDate, interventionRequired, interventionTime, controlTime,
       supportReceived, supportUnitId, announcementMade, emergencyCodeId,
       serviceInterrupted, interruptionDuration,
@@ -214,7 +215,8 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     const updated = await prisma.hazmatIncident.update({
       where: { id },
       data: {
-        categoryId: categoryId || undefined,
+        categoryId: categoryId !== undefined ? categoryId : undefined,
+        incidentTypeId: incidentTypeId !== undefined ? incidentTypeId : undefined,
         rootCause: rootCause !== undefined ? rootCause : undefined,
         departmentId: departmentId || undefined,
         incidentDate: incidentDate ? new Date(incidentDate) : undefined,

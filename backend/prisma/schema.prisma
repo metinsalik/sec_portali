@@ -819,6 +819,16 @@ model HazmatCategory {
   hazmatIncidents HazmatIncident[]
 }
 
+model HazmatIncidentType {
+  id        String   @id @default(uuid())
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hazmatIncidents HazmatIncident[]
+}
+
 model HazmatMaterial {
   id                            String                      @id @default(uuid())
   productName                   String
@@ -1129,7 +1139,8 @@ model HazmatEyewashRiskAnalysis {
 model HazmatIncident {
   id                    String    @id @default(uuid())
   facilityId            String
-  categoryId            String
+  categoryId            String?
+  incidentTypeId        String?
   rootCause             String
   departmentId          String
   incidentDate          DateTime
@@ -1158,7 +1169,8 @@ model HazmatIncident {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  category      HazmatCategory       @relation(fields: [categoryId], references: [id])
+  category      HazmatCategory?      @relation(fields: [categoryId], references: [id])
+  incidentType  HazmatIncidentType?  @relation(fields: [incidentTypeId], references: [id])
   supportUnit   IncidentSupportUnit? @relation(fields: [supportUnitId], references: [id])
   emergencyCode EmergencyCode?       @relation(fields: [emergencyCodeId], references: [id])
   facility      Facility             @relation(fields: [facilityId], references: [id], onDelete: Cascade)

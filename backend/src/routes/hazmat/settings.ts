@@ -343,4 +343,57 @@ router.delete('/categories/:id', authMiddleware, async (req: AuthRequest, res) =
   }
 });
 
+// --- INCIDENT TYPES ---
+
+router.get('/incident-types', authMiddleware, async (req, res) => {
+  try {
+    const types = await prisma.hazmatIncidentType.findMany({
+      orderBy: { name: 'asc' }
+    });
+    res.json(types);
+  } catch (error) {
+    console.error('Error fetching incident types:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/incident-types', authMiddleware, async (req: AuthRequest, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'name is required' });
+
+  try {
+    const type = await prisma.hazmatIncidentType.create({
+      data: { name }
+    });
+    res.status(201).json(type);
+  } catch (error) {
+    console.error('Error creating incident type:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.put('/incident-types/:id', authMiddleware, async (req: AuthRequest, res) => {
+  const { name } = req.body;
+  try {
+    const type = await prisma.hazmatIncidentType.update({
+      where: { id: req.params.id },
+      data: { name }
+    });
+    res.json(type);
+  } catch (error) {
+    console.error('Error updating incident type:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.delete('/incident-types/:id', authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    await prisma.hazmatIncidentType.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Incident type deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting incident type:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

@@ -716,6 +716,14 @@ function App() {
                   }
                 />
                 <Route
+                  path="/hazmat/settings/events"
+                  element={
+                    <ProtectedRoute requiredModules={['hazmat']}>
+                      <HazmatSettingsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/hazmat/settings/categories"
                   element={
                     <ProtectedRoute allowedRoles={['admin', 'management']}>
