@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -129,7 +129,7 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
             placementId: p.id,
             departmentId: p.departmentId,
             kitName: kit.kitName,
-            location: p.location || p.area || p.unit,
+            location: p.unit || p.location || p.area,
             code: kit.code || ''
           });
         }
@@ -162,6 +162,18 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
   };
 
   const isDefinitionsLoading = !facilities.length || !incidentTypes.length;
+
+  const currentLocString = useMemo(() => {
+    if (!kitLocationId) return '';
+    const loc = departments.find((d: any) => d.id === kitLocationId);
+    if (!loc) return '';
+    return `Blok: ${loc.building || '-'} / Kat: ${loc.floor || '-'} / Birim: ${loc.name || '-'}${loc.description ? ` / Mahal: ${loc.description}` : ''}`;
+  }, [kitLocationId, departments]);
+
+  const filteredKits = availableKits.filter(k => 
+    (k.departmentId && k.departmentId === kitLocationId) || 
+    k.location === currentLocString
+  );
 
   if (isDefinitionsLoading && !initialData) {
     return (
@@ -232,7 +244,13 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
             <LocationSelector
               departments={departments}
               value={String(formData.departmentId || '')}
-              onChange={v => updateField('departmentId', v)}
+              onChange={v => {
+                updateField('departmentId', v);
+                if (formData.kitUsed) {
+                  setKitLocationId(v);
+                  updateField('spillKitId', '');
+                }
+              }}
               disabled={!formData.facilityId}
             />
           </div>
@@ -326,10 +344,10 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        {availableKits.filter(k => k.departmentId === kitLocationId).length === 0 ? (
+                        {filteredKits.length === 0 ? (
                           <div className="p-2 text-xs text-muted-foreground text-center">Bu lokasyonda aktif kit bulunamadı.</div>
                         ) : (
-                          availableKits.filter(k => k.departmentId === kitLocationId).map(k => (
+                          filteredKits.map(k => (
                             <SelectItem key={k.placementId} value={k.placementId}>
                               {k.code} - {k.kitName}
                             </SelectItem>
