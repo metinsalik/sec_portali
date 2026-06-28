@@ -64,7 +64,8 @@ const checklists = {
       { name: "Çalışma Basıncı", options: ["4 Bar", "6 Bar", "12 MPa"] },
       { name: "Debi", options: ["66 lt/min", "95 lt/min"] },
       { name: "Vana Tipi", options: ["Köşe Tip Yangın Vanası", "Küresel Tip Yangın Vanası", "Basınç Düşürücü Vana"] },
-      { name: "Kapak Tipi", options: ["Ahşap Kapak", "Camlı Kapak"] }
+      { name: "Kapak Tipi", options: ["Ahşap Kapak", "Camlı Kapak"] },
+      { name: "Not", type: "text" }
     ],
     bakimKontrolleri: [
       { id: "hortumKontrol", label: "Hortum hasarsız ve tam uzunlukta mı?", type: "checkbox" },
