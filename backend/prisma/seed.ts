@@ -111,7 +111,8 @@ const checklists = {
       { name: "Bağlantı Tipi", options: ["Tek Ağızlı", "Çift Ağızlı"] },
       { name: "Bağlantı Çapı", options: ["DN65", "DN80", "DN100"] },
       { name: "Kaplin Tipi", options: ["Storz", "İtfaiye Standardına Uygun Kaplin", "Diğer"] },
-      { name: "Çekvalf", options: ["Var", "Yok"] }
+      { name: "Çekvalf", options: ["Var", "Yok"] },
+      { name: "Not", type: "text" }
     ],
     bakimKontrolleri: [
       { id: "kaplinKontrol", label: "Kaplin hasarsız ve temiz mi?", type: "checkbox" },
@@ -168,7 +169,8 @@ const checklists = {
       { name: "Çalışma Prensibi", options: ["Adresli", "Konvansiyonel"] },
       { name: "Kullanım Alanı", options: ["İç Ortam", "Dış Ortam", "Islak Hacim", "Ex-proof Alan"] },
       { name: "Besleme Tipi", options: ["Panel Beslemeli", "Harici Güç Kaynaklı"] },
-      { name: "Yangın Paneli Entegrasyonu", options: ["Var", "Yok"] }
+      { name: "Yangın Paneli Entegrasyonu", options: ["Var", "Yok"] },
+      { name: "Not", type: "text" }
     ],
     bakimKontrolleri: [
       { id: "isikKontrol", label: "Işık yanıyor mu?", type: "checkbox" },

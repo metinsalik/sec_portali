@@ -675,6 +675,200 @@ router.post('/equipment/bulk-alarm/:facilityId', async (req, res) => {
   }
 });
 
+
+router.post('/equipment/bulk-flasor/:facilityId', async (req, res) => {
+  try {
+    const { facilityId } = req.params;
+    const { equipments } = req.body;
+    if (!Array.isArray(equipments)) return res.status(400).json({ error: 'Geçersiz veri formatı.' });
+
+    const createdEquipments = [];
+    for (const eq of equipments) {
+      if (!eq.ekipman_no || !eq.kategori) continue;
+
+      let locationId = null;
+      if (eq.blok || eq.kat || eq.birim || eq.mahal) {
+        let loc = await prisma.hazmatDepartment.findFirst({
+          where: {
+            facilityId,
+            building: eq.blok ? String(eq.blok) : null,
+            floor: eq.kat ? String(eq.kat) : null,
+            name: eq.birim ? String(eq.birim) : null,
+            description: eq.mahal ? String(eq.mahal) : null
+          }
+        });
+        if (!loc) {
+          loc = await prisma.hazmatDepartment.create({
+            data: {
+              facilityId,
+              building: eq.blok ? String(eq.blok) : null,
+              floor: eq.kat ? String(eq.kat) : null,
+              name: eq.birim ? String(eq.birim) : null,
+              description: eq.mahal ? String(eq.mahal) : null,
+              isActive: true
+            }
+          });
+        }
+        locationId = loc.id;
+      }
+
+      let companyId = null;
+      if (eq.firma) {
+        let comp = await prisma.fireEquipmentCompany.findFirst({
+          where: { facilityId, name: eq.firma }
+        });
+        if (!comp) {
+          comp = await prisma.fireEquipmentCompany.create({
+            data: { facilityId, name: eq.firma, isActive: true }
+          });
+        }
+        companyId = comp.id;
+      }
+
+      let categoryId = null;
+      if (eq.kategori && eq.alt_kategori) {
+        const cat = await prisma.fireEquipmentCategory.findFirst({ where: { name: eq.alt_kategori } });
+        if (cat) categoryId = cat.id;
+      } else if (eq.kategori) {
+        const cat = await prisma.fireEquipmentCategory.findFirst({ where: { name: eq.kategori, parentId: null } });
+        if (cat) categoryId = cat.id;
+      }
+      if (!categoryId) continue;
+
+      let imalTarihi = null;
+      if (eq.imal_yili) {
+        imalTarihi = new Date(`${eq.imal_yili}-01-01`);
+        if (isNaN(imalTarihi.getTime())) imalTarihi = null;
+      }
+
+      const inventoryData = {
+        "Uyarı Tipi": eq.uyari_tipi || undefined,
+        "Işık Rengi": eq.renk || undefined,
+        "Çalışma Prensibi": eq.calisma_prensibi || undefined,
+        "Kullanım Alanı": eq.kullanım_alani || undefined,
+        "Besleme Tipi": eq.besleme_tipi || undefined,
+        "Yangın Paneli Entegrasyonu": eq.yangin_paneli_entegrasyonu || undefined,
+        "Not": eq.not || undefined,
+      };
+
+      const newEq = await prisma.fireEquipment.create({
+        data: {
+          facilityId, categoryId, locationId, companyId,
+          equipmentNo: eq.ekipman_no ? String(eq.ekipman_no) : `FL-${Math.floor(Math.random()*10000)}`,
+          productionDate: imalTarihi,
+          responsibleUnit: eq.sorumlu_departman ? String(eq.sorumlu_departman) : null,
+          brand: eq.marka ? String(eq.marka) : null,
+          model: eq.model ? String(eq.model) : null,
+          inventoryData,
+          status: 'AKTIF',
+          notes: eq.not ? String(eq.not) : null
+        }
+      });
+      createdEquipments.push(newEq);
+    }
+    res.json({ message: `${createdEquipments.length} adet flaşör başarıyla eklendi.` });
+  } catch (error) {
+    console.error('Bulk Import Error:', error);
+    res.status(500).json({ error: 'Toplu ekleme sırasında bir hata oluştu.' });
+  }
+});
+
+
+router.post('/equipment/bulk-itfaiye/:facilityId', async (req, res) => {
+  try {
+    const { facilityId } = req.params;
+    const { equipments } = req.body;
+    if (!Array.isArray(equipments)) return res.status(400).json({ error: 'Geçersiz veri formatı.' });
+
+    const createdEquipments = [];
+    for (const eq of equipments) {
+      if (!eq.ekipman_no || !eq.kategori) continue;
+
+      let locationId = null;
+      if (eq.blok || eq.kat || eq.birim || eq.mahal) {
+        let loc = await prisma.hazmatDepartment.findFirst({
+          where: {
+            facilityId,
+            building: eq.blok ? String(eq.blok) : null,
+            floor: eq.kat ? String(eq.kat) : null,
+            name: eq.birim ? String(eq.birim) : null,
+            description: eq.mahal ? String(eq.mahal) : null
+          }
+        });
+        if (!loc) {
+          loc = await prisma.hazmatDepartment.create({
+            data: {
+              facilityId,
+              building: eq.blok ? String(eq.blok) : null,
+              floor: eq.kat ? String(eq.kat) : null,
+              name: eq.birim ? String(eq.birim) : null,
+              description: eq.mahal ? String(eq.mahal) : null,
+              isActive: true
+            }
+          });
+        }
+        locationId = loc.id;
+      }
+
+      let companyId = null;
+      if (eq.firma) {
+        let comp = await prisma.fireEquipmentCompany.findFirst({
+          where: { facilityId, name: eq.firma }
+        });
+        if (!comp) {
+          comp = await prisma.fireEquipmentCompany.create({
+            data: { facilityId, name: eq.firma, isActive: true }
+          });
+        }
+        companyId = comp.id;
+      }
+
+      let categoryId = null;
+      if (eq.kategori && eq.alt_kategori) {
+        const cat = await prisma.fireEquipmentCategory.findFirst({ where: { name: eq.alt_kategori } });
+        if (cat) categoryId = cat.id;
+      } else if (eq.kategori) {
+        const cat = await prisma.fireEquipmentCategory.findFirst({ where: { name: eq.kategori, parentId: null } });
+        if (cat) categoryId = cat.id;
+      }
+      if (!categoryId) continue;
+
+      let imalTarihi = null;
+      if (eq.imal_yili) {
+        imalTarihi = new Date(`${eq.imal_yili}-01-01`);
+        if (isNaN(imalTarihi.getTime())) imalTarihi = null;
+      }
+
+      const inventoryData = {
+        "Bağlantı Tipi": eq.baglanti_tipi || undefined,
+        "Bağlantı Çapı": eq.baglanti_capi || undefined,
+        "Kaplin Tipi": eq.kaplin_turu || undefined,
+        "Çekvalf": eq.cekvalf || undefined,
+        "Not": eq.not || undefined,
+      };
+
+      const newEq = await prisma.fireEquipment.create({
+        data: {
+          facilityId, categoryId, locationId, companyId,
+          equipmentNo: eq.ekipman_no ? String(eq.ekipman_no) : `ITF-${Math.floor(Math.random()*10000)}`,
+          productionDate: imalTarihi,
+          responsibleUnit: eq.sorumlu_departman ? String(eq.sorumlu_departman) : null,
+          brand: eq.marka ? String(eq.marka) : null,
+          model: eq.model ? String(eq.model) : null,
+          inventoryData,
+          status: 'AKTIF',
+          notes: eq.not ? String(eq.not) : null
+        }
+      });
+      createdEquipments.push(newEq);
+    }
+    res.json({ message: `${createdEquipments.length} adet itfaiye su verme bağlantısı başarıyla eklendi.` });
+  } catch (error) {
+    console.error('Bulk Import Error:', error);
+    res.status(500).json({ error: 'Toplu ekleme sırasında bir hata oluştu.' });
+  }
+});
+
 router.post('/equipment/:facilityId', async (req, res) => {
   try {
     const { facilityId } = req.params;

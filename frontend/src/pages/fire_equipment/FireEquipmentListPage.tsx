@@ -16,6 +16,7 @@ import { ExcelBulkImportModal } from './components/ExcelBulkImportModal';
 import { ExcelBulkImportDolapModal } from './components/ExcelBulkImportDolapModal';
 import { ExcelBulkImportAlarmModal } from './components/ExcelBulkImportAlarmModal';
 import { ExcelBulkImportFlasorModal } from './components/ExcelBulkImportFlasorModal';
+import { ExcelBulkImportItfaiyeModal } from './components/ExcelBulkImportItfaiyeModal';
 
 export default function FireEquipmentListPage() {
   const facilityId = localStorage.getItem('activeFacilityId');
@@ -254,6 +255,9 @@ export default function FireEquipmentListPage() {
           )}
           {isAdmin && facilityId && activeCategory === 'Flaşör' && (
             <ExcelBulkImportFlasorModal facilityId={facilityId} />
+          )}
+          {isAdmin && facilityId && activeCategory === 'İtfaiye Su Verme Bağlantısı' && (
+            <ExcelBulkImportItfaiyeModal facilityId={facilityId} />
           )}
           <Button variant="outline" onClick={() => window.print()} className="hidden sm:flex" disabled={!equipment || equipment.length === 0}>
             <Printer className="w-4 h-4 mr-2" /> Toplu QR Yazdır
