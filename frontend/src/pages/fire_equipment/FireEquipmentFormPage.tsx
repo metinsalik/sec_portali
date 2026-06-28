@@ -12,6 +12,7 @@ import { Flame, ArrowLeft, Save, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAuth } from '@/context/AuthContext';
 import { ExcelBulkImportModal } from './components/ExcelBulkImportModal';
+import { ExcelBulkImportDolapModal } from './components/ExcelBulkImportDolapModal';
 
 export default function FireEquipmentFormPage() {
   const { id } = useParams();
@@ -325,6 +326,9 @@ export default function FireEquipmentFormPage() {
                   <Label>Kategori *</Label>
                   {categories?.find((c: any) => c.id === formData.categoryId)?.name === 'Yangın Tüpü' && facilityId && (
                     <ExcelBulkImportModal facilityId={facilityId} />
+                  )}
+                  {categories?.find((c: any) => c.id === formData.categoryId)?.name === 'Yangın Dolabı' && facilityId && (
+                    <ExcelBulkImportDolapModal facilityId={facilityId} />
                   )}
                 </div>
                 <select 
