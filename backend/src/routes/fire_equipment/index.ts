@@ -304,7 +304,10 @@ router.get('/equipment/detail/:id', async (req, res) => {
         location: true,
         responsible: true,
         movements: { orderBy: { movementDate: 'desc' } },
-        maintenances: { orderBy: { maintenanceDate: 'desc' } }
+        maintenances: { 
+          orderBy: { maintenanceDate: 'desc' },
+          include: { companyRel: true }
+        }
       }
     });
     
@@ -323,7 +326,17 @@ router.get('/equipment/qr/:code', async (req, res) => {
   try {
     const { code } = req.params;
     const equipment = await prisma.fireEquipment.findFirst({
-      where: { qrCode: code }
+      where: { qrCode: code },
+      include: {
+        category: { include: { parent: true } },
+        location: true,
+        responsible: true,
+        movements: { orderBy: { movementDate: 'desc' } },
+        maintenances: { 
+          orderBy: { maintenanceDate: 'desc' },
+          include: { companyRel: true }
+        }
+      }
     });
     
     if (!equipment) {

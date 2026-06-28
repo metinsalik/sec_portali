@@ -252,7 +252,7 @@ export default function FireEquipmentDetailPage() {
                         </Badge>
                       </div>
                       <p className="text-muted-foreground mb-2">
-                        Firma: {m.companyRel?.name || m.company || '-'} | Teknisyen: {m.technician || '-'}
+                        Firma: {m.companyRel?.name || m.company || '-'}
                       </p>
                       
                       {m.maintenanceData && Object.keys(m.maintenanceData).length > 0 && (
