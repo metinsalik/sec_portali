@@ -488,8 +488,8 @@ export default function FireEquipmentListPage() {
                   <tr>
                     <th className="px-6 py-4 font-medium">Ekipman No</th>
                     <th className="px-6 py-4 font-medium">Kategori</th>
-                    <th className="px-6 py-4 font-medium">Firma</th>
                     <th className="px-6 py-4 font-medium">Lokasyon</th>
+                    <th className="px-6 py-4 font-medium">Mahal</th>
                     <th className="px-6 py-4 font-medium">Sorumlu</th>
                     <th className="px-6 py-4 font-medium">Durum</th>
                     <th className="px-6 py-4 font-medium">Son Bakım</th>
@@ -513,10 +513,10 @@ export default function FireEquipmentListPage() {
                       </td>
                       <td className="px-6 py-4">{item.category?.name || '-'}</td>
                       <td className="px-6 py-4 text-muted-foreground">
-                        {item.company?.name || '-'}
+                        {(item.status === 'DEPODA' || item.equipmentNo?.toUpperCase().includes('YSC-YDK-')) ? 'Teknik Depo (Yedek)' : (item.location ? `${item.location.building || ''}${item.location.floor ? ` / ${item.location.floor}` : ''}${(item.location.department || item.location.name) ? ` - ${item.location.department || item.location.name}` : ''}` : 'Lokasyon Yok')}
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
-                        {(item.status === 'DEPODA' || item.equipmentNo?.toUpperCase().includes('YSC-YDK-')) ? 'Teknik Depo (Yedek)' : (item.location ? `${item.location.building}${item.location.floor ? ` / ${item.location.floor}` : ''}${item.location.department ? ` - ${item.location.department}` : ''}` : 'Lokasyon Yok')}
+                        {item.location?.description || '-'}
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
                         {item.responsible ? item.responsible.name : (item.responsibleUnit || '-')}
