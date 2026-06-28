@@ -12,6 +12,8 @@ import { Flame, Plus, QrCode, ArrowRight, Filter, AlertTriangle, CheckCircle, Pe
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import { ExcelBulkImportModal } from './components/ExcelBulkImportModal';
+import { ExcelBulkImportDolapModal } from './components/ExcelBulkImportDolapModal';
 
 export default function FireEquipmentListPage() {
   const facilityId = localStorage.getItem('activeFacilityId');
@@ -233,6 +235,12 @@ export default function FireEquipmentListPage() {
           <p className="text-muted-foreground mt-1">Tüm ekipmanlarınızı listeleyin ve detaylarını görüntüleyin.</p>
         </div>
         <div className="flex items-center gap-2">
+          {selectedCategoryObj?.name === 'Yangın Tüpü' && facilityId && (
+            <ExcelBulkImportModal facilityId={facilityId} />
+          )}
+          {selectedCategoryObj?.name === 'Yangın Dolabı' && facilityId && (
+            <ExcelBulkImportDolapModal facilityId={facilityId} />
+          )}
           <Button variant="outline" onClick={() => window.print()} className="hidden sm:flex" disabled={!equipment || equipment.length === 0}>
             <Printer className="w-4 h-4 mr-2" /> Toplu QR Yazdır
           </Button>
