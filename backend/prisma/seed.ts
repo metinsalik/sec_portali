@@ -57,13 +57,14 @@ const checklists = {
   "Yangın Dolabı": {
     altKategoriler: ["Hortumlu Yangın Dolabı", "Tüplü Yangın Dolabı", "Kombine Yangın Dolabı", "Köpüklü Sistem Dolabı"],
     inventoryParameters: [
-      { name: "Hortum Tipi", options: ["Yassı Hortum", "Kauçuk Hortum", "Yarı Sert Hortum"] },
-      { name: "Hortum Uzunluğu", options: ["20 m", "25 m", "30 m"] },
-      { name: "Hortum Çapı", options: ["1”", "1½”", "2”"] },
-      { name: "Lans Tipi", options: ["Açma-Kapama Lanslı", "Sis / Jet Ayarlı Lanslı"] },
-      { name: "Vana Tipi", options: ["Köşe Vana", "Küresel Vana", "Basınç Düşürücü Vana"] },
-      { name: "Yangın Tüpü Entegrasyonu", options: ["Var", "Yok"] },
-      { name: "Cam / Kapak Tipi", options: ["Camlı", "Metal Kapaklı", "Kilitli", "Kilitsiz"] }
+      { name: "Hortum Tipi", options: ["Yarı Sert Hortum", "Yassı Hortum", "Kauçuk Hortum"] },
+      { name: "Hortum Uzunluğu", options: ["20 m", "25 m", "30 m", "35 m"] },
+      { name: "Hortum Çapı", options: ["1” (25 mm)", "3/4” (19 mm)"] },
+      { name: "Nozzle Çapı", options: ["6 mm", "9 mm", "10 mm", "12 mm"] },
+      { name: "Çalışma Basıncı", options: ["4 Bar", "6 Bar", "12 MPa"] },
+      { name: "Debi", options: ["66 lt/min", "95 lt/min"] },
+      { name: "Vana Tipi", options: ["Köşe Tip Yangın Vanası", "Küresel Tip Yangın Vanası", "Basınç Düşürücü Vana"] },
+      { name: "Kapak Tipi", options: ["Ahşap Kapak", "Camlı Kapak"] }
     ],
     bakimKontrolleri: [
       { id: "hortumKontrol", label: "Hortum hasarsız ve tam uzunlukta mı?", type: "checkbox" },
