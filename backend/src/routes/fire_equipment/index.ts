@@ -1115,13 +1115,18 @@ router.post('/maintenance/bulk', async (req, res) => {
 
         // Calculate nextMaintenanceDate
         let calculatedNextDate = null;
+        const date = new Date(maintenanceDate);
         if (eq.category?.maintenanceFrequency) {
           const freq = eq.category.maintenanceFrequency;
-          const date = new Date(maintenanceDate);
           if (freq === 'AYLIK') date.setMonth(date.getMonth() + 1);
           else if (freq === '3_AYLIK') date.setMonth(date.getMonth() + 3);
           else if (freq === '6_AYLIK') date.setMonth(date.getMonth() + 6);
           else if (freq === 'YILLIK') date.setFullYear(date.getFullYear() + 1);
+          else date.setFullYear(date.getFullYear() + 1); // Default for unknown frequency
+          calculatedNextDate = date;
+        } else {
+          // Default to 1 year if no category frequency
+          date.setFullYear(date.getFullYear() + 1);
           calculatedNextDate = date;
         }
 
