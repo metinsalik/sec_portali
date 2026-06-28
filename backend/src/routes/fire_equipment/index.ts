@@ -581,11 +581,11 @@ router.post('/equipment/bulk-dolap/:facilityId', async (req, res) => {
 router.post('/equipment/bulk-alarm/:facilityId', async (req, res) => {
   try {
     const { facilityId } = req.params;
-    const items = req.body;
-    if (!Array.isArray(items)) return res.status(400).json({ error: 'Geçersiz veri formatı.' });
+    const { equipments } = req.body;
+    if (!Array.isArray(equipments)) return res.status(400).json({ error: 'Geçersiz veri formatı.' });
 
     const createdEquipments = [];
-    for (const eq of items) {
+    for (const eq of equipments) {
       if (!eq.ekipman_no || !eq.kategori) continue;
 
       let locationId = null;
