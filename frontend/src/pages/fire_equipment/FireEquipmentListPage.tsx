@@ -213,6 +213,10 @@ export default function FireEquipmentListPage() {
     return match;
   }) || [];
 
+  filteredEquipment.sort((a: any, b: any) => {
+    return (a.equipmentNo || '').localeCompare(b.equipmentNo || '', undefined, { numeric: true, sensitivity: 'base' });
+  });
+
   // Dynamic KPIs based on filtered list
   const totalEquipment = filteredEquipment.length;
   const activeEquipment = filteredEquipment.filter((e: any) => e.status === 'AKTIF').length;
