@@ -15,12 +15,14 @@ import { toast } from 'sonner';
 import { ExcelBulkImportModal } from './components/ExcelBulkImportModal';
 import { ExcelBulkImportDolapModal } from './components/ExcelBulkImportDolapModal';
 import { ExcelBulkImportAlarmModal } from './components/ExcelBulkImportAlarmModal';
+import { ExcelBulkImportFlasorModal } from './components/ExcelBulkImportFlasorModal';
 
 export default function FireEquipmentListPage() {
   const facilityId = localStorage.getItem('activeFacilityId');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isAdmin = user?.isAdmin || user?.isManagement;
 
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterSubcategory, setFilterSubcategory] = useState<string>('all');
@@ -91,6 +93,7 @@ export default function FireEquipmentListPage() {
 
   const parentCategories = categories?.filter((c: any) => !c.parentId) || [];
   const selectedCategoryObj = parentCategories.find((c: any) => c.id === filterCategory);
+  const activeCategory = selectedCategoryObj?.name;
   const availableSubcategories = selectedCategoryObj?.subcategories || [];
 
   // Hierarchical Locations Data Extraction
@@ -243,11 +246,14 @@ export default function FireEquipmentListPage() {
           {selectedCategoryObj?.name === 'Yangın Tüpü' && facilityId && (
             <ExcelBulkImportModal facilityId={facilityId} />
           )}
-          {selectedCategoryObj?.name === 'Yangın Dolabı' && facilityId && (
+          {isAdmin && facilityId && activeCategory === 'Yangın Dolabı' && (
             <ExcelBulkImportDolapModal facilityId={facilityId} />
           )}
-          {selectedCategoryObj?.name === 'Alarm Butonu' && facilityId && (
+          {isAdmin && facilityId && activeCategory === 'Alarm Butonu' && (
             <ExcelBulkImportAlarmModal facilityId={facilityId} />
+          )}
+          {isAdmin && facilityId && activeCategory === 'Flaşör' && (
+            <ExcelBulkImportFlasorModal facilityId={facilityId} />
           )}
           <Button variant="outline" onClick={() => window.print()} className="hidden sm:flex" disabled={!equipment || equipment.length === 0}>
             <Printer className="w-4 h-4 mr-2" /> Toplu QR Yazdır
