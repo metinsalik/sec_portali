@@ -124,7 +124,7 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
   kits.forEach(kit => {
     if (kit.placements) {
       kit.placements.forEach((p: any) => {
-        if (p.status === 'Aktif' || p.status === 'Sahada') {
+        if (p.status === 'Aktif' || p.status === 'Sahada' || p.status === 'Kurulumda') {
           availableKits.push({
             placementId: p.id,
             departmentId: p.departmentId,

@@ -524,7 +524,7 @@ export default function SpillKitsPage() {
                         <td className="p-3 font-semibold text-blue-700">{p.unit}</td>
                         <td className="p-3">{p.location || '-'}</td>
                         <td className="p-3">{p.owner || '-'}</td>
-                        <td className="p-3"><Badge className={p.status==='Aktif' ? 'bg-green-500 hover:bg-green-600 text-white border-0' : ''} variant={p.status==='Aktif'?'default':'destructive'}>{p.status}</Badge></td>
+                        <td className="p-3"><Badge className={(p.status==='Aktif' || p.status==='Kurulumda') ? 'bg-green-500 hover:bg-green-600 text-white border-0' : ''} variant={(p.status==='Aktif' || p.status==='Kurulumda')?'default':'destructive'}>{p.status === 'Kurulumda' ? 'Aktif' : p.status}</Badge></td>
                         <td className="p-3 text-right">
                           <Button variant="ghost" size="icon" className="text-red-500" onClick={() => removePlacementMutation.mutate({ kitId: p.kitId, placementId: p.id })}>
                             <Trash2 className="w-4 h-4" />
