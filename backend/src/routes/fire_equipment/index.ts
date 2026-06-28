@@ -533,7 +533,7 @@ router.post('/equipment/bulk-dolap/:facilityId', async (req, res) => {
 
       let categoryId = null;
       if (eq.kategori && eq.alt_kategori) {
-        const cat = await prisma.fireEquipmentCategory.findFirst({ where: { name: eq.alt_kategori } });
+        const cat = await prisma.fireEquipmentCategory.findFirst({ where: { name: eq.alt_kategori, parent: { name: eq.kategori } } });
         if (cat) categoryId = cat.id;
       } else if (eq.kategori) {
         const cat = await prisma.fireEquipmentCategory.findFirst({ where: { name: eq.kategori, parentId: null } });
@@ -629,7 +629,7 @@ router.post('/equipment/bulk-alarm/:facilityId', async (req, res) => {
 
       let categoryId = null;
       if (eq.kategori && eq.alt_kategori) {
-        const cat = await prisma.fireEquipmentCategory.findFirst({ where: { name: eq.alt_kategori } });
+        const cat = await prisma.fireEquipmentCategory.findFirst({ where: { name: eq.alt_kategori, parent: { name: eq.kategori } } });
         if (cat) categoryId = cat.id;
       } else if (eq.kategori) {
         const cat = await prisma.fireEquipmentCategory.findFirst({ where: { name: eq.kategori, parentId: null } });
@@ -727,7 +727,7 @@ router.post('/equipment/bulk-flasor/:facilityId', async (req, res) => {
 
       let categoryId = null;
       if (eq.kategori && eq.alt_kategori) {
-        const cat = await prisma.fireEquipmentCategory.findFirst({ where: { name: eq.alt_kategori } });
+        const cat = await prisma.fireEquipmentCategory.findFirst({ where: { name: eq.alt_kategori, parent: { name: eq.kategori } } });
         if (cat) categoryId = cat.id;
       } else if (eq.kategori) {
         const cat = await prisma.fireEquipmentCategory.findFirst({ where: { name: eq.kategori, parentId: null } });
@@ -825,7 +825,7 @@ router.post('/equipment/bulk-itfaiye/:facilityId', async (req, res) => {
 
       let categoryId = null;
       if (eq.kategori && eq.alt_kategori) {
-        const cat = await prisma.fireEquipmentCategory.findFirst({ where: { name: eq.alt_kategori } });
+        const cat = await prisma.fireEquipmentCategory.findFirst({ where: { name: eq.alt_kategori, parent: { name: eq.kategori } } });
         if (cat) categoryId = cat.id;
       } else if (eq.kategori) {
         const cat = await prisma.fireEquipmentCategory.findFirst({ where: { name: eq.kategori, parentId: null } });
