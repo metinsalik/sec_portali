@@ -595,8 +595,8 @@ router.post('/equipment/bulk-alarm/:facilityId', async (req, res) => {
             facilityId,
             building: eq.blok || null,
             floor: eq.kat || null,
-            department: eq.birim || null,
-            name: eq.mahal || null
+            name: eq.birim || null,
+            description: eq.mahal || null
           }
         });
         if (!loc) {
@@ -605,8 +605,8 @@ router.post('/equipment/bulk-alarm/:facilityId', async (req, res) => {
               facilityId,
               building: eq.blok || null,
               floor: eq.kat || null,
-              department: eq.birim || null,
-              name: eq.mahal || null,
+              name: eq.birim || null,
+              description: eq.mahal || null,
               isActive: true
             }
           });
