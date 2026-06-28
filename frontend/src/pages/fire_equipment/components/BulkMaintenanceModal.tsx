@@ -117,18 +117,19 @@ export function BulkMaintenanceModal({ open, onOpenChange, equipmentIds, facilit
 
           <div className="space-y-2">
             <Label>Bakımı Kontrol Eden / Teknisyen</Label>
-            <Input 
-              list="responsibles-list"
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={technician}
               onChange={(e) => setTechnician(e.target.value)}
-              placeholder="Ad Soyad girin veya seçin"
               required
-            />
-            <datalist id="responsibles-list">
-              {responsibles?.map((r: any) => (
-                <option key={r.id} value={r.name} />
+            >
+              <option value="">-- Seçilmedi --</option>
+              {responsibles?.map((resp: any) => (
+                <option key={resp.id} value={resp.name}>
+                  {resp.department ? `${resp.department} - ` : ''}{resp.name}
+                </option>
               ))}
-            </datalist>
+            </select>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t mt-6">
