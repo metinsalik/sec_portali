@@ -49,6 +49,7 @@ export default function FireEquipmentDetailPage() {
       toast.success('Değişim işlemi başarıyla tamamlandı');
       setSwapModalOpen(false);
       queryClient.invalidateQueries({ queryKey: ['fire-equipment', id] });
+      queryClient.invalidateQueries({ queryKey: ['fire-equipment'] });
     },
     onError: () => toast.error('Değişim sırasında bir hata oluştu')
   });
@@ -60,6 +61,7 @@ export default function FireEquipmentDetailPage() {
     onSuccess: () => {
       toast.success('Cihaz depoya alındı.');
       queryClient.invalidateQueries({ queryKey: ['fire-equipment', id] });
+      queryClient.invalidateQueries({ queryKey: ['fire-equipment'] });
     },
     onError: () => toast.error('İşlem sırasında bir hata oluştu')
   });

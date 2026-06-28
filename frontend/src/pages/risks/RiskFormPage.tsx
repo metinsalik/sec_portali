@@ -345,6 +345,8 @@ export default function RiskFormPage() {
     onSuccess: () => {
       toast.success(isEdit ? 'Risk değerlendirmesi güncellendi.' : 'Risk değerlendirmesi eklendi.');
       queryClient.invalidateQueries({ queryKey: ['risks', departmentId] });
+      queryClient.invalidateQueries({ queryKey: ['facility-risks'] });
+      queryClient.invalidateQueries({ queryKey: ['risk-departments'] });
       navigate(`/risks/department/${departmentId}`);
     },
     onError: (e: any) => toast.error(e.message),
