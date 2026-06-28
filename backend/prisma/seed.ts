@@ -182,7 +182,7 @@ const checklists = {
     altKategoriler: ["Dış Ortam Butonu", "Ex-Proof Buton", "Kırılabilir Camlı Buton", "Basma Elemanlı Buton", "Resetlenebilir Buton"],
     inventoryParameters: [
       { name: "Çalışma Prensibi", options: ["Adresli", "Konvansiyonel", "Basma Elemanlı"] },
-      { name: "Buton Tipi", options: ["Kırılabilir Camlı", "Resetlenebilir"] },
+      { name: "Buton Tipi", options: ["Kırılabilir Camlı", "Resetlenebilir", "Basma Elemanlı"] },
       { name: "Koruma Kapağı", options: ["Var", "Yok"] },
       { name: "Kullanım Alanı", options: ["İç Ortam", "Dış Ortam", "Islak Hacim", "Ex-proof Alan"] },
       { name: "Yangın Paneli Entegrasyonu", options: ["Var", "Yok"] },
