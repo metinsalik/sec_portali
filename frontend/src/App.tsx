@@ -295,7 +295,7 @@ function App() {
                 <Route
                   path="/operations/dashboard"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><OperationsDashboard /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -303,7 +303,7 @@ function App() {
                 <Route
                   path="/operations/facility"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><OperationsFacilityPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -311,7 +311,7 @@ function App() {
                 <Route
                   path="/operations/hr-data"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><HRDataPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -319,7 +319,7 @@ function App() {
                 <Route
                   path="/operations/accidents"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><AccidentsPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -327,7 +327,7 @@ function App() {
                 <Route
                   path="/operations/incidents"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><ExtraordinaryIncidentsPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -335,7 +335,7 @@ function App() {
                 <Route
                   path="/operations/notebooks"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><NotebooksPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -343,7 +343,7 @@ function App() {
                 <Route
                   path="/operations/training"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><TrainingPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -351,7 +351,7 @@ function App() {
                 <Route
                   path="/operations/board"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BoardPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -359,7 +359,7 @@ function App() {
                 <Route
                   path="/operations/inspections"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><InspectionsPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -376,7 +376,7 @@ function App() {
                 <Route
                   path="/build-management/project/:id/handover"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildProjectHandoverPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -488,7 +488,7 @@ function App() {
                 <Route
                   path="/workflow/dashboard"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><WorkflowDashboard /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -496,7 +496,7 @@ function App() {
                 <Route
                   path="/workflow/board"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BoardView /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -504,7 +504,7 @@ function App() {
                 <Route
                   path="/workflow/pool"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><PoolView /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -512,7 +512,7 @@ function App() {
                 <Route
                   path="/workflow/team"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><TeamOverview /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -520,7 +520,7 @@ function App() {
                 <Route
                   path="/workflow/settings"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><WorkflowSettings /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -534,7 +534,7 @@ function App() {
                 <Route
                   path="/hazmat/dashboard"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><HazmatDashboardPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -542,7 +542,7 @@ function App() {
                 <Route
                   path="/hazmat/materials"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><MaterialsListPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -550,7 +550,7 @@ function App() {
                 <Route
                   path="/hazmat/materials/new"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><MaterialFormPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -558,7 +558,7 @@ function App() {
                 <Route
                   path="/hazmat/materials/edit/:id"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><MaterialFormPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -566,7 +566,7 @@ function App() {
                 <Route
                   path="/hazmat/materials/view/:id"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <MaterialViewPage />
                     </ProtectedRoute>
                   }
@@ -574,7 +574,7 @@ function App() {
                 <Route
                   path="/hazmat/inventory"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><FacilityInventoryListPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -582,7 +582,7 @@ function App() {
                 <Route
                   path="/hazmat/inventory/material/:id"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><HazmatFacilityMaterialPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -590,7 +590,7 @@ function App() {
                 <Route
                   path="/hazmat/inventory/new"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><FacilityInventoryFormPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -598,7 +598,7 @@ function App() {
                 <Route
                   path="/hazmat/departments"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><HazmatDepartmentsPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -606,7 +606,7 @@ function App() {
                 <Route
                   path="/hazmat/departments/:id"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><HazmatDepartmentViewPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -614,7 +614,7 @@ function App() {
                 <Route
                   path="/hazmat/eyewash-risk"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><EyewashRiskAnalysisPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -622,7 +622,7 @@ function App() {
                 <Route
                   path="/hazmat/eyewash-risk/new"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><EyewashRiskAnalysisFormPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -630,7 +630,7 @@ function App() {
                 <Route
                   path="/hazmat/eyewash-risk/edit/:id"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><EyewashRiskAnalysisFormPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -638,7 +638,7 @@ function App() {
                 <Route
                   path="/hazmat/eyewash-risk/view/:id"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><EyewashRiskAnalysisViewPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -646,7 +646,7 @@ function App() {
                 <Route
                   path="/hazmat/eyewash-risk/report"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><EyewashRiskAnalysisReportPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -654,7 +654,7 @@ function App() {
                 <Route
                   path="/hazmat/spill-kits"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><SpillKitsPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -662,7 +662,7 @@ function App() {
                 <Route
                   path="/hazmat/cleaning-carts"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><HazmatCleaningCartsPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -670,7 +670,7 @@ function App() {
                 <Route
                   path="/hazmat/incidents"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><HazmatIncidentsPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -678,7 +678,7 @@ function App() {
                 <Route
                   path="/hazmat/settings/units"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><HazmatSettingsPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -686,7 +686,7 @@ function App() {
                 <Route
                   path="/hazmat/settings/departments"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><HazmatSettingsPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -694,7 +694,7 @@ function App() {
                 <Route
                   path="/hazmat/settings/ghs"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><HazmatSettingsPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -702,7 +702,7 @@ function App() {
                 <Route
                   path="/hazmat/settings/adr"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><HazmatSettingsPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -710,7 +710,7 @@ function App() {
                 <Route
                   path="/hazmat/settings/ppe"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><HazmatSettingsPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -718,7 +718,7 @@ function App() {
                 <Route
                   path="/hazmat/settings/categories"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><HazmatSettingsPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -726,7 +726,7 @@ function App() {
                 <Route
                   path="/hazmat/settings/kit-items"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><HazmatKitItemsPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -740,7 +740,7 @@ function App() {
                 <Route
                   path="/fire-equipment/dashboard"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><FireEquipmentDashboard /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -748,7 +748,7 @@ function App() {
                 <Route
                   path="/fire-equipment/list"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><FireEquipmentListPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -756,7 +756,7 @@ function App() {
                 <Route
                   path="/fire-equipment/new"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><FireEquipmentFormPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -764,7 +764,7 @@ function App() {
                 <Route
                   path="/fire-equipment/edit/:id"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><FireEquipmentFormPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -772,7 +772,7 @@ function App() {
                 <Route
                   path="/fire-equipment/view/:id"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><FireEquipmentDetailPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -780,7 +780,7 @@ function App() {
                 <Route
                   path="/fire-equipment/maintenance/:id"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><FireEquipmentMaintenancePage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -788,7 +788,7 @@ function App() {
                 <Route
                   path="/fire-equipment/maintenance"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><FireEquipmentMaintenanceDashboardPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -796,7 +796,7 @@ function App() {
                 <Route
                   path="/fire-equipment/settings"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><FireEquipmentSettingsPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -804,7 +804,7 @@ function App() {
                 <Route
                   path="/fire-equipment/scanner"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><QRScannerPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -818,7 +818,7 @@ function App() {
                 <Route
                   path="/build-management/dashboard"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildDashboard /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -826,7 +826,7 @@ function App() {
                 <Route
                   path="/build-management/list"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildProjectList /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -834,7 +834,7 @@ function App() {
                 <Route
                   path="/build-management/new"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildProjectForm /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -842,7 +842,7 @@ function App() {
                 <Route
                   path="/build-management/project/:id"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildProjectDetail /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -850,7 +850,7 @@ function App() {
                 <Route
                   path="/build-management/inspections"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildInspectionsPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -858,7 +858,7 @@ function App() {
                 <Route
                   path="/build-management/project/:id/design-form"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildDesignFormPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -866,7 +866,7 @@ function App() {
                 <Route
                   path="/build-management/project/:id/risk-assessment"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildRiskAssessmentPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -874,7 +874,7 @@ function App() {
                 <Route
                   path="/build-management/project/:id/inspections"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildProjectInspectionsDashboard /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -882,7 +882,7 @@ function App() {
                 <Route
                   path="/build-management/project/:id/inspections/ohs/new"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildInspectionOHSFormPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -890,7 +890,7 @@ function App() {
                 <Route
                   path="/build-management/project/:id/inspections/ohs"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildInspectionOHSFormPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -898,7 +898,7 @@ function App() {
                 <Route
                   path="/build-management/project/:id/inspections/ohs/edit/:inspectionId"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildInspectionOHSFormPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -906,7 +906,7 @@ function App() {
                 <Route
                   path="/build-management/project/:id/inspections/infection/new"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildInspectionInfectionFormPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -914,7 +914,7 @@ function App() {
                 <Route
                   path="/build-management/project/:id/inspections/infection"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildInspectionInfectionFormPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -922,7 +922,7 @@ function App() {
                 <Route
                   path="/build-management/project/:id/inspections/infection/edit/:inspectionId"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildInspectionInfectionFormPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -930,7 +930,7 @@ function App() {
                 <Route
                   path="/build-management/findings"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildFindingsPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -938,7 +938,7 @@ function App() {
                 <Route
                   path="/build-management/project/:id/findings"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildProjectDetail defaultTab="bulgular" /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -946,7 +946,7 @@ function App() {
                 <Route
                   path="/build-management/handover"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildHandoverListPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -954,7 +954,7 @@ function App() {
                 <Route
                   path="/build-management/reports"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildReportsPage /></AppLayout>
                     </ProtectedRoute>
                   }
@@ -962,7 +962,7 @@ function App() {
                 <Route
                   path="/build-management/settings"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['admin', 'management']}>
                       <AppLayout><BuildSettings /></AppLayout>
                     </ProtectedRoute>
                   }

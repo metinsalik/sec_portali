@@ -157,7 +157,7 @@ const buildManagementNavItems = [
 const profileNavItems = (hasAdminAccess: boolean) => [
   { label: 'UYGULAMALAR', type: 'group' },
   ...(hasAdminAccess ? [{ label: 'İSG Atama Paneli', icon: LayoutDashboard, to: '/panel' }] : []),
-  { label: 'Aylık Veri Sistemi', icon: FileText, to: '/operations' },
+  ...(hasAdminAccess ? [{ label: 'Aylık Veri Sistemi', icon: FileText, to: '/operations' }] : []),
   { label: 'HESABIM', type: 'group' },
   { label: 'Profil Bilgileri', icon: User, to: '/profile' },
 ];

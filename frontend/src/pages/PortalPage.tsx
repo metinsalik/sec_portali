@@ -193,6 +193,7 @@ export default function PortalPage() {
           )}
 
           {/* Card 2: Aylık Veri Sistemi */}
+          {hasAdminAccess && (
           <div
             onClick={() => navigate('/operations')}
             className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
@@ -231,8 +232,10 @@ export default function PortalPage() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Card 3: İş Takip */}
+          {hasAdminAccess && (
           <div
             onClick={() => navigate('/workflow')}
             className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
@@ -271,6 +274,7 @@ export default function PortalPage() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Card 4: Risk Değerlendirmesi */}
           <div
