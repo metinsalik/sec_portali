@@ -229,11 +229,14 @@ export default function FireEquipmentFormPage() {
 
   const uniqueDepartments = Array.from(new Set(responsibles?.map((r: any) => r.department).filter(Boolean))) as string[];
 
+  const parentCategoryData = categories?.find((c: any) => c.id === formData.categoryId);
   const activeCategoryData = formData.subcategoryId !== 'none'
     ? activeSubcategories.find((s: any) => s.id === formData.subcategoryId)
-    : categories?.find((c: any) => c.id === formData.categoryId);
+    : parentCategoryData;
 
-  const inventoryParams = activeCategoryData?.inventoryParameters || [];
+  const inventoryParams = (activeCategoryData?.inventoryParameters?.length > 0 
+    ? activeCategoryData.inventoryParameters 
+    : parentCategoryData?.inventoryParameters) || [];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
