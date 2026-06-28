@@ -119,13 +119,38 @@ export default function FacilityDepartmentsPage() {
                   </span>
                 </div>
                 
-                <div className="mb-6 flex-1">
+                <div className="mb-6 flex-1 space-y-1.5">
                   {hasRisk ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-error"></div>
-                      <span className="text-sm text-muted-foreground">Açık Tehlike</span>
-                      <span className="ml-auto font-bold text-error">{acikCount}</span>
-                    </div>
+                    <>
+                      {(acikCount > 0) && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-red-600"></div>
+                          <span className="text-sm text-muted-foreground dark:text-slate-400">Açık Tehlike</span>
+                          <span className="ml-auto font-bold text-red-600">{acikCount}</span>
+                        </div>
+                      )}
+                      {(dept.stats?.mudahale > 0) && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                          <span className="text-sm text-muted-foreground dark:text-slate-400">İlk Müdahale</span>
+                          <span className="ml-auto font-bold text-orange-500">{dept.stats.mudahale}</span>
+                        </div>
+                      )}
+                      {(dept.stats?.takip > 0) && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+                          <span className="text-sm text-muted-foreground dark:text-slate-400">Takipte</span>
+                          <span className="ml-auto font-bold text-blue-600">{dept.stats.takip}</span>
+                        </div>
+                      )}
+                      {(dept.stats?.kapali > 0) && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                          <span className="text-sm text-muted-foreground dark:text-slate-400">Kapatıldı</span>
+                          <span className="ml-auto font-bold text-green-500">{dept.stats.kapali}</span>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="italic text-muted-foreground text-sm">Risk kaydı yok</div>
                   )}
