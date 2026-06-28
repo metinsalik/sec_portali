@@ -170,9 +170,17 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
     return `Blok: ${loc.building || '-'} / Kat: ${loc.floor || '-'} / Birim: ${loc.name || '-'}${loc.description ? ` / Mahal: ${loc.description}` : ''}`;
   }, [kitLocationId, departments]);
 
+  const currentLocName = useMemo(() => {
+    if (!kitLocationId) return '';
+    const loc = departments.find((d: any) => d.id === kitLocationId);
+    return loc ? loc.name : '';
+  }, [kitLocationId, departments]);
+
   const filteredKits = availableKits.filter(k => 
     (k.departmentId && k.departmentId === kitLocationId) || 
-    k.location === currentLocString
+    k.location === currentLocString ||
+    k.location === currentLocName ||
+    (currentLocName && k.location?.includes(currentLocName))
   );
 
   if (isDefinitionsLoading && !initialData) {
