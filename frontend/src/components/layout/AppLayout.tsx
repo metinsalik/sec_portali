@@ -210,7 +210,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden">
+    <div className="flex h-screen bg-background text-foreground overflow-hidden print:h-auto print:overflow-visible print:block">
       {/* Mobile/Tablet Backdrop */}
       {isSidebarOpen && (
         <div 
@@ -326,7 +326,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-muted/20 print:bg-white">
+      <div className="flex-1 flex flex-col overflow-hidden bg-muted/20 print:bg-white print:overflow-visible print:block">
         {/* Top Header */}
         <header className="h-16 bg-card border-b flex items-center justify-between px-4 lg:px-6 shrink-0 print:hidden">
           <div className="flex items-center gap-2 lg:gap-4">
@@ -374,7 +374,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6 print:p-0 print:overflow-visible">
+        <main className="flex-1 overflow-y-auto p-6 print:p-0 print:overflow-visible print:block">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>
