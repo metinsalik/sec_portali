@@ -50,7 +50,10 @@ router.delete('/units/:id', auth_1.authMiddleware, async (req, res) => {
 router.get('/departments', auth_1.authMiddleware, async (req, res) => {
     const { facilityId, isCleaningCart } = req.query;
     try {
-        const whereClause = facilityId && facilityId !== 'all' ? { facilityId: String(facilityId) } : {};
+        const whereClause = { isActive: true };
+        if (facilityId && facilityId !== 'all') {
+            whereClause.facilityId = String(facilityId);
+        }
         if (isCleaningCart !== undefined) {
             whereClause.isCleaningCart = isCleaningCart === 'true';
         }
@@ -126,11 +129,53 @@ router.put('/departments/:id', auth_1.authMiddleware, async (req, res) => {
 });
 router.delete('/departments/:id', auth_1.authMiddleware, async (req, res) => {
     try {
-        await prisma.hazmatDepartment.delete({ where: { id: req.params.id } });
+        await prisma.hazmatDepartment.update({
+            where: { id: req.params.id },
+            data: { isActive: false }
+        });
         res.json({ message: 'Department deleted successfully' });
     }
     catch (error) {
         console.error('Error deleting department:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+// Bulk rename node (Building, Floor, or Department)
+router.post('/departments/rename-node', auth_1.authMiddleware, async (req, res) => {
+    const { facilityId, level, oldValue, newValue, parentBuilding, parentFloor } = req.body;
+    if (!facilityId || !level || !oldValue || !newValue) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+    try {
+        const whereClause = { facilityId: String(facilityId), isActive: true };
+        if (level === 'building') {
+            whereClause.building = oldValue === 'Belirtilmemiş Blok' ? null : oldValue;
+            await prisma.hazmatDepartment.updateMany({
+                where: whereClause,
+                data: { building: newValue }
+            });
+        }
+        else if (level === 'floor') {
+            whereClause.building = parentBuilding === 'Belirtilmemiş Blok' ? null : parentBuilding;
+            whereClause.floor = oldValue === 'Belirtilmemiş Kat' ? null : oldValue;
+            await prisma.hazmatDepartment.updateMany({
+                where: whereClause,
+                data: { floor: newValue }
+            });
+        }
+        else if (level === 'department') {
+            whereClause.building = parentBuilding === 'Belirtilmemiş Blok' ? null : parentBuilding;
+            whereClause.floor = parentFloor === 'Belirtilmemiş Kat' ? null : parentFloor;
+            whereClause.name = oldValue === 'Belirtilmemiş Birim' ? null : oldValue;
+            await prisma.hazmatDepartment.updateMany({
+                where: whereClause,
+                data: { name: newValue }
+            });
+        }
+        res.json({ message: 'Node renamed successfully' });
+    }
+    catch (error) {
+        console.error('Error renaming node:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -339,6 +384,58 @@ router.delete('/categories/:id', auth_1.authMiddleware, async (req, res) => {
     }
     catch (error) {
         console.error('Error deleting category:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+// --- INCIDENT TYPES ---
+router.get('/incident-types', auth_1.authMiddleware, async (req, res) => {
+    try {
+        const types = await prisma.hazmatIncidentType.findMany({
+            orderBy: { name: 'asc' }
+        });
+        res.json(types);
+    }
+    catch (error) {
+        console.error('Error fetching incident types:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+router.post('/incident-types', auth_1.authMiddleware, async (req, res) => {
+    const { name } = req.body;
+    if (!name)
+        return res.status(400).json({ error: 'name is required' });
+    try {
+        const type = await prisma.hazmatIncidentType.create({
+            data: { name }
+        });
+        res.status(201).json(type);
+    }
+    catch (error) {
+        console.error('Error creating incident type:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+router.put('/incident-types/:id', auth_1.authMiddleware, async (req, res) => {
+    const { name } = req.body;
+    try {
+        const type = await prisma.hazmatIncidentType.update({
+            where: { id: req.params.id },
+            data: { name }
+        });
+        res.json(type);
+    }
+    catch (error) {
+        console.error('Error updating incident type:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+router.delete('/incident-types/:id', auth_1.authMiddleware, async (req, res) => {
+    try {
+        await prisma.hazmatIncidentType.delete({ where: { id: req.params.id } });
+        res.json({ message: 'Incident type deleted successfully' });
+    }
+    catch (error) {
+        console.error('Error deleting incident type:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

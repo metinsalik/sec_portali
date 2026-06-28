@@ -19,6 +19,7 @@ const DenetimYap = () => {
   
   const [cevaplar, setCevaplar] = useState<Record<number, any>>({});
   const [savingIds, setSavingIds] = useState<Record<number, boolean>>({});
+  const [isBulking, setIsBulking] = useState(false);
 
   // Layout states
   const [searchTerm, setSearchTerm] = useState('');
@@ -130,6 +131,45 @@ const DenetimYap = () => {
       navigate('/bina-turu/turler');
     } catch (err) {
       toast.error('Tur tamamlanırken hata oluştu.');
+    }
+  };
+
+  const handleTumunuUygunYap = async () => {
+    if (!activeAlan) return;
+    const unansweredIds = activeAlanSorulari
+      .filter((ts: any) => !cevaplar[ts.id]?.sonuc)
+      .map((ts: any) => ts.id);
+
+    if (unansweredIds.length === 0) {
+      toast.info('Zaten bu bölümdeki tüm sorular yanıtlanmış.');
+      return;
+    }
+
+    setIsBulking(true);
+    try {
+      await api.post('/bina-turu/denetim/bulk-cevap', {
+        turSorusuIds: unansweredIds,
+        sonuc: 'UYGUN'
+      });
+      
+      setCevaplar(prev => {
+        const updated = { ...prev };
+        unansweredIds.forEach((id: number) => {
+          updated[id] = {
+            ...updated[id],
+            sonuc: 'UYGUN',
+            aciklama: '',
+            isSaved: true
+          };
+        });
+        return updated;
+      });
+      
+      toast.success(`${unansweredIds.length} soru UYGUN olarak işaretlendi.`);
+    } catch (err) {
+      toast.error('Toplu işaretleme başarısız oldu.');
+    } finally {
+      setIsBulking(false);
     }
   };
 
@@ -287,6 +327,17 @@ const DenetimYap = () => {
                 <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
                   {activeAlanSorulari.length} soru
                 </span>
+                
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="ml-4 text-xs h-7 border-green-200 text-green-700 hover:bg-green-50"
+                  onClick={handleTumunuUygunYap}
+                  disabled={isBulking || activeAlanSorulari.every((ts:any) => cevaplar[ts.id]?.sonuc)}
+                >
+                  {isBulking ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1" />} 
+                  {isBulking ? 'İşleniyor...' : 'Tümünü Uygun Yap'}
+                </Button>
               </div>
               
               {activeAlanSorulari.length > 0 && activeAlanSorulari.every((ts:any) => cevaplar[ts.id]?.isSaved) && (

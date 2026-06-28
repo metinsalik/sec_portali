@@ -13,6 +13,84 @@ const handleError = (res, error) => {
     console.error(error);
     res.status(500).json({ error: 'Bir hata oluştu' });
 };
+router.post('/bulk-cevap', async (req, res) => {
+    const { turSorusuIds, sonuc } = req.body;
+    if (!turSorusuIds || !Array.isArray(turSorusuIds) || turSorusuIds.length === 0) {
+        res.status(400).json({ error: 'Geçersiz soru listesi.' });
+        return;
+    }
+    try {
+        const createdAnswers = [];
+        await prisma.$transaction(async (tx) => {
+            for (const id of turSorusuIds) {
+                const turSorusu = await tx.bTTurSorusu.findUnique({
+                    where: { id: Number(id) },
+                    include: { tur: true }
+                });
+                if (!turSorusu)
+                    continue;
+                const existingCevap = await tx.bTCevap.findUnique({
+                    where: { turSorusuId: Number(id) }
+                });
+                let cevap;
+                if (existingCevap) {
+                    // If bulk overriding everything to UYGUN, we should clear aciklama and remove fotograflar conceptually?
+                    // The user requested "komplesini uygun yapsın", usually means only answering unanswered ones, or overriding everything.
+                    // It's safer to just set sonuc.
+                    cevap = await tx.bTCevap.update({
+                        where: { id: existingCevap.id },
+                        data: {
+                            sonuc: sonuc,
+                            dofGerekli: sonuc === 'UYGUN_DEGIL',
+                        }
+                    });
+                }
+                else {
+                    cevap = await tx.bTCevap.create({
+                        data: {
+                            turSorusuId: Number(id),
+                            sonuc: sonuc,
+                            aciklama: '',
+                            dofGerekli: sonuc === 'UYGUN_DEGIL',
+                            fotograflar: []
+                        }
+                    });
+                }
+                if (sonuc === 'UYGUN_DEGIL') {
+                    const existingUygunsuzluk = await tx.bTUygunsuzluk.findUnique({
+                        where: { cevapId: cevap.id }
+                    });
+                    if (!existingUygunsuzluk) {
+                        await tx.bTUygunsuzluk.create({
+                            data: {
+                                facilityId: turSorusu.tur.facilityId,
+                                turId: turSorusu.turId,
+                                cevapId: cevap.id,
+                                durum: 'ACIK'
+                            }
+                        });
+                    }
+                }
+                else {
+                    await tx.bTUygunsuzluk.deleteMany({
+                        where: { cevapId: cevap.id }
+                    });
+                }
+                if (turSorusu.tur.durum === 'TASLAK') {
+                    await tx.bTTur.update({
+                        where: { id: turSorusu.turId },
+                        data: { durum: 'AKTIF' }
+                    });
+                }
+                createdAnswers.push(cevap);
+            }
+        });
+        res.json({ message: 'Başarılı', count: createdAnswers.length });
+    }
+    catch (err) {
+        handleError(res, err);
+    }
+});
 router.post('/:turSorusuId/cevap', upload.array('fotograflar'), async (req, res) => {
     const { turSorusuId } = req.params;
     const { sonuc, aciklama, dofGerekli } = req.body;
