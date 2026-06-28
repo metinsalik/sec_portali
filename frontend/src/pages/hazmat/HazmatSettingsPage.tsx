@@ -148,6 +148,8 @@ function DeptsTab() {
   const [expandedLocs, setExpandedLocs] = useState<Record<string, boolean>>({});
   const [isLocDialogOpen, setIsLocDialogOpen] = useState(false);
   const [quickAddLoc, setQuickAddLoc] = useState({ building: '', floor: '', name: '', description: '' });
+  const [renamingNode, setRenamingNode] = useState<{level: string, oldValue: string, parentBuilding?: string, parentFloor?: string} | null>(null);
+  const [renameValue, setRenameValue] = useState('');
 
   const { data: depts = [], isLoading: isLocLoading } = useQuery({
     queryKey: ['hazmat-departments', activeFacilityId],
@@ -184,6 +186,15 @@ function DeptsTab() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hazmat-departments', activeFacilityId] });
       toast.success('Lokasyon silindi.');
+    }
+  });
+
+  const renameNodeMutation = useMutation({
+    mutationFn: async (data: any) => await api.post('/hazmat/settings/departments/rename-node', { facilityId: activeFacilityId, ...data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hazmat-departments', activeFacilityId] });
+      setRenamingNode(null);
+      toast.success('İsim başarıyla güncellendi.');
     }
   });
 
@@ -345,9 +356,15 @@ function DeptsTab() {
                     {expandedLocs[block] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                     <MapPin className="w-4 h-4 text-primary" /> {block}
                   </div>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleQuickAdd(block, 'Belirtilmemiş Kat', 'Belirtilmemiş Birim')} title="Bu bloğa Kat ekle">
-                    <Plus className="w-4 h-4 text-blue-500" />
-                  </Button>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary" 
+                      onClick={(e) => { e.stopPropagation(); setRenamingNode({level: 'building', oldValue: block}); setRenameValue(block); }} title="Bloğu Yeniden Adlandır">
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleQuickAdd(block, 'Belirtilmemiş Kat', 'Belirtilmemiş Birim')} title="Bu bloğa Kat ekle">
+                      <Plus className="w-4 h-4 text-blue-500" />
+                    </Button>
+                  </div>
                 </div>
                 {expandedLocs[block] && (
                   <div className="border-t">
@@ -358,9 +375,15 @@ function DeptsTab() {
                             {expandedLocs[`${block}-${floor}`] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                             <span className="text-muted-foreground">↳</span> {floor}
                           </div>
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleQuickAdd(block, floor, 'Belirtilmemiş Birim')} title="Bu kata Birim ekle">
-                            <Plus className="w-3.5 h-3.5 text-blue-500" />
-                          </Button>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-primary" 
+                              onClick={(e) => { e.stopPropagation(); setRenamingNode({level: 'floor', oldValue: floor, parentBuilding: block}); setRenameValue(floor); }} title="Katı Yeniden Adlandır">
+                              <Pencil className="w-3 h-3" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleQuickAdd(block, floor, 'Belirtilmemiş Birim')} title="Bu kata Birim ekle">
+                              <Plus className="w-3.5 h-3.5 text-blue-500" />
+                            </Button>
+                          </div>
                         </div>
                         {expandedLocs[`${block}-${floor}`] && (
                           <div className="bg-slate-50/50 dark:bg-slate-900/50 border-t">
@@ -371,9 +394,15 @@ function DeptsTab() {
                                     {expandedLocs[`${block}-${floor}-${dept}`] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                                     <span className="text-muted-foreground">↳</span> {dept}
                                   </div>
-                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleQuickAdd(block, floor, dept)} title="Bu birime Mahal ekle">
-                                    <Plus className="w-3.5 h-3.5 text-blue-500" />
-                                  </Button>
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-primary" 
+                                      onClick={(e) => { e.stopPropagation(); setRenamingNode({level: 'department', oldValue: dept, parentBuilding: block, parentFloor: floor}); setRenameValue(dept); }} title="Birimi Yeniden Adlandır">
+                                      <Pencil className="w-3 h-3" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleQuickAdd(block, floor, dept)} title="Bu birime Mahal ekle">
+                                      <Plus className="w-3.5 h-3.5 text-blue-500" />
+                                    </Button>
+                                  </div>
                                 </div>
                                 {expandedLocs[`${block}-${floor}-${dept}`] && (
                                   <div className="p-2 pl-20 space-y-2 border-t border-slate-100 dark:border-slate-800">
@@ -451,6 +480,29 @@ function DeptsTab() {
             <Button className="w-full" onClick={() => createDept.mutate(quickAddLoc)} disabled={createDept.isPending}>
               {createDept.isPending ? 'Ekleniyor...' : 'Ekle'}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!renamingNode} onOpenChange={(open) => !open && setRenamingNode(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>İsmi Güncelle</DialogTitle>
+            <DialogDescription>
+              Bu değişiklik, bu {renamingNode?.level === 'building' ? 'blok' : renamingNode?.level === 'floor' ? 'kat' : 'birim'} altındaki tüm kayıtlı lokasyonlara yansıyacaktır.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label>Yeni İsim</Label>
+              <Input value={renameValue} onChange={e => setRenameValue(e.target.value)} autoFocus />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setRenamingNode(null)}>İptal</Button>
+              <Button onClick={() => renameNodeMutation.mutate({...renamingNode, newValue: renameValue})} disabled={!renameValue || renameValue === renamingNode?.oldValue || renameNodeMutation.isPending}>
+                {renameNodeMutation.isPending ? 'Kaydediliyor...' : 'Kaydet'}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

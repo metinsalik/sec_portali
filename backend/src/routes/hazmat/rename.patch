@@ -1,0 +1,47 @@
+--- backend/src/routes/hazmat/settings.ts
++++ backend/src/routes/hazmat/settings.ts
+@@ -134,6 +134,42 @@
+   }
+ });
+ 
++router.post('/departments/rename-node', authMiddleware, async (req: AuthRequest, res) => {
++  const { facilityId, level, oldValue, newValue, parentBuilding, parentFloor } = req.body;
++  if (!facilityId || !level || !oldValue || !newValue) {
++    return res.status(400).json({ error: 'Missing required fields' });
++  }
++
++  try {
++    const whereClause: any = { facilityId: String(facilityId), isActive: true };
++    
++    if (level === 'building') {
++      whereClause.building = oldValue === 'Belirtilmemiş Blok' ? null : oldValue;
++      await prisma.hazmatDepartment.updateMany({
++        where: whereClause,
++        data: { building: newValue }
++      });
++    } else if (level === 'floor') {
++      whereClause.building = parentBuilding === 'Belirtilmemiş Blok' ? null : parentBuilding;
++      whereClause.floor = oldValue === 'Belirtilmemiş Kat' ? null : oldValue;
++      await prisma.hazmatDepartment.updateMany({
++        where: whereClause,
++        data: { floor: newValue }
++      });
++    } else if (level === 'department') {
++      whereClause.building = parentBuilding === 'Belirtilmemiş Blok' ? null : parentBuilding;
++      whereClause.floor = parentFloor === 'Belirtilmemiş Kat' ? null : parentFloor;
++      whereClause.name = oldValue === 'Belirtilmemiş Birim' ? null : oldValue;
++      await prisma.hazmatDepartment.updateMany({
++        where: whereClause,
++        data: { name: newValue }
++      });
++    }
++
++    res.json({ message: 'Node renamed successfully' });
++  } catch (error) {
++    console.error('Error renaming node:', error);
++    res.status(500).json({ error: 'Internal server error' });
++  }
++});
++
+ // Hazard Labels
+ router.get('/hazard-labels', authMiddleware, async (req: AuthRequest, res) => {
