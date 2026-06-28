@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PenTool, CheckCircle, AlertTriangle, Plus, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
+import { BulkMaintenanceModal } from './components/BulkMaintenanceModal';
 
 export default function FireEquipmentMaintenanceDashboardPage() {
   const facilityId = localStorage.getItem('activeFacilityId');
@@ -17,6 +18,8 @@ export default function FireEquipmentMaintenanceDashboardPage() {
   const [filter, setFilter] = useState('ALL'); // ALL, OVERDUE, UPCOMING
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
   const { data: equipmentList, isLoading } = useQuery({
     queryKey: ['fire-equipment', facilityId],
@@ -216,6 +219,11 @@ export default function FireEquipmentMaintenanceDashboardPage() {
           <Button variant={filter === 'UPCOMING' ? 'secondary' : 'outline'} className={filter === 'UPCOMING' ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' : ''} onClick={() => setFilter('UPCOMING')}>
             Yaklaşanlar
           </Button>
+          {selectedItems.length > 0 && (
+            <Button variant="default" className="bg-blue-600 hover:bg-blue-700 ml-2 animate-in fade-in" onClick={() => setIsBulkModalOpen(true)}>
+              <PenTool className="w-4 h-4 mr-2" /> Seçilenlere Toplu Bakım ({selectedItems.length})
+            </Button>
+          )}
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
           <select 
@@ -255,6 +263,20 @@ export default function FireEquipmentMaintenanceDashboardPage() {
               <table className="w-full text-sm text-left">
                 <thead className="text-xs text-muted-foreground bg-muted/50 border-b">
                   <tr>
+                    <th className="px-6 py-4 font-medium w-12">
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-gray-300 w-4 h-4 text-blue-600 focus:ring-blue-500"
+                        checked={filteredEquipment.length > 0 && selectedItems.length === filteredEquipment.length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedItems(filteredEquipment.map((i: any) => i.id));
+                          } else {
+                            setSelectedItems([]);
+                          }
+                        }}
+                      />
+                    </th>
                     <th className="px-6 py-4 font-medium">Ekipman No</th>
                     <th className="px-6 py-4 font-medium">Kategori</th>
                     <th className="px-6 py-4 font-medium">Lokasyon</th>
@@ -266,7 +288,21 @@ export default function FireEquipmentMaintenanceDashboardPage() {
                   {filteredEquipment.map((item: any) => {
                     const statusInfo = getMaintenanceStatus(item.nextMaintenanceDate);
                     return (
-                      <tr key={item.id} className="hover:bg-muted/30 transition-colors">
+                      <tr key={item.id} className={`hover:bg-muted/30 transition-colors ${selectedItems.includes(item.id) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                        <td className="px-6 py-4">
+                          <input 
+                            type="checkbox" 
+                            className="rounded border-gray-300 w-4 h-4 text-blue-600 focus:ring-blue-500"
+                            checked={selectedItems.includes(item.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedItems(prev => [...prev, item.id]);
+                              } else {
+                                setSelectedItems(prev => prev.filter(id => id !== item.id));
+                              }
+                            }}
+                          />
+                        </td>
                         <td className="px-6 py-4 font-medium">{item.equipmentNo}</td>
                         <td className="px-6 py-4">{item.category?.name || '-'}</td>
                         <td className="px-6 py-4 text-muted-foreground">
@@ -296,6 +332,16 @@ export default function FireEquipmentMaintenanceDashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      {isBulkModalOpen && (
+        <BulkMaintenanceModal 
+          open={isBulkModalOpen} 
+          onOpenChange={setIsBulkModalOpen} 
+          equipmentIds={selectedItems}
+          facilityId={facilityId}
+          onSuccess={() => setSelectedItems([])}
+        />
+      )}
     </div>
   );
 }

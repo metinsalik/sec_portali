@@ -1058,6 +1058,90 @@ router.put('/equipment/:id', async (req, res) => {
 });
 
 // --- MAINTENANCE ---
+
+router.post('/maintenance/bulk', async (req, res) => {
+  try {
+    const { equipmentIds, maintenanceDate, companyId, company, technician, description } = req.body;
+
+    if (!equipmentIds || !Array.isArray(equipmentIds) || equipmentIds.length === 0) {
+      return res.status(400).json({ error: 'Geçersiz veya boş ekipman listesi.' });
+    }
+
+    const createdRecords = [];
+
+    await prisma.$transaction(async (tx) => {
+      for (const eqId of equipmentIds) {
+        // Fetch equipment and category
+        const eq = await tx.fireEquipment.findUnique({ 
+          where: { id: eqId },
+          include: { category: true }
+        }) as any;
+
+        if (!eq) continue;
+
+        // Automatically set maintenanceData (checkboxes) to UYGUN
+        let autoMaintenanceData: any = {};
+        if (eq.category?.maintenanceParameters) {
+          try {
+            const params = typeof eq.category.maintenanceParameters === 'string' 
+              ? JSON.parse(eq.category.maintenanceParameters) 
+              : eq.category.maintenanceParameters;
+            
+            if (Array.isArray(params)) {
+              params.forEach(p => {
+                if (p.type === 'checkbox') {
+                  autoMaintenanceData[p.id] = 'UYGUN';
+                }
+              });
+            }
+          } catch (e) {
+            console.error('Error parsing maintenance parameters for auto UYGUN:', e);
+          }
+        }
+
+        // Create maintenance record
+        const record = await tx.fireEquipmentMaintenance.create({
+          data: {
+            equipmentId: eqId,
+            maintenanceDate: new Date(maintenanceDate),
+            companyId: companyId || null,
+            company: company,
+            technician: technician,
+            result: 'UYGUN',
+            description: description || 'Toplu Bakım',
+            maintenanceData: autoMaintenanceData,
+          }
+        });
+
+        // Calculate nextMaintenanceDate
+        let calculatedNextDate = null;
+        if (eq.category?.maintenanceFrequency) {
+          const freq = eq.category.maintenanceFrequency;
+          const date = new Date(maintenanceDate);
+          if (freq === 'AYLIK') date.setMonth(date.getMonth() + 1);
+          else if (freq === '3_AYLIK') date.setMonth(date.getMonth() + 3);
+          else if (freq === '6_AYLIK') date.setMonth(date.getMonth() + 6);
+          else if (freq === 'YILLIK') date.setFullYear(date.getFullYear() + 1);
+          calculatedNextDate = date;
+        }
+
+        if (calculatedNextDate) {
+          await tx.fireEquipment.update({
+            where: { id: eqId },
+            data: { nextMaintenanceDate: calculatedNextDate }
+          });
+        }
+
+        createdRecords.push(record);
+      }
+    });
+
+    res.status(201).json({ message: 'Toplu bakım başarıyla tamamlandı', count: createdRecords.length });
+  } catch (error) {
+    console.error('Error in bulk maintenance:', error);
+    res.status(500).json({ error: 'Toplu bakım işlemi başarısız oldu.' });
+  }
+});
 router.post('/equipment/:id/maintenance', upload.single('attachment'), async (req, res) => {
   try {
     const { id } = req.params;
