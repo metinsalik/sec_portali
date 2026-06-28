@@ -1000,7 +1000,7 @@ model HazmatSpillKitDepartment {
   instruction Boolean  @default(false)
   training    Boolean  @default(false)
   note        String?
-  status      String   @default("Kurulumda")
+  status      String   @default("Aktif")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
