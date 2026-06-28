@@ -593,20 +593,20 @@ router.post('/equipment/bulk-alarm/:facilityId', async (req, res) => {
         let loc = await prisma.hazmatDepartment.findFirst({
           where: {
             facilityId,
-            building: eq.blok || null,
-            floor: eq.kat || null,
-            name: eq.birim || null,
-            description: eq.mahal || null
+            building: eq.blok ? String(eq.blok) : null,
+            floor: eq.kat ? String(eq.kat) : null,
+            name: eq.birim ? String(eq.birim) : null,
+            description: eq.mahal ? String(eq.mahal) : null
           }
         });
         if (!loc) {
           loc = await prisma.hazmatDepartment.create({
             data: {
               facilityId,
-              building: eq.blok || null,
-              floor: eq.kat || null,
-              name: eq.birim || null,
-              description: eq.mahal || null,
+              building: eq.blok ? String(eq.blok) : null,
+              floor: eq.kat ? String(eq.kat) : null,
+              name: eq.birim ? String(eq.birim) : null,
+              description: eq.mahal ? String(eq.mahal) : null,
               isActive: true
             }
           });
@@ -656,11 +656,11 @@ router.post('/equipment/bulk-alarm/:facilityId', async (req, res) => {
       const newEq = await prisma.fireEquipment.create({
         data: {
           facilityId, categoryId, locationId, companyId,
-          equipmentNo: eq.ekipman_no || `AB-${Math.floor(Math.random()*10000)}`,
+          equipmentNo: eq.ekipman_no ? String(eq.ekipman_no) : `AB-${Math.floor(Math.random()*10000)}`,
           productionDate: imalTarihi,
-          responsibleUnit: eq.sorumlu_departman || null,
-          brand: eq.marka || null,
-          model: eq.model || null,
+          responsibleUnit: eq.sorumlu_departman ? String(eq.sorumlu_departman) : null,
+          brand: eq.marka ? String(eq.marka) : null,
+          model: eq.model ? String(eq.model) : null,
           inventoryData,
           status: 'AKTIF',
           notes: eq.not ? String(eq.not) : null
