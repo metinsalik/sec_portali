@@ -14,6 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { ExcelBulkImportModal } from './components/ExcelBulkImportModal';
 import { ExcelBulkImportDolapModal } from './components/ExcelBulkImportDolapModal';
+import { ExcelBulkImportAlarmModal } from './components/ExcelBulkImportAlarmModal';
 
 export default function FireEquipmentListPage() {
   const facilityId = localStorage.getItem('activeFacilityId');
@@ -244,6 +245,9 @@ export default function FireEquipmentListPage() {
           )}
           {selectedCategoryObj?.name === 'Yangın Dolabı' && facilityId && (
             <ExcelBulkImportDolapModal facilityId={facilityId} />
+          )}
+          {selectedCategoryObj?.name === 'Alarm Butonu' && facilityId && (
+            <ExcelBulkImportAlarmModal facilityId={facilityId} />
           )}
           <Button variant="outline" onClick={() => window.print()} className="hidden sm:flex" disabled={!equipment || equipment.length === 0}>
             <Printer className="w-4 h-4 mr-2" /> Toplu QR Yazdır

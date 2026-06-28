@@ -179,14 +179,15 @@ const checklists = {
     ]
   },
   "Alarm Butonu": {
-    altKategoriler: ["Kırılabilir Camlı Buton", "Resetlenebilir Buton", "Dış Ortam Butonu", "Ex-proof Buton"],
+    altKategoriler: ["Dış Ortam Butonu", "Ex-Proof Buton", "Kırılabilir Camlı Buton", "Resetlenebilir Buton"],
     inventoryParameters: [
-      { name: "Çalışma Prensibi", options: ["Adresli", "Konvansiyonel"] },
+      { name: "Çalışma Prensibi", options: ["Adresli", "Konvansiyonel", "Basma Elemanlı"] },
       { name: "Buton Tipi", options: ["Kırılabilir Camlı", "Resetlenebilir"] },
       { name: "Koruma Kapağı", options: ["Var", "Yok"] },
       { name: "Kullanım Alanı", options: ["İç Ortam", "Dış Ortam", "Islak Hacim", "Ex-proof Alan"] },
       { name: "Yangın Paneli Entegrasyonu", options: ["Var", "Yok"] },
-      { name: "Test Anahtarı", options: ["Var", "Yok"] }
+      { name: "Test Anahtarı", options: ["Var", "Yok"] },
+      { name: "Not", type: "text" }
     ],
     bakimKontrolleri: [
       { id: "camKontrol", label: "Cam/kapak hasarsız mı?", type: "checkbox" },
