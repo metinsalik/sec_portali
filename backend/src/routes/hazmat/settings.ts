@@ -48,7 +48,10 @@ router.get('/departments', authMiddleware, async (req: AuthRequest, res) => {
   const { facilityId, isCleaningCart } = req.query as Record<string, any>;
 
   try {
-    const whereClause: any = facilityId && facilityId !== 'all' ? { facilityId: String(facilityId) } : {};
+    const whereClause: any = { isActive: true };
+    if (facilityId && facilityId !== 'all') {
+      whereClause.facilityId = String(facilityId);
+    }
     if (isCleaningCart !== undefined) {
       whereClause.isCleaningCart = isCleaningCart === 'true';
     }
@@ -127,7 +130,10 @@ router.put('/departments/:id', authMiddleware, async (req: AuthRequest, res) => 
 
 router.delete('/departments/:id', authMiddleware, async (req: AuthRequest, res) => {
   try {
-    await prisma.hazmatDepartment.delete({ where: { id: req.params.id } });
+    await prisma.hazmatDepartment.update({
+      where: { id: req.params.id },
+      data: { isActive: false }
+    });
     res.json({ message: 'Department deleted successfully' });
   } catch (error) {
     console.error('Error deleting department:', error);

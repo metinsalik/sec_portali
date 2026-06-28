@@ -530,7 +530,7 @@ export default function FireEquipmentSettingsPage() {
                             ) : (
                               <>
                                 <div className="col-span-10">
-                                  <div className="font-semibold text-slate-800 dark:text-slate-200">{loc.description || 'İsimsiz Mahal'}</div>
+                                  <div className="font-semibold text-slate-800 dark:text-slate-200">{loc.description || '(Birim Tümü / Genel)'}</div>
                                   <div className="text-xs text-muted-foreground mt-0.5">
                                     {loc.building || 'Blok Yok'} {loc.floor ? `> ${loc.floor}` : ''} {loc.department ? `> ${loc.department}` : ''}
                                   </div>
@@ -605,7 +605,7 @@ export default function FireEquipmentSettingsPage() {
                                                 ) : (
                                                   <>
                                                     <div className="text-sm flex flex-col">
-                                                      <span className="font-semibold text-slate-800 dark:text-slate-200">{loc.description || 'İsimsiz Mahal'}</span>
+                                                      <span className="font-semibold text-slate-800 dark:text-slate-200">{loc.description || '(Birim Tümü / Genel)'}</span>
                                                       <span className="text-xs text-muted-foreground mt-0.5">Yol: {loc.building} / {loc.floor} / {loc.department}</span>
                                                     </div>
                                                     <div className="flex gap-1 shrink-0">
