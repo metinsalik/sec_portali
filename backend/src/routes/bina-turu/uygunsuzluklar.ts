@@ -69,11 +69,6 @@ router.put('/:id/kapat', upload.array('kanitDosyalari'), async (req: Request, re
   const files = req.files as Express.Multer.File[];
 
   try {
-    if (!dofTakipNo) {
-      res.status(400).json({ error: 'DÖF Takip Numarası zorunludur.' });
-      return;
-    }
-
     const filePaths = files ? files.map(f => f.filename) : [];
     const combinedKanit = [kapatmaKaniti, ...filePaths].filter(Boolean).join('\nDosya: ');
 

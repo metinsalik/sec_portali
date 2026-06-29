@@ -107,10 +107,13 @@ const UygunsuzlukTakibi = () => {
       if (kapatmaKaniti) formData.append('kapatmaKaniti', kapatmaKaniti);
       if (kapatmaDosya) formData.append('kanitDosyalari', kapatmaDosya);
 
-      await api.customFetch(`/bina-turu/uygunsuzluklar/${selectedUygunsuzluk.id}/kapat`, {
+      const res = await api.customFetch(`/bina-turu/uygunsuzluklar/${selectedUygunsuzluk.id}/kapat`, {
         method: 'PUT',
         body: formData
       });
+      if (!res.ok) {
+        throw new Error('İşlem başarısız');
+      }
       toast.success('Uygunsuzluk başarıyla kapatıldı.');
       setIsModalOpen(false);
       fetchData();
