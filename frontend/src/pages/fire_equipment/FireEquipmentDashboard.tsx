@@ -25,6 +25,15 @@ export default function FireEquipmentDashboard() {
     enabled: !!facilityId
   });
 
+  const { data: categories } = useQuery({
+    queryKey: ['fire-categories'],
+    queryFn: async () => {
+      const res = await api.get('/fire-equipment/categories');
+      if (!res.ok) throw new Error('Failed to fetch categories');
+      return res.json();
+    }
+  });
+
   if (!facilityId) {
     return <div className="p-8 text-center text-muted-foreground">Lütfen bir tesis seçin.</div>;
   }
@@ -66,19 +75,44 @@ export default function FireEquipmentDashboard() {
   const faultyEquipment = equipment.filter((e: any) => e.status === 'ARIZALI').length;
 
   // Chart Data preparation
-  const categoryMap: Record<string, number> = {};
-  const statusMap: Record<string, number> = {};
+  const mainCats: Record<string, any> = {};
+  const allSubCatNames = new Set<string>();
 
-  equipment.forEach((e: any) => {
-    const catName = e.category?.name || 'Diğer';
-    categoryMap[catName] = (categoryMap[catName] || 0) + 1;
-    
-    const statusName = e.status;
-    statusMap[statusName] = (statusMap[statusName] || 0) + 1;
-  });
+  if (categories && equipment) {
+    const categoriesById = categories.reduce((acc: any, cat: any) => {
+      acc[cat.id] = cat;
+      return acc;
+    }, {});
 
-  const categoryData = Object.keys(categoryMap).map(k => ({ name: k, value: categoryMap[k] }));
-  const statusData = Object.keys(statusMap).map(k => ({ name: k, value: statusMap[k] }));
+    equipment.forEach((e: any) => {
+      let mainCatName = 'Belirtilmemiş';
+      let subCatName = 'Genel';
+      
+      if (e.categoryId && categoriesById[e.categoryId]) {
+        const cat = categoriesById[e.categoryId];
+        if (cat.parentId) {
+           const parent = categoriesById[cat.parentId];
+           mainCatName = parent ? parent.name : cat.name;
+           subCatName = cat.name;
+        } else {
+           mainCatName = cat.name;
+           subCatName = 'Genel';
+        }
+      } else if (e.category?.name) {
+        mainCatName = e.category.name;
+      }
+
+      if (!mainCats[mainCatName]) {
+        mainCats[mainCatName] = { name: mainCatName, total: 0 };
+      }
+      mainCats[mainCatName][subCatName] = (mainCats[mainCatName][subCatName] || 0) + 1;
+      mainCats[mainCatName].total += 1;
+      allSubCatNames.add(subCatName);
+    });
+  }
+
+  const categoryData = Object.values(mainCats).sort((a: any, b: any) => b.total - a.total);
+  const subCategoryKeys = Array.from(allSubCatNames);
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12 p-6">
@@ -183,55 +217,24 @@ export default function FireEquipmentDashboard() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">Kategoriye Göre Ekipman Dağılımı</CardTitle>
-            <CardDescription>Tesisinizdeki yangın ekipmanlarının türlerine göre oransal dağılımı.</CardDescription>
+            <CardDescription>Tesisinizdeki ekipmanların kategorilere göre sayısal dağılımı.</CardDescription>
           </CardHeader>
-          <CardContent className="h-80">
+          <CardContent className="h-[400px]">
             {categoryData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={categoryData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={70}
-                    outerRadius={100}
-                    paddingAngle={5}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                    labelLine={false}
-                  >
-                    {categoryData.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                  <Legend verticalAlign="bottom" height={36} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-muted-foreground">Kayıtlı veri yok.</div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Ekipman Durum Dağılımı</CardTitle>
-            <CardDescription>Sistemdeki tüm ekipmanların mevcut durumları.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-80">
-            {statusData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={statusData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }} layout="vertical">
+                <BarChart data={categoryData} margin={{ top: 10, right: 30, left: 20, bottom: 5 }} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e5e7eb" />
                   <XAxis type="number" axisLine={false} tickLine={false} />
-                  <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={120} />
+                  <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={180} tick={{ fontSize: 13, fontWeight: 500 }} />
                   <RechartsTooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                  <Bar dataKey="value" name="Miktar" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={30} />
+                  {subCategoryKeys.map((sub, idx) => (
+                    <Bar key={sub} dataKey={sub} stackId="a" fill={COLORS[idx % COLORS.length]} barSize={25} name={sub} />
+                  ))}
+                  <Legend />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
