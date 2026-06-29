@@ -132,7 +132,7 @@ export default function HazmatDepartmentsPage() {
           const deptName = res.department.name || 'İsimsiz Birim';
           const itemsWithDept = res.inventoryItems.map((item: any) => ({
             ...item,
-            _printProductName: `[${deptName}] ${item.material?.productName}`
+            _departmentName: deptName
           }));
           mergedItems = [...mergedItems, ...itemsWithDept];
         } else if (res.inventoryItems) {
@@ -141,8 +141,10 @@ export default function HazmatDepartmentsPage() {
       });
 
       const finalItems = mergedItems.sort((a, b) => {
-        const nameA = a._printProductName || a.material?.productName || '';
-        const nameB = b._printProductName || b.material?.productName || '';
+        const deptComp = (a._departmentName || '').localeCompare(b._departmentName || '');
+        if (deptComp !== 0) return deptComp;
+        const nameA = a.material?.productName || '';
+        const nameB = b.material?.productName || '';
         return nameA.localeCompare(nameB);
       });
 

@@ -86,13 +86,30 @@ export const DepartmentPrintTable = forwardRef<HTMLDivElement, DepartmentPrintTa
           </tr>
         </thead>
         <tbody>
-          {inventoryItems.map((item, idx) => {
-            const m = item.material;
-            return (
-              <tr key={idx} className="hover:bg-slate-50 text-center">
-                <td className="border border-slate-800 p-1 align-middle font-bold">
-                  <VertText>{item._printProductName || m.productName}</VertText>
-                </td>
+          {(() => {
+            const grouped = new Map<string, any[]>();
+            inventoryItems.forEach(item => {
+              const groupName = item._departmentName || '';
+              if (!grouped.has(groupName)) grouped.set(groupName, []);
+              grouped.get(groupName)!.push(item);
+            });
+
+            return Array.from(grouped.entries()).map(([deptName, items], gIdx) => (
+              <React.Fragment key={gIdx}>
+                {deptName && (
+                  <tr className="bg-slate-200">
+                    <td colSpan={20} className="border border-slate-800 p-1.5 text-left font-bold text-xs text-slate-800 uppercase">
+                      {deptName} LOKASYONU / BİRİMİ
+                    </td>
+                  </tr>
+                )}
+                {items.map((item, idx) => {
+                  const m = item.material;
+                  return (
+                    <tr key={idx} className="hover:bg-slate-50 text-center">
+                      <td className="border border-slate-800 p-1 align-middle font-bold">
+                        <VertText>{m.productName}</VertText>
+                      </td>
                 <td className="border border-slate-800 p-1 align-middle whitespace-nowrap">
                   {(() => {
                     const facItem = m.facilityItems?.[0];
@@ -171,9 +188,12 @@ export const DepartmentPrintTable = forwardRef<HTMLDivElement, DepartmentPrintTa
                     )}
                   </div>
                 </td>
-              </tr>
-            );
-          })}
+                  </tr>
+                );
+              })}
+            </React.Fragment>
+          ));
+        })()}
         </tbody>
       </table>
     </div>
