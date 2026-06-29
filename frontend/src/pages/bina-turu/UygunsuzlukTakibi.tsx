@@ -100,10 +100,6 @@ const UygunsuzlukTakibi = () => {
 
   const handleKapat = async () => {
     if (!selectedUygunsuzluk) return;
-    if (!dofTakipNo.trim()) {
-      toast.error('DÖF Takip Numarası zorunludur.');
-      return;
-    }
 
     try {
       const formData = new FormData();
@@ -500,8 +496,12 @@ const UygunsuzlukTakibi = () => {
             <div className="space-y-5 mt-2">
               <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
                 <p className="text-xs text-slate-500 font-medium mb-1">Soru</p>
-                <p className="text-sm font-semibold text-slate-800 leading-snug">
+                <p className="text-sm font-semibold text-slate-800 leading-snug mb-3">
                   {selectedUygunsuzluk.cevap?.turSorusu?.soru?.kriter}
+                </p>
+                <p className="text-xs text-slate-500 font-medium mb-1">Tespit Edilen Uygunsuzluk</p>
+                <p className="text-sm font-semibold text-red-600 leading-snug">
+                  {selectedUygunsuzluk.cevap?.aciklama || 'Açıklama girilmemiş.'}
                 </p>
               </div>
 
@@ -533,7 +533,7 @@ const UygunsuzlukTakibi = () => {
               {modalType === 'KAPATMA' && (
                 <div className="space-y-4">
                   <div>
-                    <label className="text-xs font-bold text-slate-700 mb-1.5 block uppercase tracking-wider">DÖF Takip Numarası <span className="text-red-500">*</span></label>
+                    <label className="text-xs font-bold text-slate-700 mb-1.5 block uppercase tracking-wider">DÖF Takip Numarası (Opsiyonel)</label>
                     <Input 
                       value={dofTakipNo} 
                       onChange={e => setDofTakipNo(e.target.value)} 
