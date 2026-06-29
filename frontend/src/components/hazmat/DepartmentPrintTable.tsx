@@ -91,7 +91,7 @@ export const DepartmentPrintTable = forwardRef<HTMLDivElement, DepartmentPrintTa
             return (
               <tr key={idx} className="hover:bg-slate-50 text-center">
                 <td className="border border-slate-800 p-1 align-middle font-bold">
-                  <VertText>{m.productName}</VertText>
+                  <VertText>{item._printProductName || m.productName}</VertText>
                 </td>
                 <td className="border border-slate-800 p-1 align-middle whitespace-nowrap">
                   {(() => {
@@ -166,13 +166,6 @@ export const DepartmentPrintTable = forwardRef<HTMLDivElement, DepartmentPrintTa
                           </span>
                         </div>
                       ))
-                    ) : m.imageUrl ? (
-                      <div className="flex flex-col items-center p-0.5 bg-white border border-slate-200">
-                        <img src={getAbsoluteUrl(m.imageUrl)} alt={m.productName} className="w-12 h-12 object-contain" />
-                        <span className="text-[6px] font-bold text-slate-600 mt-0.5 max-w-[40px] text-center leading-tight">
-                          Ürün Görseli
-                        </span>
-                      </div>
                     ) : (
                       <span className="text-slate-400 text-xs">-</span>
                     )}

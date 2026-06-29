@@ -128,23 +128,23 @@ export default function HazmatDepartmentsPage() {
       
       let mergedItems: any[] = [];
       results.forEach(res => {
-        if (res.inventoryItems) {
+        if (res.inventoryItems && res.department) {
+          const deptName = res.department.name || 'İsimsiz Birim';
+          const itemsWithDept = res.inventoryItems.map((item: any) => ({
+            ...item,
+            _printProductName: `[${deptName}] ${item.material?.productName}`
+          }));
+          mergedItems = [...mergedItems, ...itemsWithDept];
+        } else if (res.inventoryItems) {
           mergedItems = [...mergedItems, ...res.inventoryItems];
         }
       });
 
-      const groupedMap = new Map<string, any>();
-      mergedItems.forEach(item => {
-        const matId = item.materialId;
-        if (groupedMap.has(matId)) {
-          const existing = groupedMap.get(matId);
-          existing.minQuantity = (existing.minQuantity || 0) + (item.minQuantity || 0);
-          existing.maxQuantity = (existing.maxQuantity || 0) + (item.maxQuantity || 0);
-        } else {
-          groupedMap.set(matId, JSON.parse(JSON.stringify(item)));
-        }
+      const finalItems = mergedItems.sort((a, b) => {
+        const nameA = a._printProductName || a.material?.productName || '';
+        const nameB = b._printProductName || b.material?.productName || '';
+        return nameA.localeCompare(nameB);
       });
-      const finalItems = Array.from(groupedMap.values());
 
       setPrintData({
         department: { name: levelName },
