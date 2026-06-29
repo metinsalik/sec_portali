@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Printer, Search, ArrowUpDown, PieChart as PieChartIcon } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, LabelList } from 'recharts';
 import FacilityAdvancedDashboard from '@/components/risks/FacilityAdvancedDashboard';
 
 export function RiskReportsPage() {
@@ -130,6 +130,21 @@ export function RiskReportsPage() {
     return result;
   }, [data?.risks, searchTerm, sortConfig]);
 
+  const STATUS_MAP: Record<string, string> = {
+    'ACIK_TEHLIKE': 'Açık Tehlike',
+    'ILK_MUDAHALE_EDILDI': 'İlk Müdahale',
+    'TAKIP_SURECINDE': 'Takip Sürecinde',
+    'KAPATILDI_GUVENLI': 'Kapatıldı'
+  };
+
+  const statusData = data?.analysis?.byStatus?.map((item: any) => ({
+    ...item,
+    displayName: STATUS_MAP[item.name] || item.name
+  })) || [];
+
+  const levelData = data?.analysis?.byLevel || [];
+  const deptData = data?.analysis?.byDepartment || [];
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
@@ -181,22 +196,22 @@ export function RiskReportsPage() {
       {data && (
         <div className="space-y-6">
           {/* Grafikler */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="print:break-inside-avoid">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Statü Dağılımı</CardTitle>
               </CardHeader>
               <CardContent className="h-64">
-                {data.analysis?.byStatus?.length > 0 ? (
+                {statusData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={data.analysis.byStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                        {data.analysis.byStatus.map((_: any, index: number) => (
+                      <Pie data={statusData} dataKey="value" nameKey="displayName" cx="50%" cy="50%" outerRadius={80} label>
+                        {statusData.map((_: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip />
-                      <Legend />
+                      <Legend formatter={(value, entry: any) => `${value} (${entry.payload.value})`} />
                     </PieChart>
                   </ResponsiveContainer>
                 ) : <div className="h-full flex items-center justify-center text-muted-foreground text-sm">Veri yok</div>}
@@ -208,37 +223,44 @@ export function RiskReportsPage() {
                 <CardTitle className="text-base">Risk Seviyesi Dağılımı</CardTitle>
               </CardHeader>
               <CardContent className="h-64">
-                {data.analysis?.byLevel?.length > 0 ? (
+                {levelData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={data.analysis.byLevel} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                        {data.analysis.byLevel.map((_: any, index: number) => (
+                    <BarChart data={levelData} layout="vertical" margin={{ top: 5, right: 40, left: 20, bottom: 5 }}>
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                        {levelData.map((_: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
+                        <LabelList dataKey="value" position="right" fontSize={11} />
+                      </Bar>
+                    </BarChart>
                   </ResponsiveContainer>
                 ) : <div className="h-full flex items-center justify-center text-muted-foreground text-sm">Veri yok</div>}
               </CardContent>
             </Card>
+          </div>
 
+          <div className="mt-6">
             <Card className="print:break-inside-avoid">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Departman Dağılımı</CardTitle>
               </CardHeader>
-              <CardContent className="h-64">
-                {data.analysis?.byDepartment?.length > 0 ? (
+              <CardContent className="h-72">
+                {deptData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={data.analysis.byDepartment} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                        {data.analysis.byDepartment.map((_: any, index: number) => (
+                    <BarChart data={deptData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                        {deptData.map((_: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
+                        <LabelList dataKey="value" position="top" />
+                      </Bar>
+                    </BarChart>
                   </ResponsiveContainer>
                 ) : <div className="h-full flex items-center justify-center text-muted-foreground text-sm">Veri yok</div>}
               </CardContent>
