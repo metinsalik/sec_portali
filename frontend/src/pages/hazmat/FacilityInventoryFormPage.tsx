@@ -217,6 +217,17 @@ export default function FacilityInventoryFormPage() {
     return matrixData.departments.filter((d: any) => selectedDepartments.includes(d.id));
   }, [matrixData, selectedDepartments]);
 
+  const filteredDepartments = useMemo(() => {
+    if (!matrixData?.departments) return [];
+    return matrixData.departments.filter((d: any) => {
+      // Exclude cleaning carts unless it is specifically the pre-selected one
+      if (d.isCleaningCart && d.id !== initialDepartmentId) return false;
+      
+      const fullName = `${d.isCleaningCart ? '[Temizlik Arabası] ' : ''}${d.building ? d.building + ' / ' : ''}${d.floor ? d.floor + ' / ' : ''}${d.name || ''} ${d.description ? '/ ' + d.description : ''}`.toLowerCase();
+      return fullName.includes(deptSearch.toLowerCase());
+    });
+  }, [matrixData, deptSearch, initialDepartmentId]);
+
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
@@ -385,19 +396,11 @@ export default function FacilityInventoryFormPage() {
                         onValueChange={setDeptSearch}
                       />
                       <CommandList>
-                        {matrixData.departments?.filter((d: any) => d.name.toLowerCase().includes(deptSearch.toLowerCase())).length === 0 ? (
+                        {filteredDepartments.length === 0 ? (
                           <CommandEmpty>Departman bulunamadı.</CommandEmpty>
                         ) : (
                           <CommandGroup>
-                            {matrixData.departments
-                              ?.filter((d: any) => {
-                                // Exclude cleaning carts unless it is specifically the pre-selected one
-                                if (d.isCleaningCart && d.id !== initialDepartmentId) return false;
-                                
-                                const fullName = `${d.isCleaningCart ? '[Temizlik Arabası] ' : ''}${d.building ? d.building + ' / ' : ''}${d.floor ? d.floor + ' / ' : ''}${d.name || ''} ${d.description ? '/ ' + d.description : ''}`.toLowerCase();
-                                return fullName.includes(deptSearch.toLowerCase());
-                              })
-                              .map((dept: any) => {
+                            {filteredDepartments.map((dept: any) => {
                                 const displayName = `${dept.isCleaningCart ? '[Temizlik Arabası] ' : ''}${dept.building ? dept.building + ' / ' : ''}${dept.floor ? dept.floor + ' / ' : ''}${dept.name || 'İsimsiz'}${dept.description ? ' / ' + dept.description : ''}`;
                                 return (
                                   <CommandItem
