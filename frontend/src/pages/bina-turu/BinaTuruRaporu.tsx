@@ -15,6 +15,14 @@ const BinaTuruRaporu = () => {
     fetchRapor();
   }, [id]);
 
+  const getPhotoUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('/uploads')) return `${BASE_URL}${url}`;
+    if (url.startsWith('uploads')) return `${BASE_URL}/${url}`;
+    return `${BASE_URL}/uploads/${url}`;
+  };
+
   const fetchRapor = async () => {
     try {
       const res = await api.get(`/bina-turu/rapor/${id}`);
@@ -209,8 +217,14 @@ const BinaTuruRaporu = () => {
                             
                             {/* Fotoğraf Kutusu */}
                             <div className="flex-1 border border-dashed border-slate-300 bg-slate-100 rounded flex flex-col items-center justify-center p-2">
-                              {ts.cevap?.fotografDosyasi ? (
-                                <img src={ts.cevap.fotografDosyasi.startsWith('http') ? ts.cevap.fotografDosyasi : `${BASE_URL}/uploads/${ts.cevap.fotografDosyasi}`} alt="Kanıt" className="max-h-20 object-contain" />
+                              {ts.cevap?.fotograflar?.length > 0 ? (
+                                <div className="flex flex-wrap gap-1 justify-center">
+                                  {ts.cevap.fotograflar.map((f: string, idx: number) => (
+                                    <img key={idx} src={getPhotoUrl(f)} alt="Kanıt" className="max-h-20 object-contain" />
+                                  ))}
+                                </div>
+                              ) : ts.cevap?.fotografDosyasi ? (
+                                <img src={getPhotoUrl(ts.cevap.fotografDosyasi)} alt="Kanıt" className="max-h-20 object-contain" />
                               ) : (
                                 <span className="text-[10px] text-slate-400 font-medium">Fotoğraf / Kanıt Alanı</span>
                               )}
