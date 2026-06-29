@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import api from '@/lib/api';
+import api, { BASE_URL } from '@/lib/api';
 import { format } from 'date-fns';
 import { Loader2, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -179,7 +179,7 @@ const UygunsuzlukRaporu = () => {
                               <span className="font-bold text-slate-600 block mb-1 text-[10px] border-b border-slate-200 pb-0.5">Tespit (Öncesi)</span>
                               <div className="flex flex-wrap gap-1">
                                 {item.cevap.fotograflar.map((foto: string, idx: number) => (
-                                  <img key={`tespit-${idx}`} src={foto.startsWith('http') ? foto : `http://localhost:3005/uploads/${foto}`} alt="Tespit" className="h-20 w-auto object-cover rounded shadow-sm border border-slate-300" />
+                                  <img key={`tespit-${idx}`} src={foto.startsWith('http') ? foto : `${BASE_URL}/uploads/${foto}`} alt="Tespit" className="h-20 w-auto object-cover rounded shadow-sm border border-slate-300" />
                                 ))}
                               </div>
                             </div>
@@ -191,7 +191,7 @@ const UygunsuzlukRaporu = () => {
                               <span className="font-bold text-slate-600 block mb-1 text-[10px] border-b border-slate-200 pb-0.5">Kapatma (Sonrası)</span>
                               <div className="flex flex-wrap gap-1">
                                 {kapatmaImages.map((foto: string, idx: number) => (
-                                  <img key={`kapatma-${idx}`} src={foto.startsWith('http') ? foto : `http://localhost:3005/uploads/${foto}`} alt="Kapatma" className="h-20 w-auto object-cover rounded shadow-sm border border-slate-300" />
+                                  <img key={`kapatma-${idx}`} src={foto.startsWith('http') ? foto : `${BASE_URL}/uploads/${foto}`} alt="Kapatma" className="h-20 w-auto object-cover rounded shadow-sm border border-slate-300" />
                                 ))}
                               </div>
                             </div>

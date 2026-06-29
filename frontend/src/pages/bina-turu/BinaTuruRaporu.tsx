@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import api from '@/lib/api';
+import api, { BASE_URL } from '@/lib/api';
 import { format } from 'date-fns';
 import { Loader2, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -210,7 +210,7 @@ const BinaTuruRaporu = () => {
                             {/* Fotoğraf Kutusu */}
                             <div className="flex-1 border border-dashed border-slate-300 bg-slate-100 rounded flex flex-col items-center justify-center p-2">
                               {ts.cevap?.fotografDosyasi ? (
-                                <img src={ts.cevap.fotografDosyasi} alt="Kanıt" className="max-h-20 object-contain" />
+                                <img src={ts.cevap.fotografDosyasi.startsWith('http') ? ts.cevap.fotografDosyasi : `${BASE_URL}/uploads/${ts.cevap.fotografDosyasi}`} alt="Kanıt" className="max-h-20 object-contain" />
                               ) : (
                                 <span className="text-[10px] text-slate-400 font-medium">Fotoğraf / Kanıt Alanı</span>
                               )}
