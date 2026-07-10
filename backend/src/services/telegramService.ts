@@ -29,47 +29,52 @@ export async function initTelegramBot() {
 
     bot.onText(/\/start(?:\s+(.+))?/, async (msg: any, match: any) => {
       const chatId = msg.chat.id;
-      const code = (match && match[1]) ? match[1].trim() : null;
+      try {
+        const code = (match && match[1]) ? match[1].trim() : null;
 
-      console.log(`Telegram Bot Received Start Command. Code: "${code || 'NONE'}" for chatId: ${chatId}`);
+        console.log(`Telegram Bot Received Start Command. Code: "${code || 'NONE'}" for chatId: ${chatId}`);
 
-      if (!code) {
-        bot?.sendMessage(chatId, 'SEC Portalı Bildirim Botuna Hoşgeldiniz.\n\nHesabınızı bağlamak için portal üzerinden aldığınız kodu "/start KOD" şeklinde gönderiniz.\nÖrnek: /start SEC-123456');
-        return;
+        if (!code) {
+          bot?.sendMessage(chatId, 'SEC Portalı Bildirim Botuna Hoşgeldiniz.\n\nHesabınızı bağlamak için portal üzerinden aldığınız kodu "/start KOD" şeklinde gönderiniz.\nÖrnek: /start SEC-123456');
+          return;
+        }
+
+        // Check if they are already connected
+        const existingUser = await prisma.user.findFirst({
+          where: { telegramChatId: chatId.toString() },
+        });
+
+        if (existingUser) {
+          bot?.sendMessage(chatId, `Hesabınız zaten bağlı (${existingUser.fullName}). Bildirimleri buradan alacaksınız.`);
+          return;
+        }
+
+        // Do a case-insensitive search for the token
+        const user = await prisma.user.findFirst({
+          where: { 
+            telegramConnectToken: { equals: code, mode: 'insensitive' } 
+          },
+        });
+
+        if (!user) {
+          console.log(`Failed to find user with connect token: "${code}"`);
+          bot?.sendMessage(chatId, 'Geçersiz veya süresi dolmuş kod. Lütfen SEC Portalı üzerinden yeni bir kod alarak tekrar deneyin.');
+          return;
+        }
+
+        await prisma.user.update({
+          where: { username: user.username },
+          data: {
+            telegramChatId: chatId.toString(),
+            telegramConnectToken: null, // Token tek kullanımlıktır
+          },
+        });
+
+        bot?.sendMessage(chatId, `Tebrikler ${user.fullName}! SEC Portalı hesabınız başarıyla Telegram'a bağlandı. Artık anlık iş takibi bildirimlerinizi buradan alacaksınız.`);
+      } catch (error) {
+        console.error('[TELEGRAM ERROR] Start handler failed:', error);
+        bot?.sendMessage(chatId, 'Sistemsel bir hata oluştu. Lütfen yöneticinize başvurun.');
       }
-
-      // Check if they are already connected
-      const existingUser = await prisma.user.findFirst({
-        where: { telegramChatId: chatId.toString() },
-      });
-
-      if (existingUser) {
-        bot?.sendMessage(chatId, `Hesabınız zaten bağlı (${existingUser.fullName}). Bildirimleri buradan alacaksınız.`);
-        return;
-      }
-
-      // Do a case-insensitive search for the token
-      const user = await prisma.user.findFirst({
-        where: { 
-          telegramConnectToken: { equals: code, mode: 'insensitive' } 
-        },
-      });
-
-      if (!user) {
-        console.log(`Failed to find user with connect token: "${code}"`);
-        bot?.sendMessage(chatId, 'Geçersiz veya süresi dolmuş kod. Lütfen SEC Portalı üzerinden yeni bir kod alarak tekrar deneyin.');
-        return;
-      }
-
-      await prisma.user.update({
-        where: { username: user.username },
-        data: {
-          telegramChatId: chatId.toString(),
-          telegramConnectToken: null, // Token tek kullanımlıktır
-        },
-      });
-
-      bot?.sendMessage(chatId, `Tebrikler ${user.fullName}! SEC Portalı hesabınız başarıyla Telegram'a bağlandı. Artık anlık iş takibi bildirimlerinizi buradan alacaksınız.`);
     });
 
     bot.on('polling_error', (error: any) => {
