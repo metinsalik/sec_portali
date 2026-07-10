@@ -25,19 +25,35 @@ export async function initTelegramBot() {
 
     bot.onText(/\/start (.+)/, async (msg: any, match: any) => {
       const chatId = msg.chat.id;
-      const code = match ? match[1] : null;
+      const code = match ? match[1].trim() : null;
+
+      console.log(`Telegram Bot Received Start Code: "${code}" for chatId: ${chatId}`);
 
       if (!code) {
         bot?.sendMessage(chatId, 'Lütfen size verilen bağlama kodunu girin.');
         return;
       }
 
-      const user = await prisma.user.findUnique({
-        where: { telegramConnectToken: code },
+      // Check if they are already connected
+      const existingUser = await prisma.user.findFirst({
+        where: { telegramChatId: chatId.toString() },
+      });
+
+      if (existingUser) {
+        bot?.sendMessage(chatId, `Hesabınız zaten bağlı (${existingUser.fullName}). Bildirimleri buradan alacaksınız.`);
+        return;
+      }
+
+      // Do a case-insensitive search for the token
+      const user = await prisma.user.findFirst({
+        where: { 
+          telegramConnectToken: { equals: code, mode: 'insensitive' } 
+        },
       });
 
       if (!user) {
-        bot?.sendMessage(chatId, 'Geçersiz veya süresi dolmuş kod.');
+        console.log(`Failed to find user with connect token: "${code}"`);
+        bot?.sendMessage(chatId, 'Geçersiz veya süresi dolmuş kod. Lütfen SEC Portalı üzerinden yeni bir kod alarak tekrar deneyin.');
         return;
       }
 
