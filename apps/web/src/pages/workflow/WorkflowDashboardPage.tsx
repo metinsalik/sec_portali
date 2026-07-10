@@ -1,17 +1,45 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useWorkflowDashboardStats } from '@/hooks/useWorkflow';
 import { useAuth } from '@/context/AuthContext';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutDashboard, CheckCircle2, Clock, AlertTriangle, XCircle, Users } from 'lucide-react';
+import { LayoutDashboard, CheckCircle2, Clock, AlertTriangle, XCircle, Users, MessageCircle, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { api } from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function WorkflowDashboardPage() {
   const { data: stats, isLoading, error } = useWorkflowDashboardStats();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  const handleConnectTelegram = async () => {
+    try {
+      setIsConnecting(true);
+      const res = await api.get('/settings/telegram/connect');
+      const data = await res.json();
+      
+      if (data.alreadyConnected) {
+        toast.info('Telegram hesabınız zaten bağlı.');
+        setTimeout(() => window.location.reload(), 1500);
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Bağlantı kodu üretilemedi');
+      }
+      
+      window.open(data.link, '_blank');
+      toast.success('Telegram açılıyor... Lütfen bot ekranında BAŞLAT (START) düğmesine basın.');
+    } catch (error: any) {
+      toast.error(error.message || 'Telegram bağlantısı sırasında bir hata oluştu');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
   if (isLoading) {
     return <div className="p-6 text-center text-slate-500">Dashboard yükleniyor...</div>;
@@ -46,7 +74,7 @@ export default function WorkflowDashboardPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <LayoutDashboard className="w-8 h-8 text-primary" />
@@ -54,6 +82,17 @@ export default function WorkflowDashboardPage() {
           </h1>
           <p className="text-slate-500 mt-1">İş akışı özetiniz ve performans analizleriniz.</p>
         </div>
+        {user && (
+          <Button 
+            onClick={handleConnectTelegram} 
+            disabled={isConnecting}
+            variant={user.hasTelegram ? "outline" : "default"}
+            className={user.hasTelegram ? "border-blue-600 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900" : "bg-blue-600 hover:bg-blue-700 text-white"}
+          >
+            {isConnecting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <MessageCircle className="w-4 h-4 mr-2" />}
+            {user.hasTelegram ? 'Telegram Bağlantısı Aktif' : 'Telegram\'a Bağla'}
+          </Button>
+        )}
       </div>
 
       {/* KPI Cards */}
