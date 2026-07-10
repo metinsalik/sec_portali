@@ -6,26 +6,50 @@ async function main() {
   console.log('Fixing orphaned locations across all models...');
 
   try {
-    // We will find all FireEquipments that have a locationId but it doesn't exist in FacilityLocation
-    const fireEquipments = await prisma.fireEquipment.findMany({
-      where: { locationId: { not: null } },
-      select: { id: true, locationId: true }
-    });
-
     const locations = await prisma.facilityLocation.findMany({ select: { id: true } });
     const locationIds = new Set(locations.map(l => l.id));
 
-    let fixedCount = 0;
-    for (const eq of fireEquipments) {
-      if (eq.locationId && !locationIds.has(eq.locationId)) {
-        await prisma.fireEquipment.update({
-          where: { id: eq.id },
-          data: { locationId: null }
-        });
-        fixedCount++;
+    const modelsToCheck = [
+      'extraordinaryIncident',
+      'riskLifecycle',
+      'hazmatInventoryItem',
+      'hazmatIncident',
+      'fireEquipment',
+      'buildProject',
+      'bTSoruBankasi',
+      'bTUygunsuzluk'
+    ];
+
+    for (const modelName of modelsToCheck) {
+      console.log(`Checking model: ${modelName}`);
+      const modelClient = (prisma as any)[modelName];
+      
+      if (!modelClient) {
+        console.warn(`Model ${modelName} not found on Prisma Client. Skipping.`);
+        continue;
+      }
+
+      const records = await modelClient.findMany({
+        where: { locationId: { not: null } },
+        select: { id: true, locationId: true }
+      });
+
+      let fixedCount = 0;
+      for (const record of records) {
+        if (record.locationId && !locationIds.has(record.locationId)) {
+          await modelClient.update({
+            where: { id: record.id },
+            data: { locationId: null }
+          });
+          fixedCount++;
+        }
+      }
+      if (fixedCount > 0) {
+        console.log(`Fixed ${fixedCount} orphaned records in ${modelName}.`);
       }
     }
-    console.log(`Fixed ${fixedCount} orphaned FireEquipment records.`);
+
+    console.log('Finished fixing orphaned locations.');
   } catch (error) {
     console.error('Error fixing orphaned locations:', error);
   } finally {
