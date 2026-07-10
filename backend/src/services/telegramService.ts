@@ -23,7 +23,11 @@ export async function initTelegramBot() {
     bot = new TelegramBot(settings.botToken, { polling: true });
     console.log('Telegram bot started with polling.');
 
-    bot.onText(/\/start (.+)/, async (msg: any, match: any) => {
+    bot.on('message', (msg: any) => {
+      console.log(`[TELEGRAM RAW] Received from ${msg.chat.id}: "${msg.text}"`);
+    });
+
+    bot.onText(/\/start\s+([a-zA-Z0-9\-]+)/, async (msg: any, match: any) => {
       const chatId = msg.chat.id;
       const code = match ? match[1].trim() : null;
 

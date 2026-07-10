@@ -70,7 +70,8 @@ router.get('/connect', async (req: AuthRequest, res: Response) => {
       data: { telegramConnectToken: connectToken },
     });
 
-    const link = `https://t.me/${settings.botUsername}?start=${connectToken}`;
+    const cleanBotUsername = settings.botUsername.replace('@', '');
+    const link = `https://t.me/${cleanBotUsername}?start=${connectToken}`;
 
     res.json({ token: connectToken, link });
   } catch (error) {
