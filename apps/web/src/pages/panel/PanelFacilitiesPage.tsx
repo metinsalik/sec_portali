@@ -716,19 +716,19 @@ export default function PanelFacilitiesPage() {
                     <p className="text-[10px] font-bold text-rose-700 flex items-center gap-2">
                       <AlertTriangle className="w-3 h-3" /> Eksiklikler Mevcut
                     </p>
-                    {!f.compliance?.igu?.isCompliant && f.compliance?.igu?.countdownDays !== null && (
-                      <p className={cn("text-[9px] font-black flex items-center gap-1", f.compliance.igu.countdownDays <= 7 ? "text-red-600 animate-pulse" : "text-amber-600")}>
-                        <Clock className="w-3 h-3" /> İGU İÇİN KALAN SÜRE: {f.compliance.igu.countdownDays} GÜN
+                    {!f.compliance?.igu?.isCompliant && f.compliance?.igu?.countdownDays != null && (
+                      <p className={cn("text-[9px] font-black flex items-center gap-1", f.compliance.igu!.countdownDays! <= 7 ? "text-red-600 animate-pulse" : "text-amber-600")}>
+                        <Clock className="w-3 h-3" /> İGU İÇİN KALAN SÜRE: {f.compliance.igu!.countdownDays} GÜN
                       </p>
                     )}
-                    {!f.compliance?.hekim?.isCompliant && f.compliance?.hekim?.countdownDays !== null && (
-                      <p className={cn("text-[9px] font-black flex items-center gap-1", f.compliance.hekim.countdownDays <= 7 ? "text-red-600 animate-pulse" : "text-amber-600")}>
-                        <Clock className="w-3 h-3" /> HEKİM İÇİN KALAN SÜRE: {f.compliance.hekim.countdownDays} GÜN
+                    {!f.compliance?.hekim?.isCompliant && f.compliance?.hekim?.countdownDays != null && (
+                      <p className={cn("text-[9px] font-black flex items-center gap-1", f.compliance.hekim!.countdownDays! <= 7 ? "text-red-600 animate-pulse" : "text-amber-600")}>
+                        <Clock className="w-3 h-3" /> HEKİM İÇİN KALAN SÜRE: {f.compliance.hekim!.countdownDays} GÜN
                       </p>
                     )}
-                    {!f.compliance?.dsp?.isCompliant && f.compliance?.dsp?.required && f.compliance?.dsp?.countdownDays !== null && (
-                      <p className={cn("text-[9px] font-black flex items-center gap-1", f.compliance.dsp.countdownDays <= 7 ? "text-red-600 animate-pulse" : "text-amber-600")}>
-                        <Clock className="w-3 h-3" /> DSP İÇİN KALAN SÜRE: {f.compliance.dsp.countdownDays} GÜN
+                    {!f.compliance?.dsp?.isCompliant && f.compliance?.dsp?.required && f.compliance?.dsp?.countdownDays != null && (
+                      <p className={cn("text-[9px] font-black flex items-center gap-1", f.compliance.dsp!.countdownDays! <= 7 ? "text-red-600 animate-pulse" : "text-amber-600")}>
+                        <Clock className="w-3 h-3" /> DSP İÇİN KALAN SÜRE: {f.compliance.dsp!.countdownDays} GÜN
                       </p>
                     )}
                   </div>
