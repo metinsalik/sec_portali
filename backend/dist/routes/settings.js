@@ -78,6 +78,7 @@ router.get('/facilities/:id', async (req, res) => {
             where: { id },
             include: {
                 buildings: true,
+                locations: true,
                 assignments: {
                     include: {
                         professional: true,
@@ -103,7 +104,7 @@ router.get('/facilities/:id', async (req, res) => {
     }
 });
 router.post('/facilities', auth_1.managementMiddleware, async (req, res) => {
-    const { id, name, shortName, type, city, district, fullAddress, phone, email, website, logoUrl, commercialTitle, taxOffice, taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings } = req.body;
+    const { id, name, shortName, type, city, district, fullAddress, phone, email, website, logoUrl, commercialTitle, taxOffice, taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings, locations } = req.body;
     try {
         const facility = await prisma.facility.create({
             data: {
@@ -124,9 +125,18 @@ router.post('/facilities', auth_1.managementMiddleware, async (req, res) => {
                         gardenArea: parseFloat(b.gardenArea) || null,
                         bedCapacity: parseInt(b.bedCapacity) || null
                     })) || []
+                },
+                locations: {
+                    create: locations?.map((l) => ({
+                        name: l.name || l.department || l.description || l.floor || l.building || 'İsimsiz',
+                        building: l.building || null,
+                        floor: l.floor || null,
+                        department: l.department || null,
+                        description: l.description || null
+                    })) || []
                 }
             },
-            include: { buildings: true }
+            include: { buildings: true, locations: true }
         });
         res.status(201).json(facility);
     }
@@ -140,9 +150,10 @@ router.post('/facilities', auth_1.managementMiddleware, async (req, res) => {
 });
 router.put('/facilities/:id', auth_1.managementMiddleware, async (req, res) => {
     const oldId = req.params.id;
-    const { id: newId, name, shortName, type, city, district, fullAddress, phone, email, website, logoUrl, commercialTitle, taxOffice, taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings } = req.body;
+    const { id: newId, name, shortName, type, city, district, fullAddress, phone, email, website, logoUrl, commercialTitle, taxOffice, taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings, locations } = req.body;
     try {
         // Once binalari temizle (basit yaklasim)
+        await prisma.facilityLocation.deleteMany({ where: { facilityId: oldId } });
         await prisma.facilityBuilding.deleteMany({ where: { facilityId: oldId } });
         const facility = await prisma.facility.update({
             where: { id: oldId },
@@ -166,9 +177,18 @@ router.put('/facilities/:id', auth_1.managementMiddleware, async (req, res) => {
                         gardenArea: parseFloat(b.gardenArea) || null,
                         bedCapacity: parseInt(b.bedCapacity) || null
                     })) || []
+                },
+                locations: {
+                    create: locations?.map((l) => ({
+                        name: l.name || l.department || l.description || l.floor || l.building || 'İsimsiz',
+                        building: l.building || null,
+                        floor: l.floor || null,
+                        department: l.department || null,
+                        description: l.description || null
+                    })) || []
                 }
             },
-            include: { buildings: true }
+            include: { buildings: true, locations: true }
         });
         res.json(facility);
     }
@@ -270,6 +290,7 @@ router.get('/users', auth_1.adminMiddleware, async (req, res) => {
             include: {
                 roles: { include: { role: true } },
                 facilities: { include: { facility: true } },
+                modules: { include: { module: true } },
             },
             orderBy: { createdAt: 'desc' },
         });
@@ -280,7 +301,7 @@ router.get('/users', auth_1.adminMiddleware, async (req, res) => {
     }
 });
 router.post('/users', auth_1.adminMiddleware, async (req, res) => {
-    const { username, fullName, email, phone, department, title, roles, facilities } = req.body;
+    const { username, fullName, email, phone, department, title, roles, facilities, modules } = req.body;
     if (!username || !fullName) {
         return res.status(400).json({ error: 'Kullanıcı adı ve ad soyad zorunludur.' });
     }
@@ -303,10 +324,14 @@ router.post('/users', auth_1.adminMiddleware, async (req, res) => {
                 facilities: {
                     create: facilities?.map((facilityId) => ({ facilityId })) ?? [],
                 },
+                modules: {
+                    create: modules?.map((moduleId) => ({ moduleId })) ?? [],
+                },
             },
             include: {
                 roles: { include: { role: true } },
                 facilities: { include: { facility: true } },
+                modules: { include: { module: true } },
             },
         });
         res.status(201).json(user);
@@ -321,7 +346,7 @@ router.post('/users', auth_1.adminMiddleware, async (req, res) => {
 });
 router.put('/users/:username', auth_1.adminMiddleware, async (req, res) => {
     const usernameParam = String(req.params.username);
-    const { fullName, email, phone, department, title, isActive, roles, facilities } = req.body;
+    const { fullName, email, phone, department, title, isActive, roles, facilities, modules } = req.body;
     try {
         const updateData = {};
         if (fullName !== undefined)
@@ -352,12 +377,19 @@ router.put('/users/:username', auth_1.adminMiddleware, async (req, res) => {
                 create: facilities?.map((facilityId) => ({ facilityId })) ?? [],
             };
         }
+        if (modules !== undefined) {
+            await prisma.userModule.deleteMany({ where: { username: usernameParam } });
+            updateData.modules = {
+                create: modules?.map((moduleId) => ({ moduleId })) ?? [],
+            };
+        }
         const user = await prisma.user.update({
             where: { username: usernameParam },
             data: updateData,
             include: {
                 roles: { include: { role: true } },
                 facilities: { include: { facility: true } },
+                modules: { include: { module: true } },
             },
         });
         res.json(user);
@@ -638,7 +670,7 @@ Object.entries(incidentModels).forEach(([path, model]) => {
     });
 });
 // ──────────────────────────────────────────────────────────────────────────────
-// ROL LİSTESİ - Kullanıcı yönetimi formu için
+// ROL VE MODÜL LİSTESİ - Kullanıcı yönetimi formu için
 // ──────────────────────────────────────────────────────────────────────────────
 router.get('/roles', async (req, res) => {
     try {
@@ -649,6 +681,17 @@ router.get('/roles', async (req, res) => {
     }
     catch {
         res.status(500).json({ error: 'Roller getirilemedi.' });
+    }
+});
+router.get('/modules', async (req, res) => {
+    try {
+        const modules = await prisma.module.findMany({
+            orderBy: { name: 'asc' }
+        });
+        res.json(modules);
+    }
+    catch {
+        res.status(500).json({ error: 'Modüller getirilemedi.' });
     }
 });
 // ──────────────────────────────────────────────────────────────────────────────

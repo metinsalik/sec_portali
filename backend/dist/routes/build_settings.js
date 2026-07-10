@@ -13,6 +13,7 @@ router.use(auth_1.authMiddleware);
 router.get('/locations', async (req, res) => {
     try {
         const facilityId = req.user?.facilityId || req.query.facilityId;
+        // @ts-ignore
         const locations = await prisma.buildLocation.findMany({
             where: facilityId ? { facilityId } : {},
             orderBy: { createdAt: 'desc' }
@@ -29,6 +30,7 @@ router.post('/locations', async (req, res) => {
         if (!facilityId)
             return res.status(400).json({ error: 'Tesis bilgisi eksik' });
         const { block, floor, unit, room, description } = req.body;
+        // @ts-ignore
         const location = await prisma.buildLocation.create({
             data: { facilityId, block, floor, unit, room, description }
         });
@@ -42,6 +44,7 @@ router.put('/locations/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { block, floor, unit, room, description, isActive } = req.body;
+        // @ts-ignore
         const location = await prisma.buildLocation.update({
             where: { id },
             data: { block, floor, unit, room, description, isActive }
@@ -55,6 +58,7 @@ router.put('/locations/:id', async (req, res) => {
 router.delete('/locations/:id', async (req, res) => {
     try {
         const { id } = req.params;
+        // @ts-ignore
         await prisma.buildLocation.delete({ where: { id } });
         res.json({ success: true });
     }

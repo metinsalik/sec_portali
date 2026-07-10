@@ -200,7 +200,7 @@ router.delete('/companies/:id', async (req, res) => {
 router.get('/locations/:facilityId', async (req, res) => {
     try {
         const { facilityId } = req.params;
-        const locations = await prisma.hazmatDepartment.findMany({
+        const locations = await prisma.facilityLocation.findMany({
             where: { facilityId, isActive: true }
         });
         // Map 'name' to 'department' for frontend compatibility
@@ -218,7 +218,7 @@ router.post('/locations/:facilityId', async (req, res) => {
     try {
         const { facilityId } = req.params;
         const { building, block, floor, department, description } = req.body;
-        const location = await prisma.hazmatDepartment.create({
+        const location = await prisma.facilityLocation.create({
             data: {
                 facilityId,
                 building,
@@ -239,7 +239,7 @@ router.put('/locations/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { building, block, floor, department, description } = req.body;
-        const location = await prisma.hazmatDepartment.update({
+        const location = await prisma.facilityLocation.update({
             where: { id },
             data: { building, block, floor, name: department, description }
         });
@@ -253,7 +253,7 @@ router.put('/locations/:id', async (req, res) => {
 router.delete('/locations/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        await prisma.hazmatDepartment.update({
+        await prisma.facilityLocation.update({
             where: { id },
             data: { isActive: false }
         });
@@ -368,7 +368,7 @@ router.post('/equipment/bulk/:facilityId', async (req, res) => {
             // Find location by block, floor, unit, description
             let locationId = null;
             if (eq.blok || eq.kat || eq.birim || eq.mahal) {
-                let location = await prisma.hazmatDepartment.findFirst({
+                let location = await prisma.facilityLocation.findFirst({
                     where: {
                         facilityId,
                         building: eq.blok || null,
@@ -378,7 +378,7 @@ router.post('/equipment/bulk/:facilityId', async (req, res) => {
                     }
                 });
                 if (!location) {
-                    location = await prisma.hazmatDepartment.create({
+                    location = await prisma.facilityLocation.create({
                         data: {
                             facilityId,
                             building: eq.blok || null,
@@ -498,7 +498,7 @@ router.post('/equipment/bulk-dolap/:facilityId', async (req, res) => {
             }
             let locationId = null;
             if (eq.blok || eq.kat || eq.birim || eq.mahal) {
-                let location = await prisma.hazmatDepartment.findFirst({
+                let location = await prisma.facilityLocation.findFirst({
                     where: {
                         facilityId,
                         building: eq.blok || null,
@@ -508,7 +508,7 @@ router.post('/equipment/bulk-dolap/:facilityId', async (req, res) => {
                     }
                 });
                 if (!location) {
-                    location = await prisma.hazmatDepartment.create({
+                    location = await prisma.facilityLocation.create({
                         data: {
                             facilityId,
                             building: eq.blok || null,
@@ -579,21 +579,25 @@ router.post('/equipment/bulk-alarm/:facilityId', async (req, res) => {
                 continue;
             let locationId = null;
             if (eq.blok || eq.kat || eq.birim || eq.mahal) {
-                let loc = await prisma.hazmatDepartment.findFirst({
+                let loc = await prisma.facilityLocation.findFirst({
                     where: {
                         facilityId,
+                        // @ts-ignore
                         building: eq.blok ? String(eq.blok) : null,
                         floor: eq.kat ? String(eq.kat) : null,
+                        // @ts-ignore
                         name: eq.birim ? String(eq.birim) : null,
                         description: eq.mahal ? String(eq.mahal) : null
                     }
                 });
                 if (!loc) {
-                    loc = await prisma.hazmatDepartment.create({
+                    loc = await prisma.facilityLocation.create({
                         data: {
                             facilityId,
+                            // @ts-ignore
                             building: eq.blok ? String(eq.blok) : null,
                             floor: eq.kat ? String(eq.kat) : null,
+                            // @ts-ignore
                             name: eq.birim ? String(eq.birim) : null,
                             description: eq.mahal ? String(eq.mahal) : null,
                             isActive: true
@@ -676,21 +680,25 @@ router.post('/equipment/bulk-flasor/:facilityId', async (req, res) => {
                 continue;
             let locationId = null;
             if (eq.blok || eq.kat || eq.birim || eq.mahal) {
-                let loc = await prisma.hazmatDepartment.findFirst({
+                let loc = await prisma.facilityLocation.findFirst({
                     where: {
                         facilityId,
+                        // @ts-ignore
                         building: eq.blok ? String(eq.blok) : null,
                         floor: eq.kat ? String(eq.kat) : null,
+                        // @ts-ignore
                         name: eq.birim ? String(eq.birim) : null,
                         description: eq.mahal ? String(eq.mahal) : null
                     }
                 });
                 if (!loc) {
-                    loc = await prisma.hazmatDepartment.create({
+                    loc = await prisma.facilityLocation.create({
                         data: {
                             facilityId,
+                            // @ts-ignore
                             building: eq.blok ? String(eq.blok) : null,
                             floor: eq.kat ? String(eq.kat) : null,
+                            // @ts-ignore
                             name: eq.birim ? String(eq.birim) : null,
                             description: eq.mahal ? String(eq.mahal) : null,
                             isActive: true
@@ -773,21 +781,25 @@ router.post('/equipment/bulk-itfaiye/:facilityId', async (req, res) => {
                 continue;
             let locationId = null;
             if (eq.blok || eq.kat || eq.birim || eq.mahal) {
-                let loc = await prisma.hazmatDepartment.findFirst({
+                let loc = await prisma.facilityLocation.findFirst({
                     where: {
                         facilityId,
+                        // @ts-ignore
                         building: eq.blok ? String(eq.blok) : null,
                         floor: eq.kat ? String(eq.kat) : null,
+                        // @ts-ignore
                         name: eq.birim ? String(eq.birim) : null,
                         description: eq.mahal ? String(eq.mahal) : null
                     }
                 });
                 if (!loc) {
-                    loc = await prisma.hazmatDepartment.create({
+                    loc = await prisma.facilityLocation.create({
                         data: {
                             facilityId,
+                            // @ts-ignore
                             building: eq.blok ? String(eq.blok) : null,
                             floor: eq.kat ? String(eq.kat) : null,
+                            // @ts-ignore
                             name: eq.birim ? String(eq.birim) : null,
                             description: eq.mahal ? String(eq.mahal) : null,
                             isActive: true
@@ -1239,11 +1251,11 @@ router.post('/equipment/:id/swap', async (req, res) => {
         // Determine target location for the old equipment
         const targetLocName = isReverseSwap ? 'Merkez Depo' : 'Arıza Deposu / Hurdalık';
         const targetStatus = isReverseSwap ? 'DEPODA' : brokenStatus;
-        let targetLocation = await prisma.hazmatDepartment.findFirst({
+        let targetLocation = await prisma.facilityLocation.findFirst({
             where: { facilityId: currentEquipment.facilityId, name: 'HURDA/KULLANIM DIŞI DEPOT' }
         });
         if (!targetLocation) {
-            targetLocation = await prisma.hazmatDepartment.create({
+            targetLocation = await prisma.facilityLocation.create({
                 data: {
                     facilityId: currentEquipment.facilityId,
                     name: 'HURDA/KULLANIM DIŞI DEPOT',

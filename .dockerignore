@@ -1,0 +1,20 @@
+node_modules
+npm-debug.log
+Dockerfile
+.dockerignore
+.git
+.gitignore
+.env
+
+# Workspace specific node_modules
+apps/web/node_modules
+apps/mobile/node_modules
+backend/node_modules
+packages/shared/node_modules
+packages/core/node_modules
+
+# Build folders
+apps/web/dist
+backend/dist
+packages/shared/dist
+packages/shared/src/generated

@@ -37,7 +37,7 @@ function generateDeptCode(name: string): string {
 async function initializeFacilityRiskSettings(facilityId: string) {
   const deptCount = await prisma.riskDepartmentSetting.count({ where: { facilityId } });
   const catCount = await prisma.riskCategorySetting.count({ where: { facilityId } });
-  const hdeptCount = await prisma.riskDepartment.count({ where: { facilityId } });
+  const hdeptCount = await prisma.facilityLocation.count({ where: { facilityId } });
   
   if (deptCount > 0 || catCount > 0 || hdeptCount > 0) {
     return;
@@ -46,7 +46,7 @@ async function initializeFacilityRiskSettings(facilityId: string) {
   // 1. Default Hastane Bölümleri (RiskDepartment)
   const defaultHospitalDepts = ['Acil Servis', 'Yatan Hasta Servisi', 'Yetişkin Yoğun Bakım'];
   for (const name of defaultHospitalDepts) {
-    await prisma.riskDepartment.upsert({
+    await prisma.facilityLocation.upsert({
       where: { facilityId_name: { facilityId, name } },
       update: {},
       create: { facilityId, name, code: generateDeptCode(name) }

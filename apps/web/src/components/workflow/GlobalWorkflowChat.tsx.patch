@@ -1,0 +1,38 @@
+--- apps/web/src/components/workflow/GlobalWorkflowChat.tsx
++++ apps/web/src/components/workflow/GlobalWorkflowChat.tsx
+@@ -74,13 +74,13 @@
+           break;
+         }
+       }
+-      if (hasAnyUnread) {
+-        setHasUnread(true);
+-      }
++      
++      // Only show badge if chat is closed and there are actually unread messages
++      setHasUnread(hasAnyUnread && !isChatOpen);
+     }
+-  }, [tasks, setHasUnread]);
++  }, [tasks, isChatOpen, setHasUnread]);
+ 
+   // Fetch task info
+   const { data: activeTask, isLoading: taskLoading } = useQuery({
+@@ -109,9 +109,6 @@
+     
+     // Global listener for unread badge
+     const onTaskUpdated = (updatedTaskId: any) => {
+-      // If we are not currently viewing this task's chat, set unread
+-      if (!isChatOpen || activeTaskId !== updatedTaskId) {
+-        setHasUnread(true);
+-      }
+       queryClient.invalidateQueries({ queryKey: ['workflow', 'tasks'] });
+     };
+     
+@@ -120,7 +117,7 @@
+     return () => {
+       socket.off('task_updated', onTaskUpdated);
+     };
+-  }, [socket, isChatOpen, activeTaskId, setHasUnread]);
++  }, [socket, queryClient]);
+ 
+   // Send chat message
+   const sendChatMutation = useMutation({

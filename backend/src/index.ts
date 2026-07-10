@@ -1,11 +1,15 @@
+import { startCronJobs } from './jobs/cronTasks';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 
 // Routes
 import authRoutes from './routes/auth';
 import settingsRoutes from './routes/settings';
+import telegramRoutes from './routes/settings/telegram';
 import hazmatKitItemsRoutes from './routes/settings/hazmat-kit-items';
 import panelRoutes from './routes/panel';
 import operationsRoutes from './routes/operations';
@@ -45,6 +49,7 @@ app.use('/uploads', express.static('uploads'));
 
 // Route Entegrasyonu
 app.use('/api/auth', authRoutes);
+app.use('/api/settings/telegram', telegramRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/settings/hazmat-kit-items', hazmatKitItemsRoutes);
 app.use('/api/panel', panelRoutes);
@@ -60,6 +65,7 @@ app.use('/api/fire-equipment', fireEquipmentRoutes);
 app.use('/api/build-management', buildManagementRoutes);
 app.use('/api/build-management/settings', buildSettingsRoutes);
 app.use('/api/bina-turu', binaTuruRoutes);
+app.use('/api/locations', require('./routes/locations').default);
 
 // Sağlık kontrolü
 app.get('/health', (req, res) => {
@@ -72,7 +78,33 @@ app.use(notFoundHandler);
 // Global error handler - en son middleware
 app.use(errorHandler);
 
-// Start Server
-app.listen(Number(PORT), '0.0.0.0', () => {
+import { initTelegramBot } from './services/telegramService';
+
+const httpServer = createServer(app);
+export const io = new Server(httpServer, {
+  cors: {
+    origin: [
+      process.env.FRONTEND_URL || '*',
+      'http://localhost',
+      'http://localhost:3005',
+      'http://localhost:5173'
+    ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: true
+  }
+});
+
+io.on('connection', (socket) => {
+  // Join a room specifically for a task
+  socket.on('joinTask', (taskId) => {
+    socket.join(`task_${taskId}`);
+  });
+  socket.on('leaveTask', (taskId) => {
+    socket.leave(`task_${taskId}`);
+  });
+});
+
+httpServer.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Backend server running on http://0.0.0.0:${PORT}`);
+  initTelegramBot(); // Start Telegram bot polling
 });

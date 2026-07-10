@@ -46,28 +46,30 @@ router.delete('/units/:id', auth_1.authMiddleware, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Departments
+// Locations / Departments
 router.get('/departments', auth_1.authMiddleware, async (req, res) => {
     const { facilityId, isCleaningCart } = req.query;
     try {
         const whereClause = { isActive: true };
-        if (facilityId && facilityId !== 'all') {
+        if (facilityId && facilityId !== 'all')
             whereClause.facilityId = String(facilityId);
+        if (isCleaningCart === 'true') {
+            whereClause.type = 'TEMIZLIK_ARABASI';
         }
-        if (isCleaningCart !== undefined) {
-            whereClause.isCleaningCart = isCleaningCart === 'true';
-        }
-        const departments = await prisma.hazmatDepartment.findMany({
+        const locations = await prisma.facilityLocation.findMany({
             where: whereClause,
             orderBy: [
                 { building: 'asc' },
-                { block: 'asc' },
                 { floor: 'asc' },
                 { name: 'asc' },
                 { description: 'asc' }
             ]
         });
-        res.json(departments);
+        // For backwards compatibility on frontend
+        if (isCleaningCart === 'true') {
+            return res.json(locations.map((c) => ({ ...c, isCleaningCart: true })));
+        }
+        return res.json(locations);
     }
     catch (error) {
         console.error('Error fetching departments:', error);
@@ -75,31 +77,25 @@ router.get('/departments', auth_1.authMiddleware, async (req, res) => {
     }
 });
 router.post('/departments', auth_1.authMiddleware, async (req, res) => {
-    const { facilityId, name, building, block, floor, description, isCleaningCart } = req.body;
+    const { facilityId, name, building, floor, department, description, isCleaningCart } = req.body;
     if (!facilityId)
         return res.status(400).json({ error: 'facilityId is required' });
     try {
-        // Only try to sync to global Department if it's not a cleaning cart and has a name
-        if (!isCleaningCart && name) {
-            const globalDept = await prisma.department.findFirst({
-                where: { name: { equals: name.trim(), mode: 'insensitive' } }
-            });
-            if (!globalDept) {
-                await prisma.department.create({ data: { name: name.trim() } });
-            }
-        }
-        const department = await prisma.hazmatDepartment.create({
+        const newLocation = await prisma.facilityLocation.create({
             data: {
                 facilityId,
-                name: name ? name.trim() : null,
+                name: name ? name.trim() : (isCleaningCart ? 'Bilinmeyen Araç' : 'Bilinmeyen Lokasyon'),
                 building,
-                block,
                 floor,
+                department,
                 description,
-                isCleaningCart: !!isCleaningCart
+                type: isCleaningCart ? 'TEMIZLIK_ARABASI' : 'DEPARTMAN'
             }
         });
-        res.status(201).json(department);
+        if (isCleaningCart) {
+            return res.status(201).json({ ...newLocation, isCleaningCart: true });
+        }
+        return res.status(201).json(newLocation);
     }
     catch (error) {
         console.error('Error creating department:', error);
@@ -107,20 +103,22 @@ router.post('/departments', auth_1.authMiddleware, async (req, res) => {
     }
 });
 router.put('/departments/:id', auth_1.authMiddleware, async (req, res) => {
-    const { name, building, block, floor, description, isCleaningCart } = req.body;
+    const { name, building, floor, department, description, isCleaningCart } = req.body;
     try {
-        const department = await prisma.hazmatDepartment.update({
+        const updatedLoc = await prisma.facilityLocation.update({
             where: { id: req.params.id },
             data: {
-                name: name ? name.trim() : null,
+                name: name ? name.trim() : undefined,
                 building,
-                block,
                 floor,
-                description,
-                isCleaningCart: !!isCleaningCart
+                department,
+                description
             }
         });
-        res.json(department);
+        if (isCleaningCart || updatedLoc.type === 'TEMIZLIK_ARABASI') {
+            return res.json({ ...updatedLoc, isCleaningCart: true });
+        }
+        return res.json(updatedLoc);
     }
     catch (error) {
         console.error('Error updating department:', error);
@@ -129,55 +127,19 @@ router.put('/departments/:id', auth_1.authMiddleware, async (req, res) => {
 });
 router.delete('/departments/:id', auth_1.authMiddleware, async (req, res) => {
     try {
-        await prisma.hazmatDepartment.update({
+        await prisma.facilityLocation.update({
             where: { id: req.params.id },
             data: { isActive: false }
         });
-        res.json({ message: 'Department deleted successfully' });
+        res.json({ message: 'Location deleted successfully' });
     }
     catch (error) {
-        console.error('Error deleting department:', error);
+        console.error('Error deleting location:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Bulk rename node (Building, Floor, or Department)
 router.post('/departments/rename-node', auth_1.authMiddleware, async (req, res) => {
-    const { facilityId, level, oldValue, newValue, parentBuilding, parentFloor } = req.body;
-    if (!facilityId || !level || !oldValue || !newValue) {
-        return res.status(400).json({ error: 'Missing required fields' });
-    }
-    try {
-        const whereClause = { facilityId: String(facilityId), isActive: true };
-        if (level === 'building') {
-            whereClause.building = oldValue === 'Belirtilmemiş Blok' ? null : oldValue;
-            await prisma.hazmatDepartment.updateMany({
-                where: whereClause,
-                data: { building: newValue }
-            });
-        }
-        else if (level === 'floor') {
-            whereClause.building = parentBuilding === 'Belirtilmemiş Blok' ? null : parentBuilding;
-            whereClause.floor = oldValue === 'Belirtilmemiş Kat' ? null : oldValue;
-            await prisma.hazmatDepartment.updateMany({
-                where: whereClause,
-                data: { floor: newValue }
-            });
-        }
-        else if (level === 'department') {
-            whereClause.building = parentBuilding === 'Belirtilmemiş Blok' ? null : parentBuilding;
-            whereClause.floor = parentFloor === 'Belirtilmemiş Kat' ? null : parentFloor;
-            whereClause.name = oldValue === 'Belirtilmemiş Birim' ? null : oldValue;
-            await prisma.hazmatDepartment.updateMany({
-                where: whereClause,
-                data: { name: newValue }
-            });
-        }
-        res.json({ message: 'Node renamed successfully' });
-    }
-    catch (error) {
-        console.error('Error renaming node:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+    res.status(400).json({ error: 'Bu islem artik kullanilmiyor' });
 });
 // Hazard Labels
 router.get('/hazard-labels', auth_1.authMiddleware, async (req, res) => {

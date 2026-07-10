@@ -69,10 +69,6 @@ router.put('/:id/kapat', upload.array('kanitDosyalari'), async (req, res) => {
     const { kapatmaKaniti, dofTakipNo } = req.body;
     const files = req.files;
     try {
-        if (!dofTakipNo) {
-            res.status(400).json({ error: 'DÖF Takip Numarası zorunludur.' });
-            return;
-        }
         const filePaths = files ? files.map(f => f.filename) : [];
         const combinedKanit = [kapatmaKaniti, ...filePaths].filter(Boolean).join('\nDosya: ');
         const existing = await prisma.bTUygunsuzluk.findUnique({

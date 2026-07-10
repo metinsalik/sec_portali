@@ -82,6 +82,7 @@ router.get('/facilities/:id', async (req: AuthRequest, res: Response) => {
       where: { id },
       include: { 
         buildings: true, 
+        locations: true,
         assignments: {
           include: {
             professional: true,
@@ -109,7 +110,7 @@ router.post('/facilities', managementMiddleware, async (req: AuthRequest, res: R
   const { 
     id, name, shortName, type, city, district, fullAddress, 
     phone, email, website, logoUrl, commercialTitle, taxOffice, 
-    taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings 
+    taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings, locations 
   } = req.body;
 
   try {
@@ -132,9 +133,18 @@ router.post('/facilities', managementMiddleware, async (req: AuthRequest, res: R
             gardenArea: parseFloat(b.gardenArea) || null,
             bedCapacity: parseInt(b.bedCapacity) || null
           })) || []
+        },
+        locations: {
+          create: locations?.map((l: any) => ({
+            name: l.name || l.department || l.description || l.floor || l.building || 'İsimsiz',
+            building: l.building || null,
+            floor: l.floor || null,
+            department: l.department || null,
+            description: l.description || null
+          })) || []
         }
       },
-      include: { buildings: true }
+      include: { buildings: true, locations: true }
     });
     res.status(201).json(facility);
   } catch (error: any) {
@@ -151,11 +161,12 @@ router.put('/facilities/:id', managementMiddleware, async (req: AuthRequest, res
   const { 
     id: newId, name, shortName, type, city, district, fullAddress, 
     phone, email, website, logoUrl, commercialTitle, taxOffice, 
-    taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings 
+    taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings, locations 
   } = req.body;
 
   try {
     // Once binalari temizle (basit yaklasim)
+    await prisma.facilityLocation.deleteMany({ where: { facilityId: oldId } as any });
     await prisma.facilityBuilding.deleteMany({ where: { facilityId: oldId } as any });
 
     const facility = await prisma.facility.update({
@@ -180,9 +191,18 @@ router.put('/facilities/:id', managementMiddleware, async (req: AuthRequest, res
             gardenArea: parseFloat(b.gardenArea) || null,
             bedCapacity: parseInt(b.bedCapacity) || null
           })) || []
+        },
+        locations: {
+          create: locations?.map((l: any) => ({
+            name: l.name || l.department || l.description || l.floor || l.building || 'İsimsiz',
+            building: l.building || null,
+            floor: l.floor || null,
+            department: l.department || null,
+            description: l.description || null
+          })) || []
         }
       },
-      include: { buildings: true }
+      include: { buildings: true, locations: true }
     });
     res.json(facility);
   } catch (error: any) {
@@ -292,6 +312,7 @@ router.get('/users', adminMiddleware, async (req: AuthRequest, res: Response) =>
       include: {
         roles: { include: { role: true } },
         facilities: { include: { facility: true } },
+        modules: { include: { module: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -302,7 +323,7 @@ router.get('/users', adminMiddleware, async (req: AuthRequest, res: Response) =>
 });
 
 router.post('/users', adminMiddleware, async (req: AuthRequest, res: Response) => {
-  const { username, fullName, email, phone, department, title, roles, facilities } = req.body;
+  const { username, fullName, email, phone, department, title, roles, facilities, modules } = req.body;
 
   if (!username || !fullName) {
     return res.status(400).json({ error: 'Kullanıcı adı ve ad soyad zorunludur.' });
@@ -328,10 +349,14 @@ router.post('/users', adminMiddleware, async (req: AuthRequest, res: Response) =
         facilities: {
           create: (facilities as string[] | undefined)?.map((facilityId) => ({ facilityId })) ?? [],
         },
+        modules: {
+          create: (modules as number[] | undefined)?.map((moduleId) => ({ moduleId })) ?? [],
+        },
       },
       include: {
         roles: { include: { role: true } },
         facilities: { include: { facility: true } },
+        modules: { include: { module: true } },
       },
     });
     res.status(201).json(user);
@@ -346,7 +371,7 @@ router.post('/users', adminMiddleware, async (req: AuthRequest, res: Response) =
 
 router.put('/users/:username', adminMiddleware, async (req: AuthRequest, res: Response) => {
   const usernameParam = String(req.params.username);
-  const { fullName, email, phone, department, title, isActive, roles, facilities } = req.body;
+  const { fullName, email, phone, department, title, isActive, roles, facilities, modules } = req.body;
 
   try {
     const updateData: any = {};
@@ -375,12 +400,20 @@ router.put('/users/:username', adminMiddleware, async (req: AuthRequest, res: Re
       };
     }
 
+    if (modules !== undefined) {
+      await prisma.userModule.deleteMany({ where: { username: usernameParam } });
+      updateData.modules = {
+        create: (modules as number[] | undefined)?.map((moduleId) => ({ moduleId })) ?? [],
+      };
+    }
+
     const user = await prisma.user.update({
       where: { username: usernameParam },
       data: updateData,
       include: {
         roles: { include: { role: true } },
         facilities: { include: { facility: true } },
+        modules: { include: { module: true } },
       },
     });
     res.json(user);
@@ -660,7 +693,7 @@ Object.entries(incidentModels).forEach(([path, model]) => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
-// ROL LİSTESİ - Kullanıcı yönetimi formu için
+// ROL VE MODÜL LİSTESİ - Kullanıcı yönetimi formu için
 // ──────────────────────────────────────────────────────────────────────────────
 router.get('/roles', async (req: AuthRequest, res: Response) => {
   try {
@@ -670,6 +703,17 @@ router.get('/roles', async (req: AuthRequest, res: Response) => {
     res.json(roles);
   } catch {
     res.status(500).json({ error: 'Roller getirilemedi.' });
+  }
+});
+
+router.get('/modules', async (req: AuthRequest, res: Response) => {
+  try {
+    const modules = await prisma.module.findMany({
+      orderBy: { name: 'asc' }
+    });
+    res.json(modules);
+  } catch {
+    res.status(500).json({ error: 'Modüller getirilemedi.' });
   }
 });
 

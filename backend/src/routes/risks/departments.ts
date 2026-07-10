@@ -6,7 +6,6 @@ import { authMiddleware } from '../../middleware/auth';
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Helper to check facility access
 async function checkFacilityAccess(req: AuthRequest, facilityId: string): Promise<boolean> {
   const user = req.user;
   if (!user) return false;
@@ -23,16 +22,6 @@ async function checkFacilityAccess(req: AuthRequest, facilityId: string): Promis
   return !!access;
 }
 
-// Helper to generate a 3-letter code from a department name
-function generateDeptCode(name: string): string {
-  const charMap: Record<string, string> = {
-    'ı': 'i', 'i': 'i', 'ş': 's', 'ğ': 'g', 'ü': 'u', 'ö': 'o', 'ç': 'c',
-    'I': 'I', 'İ': 'I', 'Ş': 'S', 'Ğ': 'G', 'Ü': 'U', 'Ö': 'O', 'Ç': 'C'
-  };
-  const str = name.replace(/[ıişğüöçIİŞĞÜÖÇ]/g, (m) => charMap[m]);
-  return str.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase() || 'GEN';
-}
-
 // GET /api/risks/departments?facilityId=xxx
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
@@ -44,11 +33,10 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
     }
 
-    const departments = await prisma.riskDepartment.findMany({
+    const locations = await prisma.facilityLocation.findMany({
       where: { facilityId: facilityId as string },
       include: {
         _count: { select: { risks: true } },
-        areas: true,
         risks: {
           select: { status: true },
         },
@@ -56,7 +44,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       orderBy: { name: 'asc' },
     });
 
-    const withStats = departments.map((d: any) => {
+    const withStats = locations.map((d: any) => {
       const statusMap: Record<string, number> = {};
       d.risks.forEach((r: any) => {
         statusMap[r.status] = (statusMap[r.status] || 0) + 1;
@@ -66,7 +54,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
         facilityId: d.facilityId,
         name: d.name,
         riskCount: d._count.risks,
-        areas: d.areas || [],
+        areas: [],
         stats: {
           acik: statusMap['ACIK_TEHLIKE'] || 0,
           mudahale: statusMap['ILK_MUDAHALE_EDILDI'] || 0,
@@ -83,15 +71,14 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// GET /api/risks/departments/:id
 router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const id = parseInt(req.params.id as string);
-    const dept = await prisma.riskDepartment.findUnique({ 
+    const id = req.params.id as string;
+    const dept = await prisma.facilityLocation.findUnique({ 
       where: { id },
-      include: { facility: true, areas: true }
+      include: { facility: true }
     });
-    if (!dept) return res.status(404).json({ error: 'Departman bulunamadı.' });
+    if (!dept) return res.status(404).json({ error: 'Lokasyon bulunamadı.' });
 
     const hasAccess = await checkFacilityAccess(req, dept.facilityId);
     if (!hasAccess) {
@@ -100,138 +87,79 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     res.json(dept);
   } catch (error) {
-    console.error('Get department by id error:', error);
-    res.status(500).json({ error: 'Departman alınamadı.' });
+    res.status(500).json({ error: 'Lokasyon alınamadı.' });
   }
 });
 
-// POST /api/risks/departments/areas — yeni alan oluştur
+// We disable areas for now
 router.post('/areas', authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const { departmentId, name } = req.body;
-    if (!departmentId || !name) return res.status(400).json({ error: 'departmentId ve name gerekli.' });
-
-    const existing = await prisma.riskDepartmentArea.findFirst({
-      where: { departmentId, name: { equals: name.trim(), mode: 'insensitive' } }
-    });
-    if (existing) return res.status(409).json({ error: 'Bu alan zaten mevcut.' });
-
-    const area = await prisma.riskDepartmentArea.create({
-      data: { departmentId, name: name.trim() }
-    });
-    res.status(201).json(area);
-  } catch (error) {
-    console.error('Risk department area create error:', error);
-    res.status(500).json({ error: 'Alan oluşturulamadı.' });
-  }
+  res.status(400).json({ error: 'Alan yönetimi artık Merkezi Lokasyon modülünden yapılmaktadır.' });
 });
-
-// PUT /api/risks/departments/areas/:id
 router.put('/areas/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const id = parseInt(req.params.id as string);
-    const { name } = req.body;
-    const area = await prisma.riskDepartmentArea.update({
-      where: { id },
-      data: { name: name.trim() }
-    });
-    res.json(area);
-  } catch (error) {
-    res.status(500).json({ error: 'Alan güncellenemedi.' });
-  }
+  res.status(400).json({ error: 'Alan yönetimi artık Merkezi Lokasyon modülünden yapılmaktadır.' });
 });
-
-// DELETE /api/risks/departments/areas/:id
 router.delete('/areas/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const id = parseInt(req.params.id as string);
-    await prisma.riskDepartmentArea.delete({ where: { id } });
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Alan silinemedi.' });
-  }
+  res.status(400).json({ error: 'Alan yönetimi artık Merkezi Lokasyon modülünden yapılmaktadır.' });
 });
 
-// POST /api/risks/departments — yeni departman oluştur
 router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { facilityId, name } = req.body;
     if (!facilityId || !name) return res.status(400).json({ error: 'facilityId ve name gerekli.' });
 
     const hasAccess = await checkFacilityAccess(req, facilityId);
-    if (!hasAccess) {
-      return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
-    }
+    if (!hasAccess) return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
 
-    // Global Department senkronizasyonu
-    const globalDept = await prisma.department.findFirst({
-      where: { name: { equals: name.trim(), mode: 'insensitive' } }
+    const existing = await prisma.facilityLocation.findFirst({
+      where: { facilityId, name: { equals: name.trim(), mode: 'insensitive' } },
     });
     
-    if (!globalDept) {
-      await prisma.department.create({ data: { name: name.trim() } });
-    }
+    if (existing) return res.status(409).json({ error: 'Bu lokasyon zaten mevcut.' });
 
-    const existing = await prisma.riskDepartment.findFirst({
-      where: { 
-        facilityId, 
-        name: { equals: name.trim(), mode: 'insensitive' }
-      },
-    });
-    
-    if (existing) return res.status(409).json({ error: 'Bu departman zaten mevcut.' });
-
-    const dept = await prisma.riskDepartment.create({
-      data: { facilityId, name: name.trim(), code: generateDeptCode(name.trim()) },
+    const dept = await prisma.facilityLocation.create({
+      data: { facilityId, name: name.trim() },
     });
     res.status(201).json(dept);
   } catch (error) {
-    console.error('Risk department create error:', error);
-    res.status(500).json({ error: 'Departman oluşturulamadı.' });
+    res.status(500).json({ error: 'Lokasyon oluşturulamadı.' });
   }
 });
 
-// PUT /api/risks/departments/:id
 router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = req.params.id as string;
     const { name } = req.body;
 
-    const dept = await prisma.riskDepartment.findUnique({ where: { id } });
-    if (!dept) return res.status(404).json({ error: 'Departman bulunamadı.' });
+    const dept = await prisma.facilityLocation.findUnique({ where: { id } });
+    if (!dept) return res.status(404).json({ error: 'Lokasyon bulunamadı.' });
 
     const hasAccess = await checkFacilityAccess(req, dept.facilityId);
-    if (!hasAccess) {
-      return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
-    }
+    if (!hasAccess) return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
 
-    const updatedDept = await prisma.riskDepartment.update({
+    const updatedDept = await prisma.facilityLocation.update({
       where: { id },
-      data: { name, code: generateDeptCode(name) },
+      data: { name },
     });
     res.json(updatedDept);
   } catch (error) {
-    res.status(500).json({ error: 'Departman güncellenemedi.' });
+    res.status(500).json({ error: 'Lokasyon güncellenemedi.' });
   }
 });
 
-// DELETE /api/risks/departments/:id
 router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = req.params.id as string;
 
-    const dept = await prisma.riskDepartment.findUnique({ where: { id } });
-    if (!dept) return res.status(404).json({ error: 'Departman bulunamadı.' });
+    const dept = await prisma.facilityLocation.findUnique({ where: { id } });
+    if (!dept) return res.status(404).json({ error: 'Lokasyon bulunamadı.' });
 
     const hasAccess = await checkFacilityAccess(req, dept.facilityId);
-    if (!hasAccess) {
-      return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
-    }
+    if (!hasAccess) return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
 
-    await prisma.riskDepartment.delete({ where: { id } });
+    await prisma.facilityLocation.delete({ where: { id } });
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: 'Departman silinemedi.' });
+    res.status(500).json({ error: 'Lokasyon silinemedi.' });
   }
 });
 

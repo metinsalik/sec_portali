@@ -278,6 +278,24 @@ async function main() {
       }
     }
   }
+  console.log('Seeding Fire Equipment Categories complete.');
+
+  console.log('Seeding Modules...');
+  await prisma.module.createMany({
+    data: [
+      { code: 'DASHBOARD', name: 'Gösterge Paneli', description: 'Ana özet ekranı', icon: 'LayoutGrid' },
+      { code: 'SETTINGS', name: 'Ayarlar', description: 'Kullanıcı ve sistem ayarları', icon: 'Settings' },
+      { code: 'REPORTS', name: 'Raporlar', description: 'Sistem raporları ve çıktıları', icon: 'FileText' },
+      { code: 'INCIDENTS', name: 'Olay Bildirimleri', description: 'Kaza ve ramak kala bildirimleri', icon: 'AlertTriangle' },
+      { code: 'FIRE_EQUIPMENT', name: 'Yangın Ekipmanları', description: 'Yangın envanteri ve bakımları', icon: 'Flame' },
+      { code: 'HAZMAT', name: 'Tehlikeli Maddeler', description: 'Kimyasal yönetimi', icon: 'Skull' },
+      { code: 'RISKS', name: 'Risk Analizi', description: 'Saha risk analizleri', icon: 'ShieldAlert' },
+      { code: 'WORKFLOW', name: 'İş Takibi', description: 'Görev ve iş akış yönetimi', icon: 'KanbanSquare' },
+    ],
+    skipDuplicates: true,
+  });
+  console.log('Seeding Modules complete.');
+
   console.log('Seeding complete.');
 }
 

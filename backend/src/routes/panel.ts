@@ -7,6 +7,7 @@ import {
   checkCapacity,
 } from '../services/isgCalculator';
 import { format } from 'date-fns'; // Import format for date operations
+import ExcelJS from 'exceljs';
 
 import { getDashboardStats, getEmployeeTrend } from '../services/dashboardService';
 import { 
@@ -15,6 +16,10 @@ import {
   autoSyncAllMonths,
   exportReconciliationToExcel
 } from '../services/reconciliationService';
+import { processKatipImport } from '../services/katipImportService';
+import multer from 'multer';
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -146,6 +151,26 @@ router.get('/facilities', async (req: AuthRequest, res: Response) => {
     res.json(facilities);
   } catch {
     res.status(500).json({ error: 'Tesisler getirilemedi.' });
+  }
+});
+
+// İSG-KATİP Excel Import
+router.post('/facilities/:id/import-katip', upload.single('file'), async (req: AuthRequest, res: Response) => {
+  try {
+    const facilityId = String(req.params.id);
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ error: 'Excel dosyası yüklenmedi.' });
+    }
+
+    const username = req.user!.username;
+    const result = await processKatipImport(facilityId, file.buffer, username);
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Katip Import Error:', error);
+    res.status(500).json({ error: 'Excel içe aktarılırken bir hata oluştu.' });
   }
 });
 
@@ -529,15 +554,15 @@ router.get('/assignments/compliance-status', async (req: AuthRequest, res: Respo
       where: { isActive: true },
       include: {
         assignments: {
-          where: { status: 'Aktif' },
           include: { professional: true, employerRep: true },
+          orderBy: { endDate: 'desc' },
         },
       },
       orderBy: { name: 'asc' },
     });
 
     const results = facilities.map((f) => {
-      const activeAssignments = f.assignments;
+      const activeAssignments = f.assignments.filter(a => a.status === 'Aktif');
       const iguAssignments = activeAssignments
         .filter((a) => a.type === 'IGU' && a.professional)
         .map((a) => ({
@@ -566,8 +591,34 @@ router.get('/assignments/compliance-status', async (req: AuthRequest, res: Respo
         vekilAssignments,
       });
 
+      // Calculate countdown for missing requirements
+      const today = new Date();
+      
+      const computeCountdown = (type: string, isCompliant: boolean, required: boolean) => {
+        if (isCompliant || !required) return { daysLeft: null, startDate: null };
+        const pastAssignments = f.assignments.filter(a => a.type === type && a.status === 'Sona Erdi' && a.endDate);
+        pastAssignments.sort((a, b) => b.endDate!.getTime() - a.endDate!.getTime());
+        const startDate = pastAssignments.length > 0 ? pastAssignments[0].endDate : f.createdAt;
+        if (!startDate) return { daysLeft: null, startDate: null };
+        const diffTime = today.getTime() - startDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        return { daysLeft: Math.max(0, 30 - diffDays), startDate };
+      };
+
+      const iguTimer = computeCountdown('IGU', compliance.igu.isCompliant, true);
+      compliance.igu.countdownDays = iguTimer.daysLeft;
+      compliance.igu.deficiencyStartDate = iguTimer.startDate;
+
+      const hekimTimer = computeCountdown('Hekim', compliance.hekim.isCompliant, true);
+      compliance.hekim.countdownDays = hekimTimer.daysLeft;
+      compliance.hekim.deficiencyStartDate = hekimTimer.startDate;
+
+      const dspTimer = computeCountdown('DSP', compliance.dsp.isCompliant, compliance.dsp.required);
+      compliance.dsp.countdownDays = dspTimer.daysLeft;
+      compliance.dsp.deficiencyStartDate = dspTimer.startDate;
+
       let category: 'missing' | 'none' | 'compliant' = 'compliant';
-      if (f.assignments.length === 0) {
+      if (activeAssignments.length === 0) {
         category = 'none';
       } else if (!compliance.overallCompliant) {
         category = 'missing';
@@ -576,7 +627,8 @@ router.get('/assignments/compliance-status', async (req: AuthRequest, res: Respo
       return {
         ...compliance,
         category,
-        assignmentsCount: f.assignments.length,
+        assignmentsCount: activeAssignments.length,
+        activeAssignments,
       };
     });
 
@@ -584,6 +636,126 @@ router.get('/assignments/compliance-status', async (req: AuthRequest, res: Respo
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Atama uyumluluk durumları getirilemedi.' });
+  }
+});
+
+// EXCEL EKSIK ATAMALAR RAPORU
+router.get('/reports/missing-assignments/excel', async (req: AuthRequest, res: Response) => {
+  try {
+    const facilities = await prisma.facility.findMany({
+      where: { isActive: true },
+      include: {
+        assignments: {
+          include: { professional: true, employerRep: true },
+          orderBy: { endDate: 'desc' },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Eksik Atamalar Listesi');
+
+    worksheet.columns = [
+      { header: 'Pozisyon / Tesis', key: 'position', width: 40 },
+      { header: 'Eksik Detayı', key: 'missingDetails', width: 25 },
+      { header: 'Gerekli / Atanan (Dk)', key: 'minutes', width: 25 },
+      { header: 'Kalan Yasal Süre', key: 'timeLeft', width: 25 },
+      { header: 'Mevcut Atanmış Profesyoneller', key: 'assignedPros', width: 60 },
+    ];
+
+    // Stil ayarları (Başlık satırı)
+    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F2937' } };
+
+    const today = new Date();
+
+    for (const f of facilities) {
+      const activeAssignments = f.assignments.filter(a => a.status === 'Aktif');
+      const iguAssignments = activeAssignments.filter((a) => a.type === 'IGU' && a.professional).map((a) => ({ durationMinutes: a.durationMinutes, isFullTime: a.isFullTime, titleClass: a.professional!.titleClass }));
+      const hekimAssignments = activeAssignments.filter((a) => a.type === 'Hekim').map((a) => ({ durationMinutes: a.durationMinutes, isFullTime: a.isFullTime }));
+      const dspAssignments = activeAssignments.filter((a) => a.type === 'DSP').map((a) => ({ durationMinutes: a.durationMinutes }));
+
+      const compliance = analyzeFacilityCompliance({
+        facilityId: f.id, facilityName: f.name, dangerClass: f.dangerClass, employeeCount: f.employeeCount,
+        iguAssignments, hekimAssignments, dspAssignments, vekilAssignments: [],
+      });
+
+      if (compliance.overallCompliant) continue;
+
+      const getAssignedProsText = (type: string) => {
+        const pros = activeAssignments.filter(a => a.type === type && a.professional);
+        if (pros.length === 0) return 'Yok';
+        return pros.map(a => `${a.professional!.fullName} (${a.professional!.employmentType === 'OSGB Kadrosu' ? 'OSGB' : 'Tesis'})`).join(', ');
+      };
+
+      const computeCountdown = (type: string, isCompliant: boolean, required: boolean) => {
+        if (isCompliant || !required) return { daysLeft: null };
+        const pastAssignments = f.assignments.filter(a => a.type === type && a.status === 'Sona Erdi' && a.endDate);
+        pastAssignments.sort((a, b) => b.endDate!.getTime() - a.endDate!.getTime());
+        const startDate = pastAssignments.length > 0 ? pastAssignments[0].endDate : f.createdAt;
+        if (!startDate) return { daysLeft: null };
+        const diffDays = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        return { daysLeft: Math.max(0, 30 - diffDays) };
+      };
+
+      // Tesis başlığı satırı
+      const facilityRow = worksheet.addRow({ position: `Tesis: ${f.name} (Çalışan: ${f.employeeCount})` });
+      worksheet.mergeCells(`A${facilityRow.number}:E${facilityRow.number}`);
+      facilityRow.font = { bold: true, size: 12, color: { argb: 'FF000000' } };
+      facilityRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+
+      const formatMissingDetails = (missingMins: number, requiredMins: number, employeeCount: number) => {
+        if (employeeCount === 0 || requiredMins === 0) return `${missingMins} dk eksik`;
+        const missingPersons = Math.ceil(missingMins / (requiredMins / employeeCount));
+        return `${missingMins} dk eksik (${missingPersons} çalışan için)`;
+      };
+
+      if (!compliance.igu.isCompliant) {
+        const missingMins = Math.max(0, compliance.igu.requiredMinutes - compliance.igu.assignedMinutes);
+        worksheet.addRow({
+          position: '   • İş Güvenliği Uzmanı',
+          missingDetails: formatMissingDetails(missingMins, compliance.igu.requiredMinutes, f.employeeCount),
+          minutes: `${compliance.igu.requiredMinutes} dk / ${compliance.igu.assignedMinutes} dk`,
+          timeLeft: computeCountdown('IGU', false, true).daysLeft + ' Gün Kaldı',
+          assignedPros: getAssignedProsText('IGU')
+        });
+      }
+
+      if (!compliance.hekim.isCompliant) {
+        const missingMins = Math.max(0, compliance.hekim.requiredMinutes - compliance.hekim.assignedMinutes);
+        worksheet.addRow({
+          position: '   • İşyeri Hekimi',
+          missingDetails: formatMissingDetails(missingMins, compliance.hekim.requiredMinutes, f.employeeCount),
+          minutes: `${compliance.hekim.requiredMinutes} dk / ${compliance.hekim.assignedMinutes} dk`,
+          timeLeft: computeCountdown('Hekim', false, true).daysLeft + ' Gün Kaldı',
+          assignedPros: getAssignedProsText('Hekim')
+        });
+      }
+
+      if (compliance.dsp.required && !compliance.dsp.isCompliant) {
+        const missingMins = Math.max(0, compliance.dsp.requiredMinutes - compliance.dsp.assignedMinutes);
+        worksheet.addRow({
+          position: '   • Diğer Sağlık Personeli',
+          missingDetails: formatMissingDetails(missingMins, compliance.dsp.requiredMinutes, f.employeeCount),
+          minutes: `${compliance.dsp.requiredMinutes} dk / ${compliance.dsp.assignedMinutes} dk`,
+          timeLeft: computeCountdown('DSP', false, true).daysLeft + ' Gün Kaldı',
+          assignedPros: getAssignedProsText('DSP')
+        });
+      }
+
+      // Boş satır
+      worksheet.addRow({});
+    }
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="eksik_atamalar_raporu_${format(new Date(), 'yyyy-MM-dd')}.xlsx"`);
+    
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Excel raporu oluşturulamadı.' });
   }
 });
 

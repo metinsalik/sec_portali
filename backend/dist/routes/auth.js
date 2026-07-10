@@ -26,6 +26,7 @@ router.post('/login', async (req, res) => {
             include: {
                 roles: { include: { role: true } },
                 facilities: true,
+                modules: { include: { module: true } },
             }
         });
         // Removed Development auto-registration block to restrict login to defined users only.
@@ -40,13 +41,14 @@ router.post('/login', async (req, res) => {
             fullName: user.fullName,
             roles: user.roles.map((r) => r.role.name),
             facilities: user.facilities.map((f) => f.facilityId),
+            modules: user.modules ? user.modules.map((m) => m.module.code) : [],
             isAdmin: user.roles.some((r) => r.role.name === 'admin'),
             isManagement: user.roles.some((r) => r.role.name === 'management'),
         };
         const token = jsonwebtoken_1.default.sign(payload, process.env.JWT_SECRET || 'secret', {
             expiresIn: (process.env.JWT_EXPIRES_IN || '8h'),
         });
-        return res.json({ token, user: payload });
+        return res.json({ token, user: { ...payload, hasTelegram: !!user.telegramChatId } });
     }
     catch (error) {
         console.error('Login error:', error);
@@ -72,6 +74,7 @@ router.get('/login', (0, express_ntlm_1.default)({
             include: {
                 roles: { include: { role: true } },
                 facilities: true,
+                modules: { include: { module: true } },
             }
         });
         if (!user || (!user.isActive && username !== process.env.DEV_USER)) {
@@ -82,13 +85,14 @@ router.get('/login', (0, express_ntlm_1.default)({
             fullName: user.fullName,
             roles: user.roles.map((r) => r.role.name),
             facilities: user.facilities.map((f) => f.facilityId),
+            modules: user.modules ? user.modules.map((m) => m.module.code) : [],
             isAdmin: user.roles.some((r) => r.role.name === 'admin'),
             isManagement: user.roles.some((r) => r.role.name === 'management'),
         };
         const token = jsonwebtoken_1.default.sign(payload, process.env.JWT_SECRET || 'secret', {
             expiresIn: (process.env.JWT_EXPIRES_IN || '8h'),
         });
-        return res.json({ token, user: payload });
+        return res.json({ token, user: { ...payload, hasTelegram: !!user.telegramChatId } });
     }
     catch (error) {
         console.error('Auth error:', error);
@@ -96,8 +100,22 @@ router.get('/login', (0, express_ntlm_1.default)({
     }
 });
 // Profile / Me Endpoint
-router.get('/me', auth_1.authMiddleware, (req, res) => {
-    res.json({ user: req.user });
+router.get('/me', auth_1.authMiddleware, async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { username: req.user.username },
+            select: { telegramChatId: true }
+        });
+        res.json({
+            user: {
+                ...req.user,
+                hasTelegram: !!user?.telegramChatId
+            }
+        });
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Kullanıcı bilgileri alınamadı.' });
+    }
 });
 // Active user count endpoint (authenticated)
 router.get('/active-count', auth_1.authMiddleware, async (req, res) => {

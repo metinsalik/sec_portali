@@ -19,7 +19,7 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
     }
     try {
         // 1. Get all active departments for the facility
-        const departments = await prisma.hazmatDepartment.findMany({
+        const departments = await prisma.facilityLocation.findMany({
             where: { facilityId: String(facilityId), isActive: true },
             orderBy: { name: 'asc' }
         });
@@ -59,7 +59,7 @@ router.get('/summary', auth_1.authMiddleware, async (req, res) => {
                         ppes: { include: { ppe: true } },
                         inventory: {
                             where: { facilityId: String(facilityId) },
-                            include: { department: true }
+                            include: { location: true }
                         }
                     }
                 }
@@ -82,11 +82,12 @@ router.get('/departments', auth_1.authMiddleware, async (req, res) => {
         return res.status(403).json({ error: 'Access denied' });
     }
     try {
-        const departments = await prisma.hazmatDepartment.findMany({
+        const departments = await prisma.facilityLocation.findMany({
             where: { facilityId: String(facilityId), isActive: true },
             orderBy: { name: 'asc' },
             include: {
                 _count: {
+                    // @ts-ignore
                     select: { inventory: true }
                 }
             }
@@ -109,14 +110,14 @@ router.get('/department/:id', auth_1.authMiddleware, async (req, res) => {
         return res.status(403).json({ error: 'Access denied' });
     }
     try {
-        const department = await prisma.hazmatDepartment.findUnique({
+        const department = await prisma.facilityLocation.findUnique({
             where: { id }
         });
         if (!department) {
             return res.status(404).json({ error: 'Department not found' });
         }
         const inventoryItems = await prisma.hazmatInventoryItem.findMany({
-            where: { departmentId: id, facilityId: String(facilityId) },
+            where: { locationId: id, facilityId: String(facilityId) },
             include: {
                 material: {
                     include: {
@@ -151,19 +152,19 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
         // We will do this in a transaction
         await prisma.$transaction(async (tx) => {
             for (const item of matrix) {
-                const { departmentId, minQuantity, maxQuantity } = item;
+                const { locationId, minQuantity, maxQuantity } = item;
                 // If both are empty/null/0, we can delete the entry or just store null
                 if (!minQuantity && !maxQuantity) {
                     // Attempt to delete if exists
                     await tx.hazmatInventoryItem.deleteMany({
-                        where: { facilityId, materialId, departmentId }
+                        where: { facilityId, materialId, locationId }
                     });
                 }
                 else {
                     // Upsert
                     await tx.hazmatInventoryItem.upsert({
                         where: {
-                            facilityId_departmentId_materialId: { facilityId, departmentId, materialId }
+                            facilityId_locationId_vehicleId_materialId: { facilityId, locationId: locationId || "", vehicleId: "", materialId }
                         },
                         update: {
                             minQuantity: minQuantity ? Number(minQuantity) : null,
@@ -171,7 +172,7 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
                         },
                         create: {
                             facilityId,
-                            departmentId,
+                            locationId,
                             materialId,
                             minQuantity: minQuantity ? Number(minQuantity) : null,
                             maxQuantity: maxQuantity ? Number(maxQuantity) : null

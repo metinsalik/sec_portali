@@ -41,7 +41,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         creator: { select: { fullName: true } },
         materials: true,
         category: true,
-        department: true,
+        location: true,
         supportUnit: true,
         emergencyCode: true
       },
@@ -69,7 +69,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
         creator: { select: { fullName: true } },
         materials: true,
         category: true,
-        department: true,
+        location: true,
         supportUnit: true,
         emergencyCode: true
       }
@@ -95,7 +95,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
     const {
-      facilityId, categoryId, incidentTypeId, rootCause, departmentId,
+      facilityId, categoryId, incidentTypeId, rootCause, locationId,
       incidentDate, interventionRequired, interventionTime, controlTime,
       supportReceived, supportUnitId, announcementMade, emergencyCodeId,
       serviceInterrupted, interruptionDuration,
@@ -121,7 +121,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         categoryId: categoryId || null,
         incidentTypeId: incidentTypeId || null,
         rootCause,
-        departmentId,
+        locationId,
         incidentDate: new Date(incidentDate),
         interventionRequired: interventionRequired === true || interventionRequired === 'true',
         interventionTime: interventionTime ? new Date(interventionTime) : null,
@@ -191,7 +191,7 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     const isAdmin = user.roles.includes('admin') || user.roles.includes('management');
     
     const {
-      categoryId, incidentTypeId, rootCause, departmentId,
+      categoryId, incidentTypeId, rootCause, locationId,
       incidentDate, interventionRequired, interventionTime, controlTime,
       supportReceived, supportUnitId, announcementMade, emergencyCodeId,
       serviceInterrupted, interruptionDuration,
@@ -218,7 +218,7 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
         categoryId: categoryId !== undefined ? categoryId : undefined,
         incidentTypeId: incidentTypeId !== undefined ? incidentTypeId : undefined,
         rootCause: rootCause !== undefined ? rootCause : undefined,
-        departmentId: departmentId || undefined,
+        locationId: locationId || undefined,
         incidentDate: incidentDate ? new Date(incidentDate) : undefined,
         interventionRequired: interventionRequired === true || interventionRequired === 'true',
         interventionTime: interventionTime ? new Date(interventionTime) : (interventionRequired === 'false' || interventionRequired === false ? null : undefined),

@@ -64,6 +64,8 @@ export interface ComplianceResult {
     isFullTimeRequired: boolean;
     hasValidClass: boolean;
     summary: string;
+    countdownDays: number | null;
+    deficiencyStartDate: Date | null;
   };
   hekim: {
     requiredMinutes: number;
@@ -71,6 +73,8 @@ export interface ComplianceResult {
     isCompliant: boolean;
     isFullTimeRequired: boolean;
     summary: string;
+    countdownDays: number | null;
+    deficiencyStartDate: Date | null;
   };
   dsp: {
     required: boolean;
@@ -79,6 +83,8 @@ export interface ComplianceResult {
     requiredMinutes: number;
     assignedMinutes: number;
     summary: string;
+    countdownDays: number | null;
+    deficiencyStartDate: Date | null;
   };
   vekil: {
     assigned: boolean;
@@ -410,6 +416,8 @@ export function analyzeFacilityCompliance(params: {
       isFullTimeRequired: requiredIGUFullTimeCount > 0,
       hasValidClass: iguValidClass,
       summary: `${requiredIGUFullTimeCount > 0 ? requiredIGUFullTimeCount + ' Tam Zamanlı + ' : ''}${requiredIGUExcessMinutes} dk gerekli | ${assignedIGUFullTime} Tam Zamanlı + ${Math.max(0, totalIGUMinutes - assignedIGUFullTime * 11700)} dk atanmış`,
+      countdownDays: null,
+      deficiencyStartDate: null,
     },
     hekim: {
       requiredMinutes: requiredHekimFullTimeCount * 11700 + requiredHekimExcessMinutes,
@@ -417,6 +425,8 @@ export function analyzeFacilityCompliance(params: {
       isCompliant: hekimCompliant,
       isFullTimeRequired: requiredHekimFullTimeCount > 0,
       summary: `${requiredHekimFullTimeCount > 0 ? requiredHekimFullTimeCount + ' Tam Zamanlı + ' : ''}${requiredHekimExcessMinutes} dk gerekli | ${assignedHekimFullTime} Tam Zamanlı + ${Math.max(0, totalHekimMinutes - assignedHekimFullTime * 11700)} dk atanmış`,
+      countdownDays: null,
+      deficiencyStartDate: null,
     },
     dsp: {
       required: dspRequired,
@@ -425,6 +435,8 @@ export function analyzeFacilityCompliance(params: {
       requiredMinutes: dspRequiredMinutes,
       assignedMinutes: dspAssignedMinutes,
       summary: dspSummary,
+      countdownDays: null,
+      deficiencyStartDate: null,
     },
     vekil: {
       assigned: vekilAssigned,

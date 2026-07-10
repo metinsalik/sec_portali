@@ -27,7 +27,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
           commercialTitle: true,
           fullAddress: true,
           district: true,
-          riskDepartments: {
+          locations: {
             select: {
               id: true,
               name: true,
@@ -56,7 +56,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
           commercialTitle: true,
           fullAddress: true,
           district: true,
-          riskDepartments: {
+          locations: {
             select: {
               id: true,
               name: true,
@@ -74,7 +74,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
         const stats = await prisma.riskLifecycle.groupBy({
           by: ['status'],
           where: {
-            department: { facilityId: f.id },
+            location: { facilityId: f.id },
           },
           _count: { id: true },
         });
@@ -104,4 +104,143 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
+
+
+// Locations endpoints for experts
+router.get('/:id/locations', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  try {
+    const locations = await prisma.facilityLocation.findMany({
+      where: { facilityId: id },
+      orderBy: { name: 'asc' }
+    });
+    res.json(locations);
+  } catch (err) {
+    res.status(500).json({ error: 'Lokasyonlar getirilemedi.' });
+  }
+});
+
+router.post('/:id/locations', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { building, floor, department, description, name } = req.body;
+  if (!building && !name) return res.status(400).json({ error: 'Blok veya Lokasyon Adı zorunludur.' });
+  try {
+    const loc = await prisma.facilityLocation.create({
+      data: { facilityId: id, name, building, floor, department, description }
+    });
+    res.status(201).json(loc);
+  } catch (err) {
+    res.status(500).json({ error: 'Lokasyon oluşturulamadı.' });
+  }
+});
+
+router.put('/:id/locations/:locationId', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { locationId } = req.params;
+  const { building, floor, department, description, name } = req.body;
+  if (!building && !name) return res.status(400).json({ error: 'Blok veya Lokasyon Adı zorunludur.' });
+  try {
+    const loc = await prisma.facilityLocation.update({
+      where: { id: locationId },
+      data: { name, building, floor, department, description }
+    });
+    res.json(loc);
+  } catch (err) {
+    res.status(500).json({ error: 'Lokasyon güncellenemedi.' });
+  }
+});
+
+
+router.post('/:id/locations/rename-node', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { level, oldValue, newValue, parentBuilding, parentFloor } = req.body;
+  if (!newValue || newValue.trim() === '') return res.status(400).json({ error: 'Yeni isim boş olamaz.' });
+  
+  try {
+    let whereClause: any = { facilityId: id };
+    let dataClause: any = {};
+    
+    const cleanOld = oldValue.startsWith('Belirtilmemiş') ? '' : oldValue;
+    const cleanPB = parentBuilding && parentBuilding.startsWith('Belirtilmemiş') ? '' : parentBuilding;
+    const cleanPF = parentFloor && parentFloor.startsWith('Belirtilmemiş') ? '' : parentFloor;
+
+    if (level === 'building') {
+      whereClause.building = cleanOld;
+      dataClause.building = newValue;
+    } else if (level === 'floor') {
+      whereClause.building = cleanPB;
+      whereClause.floor = cleanOld;
+      dataClause.floor = newValue;
+    } else if (level === 'department') {
+      whereClause.building = cleanPB;
+      whereClause.floor = cleanPF;
+      whereClause.department = cleanOld;
+      dataClause.department = newValue;
+    } else {
+      return res.status(400).json({ error: 'Geçersiz seviye.' });
+    }
+
+    await prisma.facilityLocation.updateMany({
+      where: whereClause,
+      data: dataClause
+    });
+    
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'İsim güncellenemedi.' });
+  }
+});
+
+
+router.post('/:id/locations/delete-node', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { level, value, parentBuilding, parentFloor } = req.body;
+  
+  try {
+    let whereClause: any = { facilityId: id };
+    let dataClause: any = {};
+    
+    const cleanVal = value.startsWith('Belirtilmemiş') ? '' : value;
+    const cleanPB = parentBuilding && parentBuilding.startsWith('Belirtilmemiş') ? '' : parentBuilding;
+    const cleanPF = parentFloor && parentFloor.startsWith('Belirtilmemiş') ? '' : parentFloor;
+    
+    if (level === 'building') {
+      whereClause.building = cleanVal;
+      dataClause.building = '';
+    } else if (level === 'floor') {
+      whereClause.building = cleanPB;
+      whereClause.floor = cleanVal;
+      dataClause.floor = '';
+    } else if (level === 'department') {
+      whereClause.building = cleanPB;
+      whereClause.floor = cleanPF;
+      whereClause.department = cleanVal;
+      dataClause.department = '';
+    } else {
+      return res.status(400).json({ error: 'Geçersiz seviye.' });
+    }
+
+    await prisma.facilityLocation.updateMany({
+      where: whereClause,
+      data: dataClause
+    });
+    
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Düğüm silinemedi.' });
+  }
+});
+
+router.delete('/:id/locations/:locationId', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { locationId } = req.params;
+  try {
+    await prisma.facilityLocation.delete({
+      where: { id: locationId }
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Lokasyon silinemedi.' });
+  }
+});
+
 export default router;
+

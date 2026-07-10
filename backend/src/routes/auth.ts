@@ -27,6 +27,7 @@ router.post('/login', async (req: any, res: Response) => {
       include: {
         roles: { include: { role: true } },
         facilities: true,
+        modules: { include: { module: true } },
       }
     });
 
@@ -45,6 +46,7 @@ router.post('/login', async (req: any, res: Response) => {
       fullName: user.fullName,
       roles: user.roles.map((r: any) => r.role.name),
       facilities: user.facilities.map((f: any) => f.facilityId),
+      modules: user.modules ? user.modules.map((m: any) => m.module.code) : [],
       isAdmin: user.roles.some((r: any) => r.role.name === 'admin'),
       isManagement: user.roles.some((r: any) => r.role.name === 'management'),
     };
@@ -53,7 +55,7 @@ router.post('/login', async (req: any, res: Response) => {
       expiresIn: (process.env.JWT_EXPIRES_IN || '8h') as any,
     });
 
-    return res.json({ token, user: payload });
+    return res.json({ token, user: { ...payload, hasTelegram: !!user.telegramChatId } });
   } catch (error) {
     console.error('Login error:', error);
     return res.status(500).json({ error: 'Sunucu hatası.' });
@@ -83,6 +85,7 @@ router.get('/login', ntlm({
       include: {
         roles: { include: { role: true } },
         facilities: true,
+        modules: { include: { module: true } },
       }
     });
 
@@ -95,6 +98,7 @@ router.get('/login', ntlm({
       fullName: user.fullName,
       roles: user.roles.map((r: any) => r.role.name),
       facilities: user.facilities.map((f: any) => f.facilityId),
+      modules: user.modules ? user.modules.map((m: any) => m.module.code) : [],
       isAdmin: user.roles.some((r: any) => r.role.name === 'admin'),
       isManagement: user.roles.some((r: any) => r.role.name === 'management'),
     };
@@ -103,7 +107,7 @@ router.get('/login', ntlm({
       expiresIn: (process.env.JWT_EXPIRES_IN || '8h') as any,
     });
 
-    return res.json({ token, user: payload });
+    return res.json({ token, user: { ...payload, hasTelegram: !!user.telegramChatId } });
   } catch (error) {
     console.error('Auth error:', error);
     return res.status(500).json({ error: 'Sunucu hatası.' });
@@ -111,8 +115,21 @@ router.get('/login', ntlm({
 });
 
 // Profile / Me Endpoint
-router.get('/me', authMiddleware, (req: AuthRequest, res: Response) => {
-  res.json({ user: req.user });
+router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { username: req.user!.username },
+      select: { telegramChatId: true }
+    });
+    res.json({ 
+      user: {
+        ...req.user,
+        hasTelegram: !!user?.telegramChatId
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Kullanıcı bilgileri alınamadı.' });
+  }
 });
 
 // Active user count endpoint (authenticated)

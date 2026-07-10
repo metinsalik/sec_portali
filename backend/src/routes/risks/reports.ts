@@ -36,7 +36,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     }
 
     const whereClause: any = {
-      department: { facilityId },
+      location: { facilityId },
     };
 
     if (startDate || endDate) {
@@ -56,7 +56,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const risks = await prisma.riskLifecycle.findMany({
       where: whereClause,
       include: {
-        department: true,
+        location: true,
       },
       orderBy: { detectionDate: 'desc' }
     });

@@ -17,8 +17,8 @@ router.get('/', async (req, res) => {
         const materialsCount = await prisma.facilityHazmatItem.count({ where: { facilityId } });
         const uniqueDepartments = await prisma.hazmatInventoryItem.findMany({
             where: { facilityId },
-            select: { departmentId: true },
-            distinct: ['departmentId'],
+            select: { locationId: true },
+            distinct: ['locationId'],
         });
         const departmentsCount = uniqueDepartments.length;
         // 2. Spill Kit Metrics

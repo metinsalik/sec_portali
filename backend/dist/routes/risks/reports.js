@@ -37,7 +37,7 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
             return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
         }
         const whereClause = {
-            department: { facilityId },
+            location: { facilityId },
         };
         if (startDate || endDate) {
             const dateFilter = {};
@@ -56,7 +56,7 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
         const risks = await prisma.riskLifecycle.findMany({
             where: whereClause,
             include: {
-                department: true,
+                location: true,
             },
             orderBy: { detectionDate: 'desc' }
         });

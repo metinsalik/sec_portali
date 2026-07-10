@@ -7,6 +7,7 @@ export interface AuthRequest<P = Record<string, string>, ReqBody = any, ReqQuery
     fullName: string;
     roles: string[];
     facilities: string[];
+    modules: string[];
     isAdmin: boolean;
     isManagement: boolean;
     workflowRole?: string;

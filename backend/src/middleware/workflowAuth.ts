@@ -4,13 +4,11 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Modül rol hiyerarşisi
 const ROLE_HIERARCHY = {
-  DIREKTOR: 5,
-  MUDUR: 4,
-  SORUMLU: 3,
-  UYE: 2,
-  IZLEYICI: 1
+  ADMIN: 4,
+  MANAGER: 3,
+  MEMBER: 2,
+  VIEWER: 1
 };
 
 export const requireWorkflowRole = (allowedRoles: string[]) => {
@@ -22,19 +20,23 @@ export const requireWorkflowRole = (allowedRoles: string[]) => {
         return res.status(401).json({ error: 'Yetkisiz erişim' });
       }
 
+      // Sistem adminleri her türlü yetkiye sahiptir
+      if (req.user?.isAdmin) {
+        if (req.user) req.user.workflowRole = 'ADMIN';
+        return next();
+      }
+
       const userRole = await prisma.workflowUserRole.findUnique({
         where: { userId: username },
       });
 
-      if (!userRole) {
-        return res.status(403).json({ error: 'İş Takip modülü rolünüz bulunmamaktadır.' });
-      }
+      const role = userRole?.moduleRole || 'VIEWER';
 
-      if (allowedRoles.length > 0 && !allowedRoles.includes(userRole.moduleRole)) {
+      if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
         return res.status(403).json({ error: 'Bu işlem için modül yetkiniz yetersiz.' });
       }
 
-      if (req.user) req.user.workflowRole = userRole.moduleRole;
+      if (req.user) req.user.workflowRole = role;
       next();
     } catch (error) {
       console.error('Workflow Auth Error:', error);

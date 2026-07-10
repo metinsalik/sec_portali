@@ -1,22 +1,32 @@
-FROM node:20-alpine
+FROM node:20-bookworm-slim
 
 WORKDIR /app
-RUN apk add --no-cache openssl busybox-extras
+RUN apt-get update && apt-get install -y openssl netcat-openbsd && rm -rf /var/lib/apt/lists/*
 
-COPY package*.json ./
-RUN npm install
+# Copy package descriptors for all workspaces
+COPY package.json ./
+COPY backend/package.json backend/
+COPY apps/web/package.json apps/web/
+COPY packages/shared/package.json packages/shared/
 
-COPY . .
+# Install dependencies (workspaces will link)
+RUN npm install --legacy-peer-deps
+
+# Copy source code
+COPY backend/ backend/
+COPY packages/ packages/
+
+WORKDIR /app/backend
 
 # Fix windows line endings
 RUN sed -i 's/\r$//' entrypoint.sh
 RUN chmod +x entrypoint.sh
 
-# Generate prisma client & build typescript
+# Generate prisma client & zod types
 RUN npx prisma generate
 RUN npm run build
 
 EXPOSE 3005
 
 ENTRYPOINT []
-CMD ["/bin/sh", "/app/entrypoint.sh"]
+CMD ["/bin/sh", "/app/backend/entrypoint.sh"]

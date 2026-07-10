@@ -2,40 +2,62 @@ generator client {
   provider = "prisma-client-js"
 }
 
+generator zod {
+  provider                  = "zod-prisma-types"
+  output                    = "../../packages/shared/src/generated"
+  createRelationValuesTypes = true
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  username              String                        @id
-  fullName              String
-  isActive              Boolean                       @default(true)
-  employmentType        String?
-  osgbName              String?
-  createdAt             DateTime                      @default(now())
-  updatedAt             DateTime                      @updatedAt
-  department            String?
-  email                 String?
-  phone                 String?
-  title                 String?
-  facilities            UserFacility[]
-  roles                 UserRole[]
-  workflowNotifications WorkflowNotificationSettings?
+  username        String           @id
+  fullName        String
+  isActive        Boolean          @default(true)
+  employmentType  String?
+  osgbName        String?
+  createdAt       DateTime         @default(now())
+  telegramChatId  String?          @unique
+  telegramConnectToken String?     @unique
+  updatedAt       DateTime         @updatedAt
+  department      String?
+  email           String?
+  phone           String?
+  title           String?
+  facilities      UserFacility[]
+  roles           UserRole[]
+  hazmatIncidents HazmatIncident[]
+  BuildProject    BuildProject[]
+  BuildApproval   BuildApproval[]
+  BuildPermit     BuildPermit[]
+  BuildDocument   BuildDocument[]
+  BuildHandover   BuildHandover[]
+  modules         UserModule[]
+
+  wfPlansOwned          WfPlan[]             @relation("WfPlanOwner")
+  wfTasksAssigned       WfTask[]             @relation("WfTaskAssignee")
+  wfTasksFollowed       WfTask[]             @relation("WfTaskFollower")
+  wfTasksCreated        WfTask[]             @relation("WfTaskCreator")
+  wfComments            WfComment[]          @relation("WfCommentAuthor")
+  wfDueRequestsMade     WfDueChangeRequest[] @relation("WfDueRequestRequestedBy")
+  wfDueRequestsReviewed WfDueChangeRequest[] @relation("WfDueRequestReviewedBy")
+  wfDueHistories        WfDueHistory[]       @relation("WfDueHistoryChangedBy")
+  wfChatMessages        WfChatMessage[]      @relation("WfChatMessageSender")
+  wfActivityLogs        WfActivityLog[]      @relation("WfActivityLogActor")
+  wfTransferRequestsMade WfTransferRequest[] @relation("WfTransferRequestedBy")
+  wfTransferRequestsTarget WfTransferRequest[] @relation("WfTransferTarget")
   workflowRole          WorkflowUserRole?
-  hazmatIncidents       HazmatIncident[]
-  BuildProject          BuildProject[]
-  BuildApproval         BuildApproval[]
-  BuildPermit           BuildPermit[]
-  BuildDocument         BuildDocument[]
-  BuildHandover         BuildHandover[]
 }
 
 model Role {
-  id        Int        @id @default(autoincrement())
-  name      String     @unique
-  createdAt DateTime   @default(now())
+  id        Int          @id @default(autoincrement())
+  name      String       @unique
+  createdAt DateTime     @default(now())
   users     UserRole[]
+  modules   RoleModule[]
 }
 
 model UserRole {
@@ -45,6 +67,43 @@ model UserRole {
   user     User   @relation(fields: [username], references: [username])
 
   @@id([username, roleId])
+}
+
+model WorkflowUserRole {
+  userId     String @id
+  moduleRole String @default("MEMBER")
+  user       User   @relation(fields: [userId], references: [username], onDelete: Cascade)
+}
+
+model Module {
+  id          Int          @id @default(autoincrement())
+  code        String       @unique
+  name        String
+  description String?
+  icon        String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  roles       RoleModule[]
+  users       UserModule[]
+}
+
+model RoleModule {
+  roleId   Int
+  moduleId Int
+  role     Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, moduleId])
+}
+
+model UserModule {
+  username String
+  moduleId Int
+  user     User   @relation(fields: [username], references: [username], onDelete: Cascade)
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@id([username, moduleId])
 }
 
 model Facility {
@@ -79,11 +138,10 @@ model Facility {
   notebookPages          NotebookPage[]
   reconciliations        Reconciliation[]
   riskCategorySettings   RiskCategorySetting[]
-  riskDepartments        RiskDepartment[]
+  locations              FacilityLocation[]
   riskDepartmentSettings RiskDepartmentSetting[]
   riskExpertFacilities   RiskExpertFacility[]
   users                  UserFacility[]
-  hazmatDepartments      HazmatDepartment[]
   facilityHazmatItems    FacilityHazmatItem[]
   spillKits              HazmatSpillKit[]
   spillKitMasterItems    HazmatSpillKitMasterItem[]
@@ -94,7 +152,6 @@ model Facility {
   fireResponsibles       FireEquipmentResponsible[]
   fireEquipmentCompanies FireEquipmentCompany[]
   BuildProject           BuildProject[]
-  BuildLocation          BuildLocation[]
   BuildContractor        BuildContractor[]
   BuildWorkType          BuildWorkType[]
   btAnaGruplar           BTAnaGrup[]
@@ -105,6 +162,7 @@ model Facility {
   btSorumluKisiler       BTSorumluKisi[]
   btTurler               BTTur[]
   btUygunsuzluklar       BTUygunsuzluk[]
+  HazmatVehicle          HazmatVehicle[]
 }
 
 model IncidentCategory {
@@ -147,6 +205,7 @@ model ExtraordinaryIncident {
   categoryId            Int
   rootCauseId           Int
   departmentId          Int
+  locationId            String?
   locationDetail        String
   incidentDate          DateTime
   interventionRequired  Boolean
@@ -174,6 +233,7 @@ model ExtraordinaryIncident {
   attachments           Json?
   category              IncidentCategory     @relation(fields: [categoryId], references: [id])
   department            Department           @relation(fields: [departmentId], references: [id])
+  location              FacilityLocation?    @relation(fields: [locationId], references: [id])
   emergencyCode         EmergencyCode?       @relation(fields: [emergencyCodeId], references: [id])
   facility              Facility             @relation(fields: [facilityId], references: [id])
   rootCause             IncidentRootCause    @relation(fields: [rootCauseId], references: [id])
@@ -204,11 +264,11 @@ model EmployeeCountHistory {
 }
 
 model FacilityBuilding {
-  id               Int      @id @default(autoincrement())
+  id               Int                @id @default(autoincrement())
   facilityId       String
   name             String
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
   bedCapacity      Int?
   buildingFloors   Int?
   buildingHeight   Float?
@@ -218,7 +278,8 @@ model FacilityBuilding {
   parkingArea      Float?
   structureFloors  Int?
   structureHeight  Float?
-  facility         Facility @relation(fields: [facilityId], references: [id])
+  facility         Facility           @relation(fields: [facilityId], references: [id])
+  locations        FacilityLocation[]
 }
 
 model UserFacility {
@@ -250,16 +311,16 @@ model Professional {
 }
 
 model EmployerRepresentative {
-  id           Int          @id @default(autoincrement())
-  fullName     String
-  title        String?
-  phone        String?
-  email        String?
-  isActive     Boolean      @default(true)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  username     String?
-  appointments Assignment[]
+  id                   Int          @id @default(autoincrement())
+  fullName             String
+  title                String?
+  phone                String?
+  email                String?
+  isActive             Boolean      @default(true)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  username             String?
+  appointments         Assignment[]
 }
 
 model OSGBCompany {
@@ -500,131 +561,6 @@ model ReportTemplate {
   @@unique([code, version])
 }
 
-model WorkflowDepartment {
-  id          Int                @id @default(autoincrement())
-  name        String
-  description String?
-  managerId   String?
-  createdAt   DateTime           @default(now())
-  tasks       WorkflowTask[]
-  roles       WorkflowUserRole[]
-}
-
-model WorkflowUserRole {
-  id           Int                 @id @default(autoincrement())
-  userId       String              @unique
-  moduleRole   String
-  departmentId Int?
-  reportsTo    String?
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  department   WorkflowDepartment? @relation(fields: [departmentId], references: [id])
-  user         User                @relation(fields: [userId], references: [username])
-}
-
-model WorkflowCategory {
-  id        Int            @id @default(autoincrement())
-  name      String
-  color     String?
-  icon      String?
-  createdAt DateTime       @default(now())
-  tasks     WorkflowTask[]
-}
-
-model WorkflowTag {
-  id    Int               @id @default(autoincrement())
-  name  String
-  color String?
-  tasks WorkflowTaskTag[]
-}
-
-model WorkflowTask {
-  id           Int                      @id @default(autoincrement())
-  title        String
-  description  String?
-  priority     String                   @default("MEDIUM")
-  status       String                   @default("BEKLIYOR")
-  categoryId   Int?
-  departmentId Int?
-  createdBy    String
-  dueDate      DateTime?
-  alarmDate    DateTime?
-  isPool       Boolean                  @default(false)
-  createdAt    DateTime                 @default(now())
-  updatedAt    DateTime                 @updatedAt
-  alarms       WorkflowAlarm[]
-  category     WorkflowCategory?        @relation(fields: [categoryId], references: [id])
-  department   WorkflowDepartment?      @relation(fields: [departmentId], references: [id])
-  assignments  WorkflowTaskAssignment[]
-  comments     WorkflowTaskComment[]
-  history      WorkflowTaskHistory[]
-  tags         WorkflowTaskTag[]
-}
-
-model WorkflowTaskTag {
-  taskId Int
-  tagId  Int
-  tag    WorkflowTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  task   WorkflowTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-
-  @@id([taskId, tagId])
-}
-
-model WorkflowTaskAssignment {
-  id          Int          @id @default(autoincrement())
-  taskId      Int
-  userId      String
-  role        String       @default("ASSIGNEE")
-  assignedBy  String
-  assignedAt  DateTime     @default(now())
-  completedAt DateTime?
-  task        WorkflowTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-}
-
-model WorkflowTaskHistory {
-  id        Int          @id @default(autoincrement())
-  taskId    Int
-  changedBy String
-  oldStatus String?
-  newStatus String?
-  note      String?
-  changedAt DateTime     @default(now())
-  task      WorkflowTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-}
-
-model WorkflowTaskComment {
-  id        Int          @id @default(autoincrement())
-  taskId    Int
-  userId    String
-  content   String
-  createdAt DateTime     @default(now())
-  task      WorkflowTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-}
-
-model WorkflowAlarm {
-  id        Int          @id @default(autoincrement())
-  taskId    Int
-  alarmDate DateTime
-  alarmType String
-  isSent    Boolean      @default(false)
-  sentAt    DateTime?
-  createdBy String
-  task      WorkflowTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-}
-
-model WorkflowNotificationSettings {
-  id                   Int      @id @default(autoincrement())
-  userId               String   @unique
-  telegramChatId       String?
-  whatsappNumber       String?
-  notifyOnAssign       Boolean  @default(true)
-  notifyOnStatusChange Boolean  @default(true)
-  notifyOnAlarm        Boolean  @default(true)
-  notifyOnComment      Boolean  @default(true)
-  updatedAt            DateTime @updatedAt
-  user                 User     @relation(fields: [userId], references: [username])
-}
-
 model RiskExpertFacility {
   expertUsername String
   facilityId     String
@@ -633,39 +569,14 @@ model RiskExpertFacility {
   @@id([expertUsername, facilityId])
 }
 
-model RiskDepartment {
-  id         Int                  @id @default(autoincrement())
-  facilityId String
-  name       String
-  createdAt  DateTime             @default(now())
-  updatedAt  DateTime             @updatedAt
-  code       String?
-  facility   Facility             @relation(fields: [facilityId], references: [id], onDelete: Cascade)
-  risks      RiskLifecycle[]
-  areas      RiskDepartmentArea[]
-
-  @@unique([facilityId, name])
-}
-
-model RiskDepartmentArea {
-  id           Int            @id @default(autoincrement())
-  name         String
-  departmentId Int
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  department   RiskDepartment @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-
-  @@unique([departmentId, name])
-}
-
 model RiskLifecycle {
-  id                         String         @id @default(uuid())
-  departmentId               Int
+  id                         String            @id @default(uuid())
+  locationId                 String?
   riskNo                     Int
   riskCategory               String
   subCategory                String?
   area                       String
-  method                     String         @default("Fine Kinney")
+  method                     String            @default("Fine Kinney")
   activity                   String
   hazard                     String
   riskDescription            String
@@ -688,11 +599,11 @@ model RiskLifecycle {
   finalSev                   Float?
   finalScore                 Float?
   finalLevel                 String?
-  status                     String         @default("ACIK_TEHLIKE")
+  status                     String            @default("ACIK_TEHLIKE")
   statusDate                 DateTime?
   createdBy                  String?
-  createdAt                  DateTime       @default(now())
-  updatedAt                  DateTime       @updatedAt
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
   affectedPeople             String?
   controlResponsible         String?
   controlResult              String?
@@ -706,9 +617,9 @@ model RiskLifecycle {
   dueDatePeriod              String?
   postImprovementResponsible String?
   auditLogs                  RiskAuditLog[]
-  department                 RiskDepartment @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  location                   FacilityLocation? @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
-  @@index([departmentId])
+  @@index([locationId])
 }
 
 model RiskAuditLog {
@@ -895,24 +806,6 @@ model HazmatMaterialPpe {
   @@unique([materialId, ppeId])
 }
 
-model HazmatDepartment {
-  id              String                @id @default(uuid())
-  facilityId      String
-  facility        Facility              @relation(fields: [facilityId], references: [id], onDelete: Cascade)
-  name            String? // Birim / Temizlik Arabası Adı
-  building        String? // Bina
-  block           String? // Blok
-  floor           String? // Kat
-  description     String? // Mahal / Ek Detay
-  isCleaningCart  Boolean               @default(false)
-  isActive        Boolean               @default(true)
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  inventory       HazmatInventoryItem[]
-  hazmatIncidents HazmatIncident[]
-  FireEquipment   FireEquipment[]
-}
-
 model FacilityHazmatItem {
   id          String   @id @default(uuid())
   facilityId  String
@@ -930,20 +823,22 @@ model FacilityHazmatItem {
 }
 
 model HazmatInventoryItem {
-  id           String           @id @default(uuid())
-  facilityId   String
-  departmentId String
-  materialId   String
-  minQuantity  Float?
-  maxQuantity  Float?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  facility     Facility         @relation(fields: [facilityId], references: [id], onDelete: Cascade)
-  department   HazmatDepartment @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  material     HazmatMaterial   @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  id          String            @id @default(uuid())
+  facilityId  String
+  locationId  String?
+  vehicleId   String?
+  materialId  String
+  minQuantity Float?
+  maxQuantity Float?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  facility    Facility          @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  location    FacilityLocation? @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  vehicle     HazmatVehicle?    @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  material    HazmatMaterial    @relation(fields: [materialId], references: [id], onDelete: Cascade)
 
-  @@unique([facilityId, departmentId, materialId])
-  @@index([facilityId, departmentId])
+  @@unique([facilityId, locationId, vehicleId, materialId])
+  @@index([facilityId, locationId, vehicleId])
   @@index([facilityId, materialId])
 }
 
@@ -1142,7 +1037,7 @@ model HazmatIncident {
   categoryId            String?
   incidentTypeId        String?
   rootCause             String
-  departmentId          String
+  locationId            String?
   incidentDate          DateTime
   interventionRequired  Boolean
   interventionTime      DateTime?
@@ -1174,7 +1069,7 @@ model HazmatIncident {
   supportUnit   IncidentSupportUnit? @relation(fields: [supportUnitId], references: [id])
   emergencyCode EmergencyCode?       @relation(fields: [emergencyCodeId], references: [id])
   facility      Facility             @relation(fields: [facilityId], references: [id], onDelete: Cascade)
-  department    HazmatDepartment     @relation(fields: [departmentId], references: [id])
+  location      FacilityLocation?    @relation(fields: [locationId], references: [id])
   creator       User?                @relation(fields: [createdBy], references: [username])
   materials     HazmatMaterial[]
 
@@ -1260,7 +1155,7 @@ model FireEquipment {
   notes     String?
 
   category    FireEquipmentCategory     @relation(fields: [categoryId], references: [id])
-  location    HazmatDepartment?         @relation(fields: [locationId], references: [id])
+  location    FacilityLocation?         @relation(fields: [locationId], references: [id])
   facility    Facility                  @relation(fields: [facilityId], references: [id], onDelete: Cascade)
   responsible FireEquipmentResponsible? @relation(fields: [responsibleId], references: [id], onDelete: SetNull)
   company     FireEquipmentCompany?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1309,22 +1204,6 @@ model FireEquipmentMaintenance {
 }
 
 // --- BUILD MANAGEMENT MODULE ---
-
-model BuildLocation {
-  id          String   @id @default(uuid())
-  facilityId  String
-  block       String? // Blok
-  floor       String? // Kat
-  unit        String? // Birim
-  room        String? // Mahal
-  description String? // Açıklama
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  facility Facility       @relation(fields: [facilityId], references: [id], onDelete: Cascade)
-  projects BuildProject[]
-}
 
 model BuildContractor {
   id          String   @id @default(uuid())
@@ -1376,9 +1255,9 @@ model BuildProject {
   facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
   creator  User?    @relation(fields: [createdById], references: [username])
 
-  location   BuildLocation?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  workType   BuildWorkType?   @relation(fields: [workTypeId], references: [id], onDelete: SetNull)
-  contractor BuildContractor? @relation(fields: [contractorId], references: [id], onDelete: SetNull)
+  location   FacilityLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  workType   BuildWorkType?    @relation(fields: [workTypeId], references: [id], onDelete: SetNull)
+  contractor BuildContractor?  @relation(fields: [contractorId], references: [id], onDelete: SetNull)
 
   designForm                   BuildDesignForm?
   riskAssessment               BuildRiskAssessment?
@@ -1692,18 +1571,20 @@ model BTKategori {
 }
 
 model BTSoruBankasi {
-  id               Int              @id @default(autoincrement())
+  id               Int               @id @default(autoincrement())
   facilityId       String
   anaGrupId        Int
-  denetlenenAlanId Int
+  denetlenenAlanId Int?
+  locationId       String?
   kategoriId       Int
   kriter           String
-  anaGrup          BTAnaGrup        @relation(fields: [anaGrupId], references: [id])
-  denetlenenAlan   BTDenetlenenAlan @relation(fields: [denetlenenAlanId], references: [id])
-  kategori         BTKategori       @relation(fields: [kategoriId], references: [id])
+  anaGrup          BTAnaGrup         @relation(fields: [anaGrupId], references: [id])
+  denetlenenAlan   BTDenetlenenAlan? @relation(fields: [denetlenenAlanId], references: [id])
+  location         FacilityLocation? @relation(fields: [locationId], references: [id])
+  kategori         BTKategori        @relation(fields: [kategoriId], references: [id])
   turSorulari      BTTurSorusu[]
-  facility         Facility         @relation(fields: [facilityId], references: [id], onDelete: Cascade)
-  createdAt        DateTime         @default(now())
+  facility         Facility          @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  createdAt        DateTime          @default(now())
 }
 
 model BTSorumluBirim {
@@ -1799,6 +1680,8 @@ model BTUygunsuzluk {
   kapatmaKaniti    String?
   kapatmaTarihi    DateTime?
   dofTakipNo       String?
+  locationId       String?
+  location         FacilityLocation?  @relation(fields: [locationId], references: [id])
   tur              BTTur              @relation(fields: [turId], references: [id], onDelete: Cascade)
   cevap            BTCevap            @relation(fields: [cevapId], references: [id], onDelete: Cascade)
   facility         Facility           @relation(fields: [facilityId], references: [id], onDelete: Cascade)
@@ -1811,4 +1694,240 @@ enum BTUygunsuzlukDurum {
   ACIK
   DEVAM_EDIYOR
   KAPALI
+}
+
+model FacilityLocation {
+  id          String   @id @default(uuid())
+  facilityId  String
+  buildingId  Int?
+  name        String? // Geriye donuk uyumluluk veya genel isim
+  building    String? // Blok
+  floor       String? // Kat
+  department  String? // Birim
+  type        String?
+  description String? // Mahal
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  facility         Facility          @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  facilityBuilding FacilityBuilding? @relation(fields: [buildingId], references: [id], onDelete: SetNull)
+
+  fireEquipments         FireEquipment[]
+  hazmatMaterials        HazmatInventoryItem[]
+  risks                  RiskLifecycle[]
+  incidents              HazmatIncident[]
+  extraordinaryIncidents ExtraordinaryIncident[]
+  buildProjects          BuildProject[]
+  btSoruBankasi          BTSoruBankasi[]
+  btUygunsuzluklar       BTUygunsuzluk[]
+
+  @@unique([facilityId, name])
+}
+
+model HazmatVehicle {
+  id          String   @id @default(uuid())
+  facilityId  String
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  facility        Facility              @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  hazmatMaterials HazmatInventoryItem[]
+}
+
+enum WfStatus {
+  TODO
+  DOING
+  REVIEW
+  DONE
+  BLOCKED
+}
+
+enum WfPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum WfDueRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model WfPlan {
+  id         String      @id @default(cuid())
+  title      String
+  goal       String?
+  ownerId    String
+  categoryId String?
+  startDate  DateTime
+  dueDate    DateTime
+  status     WfStatus    @default(TODO)
+  priority   WfPriority  @default(MEDIUM)
+  tasks      WfTask[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  owner    User        @relation(name: "WfPlanOwner", fields: [ownerId], references: [username])
+  category WfCategory? @relation(fields: [categoryId], references: [id])
+}
+
+model WfCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  color       String?  @default("#3b82f6") // Default blue
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  plans       WfPlan[]
+}
+
+model WfTask {
+  id             String               @id @default(cuid())
+  title          String
+  description    String?
+  planId         String?
+  plan           WfPlan?              @relation(fields: [planId], references: [id])
+  assigneeId     String
+  followerId     String
+  creatorId      String
+  status         WfStatus             @default(TODO)
+  priority       WfPriority           @default(MEDIUM)
+  category       String?
+  labels         String[]
+  startDate      DateTime
+  dueDate        DateTime
+  estimateHours  Float                @default(0)
+  progress       Int                  @default(0)
+  dueChangeCount Int                  @default(0)
+  blockNote      String?
+  checklist      WfChecklistStep[]
+  comments       WfComment[]
+  dueRequests    WfDueChangeRequest[]
+  dueHistories   WfDueHistory[]
+  chatMessages   WfChatMessage[]
+  transferRequests WfTransferRequest[]
+  activityLogs   WfActivityLog[]
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  assignee User @relation(name: "WfTaskAssignee", fields: [assigneeId], references: [username])
+  follower User @relation(name: "WfTaskFollower", fields: [followerId], references: [username])
+  creator  User @relation(name: "WfTaskCreator", fields: [creatorId], references: [username])
+  
+  recurrence     String?
+  lastRecurrenceAt DateTime?
+  parentTaskId   String?
+}
+
+model WfChecklistStep {
+  id           String    @id @default(cuid())
+  taskId       String
+  task         WfTask    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  text         String
+  order        Int
+  done         Boolean   @default(false)
+  doneById     String?
+  doneAt       DateTime?
+  requireEvidence Boolean @default(false)
+  requireDescription Boolean @default(false)
+  evidence     String?
+  evidenceName String?
+  evidenceById String?
+  evidenceAt   DateTime?
+  description  String?
+}
+
+model WfComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      WfTask   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  author User @relation(name: "WfCommentAuthor", fields: [authorId], references: [username])
+}
+
+model WfDueChangeRequest {
+  id            String             @id @default(cuid())
+  taskId        String
+  task          WfTask             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  requestedById String
+  oldDue        DateTime
+  requestedDue  DateTime
+  reason        String
+  status        WfDueRequestStatus @default(PENDING)
+  reviewedById  String?
+  reviewedAt    DateTime?
+  createdAt     DateTime           @default(now())
+
+  requestedBy User  @relation(name: "WfDueRequestRequestedBy", fields: [requestedById], references: [username])
+  reviewedBy  User? @relation(name: "WfDueRequestReviewedBy", fields: [reviewedById], references: [username])
+}
+
+model WfDueHistory {
+  id          String   @id @default(cuid())
+  taskId      String
+  task        WfTask   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  oldDue      DateTime
+  newDue      DateTime
+  changedById String
+  source      String
+  requestId   String?
+  createdAt   DateTime @default(now())
+
+  changedBy User @relation(name: "WfDueHistoryChangedBy", fields: [changedById], references: [username])
+}
+
+model WfChatMessage {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      WfTask   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  senderId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  sender User @relation(name: "WfChatMessageSender", fields: [senderId], references: [username])
+}
+
+model WfActivityLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  action    String
+  detail    String
+  taskId    String?
+  task      WfTask?  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  actor User @relation(name: "WfActivityLogActor", fields: [actorId], references: [username])
+}
+
+model WfTransferRequest {
+  id             String   @id @default(cuid())
+  taskId         String
+  requestedBy    String
+  targetUserId   String
+  status         WfDueRequestStatus @default(PENDING) // Reusing WfDueRequestStatus (PENDING, APPROVED, REJECTED)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  task           WfTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  requestedByUser User  @relation(name: "WfTransferRequestedBy", fields: [requestedBy], references: [username])
+  targetUser     User   @relation(name: "WfTransferTarget", fields: [targetUserId], references: [username])
+}
+
+model TelegramSettings {
+  id           Int      @id @default(1)
+  botToken     String
+  botUsername  String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

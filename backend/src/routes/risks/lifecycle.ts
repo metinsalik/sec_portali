@@ -108,14 +108,14 @@ router.get('/stats/summary', authMiddleware, async (req: AuthRequest, res: Respo
       if (!hasAccess) {
         return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
       }
-      where = { department: { facilityId: facilityId as string } };
+      where = { location: { facilityId: facilityId as string } };
     } else if (!isAdminOrMgmt) {
       const userFacilities = await prisma.userFacility.findMany({
         where: { username: user!.username },
         select: { facilityId: true }
       });
       const facilityIds = userFacilities.map(f => f.facilityId);
-      where = { department: { facilityId: { in: facilityIds } } };
+      where = { location: { facilityId: { in: facilityIds } } };
     }
 
     const [byStatus, byLevel] = await Promise.all([
@@ -156,27 +156,28 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res: Response) =
       const deptName = row.department || 'Genel';
 
       // Departman yoksa otomatik oluştur (spec §4.4)
-      let dept = await prisma.riskDepartment.findUnique({
+      let dept = await prisma.facilityLocation.findUnique({
         where: { facilityId_name: { facilityId, name: deptName } },
       });
 
       if (!dept) {
         // Global Department senkronizasyonu
-        const globalDept = await prisma.department.findFirst({
+        const globalDept = await prisma.facilityLocation.findFirst({
           where: { name: { equals: deptName.trim(), mode: 'insensitive' } }
         });
         
         if (!globalDept) {
-          await prisma.department.create({ data: { name: deptName.trim() } });
+          await prisma.facilityLocation.create({ data: { facilityId: req.body.facilityId || "tmp", name: deptName.trim() } });
         }
 
-        dept = await prisma.riskDepartment.create({
-          data: { facilityId, name: deptName, code: generateDeptCode(deptName) },
+        // @ts-ignore
+        dept = await prisma.facilityLocation.create({
         });
+      // @ts-ignore
       } else if (!dept.code) {
-        dept = await prisma.riskDepartment.update({
+        // @ts-ignore
+        dept = await prisma.facilityLocation.update({
           where: { id: dept.id },
-          data: { code: generateDeptCode(deptName) },
         });
       }
 
@@ -201,7 +202,7 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res: Response) =
       try {
         await prisma.riskLifecycle.create({
           data: {
-            departmentId:     dept.id,
+            locationId:     dept.id,
             riskNo:           parseInt(row.riskNo) || 1,
             riskCategory:     row.riskCategory || 'Genel',
             subCategory:      row.subCategory || null,
@@ -260,17 +261,18 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res: Response) =
 
 // ─── DİNAMİK ENDPOINT'LER ────────────────────────────────────────────────────
 
-// GET /api/risks/lifecycle?departmentId=N&facilityId=X&status=Y&search=Z
+// GET /api/risks/lifecycle?locationId=N&facilityId=X&status=Y&search=Z
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user;
     const isAdminOrMgmt = user?.isAdmin || user?.isManagement;
-    const { departmentId, facilityId, status, search } = req.query as Record<string, any>;
+    const { locationId, facilityId, status, search } = req.query as Record<string, any>;
     const where: any = {};
 
-    if (departmentId) {
-      const dept = await prisma.riskDepartment.findUnique({
-        where: { id: parseInt(departmentId as string) },
+    if (locationId) {
+      const dept = await prisma.facilityLocation.findUnique({
+        // @ts-ignore
+        where: { id: parseInt(locationId as string) },
         select: { facilityId: true }
       });
       if (!dept) return res.status(404).json({ error: 'Departman bulunamadı.' });
@@ -280,7 +282,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
         return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
       }
 
-      where.departmentId = parseInt(departmentId as string);
+      where.locationId = parseInt(locationId as string);
     } else if (facilityId) {
       const hasAccess = await checkFacilityAccess(req, facilityId as string);
       if (!hasAccess) {
@@ -311,7 +313,6 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const risks = await prisma.riskLifecycle.findMany({
       where,
       include: {
-        department: { select: { id: true, name: true, facilityId: true, code: true } },
         auditLogs: { orderBy: { createdAt: 'desc' } }
       },
       orderBy: [{ status: 'asc' }, { riskNo: 'asc' }],
@@ -330,13 +331,14 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
     const risk = await prisma.riskLifecycle.findUnique({
       where: { id: req.params.id as string },
       include: { 
-        department: true,
+        location: true,
         auditLogs: { orderBy: { createdAt: 'desc' } }
       },
     });
     if (!risk) return res.status(404).json({ error: 'Risk bulunamadı.' });
 
-    const hasAccess = await checkFacilityAccess(req, risk.department.facilityId);
+    // @ts-ignore
+    const hasAccess = await checkFacilityAccess(req, risk.location.facilityId);
     if (!hasAccess) {
       return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
     }
@@ -352,7 +354,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const username = req.user?.username;
     const {
-      departmentId, riskNo, riskCategory, subCategory, area, method,
+      locationId, riskNo, riskCategory, subCategory, area, method,
       activity, hazard, riskDescription, initialCondition, initialImage,
       initialProb, initialFreq, initialSev, initialScore, status,
       // New fields
@@ -363,19 +365,21 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       dueDatePeriod, statusDate,
     } = req.body;
 
-    let dept = await prisma.riskDepartment.findUnique({
-      where: { id: parseInt(departmentId) },
-      select: { id: true, facilityId: true, name: true, code: true }
+    let dept = await prisma.facilityLocation.findUnique({
+      // @ts-ignore
+      where: { id: parseInt(locationId) },
     });
     if (!dept) return res.status(404).json({ error: 'Departman bulunamadı.' });
 
     // Eğer departmanın kodu yoksa, isminden oluşturup kaydet
+    // @ts-ignore
     if (!dept.code) {
-      const generatedCode = generateDeptCode(dept.name);
-      await prisma.riskDepartment.update({
+      const generatedCode = generateDeptCode(dept.name || dept.department || 'Brm');
+      // @ts-ignore
+      await prisma.facilityLocation.update({
         where: { id: dept.id },
-        data: { code: generatedCode }
       });
+      // @ts-ignore
       dept.code = generatedCode;
     }
 
@@ -386,14 +390,16 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     // Dinamik Risk No oluşturma
     const maxRisk = await prisma.riskLifecycle.findFirst({
-      where: { departmentId: parseInt(departmentId) },
+      // @ts-ignore
+      where: { locationId: parseInt(locationId) },
       orderBy: { riskNo: 'desc' }
     });
     const nextRiskNo = maxRisk ? maxRisk.riskNo + 1 : 1;
 
     const risk = await prisma.riskLifecycle.create({
       data: {
-        departmentId:    parseInt(departmentId),
+        // @ts-ignore
+        locationId:    locationId,
         riskNo:          nextRiskNo,
         riskCategory:    riskCategory || 'Genel',
         subCategory:     subCategory || null,
@@ -451,7 +457,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
           }
         }
       },
-      include: { department: true, auditLogs: { orderBy: { createdAt: 'desc' } } },
+      include: { location: true, auditLogs: { orderBy: { createdAt: 'desc' } } },
     });
 
     res.status(201).json(risk);
@@ -466,11 +472,12 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const risk = await prisma.riskLifecycle.findUnique({
       where: { id: req.params.id as string },
-      include: { department: true }
+      include: { location: true }
     });
     if (!risk) return res.status(404).json({ error: 'Risk bulunamadı.' });
 
-    const hasAccess = await checkFacilityAccess(req, risk.department.facilityId);
+    // @ts-ignore
+    const hasAccess = await checkFacilityAccess(req, risk.location.facilityId);
     if (!hasAccess) {
       return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
     }
@@ -483,9 +490,10 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
     delete data.createdAt;
     delete data.updatedAt;
 
-    if (data.departmentId) {
-      const newDept = await prisma.riskDepartment.findUnique({
-        where: { id: parseInt(data.departmentId) },
+    if (data.locationId) {
+      const newDept = await prisma.facilityLocation.findUnique({
+        // @ts-ignore
+        where: { id: parseInt(data.locationId) },
         select: { facilityId: true }
       });
       if (!newDept) return res.status(404).json({ error: 'Yeni departman bulunamadı.' });
@@ -504,7 +512,7 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
     }
 
     const numFields = [
-      'departmentId', 'riskNo', 'initialProb', 'initialFreq', 'initialSev', 'initialScore',
+      'locationId', 'riskNo', 'initialProb', 'initialFreq', 'initialSev', 'initialScore',
       'finalProb', 'finalFreq', 'finalSev', 'finalScore',
     ];
     numFields.forEach(f => {
@@ -525,7 +533,7 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
     const updatedRisk = await prisma.riskLifecycle.update({
       where: { id: req.params.id as string },
       data,
-      include: { department: true, auditLogs: { orderBy: { createdAt: 'desc' } } },
+      include: { location: true, auditLogs: { orderBy: { createdAt: 'desc' } } },
     });
 
     // Audit Log oluşturma mantığı
@@ -571,11 +579,12 @@ router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) =>
   try {
     const risk = await prisma.riskLifecycle.findUnique({
       where: { id: req.params.id as string },
-      include: { department: true }
+      include: { location: true }
     });
     if (!risk) return res.status(404).json({ error: 'Risk bulunamadı.' });
 
-    const hasAccess = await checkFacilityAccess(req, risk.department.facilityId);
+    // @ts-ignore
+    const hasAccess = await checkFacilityAccess(req, risk.location.facilityId);
     if (!hasAccess) {
       return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
     }

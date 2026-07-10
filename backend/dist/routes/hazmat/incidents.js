@@ -34,7 +34,7 @@ router.get('/', async (req, res) => {
                 creator: { select: { fullName: true } },
                 materials: true,
                 category: true,
-                department: true,
+                location: true,
                 supportUnit: true,
                 emergencyCode: true
             },
@@ -60,7 +60,7 @@ router.get('/:id', async (req, res) => {
                 creator: { select: { fullName: true } },
                 materials: true,
                 category: true,
-                department: true,
+                location: true,
                 supportUnit: true,
                 emergencyCode: true
             }
@@ -84,7 +84,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const user = req.user;
-        const { facilityId, categoryId, incidentTypeId, rootCause, departmentId, incidentDate, interventionRequired, interventionTime, controlTime, supportReceived, supportUnitId, announcementMade, emergencyCodeId, serviceInterrupted, interruptionDuration, evacuatedStaffCount, evacuatedPatientCount, injuredCount, deceasedCount, incidentMode, causeDetail, detectedEffect, observations, actionsTaken, resultEvaluation, kitUsed, spillKitId, materialIds } = req.body;
+        const { facilityId, categoryId, incidentTypeId, rootCause, locationId, incidentDate, interventionRequired, interventionTime, controlTime, supportReceived, supportUnitId, announcementMade, emergencyCodeId, serviceInterrupted, interruptionDuration, evacuatedStaffCount, evacuatedPatientCount, injuredCount, deceasedCount, incidentMode, causeDetail, detectedEffect, observations, actionsTaken, resultEvaluation, kitUsed, spillKitId, materialIds } = req.body;
         const hasAccess = await prisma.userFacility.findFirst({
             where: { username: user.username, facilityId }
         });
@@ -99,7 +99,7 @@ router.post('/', async (req, res) => {
                 categoryId: categoryId || null,
                 incidentTypeId: incidentTypeId || null,
                 rootCause,
-                departmentId,
+                locationId,
                 incidentDate: new Date(incidentDate),
                 interventionRequired: interventionRequired === true || interventionRequired === 'true',
                 interventionTime: interventionTime ? new Date(interventionTime) : null,
@@ -165,7 +165,7 @@ router.put('/:id', async (req, res) => {
         const id = req.params.id;
         const user = req.user;
         const isAdmin = user.roles.includes('admin') || user.roles.includes('management');
-        const { categoryId, incidentTypeId, rootCause, departmentId, incidentDate, interventionRequired, interventionTime, controlTime, supportReceived, supportUnitId, announcementMade, emergencyCodeId, serviceInterrupted, interruptionDuration, evacuatedStaffCount, evacuatedPatientCount, injuredCount, deceasedCount, incidentMode, causeDetail, detectedEffect, observations, actionsTaken, resultEvaluation, kitUsed, spillKitId, materialIds } = req.body;
+        const { categoryId, incidentTypeId, rootCause, locationId, incidentDate, interventionRequired, interventionTime, controlTime, supportReceived, supportUnitId, announcementMade, emergencyCodeId, serviceInterrupted, interruptionDuration, evacuatedStaffCount, evacuatedPatientCount, injuredCount, deceasedCount, incidentMode, causeDetail, detectedEffect, observations, actionsTaken, resultEvaluation, kitUsed, spillKitId, materialIds } = req.body;
         const existing = await prisma.hazmatIncident.findUnique({ where: { id } });
         if (!existing)
             return res.status(404).json({ error: 'Olay bulunamadı.' });
@@ -183,7 +183,7 @@ router.put('/:id', async (req, res) => {
                 categoryId: categoryId !== undefined ? categoryId : undefined,
                 incidentTypeId: incidentTypeId !== undefined ? incidentTypeId : undefined,
                 rootCause: rootCause !== undefined ? rootCause : undefined,
-                departmentId: departmentId || undefined,
+                locationId: locationId || undefined,
                 incidentDate: incidentDate ? new Date(incidentDate) : undefined,
                 interventionRequired: interventionRequired === true || interventionRequired === 'true',
                 interventionTime: interventionTime ? new Date(interventionTime) : (interventionRequired === 'false' || interventionRequired === false ? null : undefined),
