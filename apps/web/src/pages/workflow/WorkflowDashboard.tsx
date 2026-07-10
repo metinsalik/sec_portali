@@ -46,25 +46,28 @@ export default function WorkflowDashboard() {
         <p className="text-slate-500 dark:text-slate-400">Görevlerin genel durumu ve içgörüler.</p>
       </div>
 
-      {user && !user.hasTelegram && (
+      {user && (
         <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 animate-in fade-in zoom-in duration-500">
           <MessageCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between w-full">
             <div>
               <AlertTitle className="text-blue-800 dark:text-blue-300 font-semibold text-base">
-                Telegram Bildirimlerini Etkinleştirin
+                {user.hasTelegram ? 'Telegram Bildirimleri Aktif' : 'Telegram Bildirimlerini Etkinleştirin'}
               </AlertTitle>
               <AlertDescription className="text-blue-700 dark:text-blue-400 mt-1">
-                Size atanan görevlerden, durum değişikliklerinden ve yaklaşan terminlerden anında haberdar olmak için hesabınızı Telegram ile eşleştirin.
+                {user.hasTelegram 
+                  ? 'Hesabınız Telegram ile eşleştirilmiş durumda. Bildirimleri Telegram üzerinden alabilirsiniz.' 
+                  : 'Size atanan görevlerden, durum değişikliklerinden ve yaklaşan terminlerden anında haberdar olmak için hesabınızı Telegram ile eşleştirin.'}
               </AlertDescription>
             </div>
             <Button 
               onClick={handleConnectTelegram} 
               disabled={isConnecting}
-              className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white"
+              variant={user.hasTelegram ? "outline" : "default"}
+              className={user.hasTelegram ? "shrink-0 border-blue-600 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900" : "shrink-0 bg-blue-600 hover:bg-blue-700 text-white"}
             >
               {isConnecting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ExternalLink className="w-4 h-4 mr-2" />}
-              Telegram'ı Bağla
+              {user.hasTelegram ? 'Yeniden Bağla' : 'Telegram\'ı Bağla'}
             </Button>
           </div>
         </Alert>
