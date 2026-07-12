@@ -754,7 +754,7 @@ function App() {
                     path="/hazmat/settings/events"
                     element={
                       <ProtectedRoute requiredModules={['hazmat']}>
-                        <HazmatSettingsPage />
+                        <AppLayout><HazmatSettingsPage /></AppLayout>
                       </ProtectedRoute>
                     }
                   />

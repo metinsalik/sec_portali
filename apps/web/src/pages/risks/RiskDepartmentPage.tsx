@@ -116,7 +116,27 @@ export default function RiskDepartmentPage() {
   const { data: risks = [], isLoading } = useQuery({
     queryKey: ['risks', departmentId],
     queryFn: async () => {
-      const params = new URLSearchParams({ departmentId: departmentId! });
+      const params = new URLSearchParams();
+      if (departmentId?.startsWith('group:')) {
+        const parts = departmentId.split(':');
+        // group:{level}:{facId}:{path}
+        if (['building', 'floor', 'department'].includes(parts[1])) {
+          const level = parts[1];
+          const facId = parts[2];
+          const path = parts.slice(3).join(':');
+          params.set('facilityId', facId);
+          params.set('level', level);
+          params.set('path', path);
+        } else {
+          // old format fallback
+          const [_, facId, ...nameParts] = departmentId.split(':');
+          params.set('facilityId', facId);
+          params.set('level', 'department');
+          params.set('path', `||${nameParts.join(':')}`); // Mock path for fallback
+        }
+      } else {
+        params.set('locationId', departmentId!);
+      }
       if (filterStatus) params.set('status', filterStatus);
       const res = await fetch(`${API}/api/risks/lifecycle?${params}`, {
         headers: { Authorization: `Bearer ${token}` },

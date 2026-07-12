@@ -17,6 +17,7 @@ export default function FacilityInventoryListPage() {
 
   const [searchMaterial, setSearchMaterial] = useState('');
   const [searchDepartment, setSearchDepartment] = useState('');
+  const [searchAdrCategory, setSearchAdrCategory] = useState('all');
   const [printMaterial, setPrintMaterial] = useState<any>(null);
   
   // Dialog state
@@ -47,6 +48,16 @@ export default function FacilityInventoryListPage() {
     enabled: !!activeFacilityId
   });
 
+  // 3. Fetch ADR categories
+  const { data: adrCategories = [] } = useQuery({
+    queryKey: ['hazmat-hazard-labels'],
+    queryFn: async () => {
+      const res = await api.get('/hazmat/settings/hazard-labels');
+      if (!res.ok) return [];
+      return res.json();
+    }
+  });
+
   const groupedSummary = useMemo(() => {
     if (!summaryData) return [];
     
@@ -54,10 +65,10 @@ export default function FacilityInventoryListPage() {
       const mat = facItem.material;
       
       const departments = (mat.inventory || [])
-        .filter((invItem: any) => invItem.department)
+        .filter((invItem: any) => invItem.location || invItem.department)
         .map((invItem: any) => {
-        const dept = invItem.department;
-        const deptName = `${dept.isCleaningCart ? '[Temizlik Arabası] ' : ''}${dept.building ? dept.building + ' / ' : ''}${dept.floor ? dept.floor + ' / ' : ''}${dept.name || ''} ${dept.description ? '/ ' + dept.description : ''}`.trim() || 'İsimsiz Lokasyon';
+        const dept = invItem.location || invItem.department;
+        const deptName = `${dept.isCleaningCart ? '[Temizlik Arabası] ' : ''}${dept.building ? dept.building + ' / ' : ''}${dept.floor ? dept.floor + ' / ' : ''}${dept.department ? dept.department + ' / ' : ''}${dept.name || dept.description || ''}`.trim().replace(/\/$/, '').trim() || 'İsimsiz Lokasyon';
         return {
           id: dept.id,
           name: deptName
@@ -101,8 +112,14 @@ export default function FacilityInventoryListPage() {
       );
     }
 
+    if (searchAdrCategory !== 'all') {
+      filtered = filtered.filter((g: any) => 
+        g.hazardLabels.some((hl: any) => hl.label.id === searchAdrCategory)
+      );
+    }
+
     return filtered;
-  }, [groupedSummary, searchMaterial, searchDepartment]);
+  }, [groupedSummary, searchMaterial, searchDepartment, searchAdrCategory]);
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-12">
@@ -143,6 +160,18 @@ export default function FacilityInventoryListPage() {
             value={searchDepartment}
             onChange={(e) => setSearchDepartment(e.target.value)}
           />
+        </div>
+        <div className="relative flex-1">
+          <select 
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            value={searchAdrCategory}
+            onChange={(e) => setSearchAdrCategory(e.target.value)}
+          >
+            <option value="all">Tüm ADR Kategorileri</option>
+            {adrCategories.map((cat: any) => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
         </div>
       </div>
 

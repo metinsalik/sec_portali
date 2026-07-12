@@ -47,24 +47,24 @@ export default function LocationTreeSelector({ facilityId, value, onChange, disa
       if (!root[loc.building]) root[loc.building] = { id: `b-${loc.building}`, name: loc.building, type: 'building', children: {} };
       const bNode = root[loc.building];
 
+      if (!bNode.locationId) bNode.locationId = loc.id;
+
       if (!loc.floor) {
-        bNode.locationId = loc.id;
         return;
       }
       if (!bNode.children[loc.floor]) bNode.children[loc.floor] = { id: `f-${loc.building}-${loc.floor}`, name: loc.floor, type: 'floor', children: {} };
       const fNode = bNode.children[loc.floor];
+      if (!fNode.locationId) fNode.locationId = loc.id;
 
       if (!loc.department) {
-        fNode.locationId = loc.id;
         return;
       }
       if (!fNode.children[loc.department]) fNode.children[loc.department] = { id: `d-${loc.building}-${loc.floor}-${loc.department}`, name: loc.department, type: 'department', children: {} };
       const dNode = fNode.children[loc.department];
+      if (!dNode.locationId) dNode.locationId = loc.id;
 
       if (loc.description) {
         dNode.children[loc.description] = { id: loc.id, name: loc.description, type: 'unit', locationId: loc.id };
-      } else {
-        dNode.locationId = loc.id;
       }
     });
 

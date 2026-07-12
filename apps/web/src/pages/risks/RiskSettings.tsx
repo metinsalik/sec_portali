@@ -329,14 +329,14 @@ export default function RiskSettings() {
           </CardContent>
         </Card>
       ) : (
-        <Tabs defaultValue="hosp-depts" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 md:w-[600px] bg-muted/50 p-1 rounded-xl">
+        <Tabs defaultValue="departments" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 md:w-[400px] bg-muted/50 p-1 rounded-xl">
             {/* <TabsTrigger value="hosp-depts" className="gap-2 rounded-lg">
               <Building2 className="w-4 h-4" /> Hastane Bölümleri
             </TabsTrigger> */}
-            {/* <TabsTrigger value="departments" className="gap-2 rounded-lg">
-              <Building2 className="w-4 h-4" /> Departmanlar
-            </TabsTrigger> */}
+            <TabsTrigger value="departments" className="gap-2 rounded-lg">
+              <Building2 className="w-4 h-4" /> Departmanlar / Sorumlular
+            </TabsTrigger>
             <TabsTrigger value="categories" className="gap-2 rounded-lg">
               <Tag className="w-4 h-4" /> Kategoriler
             </TabsTrigger>

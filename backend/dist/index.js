@@ -8,6 +8,7 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const path_1 = __importDefault(require("path"));
 const http_1 = require("http");
 const socket_io_1 = require("socket.io");
 // Routes
@@ -43,7 +44,7 @@ app.use((0, helmet_1.default)({
 const build_settings_1 = __importDefault(require("./routes/build_settings"));
 const bina_turu_1 = __importDefault(require("./routes/bina-turu"));
 // Servis statik dosyalar (Yüklemeler için)
-app.use('/uploads', express_1.default.static('uploads'));
+app.use('/uploads', express_1.default.static(path_1.default.join(process.cwd(), 'uploads')));
 // Route Entegrasyonu
 app.use('/api/auth', auth_1.default);
 app.use('/api/settings/telegram', telegram_1.default);

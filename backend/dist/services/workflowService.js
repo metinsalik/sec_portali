@@ -260,6 +260,8 @@ class WorkflowService {
                 dueDate: new Date(data.dueDate),
                 estimateHours: data.estimateHours,
                 blockNote: data.blockNote,
+                recurrence: data.recurrence || null,
+                recurrenceEndDate: data.recurrenceEndDate ? new Date(data.recurrenceEndDate) : null,
                 checklist: {
                     create: data.checklist?.map(c => ({
                         text: c.text,
@@ -328,6 +330,8 @@ class WorkflowService {
             taskData.startDate = new Date(taskData.startDate);
         if (taskData.dueDate)
             taskData.dueDate = new Date(taskData.dueDate);
+        if (taskData.recurrenceEndDate)
+            taskData.recurrenceEndDate = new Date(taskData.recurrenceEndDate);
         const updated = await prisma.wfTask.update({
             where: { id },
             data: taskData

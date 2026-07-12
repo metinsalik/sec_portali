@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import LocationTreeSelector from '@/components/shared/LocationTreeSelector';
+import LocationCascadingSelector from '@/components/shared/LocationCascadingSelector';
 import { ArrowLeft, Save, Upload, Image as ImageIcon, Loader2, Calendar, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -91,6 +94,60 @@ interface FormState {
   status: string;
 }
 
+const MultiSelectResponsibles = ({ 
+  value, 
+  onChange, 
+  options 
+}: { 
+  value: string; 
+  onChange: (val: string) => void; 
+  options: { id: string | number; name: string }[] 
+}) => {
+  const selected = value ? value.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+  const toggleOption = (opt: string) => {
+    if (selected.includes(opt)) {
+      onChange(selected.filter(s => s !== opt).join(', '));
+    } else {
+      onChange([...selected, opt].join(', '));
+    }
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-full justify-start text-left font-normal h-9 px-3 bg-background text-sm flex-nowrap">
+          <span className="block truncate max-w-[calc(100%-10px)] overflow-hidden text-ellipsis whitespace-nowrap">
+            {selected.length > 0 ? selected.join(', ') : <span className="text-muted-foreground">Sorumlu seçiniz...</span>}
+          </span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-2" align="start">
+        <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+          {options.map((opt) => (
+            <div key={opt.id} className="flex items-center space-x-2">
+              <Checkbox 
+                id={`resp-${opt.id}`} 
+                checked={selected.includes(opt.name)}
+                onCheckedChange={() => toggleOption(opt.name)}
+              />
+              <label 
+                htmlFor={`resp-${opt.id}`} 
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer select-none"
+              >
+                {opt.name}
+              </label>
+            </div>
+          ))}
+          {options.length === 0 && (
+            <div className="text-sm text-muted-foreground p-2 text-center">Önce ayarlardan departman ekleyin.</div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function RiskFormPage() {
   const { departmentId, riskId } = useParams<{ departmentId: string; riskId?: string }>();
   const navigate = useNavigate();
@@ -157,6 +214,19 @@ export default function RiskFormPage() {
   const facilityId = department?.facilityId;
   const departmentAreas = department?.areas || [];
   const hasAreas = departmentAreas.length > 0;
+
+  // 2. Fetch all locations for cascading selector
+  const { data: locations = [] } = useQuery({
+    queryKey: ['risk-locations-flat', facilityId],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/risks/departments?facilityId=${facilityId}&flat=true`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error();
+      return res.json();
+    },
+    enabled: !!facilityId,
+  });
 
   // 3. Fetch Settings (Categories and custom Departments)
   const { data: settingsData } = useQuery<{
@@ -461,15 +531,18 @@ export default function RiskFormPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Lokasyon Seçimi *</label>
-                <LocationTreeSelector 
-                  facilityId={facilityId || ''}
+              <div className="col-span-1 md:col-span-3">
+                <LocationCascadingSelector 
+                  locations={locations}
                   value={form.locationId || departmentId || ''}
-                  onChange={(val) => updateField('locationId', val)}
+                  onChange={(val, level, path) => {
+                    updateField('locationId', val);
+                    updateField('area', path.description || path.department || path.floor || path.building);
+                  }}
                 />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 hidden">
+                {/* Hidden as it is now integrated into LocationCascadingSelector or populated dynamically */}
                 <label className="text-xs font-semibold text-muted-foreground">Lokasyon Detayı / Alan</label>
                 <Input value={form.area} onChange={(e) => updateField('area', e.target.value)} placeholder="Örn: Sol köşe, Makine yanı vb." />
               </div>
@@ -599,10 +672,11 @@ export default function RiskFormPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground">İyileştirme Sorumlusu</label>
-                <select value={form.improvementResponsible} onChange={(e) => updateField('improvementResponsible', e.target.value)} className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                  <option value="">Seçiniz...</option>
-                  {settingsDepartments.map((dept: any) => <option key={dept.id} value={dept.name}>{dept.name}</option>)}
-                </select>
+                <MultiSelectResponsibles 
+                  value={form.improvementResponsible} 
+                  onChange={(val) => updateField('improvementResponsible', val)} 
+                  options={settingsDepartments} 
+                />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground">Termin Tarihi *</label>
@@ -701,10 +775,11 @@ export default function RiskFormPage() {
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground">İyileştirme Kontrol Sorumlusu</label>
-                <select value={form.controlResponsible} onChange={(e) => updateField('controlResponsible', e.target.value)} className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                  <option value="">Seçiniz...</option>
-                  {settingsDepartments.map((dept: any) => <option key={dept.id} value={dept.name}>{dept.name}</option>)}
-                </select>
+                <MultiSelectResponsibles 
+                  value={form.controlResponsible} 
+                  onChange={(val) => updateField('controlResponsible', val)} 
+                  options={settingsDepartments} 
+                />
               </div>
             </div>
             <div className="space-y-1.5">

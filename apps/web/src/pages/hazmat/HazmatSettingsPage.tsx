@@ -57,7 +57,7 @@ export default function HazmatSettingsPage() {
           <TabsTrigger value="units" className="py-2">Miktar Cinsleri</TabsTrigger>
           {/* <TabsTrigger value="departments" className="py-2">Bölüm - Departman</TabsTrigger> */}
           <TabsTrigger value="ghs" className="py-2">GHS Etiketleri</TabsTrigger>
-          <TabsTrigger value="adr" className="py-2">ADR Etiketleri</TabsTrigger>
+          <TabsTrigger value="adr" className="py-2">ADR (Kategori)</TabsTrigger>
           <TabsTrigger value="ppe" className="py-2">KKD'ler</TabsTrigger>
         </TabsList>
         
@@ -139,7 +139,7 @@ function UnitsTab() {
 function ImageItemsTab({ type, title, queryKey, hasCode }: { type: string, title: string, queryKey: string, hasCode: boolean }) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [imageUrl, setImageUrl] = useState('');
@@ -186,13 +186,33 @@ function ImageItemsTab({ type, title, queryKey, hasCode }: { type: string, title
   };
 
   const createItem = useMutation({
-    mutationFn: async () => await api.post(`/hazmat/settings/${type}`, { code, name, imageUrl }),
+    mutationFn: async () => {
+      if (editingId) {
+        return await api.put(`/hazmat/settings/${type}/${editingId}`, { code, name, imageUrl });
+      } else {
+        return await api.post(`/hazmat/settings/${type}`, { code, name, imageUrl });
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [queryKey] });
-      setCode(''); setName(''); setImageUrl('');
-      toast.success('Başarıyla eklendi.');
+      setCode(''); setName(''); setImageUrl(''); setEditingId(null);
+      toast.success(editingId ? 'Başarıyla güncellendi.' : 'Başarıyla eklendi.');
     }
   });
+
+  const handleEditClick = (item: any) => {
+    setEditingId(item.id);
+    setCode(item.code || '');
+    setName(item.name || '');
+    setImageUrl(item.imageUrl || '');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setCode('');
+    setName('');
+    setImageUrl('');
+  };
 
   const deleteItem = useMutation({
     mutationFn: async (id: string) => await api.delete(`/hazmat/settings/${type}/${id}`),
@@ -203,31 +223,45 @@ function ImageItemsTab({ type, title, queryKey, hasCode }: { type: string, title
     <div className="bg-card border rounded-lg p-6 mt-4">
       <h3 className="text-lg font-semibold mb-4">{title}</h3>
       
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 bg-muted/30 p-4 rounded-lg border">
-        {hasCode && (
-          <div className="space-y-1">
-            <Label>Kod</Label>
-            <Input placeholder="Örn: GHS01" value={code} onChange={e => setCode(e.target.value)} />
+      <div className="flex flex-col gap-4 mb-6 bg-muted/10 p-5 rounded-xl border border-border shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+          {hasCode && (
+            <div className="space-y-1.5 md:col-span-3">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Kod</Label>
+              <Input placeholder="Örn: GHS01" value={code} onChange={e => setCode(e.target.value)} className="bg-background" />
+            </div>
+          )}
+          <div className={`space-y-1.5 ${hasCode ? 'md:col-span-5' : 'md:col-span-8'}`}>
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Adı / Açıklama</Label>
+            <Input placeholder="Örn: Patlayıcı Madde" value={name} onChange={e => setName(e.target.value)} className="bg-background" />
           </div>
-        )}
-        <div className={`space-y-1 ${hasCode ? 'md:col-span-2' : 'md:col-span-3'}`}>
-          <Label>Adı / Açıklama</Label>
-          <Input placeholder="Örn: Patlayıcı Madde" value={name} onChange={e => setName(e.target.value)} />
+          <div className="space-y-1.5 md:col-span-4">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Görsel (İsteğe Bağlı)</Label>
+            <div className="flex gap-3 items-center">
+              {imageUrl && (
+                <div className="w-10 h-10 shrink-0 bg-white border rounded-md flex items-center justify-center p-1 shadow-sm">
+                  <img src={imageUrl} alt="preview" className="w-full h-full object-contain" />
+                </div>
+              )}
+              <div className="flex-1">
+                <Button variant="outline" type="button" onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="w-full bg-background hover:bg-muted/50">
+                  <Upload className="w-4 h-4 mr-2 text-muted-foreground" />
+                  {isUploading ? 'Yükleniyor...' : (imageUrl ? 'Değiştir' : 'Görsel Seç')}
+                </Button>
+              </div>
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
+            </div>
+          </div>
         </div>
-        <div className="space-y-1">
-          <Label>Görsel (İsteğe Bağlı)</Label>
-          <div className="flex gap-2 items-center">
-            <Button variant="outline" type="button" onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="w-full">
-              <Upload className="w-4 h-4 mr-2" />
-              {isUploading ? 'Yükleniyor...' : 'Seç'}
+        <div className="flex justify-end gap-3 mt-2 border-t pt-4">
+          {editingId && (
+            <Button variant="outline" onClick={handleCancelEdit} className="px-6">
+              İptal
             </Button>
-            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
-          </div>
-          {imageUrl && <img src={imageUrl} alt="preview" className="h-8 object-contain mt-1" />}
-        </div>
-        <div className="flex items-end">
-          <Button className="w-full" onClick={() => createItem.mutate()} disabled={!name || (hasCode && !code)}>
-            <Plus className="w-4 h-4 mr-2" /> Ekle
+          )}
+          <Button onClick={() => createItem.mutate()} disabled={!name || (hasCode && !code)} className="px-6 shadow-sm">
+            {editingId ? <Check className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+            {editingId ? 'Değişiklikleri Kaydet' : 'Yeni Ekle'}
           </Button>
         </div>
       </div>
@@ -235,14 +269,24 @@ function ImageItemsTab({ type, title, queryKey, hasCode }: { type: string, title
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {items.map((item: any) => (
           <div key={item.id} className="border rounded-lg p-4 flex flex-col items-center justify-between text-center relative group">
-            <Button 
-              variant="destructive" 
-              size="icon" 
-              className="absolute -top-2 -right-2 w-6 h-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => deleteItem.mutate(item.id)}
-            >
-              <Trash2 className="w-3 h-3" />
-            </Button>
+            <div className="absolute -top-2 -right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button 
+                variant="secondary" 
+                size="icon" 
+                className="w-6 h-6 rounded-full shadow-sm"
+                onClick={() => handleEditClick(item)}
+              >
+                <Pencil className="w-3 h-3 text-blue-600" />
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="icon" 
+                className="w-6 h-6 rounded-full shadow-sm"
+                onClick={() => deleteItem.mutate(item.id)}
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            </div>
             
             {item.imageUrl ? (
               <img src={item.imageUrl} alt={item.name} className="w-16 h-16 object-contain mb-2" />

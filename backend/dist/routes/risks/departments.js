@@ -27,9 +27,11 @@ async function checkFacilityAccess(req, facilityId) {
 // GET /api/risks/departments?facilityId=xxx
 router.get('/', auth_1.authMiddleware, async (req, res) => {
     try {
-        const { facilityId } = req.query;
-        if (!facilityId)
-            return res.status(400).json({ error: 'facilityId gerekli.' });
+        const facilityId = req.query.facilityId;
+        const flat = req.query.flat === 'true';
+        if (!facilityId) {
+            return res.status(400).json({ error: 'facilityId zorunludur.' });
+        }
         const hasAccess = await checkFacilityAccess(req, facilityId);
         if (!hasAccess) {
             return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
@@ -37,32 +39,57 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
         const locations = await prisma.facilityLocation.findMany({
             where: { facilityId: facilityId },
             include: {
-                _count: { select: { risks: true } },
                 risks: {
                     select: { status: true },
                 },
             },
-            orderBy: { name: 'asc' },
         });
-        const withStats = locations.map((d) => {
-            const statusMap = {};
-            d.risks.forEach((r) => {
-                statusMap[r.status] = (statusMap[r.status] || 0) + 1;
+        if (flat) {
+            const mapped = locations.map(loc => {
+                let riskCount = loc.risks.length;
+                let stats = { acik: 0, mudahale: 0, takip: 0, kapali: 0 };
+                loc.risks.forEach((r) => {
+                    if (r.status === 'ACIK_TEHLIKE')
+                        stats.acik++;
+                    if (r.status === 'ILK_MUDAHALE_EDILDI')
+                        stats.mudahale++;
+                    if (r.status === 'TAKIP_SURECINDE')
+                        stats.takip++;
+                    if (r.status === 'KAPATILDI_GUVENLI')
+                        stats.kapali++;
+                });
+                return { ...loc, riskCount, stats };
             });
-            return {
-                id: d.id,
-                facilityId: d.facilityId,
-                name: d.name,
-                riskCount: d._count.risks,
-                areas: [],
-                stats: {
-                    acik: statusMap['ACIK_TEHLIKE'] || 0,
-                    mudahale: statusMap['ILK_MUDAHALE_EDILDI'] || 0,
-                    takip: statusMap['TAKIP_SURECINDE'] || 0,
-                    kapali: statusMap['KAPATILDI_GUVENLI'] || 0,
-                },
-            };
-        });
+            return res.json(mapped);
+        }
+        const groups = new Map();
+        for (const loc of locations) {
+            const groupName = loc.department || loc.floor || loc.building || loc.name || 'Bilinmeyen Lokasyon';
+            const groupId = `group:${facilityId}:${groupName}`;
+            if (!groups.has(groupId)) {
+                groups.set(groupId, {
+                    id: groupId,
+                    facilityId: loc.facilityId,
+                    name: groupName,
+                    riskCount: 0,
+                    areas: [],
+                    stats: { acik: 0, mudahale: 0, takip: 0, kapali: 0 }
+                });
+            }
+            const g = groups.get(groupId);
+            g.riskCount += loc.risks.length;
+            loc.risks.forEach((r) => {
+                if (r.status === 'ACIK_TEHLIKE')
+                    g.stats.acik++;
+                if (r.status === 'ILK_MUDAHALE_EDILDI')
+                    g.stats.mudahale++;
+                if (r.status === 'TAKIP_SURECINDE')
+                    g.stats.takip++;
+                if (r.status === 'KAPATILDI_GUVENLI')
+                    g.stats.kapali++;
+            });
+        }
+        const withStats = Array.from(groups.values()).sort((a, b) => a.name.localeCompare(b.name));
         res.json(withStats);
     }
     catch (error) {
@@ -73,6 +100,35 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
 router.get('/:id', auth_1.authMiddleware, async (req, res) => {
     try {
         const id = req.params.id;
+        if (id.startsWith('group:')) {
+            const parts = id.split(':');
+            // format: group:{level}:{facId}:{path}
+            // Or old format fallback
+            let facId = '';
+            let groupName = '';
+            if (['building', 'floor', 'department'].includes(parts[1])) {
+                facId = parts[2];
+                const path = parts.slice(3).join(':');
+                const pathParts = path.split('|');
+                groupName = pathParts[pathParts.length - 1];
+            }
+            else {
+                facId = parts[1];
+                groupName = parts.slice(2).join(':');
+            }
+            const facility = await prisma.facility.findUnique({ where: { id: facId } });
+            if (!facility)
+                return res.status(404).json({ error: 'Tesis bulunamadı.' });
+            const hasAccess = await checkFacilityAccess(req, facId);
+            if (!hasAccess)
+                return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
+            return res.json({
+                id: id,
+                facilityId: facId,
+                name: groupName,
+                facility: facility
+            });
+        }
         const dept = await prisma.facilityLocation.findUnique({
             where: { id },
             include: { facility: true }
@@ -83,7 +139,10 @@ router.get('/:id', auth_1.authMiddleware, async (req, res) => {
         if (!hasAccess) {
             return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
         }
-        res.json(dept);
+        res.json({
+            ...dept,
+            name: dept.department || dept.floor || dept.building || dept.name || 'Lokasyon'
+        });
     }
     catch (error) {
         res.status(500).json({ error: 'Lokasyon alınamadı.' });

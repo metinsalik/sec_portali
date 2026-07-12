@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { DepartmentPrintModal } from '@/components/hazmat/DepartmentPrintModal';
 import { HazmatMaterialSummaryDialog } from '@/components/hazmat/HazmatMaterialSummaryDialog';
 import { Badge } from '@/components/ui/badge';
+import { Plus } from 'lucide-react';
 
 export default function HazmatDepartmentsPage() {
   const navigate = useNavigate();
@@ -60,30 +61,36 @@ export default function HazmatDepartmentsPage() {
   });
 
   // Derived Inventory Items for the current path
-  const currentLevelInventory = useMemo(() => {
-    if (!summaryData || currentPath.length === 0) return [];
-    const results: any[] = [];
+  const { exactInventory, subInventory } = useMemo(() => {
+    if (!summaryData || currentPath.length === 0) return { exactInventory: [], subInventory: [] };
+    const exact: any[] = [];
+    const sub: any[] = [];
     
     summaryData.forEach((facItem: any) => {
       const mat = facItem.material;
       if (!mat || !mat.inventory) return;
       
       mat.inventory.forEach((invItem: any) => {
-        const dept = invItem.department;
-        if (!dept || dept.isCleaningCart) return; // Skip cleaning carts here? Or keep them? We keep them if they somehow match.
+        const dept = invItem.location || invItem.department;
+        if (!dept || dept.isCleaningCart) return;
         
-        // Check if this department matches currentPath
-        const b = dept.building || 'Belirtilmemiş Blok';
-        const f = dept.floor || 'Belirtilmemiş Kat';
-        const n = dept.name || 'Belirtilmemiş Birim';
-        const desc = dept.description || 'İsimsiz Mahal';
-        
-        if (currentPath.length >= 1 && b !== currentPath[0]) return;
-        if (currentPath.length >= 2 && f !== currentPath[1]) return;
-        if (currentPath.length >= 3 && n !== currentPath[2]) return;
-        if (currentPath.length >= 4 && desc !== currentPath[3]) return;
+        const locPath = [dept.building, dept.floor, dept.department, dept.description].filter(Boolean);
+        if (locPath.length === 0 && dept.name) locPath.push(dept.name);
 
-        results.push({
+        // Check if this department matches currentPath
+        let matchesPath = true;
+        for (let i = 0; i < currentPath.length; i++) {
+          if (locPath[i] !== currentPath[i]) {
+            matchesPath = false;
+            break;
+          }
+        }
+        if (!matchesPath) return;
+
+        // Determine if exact match
+        const isExact = (locPath.length === currentPath.length);
+
+        const itemObj = {
           id: invItem.id, // unique inventory item id
           material: mat,
           productName: mat.productName,
@@ -95,23 +102,23 @@ export default function HazmatDepartmentsPage() {
           minQuantity: invItem.minQuantity,
           maxQuantity: invItem.maxQuantity,
           hazardLabels: mat.hazardLabels || []
-        });
+        };
+
+        if (isExact) {
+          exact.push(itemObj);
+        } else {
+          sub.push(itemObj);
+        }
       });
     });
     
-    // Sort by product name
-    return results.sort((a, b) => a.productName.localeCompare(b.productName));
+    return {
+      exactInventory: exact.sort((a, b) => a.productName.localeCompare(b.productName)),
+      subInventory: sub.sort((a, b) => a.productName.localeCompare(b.productName))
+    };
   }, [summaryData, currentPath]);
 
-  // Auto-select single block
-  useEffect(() => {
-    if (departments.length > 0 && currentPath.length === 0) {
-      const blocks = Array.from(new Set(departments.map((d: any) => d.building || 'Belirtilmemiş Blok')));
-      if (blocks.length === 1) {
-        setCurrentPath([blocks[0]]);
-      }
-    }
-  }, [departments, currentPath.length]);
+  // Auto-select single block removed deliberately as per user request to always show block level first.
 
   if (!activeFacilityId) {
     return <div className="p-8 text-center text-muted-foreground">Lütfen önce bir tesis seçin.</div>;
@@ -161,72 +168,88 @@ export default function HazmatDepartmentsPage() {
 
   // Determine Current Node Exact ID (for assigning inventory to current level)
   const exactNodeMatch = departments.find((d: any) => {
-    const b = d.building || 'Belirtilmemiş Blok';
-    const f = d.floor || 'Belirtilmemiş Kat';
-    const n = d.name || 'Belirtilmemiş Birim';
-    const desc = d.description || 'İsimsiz Mahal';
-
-    if (currentPath.length === 1) return b === currentPath[0] && !d.floor && !d.name && !d.description;
-    if (currentPath.length === 2) return b === currentPath[0] && f === currentPath[1] && !d.name && !d.description;
-    if (currentPath.length === 3) return b === currentPath[0] && f === currentPath[1] && n === currentPath[2] && !d.description;
-    if (currentPath.length === 4) return b === currentPath[0] && f === currentPath[1] && n === currentPath[2] && desc === currentPath[3];
-    return false;
+    const locPath = [d.building, d.floor, d.department, d.description].filter(Boolean);
+    if (locPath.length === 0 && d.name) locPath.push(d.name);
+    
+    if (locPath.length !== currentPath.length) return false;
+    for (let i = 0; i < currentPath.length; i++) {
+      if (locPath[i] !== currentPath[i]) return false;
+    }
+    return true;
   });
 
   // Calculate Children for Current Path
   const filteredDepartments = departments.filter((d: any) => {
-    const b = d.building || 'Belirtilmemiş Blok';
-    const f = d.floor || 'Belirtilmemiş Kat';
-    const n = d.name || 'Belirtilmemiş Birim';
+    const locPath = [d.building, d.floor, d.department, d.description].filter(Boolean);
+    if (locPath.length === 0 && d.name) locPath.push(d.name);
     
-    if (currentPath.length >= 1 && b !== currentPath[0]) return false;
-    if (currentPath.length >= 2 && f !== currentPath[1]) return false;
-    if (currentPath.length >= 3 && n !== currentPath[2]) return false;
+    if (locPath.length <= currentPath.length) return false;
+    for (let i = 0; i < currentPath.length; i++) {
+      if (locPath[i] !== currentPath[i]) return false;
+    }
     return true;
   });
 
-  // Determine what level to show (Blocks, Floors, Depts, or Rooms)
   const nextLevelIndex = currentPath.length;
-  
+
   // Group children
   const childrenMap = new Map<string, { count: number, ids: string[], isLeaf: boolean, exactId?: string }>();
   
   filteredDepartments.forEach((d: any) => {
-    const b = d.building || 'Belirtilmemiş Blok';
-    const f = d.floor || 'Belirtilmemiş Kat';
-    const n = d.name || 'Belirtilmemiş Birim';
-    const desc = d.description || 'İsimsiz Mahal';
+    const locPath = [d.building, d.floor, d.department, d.description].filter(Boolean);
+    if (locPath.length === 0 && d.name) locPath.push(d.name);
     
-    const pathParts = [b, f, n, desc];
-    
-    // Ignore exact matches to current path, we only want children
-    if (pathParts.slice(0, 4).every((p, i) => i < currentPath.length ? p === currentPath[i] : !p || p === 'Belirtilmemiş Kat' || p === 'Belirtilmemiş Birim' || p === 'İsimsiz Mahal')) {
-      return; 
-    }
-
-    const childName = pathParts[nextLevelIndex] || (nextLevelIndex === 1 ? 'Belirtilmemiş Kat' : nextLevelIndex === 2 ? 'Belirtilmemiş Birim' : 'İsimsiz Mahal');
+    const childName = locPath[nextLevelIndex];
     
     if (!childName) return;
 
     if (!childrenMap.has(childName)) {
-      childrenMap.set(childName, { count: 0, ids: [], isLeaf: nextLevelIndex >= 3 });
+      const isLeaf = (nextLevelIndex === locPath.length - 1);
+      childrenMap.set(childName, { count: 0, ids: [], isLeaf });
     }
     
     const child = childrenMap.get(childName)!;
-    child.count += (d._count?.inventory || 0);
     child.ids.push(d.id);
     
     // Check if this specific department object IS exactly the child node
-    const isExactChild = (
-      (nextLevelIndex === 0 && !d.floor && !d.name && !d.description) ||
-      (nextLevelIndex === 1 && d.floor === childName && !d.name && !d.description) ||
-      (nextLevelIndex === 2 && d.name === childName && !d.description) ||
-      (nextLevelIndex === 3 && d.description === childName)
-    );
+    const isExactChild = (locPath.length === nextLevelIndex + 1);
     if (isExactChild) {
       child.exactId = d.id;
+      child.isLeaf = true;
+    } else {
+      child.isLeaf = false;
     }
   });
+
+  // Calculate true distinct material counts per folder
+  if (summaryData) {
+    for (const [childName, childData] of childrenMap.entries()) {
+      const distinctMaterials = new Set<string>();
+      summaryData.forEach((facItem: any) => {
+        const mat = facItem.material;
+        if (!mat || !mat.inventory) return;
+        
+        const hasInventoryInPath = mat.inventory.some((invItem: any) => {
+          const dept = invItem.location || invItem.department;
+          if (!dept || dept.isCleaningCart) return false;
+          
+          const locPath = [dept.building, dept.floor, dept.department, dept.description].filter(Boolean);
+          if (locPath.length === 0 && dept.name) locPath.push(dept.name);
+          
+          if (locPath.length <= currentPath.length) return false;
+          for (let i = 0; i < currentPath.length; i++) {
+            if (locPath[i] !== currentPath[i]) return false;
+          }
+          return locPath[currentPath.length] === childName;
+        });
+        
+        if (hasInventoryInPath) {
+          distinctMaterials.add(mat.id);
+        }
+      });
+      childData.count = distinctMaterials.size;
+    }
+  }
 
   const displayChildren = Array.from(childrenMap.entries())
     .filter(([name]) => name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -277,9 +300,14 @@ export default function HazmatDepartmentsPage() {
         
         <div className="flex items-center gap-2">
           {exactNodeMatch && (
-            <Button size="sm" onClick={() => navigate(`/hazmat/departments/${exactNodeMatch.id}`)}>
-              {currentPath[currentPath.length - 1]} Envanterini Yönet
-            </Button>
+            <>
+              <Button size="sm" variant="secondary" onClick={() => navigate(`/hazmat/inventory/new?departmentId=${exactNodeMatch.id}`)}>
+                <Plus className="w-4 h-4 mr-2" /> Madde Ekle
+              </Button>
+              <Button size="sm" onClick={() => navigate(`/hazmat/departments/${exactNodeMatch.id}`)}>
+                {currentPath[currentPath.length - 1]} Envanterini Yönet
+              </Button>
+            </>
           )}
           {currentPath.length > 0 && (
             <Button size="sm" variant="outline" onClick={() => handlePrint(currentPath.join(' / '), filteredDepartments.map((d: any) => d.id))}>
@@ -362,38 +390,51 @@ export default function HazmatDepartmentsPage() {
                 <div className="flex items-center justify-between text-sm p-3 bg-muted/30 rounded-lg">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <PackageSearch className="w-4 h-4" />
-                    <span>Tehlikeli Madde Sayısı:</span>
+                    <span>Tehlikeli Madde Çeşidi:</span>
                   </div>
                   <span className="font-semibold text-base">{data.count}</span>
                 </div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1"
-                    onClick={(e) => { e.stopPropagation(); handlePrint(currentPath.length > 0 ? `${currentPath.join(' / ')} / ${name}` : name, data.ids); }}
-                  >
-                    <Printer className="w-4 h-4 mr-2" /> Yazdır
-                  </Button>
-                  {(data.isLeaf && data.exactId) ? (
+                  <div className="flex gap-2 flex-col sm:flex-row">
                     <Button 
+                      variant="outline" 
                       size="sm" 
                       className="flex-1"
-                      onClick={(e) => { e.stopPropagation(); navigate(`/hazmat/departments/${data.exactId}`); }}
+                      onClick={(e) => { e.stopPropagation(); handlePrint(currentPath.length > 0 ? `${currentPath.join(' / ')} / ${name}` : name, data.ids); }}
                     >
-                      Envanter
+                      <Printer className="w-4 h-4 mr-2" /> Yazdır
                     </Button>
-                  ) : (
                     <Button 
                       size="sm" 
                       variant="secondary"
                       className="flex-1"
-                      onClick={(e) => { e.stopPropagation(); setCurrentPath([...currentPath, name]); }}
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        const deptId = data.exactId 
+                          ? data.exactId 
+                          : `group:${nextLevelIndex === 0 ? 'building' : nextLevelIndex === 1 ? 'floor' : 'department'}:${activeFacilityId}:${[...currentPath, name].join('|')}`;
+                        navigate(`/hazmat/inventory/new?departmentId=${deptId}`); 
+                      }}
                     >
-                      İçine Gir <ArrowRight className="w-4 h-4 ml-2" />
+                      <Plus className="w-4 h-4 mr-2" /> Ekle
                     </Button>
-                  )}
-                </div>
+                    {(data.isLeaf && data.exactId) ? (
+                      <Button 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={(e) => { e.stopPropagation(); navigate(`/hazmat/departments/${data.exactId}`); }}
+                      >
+                        Envanter
+                      </Button>
+                    ) : (
+                      <Button 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={(e) => { e.stopPropagation(); setCurrentPath([...currentPath, name]); }}
+                      >
+                        İçine Gir <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    )}
+                  </div>
               </CardContent>
             </Card>
           ))}
@@ -402,7 +443,7 @@ export default function HazmatDepartmentsPage() {
         <div className="border rounded-lg bg-card overflow-hidden">
           <div className="grid grid-cols-12 gap-4 p-4 font-medium text-sm text-muted-foreground border-b bg-muted/30">
             <div className="col-span-5">Konum Adı</div>
-            <div className="col-span-3 text-center">Tehlikeli Madde Sayısı</div>
+            <div className="col-span-3 text-center">Tehlikeli Madde Çeşidi</div>
             <div className="col-span-4 text-right">İşlemler</div>
           </div>
           <div className="divide-y">
@@ -439,6 +480,19 @@ export default function HazmatDepartmentsPage() {
                   >
                     <Printer className="w-3.5 h-3.5" />
                   </Button>
+                  <Button 
+                    variant="secondary"
+                    size="sm" 
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      const deptId = data.exactId 
+                        ? data.exactId 
+                        : `group:${nextLevelIndex === 0 ? 'building' : nextLevelIndex === 1 ? 'floor' : 'department'}:${activeFacilityId}:${[...currentPath, name].join('|')}`;
+                      navigate(`/hazmat/inventory/new?departmentId=${deptId}`); 
+                    }}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Ekle
+                  </Button>
                   {(data.isLeaf && data.exactId) ? (
                     <Button 
                       size="sm" 
@@ -449,7 +503,6 @@ export default function HazmatDepartmentsPage() {
                   ) : (
                     <Button 
                       size="sm" 
-                      variant="secondary"
                       onClick={(e) => { e.stopPropagation(); setCurrentPath([...currentPath, name]); }}
                     >
                       İçine Gir
@@ -462,11 +515,81 @@ export default function HazmatDepartmentsPage() {
         </div>
       )}
 
-      {currentPath.length > 0 && currentLevelInventory.length > 0 && (
+      {currentPath.length > 0 && exactInventory.length > 0 && (
         <Card className="border-primary/20 shadow-sm mt-8">
           <CardHeader>
-            <CardTitle>Bu Konumdaki Tehlikeli Maddeler</CardTitle>
-            <CardDescription>Bulunduğunuz seviye ve altındaki tüm konumlara atanmış maddeler.</CardDescription>
+            <CardTitle>Sadece Bu Konuma Atanmış Tehlikeli Maddeler</CardTitle>
+            <CardDescription>Doğrudan seçtiğiniz seviyeye tanımlı maddeler.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-lg border overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-muted/50 text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">Tehlikeli Madde</th>
+                      <th className="px-4 py-3 font-medium">Kategori</th>
+                      <th className="px-4 py-3 font-medium">Ambalaj</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {exactInventory.map((item: any) => (
+                      <tr 
+                        key={item.id} 
+                        className="hover:bg-muted/30 transition-colors cursor-pointer group"
+                        onClick={() => setSelectedMaterial(item)}
+                      >
+                        <td className="px-4 py-3 font-medium text-foreground">
+                          <div className="flex items-center gap-3">
+                            <div className="flex -space-x-2">
+                              {item.hazardLabels.slice(0, 3).map((hl: any) => (
+                                <img 
+                                  key={hl.label.id} 
+                                  src={hl.label.imageUrl} 
+                                  alt={hl.label.name} 
+                                  className="w-6 h-6 rounded-full border-2 border-background object-contain bg-white" 
+                                  title={hl.label.name}
+                                />
+                              ))}
+                            </div>
+                            <div>
+                              <span className="group-hover:text-primary transition-colors">{item.productName}</span>
+                              {item.brandName && (
+                                <div className="text-xs text-muted-foreground font-normal">
+                                  {item.brandName}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant="outline" className="font-normal bg-muted/50">
+                            {item.categoryName}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-medium">
+                            {item.amountValue ? item.amountValue : '-'}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {item.unitName || ''}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {currentPath.length > 0 && subInventory.length > 0 && (
+        <Card className="border-primary/20 shadow-sm mt-8">
+          <CardHeader>
+            <CardTitle>Alt Konumlardaki Tehlikeli Maddeler</CardTitle>
+            <CardDescription>Bulunduğunuz seviyenin altındaki konumlara (Birim, Mahal vb.) atanmış maddeler.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="rounded-lg border overflow-hidden">
@@ -481,7 +604,7 @@ export default function HazmatDepartmentsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {currentLevelInventory.map((item: any) => (
+                    {subInventory.map((item: any) => (
                       <tr 
                         key={item.id} 
                         className="hover:bg-muted/30 transition-colors cursor-pointer group"
@@ -525,8 +648,11 @@ export default function HazmatDepartmentsPage() {
                         </td>
                         <td className="px-4 py-3">
                           <Badge variant="secondary" className="font-normal bg-primary/5">
-                            {item.department.name || item.department.description || 'İsimsiz Mahal'}
-                            {(item.department.floor && currentPath.length < 2) ? ` (${item.department.floor})` : ''}
+                            {(() => {
+                               const path = [item.department.building, item.department.floor, item.department.department, item.department.description].filter(Boolean);
+                               if (path.length === 0 && item.department.name) path.push(item.department.name);
+                               return path.slice(currentPath.length).join(' / ') || 'Bilinmiyor';
+                            })()}
                           </Badge>
                         </td>
                       </tr>

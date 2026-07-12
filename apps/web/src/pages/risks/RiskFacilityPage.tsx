@@ -43,10 +43,7 @@ export default function RiskFacilityPage() {
   const token = localStorage.getItem('token');
   const { user } = useAuth();
   const isAdminOrMgmt = user?.isAdmin || user?.isManagement;
-  const [newDeptName, setNewDeptName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [adding, setAdding] = useState(false);
-  const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showBulkPrint, setShowBulkPrint] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
@@ -83,17 +80,6 @@ export default function RiskFacilityPage() {
       return res.json();
     },
     enabled: !!facilityId,
-  });
-
-  const { data: globalDepartments = [] } = useQuery({
-    queryKey: ['global-departments'],
-    queryFn: async () => {
-      const res = await fetch(`${API}/api/settings/definitions/departments`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return [];
-      return res.json();
-    },
   });
 
   const facility = facilities.find((f: any) => f.id === facilityId);
@@ -176,37 +162,8 @@ export default function RiskFacilityPage() {
               <Upload className="w-4 h-4 mr-1.5" /> Konsolide Excel Aktar
             </Button>
           )}
-          <Button size="sm" onClick={() => setShowAdd(!showAdd)}>
-            <Plus className="w-4 h-4 mr-1.5" /> Departman Ekle
-          </Button>
         </div>
       </div>
-
-      {/* Yeni Departman Formu */}
-      {showAdd && (
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="p-4 flex gap-2 items-center">
-            <input
-              list="global-departments"
-              value={newDeptName}
-              onChange={e => setNewDeptName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleAddDept()}
-              placeholder="Departman seçin veya yazın (Örn: Acil Servis)"
-              className="flex-1 h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              autoFocus
-            />
-            <datalist id="global-departments">
-              {globalDepartments.map((d: any) => (
-                <option key={d.id} value={d.name} />
-              ))}
-            </datalist>
-            <Button size="sm" onClick={handleAddDept} disabled={adding || !newDeptName.trim()}>
-              {adding ? 'Ekleniyor...' : 'Ekle'}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setShowAdd(false)}>İptal</Button>
-          </CardContent>
-        </Card>
-      )}
 
       {/* TOP METRICS (Stitch Style) */}
       {!risksLoading && (

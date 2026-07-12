@@ -249,9 +249,15 @@ router.put('/accidents/:facilityId/monthly/:month', async (req: AuthRequest, res
 router.get('/facilities', async (req: AuthRequest, res: Response) => {
   try {
     const user = getUser(req);
-    const facilityFilter = user.facilities?.length > 0
-      ? { id: { in: user.facilities as string[] } }
-      : {};
+    
+    let facilityFilter = {};
+    if (!user.isAdmin && !user.isManagement) {
+      if (user.facilities && user.facilities.length > 0) {
+        facilityFilter = { id: { in: user.facilities as string[] } };
+      } else {
+        return res.json([]); // Not admin and no facilities assigned, return empty
+      }
+    }
 
     const facilities = await prisma.facility.findMany({
       where: { isActive: true, ...facilityFilter },

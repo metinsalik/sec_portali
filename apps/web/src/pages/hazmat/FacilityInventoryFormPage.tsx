@@ -10,9 +10,11 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Save, AlertTriangle, Layers, Pencil, CheckCircle2, Check, ChevronsUpDown } from 'lucide-react';
+import { Save, AlertTriangle, Layers, Pencil, CheckCircle2, Check, ChevronsUpDown, Plus } from 'lucide-react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import LocationCascadingSelector from '@/components/shared/LocationCascadingSelector';
+import { toast } from 'react-hot-toast';
 
 export default function FacilityInventoryFormPage() {
   const navigate = useNavigate();
@@ -27,6 +29,7 @@ export default function FacilityInventoryFormPage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>(initialDepartmentId ? [initialDepartmentId] : []);
   
+  const [cascadingSelection, setCascadingSelection] = useState<string>('');
   const [openMaterial, setOpenMaterial] = useState(false);
   const [openDept, setOpenDept] = useState(false);
   const [deptSearch, setDeptSearch] = useState('');
@@ -153,7 +156,7 @@ export default function FacilityInventoryFormPage() {
       const matrixArray = selectedDepartments.map(departmentId => {
         const values = matrixState[departmentId] || { minQuantity: '', maxQuantity: '' };
         return {
-          departmentId,
+          locationId: departmentId,
           minQuantity: values.minQuantity,
           maxQuantity: values.maxQuantity
         };
@@ -165,17 +168,22 @@ export default function FacilityInventoryFormPage() {
         materialId: selectedMaterialId,
         matrix: matrixArray
       });
-      if (!res.ok) throw new Error('Failed to save');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.details || data.error || 'Failed to save');
+      }
     },
     onSuccess: () => {
       toast.success('Envanter başarıyla güncellendi');
       queryClient.invalidateQueries({ queryKey: ['inventory-matrix', activeFacilityId, selectedMaterialId] });
       queryClient.invalidateQueries({ queryKey: ['inventory-summary', activeFacilityId] });
       queryClient.invalidateQueries({ queryKey: ['facility-material-item', activeFacilityId, selectedMaterialId] });
+      queryClient.invalidateQueries({ queryKey: ['facility-locations', activeFacilityId] });
       navigate(returnTo);
     },
-    onError: () => {
-      toast.error('Kaydedilirken bir hata oluştu');
+    onError: (error: any) => {
+      toast.error(error?.message || 'Kaydedilirken bir hata oluştu');
+      console.error('Save error:', error);
     }
   });
 
@@ -228,6 +236,22 @@ export default function FacilityInventoryFormPage() {
       return fullName.includes(deptSearch.toLowerCase());
     });
   }, [matrixData, deptSearch, initialDepartmentId]);
+
+  const getLocationName = (deptId: string) => {
+    if (deptId.startsWith('group:')) {
+      const parts = deptId.split(':');
+      if (parts.length >= 4) {
+        const level = parts[1];
+        const path = parts.slice(3).join(':');
+        const levelText = level === 'building' ? 'Bina Geneli' : level === 'floor' ? 'Kat Geneli' : 'Grup';
+        return `${path} (${levelText})`;
+      }
+      return deptId;
+    }
+    const dept = matrixData?.departments?.find((d: any) => d.id === deptId);
+    if (!dept) return deptId;
+    return `${dept.building ? dept.building + ' / ' : ''}${dept.floor ? dept.floor + ' / ' : ''}${dept.name}`;
+  };
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-12">
@@ -367,22 +391,31 @@ export default function FacilityInventoryFormPage() {
               ) : (
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground mb-2">Bu ürünün bulunacağı lokasyonu seçip listeye ekleyin.</p>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <LocationTreeSelector 
-                        facilityId={facilityId || ''}
-                        value={''}
-                        onChange={(val) => {
-                          if (!selectedDepartments.includes(val)) {
-                            setSelectedDepartments([...selectedDepartments, val]);
-                            // Ensure it's added to inventoryAmounts if not exists
-                            if (!inventoryAmounts[val]) {
-                              setInventoryAmounts({...inventoryAmounts, [val]: { min: '', max: '' }});
-                            }
-                          }
-                        }}
+                  <div className="flex gap-4 items-end">
+                    <div className="flex-1 border rounded-md p-4">
+                      <LocationCascadingSelector 
+                        locations={matrixData?.departments || []}
+                        value={cascadingSelection}
+                        onChange={(val) => setCascadingSelection(val)}
                       />
                     </div>
+                    <Button 
+                      type="button" 
+                      onClick={() => {
+                        if (cascadingSelection && !selectedDepartments.includes(cascadingSelection)) {
+                          setSelectedDepartments([...selectedDepartments, cascadingSelection]);
+                          if (!matrixState[cascadingSelection]) {
+                            setMatrixState(prev => ({...prev, [cascadingSelection]: { minQuantity: '', maxQuantity: '' }}));
+                          }
+                          setCascadingSelection('');
+                        }
+                      }}
+                      disabled={!cascadingSelection || selectedDepartments.includes(cascadingSelection)}
+                      className="mb-4"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Listeye Ekle
+                    </Button>
                   </div>
                 </div>
               )}
@@ -417,13 +450,13 @@ export default function FacilityInventoryFormPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {selectedDepartmentsData.map((dept: any) => {
-                        const values = matrixState[dept.id] || { minQuantity: '', maxQuantity: '' };
+                      {selectedDepartments.map((deptId: string) => {
+                        const values = matrixState[deptId] || { minQuantity: '', maxQuantity: '' };
                         return (
-                          <tr key={dept.id} className="hover:bg-muted/20">
+                          <tr key={deptId} className="hover:bg-muted/20">
                             <td className="px-4 py-4 font-medium flex items-center gap-2">
                               <CheckCircle2 className="w-4 h-4 text-green-500" />
-                              {dept.name}
+                              {getLocationName(deptId)}
                             </td>
                             <td className="px-4 py-3">
                               <Input 
@@ -431,7 +464,7 @@ export default function FacilityInventoryFormPage() {
                                 min="0"
                                 placeholder="0"
                                 value={values.minQuantity}
-                                onChange={(e) => handleInputChange(dept.id, 'minQuantity', e.target.value)}
+                                onChange={(e) => handleInputChange(deptId, 'minQuantity', e.target.value)}
                               />
                             </td>
                             <td className="px-4 py-3">
@@ -440,7 +473,7 @@ export default function FacilityInventoryFormPage() {
                                 min="0"
                                 placeholder="0"
                                 value={values.maxQuantity}
-                                onChange={(e) => handleInputChange(dept.id, 'maxQuantity', e.target.value)}
+                                onChange={(e) => handleInputChange(deptId, 'maxQuantity', e.target.value)}
                               />
                             </td>
                             <td className="px-4 py-3 text-right text-muted-foreground">

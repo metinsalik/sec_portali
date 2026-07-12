@@ -44,9 +44,10 @@ export default function HazmatFacilityMaterialPage() {
     facilityItem.material.inventory.forEach((invItem: any) => {
       tMin += (invItem.minQuantity || 0);
       tMax += (invItem.maxQuantity || 0);
-      if (invItem.department) {
+      const loc = invItem.location || invItem.department;
+      if (loc) {
         depts.push({
-          ...invItem.department,
+          ...loc,
           inventoryItem: invItem
         });
       }
@@ -141,7 +142,7 @@ export default function HazmatFacilityMaterialPage() {
                   <tbody className="divide-y">
                     {departments.filter(Boolean).map((dept: any) => {
                       const isCart = dept.isCleaningCart || dept.name?.includes('[Temizlik Arabası]');
-                      const nameStr = dept.name || dept.description || 'İsimsiz Lokasyon';
+                      const nameStr = dept.name || dept.description || dept.department || dept.floor || dept.building || 'İsimsiz Lokasyon';
                       
                       return (
                         <tr 

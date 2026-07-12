@@ -11,6 +11,7 @@ import { ArrowLeft, Upload, Loader2, Save } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import LocationCascadingSelector from '@/components/shared/LocationCascadingSelector';
 
 const api = {
   get: async (url: string) => {
@@ -120,31 +121,61 @@ export default function EyewashRiskAnalysisFormPage() {
     enabled: !!facilityId
   });
 
-  const [locBlock, setLocBlock] = useState('all');
-  const [locFloor, setLocFloor] = useState('all');
-  const [locDepartment, setLocDepartment] = useState('all');
+  // Fetch inventory for selected location to calculate chemicals
+  const { data: inventoryData } = useQuery({
+    queryKey: ['hazmat-inventory-dept', formData.department, facilityId],
+    queryFn: async () => {
+      if (!formData.department || !facilityId) return null;
+      const res = await api.get(`/hazmat/inventory/department/${formData.department}?facilityId=${facilityId}`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!formData.department && !!facilityId
+  });
+
+  // Fetch ADR (Hazard Labels) which acts as categories
+  const { data: adrCategories = [] } = useQuery({
+    queryKey: ['hazmat-hazard-labels'],
+    queryFn: async () => {
+      const res = await api.get(`/hazmat/settings/hazard-labels`);
+      if (!res.ok) return [];
+      return res.json();
+    }
+  });
 
   useEffect(() => {
-    if (departments.length > 0) {
-      const uniqueBlocks = Array.from(new Set(departments.map((d: any) => d.building).filter(Boolean)));
-      if (uniqueBlocks.length === 1 && locBlock === 'all') {
-        setLocBlock(uniqueBlocks[0] as string);
-      }
-    }
-  }, [departments, locBlock]);
+    if (inventoryData && inventoryData.inventoryItems && adrCategories.length > 0) {
+      const newDetails: Record<string, number> = {};
+      let total = 0;
+      
+      // Initialize with all ADR labels
+      adrCategories.forEach((cat: any) => {
+        newDetails[cat.name] = 0;
+      });
 
-  const blocks = Array.from(new Set(departments.map((d: any) => d.building).filter(Boolean))).sort();
-  const floors = Array.from(new Set(departments.filter((d: any) => locBlock === 'all' || d.building === locBlock).map((d: any) => d.floor).filter(Boolean))).sort();
-  const filteredDepts = Array.from(new Set(departments.filter((d: any) => (locBlock === 'all' || d.building === locBlock) && (locFloor === 'all' || d.floor === locFloor)).map((d: any) => d.name).filter(Boolean))).sort();
-  
-  const getFilteredLocations = () => {
-    return departments.filter((d: any) => {
-      if (locBlock !== 'all' && d.building !== locBlock) return false;
-      if (locFloor !== 'all' && d.floor !== locFloor) return false;
-      if (locDepartment !== 'all' && d.name !== locDepartment) return false;
-      return true;
-    });
-  };
+      // Sum quantities based on inventory hazardLabels
+      inventoryData.inventoryItems.forEach((item: any) => {
+        const qty = item.maxQuantity || 0;
+        total += qty;
+        if (item.material?.hazardLabels && item.material.hazardLabels.length > 0) {
+          item.material.hazardLabels.forEach((hl: any) => {
+            const catName = hl.label?.name;
+            if (catName) {
+              newDetails[catName] = (newDetails[catName] || 0) + qty;
+            }
+          });
+        }
+      });
+
+      setFormData((prev: any) => ({
+        ...prev,
+        chemicalDetails: newDetails,
+        chemicalTotalLiters: total
+      }));
+    }
+  }, [inventoryData, adrCategories]);
+
+
 
   const handleLocationSelect = (locId: string) => {
     const loc = departments.find((d: any) => d.id === locId);
@@ -237,47 +268,12 @@ export default function EyewashRiskAnalysisFormPage() {
               <Input type="date" value={formData.analysisDate?.split('T')[0] || ''} onChange={e => setFormData({...formData, analysisDate: e.target.value})} className="h-11" />
             </div>
             <div className="space-y-3 md:col-span-2 p-4 bg-white rounded-lg border">
-              <Label className="text-base font-semibold">Lokasyon Seçimi</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <div className="space-y-1">
-                  <Label className="text-xs">Blok Seçimi *</Label>
-                  <select className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-1 text-sm disabled:opacity-50" disabled={blocks.length === 0} value={locBlock} onChange={e => {setLocBlock(e.target.value); setLocFloor('all'); setLocDepartment('all');}}>
-                    <option value="all">Seçiniz...</option>
-                    {blocks.map((b: any) => <option key={b} value={b}>{b}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Kat Seçimi *</Label>
-                  <select className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-1 text-sm disabled:opacity-50" disabled={floors.length === 0} value={locFloor} onChange={e => {setLocFloor(e.target.value); setLocDepartment('all');}}>
-                    <option value="all">Seçiniz...</option>
-                    {floors.map((f: any) => <option key={f} value={f}>{f}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Birim Seçimi *</Label>
-                  <select className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-1 text-sm disabled:opacity-50" disabled={filteredDepts.length === 0} value={locDepartment} onChange={e => setLocDepartment(e.target.value)}>
-                    <option value="all">Seçiniz...</option>
-                    {filteredDepts.map((d: any) => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Mahal Seçimi (Opsiyonel)</Label>
-                  <select 
-                    className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-1 text-sm disabled:opacity-50"
-                    onChange={(e) => handleLocationSelect(e.target.value)}
-                    value=""
-                  >
-                    <option value="" disabled>Seçiniz...</option>
-                    {getFilteredLocations().map((loc: any) => (
-                      <option key={loc.id} value={loc.id}>{`${loc.building ? `${loc.building} / ` : ''}${loc.floor ? `${loc.floor} / ` : ''}${loc.name}${loc.description ? ` / ${loc.description}` : ''}`}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="mt-2">
-                <Label className="text-xs text-muted-foreground">Seçilen Departman (Kaydedilecek)</Label>
-                <Input value={formData.department || ''} onChange={e => setFormData({...formData, department: e.target.value})} className="h-11 bg-slate-50 font-medium" />
-              </div>
+              <Label className="text-base font-semibold">Lokasyon Seçimi *</Label>
+              <LocationCascadingSelector
+                locations={departments}
+                value={formData.department || ''}
+                onChange={(val) => setFormData({ ...formData, department: val })}
+              />
             </div>
             <div className="space-y-3">
               <Label>Alan Yüz ölçümü (m²)</Label>
@@ -293,26 +289,24 @@ export default function EyewashRiskAnalysisFormPage() {
           <div className="space-y-4 bg-muted/30 p-6 rounded-xl border border-border/50">
             <h3 className="font-semibold text-lg">Alanda Bulunan Kimyasal Madde Türleri ve Miktarları (Litre)</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {['Yanıcı', 'Aşındırıcı', 'Tahriş Edici', 'Oksitleyici', 'Toksik', 'Kanserojen', 'Bulaşıcı'].map(type => {
-                const key = type.toLowerCase().replace(/ş/g, 's').replace(/ı/g, 'i').replace(/ /g, '');
-                return (
-                  <div key={key} className="space-y-2">
-                    <Label className="text-sm">{type} Madde</Label>
-                    <Input type="number" value={formData.chemicalDetails?.[key] || 0} onChange={e => {
-                      const newDetails = { ...formData.chemicalDetails, [key]: parseFloat(e.target.value) || 0 };
-                      setFormData({
-                        ...formData,
-                        chemicalDetails: newDetails,
-                        chemicalTotalLiters: calculateTotalLiters(newDetails)
-                      });
-                    }} className="h-11" />
+              {Object.keys(formData.chemicalDetails || {}).length > 0 ? (
+                Object.entries(formData.chemicalDetails).map(([catName, qty]) => (
+                  <div key={catName} className="space-y-2">
+                    <Label className="text-sm">{catName}</Label>
+                    <Input type="number" readOnly className="h-11 bg-slate-50" value={String(qty)} />
                   </div>
-                );
-              })}
-              <div className="space-y-2">
-                <Label className="text-sm font-bold text-primary">Toplam (Litre)</Label>
-                <Input type="number" readOnly className="bg-muted font-bold h-11 border-primary/50 text-primary" value={formData.chemicalTotalLiters || 0} />
-              </div>
+                ))
+              ) : (
+                <div className="col-span-full text-sm text-muted-foreground p-4 bg-muted/50 rounded-lg text-center">
+                  Seçilen lokasyona ait kimyasal envanter bulunamadı. Lütfen bir lokasyon seçiniz veya envanter girdiğinizden emin olunuz.
+                </div>
+              )}
+              {Object.keys(formData.chemicalDetails || {}).length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-primary">Toplam (Litre)</Label>
+                  <Input type="number" readOnly className="bg-muted font-bold h-11 border-primary/50 text-primary" value={formData.chemicalTotalLiters || 0} />
+                </div>
+              )}
             </div>
           </div>
 

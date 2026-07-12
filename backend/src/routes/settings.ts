@@ -65,7 +65,19 @@ router.post('/facilities/upload-logo', upload.single('file'), (req: AuthRequest,
 });
 router.get('/facilities', async (req: AuthRequest, res: Response) => {
   try {
+    const user = req.user!;
+    let whereClause = {};
+    
+    if (!user.isAdmin && !user.isManagement) {
+      if (user.facilities && user.facilities.length > 0) {
+        whereClause = { id: { in: user.facilities as string[] } };
+      } else {
+        return res.json([]);
+      }
+    }
+    
     const facilities = await prisma.facility.findMany({
+      where: whereClause,
       include: { buildings: true, assignments: true },
       orderBy: { id: 'asc' },
     });

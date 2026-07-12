@@ -123,8 +123,39 @@ router.get('/department/:id', authMiddleware, async (req: AuthRequest, res) => {
   }
 
   try {
+    let actualLocationId = id;
+    if (id.startsWith('group:')) {
+      const parts = id.split(':');
+      let b = '', f = '', d = '';
+      if (['building', 'floor', 'department'].includes(parts[1])) {
+        const level = parts[1];
+        const pathParts = parts.slice(3).join(':').split('|');
+        if (level === 'building') { b = pathParts[0] || ''; }
+        else if (level === 'floor') { b = pathParts[0] || ''; f = pathParts[1] || ''; }
+        else { b = pathParts[0] || ''; f = pathParts[1] || ''; d = pathParts[2] || ''; }
+      }
+      
+      let groupLoc = await prisma.facilityLocation.findFirst({
+        where: { facilityId: String(facilityId), building: b || null, floor: f || null, department: d || null, description: null }
+      });
+      
+      if (!groupLoc) {
+        groupLoc = await prisma.facilityLocation.create({
+          data: {
+            facilityId: String(facilityId),
+            name: d || f || b || 'Bilinmeyen',
+            building: b || null,
+            floor: f || null,
+            department: d || null,
+            description: null
+          }
+        });
+      }
+      actualLocationId = groupLoc.id;
+    }
+
     const department = await prisma.facilityLocation.findUnique({
-      where: { id }
+      where: { id: actualLocationId }
     });
 
     if (!department) {
@@ -132,7 +163,7 @@ router.get('/department/:id', authMiddleware, async (req: AuthRequest, res) => {
     }
 
     const inventoryItems = await prisma.hazmatInventoryItem.findMany({
-      where: { locationId: id, facilityId: String(facilityId) },
+      where: { locationId: actualLocationId, facilityId: String(facilityId) },
       include: {
         material: {
           include: {
@@ -171,7 +202,37 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
     // We will do this in a transaction
     await prisma.$transaction(async (tx) => {
       for (const item of matrix) {
-        const { locationId, minQuantity, maxQuantity } = item;
+        let { locationId, minQuantity, maxQuantity } = item;
+        
+        if (locationId && locationId.startsWith('group:')) {
+          const parts = locationId.split(':');
+          let b = '', f = '', d = '';
+          if (['building', 'floor', 'department'].includes(parts[1])) {
+            const level = parts[1];
+            const pathParts = parts.slice(3).join(':').split('|');
+            if (level === 'building') { b = pathParts[0] || ''; }
+            else if (level === 'floor') { b = pathParts[0] || ''; f = pathParts[1] || ''; }
+            else { b = pathParts[0] || ''; f = pathParts[1] || ''; d = pathParts[2] || ''; }
+          }
+          
+          let groupLoc = await tx.facilityLocation.findFirst({
+            where: { facilityId, building: b || null, floor: f || null, department: d || null, description: null }
+          });
+          
+          if (!groupLoc) {
+            groupLoc = await tx.facilityLocation.create({
+              data: {
+                facilityId,
+                name: d || f || b || 'Bilinmeyen',
+                building: b || null,
+                floor: f || null,
+                department: d || null,
+                description: null
+              }
+            });
+          }
+          locationId = groupLoc.id;
+        }
         
         // If both are empty/null/0, we can delete the entry or just store null
         if (!minQuantity && !maxQuantity) {
@@ -180,31 +241,43 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
             where: { facilityId, materialId, locationId }
           });
         } else {
-          // Upsert
-          await tx.hazmatInventoryItem.upsert({
+          const locId = locationId || null;
+          const existingItem = await tx.hazmatInventoryItem.findFirst({
             where: {
-              facilityId_locationId_vehicleId_materialId: { facilityId, locationId: locationId || "", vehicleId: "", materialId }
-            },
-            update: {
-              minQuantity: minQuantity ? Number(minQuantity) : null,
-              maxQuantity: maxQuantity ? Number(maxQuantity) : null
-            },
-            create: {
               facilityId,
-              locationId,
-              materialId,
-              minQuantity: minQuantity ? Number(minQuantity) : null,
-              maxQuantity: maxQuantity ? Number(maxQuantity) : null
+              locationId: locId,
+              vehicleId: null,
+              materialId
             }
           });
+
+          if (existingItem) {
+            await tx.hazmatInventoryItem.update({
+              where: { id: existingItem.id },
+              data: {
+                minQuantity: minQuantity ? Number(minQuantity) : null,
+                maxQuantity: maxQuantity ? Number(maxQuantity) : null
+              }
+            });
+          } else {
+            await tx.hazmatInventoryItem.create({
+              data: {
+                facilityId,
+                locationId: locId,
+                materialId,
+                minQuantity: minQuantity ? Number(minQuantity) : null,
+                maxQuantity: maxQuantity ? Number(maxQuantity) : null
+              }
+            });
+          }
         }
       }
     });
 
     res.json({ message: 'Inventory updated successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating inventory:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error', details: error.message, stack: error.stack });
   }
 });
 
