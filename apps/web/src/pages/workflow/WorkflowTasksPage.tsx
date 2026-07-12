@@ -30,7 +30,7 @@ export default function WorkflowTasksPage({ planId }: { planId?: string }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { data: tasks, isLoading, error } = useWorkflowTasks(
-    planId ? { planId } : { assigneeId: user?.username || '' }
+    planId ? { planId } : {}
   );
   const { mutate: updateStatus } = useUpdateTaskStatus();
 
@@ -262,7 +262,7 @@ export default function WorkflowTasksPage({ planId }: { planId?: string }) {
                             </div>
                           </td>
                           <td className="px-6 py-2 md:py-4 text-slate-500">
-                            {task.creator?.fullName || task.creator?.username || task.creatorId}
+                            {task.assignee?.fullName || task.assignee?.username || task.assigneeId}
                           </td>
                           <td className="px-6 py-2 md:py-4 text-slate-500">
                             {new Date(task.dueDate).toLocaleDateString('tr-TR')}

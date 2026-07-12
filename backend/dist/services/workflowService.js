@@ -33,22 +33,6 @@ class WorkflowService {
             }
         });
     }
-    async updatePlan(id, data) {
-        return await prisma.wfPlan.update({
-            where: { id },
-            data
-        });
-    }
-    async deletePlan(id) {
-        // 7. Plan silme: Bağlı görevler silinmez, planId = null yapılır
-        await prisma.wfTask.updateMany({
-            where: { planId: id },
-            data: { planId: null }
-        });
-        return await prisma.wfPlan.delete({
-            where: { id }
-        });
-    }
     // Alerts
     async getAlerts(user) {
         const hasAdminAccess = user?.workflowRole === 'ADMIN' || user?.workflowRole === 'MANAGER' || user?.roles?.includes('admin') || user?.roles?.includes('management') || user?.isAdmin;
@@ -180,6 +164,33 @@ class WorkflowService {
                 .slice(0, 10)
         };
     }
+    async updatePlan(id, data, user) {
+        const plan = await prisma.wfPlan.findUnique({ where: { id } });
+        if (!plan)
+            throw new Error('Plan not found');
+        const hasAdminAccess = user?.workflowRole === 'ADMIN' || user?.workflowRole === 'MANAGER' || user?.roles?.includes('admin') || user?.roles?.includes('management') || user?.isAdmin;
+        if (!hasAdminAccess && plan.ownerId !== user.username) {
+            throw new Error('Planı düzenleme yetkiniz yok. Sadece planı oluşturan kişi düzenleyebilir.');
+        }
+        return await prisma.wfPlan.update({
+            where: { id },
+            data
+        });
+    }
+    async deletePlan(id, user) {
+        const plan = await prisma.wfPlan.findUnique({ where: { id } });
+        if (!plan)
+            throw new Error('Plan not found');
+        const hasAdminAccess = user?.workflowRole === 'ADMIN' || user?.workflowRole === 'MANAGER' || user?.roles?.includes('admin') || user?.roles?.includes('management') || user?.isAdmin;
+        if (!hasAdminAccess && plan.ownerId !== user.username) {
+            throw new Error('Planı silme yetkiniz yok. Sadece planı oluşturan kişi silebilir.');
+        }
+        const taskCount = await prisma.wfTask.count({ where: { planId: id } });
+        if (taskCount > 0) {
+            throw new Error('Bu planın içinde görevler mevcut. Lütfen önce görevleri silin.');
+        }
+        return await prisma.wfPlan.delete({ where: { id } });
+    }
     async getTasks(user, filters) {
         const where = {};
         if (filters.status)
@@ -245,8 +256,8 @@ class WorkflowService {
                 priority: data.priority,
                 category: data.category,
                 labels: data.labels || [],
-                startDate: data.startDate,
-                dueDate: data.dueDate,
+                startDate: new Date(data.startDate),
+                dueDate: new Date(data.dueDate),
                 estimateHours: data.estimateHours,
                 blockNote: data.blockNote,
                 checklist: {
@@ -262,18 +273,6 @@ class WorkflowService {
         await this.logActivity(user.username, "Görev oluşturuldu", `Görev ID: ${task.id}`);
         // Telegram Notification
         await (0, telegramService_1.sendTelegramMessage)(data.assigneeId, `🚨 <b>Yeni Görev Atandı</b>\n\n<b>Görev:</b> ${data.title}\n<b>Öncelik:</b> ${data.priority}\n<b>Son Tarih:</b> ${new Date(data.dueDate).toLocaleDateString('tr-TR')}\n\nLütfen portal üzerinden kontrol ediniz.`);
-        index_1.io.emit('task_updated', task.id);
-        return task;
-    }
-    async updateTask(id, user, data) {
-        const task = await prisma.wfTask.update({
-            where: { id },
-            data: {
-                ...data,
-                checklist: undefined // Handle checklist updates separately or with a specific logic if needed
-            }
-        });
-        await this.logActivity(user.username, "Görev güncellendi", `Görev ID: ${task.id}`);
         index_1.io.emit('task_updated', task.id);
         return task;
     }
@@ -315,6 +314,56 @@ class WorkflowService {
         }
         return updatedTask;
     }
+    async updateTask(id, data, user) {
+        const task = await prisma.wfTask.findUnique({ where: { id } });
+        if (!task)
+            throw new Error('Task not found');
+        const hasAdminAccess = user?.workflowRole === 'ADMIN' || user?.workflowRole === 'MANAGER' || user?.roles?.includes('admin') || user?.roles?.includes('management') || user?.isAdmin;
+        // Only creator, follower or admin can edit
+        if (!hasAdminAccess && task.creatorId !== user.username && task.followerId !== user.username) {
+            throw new Error('Görevi düzenleme yetkiniz yok. Sadece görevi veren kişi düzenleyebilir.');
+        }
+        const { checklist, ...taskData } = data;
+        if (taskData.startDate)
+            taskData.startDate = new Date(taskData.startDate);
+        if (taskData.dueDate)
+            taskData.dueDate = new Date(taskData.dueDate);
+        const updated = await prisma.wfTask.update({
+            where: { id },
+            data: taskData
+        });
+        if (checklist) {
+            // Very basic approach: delete old and create new
+            await prisma.wfChecklistStep.deleteMany({ where: { taskId: id } });
+            let order = 0;
+            for (const step of checklist) {
+                await prisma.wfChecklistStep.create({
+                    data: {
+                        text: step.text || step.title || '',
+                        done: step.isDone || step.done || false,
+                        order: step.order ?? order++,
+                        requireEvidence: step.requireEvidence || false,
+                        requireDescription: step.requireDescription || false,
+                        taskId: id
+                    }
+                });
+            }
+        }
+        await this.logActivity(user.username, "Görev güncellendi", `Görev ID: ${id}`);
+        index_1.io.emit('task_updated', id);
+        return updated;
+    }
+    async deleteTask(id, user) {
+        const task = await prisma.wfTask.findUnique({ where: { id } });
+        if (!task)
+            throw new Error('Task not found');
+        const hasAdminAccess = user?.workflowRole === 'ADMIN' || user?.workflowRole === 'MANAGER' || user?.roles?.includes('admin') || user?.roles?.includes('management') || user?.isAdmin;
+        // Only creator or admin can delete
+        if (!hasAdminAccess && task.creatorId !== user.username) {
+            throw new Error('Görevi silme yetkiniz yok. Sadece görevi veren (açan) kişi silebilir.');
+        }
+        return await prisma.wfTask.delete({ where: { id } });
+    }
     async updateTaskStatus(id, user, status) {
         const task = await prisma.wfTask.findUnique({ where: { id } });
         if (!task)
@@ -329,7 +378,10 @@ class WorkflowService {
         }
         const res = await prisma.wfTask.update({
             where: { id },
-            data: { status: finalStatus },
+            data: {
+                status: finalStatus,
+                ...(finalStatus !== client_1.WfStatus.BLOCKED ? { blockNote: null } : {})
+            },
         });
         if (finalStatus === 'REVIEW' && task.creatorId) {
             await (0, telegramService_1.sendTelegramMessage)(task.creatorId, `✅ <b>Görev Onay Bekliyor</b>\n\n<b>Görev:</b> ${task.title}\n\nGörevi yapan kişi tüm adımları tamamladı, kontrolünüzü bekliyor.`);
@@ -348,10 +400,37 @@ class WorkflowService {
         });
         return res;
     }
-    async addChecklistStep(taskId, data) {
+    async unblockTask(id, user, resolutionNote) {
+        const task = await prisma.wfTask.findUnique({ where: { id } });
+        if (!task)
+            throw new Error("Task not found");
+        if (task.status !== client_1.WfStatus.BLOCKED)
+            throw new Error("Görev engellenmiş durumda değil.");
+        const res = await prisma.wfTask.update({
+            where: { id },
+            data: {
+                status: client_1.WfStatus.DOING,
+                blockNote: null
+            },
+        });
+        await prisma.wfActivityLog.create({
+            data: {
+                actorId: user.username,
+                taskId: id,
+                action: 'UNBLOCK',
+                detail: `Engel kaldırıldı. Çözüm: ${resolutionNote}`
+            }
+        });
+        return res;
+    }
+    async addChecklistStep(taskId, user, data) {
         const task = await prisma.wfTask.findUnique({ where: { id: taskId }, include: { checklist: true } });
         if (!task)
             throw new Error('Task not found');
+        const hasAdminAccess = user?.workflowRole === 'ADMIN' || user?.workflowRole === 'MANAGER' || user?.roles?.includes('admin') || user?.roles?.includes('management') || user?.isAdmin;
+        if (!hasAdminAccess && task.creatorId !== user.username) {
+            throw new Error('Yetkisiz işlem. Adımları sadece yöneticiler veya görevi açan kişi değiştirebilir.');
+        }
         const newOrder = task.checklist.length > 0 ? Math.max(...task.checklist.map(s => s.order)) + 1 : 0;
         const newStep = await prisma.wfChecklistStep.create({
             data: {
@@ -364,7 +443,14 @@ class WorkflowService {
         });
         return newStep;
     }
-    async updateChecklistStepDefinition(taskId, stepId, data) {
+    async updateChecklistStepDefinition(taskId, stepId, user, data) {
+        const task = await prisma.wfTask.findUnique({ where: { id: taskId } });
+        if (!task)
+            throw new Error('Task not found');
+        const hasAdminAccess = user?.workflowRole === 'ADMIN' || user?.workflowRole === 'MANAGER' || user?.roles?.includes('admin') || user?.roles?.includes('management') || user?.isAdmin;
+        if (!hasAdminAccess && task.creatorId !== user.username) {
+            throw new Error('Yetkisiz işlem. Adımları sadece yöneticiler veya görevi açan kişi değiştirebilir.');
+        }
         await prisma.wfChecklistStep.update({
             where: { id: stepId },
             data: {
@@ -384,7 +470,14 @@ class WorkflowService {
         }
         return this.getTaskById(taskId);
     }
-    async deleteChecklistStep(taskId, stepId) {
+    async deleteChecklistStep(taskId, stepId, user) {
+        const taskCurrent = await prisma.wfTask.findUnique({ where: { id: taskId } });
+        if (!taskCurrent)
+            throw new Error('Task not found');
+        const hasAdminAccess = user?.workflowRole === 'ADMIN' || user?.workflowRole === 'MANAGER' || user?.roles?.includes('admin') || user?.roles?.includes('management') || user?.isAdmin;
+        if (!hasAdminAccess && taskCurrent.creatorId !== user.username) {
+            throw new Error('Yetkisiz işlem. Adımları sadece yöneticiler veya görevi açan kişi silebilir.');
+        }
         await prisma.wfChecklistStep.delete({
             where: { id: stepId }
         });

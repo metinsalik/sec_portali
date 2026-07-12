@@ -21,7 +21,7 @@ services:
       context: .
       dockerfile: ./backend/Dockerfile
     volumes:
-      - uploads_data:/app/uploads
+      - uploads_data:/app/backend/uploads
     environment:
       DATABASE_URL: postgresql://isguser:${DB_PASSWORD}@postgres:5432/isgdb
       JWT_SECRET: ${JWT_SECRET}

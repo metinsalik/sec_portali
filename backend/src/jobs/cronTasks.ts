@@ -45,6 +45,16 @@ export const startCronJobs = () => {
           newStartDate = addYears(task.startDate, 1);
         }
 
+        if (task.recurrenceEndDate && newStartDate > task.recurrenceEndDate) {
+          // End date reached. Stop spawning.
+          await prisma.wfTask.update({
+            where: { id: task.id },
+            data: { recurrence: null }
+          });
+          console.log(`[CRON] Task ${task.id} reached its recurrenceEndDate. Stopped cloning.`);
+          continue;
+        }
+
         newDueDate = new Date(newStartDate.getTime() + durationMs);
 
         console.log(`[CRON] Cloning task ${task.id} (${task.title}) for recurrence: ${task.recurrence}`);
@@ -61,6 +71,7 @@ export const startCronJobs = () => {
             status: 'TODO',
             priority: task.priority,
             recurrence: task.recurrence,
+            recurrenceEndDate: task.recurrenceEndDate,
             parentTaskId: task.id,
             startDate: newStartDate,
             dueDate: newDueDate

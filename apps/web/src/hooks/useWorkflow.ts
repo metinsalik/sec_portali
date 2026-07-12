@@ -93,3 +93,93 @@ export const useUpdateWorkflowRole = () => {
     },
   });
 };
+
+export const useCreatePlan = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: any) => {
+      const res = await api.post('/workflow/plans', data);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Oluşturulamadı');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow-plans-all'] });
+    },
+  });
+};
+
+export const useUpdatePlan = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const res = await api.put(`/workflow/plans/${id}`, data);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Güncellenemedi');
+      }
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['workflow-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow-plans-all'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow-plan', variables.id] });
+    },
+  });
+};
+
+export const useDeletePlan = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.delete(`/workflow/plans/${id}`);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Silinemedi');
+      }
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow-plans'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow-plans-all'] });
+    },
+  });
+};
+
+export const useDeleteTask = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.delete(`/workflow/tasks/${id}`);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Silinemedi');
+      }
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'tasks'] });
+    },
+  });
+};
+
+export const useUnblockTask = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, resolutionNote }: { id: string; resolutionNote: string }) => {
+      const res = await api.post(`/workflow/tasks/${id}/unblock`, { resolutionNote });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Engel kaldırılamadı');
+      }
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow-task', variables.id] });
+    },
+  });
+};

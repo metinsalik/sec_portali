@@ -279,7 +279,7 @@ export default function GlobalWorkflowChat() {
                           <span className={`font-medium text-sm text-slate-900 dark:text-slate-100 truncate pr-2 ${unreadCount > 0 ? 'font-bold' : ''}`}>{task.title}</span>
                           {unreadCount > 0 && <span className="w-5 h-5 bg-indigo-500 rounded-full text-white text-[10px] flex items-center justify-center shrink-0">{unreadCount}</span>}
                         </div>
-                        <span className="text-xs text-slate-500 truncate">Görevi Yapan: {task.creator?.fullName || task.creator?.username || 'Atanmadı'}</span>
+                        <span className="text-xs text-slate-500 truncate">Görevi Yapan: {task.assignee?.fullName || task.assignee?.username || 'Atanmadı'}</span>
                       </div>
                     );
                   })}

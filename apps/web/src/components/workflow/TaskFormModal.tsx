@@ -19,26 +19,52 @@ interface TaskFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   planId?: string; // If provided, plan is locked
+  initialData?: any; // For editing
 }
 
-export function TaskFormModal({ isOpen, onClose, planId: defaultPlanId }: TaskFormModalProps) {
+export function TaskFormModal({ isOpen, onClose, planId: defaultPlanId, initialData }: TaskFormModalProps) {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
+
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    planId: defaultPlanId || '',
-    creatorId: '',
-    assigneeId: '',
-    priority: 'MEDIUM',
-    status: 'TODO',
-    category: '',
-    labels: '',
-    startDate: '',
-    dueDate: '',
-    blockNote: '',
-    recurrence: ''
+    title: initialData?.title || '',
+    description: initialData?.description || '',
+    planId: initialData?.planId || defaultPlanId || '',
+    assigneeId: initialData?.assigneeId || '',
+    followerId: initialData?.followerId || '',
+    priority: initialData?.priority || 'MEDIUM',
+    category: initialData?.category || '',
+    labels: initialData?.labels ? initialData.labels.join(', ') : '',
+    startDate: initialData?.startDate ? new Date(initialData.startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    dueDate: initialData?.dueDate ? new Date(initialData.dueDate).toISOString().split('T')[0] : '',
+    estimateHours: initialData?.estimateHours?.toString() || '0',
+    recurrence: initialData?.recurrence || '',
+    recurrenceEndDate: initialData?.recurrenceEndDate ? new Date(initialData.recurrenceEndDate).toISOString().split('T')[0] : '',
+    checklist: initialData?.checklist?.map((c: any) => ({ title: c.title, isDone: c.isDone })) || [{ title: '', isDone: false }]
   });
+
+  // Reset form when opened with new initialData
+  React.useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        title: initialData?.title || '',
+        description: initialData?.description || '',
+        planId: initialData?.planId || defaultPlanId || '',
+        assigneeId: initialData?.assigneeId || '',
+        followerId: initialData?.followerId || '',
+        priority: initialData?.priority || 'MEDIUM',
+        category: initialData?.category || '',
+        labels: initialData?.labels ? initialData.labels.join(', ') : '',
+        startDate: initialData?.startDate ? new Date(initialData.startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        dueDate: initialData?.dueDate ? new Date(initialData.dueDate).toISOString().split('T')[0] : '',
+        estimateHours: initialData?.estimateHours?.toString() || '0',
+        recurrence: initialData?.recurrence || '',
+        recurrenceEndDate: initialData?.recurrenceEndDate ? new Date(initialData.recurrenceEndDate).toISOString().split('T')[0] : '',
+        checklist: initialData?.checklist?.map((c: any) => ({ title: c.title, isDone: c.isDone })) || [{ title: '', isDone: false }]
+      });
+    }
+  }, [isOpen, initialData, defaultPlanId]);
+
 
   const [checklist, setChecklist] = useState([
     { id: 1, text: '', requireEvidence: false, requireDescription: false }
@@ -129,36 +155,27 @@ export function TaskFormModal({ isOpen, onClose, planId: defaultPlanId }: TaskFo
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     try {
-      if (!formData.planId) {
-        throw new Error("Lütfen bir iş planı seçiniz.");
-      }
-
+      setLoading(true);
       const payload = {
         ...formData,
-        followerId: formData.assigneeId, 
-        startDate: formData.startDate ? new Date(formData.startDate).toISOString() : new Date().toISOString(),
-        dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : new Date().toISOString(),
-        recurrence: formData.recurrence || null,
-        labels: formData.labels ? formData.labels.split(',').map(s => s.trim()).filter(Boolean) : [],
-        checklist: checklist.filter(c => c.text.trim() !== '').map((c, i) => ({
-          text: c.text,
-          order: i + 1,
-          requireEvidence: c.requireEvidence,
-          requireDescription: c.requireDescription
-        }))
+        ...(formData.estimateHours ? { estimateHours: parseFloat(formData.estimateHours) } : {}),
+        labels: formData.labels.split(',').map((l: string) => l.trim()).filter(Boolean),
+        checklist: checklist.filter(c => c.text.trim() !== '').map((c, idx) => ({ ...c, order: idx }))
       };
+
+      if (initialData?.id) {
+        await api.put(`/workflow/tasks/${initialData.id}`, payload);
+        toast.success('Görev başarıyla güncellendi');
+      } else {
+        await api.post('/workflow/tasks', payload);
+        toast.success('Görev başarıyla oluşturuldu');
+      }
       
-      const res = await api.post('/workflow/tasks', payload);
-      if (!res.ok) throw new Error(await res.text());
-      toast.success('Görev başarıyla oluşturuldu');
-      queryClient.invalidateQueries({ queryKey: ['workflow', 'tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['workflow', 'plans'] }); // To update board if in plan detail
-      queryClient.invalidateQueries({ queryKey: ['workflow', 'dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow'] });
       onClose();
-    } catch (err: any) {
-      toast.error('Görev oluşturulamadı: ' + err.message);
+    } catch (error: any) {
+      toast.error(initialData?.id ? 'Görev güncellenemedi' : 'Görev oluşturulamadı');
     } finally {
       setLoading(false);
     }
@@ -169,7 +186,7 @@ export function TaskFormModal({ isOpen, onClose, planId: defaultPlanId }: TaskFo
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Yeni Görev Oluştur</DialogTitle>
+            <DialogTitle>{initialData ? 'Görevi Düzenle' : 'Yeni Görev'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             
@@ -206,7 +223,7 @@ export function TaskFormModal({ isOpen, onClose, planId: defaultPlanId }: TaskFo
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Görevi Yapan *</label>
-                <select name="creatorId" value={formData.creatorId} onChange={handleChange} required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                <select name="assigneeId" value={formData.assigneeId} onChange={handleChange} required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                   <option value="">Seçiniz...</option>
                   {workflowUsers?.map((u: any) => (
                     <option key={u.username} value={u.username}>{u.fullName || u.username} ({u.workflowRole})</option>
@@ -215,7 +232,7 @@ export function TaskFormModal({ isOpen, onClose, planId: defaultPlanId }: TaskFo
               </div>
               <div className="grid gap-2">
                 <label className="text-sm font-medium">Sorumlu (Görevi takip eden) *</label>
-                <select name="assigneeId" value={formData.assigneeId} onChange={handleChange} required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                <select name="followerId" value={formData.followerId} onChange={handleChange} required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                   <option value="">Seçiniz...</option>
                   {workflowUsers?.map((u: any) => (
                     <option key={u.username} value={u.username}>{u.fullName || u.username} ({u.workflowRole})</option>
@@ -255,6 +272,13 @@ export function TaskFormModal({ isOpen, onClose, planId: defaultPlanId }: TaskFo
                   <option value="YEARLY">Yıllık</option>
                 </select>
               </div>
+              {formData.recurrence && (
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Tekrarın Bitiş Tarihi</label>
+                  <Input type="date" name="recurrenceEndDate" value={formData.recurrenceEndDate || ''} onChange={handleChange} />
+                  <span className="text-[10px] text-slate-500">Boş bırakılırsa sonsuza kadar tekrarlar.</span>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -324,7 +348,7 @@ export function TaskFormModal({ isOpen, onClose, planId: defaultPlanId }: TaskFo
               İptal
             </Button>
             <Button type="submit" disabled={loading || checklist.length === 0}>
-              {loading ? 'Kaydediliyor...' : 'Oluştur'}
+              {loading ? 'Kaydediliyor...' : (initialData ? 'Güncelle' : 'Oluştur')}
             </Button>
           </DialogFooter>
         </form>

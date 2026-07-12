@@ -19,6 +19,8 @@ export interface CreateWfTaskDto {
     requireDescription?: boolean;
   }[];
   status?: 'TODO' | 'DOING' | 'REVIEW' | 'DONE' | 'BLOCKED';
+  recurrence?: string;
+  recurrenceEndDate?: Date;
 }
 
 export interface UpdateWfTaskDto extends Partial<CreateWfTaskDto> {

@@ -53,6 +53,36 @@ router.get('/dashboard/stats', async (req: any, res: any) => {
   }
 });
 
+
+router.put('/tasks/:id', async (req: any, res: any) => {
+  try {
+    const task = await workflowService.updateTask(req.params.id, req.body, req.user);
+    res.json(task);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/tasks/:id/unblock', async (req: any, res: any) => {
+  try {
+    const { resolutionNote } = req.body;
+    if (!resolutionNote) return res.status(400).json({ error: 'Çözüm açıklaması zorunludur' });
+    const task = await workflowService.unblockTask(req.params.id, req.user, resolutionNote);
+    res.json(task);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/tasks/:id', async (req: any, res: any) => {
+  try {
+    await workflowService.deleteTask(req.params.id, req.user);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get('/tasks', async (req: any, res: any) => {
   try {
     const filters = req.query;
@@ -114,7 +144,7 @@ router.patch('/tasks/:id/status', async (req: any, res: any) => {
 
 router.post('/tasks/:id/checklist', async (req: any, res: any) => {
   try {
-    const task = await workflowService.addChecklistStep(req.params.id, req.body);
+    const task = await workflowService.addChecklistStep(req.params.id, req.user, req.body);
     res.json(task);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
@@ -123,7 +153,7 @@ router.post('/tasks/:id/checklist', async (req: any, res: any) => {
 
 router.put('/tasks/:id/checklist/:stepId', async (req: any, res: any) => {
   try {
-    const task = await workflowService.updateChecklistStepDefinition(req.params.id, req.params.stepId, req.body);
+    const task = await workflowService.updateChecklistStepDefinition(req.params.id, req.params.stepId, req.user, req.body);
     res.json(task);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
@@ -132,7 +162,7 @@ router.put('/tasks/:id/checklist/:stepId', async (req: any, res: any) => {
 
 router.delete('/tasks/:id/checklist/:stepId', async (req: any, res: any) => {
   try {
-    const task = await workflowService.deleteChecklistStep(req.params.id, req.params.stepId);
+    const task = await workflowService.deleteChecklistStep(req.params.id, req.params.stepId, req.user);
     res.json(task);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
@@ -193,6 +223,28 @@ router.patch('/tasks/:id/due-requests/:reqId', requireWorkflowRole(['ADMIN', 'MA
 });
 
 // --- PLANS ---
+
+router.put('/plans/:id', async (req: any, res: any) => {
+  try {
+    const data = { ...req.body };
+    if(data.startDate) data.startDate = new Date(data.startDate);
+    if(data.dueDate) data.dueDate = new Date(data.dueDate);
+    const plan = await workflowService.updatePlan(req.params.id, data, req.user);
+    res.json(plan);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/plans/:id', async (req: any, res: any) => {
+  try {
+    await workflowService.deletePlan(req.params.id, req.user);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get('/plans', async (req: any, res: any) => {
   try {
     const plans = await workflowService.getPlans(req.user, req.query);
@@ -234,26 +286,7 @@ router.get('/plans/:id', async (req: any, res: any) => {
   }
 });
 
-router.put('/plans/:id', async (req: any, res: any) => {
-  try {
-    const data = { ...req.body };
-    if(data.startDate) data.startDate = new Date(data.startDate);
-    if(data.dueDate) data.dueDate = new Date(data.dueDate);
-    const plan = await workflowService.updatePlan(req.params.id, data);
-    res.json(plan);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
-  }
-});
 
-router.delete('/plans/:id', requireWorkflowRole(['ADMIN']), async (req: any, res: any) => {
-  try {
-    await workflowService.deletePlan(req.params.id);
-    res.status(204).send();
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
-  }
-});
 
 // --- SETTINGS / ROLES ---
 router.get('/settings/roles', adminMiddleware, async (req: any, res: any) => {

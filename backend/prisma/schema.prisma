@@ -1822,6 +1822,7 @@ model WfTask {
   creator  User @relation(name: "WfTaskCreator", fields: [creatorId], references: [username])
   
   recurrence     String?
+  recurrenceEndDate DateTime?
   lastRecurrenceAt DateTime?
   parentTaskId   String?
 }

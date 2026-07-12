@@ -25,21 +25,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PlanFormModal } from '@/components/workflow/PlanFormModal';
 
 export default function WorkflowPlansPage() {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isCatModalOpen, setIsCatModalOpen] = useState(false);
-  const [newCatName, setNewCatName] = useState('');
-  
-  // Form state
-  const [title, setTitle] = useState('');
-  const [goal, setGoal] = useState('');
-  const [categoryId, setCategoryId] = useState<string>('none');
-  const [ownerId, setOwnerId] = useState<string>('');
-  const [startDate, setStartDate] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [priority, setPriority] = useState('MEDIUM');
 
   const { data: users = [] } = useWorkflowRoles();
 
@@ -61,61 +51,7 @@ export default function WorkflowPlansPage() {
     }
   });
 
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      const payload = {
-        title,
-        goal: goal || undefined,
-        categoryId: categoryId !== 'none' ? categoryId : undefined,
-        ownerId: ownerId || undefined,
-        startDate: new Date(startDate).toISOString(),
-        dueDate: new Date(dueDate).toISOString(),
-        priority
-      };
-      
-      const res = await api.post('/workflow/plans', payload);
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Oluşturulamadı');
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workflow-plans'] });
-      toast.success('İş planı oluşturuldu');
-      closeModal();
-    },
-    onError: (err: any) => {
-      toast.error(err.message);
-    }
-  });
-
-  const createCatMutation = useMutation({
-    mutationFn: async () => {
-      const res = await api.post('/workflow/categories', { name: newCatName });
-      if (!res.ok) throw new Error('Kategori eklenemedi');
-      return res.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['workflow-categories'] });
-      setCategoryId(data.id);
-      setIsCatModalOpen(false);
-      setNewCatName('');
-      toast.success('Kategori eklendi');
-    },
-    onError: (err: any) => toast.error(err.message)
-  });
-
-  const openModal = () => {
-    setTitle('');
-    setGoal('');
-    setCategoryId('none');
-    setOwnerId('');
-    setStartDate(new Date().toISOString().split('T')[0]);
-    setDueDate('');
-    setPriority('MEDIUM');
-    setIsModalOpen(true);
-  };
+  const openModal = () => setIsModalOpen(true);
 
   const closeModal = () => setIsModalOpen(false);
 
@@ -184,124 +120,7 @@ export default function WorkflowPlansPage() {
         )}
       </div>
 
-      {/* CREATE PLAN MODAL */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Yeni İş Planı</DialogTitle>
-            <DialogDescription>
-              Kapsamlı bir süreci başlatmak için plan oluşturun. Kategoriler, ayarlar sayfasından yönetilmektedir.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Plan Başlığı *</Label>
-              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Örn: 2026 Q1 Güvenlik Denetimi" />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Kategori *</Label>
-              <div className="flex gap-2">
-                <Select value={categoryId} onValueChange={setCategoryId}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Kategori Seçin">
-                      {categoryId === 'none' ? 'Kategori Seçin...' : categories.find((c: any) => c.id === categoryId)?.name || 'Kategori Seçin'}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((c: any) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button variant="outline" size="icon" onClick={() => setIsCatModalOpen(true)} type="button">
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Plan Sahibi (Sorumlu)</Label>
-              <Select value={ownerId} onValueChange={setOwnerId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sorumlu Seçin">
-                    {ownerId ? users.find((u: any) => u.username === ownerId)?.fullName || ownerId : 'Sorumlu Seçin'}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((u: any) => (
-                    <SelectItem key={u.username} value={u.username}>
-                      {u.fullName} ({u.username})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Amacı / Hedefi</Label>
-              <Textarea value={goal} onChange={e => setGoal(e.target.value)} placeholder="Planın ulaşmak istediği ana hedef..." className="min-h-[100px]" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Başlangıç Tarihi *</Label>
-                <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Hedef Bitiş Tarihi *</Label>
-                <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Öncelik Seviyesi</Label>
-              <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger>
-                  <SelectValue>
-                    {priority === 'LOW' ? 'Düşük' : priority === 'MEDIUM' ? 'Orta' : priority === 'HIGH' ? 'Yüksek' : 'Kritik'}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="LOW">Düşük</SelectItem>
-                  <SelectItem value="MEDIUM">Orta</SelectItem>
-                  <SelectItem value="HIGH">Yüksek</SelectItem>
-                  <SelectItem value="CRITICAL">Kritik</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeModal}>İptal</Button>
-            <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !title.trim() || !startDate || !dueDate || categoryId === 'none'}>
-              {createMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Oluştur
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* QUICK CATEGORY MODAL */}
-      <Dialog open={isCatModalOpen} onOpenChange={setIsCatModalOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Yeni Kategori Ekle</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <Label>Kategori Adı</Label>
-            <Input value={newCatName} onChange={e => setNewCatName(e.target.value)} autoFocus className="mt-2" />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCatModalOpen(false)}>İptal</Button>
-            <Button onClick={() => createCatMutation.mutate()} disabled={createCatMutation.isPending || !newCatName.trim()}>
-              {createCatMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Ekle
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PlanFormModal isOpen={isModalOpen} onClose={closeModal} />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import path from 'path';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 
@@ -45,7 +46,7 @@ import buildSettingsRoutes from './routes/build_settings';
 import binaTuruRoutes from './routes/bina-turu';
 
 // Servis statik dosyalar (Yüklemeler için)
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Route Entegrasyonu
 app.use('/api/auth', authRoutes);

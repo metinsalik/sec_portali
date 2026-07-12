@@ -15,15 +15,18 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { formatDistanceToNow, isPast, differenceInSeconds } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
 function ChecklistDescriptionEditor({ 
   initialValue, 
-  onSave 
+  onSave,
+  disabled
 }: { 
   initialValue: string; 
   onSave: (val: string) => void;
+  disabled?: boolean;
 }) {
   const [val, setVal] = useState(initialValue);
   const isChanged = val !== initialValue;
@@ -34,9 +37,10 @@ function ChecklistDescriptionEditor({
         value={val} 
         onChange={(e) => setVal(e.target.value)}
         placeholder="Açıklama giriniz..." 
-        className="min-h-[60px] bg-white" 
+        className="min-h-[60px] bg-white disabled:bg-slate-50 disabled:text-slate-500" 
+        disabled={disabled}
       />
-      {isChanged && (
+      {isChanged && !disabled && (
         <div className="flex justify-end gap-2">
           <Button size="sm" variant="ghost" onClick={() => setVal(initialValue)}>İptal</Button>
           <Button size="sm" onClick={() => onSave(val)}>Güncelle</Button>
@@ -49,13 +53,15 @@ function ChecklistDescriptionEditor({
 const getActionTranslation = (action: string) => {
   const map: Record<string, string> = {
     'STATUS_CHANGE': 'Durum Değişikliği',
+    'STATUS_UPDATE': 'Durum Güncellendi',
     'COMMENT_ADD': 'Yorum Eklendi',
     'EVIDENCE_ADD': 'Kanıt Eklendi',
     'STEP_ADD': 'Adım Eklendi',
     'STEP_UPDATE': 'Adım Güncellendi',
     'STEP_DELETE': 'Adım Silindi',
     'STEP_TOGGLE': 'Adım Durumu Değişti',
-    'REJECT': 'Görev İade Edildi'
+    'REJECT': 'Görev İade Edildi',
+    'UNBLOCK': 'Engel Kaldırıldı'
   };
   return map[action] || action;
 };
@@ -63,7 +69,7 @@ const getActionTranslation = (action: string) => {
 const getStatusTranslation = (status: string) => {
   const map: Record<string, string> = {
     'TODO': 'Bekliyor',
-    'DOING': 'Yapılıyor',
+    'DOING': 'Devam Ediyor',
     'REVIEW': 'Kontrolde',
     'DONE': 'Tamamlandı',
     'BLOCKED': 'Bloke Edildi'
@@ -76,6 +82,10 @@ const formatDetailText = (detail: string) => {
   let formatted = detail;
   const statusRegex = /(TODO|DOING|REVIEW|DONE|BLOCKED)/g;
   formatted = formatted.replace(statusRegex, (match) => getStatusTranslation(match));
+  
+  // Custom replacements for raw DB messages
+  formatted = formatted.replace(/Görev durumu '([^']+)' olarak güncellendi\./g, "Görev statüsü '$1' yapıldı.");
+
   return formatted;
 };
 
@@ -86,13 +96,22 @@ export default function WorkflowTaskDetailsPage() {
   const { user } = useAuth();
   const { openChat, isChatOpen, activeTaskId } = useChat();
   const [socket, setSocket] = useState<Socket | null>(null);
+  
+  const { useDeleteTask, useUnblockTask } = require('@/hooks/useWorkflow');
+  const { mutate: deleteTask, isPending: isDeleting } = useDeleteTask();
+  const { mutate: unblockTask, isPending: isUnblocking } = useUnblockTask();
 
   // Modals state
   const [isDueRequestOpen, setIsDueRequestOpen] = useState(false);
   const [dueRequestData, setDueRequestData] = useState({ date: '', reason: '' });
   
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
   const [blockNote, setBlockNote] = useState('');
+
+  const [isUnblockModalOpen, setIsUnblockModalOpen] = useState(false);
+  const [unblockResolution, setUnblockResolution] = useState('');
 
   const [uploadingStepId, setUploadingStepId] = useState<string | null>(null);
   const [uploadEvidenceData, setUploadEvidenceData] = useState<{ stepId: string; file: File | null; name: string } | null>(null);
@@ -145,6 +164,8 @@ export default function WorkflowTaskDetailsPage() {
   });
 
   const canTransfer = task && (user?.username === task.creatorId || user?.username === task.assigneeId || user?.workflowRole === 'ADMIN');
+  const canEditCore = task && (user?.username === task.creatorId || user?.workflowRole === 'ADMIN' || user?.roles?.includes('admin'));
+  const isDone = task?.status === 'DONE';
 
   useEffect(() => {
     if (!taskId) return;
@@ -317,6 +338,33 @@ export default function WorkflowTaskDetailsPage() {
     }
   };
 
+  const handleUnblock = () => {
+    if (!unblockResolution.trim()) {
+      toast.error('Lütfen çözüm açıklaması giriniz.');
+      return;
+    }
+    unblockTask({ id: taskId, resolutionNote: unblockResolution }, {
+      onSuccess: () => {
+        toast.success('Görev engeli kaldırıldı ve görev devam ediyor.');
+        setIsUnblockModalOpen(false);
+        setUnblockResolution('');
+      }
+    });
+  };
+
+  const handleDeleteTask = () => {
+    deleteTask(taskId, {
+      onSuccess: () => {
+        toast.success('Görev başarıyla silindi.');
+        navigate('/workflow/tasks');
+      },
+      onError: (err: any) => {
+        toast.error(err.message || 'Görev silinemedi.');
+        setIsDeleteDialogOpen(false);
+      }
+    });
+  };
+
   const handleAddStep = async () => {
     if (!newStepData.text) {
       toast.error('Adım metni zorunludur');
@@ -408,13 +456,14 @@ export default function WorkflowTaskDetailsPage() {
                 <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
                   <Clock className="w-3 h-3 mr-1" />
                   Periyodik: {getRecurrenceText(task.recurrence)}
+                  {task.recurrenceEndDate && ` (Bitiş: ${new Date(task.recurrenceEndDate).toLocaleDateString('tr-TR')})`}
                 </span>
               )}
             </div>
-            <p className="text-sm text-slate-500">Görevi Yapan: {task.creator?.fullName || task.creator?.username} • Sorumlu (Görevi takip eden): {task.assignee?.fullName || task.assignee?.username}</p>
+            <p className="text-sm text-slate-500">Sorumlu (Görevi Açan): {task.creator?.fullName || task.creator?.username} • Görevi Yapan: {task.assignee?.fullName || task.assignee?.username}</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            {canTransfer && (
+            {canTransfer && !isDone && (
               <Button variant="outline" onClick={() => setIsTransferModalOpen(true)}>
                 Görevi Devret
               </Button>
@@ -426,16 +475,23 @@ export default function WorkflowTaskDetailsPage() {
                 <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-white" />
               )}
             </Button>
+            {(user?.username === task.creatorId || user?.workflowRole === 'ADMIN' || user?.roles?.includes('admin')) && !isDone && (
+               <Button variant="outline" className="border-red-200 hover:bg-red-50 hover:text-red-600 px-2" onClick={() => setIsDeleteDialogOpen(true)}>
+                 <Trash2 className="w-4 h-4 text-red-500" />
+               </Button>
+            )}
           </div>
         </div>
 
         <div className="flex flex-wrap gap-3 items-center">
-          <div className="bg-white dark:bg-slate-800 border rounded-lg px-4 py-2 flex items-center gap-2 text-sm font-medium">
-            <Clock className={`w-4 h-4 ${isPast(new Date(task.dueDate)) ? 'text-red-500' : 'text-amber-500'}`} />
-            <span className={isPast(new Date(task.dueDate)) ? 'text-red-500' : ''}>
-              {getDueTimeText()}
-            </span>
-          </div>
+          {!isDone && (
+            <div className="bg-white dark:bg-slate-800 border rounded-lg px-4 py-2 flex items-center gap-2 text-sm font-medium">
+              <Clock className={`w-4 h-4 ${isPast(new Date(task.dueDate)) ? 'text-red-500' : 'text-amber-500'}`} />
+              <span className={isPast(new Date(task.dueDate)) ? 'text-red-500' : ''}>
+                {getDueTimeText()}
+              </span>
+            </div>
+          )}
 
           {task.status === 'TODO' && (
             <Button onClick={() => handleStatusChange('DOING')} className="bg-blue-600 hover:bg-blue-700 text-white">
@@ -449,8 +505,13 @@ export default function WorkflowTaskDetailsPage() {
               Onaya Gönder (Tamamla)
             </Button>
           )}
+          {isDone && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-100 text-emerald-800 text-sm font-medium border border-emerald-200">
+              <CheckCircle2 className="w-4 h-4" /> Görev Tamamlandı
+            </span>
+          )}
           
-          {task.status === 'REVIEW' && (user?.username === task.creatorId || user?.username === task.followerId || user?.isAdmin) && (
+          {task.status === 'REVIEW' && !isDone && (user?.username === task.creatorId || user?.username === task.followerId || user?.isAdmin) && (
             <div className="flex gap-2">
               <Button onClick={() => handleStatusChange('DONE')} className="bg-emerald-600 hover:bg-emerald-700 text-white">
                 <CheckCircle2 className="w-4 h-4 mr-2" />
@@ -463,38 +524,80 @@ export default function WorkflowTaskDetailsPage() {
             </div>
           )}
 
-          <select 
-            value={task.status} 
-            onChange={(e) => handleStatusChange(e.target.value)}
-            className="flex h-10 rounded-md border border-input bg-white dark:bg-slate-800 px-3 py-2 text-sm"
-          >
-            <option value="TODO">Bekliyor</option>
-            <option value="DOING">Devam Ediyor</option>
-            <option value="REVIEW">Kontrolde</option>
-            { (user?.username === task.creatorId || user?.username === task.followerId || user?.isAdmin) && (
-              <option value="DONE">Tamamlandı</option>
-            )}
-            <option value="BLOCKED">Bloke Edildi</option>
-          </select>
+          {!isDone && (
+            <>
+              <select 
+                value={task.status} 
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="flex h-10 rounded-md border border-input bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+              >
+                <option value="TODO">Bekliyor</option>
+                <option value="DOING">Devam Ediyor</option>
+                <option value="REVIEW">Kontrolde</option>
+                { (user?.username === task.creatorId || user?.username === task.followerId || user?.isAdmin) && (
+                  <option value="DONE">Tamamlandı</option>
+                )}
+                <option value="BLOCKED">Bloke Edildi</option>
+              </select>
 
-          <Button variant="outline" className="text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => setIsDueRequestOpen(true)}>
-            <CalendarIcon className="w-4 h-4 mr-2" /> Termin Düzeltme İste
-          </Button>
-          
-          <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => setIsBlockModalOpen(true)}>
-            <AlertTriangle className="w-4 h-4 mr-2" /> Engel Bildir
-          </Button>
+              <Button variant="outline" className="text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => setIsDueRequestOpen(true)}>
+                <CalendarIcon className="w-4 h-4 mr-2" /> Termin Düzeltme İste
+              </Button>
+              
+              <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => setIsBlockModalOpen(true)}>
+                <AlertTriangle className="w-4 h-4 mr-2" /> Engel Bildir
+              </Button>
+            </>
+          )}
         </div>
 
-        {task.blockNote && (
+        {(() => {
+          if (!isDone) return null;
+          const doneLog = task.activityLogs?.find((l: any) => l.action === 'STATUS_UPDATE' && l.detail.includes('DONE'));
+          if (doneLog && task.createdAt) {
+            const startDate = new Date(task.createdAt);
+            const endDate = new Date(doneLog.createdAt);
+            
+            const diffInSeconds = differenceInSeconds(endDate, startDate);
+            const d = Math.floor(diffInSeconds / (3600 * 24));
+            const h = Math.floor((diffInSeconds % (3600 * 24)) / 3600);
+            const m = Math.floor((diffInSeconds % 3600) / 60);
+            
+            let timeStr = '';
+            if (d > 0) timeStr += `${d} gün `;
+            if (h > 0) timeStr += `${h} saat `;
+            if (m > 0) timeStr += `${m} dakika`;
+            if (!timeStr) timeStr = '1 dakikadan az';
+
+            return (
+              <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg flex items-center justify-between">
+                <div>
+                  <h3 className="text-emerald-800 font-bold text-sm flex items-center gap-2 mb-1">
+                    <CheckCircle2 className="w-4 h-4" /> Başarıyla Tamamlandı
+                  </h3>
+                  <p className="text-emerald-700 text-sm">Bu görev {endDate.toLocaleString('tr-TR')} tarihinde onaylandı ve tamamlandı.</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-emerald-600 font-semibold uppercase tracking-wider">Tamamlanma Süresi</span>
+                  <div className="text-lg font-bold text-emerald-800">{timeStr}</div>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
+
+        {task.status === 'BLOCKED' && task.blockNote && (
           <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
             <h3 className="text-red-800 font-bold text-sm flex items-center gap-2 mb-1">
               <AlertTriangle className="w-4 h-4" /> Görev Engellendi
             </h3>
             <p className="text-red-700 text-sm">{task.blockNote}</p>
-            <Button variant="link" className="text-red-800 p-0 h-auto mt-2 text-xs" onClick={() => handleStatusChange('DOING')}>
-              Engeli Kaldır
-            </Button>
+            { (user?.username === task.creatorId || user?.username === task.followerId || user?.isAdmin) && (
+              <Button variant="link" className="text-red-800 p-0 h-auto mt-2 text-xs" onClick={() => setIsUnblockModalOpen(true)}>
+                Engeli Kaldır
+              </Button>
+            )}
           </div>
         )}
 
@@ -541,7 +644,7 @@ export default function WorkflowTaskDetailsPage() {
                     <Checkbox 
                       checked={step.done} 
                       onCheckedChange={() => handleChecklistToggle(step.id, step.done, step.requireEvidence, step.evidence)} 
-                      disabled={step.requireEvidence && !step.evidence && !step.done}
+                      disabled={isDone || (step.requireEvidence && !step.evidence && !step.done)}
                       className="mt-1"
                     />
                     <div className="flex-1">
@@ -549,18 +652,20 @@ export default function WorkflowTaskDetailsPage() {
                         <p className={`text-sm ${step.done ? 'line-through text-slate-400' : 'text-slate-700 dark:text-slate-200'}`}>
                           <span className="font-semibold text-slate-400 mr-1">{index + 1}.</span> {step.text}
                         </p>
-                        <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-blue-600" onClick={() => { setEditingStep(step.id); setStepEditData({ text: step.text, requireEvidence: step.requireEvidence, requireDescription: step.requireDescription }); }}>
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-red-600" onClick={() => handleDeleteStep(step.id)}>
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
+                        {canEditCore && !isDone && (
+                          <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-blue-600" onClick={() => { setEditingStep(step.id); setStepEditData({ text: step.text, requireEvidence: step.requireEvidence, requireDescription: step.requireDescription }); }}>
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-red-600" onClick={() => handleDeleteStep(step.id)}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     <div className="flex flex-col gap-2 mt-2">
                       <div className="flex flex-wrap gap-3">
-                        {step.requireEvidence && (
+                        {step.requireEvidence && !isDone && (
                           <Button size="sm" variant="outline" className="text-blue-600 bg-blue-50 border-blue-200 h-7 text-xs px-2" onClick={() => setUploadEvidenceData({ stepId: step.id, file: null, name: '' })}>
                             <UploadCloud className="w-3 h-3 mr-1" /> {step.evidence ? 'Yeni Kanıt Ekle' : 'Kanıt Yükle'}
                           </Button>
@@ -581,6 +686,7 @@ export default function WorkflowTaskDetailsPage() {
                           <ChecklistDescriptionEditor 
                             initialValue={step.description || ''} 
                             onSave={(val) => handleSaveDescription(step.id, val)} 
+                            disabled={isDone}
                           />
                         </div>
                       )}
@@ -591,33 +697,35 @@ export default function WorkflowTaskDetailsPage() {
               </div>
             ))}
             
-            {false ? (
-              <div className="flex flex-col gap-3 p-3 bg-white dark:bg-slate-800 rounded-lg border shadow-sm mt-4">
-                <h4 className="font-semibold text-sm">Yeni Adım Ekle</h4>
-                <Input 
-                  value={newStepData.text} 
-                  onChange={(e) => setNewStepData({ ...newStepData, text: e.target.value })} 
-                  placeholder="Adım açıklaması..."
-                />
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox checked={newStepData.requireEvidence} onCheckedChange={(c) => setNewStepData({ ...newStepData, requireEvidence: !!c })} />
-                    Kanıt İste
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox checked={newStepData.requireDescription} onCheckedChange={(c) => setNewStepData({ ...newStepData, requireDescription: !!c })} />
-                    Açıklama İste
-                  </label>
+            {canEditCore && !isDone && (
+              isAddingStep ? (
+                <div className="flex flex-col gap-3 p-3 bg-white dark:bg-slate-800 rounded-lg border shadow-sm mt-4">
+                  <h4 className="font-semibold text-sm">Yeni Adım Ekle</h4>
+                  <Input 
+                    value={newStepData.text} 
+                    onChange={(e) => setNewStepData({ ...newStepData, text: e.target.value })} 
+                    placeholder="Adım açıklaması..."
+                  />
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox checked={newStepData.requireEvidence} onCheckedChange={(c) => setNewStepData({ ...newStepData, requireEvidence: !!c })} />
+                      Kanıt İste
+                    </label>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox checked={newStepData.requireDescription} onCheckedChange={(c) => setNewStepData({ ...newStepData, requireDescription: !!c })} />
+                      Açıklama İste
+                    </label>
+                  </div>
+                  <div className="flex gap-2 justify-end mt-2">
+                    <Button size="sm" variant="ghost" onClick={() => setIsAddingStep(false)}>İptal</Button>
+                    <Button size="sm" onClick={handleAddStep}>Adım Ekle</Button>
+                  </div>
                 </div>
-                <div className="flex gap-2 justify-end mt-2">
-                  <Button size="sm" variant="ghost" onClick={() => setIsAddingStep(false)}>İptal</Button>
-                  <Button size="sm" onClick={handleAddStep}>Adım Ekle</Button>
-                </div>
-              </div>
-            ) : (
-              <Button variant="outline" size="sm" className="w-full border-dashed text-slate-500 mt-2" onClick={() => setIsAddingStep(true)} className="hidden w-full border-dashed text-slate-500 mt-2">
-                <Plus className="w-4 h-4 mr-2" /> Yeni Adım Ekle
-              </Button>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => setIsAddingStep(true)} className="w-full border-dashed text-slate-500 mt-2">
+                  <Plus className="w-4 h-4 mr-2" /> Yeni Adım Ekle
+                </Button>
+              )
             )}
           </div>
         </div>
@@ -753,6 +861,52 @@ export default function WorkflowTaskDetailsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={isUnblockModalOpen} onOpenChange={setIsUnblockModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Görevin Engelini Kaldır</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-slate-500 mb-4">Görev üzerindeki engelin nasıl aşıldığını (çözümünü) kısaca açıklayın. Bu bilgi işlem geçmişine kaydedilecektir ve görev "Devam Ediyor" durumuna alınacaktır.</p>
+            <Textarea 
+              value={unblockResolution} 
+              onChange={(e) => setUnblockResolution(e.target.value)} 
+              placeholder="Örn: Malzeme temin edildi, çalışmaya başlanabilir." 
+              className="min-h-[100px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUnblockModalOpen(false)}>İptal</Button>
+            <Button onClick={handleUnblock} disabled={isUnblocking || !unblockResolution.trim()}>
+              {isUnblocking && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Engeli Kaldır ve Devam Et
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Görevi silmek istediğinize emin misiniz?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bu işlem geri alınamaz. Görev ve altındaki tüm adımlar kalıcı olarak silinecektir.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>İptal</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => { e.preventDefault(); handleDeleteTask(); }} 
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {isDeleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+              Evet, Sil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
