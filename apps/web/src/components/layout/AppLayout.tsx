@@ -42,7 +42,6 @@ const panelNavItems = [
 const operationsNavItems = (hasAdminAccess: boolean) => [
   { label: 'GENEL', type: 'group' },
   { label: 'Dashboard', icon: LayoutDashboard, to: '/operations/dashboard' },
-  { label: 'Tesis Bilgileri', icon: Building2, to: '/operations/facility' },
   { label: 'VERİ GİRİŞİ', type: 'group' },
   { label: 'Aylık Personel Verisi', icon: Users, to: '/operations/hr-data' },
   { label: 'Kaza İstatistikleri', icon: BarChart3, to: '/operations/accidents' },
@@ -161,9 +160,29 @@ const buildManagementNavItems = [
   { label: 'Modül Ayarları', icon: Settings, to: '/build-management/settings' },
 ];
 
+const renovationReportNavItems = [
+  { label: 'GENEL', type: 'group' },
+  { label: 'Dashboard', icon: LayoutDashboard, to: '/renovation-report', end: true },
+  { label: 'AYARLAR', type: 'group' },
+  { label: 'Modül Ayarları', icon: Settings, to: '/renovation-report/settings' },
+];
+
+const checklistNavItems = (hasAdminAccess: boolean) => [
+  { label: 'GENEL', type: 'group' },
+  { label: 'Dashboard', icon: LayoutDashboard, to: '/checklists', end: true },
+  { label: 'UYGULAMA', type: 'group' },
+  { label: 'Saha Denetimleri', icon: ClipboardList, to: '/checklists/submissions' },
+  { label: 'Raporlar', icon: ClipboardList, to: '/checklists/reports' },
+  ...(hasAdminAccess ? [
+    { label: 'YÖNETİM', type: 'group' },
+    { label: 'Şablonlar', icon: FileText, to: '/checklists/templates' },
+    { label: 'Ayarlar', icon: Settings, to: '/checklists/settings' },
+  ] : []),
+];
+
 const profileNavItems = (hasAdminAccess: boolean) => [
   { label: 'UYGULAMALAR', type: 'group' },
-  ...(hasAdminAccess ? [{ label: 'İSG Atama Paneli', icon: LayoutDashboard, to: '/panel' }] : []),
+  ...(hasAdminAccess ? [{ label: 'Operasyon Yönetim Sistemi', icon: LayoutDashboard, to: '/operations-management' }] : []),
   ...(hasAdminAccess ? [{ label: 'Aylık Veri Sistemi', icon: FileText, to: '/operations' }] : []),
   { label: 'HESABIM', type: 'group' },
   { label: 'Profil Bilgileri', icon: User, to: '/profile' },
@@ -204,6 +223,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
   } else if (path.startsWith('/build-management')) {
     navItems = buildManagementNavItems;
     moduleName = 'İnşaat ve Renovasyon Yönetimi';
+  } else if (path.startsWith('/renovation-report')) {
+    navItems = renovationReportNavItems;
+    moduleName = 'İnşaat Renovasyon Teslim Raporu';
+  } else if (path.startsWith('/checklists')) {
+    navItems = checklistNavItems(hasAdminAccess);
+    moduleName = 'İSG Kontrol Listeleri';
   } else if (path.startsWith('/settings')) {
     navItems = settingsNavItems(hasAdminAccess);
     moduleName = 'Sistem Ayarları';
@@ -248,7 +273,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* Facility Switcher (Show for modules that need it) */}
-        {(path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management')) && (
+        {(path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management') || path.startsWith('/renovation-report') || path.startsWith('/checklists')) && (
           <FacilitySwitcher />
         )}
 

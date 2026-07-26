@@ -1,0 +1,22 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const auth_1 = require("../../middleware/auth");
+const templates_1 = __importDefault(require("./templates"));
+const submissions_1 = __importDefault(require("./submissions"));
+const reports_1 = __importDefault(require("./reports"));
+const categories_1 = __importDefault(require("./categories"));
+const scales_1 = __importDefault(require("./scales"));
+const assignments_1 = __importDefault(require("./assignments"));
+const router = express_1.default.Router();
+router.use(auth_1.authMiddleware);
+router.use('/templates', templates_1.default);
+router.use('/submissions', submissions_1.default);
+router.use('/reports', reports_1.default);
+router.use('/categories', categories_1.default);
+router.use('/scales', scales_1.default);
+router.use('/assignments', assignments_1.default);
+exports.default = router;

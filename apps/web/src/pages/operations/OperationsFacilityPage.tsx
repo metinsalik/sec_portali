@@ -57,7 +57,17 @@ const DANGER_CLASSES = [
 
 export default function OperationsFacilityPage() {
   const queryClient = useQueryClient();
-  const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null);
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(
+    localStorage.getItem('activeFacilityId')
+  );
+
+  useEffect(() => {
+    const handleFacilityChange = () => {
+      setSelectedFacilityId(localStorage.getItem('activeFacilityId'));
+    };
+    window.addEventListener('facilityChanged', handleFacilityChange);
+    return () => window.removeEventListener('facilityChanged', handleFacilityChange);
+  }, []);
 
   const { data: facilities, isLoading: isLoadingList } = useQuery<Facility[]>({
     queryKey: ['operations-facilities'],
@@ -69,10 +79,10 @@ export default function OperationsFacilityPage() {
   });
 
   useEffect(() => {
-    if (facilities && facilities.length === 1) {
+    if (facilities && facilities.length > 0 && !selectedFacilityId) {
       setSelectedFacilityId(facilities[0].id);
     }
-  }, [facilities]);
+  }, [facilities, selectedFacilityId]);
 
   const { data: facility, isLoading: isLoadingDetail } = useQuery<Facility>({
     queryKey: ['operations-facility', selectedFacilityId],
@@ -193,20 +203,7 @@ export default function OperationsFacilityPage() {
           <p className="text-slate-500 text-sm mt-1">Sorumlu olduğunuz tesisin bilgilerini güncelleyin.</p>
         </div>
 
-        {facilities.length > 1 && (
-          <div className="w-full md:w-64">
-            <Select value={selectedFacilityId || ''} onValueChange={setSelectedFacilityId}>
-              <SelectTrigger className="bg-white dark:bg-slate-900 h-11 rounded-xl shadow-sm border-slate-200">
-                <SelectValue placeholder="Tesis Seçin" />
-              </SelectTrigger>
-              <SelectContent>
-                {facilities.map(f => (
-                  <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+
       </div>
 
       {isLoadingDetail ? (

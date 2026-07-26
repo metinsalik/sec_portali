@@ -41,7 +41,7 @@ export default function WorkflowPlanDetailsPage() {
   if (isLoading) return <div className="flex justify-center p-20"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
   if (!plan) return <div className="p-10 text-center">Plan bulunamadı.</div>;
 
-  const hasAccess = user?.username === plan.ownerId || user?.workflowRole === 'ADMIN' || user?.roles?.includes('admin');
+  const hasAccess = user?.username === plan.ownerId;
 
   const handleDelete = () => {
     deletePlan(plan.id, {

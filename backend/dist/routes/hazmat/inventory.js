@@ -234,23 +234,35 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
                     });
                 }
                 else {
-                    // Upsert
-                    await tx.hazmatInventoryItem.upsert({
+                    const locId = locationId || null;
+                    const existingItem = await tx.hazmatInventoryItem.findFirst({
                         where: {
-                            facilityId_locationId_vehicleId_materialId: { facilityId, locationId: locationId || "", vehicleId: "", materialId }
-                        },
-                        update: {
-                            minQuantity: minQuantity ? Number(minQuantity) : null,
-                            maxQuantity: maxQuantity ? Number(maxQuantity) : null
-                        },
-                        create: {
                             facilityId,
-                            locationId,
-                            materialId,
-                            minQuantity: minQuantity ? Number(minQuantity) : null,
-                            maxQuantity: maxQuantity ? Number(maxQuantity) : null
+                            locationId: locId,
+                            vehicleId: null,
+                            materialId
                         }
                     });
+                    if (existingItem) {
+                        await tx.hazmatInventoryItem.update({
+                            where: { id: existingItem.id },
+                            data: {
+                                minQuantity: minQuantity ? Number(minQuantity) : null,
+                                maxQuantity: maxQuantity ? Number(maxQuantity) : null
+                            }
+                        });
+                    }
+                    else {
+                        await tx.hazmatInventoryItem.create({
+                            data: {
+                                facilityId,
+                                locationId: locId,
+                                materialId,
+                                minQuantity: minQuantity ? Number(minQuantity) : null,
+                                maxQuantity: maxQuantity ? Number(maxQuantity) : null
+                            }
+                        });
+                    }
                 }
             }
         });

@@ -198,6 +198,7 @@ router.post('/departments', async (req, res) => {
         res.status(201).json(dept);
     }
     catch (error) {
+        console.error("POST /departments error:", error);
         res.status(500).json({ error: 'Departman oluşturulamadı' });
     }
 });

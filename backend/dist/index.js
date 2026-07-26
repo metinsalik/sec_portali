@@ -27,6 +27,7 @@ const reports_1 = __importDefault(require("./routes/risks/reports"));
 const hazmat_1 = __importDefault(require("./routes/hazmat"));
 const fire_equipment_1 = __importDefault(require("./routes/fire_equipment"));
 const build_management_1 = __importDefault(require("./routes/build_management"));
+const checklists_1 = __importDefault(require("./routes/checklists"));
 // Middleware
 const errorHandler_1 = require("./middleware/errorHandler");
 dotenv_1.default.config();
@@ -43,6 +44,7 @@ app.use((0, helmet_1.default)({
 }));
 const build_settings_1 = __importDefault(require("./routes/build_settings"));
 const bina_turu_1 = __importDefault(require("./routes/bina-turu"));
+const renovation_report_1 = __importDefault(require("./routes/renovation_report"));
 // Servis statik dosyalar (Yüklemeler için)
 app.use('/uploads', express_1.default.static(path_1.default.join(process.cwd(), 'uploads')));
 // Route Entegrasyonu
@@ -63,7 +65,9 @@ app.use('/api/fire-equipment', fire_equipment_1.default);
 app.use('/api/build-management', build_management_1.default);
 app.use('/api/build-management/settings', build_settings_1.default);
 app.use('/api/bina-turu', bina_turu_1.default);
+app.use('/api/renovation-reports', renovation_report_1.default);
 app.use('/api/locations', require('./routes/locations').default);
+app.use('/api/checklists', checklists_1.default);
 // Sağlık kontrolü
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

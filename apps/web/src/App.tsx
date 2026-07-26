@@ -11,7 +11,10 @@ import { Toaster } from 'sonner';
 // Auth
 import LoginPage from './pages/Login';
 import PortalPage from './pages/PortalPage';
+import OperationsManagementPage from './pages/OperationsManagementPage';
 import ProfilePage from './pages/ProfilePage';
+import RenovationReportPage from './pages/build_management/RenovationReportPage';
+import RenovationReportSettings from './pages/build_management/RenovationReportSettings';
 import NotificationPage from './pages/notifications/NotificationPage';
 
 // Settings
@@ -53,8 +56,6 @@ import NotebooksPage from './pages/operations/NotebooksPage';
 import TrainingPage from './pages/operations/TrainingPage';
 import BoardPage from './pages/operations/BoardPage';
 import InspectionsPage from './pages/operations/InspectionsPage';
-import OperationsFacilityPage from './pages/operations/OperationsFacilityPage';
-
 // Workflow
 import WorkflowDashboard from './pages/workflow/WorkflowDashboard';
 import WorkflowTasksPage from './pages/workflow/WorkflowTasksPage';
@@ -138,6 +139,16 @@ import BinaTuruYillikRaporu from "./pages/bina-turu/BinaTuruYillikRaporu";
 import UygunsuzlukRaporu from './pages/bina-turu/UygunsuzlukRaporu';
 import UygunsuzlukYillikRaporu from './pages/bina-turu/UygunsuzlukYillikRaporu';
 
+// İSG Kontrol Listeleri
+import TemplateListPage from './pages/checklists/TemplateListPage';
+import TemplateBuilderPage from './pages/checklists/TemplateBuilderPage';
+import SubmissionListPage from './pages/checklists/SubmissionListPage';
+import SubmissionFormPage from './pages/checklists/SubmissionFormPage';
+import ReportsPage from './pages/checklists/ReportsPage';
+import ChecklistSettingsPage from './pages/settings/ChecklistSettingsPage';
+import ChecklistDashboardPage from './pages/checklists/ChecklistDashboardPage';
+
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -165,6 +176,34 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <PortalPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* ── OPERATIONS MANAGEMENT ─────────────────────── */}
+                  <Route
+                    path="/operations-management"
+                    element={
+                      <ProtectedRoute>
+                        <OperationsManagementPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* ── İNŞAAT RENOVASYON TESLİM RAPORU ──────────── */}
+                  <Route
+                    path="/renovation-report"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><RenovationReportPage /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/renovation-report/settings"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><RenovationReportSettings /></AppLayout>
                       </ProtectedRoute>
                     }
                   />
@@ -300,14 +339,6 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <AppLayout><OperationsDashboard /></AppLayout>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/operations/facility"
-                    element={
-                      <ProtectedRoute>
-                        <AppLayout><OperationsFacilityPage /></AppLayout>
                       </ProtectedRoute>
                     }
                   />
@@ -1048,6 +1079,18 @@ function App() {
                   <Route path="/bina-turu/uygunsuzluk-yillik-rapor/:year" element={<ProtectedRoute><UygunsuzlukYillikRaporu /></ProtectedRoute>} />
                   <Route path="/bina-turu/uygunsuzluklar" element={<ProtectedRoute><AppLayout><UygunsuzlukTakibi /></AppLayout></ProtectedRoute>} />
                   <Route path="/bina-turu/ayarlar" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AyarlarIndex /></AppLayout></ProtectedRoute>} />
+
+                  {/* İSG Kontrol Listeleri */}
+                  <Route path="/checklists" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><ChecklistDashboardPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/templates" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><TemplateListPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/templates/new" element={<ProtectedRoute allowedRoles={['admin','specialist']}><AppLayout><TemplateBuilderPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/templates/:id/edit" element={<ProtectedRoute allowedRoles={['admin','specialist']}><AppLayout><TemplateBuilderPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/submissions" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><SubmissionListPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/submissions/new" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><SubmissionFormPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/submissions/:id" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><SubmissionFormPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/reports" element={<ProtectedRoute allowedRoles={['admin','management']}><AppLayout><ReportsPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/settings" element={<ProtectedRoute allowedRoles={['admin','management']}><AppLayout><ChecklistSettingsPage /></AppLayout></ProtectedRoute>} />
+
 
                   {/* ── Redirects ──────────────────────────────────── */}
                   <Route path="/" element={<Navigate to="/portal" replace />} />

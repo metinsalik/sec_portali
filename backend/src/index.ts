@@ -23,6 +23,7 @@ import riskReportsRoutes from './routes/risks/reports';
 import hazmatRoutes from './routes/hazmat';
 import fireEquipmentRoutes from './routes/fire_equipment';
 import buildManagementRoutes from './routes/build_management';
+import checklistRoutes from './routes/checklists';
 
 // Middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
@@ -45,6 +46,8 @@ app.use(helmet({
 import buildSettingsRoutes from './routes/build_settings';
 import binaTuruRoutes from './routes/bina-turu';
 
+import renovationReportRoutes from './routes/renovation_report';
+
 // Servis statik dosyalar (Yüklemeler için)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
@@ -66,7 +69,9 @@ app.use('/api/fire-equipment', fireEquipmentRoutes);
 app.use('/api/build-management', buildManagementRoutes);
 app.use('/api/build-management/settings', buildSettingsRoutes);
 app.use('/api/bina-turu', binaTuruRoutes);
+app.use('/api/renovation-reports', renovationReportRoutes);
 app.use('/api/locations', require('./routes/locations').default);
+app.use('/api/checklists', checklistRoutes);
 
 // Sağlık kontrolü
 app.get('/health', (req, res) => {

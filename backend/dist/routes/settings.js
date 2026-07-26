@@ -49,6 +49,30 @@ async function ensureRolesExist() {
         });
     }
 }
+async function ensureModulesExist() {
+    const defaultModules = [
+        { code: 'DASHBOARD', name: 'Gösterge Paneli', description: 'Ana özet ekranı', icon: 'LayoutGrid' },
+        { code: 'SETTINGS', name: 'Ayarlar', description: 'Kullanıcı ve sistem ayarları', icon: 'Settings' },
+        { code: 'REPORTS', name: 'Raporlar', description: 'Sistem raporları ve çıktıları', icon: 'FileText' },
+        { code: 'INCIDENTS', name: 'Olay Bildirimleri', description: 'Kaza ve ramak kala bildirimleri', icon: 'AlertTriangle' },
+        { code: 'FIRE_EQUIPMENT', name: 'Yangın Ekipmanları', description: 'Yangın envanteri ve bakımları', icon: 'Flame' },
+        { code: 'HAZMAT', name: 'Tehlikeli Maddeler', description: 'Kimyasal yönetimi', icon: 'Skull' },
+        { code: 'RISKS', name: 'Risk Analizi', description: 'Saha risk analizleri', icon: 'ShieldAlert' },
+        { code: 'WORKFLOW', name: 'İş Takibi', description: 'Görev ve iş akış yönetimi', icon: 'KanbanSquare' },
+        { code: 'OPERATIONS', name: 'Aylık Veri Sistemi', description: 'Aylık çalışma saatleri ve kaza kayıtları', icon: 'description' },
+        { code: 'PANEL', name: 'Operasyon Yönetim Sistemi', description: 'İSG Atama Paneli', icon: 'settings_suggest' },
+        { code: 'RENOVATION_REPORT', name: 'Renovasyon Raporu', description: 'İnşaat Renovasyon Teslim Raporu', icon: 'receipt_long' },
+        { code: 'BUILD_MANAGEMENT', name: 'İnşaat ve Renovasyon Yönetimi', description: 'İnşaat projelerinin ICRA, risk ve onay süreçleri', icon: 'construction' },
+        { code: 'BUILDING_TOUR', name: 'Bina Turu Yönetimi', description: 'Bina turları ve denetimleri', icon: 'apartment' }
+    ];
+    for (const mod of defaultModules) {
+        await prisma.module.upsert({
+            where: { code: mod.code },
+            update: { name: mod.name, description: mod.description, icon: mod.icon },
+            create: mod
+        });
+    }
+}
 // ──────────────────────────────────────────────────────────────────────────────
 // TESİS YÖNETİMİ - Admin + Management
 // ──────────────────────────────────────────────────────────────────────────────
@@ -61,7 +85,18 @@ router.post('/facilities/upload-logo', upload.single('file'), (req, res) => {
 });
 router.get('/facilities', async (req, res) => {
     try {
+        const user = req.user;
+        let whereClause = {};
+        if (!user.isAdmin && !user.isManagement) {
+            if (user.facilities && user.facilities.length > 0) {
+                whereClause = { id: { in: user.facilities } };
+            }
+            else {
+                return res.json([]);
+            }
+        }
         const facilities = await prisma.facility.findMany({
+            where: whereClause,
             include: { buildings: true, assignments: true },
             orderBy: { id: 'asc' },
         });
@@ -437,6 +472,12 @@ router.post('/users/:username/facilities', auth_1.adminMiddleware, async (req, r
 // ──────────────────────────────────────────────────────────────────────────────
 router.get('/parameters', async (req, res) => {
     try {
+        if (req.query.year === 'all') {
+            const allSettings = await prisma.systemSettings.findMany({
+                orderBy: { year: 'desc' }
+            });
+            return res.json(allSettings);
+        }
         const year = parseInt(req.query.year) || new Date().getFullYear();
         const settings = await prisma.systemSettings.findFirst({
             where: { year },
@@ -610,6 +651,99 @@ router.delete('/definitions/departments/:id', auth_1.managementMiddleware, async
     }
 });
 // ──────────────────────────────────────────────────────────────────────────────
+// OPERASYON TANIMLARI - Admin + Management
+// ──────────────────────────────────────────────────────────────────────────────
+router.get('/definitions/operations-categories', async (req, res) => {
+    try {
+        const categories = await prisma.operationsCategory.findMany({ orderBy: { name: 'asc' } });
+        res.json(categories);
+    }
+    catch {
+        res.status(500).json({ error: 'Kategoriler getirilemedi.' });
+    }
+});
+router.post('/definitions/operations-categories', auth_1.managementMiddleware, async (req, res) => {
+    const { name } = req.body;
+    if (!name)
+        return res.status(400).json({ error: 'Ad zorunludur.' });
+    try {
+        const trimmed = name.trim();
+        let cat = await prisma.operationsCategory.findFirst({ where: { name: { equals: trimmed, mode: 'insensitive' } } });
+        if (!cat)
+            cat = await prisma.operationsCategory.create({ data: { name: trimmed } });
+        res.status(201).json(cat);
+    }
+    catch {
+        res.status(500).json({ error: 'Oluşturulamadı.' });
+    }
+});
+router.put('/definitions/operations-categories/:id', auth_1.managementMiddleware, async (req, res) => {
+    const id = parseInt(String(req.params.id));
+    const { name } = req.body;
+    try {
+        const cat = await prisma.operationsCategory.update({ where: { id }, data: { name } });
+        res.json(cat);
+    }
+    catch {
+        res.status(500).json({ error: 'Güncellenemedi.' });
+    }
+});
+router.delete('/definitions/operations-categories/:id', auth_1.managementMiddleware, async (req, res) => {
+    const id = parseInt(String(req.params.id));
+    try {
+        await prisma.operationsCategory.delete({ where: { id } });
+        res.json({ message: 'Silindi.' });
+    }
+    catch {
+        res.status(500).json({ error: 'Silinemedi.' });
+    }
+});
+router.get('/definitions/operations-departments', async (req, res) => {
+    try {
+        const depts = await prisma.operationsDepartment.findMany({ orderBy: { name: 'asc' } });
+        res.json(depts);
+    }
+    catch {
+        res.status(500).json({ error: 'Departmanlar getirilemedi.' });
+    }
+});
+router.post('/definitions/operations-departments', auth_1.managementMiddleware, async (req, res) => {
+    const { name } = req.body;
+    if (!name)
+        return res.status(400).json({ error: 'Ad zorunludur.' });
+    try {
+        const trimmed = name.trim();
+        let dept = await prisma.operationsDepartment.findFirst({ where: { name: { equals: trimmed, mode: 'insensitive' } } });
+        if (!dept)
+            dept = await prisma.operationsDepartment.create({ data: { name: trimmed } });
+        res.status(201).json(dept);
+    }
+    catch {
+        res.status(500).json({ error: 'Oluşturulamadı.' });
+    }
+});
+router.put('/definitions/operations-departments/:id', auth_1.managementMiddleware, async (req, res) => {
+    const id = parseInt(String(req.params.id));
+    const { name } = req.body;
+    try {
+        const dept = await prisma.operationsDepartment.update({ where: { id }, data: { name } });
+        res.json(dept);
+    }
+    catch {
+        res.status(500).json({ error: 'Güncellenemedi.' });
+    }
+});
+router.delete('/definitions/operations-departments/:id', auth_1.managementMiddleware, async (req, res) => {
+    const id = parseInt(String(req.params.id));
+    try {
+        await prisma.operationsDepartment.delete({ where: { id } });
+        res.json({ message: 'Silindi.' });
+    }
+    catch {
+        res.status(500).json({ error: 'Silinemedi.' });
+    }
+});
+// ──────────────────────────────────────────────────────────────────────────────
 // OLAĞAN DIŞI OLAY TANIMLARI - Admin + Management
 // ──────────────────────────────────────────────────────────────────────────────
 // Generic helper for incident definitions
@@ -685,6 +819,7 @@ router.get('/roles', async (req, res) => {
 });
 router.get('/modules', async (req, res) => {
     try {
+        await ensureModulesExist();
         const modules = await prisma.module.findMany({
             orderBy: { name: 'asc' }
         });

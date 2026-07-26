@@ -84,17 +84,24 @@ export async function processKatipImport(facilityId: string, fileBuffer: Buffer,
 
     const newTitleClass = determineTitleClass(sertifikaTipi);
     const newCertNo = String(sertifikaNo);
-    const unvan = (row['Hizmet Veren İşyeri Unvanı'] || '').toLowerCase();
-    const isOSGB = unvan.includes('ortak sağlık') || unvan.includes('osgb');
+    let rawUnvan = row['Hizmet Veren İşyeri Unvanı'] || '';
+    let normalizedUnvan = normalizeName(rawUnvan);
+    let isOSGB = normalizedUnvan.includes('ORTAK SAĞLIK') || normalizedUnvan.includes('OSGB');
+    
+    if (isOSGB) {
+        normalizedUnvan = normalizedUnvan.replace(/ORTAK SAĞLIK GÜVENLİK BİRİMİ/g, 'OSGB');
+        normalizedUnvan = normalizedUnvan.replace(/ORTAK SAĞLIK VE GÜVENLİK BİRİMİ/g, 'OSGB');
+        normalizedUnvan = normalizedUnvan.replace(/ORTAK SAGLIK GUVENLIK BIRIMI/g, 'OSGB');
+    }
+    
     const empType = isOSGB ? 'OSGB Kadrosu' : 'Tesis Kadrosu';
 
-    if (isOSGB && row['Hizmet Veren İşyeri Unvanı']) {
-      const normalizedOsgbName = normalizeName(row['Hizmet Veren İşyeri Unvanı']);
-      let osgb = allOsgbs.find(o => normalizeName(o.name) === normalizedOsgbName);
+    if (isOSGB && normalizedUnvan) {
+      let osgb = allOsgbs.find(o => normalizeName(o.name) === normalizedUnvan);
       if (!osgb) {
         osgb = await prisma.oSGBCompany.create({
           data: {
-            name: row['Hizmet Veren İşyeri Unvanı'],
+            name: normalizedUnvan,
             isActive: true
           }
         });
@@ -120,7 +127,7 @@ export async function processKatipImport(facilityId: string, fileBuffer: Buffer,
           employmentType: empType,
           titleClass: newTitleClass,
           certificateNo: newCertNo,
-          osgbName: isOSGB ? row['Hizmet Veren İşyeri Unvanı'] : '',
+          osgbName: isOSGB ? normalizedUnvan : '',
           isActive: true
         }
       });
@@ -129,7 +136,7 @@ export async function processKatipImport(facilityId: string, fileBuffer: Buffer,
       const needsTitleUpdate = sertifikaTipi && newTitleClass !== professional.titleClass;
       const needsEmpTypeUpdate = professional.employmentType !== empType;
       const needsCertUpdate = newCertNo && newCertNo !== 'null' && newCertNo !== 'undefined' && newCertNo !== professional.certificateNo;
-      const targetOsgbName = isOSGB ? row['Hizmet Veren İşyeri Unvanı'] : '';
+      const targetOsgbName = isOSGB ? normalizedUnvan : '';
       const needsOsgbUpdate = professional.osgbName !== targetOsgbName;
 
       if (needsTitleUpdate || needsEmpTypeUpdate || needsCertUpdate || needsOsgbUpdate) {
@@ -186,7 +193,7 @@ export async function processKatipImport(facilityId: string, fileBuffer: Buffer,
             professionalId: professional.id,
             username,
             action: 'İSG-KATİP Yeni Atama',
-            details: `İSG-KATİP aktarımı ile ${type} ataması sisteme işlendi. Sözleşme Süresi: ${calismaSuresi} dk.`,
+            details: `İSG-KATİP: ${professional.fullName} adlı profesyonel ${type} olarak atandı (Süre: ${calismaSuresi} dk, Başlangıç: ${baslangic.toLocaleDateString('tr-TR')}${isOSGB ? ', OSGB: ' + normalizedUnvan : ''}).`,
             createdAt: baslangic
           }
         });
@@ -207,7 +214,7 @@ export async function processKatipImport(facilityId: string, fileBuffer: Buffer,
             professionalId: professional.id,
             username,
             action: 'İSG-KATİP Atama Sonlandırma',
-            details: `İSG-KATİP kayıtlarına göre atama sonlandırıldı.`,
+            details: `İSG-KATİP: ${professional.fullName} adlı profesyonelin ${type} ataması sonlandırıldı (Bitiş: ${actionDate.toLocaleDateString('tr-TR')}).`,
             createdAt: actionDate
           }
         });
@@ -229,7 +236,7 @@ export async function processKatipImport(facilityId: string, fileBuffer: Buffer,
             professionalId: professional.id,
             username,
             action: 'İSG-KATİP Yeniden Atama',
-            details: `İSG-KATİP üzerinden yeni dönem ataması aktifleşti.`,
+            details: `İSG-KATİP: ${professional.fullName} adlı profesyonel ${type} olarak yeniden atandı (Süre: ${calismaSuresi} dk, Başlangıç: ${baslangic.toLocaleDateString('tr-TR')}${isOSGB ? ', OSGB: ' + normalizedUnvan : ''}).`,
             createdAt: baslangic
           }
         });

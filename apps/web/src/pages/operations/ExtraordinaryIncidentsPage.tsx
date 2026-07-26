@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -39,10 +39,18 @@ const ExtraordinaryIncidentsPage = () => {
   const [viewingIncident, setViewingIncident] = useState<any>(null);
 
   // Filter State
-  const [selectedFacility, setSelectedFacility] = useState<string>('');
+  const [selectedFacility, setSelectedFacility] = useState<string>(localStorage.getItem('activeFacilityId') || '');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [rootCauseFilter, setRootCauseFilter] = useState<string>('all');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
+
+  useEffect(() => {
+    const handleFacilityChange = () => {
+      setSelectedFacility(localStorage.getItem('activeFacilityId') || '');
+    };
+    window.addEventListener('facilityChanged', handleFacilityChange);
+    return () => window.removeEventListener('facilityChanged', handleFacilityChange);
+  }, []);
 
   const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('management');
 
@@ -53,6 +61,12 @@ const ExtraordinaryIncidentsPage = () => {
       return res.json();
     }
   });
+
+  useEffect(() => {
+    if (facilities.length > 0 && !selectedFacility) {
+      setSelectedFacility(facilities[0].id);
+    }
+  }, [facilities, selectedFacility]);
 
   // Definition Queries
   const { data: categories = [] } = useQuery<any[]>({ queryKey: ['incident-categories'], queryFn: async () => (await api.get('/settings/definitions/incident-categories')).json() });
@@ -234,25 +248,6 @@ const ExtraordinaryIncidentsPage = () => {
               />
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {(isAdmin || (user?.facilities && user.facilities.length > 1)) && (
-                <Select value={selectedFacility} onValueChange={setSelectedFacility}>
-                  <SelectTrigger className="w-[200px] h-10">
-                    <SelectValue>
-                      {facilities.find(f => f.id === selectedFacility)?.name || "Tüm Tesisler"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tüm Tesisler</SelectItem>
-                    {facilities
-                      .filter(f => isAdmin || user?.facilities?.includes(f.id))
-                      .map(f => (
-                        <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                      ))
-                    }
-                  </SelectContent>
-                </Select>
-              )}
-              
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-[160px] h-10">
                   <SelectValue>

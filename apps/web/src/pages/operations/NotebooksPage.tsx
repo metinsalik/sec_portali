@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { 
@@ -53,8 +53,17 @@ interface NotebookPage {
 
 export default function NotebooksPage() {
   const queryClient = useQueryClient();
-  const [selectedFacility, setSelectedFacility] = useState('');
+  const [selectedFacility, setSelectedFacility] = useState(localStorage.getItem('activeFacilityId') || '');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+
+  useEffect(() => {
+    const handleFacilityChange = () => {
+      setSelectedFacility(localStorage.getItem('activeFacilityId') || '');
+    };
+    window.addEventListener('facilityChanged', handleFacilityChange);
+    return () => window.removeEventListener('facilityChanged', handleFacilityChange);
+  }, []);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewPage, setViewPage] = useState<NotebookPage | null>(null);
   const [isEdit, setIsEdit] = useState(false);
@@ -90,6 +99,12 @@ export default function NotebooksPage() {
       return res.json();
     },
   });
+
+  useEffect(() => {
+    if (facilities?.length > 0 && !selectedFacility) {
+      setSelectedFacility(facilities[0].id);
+    }
+  }, [facilities, selectedFacility]);
 
   const { data: categories } = useQuery({
     queryKey: ['definitions-categories'],
@@ -390,19 +405,6 @@ export default function NotebooksPage() {
         </div>
         
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Label className="text-xs font-bold text-muted-foreground uppercase hidden sm:inline">Tesis:</Label>
-            <Select value={selectedFacility} onValueChange={setSelectedFacility}>
-              <SelectTrigger className="w-64 bg-background h-10 font-semibold">
-                <SelectValue placeholder="Tesis seçin" />
-              </SelectTrigger>
-              <SelectContent>
-                {facilities?.map((f: any) => (
-                  <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
           <div className="flex items-center gap-2">
             <Label className="text-xs font-bold text-muted-foreground uppercase hidden sm:inline italic">Arşivi Göster:</Label>
             <Button 

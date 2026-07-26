@@ -19,25 +19,59 @@ function getUser(req) {
 router.get('/dashboard', async (req, res) => {
     try {
         const user = getUser(req);
-        const userFacilities = user.facilities?.length > 0
-            ? user.facilities
-            : undefined;
-        const facilityFilter = userFacilities
-            ? { id: { in: userFacilities } }
-            : {};
+        const isAdmin = user.roles?.includes('admin') || user.roles?.includes('management');
+        // Facility parameter allows filtering when sent from frontend (for both admin & expert)
+        const activeFacilityId = req.query.facilityId;
+        const userFacilities = user.facilities?.length > 0 ? user.facilities : undefined;
+        // Determine the final facility IDs to query
+        let facilityFilter = {};
+        if (activeFacilityId) {
+            // If user is not admin, ensure they own this facility
+            if (!isAdmin && userFacilities && !userFacilities.includes(activeFacilityId)) {
+                return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
+            }
+            facilityFilter = { id: activeFacilityId };
+        }
+        else if (userFacilities) {
+            facilityFilter = { id: { in: userFacilities } };
+        }
         const facilities = await prisma.facility.findMany({
             where: { isActive: true, ...facilityFilter },
-            select: { id: true },
+            select: { id: true, name: true },
         });
         const facilityIds = facilities.map(f => f.id);
         const currentMonth = new Date().toISOString().slice(0, 7);
-        const [hrDataCount, accidentDataCount, recentHrData, recentAccidents] = await Promise.all([
-            prisma.monthlyHRData.count({
-                where: { facilityId: { in: facilityIds }, month: currentMonth },
-            }),
-            prisma.monthlyAccidentData.count({
-                where: { facilityId: { in: facilityIds }, month: currentMonth },
-            }),
+        if (isAdmin && !activeFacilityId) {
+            // ADMIN GLOBAL DASHBOARD
+            const [hrData, accidentData] = await Promise.all([
+                prisma.monthlyHRData.findMany({
+                    where: { facilityId: { in: facilityIds }, month: currentMonth },
+                    select: { facilityId: true }
+                }),
+                prisma.monthlyAccidentData.findMany({
+                    where: { facilityId: { in: facilityIds }, month: currentMonth },
+                    select: { facilityId: true }
+                })
+            ]);
+            const hrDataFacilityIds = new Set(hrData.map(d => d.facilityId));
+            const accidentDataFacilityIds = new Set(accidentData.map(d => d.facilityId));
+            const facilitiesStatus = facilities.map(f => ({
+                id: f.id,
+                name: f.name,
+                hasHrData: hrDataFacilityIds.has(f.id),
+                hasAccidentData: accidentDataFacilityIds.has(f.id)
+            }));
+            return res.json({
+                isAdminView: true,
+                totalFacilities: facilities.length,
+                hrDataSubmittedThisMonth: hrDataFacilityIds.size,
+                accidentDataSubmittedThisMonth: accidentDataFacilityIds.size,
+                facilitiesStatus,
+                currentMonth,
+            });
+        }
+        // EXPERT OR SPECIFIC FACILITY DASHBOARD
+        const [recentHrData, recentAccidents, currentMonthHr, currentMonthAccidents] = await Promise.all([
             prisma.monthlyHRData.findMany({
                 where: { facilityId: { in: facilityIds } },
                 orderBy: { updatedAt: 'desc' },
@@ -50,19 +84,69 @@ router.get('/dashboard', async (req, res) => {
                 take: 5,
                 include: { facility: { select: { name: true } } },
             }),
+            prisma.monthlyHRData.findFirst({
+                where: { facilityId: { in: facilityIds }, month: currentMonth },
+            }),
+            prisma.monthlyAccidentData.findFirst({
+                where: { facilityId: { in: facilityIds }, month: currentMonth },
+            })
         ]);
+        const totalWorkersThisMonth = currentMonthHr ? (currentMonthHr.mainEmployerData?.totalWorkers || 0) + (currentMonthHr.subContractorData?.totalWorkers || 0) : 0;
+        const totalAccidentsThisMonth = currentMonthAccidents ? (currentMonthAccidents.mainEmployerData?.accidents || 0) + (currentMonthAccidents.subContractorData?.accidents || 0) : 0;
         res.json({
+            isAdminView: false,
             totalFacilities: facilities.length,
-            hrDataSubmittedThisMonth: hrDataCount,
-            accidentDataSubmittedThisMonth: accidentDataCount,
             recentHrData,
             recentAccidents,
             currentMonth,
+            totalWorkersThisMonth,
+            totalAccidentsThisMonth,
+            hasHrDataThisMonth: !!currentMonthHr,
+            hasAccidentDataThisMonth: !!currentMonthAccidents
         });
     }
     catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Dashboard verileri getirilemedi.' });
+    }
+});
+// ─────────────────────────────────────────────────────────────────────────────
+// ANALİTİK & KPI (Yönetici & Genel)
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/analytics/kpi', async (req, res) => {
+    try {
+        const user = getUser(req);
+        const isAdmin = user.isAdmin || user.isManagement;
+        const year = req.query.year ? String(req.query.year) : new Date().getFullYear().toString();
+        let facilityFilter = {};
+        if (!isAdmin) {
+            if (user.facilities && user.facilities.length > 0) {
+                facilityFilter = { id: { in: user.facilities } };
+            }
+            else {
+                return res.json({ hrData: [], accidentData: [] }); // No access
+            }
+        }
+        const facilities = await prisma.facility.findMany({
+            where: { isActive: true, ...facilityFilter },
+            select: { id: true },
+        });
+        const facilityIds = facilities.map(f => f.id);
+        // Fetch all HR and Accident data for the year
+        const hrData = await prisma.monthlyHRData.findMany({
+            where: { facilityId: { in: facilityIds }, ...(year !== 'all' ? { month: { startsWith: year } } : {}) },
+        });
+        const accidentData = await prisma.monthlyAccidentData.findMany({
+            where: { facilityId: { in: facilityIds }, ...(year !== 'all' ? { month: { startsWith: year } } : {}) },
+        });
+        res.json({
+            hrData,
+            accidentData
+        });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'KPI verileri getirilemedi.' });
     }
 });
 // ─────────────────────────────────────────────────────────────────────────────
@@ -227,9 +311,15 @@ router.put('/accidents/:facilityId/monthly/:month', async (req, res) => {
 router.get('/facilities', async (req, res) => {
     try {
         const user = getUser(req);
-        const facilityFilter = user.facilities?.length > 0
-            ? { id: { in: user.facilities } }
-            : {};
+        let facilityFilter = {};
+        if (!user.isAdmin && !user.isManagement) {
+            if (user.facilities && user.facilities.length > 0) {
+                facilityFilter = { id: { in: user.facilities } };
+            }
+            else {
+                return res.json([]); // Not admin and no facilities assigned, return empty
+            }
+        }
         const facilities = await prisma.facility.findMany({
             where: { isActive: true, ...facilityFilter },
             include: {

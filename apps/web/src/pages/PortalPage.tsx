@@ -150,21 +150,21 @@ export default function PortalPage() {
         {/* Bento Grid layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-          {/* Card 1: İSG Atama Paneli (Only shown to admin/management) */}
-          {(hasAdminAccess || user?.modules?.includes('PANEL')) && (
+          {/* Card 1: Operasyon Yönetim Sistemi (Only shown to admin/management) */}
+          {(hasAdminAccess || user?.modules?.includes('PANEL') || user?.modules?.includes('RENOVATION_REPORT')) && (
             <div
-              onClick={() => navigate('/panel')}
+              onClick={() => navigate('/operations-management')}
               className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
             >
               {/* Mobile Card Layout */}
               <div className="flex md:hidden items-start gap-4">
                 <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#e5eeff] dark:bg-[#0051d5]/20 flex items-center justify-center text-[#0051d5] dark:text-[#b4c5ff]">
-                  <span className="material-symbols-outlined text-[28px]">grid_view</span>
+                  <span className="material-symbols-outlined text-[28px]">settings_suggest</span>
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">İSG Atama Paneli</h2>
+                  <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">Operasyon Yönetim Sistemi</h2>
                   <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
-                    Profesyonel yönetimi, OSGB takibi, kurumsal atamalar ve yasal süre hesaplamaları.
+                    İSG Atama Paneli ve İnşaat Renovasyon Teslim Raporu modüllerine buradan erişebilirsiniz.
                   </p>
                   <div className="flex items-center gap-2 text-[#0051d5] dark:text-[#b4c5ff] text-sm font-medium group-hover:underline">
                     Uygulamaya Git
@@ -177,11 +177,11 @@ export default function PortalPage() {
               <div className="hidden md:flex flex-col justify-between h-full">
                 <div>
                   <div className="w-14 h-14 rounded-xl bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center mb-6 text-[#0051d5] dark:text-[#b4c5ff] transition-transform group-hover:scale-110">
-                    <span className="material-symbols-outlined text-[32px]">grid_view</span>
+                    <span className="material-symbols-outlined text-[32px]">settings_suggest</span>
                   </div>
-                  <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">İSG Atama Paneli</h3>
+                  <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">Operasyon Yönetim Sistemi</h3>
                   <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
-                    Profesyonel yönetimi, OSGB takibi, kurumsal atamalar ve yasal süre hesaplamaları.
+                    İSG Atama Paneli ve İnşaat Renovasyon Teslim Raporu modüllerine buradan erişebilirsiniz.
                   </p>
                 </div>
                 <div className="inline-flex items-center gap-2 text-[#0051d5] dark:text-[#b4c5ff] text-sm font-medium group-hover:gap-4 transition-all">
@@ -438,6 +438,48 @@ export default function PortalPage() {
                 </p>
               </div>
               <div className="inline-flex items-center gap-2 text-[#1565c0] dark:text-blue-400 text-sm font-medium group-hover:gap-4 transition-all">
+                Uygulamaya Git
+                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+              </div>
+            </div>
+          </div>
+          )}
+
+          {/* Card: İSG Kontrol Listeleri */}
+          {(hasAdminAccess || user?.modules?.includes('CHECKLISTS')) && (
+          <div
+            onClick={() => navigate('/checklists')}
+            className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
+          >
+            {/* Mobile Card Layout */}
+            <div className="flex md:hidden items-start gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#e8f5e9] dark:bg-[#1b5e20]/20 flex items-center justify-center text-[#2e7d32] dark:text-emerald-400">
+                <span className="material-symbols-outlined text-[28px]">fact_check</span>
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">İSG Kontrol Listeleri</h2>
+                <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
+                  Saha denetimleri için esnek formlar oluşturun ve mobil ortamda doldurun.
+                </p>
+                <div className="flex items-center gap-2 text-[#2e7d32] dark:text-emerald-400 text-sm font-medium group-hover:underline">
+                  Uygulamaya Git
+                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop Card Layout */}
+            <div className="hidden md:flex flex-col justify-between h-full">
+              <div>
+                <div className="w-14 h-14 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center mb-6 text-[#2e7d32] dark:text-emerald-400 transition-transform group-hover:scale-110">
+                  <span className="material-symbols-outlined text-[32px]">fact_check</span>
+                </div>
+                <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">İSG Kontrol Listeleri</h3>
+                <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
+                  Saha denetimleri için esnek formlar oluşturun, mobil ortamda doldurun ve Excel'e aktarın.
+                </p>
+              </div>
+              <div className="inline-flex items-center gap-2 text-[#2e7d32] dark:text-emerald-400 text-sm font-medium group-hover:gap-4 transition-all">
                 Uygulamaya Git
                 <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
               </div>

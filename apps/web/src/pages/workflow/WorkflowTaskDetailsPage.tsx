@@ -8,10 +8,11 @@ import { useAuth } from '@/context/AuthContext';
 import { useChat } from '@/context/ChatContext';
 import { 
   ArrowLeft, Clock, MessageSquare, AlertTriangle, CheckCircle2, 
-  Loader2, Paperclip, CalendarIcon, UploadCloud, XCircle, Trash2, Plus
+  Loader2, Paperclip, CalendarIcon, UploadCloud, XCircle, Trash2, Plus, Edit
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { TaskFormModal } from '@/components/workflow/TaskFormModal';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -60,6 +61,8 @@ const getActionTranslation = (action: string) => {
     'STEP_UPDATE': 'Adım Güncellendi',
     'STEP_DELETE': 'Adım Silindi',
     'STEP_TOGGLE': 'Adım Durumu Değişti',
+    'STEP_COMPLETED': 'Kontrol Adımı',
+    'STEP_UNCHECKED': 'Kontrol Adımı',
     'REJECT': 'Görev İade Edildi',
     'UNBLOCK': 'Engel Kaldırıldı'
   };
@@ -106,6 +109,7 @@ export default function WorkflowTaskDetailsPage() {
   const [dueRequestData, setDueRequestData] = useState({ date: '', reason: '' });
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
   const [blockNote, setBlockNote] = useState('');
@@ -164,7 +168,7 @@ export default function WorkflowTaskDetailsPage() {
   });
 
   const canTransfer = task && (user?.username === task.creatorId || user?.username === task.assigneeId || user?.workflowRole === 'ADMIN');
-  const canEditCore = task && (user?.username === task.creatorId || user?.workflowRole === 'ADMIN' || user?.roles?.includes('admin'));
+  const canEditCore = task && (user?.username === task.creatorId);
   const isDone = task?.status === 'DONE';
 
   useEffect(() => {
@@ -475,10 +479,15 @@ export default function WorkflowTaskDetailsPage() {
                 <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-white" />
               )}
             </Button>
-            {(user?.username === task.creatorId || user?.workflowRole === 'ADMIN' || user?.roles?.includes('admin')) && !isDone && (
-               <Button variant="outline" className="border-red-200 hover:bg-red-50 hover:text-red-600 px-2" onClick={() => setIsDeleteDialogOpen(true)}>
-                 <Trash2 className="w-4 h-4 text-red-500" />
-               </Button>
+            {(user?.username === task.creatorId) && !isDone && (
+               <div className="flex items-center gap-2">
+                 <Button variant="outline" className="px-2 hover:bg-slate-50" onClick={() => setIsEditModalOpen(true)}>
+                   <Edit className="w-4 h-4 text-slate-500" />
+                 </Button>
+                 <Button variant="outline" className="border-red-200 hover:bg-red-50 hover:text-red-600 px-2" onClick={() => setIsDeleteDialogOpen(true)}>
+                   <Trash2 className="w-4 h-4 text-red-500" />
+                 </Button>
+               </div>
             )}
           </div>
         </div>
@@ -500,10 +509,19 @@ export default function WorkflowTaskDetailsPage() {
           )}
           
           {task.status === 'DOING' && (user?.username === task.assigneeId) && (
-            <Button onClick={() => handleStatusChange('REVIEW')} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              <CheckCircle2 className="w-4 h-4 mr-2" />
-              Onaya Gönder (Tamamla)
-            </Button>
+            <div className="flex flex-col gap-1 items-center">
+              <Button 
+                onClick={() => handleStatusChange('REVIEW')} 
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                disabled={task.checklist && task.checklist.length > 0 && !task.checklist.every((step: any) => step.done)}
+              >
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                Onaya Gönder (Tamamla)
+              </Button>
+              {task.checklist && task.checklist.length > 0 && !task.checklist.every((step: any) => step.done) && (
+                <span className="text-xs text-red-500">Tüm kontrol adımlarını tamamlamalısınız</span>
+              )}
+            </div>
           )}
           {isDone && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-100 text-emerald-800 text-sm font-medium border border-emerald-200">
@@ -511,7 +529,7 @@ export default function WorkflowTaskDetailsPage() {
             </span>
           )}
           
-          {task.status === 'REVIEW' && !isDone && (user?.username === task.creatorId || user?.username === task.followerId || user?.isAdmin) && (
+          {task.status === 'REVIEW' && !isDone && (user?.username === task.creatorId || user?.username === task.followerId) && (
             <div className="flex gap-2">
               <Button onClick={() => handleStatusChange('DONE')} className="bg-emerald-600 hover:bg-emerald-700 text-white">
                 <CheckCircle2 className="w-4 h-4 mr-2" />
@@ -526,20 +544,6 @@ export default function WorkflowTaskDetailsPage() {
 
           {!isDone && (
             <>
-              <select 
-                value={task.status} 
-                onChange={(e) => handleStatusChange(e.target.value)}
-                className="flex h-10 rounded-md border border-input bg-white dark:bg-slate-800 px-3 py-2 text-sm"
-              >
-                <option value="TODO">Bekliyor</option>
-                <option value="DOING">Devam Ediyor</option>
-                <option value="REVIEW">Kontrolde</option>
-                { (user?.username === task.creatorId || user?.username === task.followerId || user?.isAdmin) && (
-                  <option value="DONE">Tamamlandı</option>
-                )}
-                <option value="BLOCKED">Bloke Edildi</option>
-              </select>
-
               <Button variant="outline" className="text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => setIsDueRequestOpen(true)}>
                 <CalendarIcon className="w-4 h-4 mr-2" /> Termin Düzeltme İste
               </Button>
@@ -593,7 +597,7 @@ export default function WorkflowTaskDetailsPage() {
               <AlertTriangle className="w-4 h-4" /> Görev Engellendi
             </h3>
             <p className="text-red-700 text-sm">{task.blockNote}</p>
-            { (user?.username === task.creatorId || user?.username === task.followerId || user?.isAdmin) && (
+            { (user?.username === task.creatorId || user?.username === task.followerId) && (
               <Button variant="link" className="text-red-800 p-0 h-auto mt-2 text-xs" onClick={() => setIsUnblockModalOpen(true)}>
                 Engeli Kaldır
               </Button>
@@ -601,10 +605,29 @@ export default function WorkflowTaskDetailsPage() {
           </div>
         )}
 
-        <div className="bg-white dark:bg-slate-800 border rounded-lg p-5">
-          <h3 className="font-semibold text-lg mb-3">Açıklama</h3>
-          <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{task.description || 'Açıklama bulunmuyor.'}</p>
-        </div>
+        {/* The rest of the content (description, checklist) is hidden/blurred if assignee hasn't started the task */}
+        {task.status === 'TODO' && user?.username === task.assigneeId ? (
+          <div className="bg-white dark:bg-slate-800 border rounded-lg p-12 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-2">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200">Görevi Başlatmanız Gerekiyor</h3>
+            <p className="text-slate-500 max-w-md">
+              Bu görevin içeriğini görmek ve işlem yapabilmek için öncelikle görevi başlatmalısınız.
+            </p>
+            <Button size="lg" onClick={() => handleStatusChange('DOING')} className="bg-blue-600 hover:bg-blue-700 text-white mt-4">
+              Görevi Başlat
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="bg-white dark:bg-slate-800 border rounded-lg p-5">
+              <h3 className="font-semibold text-lg mb-3">Açıklama</h3>
+              <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{task.description || 'Açıklama bulunmuyor.'}</p>
+            </div>
 
         <div className="bg-white dark:bg-slate-800 border rounded-lg p-5">
           <div className="flex items-center justify-between mb-4">
@@ -729,8 +752,8 @@ export default function WorkflowTaskDetailsPage() {
             )}
           </div>
         </div>
-
-        
+        </>
+        )}
       </div>
       
       {/* Right Sidebar - Activity Log */}
@@ -792,6 +815,13 @@ export default function WorkflowTaskDetailsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <TaskFormModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        initialData={task}
+        planId={task.planId}
+      />
+
       <Dialog open={isDueRequestOpen} onOpenChange={setIsDueRequestOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

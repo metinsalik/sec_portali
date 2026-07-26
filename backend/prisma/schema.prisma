@@ -14,42 +14,44 @@ datasource db {
 }
 
 model User {
-  username        String           @id
-  fullName        String
-  isActive        Boolean          @default(true)
-  employmentType  String?
-  osgbName        String?
-  createdAt       DateTime         @default(now())
-  telegramChatId  String?          @unique
-  telegramConnectToken String?     @unique
-  updatedAt       DateTime         @updatedAt
-  department      String?
-  email           String?
-  phone           String?
-  title           String?
-  facilities      UserFacility[]
-  roles           UserRole[]
-  hazmatIncidents HazmatIncident[]
-  BuildProject    BuildProject[]
-  BuildApproval   BuildApproval[]
-  BuildPermit     BuildPermit[]
-  BuildDocument   BuildDocument[]
-  BuildHandover   BuildHandover[]
-  modules         UserModule[]
+  username             String           @id
+  fullName             String
+  isActive             Boolean          @default(true)
+  employmentType       String?
+  osgbName             String?
+  createdAt            DateTime         @default(now())
+  telegramChatId       String?          @unique
+  telegramConnectToken String?          @unique
+  updatedAt            DateTime         @updatedAt
+  department           String?
+  email                String?
+  phone                String?
+  title                String?
+  facilities           UserFacility[]
+  roles                UserRole[]
+  hazmatIncidents      HazmatIncident[]
+  BuildProject         BuildProject[]
+  BuildApproval        BuildApproval[]
+  BuildPermit          BuildPermit[]
+  BuildDocument        BuildDocument[]
+  BuildHandover        BuildHandover[]
+  modules              UserModule[]
 
-  wfPlansOwned          WfPlan[]             @relation("WfPlanOwner")
-  wfTasksAssigned       WfTask[]             @relation("WfTaskAssignee")
-  wfTasksFollowed       WfTask[]             @relation("WfTaskFollower")
-  wfTasksCreated        WfTask[]             @relation("WfTaskCreator")
-  wfComments            WfComment[]          @relation("WfCommentAuthor")
-  wfDueRequestsMade     WfDueChangeRequest[] @relation("WfDueRequestRequestedBy")
-  wfDueRequestsReviewed WfDueChangeRequest[] @relation("WfDueRequestReviewedBy")
-  wfDueHistories        WfDueHistory[]       @relation("WfDueHistoryChangedBy")
-  wfChatMessages        WfChatMessage[]      @relation("WfChatMessageSender")
-  wfActivityLogs        WfActivityLog[]      @relation("WfActivityLogActor")
-  wfTransferRequestsMade WfTransferRequest[] @relation("WfTransferRequestedBy")
-  wfTransferRequestsTarget WfTransferRequest[] @relation("WfTransferTarget")
-  workflowRole          WorkflowUserRole?
+  wfPlansOwned             WfPlan[]              @relation("WfPlanOwner")
+  wfTasksAssigned          WfTask[]              @relation("WfTaskAssignee")
+  wfTasksFollowed          WfTask[]              @relation("WfTaskFollower")
+  wfTasksCreated           WfTask[]              @relation("WfTaskCreator")
+  wfComments               WfComment[]           @relation("WfCommentAuthor")
+  wfDueRequestsMade        WfDueChangeRequest[]  @relation("WfDueRequestRequestedBy")
+  wfDueRequestsReviewed    WfDueChangeRequest[]  @relation("WfDueRequestReviewedBy")
+  wfDueHistories           WfDueHistory[]        @relation("WfDueHistoryChangedBy")
+  wfChatMessages           WfChatMessage[]       @relation("WfChatMessageSender")
+  wfActivityLogs           WfActivityLog[]       @relation("WfActivityLogActor")
+  wfTransferRequestsMade   WfTransferRequest[]   @relation("WfTransferRequestedBy")
+  wfTransferRequestsTarget WfTransferRequest[]   @relation("WfTransferTarget")
+  workflowRole             WorkflowUserRole?
+  checklistTemplates       ChecklistTemplate[]
+  checklistSubmissions     ChecklistSubmission[]
 }
 
 model Role {
@@ -141,6 +143,7 @@ model Facility {
   locations              FacilityLocation[]
   riskDepartmentSettings RiskDepartmentSetting[]
   riskExpertFacilities   RiskExpertFacility[]
+  checklistSubmissions   ChecklistSubmission[]
   users                  UserFacility[]
   facilityHazmatItems    FacilityHazmatItem[]
   spillKits              HazmatSpillKit[]
@@ -163,6 +166,7 @@ model Facility {
   btTurler               BTTur[]
   btUygunsuzluklar       BTUygunsuzluk[]
   HazmatVehicle          HazmatVehicle[]
+  renovationReports      RenovationReport[]
 }
 
 model IncidentCategory {
@@ -311,16 +315,16 @@ model Professional {
 }
 
 model EmployerRepresentative {
-  id                   Int          @id @default(autoincrement())
-  fullName             String
-  title                String?
-  phone                String?
-  email                String?
-  isActive             Boolean      @default(true)
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
-  username             String?
-  appointments         Assignment[]
+  id           Int          @id @default(autoincrement())
+  fullName     String
+  title        String?
+  phone        String?
+  email        String?
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  username     String?
+  appointments Assignment[]
 }
 
 model OSGBCompany {
@@ -1760,18 +1764,18 @@ enum WfDueRequestStatus {
 }
 
 model WfPlan {
-  id         String      @id @default(cuid())
+  id         String     @id @default(cuid())
   title      String
   goal       String?
   ownerId    String
   categoryId String?
   startDate  DateTime
   dueDate    DateTime
-  status     WfStatus    @default(TODO)
-  priority   WfPriority  @default(MEDIUM)
+  status     WfStatus   @default(TODO)
+  priority   WfPriority @default(MEDIUM)
   tasks      WfTask[]
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 
   owner    User        @relation(name: "WfPlanOwner", fields: [ownerId], references: [username])
   category WfCategory? @relation(fields: [categoryId], references: [id])
@@ -1785,64 +1789,64 @@ model WfCategory {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  plans       WfPlan[]
+  plans WfPlan[]
 }
 
 model WfTask {
-  id             String               @id @default(cuid())
-  title          String
-  description    String?
-  planId         String?
-  plan           WfPlan?              @relation(fields: [planId], references: [id])
-  assigneeId     String
-  followerId     String
-  creatorId      String
-  status         WfStatus             @default(TODO)
-  priority       WfPriority           @default(MEDIUM)
-  category       String?
-  labels         String[]
-  startDate      DateTime
-  dueDate        DateTime
-  estimateHours  Float                @default(0)
-  progress       Int                  @default(0)
-  dueChangeCount Int                  @default(0)
-  blockNote      String?
-  checklist      WfChecklistStep[]
-  comments       WfComment[]
-  dueRequests    WfDueChangeRequest[]
-  dueHistories   WfDueHistory[]
-  chatMessages   WfChatMessage[]
+  id               String               @id @default(cuid())
+  title            String
+  description      String?
+  planId           String?
+  plan             WfPlan?              @relation(fields: [planId], references: [id])
+  assigneeId       String
+  followerId       String
+  creatorId        String
+  status           WfStatus             @default(TODO)
+  priority         WfPriority           @default(MEDIUM)
+  category         String?
+  labels           String[]
+  startDate        DateTime
+  dueDate          DateTime
+  estimateHours    Float                @default(0)
+  progress         Int                  @default(0)
+  dueChangeCount   Int                  @default(0)
+  blockNote        String?
+  checklist        WfChecklistStep[]
+  comments         WfComment[]
+  dueRequests      WfDueChangeRequest[]
+  dueHistories     WfDueHistory[]
+  chatMessages     WfChatMessage[]
   transferRequests WfTransferRequest[]
-  activityLogs   WfActivityLog[]
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+  activityLogs     WfActivityLog[]
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 
   assignee User @relation(name: "WfTaskAssignee", fields: [assigneeId], references: [username])
   follower User @relation(name: "WfTaskFollower", fields: [followerId], references: [username])
   creator  User @relation(name: "WfTaskCreator", fields: [creatorId], references: [username])
-  
-  recurrence     String?
+
+  recurrence        String?
   recurrenceEndDate DateTime?
-  lastRecurrenceAt DateTime?
-  parentTaskId   String?
+  lastRecurrenceAt  DateTime?
+  parentTaskId      String?
 }
 
 model WfChecklistStep {
-  id           String    @id @default(cuid())
-  taskId       String
-  task         WfTask    @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  text         String
-  order        Int
-  done         Boolean   @default(false)
-  doneById     String?
-  doneAt       DateTime?
-  requireEvidence Boolean @default(false)
-  requireDescription Boolean @default(false)
-  evidence     String?
-  evidenceName String?
-  evidenceById String?
-  evidenceAt   DateTime?
-  description  String?
+  id                 String    @id @default(cuid())
+  taskId             String
+  task               WfTask    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  text               String
+  order              Int
+  done               Boolean   @default(false)
+  doneById           String?
+  doneAt             DateTime?
+  requireEvidence    Boolean   @default(false)
+  requireDescription Boolean   @default(false)
+  evidence           String?
+  evidenceName       String?
+  evidenceById       String?
+  evidenceAt         DateTime?
+  description        String?
 }
 
 model WfComment {
@@ -1911,24 +1915,223 @@ model WfActivityLog {
 }
 
 model WfTransferRequest {
-  id             String   @id @default(cuid())
-  taskId         String
-  requestedBy    String
-  targetUserId   String
-  status         WfDueRequestStatus @default(PENDING) // Reusing WfDueRequestStatus (PENDING, APPROVED, REJECTED)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id           String             @id @default(cuid())
+  taskId       String
+  requestedBy  String
+  targetUserId String
+  status       WfDueRequestStatus @default(PENDING) // Reusing WfDueRequestStatus (PENDING, APPROVED, REJECTED)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 
-  task           WfTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  requestedByUser User  @relation(name: "WfTransferRequestedBy", fields: [requestedBy], references: [username])
-  targetUser     User   @relation(name: "WfTransferTarget", fields: [targetUserId], references: [username])
+  task            WfTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  requestedByUser User   @relation(name: "WfTransferRequestedBy", fields: [requestedBy], references: [username])
+  targetUser      User   @relation(name: "WfTransferTarget", fields: [targetUserId], references: [username])
 }
 
 model TelegramSettings {
-  id           Int      @id @default(1)
-  botToken     String
-  botUsername  String
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          Int      @id @default(1)
+  botToken    String
+  botUsername String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model RenovationReport {
+  id             String    @id @default(cuid())
+  facilityId     String
+  facility       Facility  @relation(fields: [facilityId], references: [id])
+  projectName    String
+  location       String
+  startDate      DateTime?
+  endDate        DateTime?
+  controlledBy   String?
+  assessmentDate DateTime?
+  reportDate     DateTime?
+  status         String    @default("DRAFT") // DRAFT, COMPLETED
+
+  // JSON data for the report sections
+  checks       Json?
+  tests        Json?
+  certificates Json?
+  findings     Json?
+  evaluation   Json?
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OperationsCategory {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OperationsDepartment {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------
+// ---------------------------------------------------------
+// İSG Kontrol Listeleri (Checklist) Modelleri
+// ---------------------------------------------------------
+
+model ChecklistCategory {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items ChecklistItem[]
+}
+
+model ChecklistScaleSet {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  options   ChecklistScaleOption[]
+  templates ChecklistTemplate[]
+}
+
+model ChecklistScaleOption {
+  id                  String  @id @default(uuid())
+  scaleSetId          String
+  label               String
+  multiplier          Float?
+  sortOrder           Int
+  color               String?
+  requiresExplanation Boolean @default(false)
+  requiresAttachment  Boolean @default(false)
+
+  scaleSet ChecklistScaleSet @relation(fields: [scaleSetId], references: [id], onDelete: Cascade)
+  answers  ChecklistAnswer[]
+}
+
+model ChecklistTemplate {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  version     Int      @default(1)
+  createdById String
+  scaleSetId  String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  scaleSet    ChecklistScaleSet?    @relation(fields: [scaleSetId], references: [id])
+  sections    ChecklistSection[]
+  submissions ChecklistSubmission[]
+  assignments ChecklistAssignment[]
+  createdBy   User                  @relation(fields: [createdById], references: [username])
+}
+
+model ChecklistSection {
+  id         String @id @default(uuid())
+  templateId String
+  title      String
+  sortOrder  Int
+
+  template ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  items    ChecklistItem[]
+}
+
+model ChecklistItem {
+  id           String  @id @default(uuid())
+  sectionId    String
+  categoryId   String?
+  itemNo       Int
+  questionText String
+  questionType String
+  weight       Float   @default(1)
+  isRequired   Boolean @default(true)
+  sortOrder    Int
+  config       Json?
+
+  section  ChecklistSection   @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  category ChecklistCategory? @relation(fields: [categoryId], references: [id])
+  answers  ChecklistAnswer[]
+}
+
+model ChecklistAssignment {
+  id          String    @id @default(uuid())
+  templateId  String
+  facilityIds String[]
+  isPeriodic  Boolean   @default(false)
+  periodValue Int?
+  periodType  String?
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  template ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// 2. UYGULAMA (SUBMISSION) YAPISI
+// ============================================
+
+model ChecklistSubmission {
+  id             String   @id @default(uuid())
+  templateId     String
+  facilityId     String
+  conductedById  String?
+  auditDate      DateTime
+  auditTimeStart String?
+  auditTimeEnd   String?
+  auditTeam      String?
+  status         String   @default("BEKLEYEN") // BEKLEYEN, TASLAK, TAMAMLANDI, ONAYLANDI, IPTAL
+  totalScore     Float?
+  maxScore       Float?
+  percentScore   Float?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  template    ChecklistTemplate      @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  facility    Facility               @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  answers     ChecklistAnswer[]
+  attachments SubmissionAttachment[]
+  conductedBy User?                  @relation(fields: [conductedById], references: [username])
+}
+
+model ChecklistAnswer {
+  id             String    @id @default(uuid())
+  submissionId   String
+  itemId         String
+  scaleOptionId  String?
+  yesNoValue     Boolean?
+  numberValue    Float?
+  textValue      String?
+  dateValue      DateTime?
+  multiSelectVal Json?
+  photoPath      String?
+  notApplicable  Boolean   @default(false)
+  earnedScore    Float?
+  note           String?
+
+  submission  ChecklistSubmission    @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  item        ChecklistItem          @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  scaleOption ChecklistScaleOption?  @relation(fields: [scaleOptionId], references: [id])
+  attachments SubmissionAttachment[]
+}
+
+model SubmissionAttachment {
+  id           String  @id @default(uuid())
+  submissionId String
+  answerId     String?
+  filePath     String
+  label        String?
+  sortOrder    Int     @default(0)
+
+  submission ChecklistSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  answer     ChecklistAnswer?    @relation(fields: [answerId], references: [id], onDelete: Cascade)
 }

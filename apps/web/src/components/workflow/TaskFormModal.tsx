@@ -43,28 +43,67 @@ export function TaskFormModal({ isOpen, onClose, planId: defaultPlanId, initialD
     checklist: initialData?.checklist?.map((c: any) => ({ title: c.title, isDone: c.isDone })) || [{ title: '', isDone: false }]
   });
 
+  const formatDateTimeLocal = (dateStr?: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '';
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+  };
+
   // Reset form when opened with new initialData
   React.useEffect(() => {
     if (isOpen) {
-      setFormData({
-        title: initialData?.title || '',
-        description: initialData?.description || '',
-        planId: initialData?.planId || defaultPlanId || '',
-        assigneeId: initialData?.assigneeId || '',
-        followerId: initialData?.followerId || '',
-        priority: initialData?.priority || 'MEDIUM',
-        category: initialData?.category || '',
-        labels: initialData?.labels ? initialData.labels.join(', ') : '',
-        startDate: initialData?.startDate ? new Date(initialData.startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        dueDate: initialData?.dueDate ? new Date(initialData.dueDate).toISOString().split('T')[0] : '',
-        estimateHours: initialData?.estimateHours?.toString() || '0',
-        recurrence: initialData?.recurrence || '',
-        recurrenceEndDate: initialData?.recurrenceEndDate ? new Date(initialData.recurrenceEndDate).toISOString().split('T')[0] : '',
-        checklist: initialData?.checklist?.map((c: any) => ({ title: c.title, isDone: c.isDone })) || [{ title: '', isDone: false }]
-      });
+      if (initialData) {
+        setFormData({
+          title: initialData.title || '',
+          description: initialData.description || '',
+          planId: initialData.planId || defaultPlanId || '',
+          assigneeId: initialData.assigneeId || '',
+          followerId: initialData.followerId || '',
+          priority: initialData.priority || 'MEDIUM',
+          category: initialData.category?.name || initialData.category || '',
+          labels: initialData.labels ? (Array.isArray(initialData.labels) ? initialData.labels.join(', ') : initialData.labels) : '',
+          startDate: formatDateTimeLocal(initialData.startDate) || formatDateTimeLocal(new Date().toISOString()),
+          dueDate: formatDateTimeLocal(initialData.dueDate),
+          estimateHours: initialData.estimateHours?.toString() || '0',
+          recurrence: initialData.recurrence || '',
+          recurrenceEndDate: initialData.recurrenceEndDate ? new Date(initialData.recurrenceEndDate).toISOString().split('T')[0] : '',
+          blockNote: initialData.blockNote || '',
+          status: initialData.status || 'TODO'
+        });
+        if (initialData.checklist && initialData.checklist.length > 0) {
+          setChecklist(initialData.checklist.map((c: any) => ({
+            id: c.id || Math.random(),
+            text: c.text || '',
+            requireEvidence: !!c.requireEvidence,
+            requireDescription: !!c.requireDescription
+          })));
+        } else {
+          setChecklist([{ id: 1, text: '', requireEvidence: false, requireDescription: false }]);
+        }
+      } else {
+        setFormData({
+          title: '',
+          description: '',
+          planId: defaultPlanId || '',
+          assigneeId: '',
+          followerId: '',
+          priority: 'MEDIUM',
+          status: 'TODO',
+          category: '',
+          labels: '',
+          startDate: formatDateTimeLocal(new Date().toISOString()),
+          dueDate: '',
+          estimateHours: '0',
+          blockNote: '',
+          recurrence: '',
+          recurrenceEndDate: ''
+        });
+        setChecklist([{ id: 1, text: '', requireEvidence: false, requireDescription: false }]);
+      }
     }
   }, [isOpen, initialData, defaultPlanId]);
-
 
   const [checklist, setChecklist] = useState([
     { id: 1, text: '', requireEvidence: false, requireDescription: false }
@@ -106,36 +145,14 @@ export function TaskFormModal({ isOpen, onClose, planId: defaultPlanId, initialD
 
   // Pre-fill from plan
   React.useEffect(() => {
-    if (selectedPlan && isOpen) {
+    if (selectedPlan && isOpen && !initialData) {
       setFormData(prev => ({
         ...prev,
         creatorId: prev.creatorId || selectedPlan.ownerId || '',
         category: selectedPlan.category?.name || '',
       }));
     }
-  }, [selectedPlan, isOpen]);
-
-  // Reset form on open
-  React.useEffect(() => {
-    if (isOpen) {
-      setFormData({
-        title: '',
-        description: '',
-        planId: defaultPlanId || '',
-        creatorId: '',
-        assigneeId: '',
-        priority: 'MEDIUM',
-        status: 'TODO',
-        category: '',
-        labels: '',
-        startDate: '',
-        dueDate: '',
-        blockNote: '',
-        recurrence: ''
-      });
-      setChecklist([{ id: 1, text: '', requireEvidence: false, requireDescription: false }]);
-    }
-  }, [isOpen, defaultPlanId]);
+  }, [selectedPlan, isOpen, initialData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

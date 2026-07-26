@@ -18,11 +18,10 @@ import {
   Clock, CheckCircle2, AlertCircle, FileText,
   Calendar, TrendingUp, History,
   Stethoscope, HardHat, HeartPulse, Info, UserCheck,
-  Plus, Edit2, Trash2, Loader2, UserPlus, XCircle, Upload
+  Plus, Edit2, Trash2, Loader2, UserPlus, XCircle, Upload, Eye
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QuickAssignModal } from '@/components/panel/assignments/QuickAssignModal';
-import LocationsManagerModal from '@/components/panel/LocationsManagerModal';
 import { toast } from 'sonner';
 
 interface EmployeeCountHistory {
@@ -92,7 +91,6 @@ const PanelFacilityLifeCardPage = () => {
   // Modal States
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [manageModalOpen, setManageModalOpen] = useState(false);
-  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [assignType, setAssignType] = useState<'IGU' | 'Hekim' | 'DSP' | 'Vekil'>('IGU');
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
   const [terminatingAssignmentId, setTerminatingAssignmentId] = useState<number | null>(null);
@@ -290,13 +288,17 @@ interface UpdateAssignmentData {
   const assignedHekimMin = activeAssignments.filter(a => a.type === 'Hekim').reduce((sum, a) => sum + a.durationMinutes, 0);
   const assignedDspMin = activeAssignments.filter(a => a.type === 'DSP').reduce((sum, a) => sum + a.durationMinutes, 0);
 
-  const isIguExcess = assignedIguMin > reqs.igu.totalMin;
-  const isHekimExcess = assignedHekimMin > reqs.hekim.totalMin;
-  const isDspExcess = reqs.dsp.required && assignedDspMin > reqs.dsp.totalMin;
+  // DSP Muafiyet Mantığı (Tam zamanlı hekim ataması varsa DSP muaf)
+  const isDspWaived = assignedHekimMin >= 11700 || activeAssignments.some(a => a.type === 'Hekim' && a.isFullTime);
 
   const isIguMet = assignedIguMin >= reqs.igu.totalMin;
+  const isIguExcess = assignedIguMin > reqs.igu.totalMin;
+  
   const isHekimMet = assignedHekimMin >= reqs.hekim.totalMin;
-  const isDspMet = !reqs.dsp.required || assignedDspMin >= reqs.dsp.totalMin;
+  const isHekimExcess = assignedHekimMin > reqs.hekim.totalMin;
+  
+  const isDspMet = isDspWaived || assignedDspMin >= reqs.dsp.totalMin;
+  const isDspExcess = !isDspWaived && assignedDspMin > reqs.dsp.totalMin;
 
   const computeCountdown = (type: string, isMet: boolean, isRequired: boolean = true) => {
     if (isMet || !isRequired || !facility) return null;
@@ -310,7 +312,7 @@ interface UpdateAssignmentData {
 
   const iguCountdown = computeCountdown('IGU', isIguMet);
   const hekimCountdown = computeCountdown('Hekim', isHekimMet);
-  const dspCountdown = computeCountdown('DSP', isDspMet, reqs.dsp.required);
+  const dspCountdown = computeCountdown('DSP', isDspMet, reqs.dsp.required && !isDspWaived);
 
 
   const openManageModal = (type: 'IGU' | 'Hekim' | 'DSP' | 'Vekil') => {
@@ -361,18 +363,11 @@ interface UpdateAssignmentData {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right mr-4">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">Tesis Kodu</span>
-            <span className="text-xs font-mono font-bold text-slate-600">{facility.id}</span>
-          </div>
-          <Button 
-            variant="outline" 
-            className="rounded-xl h-10 px-4 font-semibold text-xs border-border"
-            onClick={() => setIsLocationModalOpen(true)}
-          >
-            <MapPin className="w-4 h-4 mr-2 text-primary" /> Lokasyonları Yönet
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" className="w-10 h-10 rounded-xl border-border bg-white" title="Görüntüle">
+            <Eye className="w-4 h-4 text-slate-700" />
           </Button>
+
           <div className="relative">
             <input 
               type="file" 
@@ -383,34 +378,39 @@ interface UpdateAssignmentData {
             />
             <Button 
               variant="outline" 
-              className="rounded-xl h-10 px-4 font-semibold text-xs border-primary/20 bg-primary/5 text-primary hover:bg-primary/10"
+              size="icon"
+              className="w-10 h-10 rounded-xl border-border bg-card hover:bg-muted"
               onClick={() => document.getElementById('katip-upload')?.click()}
               disabled={isUploadingKatip}
+              title="İSG-KATİP Aktar"
             >
-              {isUploadingKatip ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-              {isUploadingKatip ? 'Aktarılıyor...' : 'İSG-KATİP Aktar'}
+              {isUploadingKatip ? <Loader2 className="w-4 h-4 animate-spin text-slate-700" /> : <Upload className="w-4 h-4 text-slate-700" />}
             </Button>
           </div>
-          <Button variant="outline" className="rounded-xl h-10 px-4 font-semibold text-xs border-border">
-            <FileText className="w-4 h-4 mr-2 text-primary" /> Rapor
+
+          <Button variant="outline" size="icon" className="w-10 h-10 rounded-xl border-border bg-card hover:bg-muted" title="Rapor" onClick={() => window.print()}>
+            <FileText className="w-4 h-4 text-slate-700" />
           </Button>
+
           <Button 
-            className="rounded-xl h-10 px-6 font-bold text-xs bg-slate-900 hover:bg-slate-800 shadow-lg"
+            size="icon"
+            className="w-10 h-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-md ml-1"
             onClick={() => openAssignModal('IGU')}
+            title="Atama Yap"
           >
-            Atama Yap
+            <Plus className="w-5 h-5" />
           </Button>
         </div>
       </div>
 
       {/* 3-Column Requirements Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* IGU Requirement */}
         <Card className={cn(
-          "border-none shadow-sm rounded-xl overflow-hidden transition-all duration-300",
-          !isIguMet ? "bg-red-500/5 border border-red-500/20" : 
-          isIguExcess ? "bg-orange-500/5 border border-orange-500/20" :
-          "bg-emerald-500/5 border border-emerald-500/20"
+          "bg-card shadow-sm hover:shadow-md rounded-2xl overflow-hidden transition-all duration-300 border",
+          !isIguMet ? "border-red-200/60 dark:border-red-900/40 shadow-red-500/5" : 
+          isIguExcess ? "border-amber-200/60 dark:border-amber-900/40 shadow-amber-500/5" :
+          "border-slate-200/60 dark:border-slate-800/60"
         )}>
           <CardHeader className="p-6 pb-2">
             <div className="flex items-center justify-between">
@@ -492,7 +492,7 @@ interface UpdateAssignmentData {
                 <div 
                   key={as.id} 
                   className="flex items-center justify-between p-3 bg-card text-card-foreground rounded-xl border border-border shadow-sm group cursor-pointer hover:border-primary/50 transition-colors"
-                  onClick={() => openManageModal('IGU')}
+                  onClick={() => as.professional ? navigate(`/panel/professionals/${as.professional.id}`) : openManageModal('IGU')}
                 >
                   <div className="flex items-center gap-3">
                     <UserCheck className="w-4 h-4 text-emerald-500" />
@@ -506,12 +506,15 @@ interface UpdateAssignmentData {
                           {as.professional?.employmentType === 'OSGB Kadrosu' ? 'OSGB' : 'Tesis'}
                         </Badge>
                         <span className="text-[9px] text-slate-400 font-medium uppercase">
-                          {as.professional?.titleClass} SINIFI • {as.durationMinutes === 11700 ? 'TAM ZAMANLI' : `KISMİ SÜRELİ (${as.durationMinutes} DK)`}
+                          {as.durationMinutes === 11700 ? 'TAM ZAMANLI' : `KISMİ SÜRELİ (${as.durationMinutes} DK)`}
                         </span>
                       </div>
                     </div>
                   </div>
-                  <Edit2 className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <Edit2 
+                    className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary" 
+                    onClick={(e) => { e.stopPropagation(); openManageModal('IGU'); }} 
+                  />
                 </div>
               ))}
               {activeAssignments.filter(a => a.type === 'IGU').length === 0 && (
@@ -556,16 +559,16 @@ interface UpdateAssignmentData {
 
         {/* Workplace Doctor Requirement */}
         <Card className={cn(
-          "border-none shadow-sm rounded-xl overflow-hidden transition-all duration-300",
-          !isHekimMet ? "bg-red-500/5 border border-red-500/20" :
-          isHekimExcess ? "bg-orange-500/5 border border-orange-500/20" :
-          "bg-emerald-500/5 border border-emerald-500/20"
+          "bg-card shadow-sm hover:shadow-md rounded-2xl overflow-hidden transition-all duration-300 border",
+          !isHekimMet ? "border-red-200/60 dark:border-red-900/40 shadow-red-500/5" : 
+          isHekimExcess ? "border-amber-200/60 dark:border-amber-900/40 shadow-amber-500/5" :
+          "border-slate-200/60 dark:border-slate-800/60"
         )}>
           <CardHeader className="p-6 pb-2">
             <div className="flex items-center justify-between">
               <div className={cn(
                 "w-12 h-12 rounded-lg flex items-center justify-center shadow-sm text-white",
-                !isHekimMet ? "bg-red-500" :
+                !isHekimMet ? "bg-red-500" : 
                 isHekimExcess ? "bg-orange-500" : "bg-emerald-500"
               )}>
                 <Stethoscope className="w-6 h-6" />
@@ -626,8 +629,8 @@ interface UpdateAssignmentData {
               {activeAssignments.filter(a => a.type === 'Hekim').map(as => (
                 <div 
                   key={as.id} 
-                  className="flex items-center justify-between p-3 bg-card text-card-foreground rounded-xl border border-border shadow-sm cursor-pointer hover:border-primary/50 group"
-                  onClick={() => openManageModal('Hekim')}
+                  className="flex items-center justify-between p-3 bg-card text-card-foreground rounded-xl border border-border shadow-sm cursor-pointer hover:border-primary/50 group transition-colors"
+                  onClick={() => as.professional ? navigate(`/panel/professionals/${as.professional.id}`) : openManageModal('Hekim')}
                 >
                   <div className="flex items-center gap-3">
                     <UserCheck className="w-4 h-4 text-emerald-500" />
@@ -646,7 +649,10 @@ interface UpdateAssignmentData {
                       </div>
                     </div>
                   </div>
-                  <Edit2 className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <Edit2 
+                    className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary" 
+                    onClick={(e) => { e.stopPropagation(); openManageModal('Hekim'); }} 
+                  />
                 </div>
               ))}
               {activeAssignments.filter(a => a.type === 'Hekim').length === 0 && (
@@ -691,26 +697,31 @@ interface UpdateAssignmentData {
 
         {/* DSP Requirement */}
         <Card className={cn(
-          "border-none shadow-sm rounded-xl overflow-hidden transition-all duration-300",
-          !reqs.dsp.required ? "bg-slate-500/5 border border-slate-500/20" :
-          !isDspMet ? "bg-red-500/5 border border-red-500/20" :
-          isDspExcess ? "bg-orange-500/5 border border-orange-500/20" :
-          "bg-emerald-500/5 border border-emerald-500/20"
+          "bg-card shadow-sm hover:shadow-md rounded-2xl overflow-hidden transition-all duration-300 border",
+          !reqs.dsp.required ? "border-slate-200/60 dark:border-slate-800/60 opacity-80" :
+          !isDspMet ? "border-red-200/60 dark:border-red-900/40 shadow-red-500/5" : 
+          isDspExcess ? "border-amber-200/60 dark:border-amber-900/40 shadow-amber-500/5" :
+          "border-slate-200/60 dark:border-slate-800/60"
         )}>
           <CardHeader className="p-6 pb-2">
             <div className="flex items-center justify-between">
               <div className={cn(
                 "w-12 h-12 rounded-lg flex items-center justify-center shadow-sm text-white",
-                !reqs.dsp.required ? "bg-slate-500" :
-                !isDspMet ? "bg-red-500" :
+                isDspWaived ? "bg-slate-400" :
+                !isDspMet && reqs.dsp.required ? "bg-red-500" : 
                 isDspExcess ? "bg-orange-500" : "bg-emerald-500"
               )}>
                 <HeartPulse className="w-6 h-6" />
               </div>
               <div className="text-right">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Gereksinim</span>
-                <span className={cn("text-lg font-black", isDspMet ? "text-emerald-600" : "text-destructive")}>
-                  {reqs.dsp.totalMin} <span className="text-[10px] font-bold">DK</span>
+                <span className={cn(
+                  "text-lg font-black",
+                  isDspWaived ? "text-slate-500" :
+                  !isDspMet && reqs.dsp.required ? "text-destructive" : 
+                  isDspExcess ? "text-amber-600" : "text-emerald-600"
+                )}>
+                  {isDspWaived ? "MUAF" : <>{reqs.dsp.totalMin} <span className="text-[10px] font-bold">DK</span></>}
                 </span>
               </div>
             </div>
@@ -742,10 +753,15 @@ interface UpdateAssignmentData {
             <div className="bg-white/60 dark:bg-slate-900/60 p-4 rounded-lg border border-border space-y-3">
               <div className="flex justify-between text-xs">
                 <span className="text-slate-500 font-medium">DSP Zorunluluğu:</span>
-                <span className="font-bold">{reqs.dsp.required ? 'VAR' : 'YOK'}</span>
+                <span className="font-bold">{isDspWaived ? 'MUAF' : reqs.dsp.required ? 'VAR' : 'YOK'}</span>
               </div>
               <div className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">
-                {reqs.dsp.required ? (
+                {isDspWaived ? (
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Tam zamanlı İşyeri Hekimi atandığı için DSP atama zorunluluğu muaf tutulmuştur.</span>
+                  </div>
+                ) : reqs.dsp.required ? (
                   <div className="flex items-center gap-2">
                     <Info className="w-3.5 h-3.5 text-primary" />
                     <span>Hekim tam zamanlı değilse atanması zorunludur.</span>
@@ -764,8 +780,8 @@ interface UpdateAssignmentData {
               {activeAssignments.filter(a => a.type === 'DSP').map(as => (
                 <div 
                   key={as.id} 
-                  className="flex items-center justify-between p-3 bg-card text-card-foreground rounded-xl border border-border shadow-sm cursor-pointer hover:border-primary/50 group"
-                  onClick={() => openManageModal('DSP')}
+                  className="flex items-center justify-between p-3 bg-card text-card-foreground rounded-xl border border-border shadow-sm cursor-pointer hover:border-primary/50 group transition-colors"
+                  onClick={() => as.professional ? navigate(`/panel/professionals/${as.professional.id}`) : openManageModal('DSP')}
                 >
                   <div className="flex items-center gap-3">
                     <UserCheck className="w-4 h-4 text-emerald-500" />
@@ -784,7 +800,10 @@ interface UpdateAssignmentData {
                       </div>
                     </div>
                   </div>
-                  <Edit2 className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <Edit2 
+                    className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary" 
+                    onClick={(e) => { e.stopPropagation(); openManageModal('DSP'); }} 
+                  />
                 </div>
               ))}
               {reqs.dsp.required && activeAssignments.filter(a => a.type === 'DSP').length === 0 && (
@@ -827,6 +846,76 @@ interface UpdateAssignmentData {
               </div>
             )}
           </CardContent>
+        </Card>
+
+      </div>
+
+      <div className="w-full">
+        {/* İşveren Vekili Requirement */}
+        <Card className="bg-card shadow-sm hover:shadow-md rounded-2xl overflow-hidden transition-all duration-300 border border-slate-200/60 dark:border-slate-800/60 flex flex-col md:flex-row items-center justify-between p-4 md:p-6 gap-6">
+          
+          <div className="flex items-center gap-4 w-full md:w-auto shrink-0 md:pr-6 md:border-r border-border">
+            <div className="w-12 h-12 rounded-lg flex items-center justify-center shadow-sm text-white bg-slate-500 shrink-0">
+              <Shield className="w-6 h-6" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-bold">İşveren Vekili</CardTitle>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mt-0.5">Durum: <span className="text-slate-600 dark:text-slate-300 font-black">İHTİYARİ</span></span>
+            </div>
+          </div>
+
+          <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {activeAssignments.filter(a => a.type === 'Vekil').map(as => (
+              <div 
+                key={as.id} 
+                className="flex items-center justify-between p-3 bg-background text-foreground rounded-xl border border-border shadow-sm cursor-pointer hover:border-primary/50 group transition-colors"
+              >
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <UserCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <div className="overflow-hidden">
+                    <p className="text-xs font-bold truncate">{as.employerRep?.fullName}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800">
+                        VEKİL
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+                <Edit2 
+                  className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary shrink-0 ml-2" 
+                  onClick={(e) => { e.stopPropagation(); openManageModal('Vekil'); }} 
+                />
+              </div>
+            ))}
+            {activeAssignments.filter(a => a.type === 'Vekil').length === 0 && (
+              <div 
+                className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl border border-dashed border-muted-foreground/30 cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => openAssignModal('Vekil')}
+              >
+                <UserPlus className="w-4 h-4 text-muted-foreground shrink-0" />
+                <span className="text-[11px] font-medium text-muted-foreground">Vekil Ata</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2 w-full md:w-auto shrink-0 justify-end md:pl-6 md:border-l border-border">
+            <Button 
+              variant="outline" 
+              className="h-9 px-4 rounded-xl text-xs font-bold gap-2"
+              onClick={() => openAssignModal('Vekil')}
+              title="Hızlı Atama Ekle"
+            >
+              <Plus className="w-3.5 h-3.5" /> Ekle
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-9 px-4 rounded-xl text-xs font-bold gap-2"
+              onClick={() => openManageModal('Vekil')}
+              title="Yönet"
+            >
+              <Edit2 className="w-3.5 h-3.5" /> Yönet
+            </Button>
+          </div>
         </Card>
       </div>
 
@@ -1168,7 +1257,6 @@ interface UpdateAssignmentData {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <LocationsManagerModal facilityId={id || ''} isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} />
     </div>
   );
 };

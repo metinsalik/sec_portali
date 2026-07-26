@@ -303,7 +303,7 @@ export default function PanelFacilitiesPage() {
             <label className="text-[10px] font-bold text-muted-foreground uppercase">Tesis Tipi</label>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger className="w-[160px] h-10 bg-muted/30 border-none">
-                <SelectValue placeholder="Tesis Tipi" />
+                <span className="line-clamp-1">{typeFilter === 'all' ? 'Tüm Tipler' : typeFilter}</span>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tüm Tipler</SelectItem>
@@ -316,7 +316,7 @@ export default function PanelFacilitiesPage() {
             <label className="text-[10px] font-bold text-muted-foreground uppercase">Tehlike Sınıfı</label>
             <Select value={dangerFilter} onValueChange={setDangerFilter}>
               <SelectTrigger className="w-[160px] h-10 bg-muted/30 border-none">
-                <SelectValue placeholder="Tehlike Sınıfı" />
+                <span className="line-clamp-1">{dangerFilter === 'all' ? 'Tüm Sınıflar' : dangerFilter}</span>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tüm Sınıflar</SelectItem>
@@ -329,7 +329,7 @@ export default function PanelFacilitiesPage() {
             <label className="text-[10px] font-bold text-muted-foreground uppercase">Durum</label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[140px] h-10 bg-muted/30 border-none">
-                <SelectValue placeholder="Durum" />
+                <span className="line-clamp-1">{statusFilter === 'all' ? 'Tüm Durumlar' : statusFilter === 'active' ? 'Aktif' : 'Pasif'}</span>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tüm Durumlar</SelectItem>
@@ -343,7 +343,7 @@ export default function PanelFacilitiesPage() {
             <label className="text-[10px] font-bold text-muted-foreground uppercase">Uyumluluk</label>
             <Select value={complianceFilter} onValueChange={setComplianceFilter}>
               <SelectTrigger className="w-[160px] h-10 bg-muted/30 border-none">
-                <SelectValue placeholder="Uyumluluk" />
+                <span className="line-clamp-1">{complianceFilter === 'all' ? 'Tüm Atamalar' : complianceFilter === 'compliant' ? 'Ataması Tam (Uygun)' : 'Ataması Eksik'}</span>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tüm Atamalar</SelectItem>
