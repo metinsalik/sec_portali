@@ -123,7 +123,8 @@ router.get('/facilities/:id', async (req: AuthRequest, res: Response) => {
         assignments: {
           include: {
             professional: true,
-            employerRep: true
+            employerRep: true,
+            documents: true
           }
         },
         employeeCountHistory: {

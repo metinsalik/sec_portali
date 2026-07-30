@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QuickAssignModal } from '@/components/panel/assignments/QuickAssignModal';
+import { AssignmentDocumentModal } from '@/components/panel/assignments/AssignmentDocumentModal';
 import { toast } from 'sonner';
 
 interface EmployeeCountHistory {
@@ -81,6 +82,7 @@ interface Assignment {
   employerRep?: EmployerRepresentative;
   professionalId?: number;
   employerRepId?: number;
+  documents?: any[];
 }
 
 const PanelFacilityLifeCardPage = () => {
@@ -96,6 +98,9 @@ const PanelFacilityLifeCardPage = () => {
   const [terminatingAssignmentId, setTerminatingAssignmentId] = useState<number | null>(null);
   const [terminationDate, setTerminationDate] = useState(new Date().toISOString().split('T')[0]);
   const [isUploadingKatip, setIsUploadingKatip] = useState(false);
+  const [documentModalOpen, setDocumentModalOpen] = useState(false);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<number | null>(null);
+  const [selectedAssignmentName, setSelectedAssignmentName] = useState<string>('');
 
   const [formData, setFormData] = useState({
     professionalId: '',
@@ -878,13 +883,32 @@ interface UpdateAssignmentData {
                       <Badge variant="outline" className="text-[9px] px-1 py-0 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800">
                         VEKİL
                       </Badge>
+                      {as.documents && as.documents.length > 0 && (
+                        <Badge variant="outline" className="text-[9px] px-1 py-0 border-emerald-200 text-emerald-600 bg-emerald-50">
+                          {as.documents.length} DOKÜMAN
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
-                <Edit2 
-                  className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary shrink-0 ml-2" 
-                  onClick={(e) => { e.stopPropagation(); openManageModal('Vekil'); }} 
-                />
+                <div className="flex items-center">
+                  <FileText 
+                    className={cn("w-4 h-4 shrink-0 ml-2 transition-opacity hover:text-blue-500", as.documents && as.documents.length > 0 ? "text-blue-500 opacity-100" : "text-slate-300 opacity-0 group-hover:opacity-100")}
+
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      setSelectedAssignmentId(as.id);
+                      setSelectedAssignmentName(as.employerRep?.fullName || '');
+                      setDocumentModalOpen(true);
+                    }} 
+                    title="Dokümanlar"
+                  />
+                  <Edit2 
+                    className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary shrink-0 ml-2" 
+                    onClick={(e) => { e.stopPropagation(); openManageModal('Vekil'); }} 
+                    title="Yönet"
+                  />
+                </div>
               </div>
             ))}
             {activeAssignments.filter(a => a.type === 'Vekil').length === 0 && (
@@ -1005,6 +1029,13 @@ interface UpdateAssignmentData {
         onOpenChange={setAssignModalOpen}
         facility={facility}
         type={assignType}
+      />
+
+      <AssignmentDocumentModal
+        open={documentModalOpen}
+        onOpenChange={setDocumentModalOpen}
+        assignmentId={selectedAssignmentId}
+        assignmentName={selectedAssignmentName}
       />
 
       {/* Manage Assignments Modal */}

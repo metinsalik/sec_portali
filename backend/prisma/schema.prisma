@@ -379,6 +379,18 @@ model Assignment {
   employerRep     EmployerRepresentative? @relation(fields: [employerRepId], references: [id])
   facility        Facility                @relation(fields: [facilityId], references: [id])
   professional    Professional?           @relation(fields: [professionalId], references: [id])
+  documents       AssignmentDocument[]
+}
+
+model AssignmentDocument {
+  id           String     @id @default(uuid())
+  assignmentId Int
+  name         String
+  date         DateTime
+  filePath     String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 }
 
 model SystemSettings {

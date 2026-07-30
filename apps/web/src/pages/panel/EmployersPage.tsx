@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 
 interface Employer {
   id: number; fullName: string; title?: string; phone?: string; email?: string; username?: string; isActive: boolean;
+  appointments?: { facility: { name: string } }[];
 }
 
 const emptyForm = { fullName: '', title: '', phone: '', email: '', username: '' };
@@ -67,10 +68,13 @@ export default function EmployersPage() {
     setModalOpen(true);
   };
 
-  const filtered = employers.filter((e) =>
-    e.fullName.toLowerCase().includes(search.toLowerCase()) ||
-    e.title?.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = employers.filter((e) => {
+    const term = search.toLowerCase();
+    const facilityMatch = e.appointments?.some(a => a.facility?.name.toLowerCase().includes(term));
+    return e.fullName.toLowerCase().includes(term) ||
+           e.title?.toLowerCase().includes(term) ||
+           facilityMatch;
+  });
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -108,7 +112,7 @@ export default function EmployersPage() {
         <div className="relative max-w-md">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
           <Input 
-            placeholder="Ad veya unvan ile hızlı ara..." 
+            placeholder="Ad, unvan veya tesis ile hızlı ara..." 
             className="pl-10 h-11 bg-slate-50/50 border-none rounded-xl text-sm font-medium focus-visible:ring-primary/10" 
             value={search} 
             onChange={(e) => setSearch(e.target.value)} 
@@ -163,6 +167,18 @@ export default function EmployersPage() {
                       <span className="truncate">{e.email}</span>
                     </div>
                   )}
+                  {e.appointments && e.appointments.length > 0 && (
+                    <div className="flex flex-col gap-1.5 mt-2 pt-2 border-t border-slate-50 dark:border-slate-800/50">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Atandığı Tesisler</span>
+                      <div className="flex flex-wrap gap-1">
+                        {e.appointments.map((a, i) => (
+                          <span key={i} className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded font-medium border border-slate-200 dark:border-slate-700">
+                            {a.facility?.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -177,6 +193,7 @@ export default function EmployersPage() {
                   <th className="px-6 py-4 text-xs font-bold text-slate-500">İşveren Vekili</th>
                   <th className="px-6 py-4 text-xs font-bold text-slate-500">Unvan</th>
                   <th className="px-6 py-4 text-xs font-bold text-slate-500">İletişim</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500">Atandığı Tesisler</th>
                   <th className="px-6 py-4 text-xs font-bold text-slate-500 text-right">İşlemler</th>
                 </tr>
               </thead>
@@ -203,6 +220,19 @@ export default function EmployersPage() {
                           </span>
                         )}
                       </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {e.appointments && e.appointments.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 max-w-[250px]">
+                          {e.appointments.map((a, i) => (
+                            <span key={i} className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded font-medium border border-slate-200 dark:border-slate-700">
+                              {a.facility?.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400 font-medium">—</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">

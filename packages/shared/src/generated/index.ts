@@ -100,6 +100,8 @@ export const ReconciliationScalarFieldEnumSchema = z.enum(['id','facilityId','os
 
 export const AssignmentScalarFieldEnumSchema = z.enum(['id','facilityId','professionalId','employerRepId','type','durationMinutes','isFullTime','startDate','endDate','status','costType','unitPrice','createdAt','updatedAt']);
 
+export const AssignmentDocumentScalarFieldEnumSchema = z.enum(['id','assignmentId','name','date','filePath','createdAt','updatedAt']);
+
 export const SystemSettingsScalarFieldEnumSchema = z.enum(['id','year','seriousAccidentDays','includeSaturday','dailyWorkHours','monthlyWorkDays','createdAt','updatedAt']);
 
 export const MonthlyHRDataScalarFieldEnumSchema = z.enum(['id','facilityId','month','mainEmployerData','subContractorData','createdBy','createdAt','updatedAt']);
@@ -1170,6 +1172,7 @@ export type AssignmentRelations = {
   employerRep?: EmployerRepresentativeWithRelations | null;
   facility: FacilityWithRelations;
   professional?: ProfessionalWithRelations | null;
+  documents: AssignmentDocumentWithRelations[];
 };
 
 export type AssignmentWithRelations = z.infer<typeof AssignmentSchema> & AssignmentRelations
@@ -1178,6 +1181,36 @@ export const AssignmentWithRelationsSchema: z.ZodType<AssignmentWithRelations> =
   employerRep: z.lazy(() => EmployerRepresentativeWithRelationsSchema).nullable(),
   facility: z.lazy(() => FacilityWithRelationsSchema),
   professional: z.lazy(() => ProfessionalWithRelationsSchema).nullable(),
+  documents: z.lazy(() => AssignmentDocumentWithRelationsSchema).array(),
+}))
+
+/////////////////////////////////////////
+// ASSIGNMENT DOCUMENT SCHEMA
+/////////////////////////////////////////
+
+export const AssignmentDocumentSchema = z.object({
+  id: z.string(),
+  assignmentId: z.number().int(),
+  name: z.string(),
+  date: z.coerce.date(),
+  filePath: z.string(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type AssignmentDocument = z.infer<typeof AssignmentDocumentSchema>
+
+// ASSIGNMENT DOCUMENT RELATION SCHEMA
+//------------------------------------------------------
+
+export type AssignmentDocumentRelations = {
+  assignment: AssignmentWithRelations;
+};
+
+export type AssignmentDocumentWithRelations = z.infer<typeof AssignmentDocumentSchema> & AssignmentDocumentRelations
+
+export const AssignmentDocumentWithRelationsSchema: z.ZodType<AssignmentDocumentWithRelations> = AssignmentDocumentSchema.merge(z.object({
+  assignment: z.lazy(() => AssignmentWithRelationsSchema),
 }))
 
 /////////////////////////////////////////
@@ -5453,11 +5486,21 @@ export const AssignmentIncludeSchema: z.ZodType<Prisma.AssignmentInclude> = z.ob
   employerRep: z.union([z.boolean(),z.lazy(() => EmployerRepresentativeArgsSchema)]).optional(),
   facility: z.union([z.boolean(),z.lazy(() => FacilityArgsSchema)]).optional(),
   professional: z.union([z.boolean(),z.lazy(() => ProfessionalArgsSchema)]).optional(),
+  documents: z.union([z.boolean(),z.lazy(() => AssignmentDocumentFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => AssignmentCountOutputTypeArgsSchema)]).optional(),
 }).strict();
 
 export const AssignmentArgsSchema: z.ZodType<Prisma.AssignmentDefaultArgs> = z.object({
   select: z.lazy(() => AssignmentSelectSchema).optional(),
   include: z.lazy(() => AssignmentIncludeSchema).optional(),
+}).strict();
+
+export const AssignmentCountOutputTypeArgsSchema: z.ZodType<Prisma.AssignmentCountOutputTypeDefaultArgs> = z.object({
+  select: z.lazy(() => AssignmentCountOutputTypeSelectSchema).nullish(),
+}).strict();
+
+export const AssignmentCountOutputTypeSelectSchema: z.ZodType<Prisma.AssignmentCountOutputTypeSelect> = z.object({
+  documents: z.boolean().optional(),
 }).strict();
 
 export const AssignmentSelectSchema: z.ZodType<Prisma.AssignmentSelect> = z.object({
@@ -5478,6 +5521,31 @@ export const AssignmentSelectSchema: z.ZodType<Prisma.AssignmentSelect> = z.obje
   employerRep: z.union([z.boolean(),z.lazy(() => EmployerRepresentativeArgsSchema)]).optional(),
   facility: z.union([z.boolean(),z.lazy(() => FacilityArgsSchema)]).optional(),
   professional: z.union([z.boolean(),z.lazy(() => ProfessionalArgsSchema)]).optional(),
+  documents: z.union([z.boolean(),z.lazy(() => AssignmentDocumentFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => AssignmentCountOutputTypeArgsSchema)]).optional(),
+}).strict()
+
+// ASSIGNMENT DOCUMENT
+//------------------------------------------------------
+
+export const AssignmentDocumentIncludeSchema: z.ZodType<Prisma.AssignmentDocumentInclude> = z.object({
+  assignment: z.union([z.boolean(),z.lazy(() => AssignmentArgsSchema)]).optional(),
+}).strict();
+
+export const AssignmentDocumentArgsSchema: z.ZodType<Prisma.AssignmentDocumentDefaultArgs> = z.object({
+  select: z.lazy(() => AssignmentDocumentSelectSchema).optional(),
+  include: z.lazy(() => AssignmentDocumentIncludeSchema).optional(),
+}).strict();
+
+export const AssignmentDocumentSelectSchema: z.ZodType<Prisma.AssignmentDocumentSelect> = z.object({
+  id: z.boolean().optional(),
+  assignmentId: z.boolean().optional(),
+  name: z.boolean().optional(),
+  date: z.boolean().optional(),
+  filePath: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  assignment: z.union([z.boolean(),z.lazy(() => AssignmentArgsSchema)]).optional(),
 }).strict()
 
 // SYSTEM SETTINGS
@@ -10731,6 +10799,7 @@ export const AssignmentWhereInputSchema: z.ZodType<Prisma.AssignmentWhereInput> 
   employerRep: z.union([ z.lazy(() => EmployerRepresentativeNullableRelationFilterSchema), z.lazy(() => EmployerRepresentativeWhereInputSchema) ]).optional().nullable(),
   facility: z.union([ z.lazy(() => FacilityRelationFilterSchema), z.lazy(() => FacilityWhereInputSchema) ]).optional(),
   professional: z.union([ z.lazy(() => ProfessionalNullableRelationFilterSchema), z.lazy(() => ProfessionalWhereInputSchema) ]).optional().nullable(),
+  documents: z.lazy(() => AssignmentDocumentListRelationFilterSchema).optional(),
 }).strict();
 
 export const AssignmentOrderByWithRelationInputSchema: z.ZodType<Prisma.AssignmentOrderByWithRelationInput> = z.object({
@@ -10751,6 +10820,7 @@ export const AssignmentOrderByWithRelationInputSchema: z.ZodType<Prisma.Assignme
   employerRep: z.lazy(() => EmployerRepresentativeOrderByWithRelationInputSchema).optional(),
   facility: z.lazy(() => FacilityOrderByWithRelationInputSchema).optional(),
   professional: z.lazy(() => ProfessionalOrderByWithRelationInputSchema).optional(),
+  documents: z.lazy(() => AssignmentDocumentOrderByRelationAggregateInputSchema).optional(),
 }).strict();
 
 export const AssignmentWhereUniqueInputSchema: z.ZodType<Prisma.AssignmentWhereUniqueInput> = z.object({
@@ -10777,6 +10847,7 @@ export const AssignmentWhereUniqueInputSchema: z.ZodType<Prisma.AssignmentWhereU
   employerRep: z.union([ z.lazy(() => EmployerRepresentativeNullableRelationFilterSchema), z.lazy(() => EmployerRepresentativeWhereInputSchema) ]).optional().nullable(),
   facility: z.union([ z.lazy(() => FacilityRelationFilterSchema), z.lazy(() => FacilityWhereInputSchema) ]).optional(),
   professional: z.union([ z.lazy(() => ProfessionalNullableRelationFilterSchema), z.lazy(() => ProfessionalWhereInputSchema) ]).optional().nullable(),
+  documents: z.lazy(() => AssignmentDocumentListRelationFilterSchema).optional(),
 }).strict());
 
 export const AssignmentOrderByWithAggregationInputSchema: z.ZodType<Prisma.AssignmentOrderByWithAggregationInput> = z.object({
@@ -10817,6 +10888,76 @@ export const AssignmentScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.As
   status: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
   costType: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   unitPrice: z.union([ z.lazy(() => FloatNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const AssignmentDocumentWhereInputSchema: z.ZodType<Prisma.AssignmentDocumentWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => AssignmentDocumentWhereInputSchema), z.lazy(() => AssignmentDocumentWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => AssignmentDocumentWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => AssignmentDocumentWhereInputSchema), z.lazy(() => AssignmentDocumentWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  assignmentId: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  name: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  date: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  filePath: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  assignment: z.union([ z.lazy(() => AssignmentRelationFilterSchema), z.lazy(() => AssignmentWhereInputSchema) ]).optional(),
+}).strict();
+
+export const AssignmentDocumentOrderByWithRelationInputSchema: z.ZodType<Prisma.AssignmentDocumentOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  assignmentId: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  date: z.lazy(() => SortOrderSchema).optional(),
+  filePath: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  assignment: z.lazy(() => AssignmentOrderByWithRelationInputSchema).optional(),
+}).strict();
+
+export const AssignmentDocumentWhereUniqueInputSchema: z.ZodType<Prisma.AssignmentDocumentWhereUniqueInput> = z.object({
+  id: z.string(),
+})
+.and(z.object({
+  id: z.string().optional(),
+  AND: z.union([ z.lazy(() => AssignmentDocumentWhereInputSchema), z.lazy(() => AssignmentDocumentWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => AssignmentDocumentWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => AssignmentDocumentWhereInputSchema), z.lazy(() => AssignmentDocumentWhereInputSchema).array() ]).optional(),
+  assignmentId: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
+  name: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  date: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  filePath: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  assignment: z.union([ z.lazy(() => AssignmentRelationFilterSchema), z.lazy(() => AssignmentWhereInputSchema) ]).optional(),
+}).strict());
+
+export const AssignmentDocumentOrderByWithAggregationInputSchema: z.ZodType<Prisma.AssignmentDocumentOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  assignmentId: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  date: z.lazy(() => SortOrderSchema).optional(),
+  filePath: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => AssignmentDocumentCountOrderByAggregateInputSchema).optional(),
+  _avg: z.lazy(() => AssignmentDocumentAvgOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => AssignmentDocumentMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => AssignmentDocumentMinOrderByAggregateInputSchema).optional(),
+  _sum: z.lazy(() => AssignmentDocumentSumOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const AssignmentDocumentScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.AssignmentDocumentScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => AssignmentDocumentScalarWhereWithAggregatesInputSchema), z.lazy(() => AssignmentDocumentScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => AssignmentDocumentScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => AssignmentDocumentScalarWhereWithAggregatesInputSchema), z.lazy(() => AssignmentDocumentScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  assignmentId: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  name: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  date: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  filePath: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
   createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
 }).strict();
@@ -21865,6 +22006,7 @@ export const AssignmentCreateInputSchema: z.ZodType<Prisma.AssignmentCreateInput
   employerRep: z.lazy(() => EmployerRepresentativeCreateNestedOneWithoutAppointmentsInputSchema).optional(),
   facility: z.lazy(() => FacilityCreateNestedOneWithoutAssignmentsInputSchema),
   professional: z.lazy(() => ProfessionalCreateNestedOneWithoutAssignmentsInputSchema).optional(),
+  documents: z.lazy(() => AssignmentDocumentCreateNestedManyWithoutAssignmentInputSchema).optional(),
 }).strict();
 
 export const AssignmentUncheckedCreateInputSchema: z.ZodType<Prisma.AssignmentUncheckedCreateInput> = z.object({
@@ -21882,6 +22024,7 @@ export const AssignmentUncheckedCreateInputSchema: z.ZodType<Prisma.AssignmentUn
   unitPrice: z.number().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  documents: z.lazy(() => AssignmentDocumentUncheckedCreateNestedManyWithoutAssignmentInputSchema).optional(),
 }).strict();
 
 export const AssignmentUpdateInputSchema: z.ZodType<Prisma.AssignmentUpdateInput> = z.object({
@@ -21898,6 +22041,7 @@ export const AssignmentUpdateInputSchema: z.ZodType<Prisma.AssignmentUpdateInput
   employerRep: z.lazy(() => EmployerRepresentativeUpdateOneWithoutAppointmentsNestedInputSchema).optional(),
   facility: z.lazy(() => FacilityUpdateOneRequiredWithoutAssignmentsNestedInputSchema).optional(),
   professional: z.lazy(() => ProfessionalUpdateOneWithoutAssignmentsNestedInputSchema).optional(),
+  documents: z.lazy(() => AssignmentDocumentUpdateManyWithoutAssignmentNestedInputSchema).optional(),
 }).strict();
 
 export const AssignmentUncheckedUpdateInputSchema: z.ZodType<Prisma.AssignmentUncheckedUpdateInput> = z.object({
@@ -21915,6 +22059,7 @@ export const AssignmentUncheckedUpdateInputSchema: z.ZodType<Prisma.AssignmentUn
   unitPrice: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  documents: z.lazy(() => AssignmentDocumentUncheckedUpdateManyWithoutAssignmentNestedInputSchema).optional(),
 }).strict();
 
 export const AssignmentCreateManyInputSchema: z.ZodType<Prisma.AssignmentCreateManyInput> = z.object({
@@ -21960,6 +22105,75 @@ export const AssignmentUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Assignme
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   costType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   unitPrice: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const AssignmentDocumentCreateInputSchema: z.ZodType<Prisma.AssignmentDocumentCreateInput> = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  date: z.coerce.date(),
+  filePath: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  assignment: z.lazy(() => AssignmentCreateNestedOneWithoutDocumentsInputSchema),
+}).strict();
+
+export const AssignmentDocumentUncheckedCreateInputSchema: z.ZodType<Prisma.AssignmentDocumentUncheckedCreateInput> = z.object({
+  id: z.string().optional(),
+  assignmentId: z.number().int(),
+  name: z.string(),
+  date: z.coerce.date(),
+  filePath: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const AssignmentDocumentUpdateInputSchema: z.ZodType<Prisma.AssignmentDocumentUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  date: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  filePath: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  assignment: z.lazy(() => AssignmentUpdateOneRequiredWithoutDocumentsNestedInputSchema).optional(),
+}).strict();
+
+export const AssignmentDocumentUncheckedUpdateInputSchema: z.ZodType<Prisma.AssignmentDocumentUncheckedUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  assignmentId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  date: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  filePath: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const AssignmentDocumentCreateManyInputSchema: z.ZodType<Prisma.AssignmentDocumentCreateManyInput> = z.object({
+  id: z.string().optional(),
+  assignmentId: z.number().int(),
+  name: z.string(),
+  date: z.coerce.date(),
+  filePath: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const AssignmentDocumentUpdateManyMutationInputSchema: z.ZodType<Prisma.AssignmentDocumentUpdateManyMutationInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  date: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  filePath: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const AssignmentDocumentUncheckedUpdateManyInputSchema: z.ZodType<Prisma.AssignmentDocumentUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  assignmentId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  date: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  filePath: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
@@ -32939,6 +33153,16 @@ export const EmployerRepresentativeNullableRelationFilterSchema: z.ZodType<Prism
   isNot: z.lazy(() => EmployerRepresentativeWhereInputSchema).optional().nullable(),
 }).strict();
 
+export const AssignmentDocumentListRelationFilterSchema: z.ZodType<Prisma.AssignmentDocumentListRelationFilter> = z.object({
+  every: z.lazy(() => AssignmentDocumentWhereInputSchema).optional(),
+  some: z.lazy(() => AssignmentDocumentWhereInputSchema).optional(),
+  none: z.lazy(() => AssignmentDocumentWhereInputSchema).optional(),
+}).strict();
+
+export const AssignmentDocumentOrderByRelationAggregateInputSchema: z.ZodType<Prisma.AssignmentDocumentOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
 export const AssignmentCountOrderByAggregateInputSchema: z.ZodType<Prisma.AssignmentCountOrderByAggregateInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   facilityId: z.lazy(() => SortOrderSchema).optional(),
@@ -33004,6 +33228,49 @@ export const AssignmentSumOrderByAggregateInputSchema: z.ZodType<Prisma.Assignme
   employerRepId: z.lazy(() => SortOrderSchema).optional(),
   durationMinutes: z.lazy(() => SortOrderSchema).optional(),
   unitPrice: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const AssignmentRelationFilterSchema: z.ZodType<Prisma.AssignmentRelationFilter> = z.object({
+  is: z.lazy(() => AssignmentWhereInputSchema).optional(),
+  isNot: z.lazy(() => AssignmentWhereInputSchema).optional(),
+}).strict();
+
+export const AssignmentDocumentCountOrderByAggregateInputSchema: z.ZodType<Prisma.AssignmentDocumentCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  assignmentId: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  date: z.lazy(() => SortOrderSchema).optional(),
+  filePath: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const AssignmentDocumentAvgOrderByAggregateInputSchema: z.ZodType<Prisma.AssignmentDocumentAvgOrderByAggregateInput> = z.object({
+  assignmentId: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const AssignmentDocumentMaxOrderByAggregateInputSchema: z.ZodType<Prisma.AssignmentDocumentMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  assignmentId: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  date: z.lazy(() => SortOrderSchema).optional(),
+  filePath: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const AssignmentDocumentMinOrderByAggregateInputSchema: z.ZodType<Prisma.AssignmentDocumentMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  assignmentId: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  date: z.lazy(() => SortOrderSchema).optional(),
+  filePath: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const AssignmentDocumentSumOrderByAggregateInputSchema: z.ZodType<Prisma.AssignmentDocumentSumOrderByAggregateInput> = z.object({
+  assignmentId: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const FloatFilterSchema: z.ZodType<Prisma.FloatFilter> = z.object({
@@ -41785,6 +42052,20 @@ export const ProfessionalCreateNestedOneWithoutAssignmentsInputSchema: z.ZodType
   connect: z.lazy(() => ProfessionalWhereUniqueInputSchema).optional(),
 }).strict();
 
+export const AssignmentDocumentCreateNestedManyWithoutAssignmentInputSchema: z.ZodType<Prisma.AssignmentDocumentCreateNestedManyWithoutAssignmentInput> = z.object({
+  create: z.union([ z.lazy(() => AssignmentDocumentCreateWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentCreateWithoutAssignmentInputSchema).array(), z.lazy(() => AssignmentDocumentUncheckedCreateWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentUncheckedCreateWithoutAssignmentInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => AssignmentDocumentCreateOrConnectWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentCreateOrConnectWithoutAssignmentInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => AssignmentDocumentCreateManyAssignmentInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => AssignmentDocumentWhereUniqueInputSchema), z.lazy(() => AssignmentDocumentWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const AssignmentDocumentUncheckedCreateNestedManyWithoutAssignmentInputSchema: z.ZodType<Prisma.AssignmentDocumentUncheckedCreateNestedManyWithoutAssignmentInput> = z.object({
+  create: z.union([ z.lazy(() => AssignmentDocumentCreateWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentCreateWithoutAssignmentInputSchema).array(), z.lazy(() => AssignmentDocumentUncheckedCreateWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentUncheckedCreateWithoutAssignmentInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => AssignmentDocumentCreateOrConnectWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentCreateOrConnectWithoutAssignmentInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => AssignmentDocumentCreateManyAssignmentInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => AssignmentDocumentWhereUniqueInputSchema), z.lazy(() => AssignmentDocumentWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
 export const EmployerRepresentativeUpdateOneWithoutAppointmentsNestedInputSchema: z.ZodType<Prisma.EmployerRepresentativeUpdateOneWithoutAppointmentsNestedInput> = z.object({
   create: z.union([ z.lazy(() => EmployerRepresentativeCreateWithoutAppointmentsInputSchema), z.lazy(() => EmployerRepresentativeUncheckedCreateWithoutAppointmentsInputSchema) ]).optional(),
   connectOrCreate: z.lazy(() => EmployerRepresentativeCreateOrConnectWithoutAppointmentsInputSchema).optional(),
@@ -41811,6 +42092,48 @@ export const ProfessionalUpdateOneWithoutAssignmentsNestedInputSchema: z.ZodType
   delete: z.union([ z.boolean(),z.lazy(() => ProfessionalWhereInputSchema) ]).optional(),
   connect: z.lazy(() => ProfessionalWhereUniqueInputSchema).optional(),
   update: z.union([ z.lazy(() => ProfessionalUpdateToOneWithWhereWithoutAssignmentsInputSchema), z.lazy(() => ProfessionalUpdateWithoutAssignmentsInputSchema), z.lazy(() => ProfessionalUncheckedUpdateWithoutAssignmentsInputSchema) ]).optional(),
+}).strict();
+
+export const AssignmentDocumentUpdateManyWithoutAssignmentNestedInputSchema: z.ZodType<Prisma.AssignmentDocumentUpdateManyWithoutAssignmentNestedInput> = z.object({
+  create: z.union([ z.lazy(() => AssignmentDocumentCreateWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentCreateWithoutAssignmentInputSchema).array(), z.lazy(() => AssignmentDocumentUncheckedCreateWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentUncheckedCreateWithoutAssignmentInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => AssignmentDocumentCreateOrConnectWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentCreateOrConnectWithoutAssignmentInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => AssignmentDocumentUpsertWithWhereUniqueWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentUpsertWithWhereUniqueWithoutAssignmentInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => AssignmentDocumentCreateManyAssignmentInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => AssignmentDocumentWhereUniqueInputSchema), z.lazy(() => AssignmentDocumentWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => AssignmentDocumentWhereUniqueInputSchema), z.lazy(() => AssignmentDocumentWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => AssignmentDocumentWhereUniqueInputSchema), z.lazy(() => AssignmentDocumentWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => AssignmentDocumentWhereUniqueInputSchema), z.lazy(() => AssignmentDocumentWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => AssignmentDocumentUpdateWithWhereUniqueWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentUpdateWithWhereUniqueWithoutAssignmentInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => AssignmentDocumentUpdateManyWithWhereWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentUpdateManyWithWhereWithoutAssignmentInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => AssignmentDocumentScalarWhereInputSchema), z.lazy(() => AssignmentDocumentScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const AssignmentDocumentUncheckedUpdateManyWithoutAssignmentNestedInputSchema: z.ZodType<Prisma.AssignmentDocumentUncheckedUpdateManyWithoutAssignmentNestedInput> = z.object({
+  create: z.union([ z.lazy(() => AssignmentDocumentCreateWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentCreateWithoutAssignmentInputSchema).array(), z.lazy(() => AssignmentDocumentUncheckedCreateWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentUncheckedCreateWithoutAssignmentInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => AssignmentDocumentCreateOrConnectWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentCreateOrConnectWithoutAssignmentInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => AssignmentDocumentUpsertWithWhereUniqueWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentUpsertWithWhereUniqueWithoutAssignmentInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => AssignmentDocumentCreateManyAssignmentInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => AssignmentDocumentWhereUniqueInputSchema), z.lazy(() => AssignmentDocumentWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => AssignmentDocumentWhereUniqueInputSchema), z.lazy(() => AssignmentDocumentWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => AssignmentDocumentWhereUniqueInputSchema), z.lazy(() => AssignmentDocumentWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => AssignmentDocumentWhereUniqueInputSchema), z.lazy(() => AssignmentDocumentWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => AssignmentDocumentUpdateWithWhereUniqueWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentUpdateWithWhereUniqueWithoutAssignmentInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => AssignmentDocumentUpdateManyWithWhereWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentUpdateManyWithWhereWithoutAssignmentInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => AssignmentDocumentScalarWhereInputSchema), z.lazy(() => AssignmentDocumentScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const AssignmentCreateNestedOneWithoutDocumentsInputSchema: z.ZodType<Prisma.AssignmentCreateNestedOneWithoutDocumentsInput> = z.object({
+  create: z.union([ z.lazy(() => AssignmentCreateWithoutDocumentsInputSchema), z.lazy(() => AssignmentUncheckedCreateWithoutDocumentsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => AssignmentCreateOrConnectWithoutDocumentsInputSchema).optional(),
+  connect: z.lazy(() => AssignmentWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const AssignmentUpdateOneRequiredWithoutDocumentsNestedInputSchema: z.ZodType<Prisma.AssignmentUpdateOneRequiredWithoutDocumentsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => AssignmentCreateWithoutDocumentsInputSchema), z.lazy(() => AssignmentUncheckedCreateWithoutDocumentsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => AssignmentCreateOrConnectWithoutDocumentsInputSchema).optional(),
+  upsert: z.lazy(() => AssignmentUpsertWithoutDocumentsInputSchema).optional(),
+  connect: z.lazy(() => AssignmentWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => AssignmentUpdateToOneWithWhereWithoutDocumentsInputSchema), z.lazy(() => AssignmentUpdateWithoutDocumentsInputSchema), z.lazy(() => AssignmentUncheckedUpdateWithoutDocumentsInputSchema) ]).optional(),
 }).strict();
 
 export const FloatFieldUpdateOperationsInputSchema: z.ZodType<Prisma.FloatFieldUpdateOperationsInput> = z.object({
@@ -50889,6 +51212,7 @@ export const AssignmentCreateWithoutFacilityInputSchema: z.ZodType<Prisma.Assign
   updatedAt: z.coerce.date().optional(),
   employerRep: z.lazy(() => EmployerRepresentativeCreateNestedOneWithoutAppointmentsInputSchema).optional(),
   professional: z.lazy(() => ProfessionalCreateNestedOneWithoutAssignmentsInputSchema).optional(),
+  documents: z.lazy(() => AssignmentDocumentCreateNestedManyWithoutAssignmentInputSchema).optional(),
 }).strict();
 
 export const AssignmentUncheckedCreateWithoutFacilityInputSchema: z.ZodType<Prisma.AssignmentUncheckedCreateWithoutFacilityInput> = z.object({
@@ -50905,6 +51229,7 @@ export const AssignmentUncheckedCreateWithoutFacilityInputSchema: z.ZodType<Pris
   unitPrice: z.number().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  documents: z.lazy(() => AssignmentDocumentUncheckedCreateNestedManyWithoutAssignmentInputSchema).optional(),
 }).strict();
 
 export const AssignmentCreateOrConnectWithoutFacilityInputSchema: z.ZodType<Prisma.AssignmentCreateOrConnectWithoutFacilityInput> = z.object({
@@ -55866,6 +56191,7 @@ export const AssignmentCreateWithoutProfessionalInputSchema: z.ZodType<Prisma.As
   updatedAt: z.coerce.date().optional(),
   employerRep: z.lazy(() => EmployerRepresentativeCreateNestedOneWithoutAppointmentsInputSchema).optional(),
   facility: z.lazy(() => FacilityCreateNestedOneWithoutAssignmentsInputSchema),
+  documents: z.lazy(() => AssignmentDocumentCreateNestedManyWithoutAssignmentInputSchema).optional(),
 }).strict();
 
 export const AssignmentUncheckedCreateWithoutProfessionalInputSchema: z.ZodType<Prisma.AssignmentUncheckedCreateWithoutProfessionalInput> = z.object({
@@ -55882,6 +56208,7 @@ export const AssignmentUncheckedCreateWithoutProfessionalInputSchema: z.ZodType<
   unitPrice: z.number().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  documents: z.lazy(() => AssignmentDocumentUncheckedCreateNestedManyWithoutAssignmentInputSchema).optional(),
 }).strict();
 
 export const AssignmentCreateOrConnectWithoutProfessionalInputSchema: z.ZodType<Prisma.AssignmentCreateOrConnectWithoutProfessionalInput> = z.object({
@@ -55966,6 +56293,7 @@ export const AssignmentCreateWithoutEmployerRepInputSchema: z.ZodType<Prisma.Ass
   updatedAt: z.coerce.date().optional(),
   facility: z.lazy(() => FacilityCreateNestedOneWithoutAssignmentsInputSchema),
   professional: z.lazy(() => ProfessionalCreateNestedOneWithoutAssignmentsInputSchema).optional(),
+  documents: z.lazy(() => AssignmentDocumentCreateNestedManyWithoutAssignmentInputSchema).optional(),
 }).strict();
 
 export const AssignmentUncheckedCreateWithoutEmployerRepInputSchema: z.ZodType<Prisma.AssignmentUncheckedCreateWithoutEmployerRepInput> = z.object({
@@ -55982,6 +56310,7 @@ export const AssignmentUncheckedCreateWithoutEmployerRepInputSchema: z.ZodType<P
   unitPrice: z.number().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  documents: z.lazy(() => AssignmentDocumentUncheckedCreateNestedManyWithoutAssignmentInputSchema).optional(),
 }).strict();
 
 export const AssignmentCreateOrConnectWithoutEmployerRepInputSchema: z.ZodType<Prisma.AssignmentCreateOrConnectWithoutEmployerRepInput> = z.object({
@@ -56580,6 +56909,34 @@ export const ProfessionalCreateOrConnectWithoutAssignmentsInputSchema: z.ZodType
   create: z.union([ z.lazy(() => ProfessionalCreateWithoutAssignmentsInputSchema), z.lazy(() => ProfessionalUncheckedCreateWithoutAssignmentsInputSchema) ]),
 }).strict();
 
+export const AssignmentDocumentCreateWithoutAssignmentInputSchema: z.ZodType<Prisma.AssignmentDocumentCreateWithoutAssignmentInput> = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  date: z.coerce.date(),
+  filePath: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const AssignmentDocumentUncheckedCreateWithoutAssignmentInputSchema: z.ZodType<Prisma.AssignmentDocumentUncheckedCreateWithoutAssignmentInput> = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  date: z.coerce.date(),
+  filePath: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const AssignmentDocumentCreateOrConnectWithoutAssignmentInputSchema: z.ZodType<Prisma.AssignmentDocumentCreateOrConnectWithoutAssignmentInput> = z.object({
+  where: z.lazy(() => AssignmentDocumentWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => AssignmentDocumentCreateWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentUncheckedCreateWithoutAssignmentInputSchema) ]),
+}).strict();
+
+export const AssignmentDocumentCreateManyAssignmentInputEnvelopeSchema: z.ZodType<Prisma.AssignmentDocumentCreateManyAssignmentInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => AssignmentDocumentCreateManyAssignmentInputSchema), z.lazy(() => AssignmentDocumentCreateManyAssignmentInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
 export const EmployerRepresentativeUpsertWithoutAppointmentsInputSchema: z.ZodType<Prisma.EmployerRepresentativeUpsertWithoutAppointmentsInput> = z.object({
   update: z.union([ z.lazy(() => EmployerRepresentativeUpdateWithoutAppointmentsInputSchema), z.lazy(() => EmployerRepresentativeUncheckedUpdateWithoutAppointmentsInputSchema) ]),
   create: z.union([ z.lazy(() => EmployerRepresentativeCreateWithoutAppointmentsInputSchema), z.lazy(() => EmployerRepresentativeUncheckedCreateWithoutAppointmentsInputSchema) ]),
@@ -56789,6 +57146,117 @@ export const ProfessionalUncheckedUpdateWithoutAssignmentsInputSchema: z.ZodType
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   username: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   activityLogs: z.lazy(() => ActivityLogUncheckedUpdateManyWithoutProfessionalNestedInputSchema).optional(),
+}).strict();
+
+export const AssignmentDocumentUpsertWithWhereUniqueWithoutAssignmentInputSchema: z.ZodType<Prisma.AssignmentDocumentUpsertWithWhereUniqueWithoutAssignmentInput> = z.object({
+  where: z.lazy(() => AssignmentDocumentWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => AssignmentDocumentUpdateWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentUncheckedUpdateWithoutAssignmentInputSchema) ]),
+  create: z.union([ z.lazy(() => AssignmentDocumentCreateWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentUncheckedCreateWithoutAssignmentInputSchema) ]),
+}).strict();
+
+export const AssignmentDocumentUpdateWithWhereUniqueWithoutAssignmentInputSchema: z.ZodType<Prisma.AssignmentDocumentUpdateWithWhereUniqueWithoutAssignmentInput> = z.object({
+  where: z.lazy(() => AssignmentDocumentWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => AssignmentDocumentUpdateWithoutAssignmentInputSchema), z.lazy(() => AssignmentDocumentUncheckedUpdateWithoutAssignmentInputSchema) ]),
+}).strict();
+
+export const AssignmentDocumentUpdateManyWithWhereWithoutAssignmentInputSchema: z.ZodType<Prisma.AssignmentDocumentUpdateManyWithWhereWithoutAssignmentInput> = z.object({
+  where: z.lazy(() => AssignmentDocumentScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => AssignmentDocumentUpdateManyMutationInputSchema), z.lazy(() => AssignmentDocumentUncheckedUpdateManyWithoutAssignmentInputSchema) ]),
+}).strict();
+
+export const AssignmentDocumentScalarWhereInputSchema: z.ZodType<Prisma.AssignmentDocumentScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => AssignmentDocumentScalarWhereInputSchema), z.lazy(() => AssignmentDocumentScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => AssignmentDocumentScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => AssignmentDocumentScalarWhereInputSchema), z.lazy(() => AssignmentDocumentScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  assignmentId: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  name: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  date: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  filePath: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const AssignmentCreateWithoutDocumentsInputSchema: z.ZodType<Prisma.AssignmentCreateWithoutDocumentsInput> = z.object({
+  type: z.string(),
+  durationMinutes: z.number().int(),
+  isFullTime: z.boolean().optional(),
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date().optional().nullable(),
+  status: z.string(),
+  costType: z.string().optional().nullable(),
+  unitPrice: z.number().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  employerRep: z.lazy(() => EmployerRepresentativeCreateNestedOneWithoutAppointmentsInputSchema).optional(),
+  facility: z.lazy(() => FacilityCreateNestedOneWithoutAssignmentsInputSchema),
+  professional: z.lazy(() => ProfessionalCreateNestedOneWithoutAssignmentsInputSchema).optional(),
+}).strict();
+
+export const AssignmentUncheckedCreateWithoutDocumentsInputSchema: z.ZodType<Prisma.AssignmentUncheckedCreateWithoutDocumentsInput> = z.object({
+  id: z.number().int().optional(),
+  facilityId: z.string(),
+  professionalId: z.number().int().optional().nullable(),
+  employerRepId: z.number().int().optional().nullable(),
+  type: z.string(),
+  durationMinutes: z.number().int(),
+  isFullTime: z.boolean().optional(),
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date().optional().nullable(),
+  status: z.string(),
+  costType: z.string().optional().nullable(),
+  unitPrice: z.number().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const AssignmentCreateOrConnectWithoutDocumentsInputSchema: z.ZodType<Prisma.AssignmentCreateOrConnectWithoutDocumentsInput> = z.object({
+  where: z.lazy(() => AssignmentWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => AssignmentCreateWithoutDocumentsInputSchema), z.lazy(() => AssignmentUncheckedCreateWithoutDocumentsInputSchema) ]),
+}).strict();
+
+export const AssignmentUpsertWithoutDocumentsInputSchema: z.ZodType<Prisma.AssignmentUpsertWithoutDocumentsInput> = z.object({
+  update: z.union([ z.lazy(() => AssignmentUpdateWithoutDocumentsInputSchema), z.lazy(() => AssignmentUncheckedUpdateWithoutDocumentsInputSchema) ]),
+  create: z.union([ z.lazy(() => AssignmentCreateWithoutDocumentsInputSchema), z.lazy(() => AssignmentUncheckedCreateWithoutDocumentsInputSchema) ]),
+  where: z.lazy(() => AssignmentWhereInputSchema).optional(),
+}).strict();
+
+export const AssignmentUpdateToOneWithWhereWithoutDocumentsInputSchema: z.ZodType<Prisma.AssignmentUpdateToOneWithWhereWithoutDocumentsInput> = z.object({
+  where: z.lazy(() => AssignmentWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => AssignmentUpdateWithoutDocumentsInputSchema), z.lazy(() => AssignmentUncheckedUpdateWithoutDocumentsInputSchema) ]),
+}).strict();
+
+export const AssignmentUpdateWithoutDocumentsInputSchema: z.ZodType<Prisma.AssignmentUpdateWithoutDocumentsInput> = z.object({
+  type: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  durationMinutes: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isFullTime: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  startDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  endDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  costType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  unitPrice: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  employerRep: z.lazy(() => EmployerRepresentativeUpdateOneWithoutAppointmentsNestedInputSchema).optional(),
+  facility: z.lazy(() => FacilityUpdateOneRequiredWithoutAssignmentsNestedInputSchema).optional(),
+  professional: z.lazy(() => ProfessionalUpdateOneWithoutAssignmentsNestedInputSchema).optional(),
+}).strict();
+
+export const AssignmentUncheckedUpdateWithoutDocumentsInputSchema: z.ZodType<Prisma.AssignmentUncheckedUpdateWithoutDocumentsInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  professionalId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  employerRepId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  type: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  durationMinutes: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isFullTime: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  startDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  endDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  costType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  unitPrice: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
 export const FacilityCreateWithoutMonthlyHrDataInputSchema: z.ZodType<Prisma.FacilityCreateWithoutMonthlyHrDataInput> = z.object({
@@ -84261,6 +84729,7 @@ export const AssignmentUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.Assign
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   employerRep: z.lazy(() => EmployerRepresentativeUpdateOneWithoutAppointmentsNestedInputSchema).optional(),
   professional: z.lazy(() => ProfessionalUpdateOneWithoutAssignmentsNestedInputSchema).optional(),
+  documents: z.lazy(() => AssignmentDocumentUpdateManyWithoutAssignmentNestedInputSchema).optional(),
 }).strict();
 
 export const AssignmentUncheckedUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.AssignmentUncheckedUpdateWithoutFacilityInput> = z.object({
@@ -84277,6 +84746,7 @@ export const AssignmentUncheckedUpdateWithoutFacilityInputSchema: z.ZodType<Pris
   unitPrice: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  documents: z.lazy(() => AssignmentDocumentUncheckedUpdateManyWithoutAssignmentNestedInputSchema).optional(),
 }).strict();
 
 export const AssignmentUncheckedUpdateManyWithoutFacilityInputSchema: z.ZodType<Prisma.AssignmentUncheckedUpdateManyWithoutFacilityInput> = z.object({
@@ -86621,6 +87091,7 @@ export const AssignmentUpdateWithoutProfessionalInputSchema: z.ZodType<Prisma.As
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   employerRep: z.lazy(() => EmployerRepresentativeUpdateOneWithoutAppointmentsNestedInputSchema).optional(),
   facility: z.lazy(() => FacilityUpdateOneRequiredWithoutAssignmentsNestedInputSchema).optional(),
+  documents: z.lazy(() => AssignmentDocumentUpdateManyWithoutAssignmentNestedInputSchema).optional(),
 }).strict();
 
 export const AssignmentUncheckedUpdateWithoutProfessionalInputSchema: z.ZodType<Prisma.AssignmentUncheckedUpdateWithoutProfessionalInput> = z.object({
@@ -86637,6 +87108,7 @@ export const AssignmentUncheckedUpdateWithoutProfessionalInputSchema: z.ZodType<
   unitPrice: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  documents: z.lazy(() => AssignmentDocumentUncheckedUpdateManyWithoutAssignmentNestedInputSchema).optional(),
 }).strict();
 
 export const AssignmentUncheckedUpdateManyWithoutProfessionalInputSchema: z.ZodType<Prisma.AssignmentUncheckedUpdateManyWithoutProfessionalInput> = z.object({
@@ -86710,6 +87182,7 @@ export const AssignmentUpdateWithoutEmployerRepInputSchema: z.ZodType<Prisma.Ass
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   facility: z.lazy(() => FacilityUpdateOneRequiredWithoutAssignmentsNestedInputSchema).optional(),
   professional: z.lazy(() => ProfessionalUpdateOneWithoutAssignmentsNestedInputSchema).optional(),
+  documents: z.lazy(() => AssignmentDocumentUpdateManyWithoutAssignmentNestedInputSchema).optional(),
 }).strict();
 
 export const AssignmentUncheckedUpdateWithoutEmployerRepInputSchema: z.ZodType<Prisma.AssignmentUncheckedUpdateWithoutEmployerRepInput> = z.object({
@@ -86726,6 +87199,7 @@ export const AssignmentUncheckedUpdateWithoutEmployerRepInputSchema: z.ZodType<P
   unitPrice: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  documents: z.lazy(() => AssignmentDocumentUncheckedUpdateManyWithoutAssignmentNestedInputSchema).optional(),
 }).strict();
 
 export const AssignmentUncheckedUpdateManyWithoutEmployerRepInputSchema: z.ZodType<Prisma.AssignmentUncheckedUpdateManyWithoutEmployerRepInput> = z.object({
@@ -86801,6 +87275,42 @@ export const ReconciliationUncheckedUpdateManyWithoutOsgbCompanyInputSchema: z.Z
   calculationDetails: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   difference: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   invoiceAmount: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+}).strict();
+
+export const AssignmentDocumentCreateManyAssignmentInputSchema: z.ZodType<Prisma.AssignmentDocumentCreateManyAssignmentInput> = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  date: z.coerce.date(),
+  filePath: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const AssignmentDocumentUpdateWithoutAssignmentInputSchema: z.ZodType<Prisma.AssignmentDocumentUpdateWithoutAssignmentInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  date: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  filePath: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const AssignmentDocumentUncheckedUpdateWithoutAssignmentInputSchema: z.ZodType<Prisma.AssignmentDocumentUncheckedUpdateWithoutAssignmentInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  date: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  filePath: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const AssignmentDocumentUncheckedUpdateManyWithoutAssignmentInputSchema: z.ZodType<Prisma.AssignmentDocumentUncheckedUpdateManyWithoutAssignmentInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  date: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  filePath: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
 export const NotebookItemCreateManyCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateManyCategoryInput> = z.object({
@@ -93359,6 +93869,68 @@ export const AssignmentFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.AssignmentF
   select: AssignmentSelectSchema.optional(),
   include: AssignmentIncludeSchema.optional(),
   where: AssignmentWhereUniqueInputSchema, 
+}).strict();
+
+export const AssignmentDocumentFindFirstArgsSchema: z.ZodType<Prisma.AssignmentDocumentFindFirstArgs> = z.object({
+  select: AssignmentDocumentSelectSchema.optional(),
+  include: AssignmentDocumentIncludeSchema.optional(),
+  where: AssignmentDocumentWhereInputSchema.optional(), 
+  orderBy: z.union([ AssignmentDocumentOrderByWithRelationInputSchema.array(), AssignmentDocumentOrderByWithRelationInputSchema ]).optional(),
+  cursor: AssignmentDocumentWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ AssignmentDocumentScalarFieldEnumSchema, AssignmentDocumentScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const AssignmentDocumentFindFirstOrThrowArgsSchema: z.ZodType<Prisma.AssignmentDocumentFindFirstOrThrowArgs> = z.object({
+  select: AssignmentDocumentSelectSchema.optional(),
+  include: AssignmentDocumentIncludeSchema.optional(),
+  where: AssignmentDocumentWhereInputSchema.optional(), 
+  orderBy: z.union([ AssignmentDocumentOrderByWithRelationInputSchema.array(), AssignmentDocumentOrderByWithRelationInputSchema ]).optional(),
+  cursor: AssignmentDocumentWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ AssignmentDocumentScalarFieldEnumSchema, AssignmentDocumentScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const AssignmentDocumentFindManyArgsSchema: z.ZodType<Prisma.AssignmentDocumentFindManyArgs> = z.object({
+  select: AssignmentDocumentSelectSchema.optional(),
+  include: AssignmentDocumentIncludeSchema.optional(),
+  where: AssignmentDocumentWhereInputSchema.optional(), 
+  orderBy: z.union([ AssignmentDocumentOrderByWithRelationInputSchema.array(), AssignmentDocumentOrderByWithRelationInputSchema ]).optional(),
+  cursor: AssignmentDocumentWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ AssignmentDocumentScalarFieldEnumSchema, AssignmentDocumentScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const AssignmentDocumentAggregateArgsSchema: z.ZodType<Prisma.AssignmentDocumentAggregateArgs> = z.object({
+  where: AssignmentDocumentWhereInputSchema.optional(), 
+  orderBy: z.union([ AssignmentDocumentOrderByWithRelationInputSchema.array(), AssignmentDocumentOrderByWithRelationInputSchema ]).optional(),
+  cursor: AssignmentDocumentWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const AssignmentDocumentGroupByArgsSchema: z.ZodType<Prisma.AssignmentDocumentGroupByArgs> = z.object({
+  where: AssignmentDocumentWhereInputSchema.optional(), 
+  orderBy: z.union([ AssignmentDocumentOrderByWithAggregationInputSchema.array(), AssignmentDocumentOrderByWithAggregationInputSchema ]).optional(),
+  by: AssignmentDocumentScalarFieldEnumSchema.array(), 
+  having: AssignmentDocumentScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const AssignmentDocumentFindUniqueArgsSchema: z.ZodType<Prisma.AssignmentDocumentFindUniqueArgs> = z.object({
+  select: AssignmentDocumentSelectSchema.optional(),
+  include: AssignmentDocumentIncludeSchema.optional(),
+  where: AssignmentDocumentWhereUniqueInputSchema, 
+}).strict();
+
+export const AssignmentDocumentFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.AssignmentDocumentFindUniqueOrThrowArgs> = z.object({
+  select: AssignmentDocumentSelectSchema.optional(),
+  include: AssignmentDocumentIncludeSchema.optional(),
+  where: AssignmentDocumentWhereUniqueInputSchema, 
 }).strict();
 
 export const SystemSettingsFindFirstArgsSchema: z.ZodType<Prisma.SystemSettingsFindFirstArgs> = z.object({
@@ -100697,6 +101269,52 @@ export const AssignmentUpdateManyArgsSchema: z.ZodType<Prisma.AssignmentUpdateMa
 
 export const AssignmentDeleteManyArgsSchema: z.ZodType<Prisma.AssignmentDeleteManyArgs> = z.object({
   where: AssignmentWhereInputSchema.optional(), 
+}).strict();
+
+export const AssignmentDocumentCreateArgsSchema: z.ZodType<Prisma.AssignmentDocumentCreateArgs> = z.object({
+  select: AssignmentDocumentSelectSchema.optional(),
+  include: AssignmentDocumentIncludeSchema.optional(),
+  data: z.union([ AssignmentDocumentCreateInputSchema, AssignmentDocumentUncheckedCreateInputSchema ]),
+}).strict();
+
+export const AssignmentDocumentUpsertArgsSchema: z.ZodType<Prisma.AssignmentDocumentUpsertArgs> = z.object({
+  select: AssignmentDocumentSelectSchema.optional(),
+  include: AssignmentDocumentIncludeSchema.optional(),
+  where: AssignmentDocumentWhereUniqueInputSchema, 
+  create: z.union([ AssignmentDocumentCreateInputSchema, AssignmentDocumentUncheckedCreateInputSchema ]),
+  update: z.union([ AssignmentDocumentUpdateInputSchema, AssignmentDocumentUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const AssignmentDocumentCreateManyArgsSchema: z.ZodType<Prisma.AssignmentDocumentCreateManyArgs> = z.object({
+  data: z.union([ AssignmentDocumentCreateManyInputSchema, AssignmentDocumentCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const AssignmentDocumentCreateManyAndReturnArgsSchema: z.ZodType<Prisma.AssignmentDocumentCreateManyAndReturnArgs> = z.object({
+  data: z.union([ AssignmentDocumentCreateManyInputSchema, AssignmentDocumentCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const AssignmentDocumentDeleteArgsSchema: z.ZodType<Prisma.AssignmentDocumentDeleteArgs> = z.object({
+  select: AssignmentDocumentSelectSchema.optional(),
+  include: AssignmentDocumentIncludeSchema.optional(),
+  where: AssignmentDocumentWhereUniqueInputSchema, 
+}).strict();
+
+export const AssignmentDocumentUpdateArgsSchema: z.ZodType<Prisma.AssignmentDocumentUpdateArgs> = z.object({
+  select: AssignmentDocumentSelectSchema.optional(),
+  include: AssignmentDocumentIncludeSchema.optional(),
+  data: z.union([ AssignmentDocumentUpdateInputSchema, AssignmentDocumentUncheckedUpdateInputSchema ]),
+  where: AssignmentDocumentWhereUniqueInputSchema, 
+}).strict();
+
+export const AssignmentDocumentUpdateManyArgsSchema: z.ZodType<Prisma.AssignmentDocumentUpdateManyArgs> = z.object({
+  data: z.union([ AssignmentDocumentUpdateManyMutationInputSchema, AssignmentDocumentUncheckedUpdateManyInputSchema ]),
+  where: AssignmentDocumentWhereInputSchema.optional(), 
+}).strict();
+
+export const AssignmentDocumentDeleteManyArgsSchema: z.ZodType<Prisma.AssignmentDocumentDeleteManyArgs> = z.object({
+  where: AssignmentDocumentWhereInputSchema.optional(), 
 }).strict();
 
 export const SystemSettingsCreateArgsSchema: z.ZodType<Prisma.SystemSettingsCreateArgs> = z.object({
