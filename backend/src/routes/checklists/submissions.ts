@@ -10,12 +10,11 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const { facilityId } = req.query;
     
-    if (!facilityId || typeof facilityId !== 'string') {
-      return res.status(400).json({ error: 'facilityId is required' });
-    }
+    // If facilityId is provided, filter by it. Otherwise return all (for admins).
+    const whereClause = facilityId && typeof facilityId === 'string' ? { facilityId } : {};
 
-    const submissions = await prisma.checklistSubmission.findMany({
-      where: { facilityId },
+    let submissions = await prisma.checklistSubmission.findMany({
+      where: whereClause,
       include: {
         template: {
           select: { title: true, version: true }
@@ -26,6 +25,32 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       },
       orderBy: { auditDate: 'desc' }
     });
+
+    // Auto-close expired ones
+    for (let sub of submissions) {
+      if (sub.status === 'TASLAK' || sub.status === 'BEKLEYEN') {
+        const assignment = await prisma.checklistAssignment.findFirst({
+          where: {
+            templateId: sub.templateId,
+            facilityIds: { has: sub.facilityId }
+          },
+          orderBy: { createdAt: 'desc' }
+        });
+        
+        if (
+          assignment && 
+          assignment.endDate && 
+          new Date(assignment.endDate) < new Date() && 
+          new Date(sub.updatedAt) <= new Date(assignment.endDate)
+        ) {
+          const updated = await prisma.checklistSubmission.update({
+            where: { id: sub.id },
+            data: { status: 'TAMAMLANDI' }
+          });
+          sub.status = updated.status;
+        }
+      }
+    }
 
     res.json(submissions);
   } catch (error) {
@@ -43,7 +68,9 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
       include: {
         template: {
           include: {
-            scale: true,
+            scaleSet: {
+              include: { options: true }
+            },
             sections: {
               include: { items: true }
             }
@@ -57,6 +84,29 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 
     if (!submission) {
       return res.status(404).json({ error: 'Submission not found' });
+    }
+
+    // Auto-close if assignment endDate passed
+    if (submission.status === 'TASLAK' || submission.status === 'BEKLEYEN') {
+      const assignment = await prisma.checklistAssignment.findFirst({
+        where: {
+          templateId: submission.templateId,
+          facilityIds: { has: submission.facilityId }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+      if (
+        assignment && 
+        assignment.endDate && 
+        new Date(assignment.endDate) < new Date() &&
+        new Date(submission.updatedAt) <= new Date(assignment.endDate)
+      ) {
+        const updated = await prisma.checklistSubmission.update({
+          where: { id: submission.id },
+          data: { status: 'TAMAMLANDI' }
+        });
+        submission.status = updated.status;
+      }
     }
 
     res.json(submission);

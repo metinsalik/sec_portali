@@ -180,6 +180,15 @@ const checklistNavItems = (hasAdminAccess: boolean) => [
   ] : []),
 ];
 
+const isgKurulNavItems = [
+  { label: 'GENEL', type: 'group' },
+  { label: 'Dashboard', icon: LayoutDashboard, to: '/isg-kurul/dashboard', end: true },
+  { label: 'YÖNETİM', type: 'group' },
+  { label: 'Kurul Toplantıları', icon: Users, to: '/isg-kurul/meetings' },
+  { label: 'AYARLAR', type: 'group' },
+  { label: 'Modül Ayarları', icon: Settings, to: '/isg-kurul/settings' },
+];
+
 const profileNavItems = (hasAdminAccess: boolean) => [
   { label: 'UYGULAMALAR', type: 'group' },
   ...(hasAdminAccess ? [{ label: 'Operasyon Yönetim Sistemi', icon: LayoutDashboard, to: '/operations-management' }] : []),
@@ -232,6 +241,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   } else if (path.startsWith('/settings')) {
     navItems = settingsNavItems(hasAdminAccess);
     moduleName = 'Sistem Ayarları';
+  } else if (path.startsWith('/isg-kurul')) {
+    navItems = isgKurulNavItems;
+    moduleName = 'İSG Kurul Yönetimi';
   } else if (path.startsWith('/profile') || path.startsWith('/notifications')) {
     navItems = profileNavItems(!!hasAdminAccess);
     moduleName = path.startsWith('/profile') ? 'Kullanıcı Profili' : 'Bildirim Merkezi';
@@ -240,6 +252,25 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const getAppsUrl = () => {
+    if (
+      path.startsWith('/operations') ||
+      path.startsWith('/risks') ||
+      path.startsWith('/hazmat') ||
+      path.startsWith('/checklists') ||
+      path.startsWith('/isg-kurul')
+    ) {
+      return '/safety-management';
+    }
+    if (
+      path.startsWith('/panel') ||
+      path.startsWith('/renovation-report')
+    ) {
+      return '/operations-management';
+    }
+    return '/portal';
   };
 
   return (
@@ -273,7 +304,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* Facility Switcher (Show for modules that need it) */}
-        {(path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management') || path.startsWith('/renovation-report') || path.startsWith('/checklists')) && (
+        {(path.startsWith('/isg-kurul') || path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management') || path.startsWith('/renovation-report') || path.startsWith('/checklists')) && (
           <FacilitySwitcher />
         )}
 
@@ -376,7 +407,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => navigate('/portal')}
+              onClick={() => navigate(getAppsUrl())}
               className="hidden md:flex h-8"
             >
               <LayoutGrid className="w-4 h-4 mr-2 text-muted-foreground" />

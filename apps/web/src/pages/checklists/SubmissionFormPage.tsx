@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Save, ArrowLeft, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Save, CheckCircle, Upload } from 'lucide-react';
 import api from '@/lib/api';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import { useAuth } from '@/context/AuthContext';
 
 export default function SubmissionFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [submission, setSubmission] = useState<any>(null);
   const [answers, setAnswers] = useState<any[]>([]);
 
@@ -64,6 +67,11 @@ export default function SubmissionFormPage() {
   };
 
   const handleSave = async (status: string) => {
+    if (status === 'TAMAMLANDI' && !isSubmittable) {
+      toast.error('Lütfen tüm zorunlu soruları yanıtlayıp gerekli ekleri/açıklamaları girin.');
+      return;
+    }
+    
     try {
       await api.put(`/checklists/submissions/${id}`, {
         status,
@@ -72,12 +80,40 @@ export default function SubmissionFormPage() {
         maxScore,
         percentScore
       });
+      toast.success(status === 'TAMAMLANDI' ? 'Denetim onaya gönderildi!' : 'İlerleme kaydedildi.');
       navigate('/checklists/submissions');
     } catch (error) {
       console.error('Error saving submission', error);
-      alert('Kaydedilirken hata oluştu.');
+      toast.error('Kaydedilirken hata oluştu.');
     }
   };
+
+  // Validation Logic
+  let isSubmittable = true;
+  template.sections.forEach((section: any) => {
+    section.items.forEach((item: any) => {
+      const currentAnswer = answers.find(a => a.itemId === item.id);
+      if (!currentAnswer) {
+        isSubmittable = false;
+        return;
+      }
+      if (currentAnswer.notApplicable) return;
+      if (!currentAnswer.scaleOptionId) {
+        isSubmittable = false;
+        return;
+      }
+      
+      const selectedOption = template.scaleSet?.options?.find((o: any) => o.id === currentAnswer.scaleOptionId);
+      if (selectedOption?.requiresExplanation && (!currentAnswer.note || currentAnswer.note.trim() === '')) {
+        isSubmittable = false;
+        return;
+      }
+      if (selectedOption?.requiresAttachment && (!currentAnswer.attachments || currentAnswer.attachments.length === 0)) {
+        isSubmittable = false;
+        return;
+      }
+    });
+  });
 
   return (
     <div className="container mx-auto p-6 max-w-4xl space-y-6">
@@ -92,12 +128,28 @@ export default function SubmissionFormPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => handleSave('TASLAK')}>
-            <Save className="w-4 h-4 mr-2" /> Taslak Kaydet
-          </Button>
-          <Button onClick={() => handleSave('TAMAMLANDI')} className="bg-emerald-600 hover:bg-emerald-700">
-            <CheckCircle className="w-4 h-4 mr-2" /> Denetimi Bitir
-          </Button>
+          {submission.status === 'TAMAMLANDI' ? (
+            <>
+              {user?.role === 'ADMIN' && (
+                <Button variant="outline" onClick={() => handleSave('TASLAK')} className="border-amber-500 text-amber-600 hover:bg-amber-50">
+                  Tesise Geri Gönder (Yeniden Aç)
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => handleSave('TASLAK')}>
+                <Save className="w-4 h-4 mr-2" /> Kaydet
+              </Button>
+              <Button 
+                onClick={() => handleSave('TAMAMLANDI')} 
+                className="bg-emerald-600 hover:bg-emerald-700"
+                disabled={!isSubmittable}
+              >
+                <CheckCircle className="w-4 h-4 mr-2" /> Onaya Gönder
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -141,6 +193,7 @@ export default function SubmissionFormPage() {
                             color: currentAnswer.scaleOptionId === s.id ? '#fff' : 'inherit'
                           }}
                           onClick={() => handleAnswerChange(item.id, s.id, s.multiplier)}
+                          disabled={submission.status === 'TAMAMLANDI'}
                         >
                           {s.label}
                         </Button>
@@ -150,6 +203,7 @@ export default function SubmissionFormPage() {
                         variant={currentAnswer.notApplicable ? 'default' : 'outline'}
                         className={`justify-start ${currentAnswer.notApplicable ? 'ring-2 ring-offset-1 bg-slate-500 hover:bg-slate-600 text-white border-slate-500' : 'border-slate-300 text-slate-600 hover:bg-slate-50'}`}
                         onClick={() => handleAnswerChange(item.id, null, null)}
+                        disabled={submission.status === 'TAMAMLANDI'}
                       >
                         Kapsam Dışı
                       </Button>
@@ -179,6 +233,7 @@ export default function SubmissionFormPage() {
                                     setAnswers(newAnswers);
                                   }
                                 }}
+                                disabled={submission.status === 'TAMAMLANDI'}
                               />
                             </div>
                             
@@ -192,6 +247,7 @@ export default function SubmissionFormPage() {
                                     type="file" 
                                     multiple 
                                     accept="image/*,.pdf,.doc,.docx"
+                                    disabled={submission.status === 'TAMAMLANDI'}
                                     onChange={async (e) => {
                                       if (!e.target.files?.length) return;
                                       const files = Array.from(e.target.files).slice(0, 10);

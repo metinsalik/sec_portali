@@ -14,14 +14,15 @@ export default function SubmissionListPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user?.facilityId) {
+    if (user) {
       fetchSubmissions(user.facilityId);
     }
   }, [user]);
 
-  const fetchSubmissions = async (facilityId: string) => {
+  const fetchSubmissions = async (facilityId?: string) => {
     try {
-      const response = await api.get(`/checklists/submissions?facilityId=${facilityId}`);
+      const endpoint = facilityId ? `/checklists/submissions?facilityId=${facilityId}` : '/checklists/submissions';
+      const response = await api.get(endpoint);
       const data = await response.json();
       setSubmissions(data);
     } catch (error) {
@@ -32,6 +33,7 @@ export default function SubmissionListPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'TASLAK': return 'text-amber-500 bg-amber-50';
+      case 'BEKLEYEN': return 'text-blue-500 bg-blue-50';
       case 'TAMAMLANDI': return 'text-emerald-500 bg-emerald-50';
       default: return 'text-gray-500 bg-gray-50';
     }

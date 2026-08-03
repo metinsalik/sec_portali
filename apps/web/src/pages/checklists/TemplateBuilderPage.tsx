@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Save, ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,16 +52,31 @@ export default function TemplateBuilderPage() {
 
   const handleSave = async () => {
     try {
+      if (!title.trim()) {
+        toast.error('Lütfen şablon başlığı girin.');
+        return;
+      }
+      if (!scaleSetId) {
+        toast.error('Lütfen bir değerlendirme ölçeği seçin.');
+        return;
+      }
+      if (sections.length === 0 || sections.some(s => s.items.length === 0)) {
+        toast.error('Lütfen en az bir bölüm ve her bölüm için en az bir soru ekleyin.');
+        return;
+      }
+
       const payload = { title, description, scaleSetId, sections };
       if (isEdit) {
         await api.put(`/checklists/templates/${id}`, payload);
+        toast.success('Şablon güncellendi');
       } else {
         await api.post(`/checklists/templates`, payload);
+        toast.success('Şablon oluşturuldu');
       }
       navigate('/checklists');
     } catch (error) {
       console.error('Error saving template', error);
-      alert('Kaydetme hatası!');
+      toast.error('Kaydetme hatası!');
     }
   };
 

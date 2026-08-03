@@ -167,6 +167,8 @@ model Facility {
   btUygunsuzluklar       BTUygunsuzluk[]
   HazmatVehicle          HazmatVehicle[]
   renovationReports      RenovationReport[]
+  ohsBoardMeetings OhsBoardMeeting[]
+  ohsBoardMembers  OhsBoardMember[]
 }
 
 model IncidentCategory {
@@ -440,6 +442,7 @@ model Category {
   updatedAt     DateTime       @updatedAt
   notebookItems NotebookItem[]
   subCategories SubCategory[]
+  ohsBoardDecisions OhsBoardDecision[]
 }
 
 model SubCategory {
@@ -450,6 +453,7 @@ model SubCategory {
   updatedAt     DateTime       @updatedAt
   notebookItems NotebookItem[]
   category      Category       @relation(fields: [categoryId], references: [id])
+  ohsBoardDecisions OhsBoardDecision[]
 }
 
 model Department {
@@ -459,6 +463,8 @@ model Department {
   updatedAt     DateTime                @updatedAt
   incidents     ExtraordinaryIncident[]
   notebookItems NotebookItem[]
+  ohsBoardDecisions OhsBoardDecision[]
+  ohsBoardMembers OhsBoardMember[]
 }
 
 model NotebookPage {
@@ -2146,4 +2152,79 @@ model SubmissionAttachment {
 
   submission ChecklistSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   answer     ChecklistAnswer?    @relation(fields: [answerId], references: [id], onDelete: Cascade)
+}
+
+model OhsBoardMeeting {
+  id          String   @id @default(uuid())
+  facilityId  String
+  facility    Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  meetingDate DateTime
+  meetingNo   String
+  
+  decisions   OhsBoardDecision[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model OhsBoardDecision {
+  id              String   @id @default(uuid())
+  meetingId       String
+  meeting         OhsBoardMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  
+  decisionNumber  String
+  decisionText    String
+  
+  categoryId      Int
+  category        Category @relation(fields: [categoryId], references: [id])
+  
+  subCategoryId   Int?
+  subCategory     SubCategory? @relation(fields: [subCategoryId], references: [id])
+  
+  departmentId    Int
+  department      Department @relation(fields: [departmentId], references: [id])
+  
+  priority        String   // "Kritik", "Yüksek Riskli", "Riskli", "Orta", "Düşük"
+  status          String   // "Başlamadı", "Devam Ediyor", "Tamamlandı", "İptal Edildi", "Sürekli Takip", "Belirsiz"
+  
+  dueDateType     String   // "DATE" veya "PERIOD"
+  dueDate         DateTime?
+  periodicity     String?  // "Sürekli", "Aylık", "3 Aylık", "6 Aylık", "Yıllık"
+  
+  remarks         String?
+  
+  actions         OhsBoardDecisionAction[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model OhsBoardDecisionAction {
+  id            String   @id @default(uuid())
+  decisionId    String
+  decision      OhsBoardDecision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  
+  actionText    String
+  createdBy     String?  // The username who created the action
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model OhsBoardMember {
+  id           Int      @id @default(autoincrement())
+  facilityId   String
+  year         Int
+  
+  boardRole    String   
+  jobTitle     String   
+  
+  name         String   
+  departmentId Int
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  facility     Facility   @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  department   Department @relation(fields: [departmentId], references: [id])
 }

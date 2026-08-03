@@ -24,6 +24,7 @@ import hazmatRoutes from './routes/hazmat';
 import fireEquipmentRoutes from './routes/fire_equipment';
 import buildManagementRoutes from './routes/build_management';
 import checklistRoutes from './routes/checklists';
+import ohsBoardRoutes from './routes/ohs_boards';
 
 // Middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
@@ -58,6 +59,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/settings/hazmat-kit-items', hazmatKitItemsRoutes);
 app.use('/api/panel', panelRoutes);
 app.use('/api/operations', operationsRoutes);
+app.use('/api/operations/board', ohsBoardRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/notebooks', notebookRoutes);
 app.use('/api/incidents', incidentRoutes);

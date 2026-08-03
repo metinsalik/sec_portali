@@ -1,0 +1,717 @@
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { ArrowRight } from 'lucide-react';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
+import { Badge } from '@/components/ui/badge';
+import { useNavigate } from 'react-router-dom';
+
+const API = import.meta.env.VITE_API_URL || '';
+
+const COLORS = {
+  'Devam Ediyor': '#3b82f6', // blue-500
+  'Tamamlandı': '#22c55e',   // green-500
+  'İptal Edildi': '#8b5cf6', // violet-500
+  'Başlamadı': '#64748b',    // slate-500
+  'Sürekli Takip': '#f59e0b',// amber-500
+  'Belirsiz': '#ef4444'      // red-500
+};
+
+const PRIORITY_COLORS: Record<string, string> = {
+  'Kritik': '#dc2626', // red-600
+  'Yüksek Riskli': '#f97316', // orange-500
+  'Riskli': '#fbbf24', // amber-400
+  'Orta': '#22c55e', // green-500
+  'Düşük': '#15803d', // green-700
+  'Belirtilmedi': '#f1f5f9'
+};
+
+const PRIORITY_WEIGHTS: Record<string, number> = {
+  'Kritik': 5,
+  'Yüksek Riskli': 4,
+  'Riskli': 3,
+  'Orta': 2,
+  'Düşük': 1,
+};
+
+export default function IsgKurulDashboard() {
+  const selectedFacilityId = localStorage.getItem('activeFacilityId') || '';
+  const token = localStorage.getItem('token');
+  const navigate = useNavigate();
+
+  // Filters state
+  const [search, setSearch] = useState('');
+  const [year, setYear] = useState('all');
+  const [meetingId, setMeetingId] = useState('all');
+  const [categoryId, setCategoryId] = useState('all');
+  const [status, setStatus] = useState('all');
+  const [priority, setPriority] = useState('all');
+  const [departmentId, setDepartmentId] = useState('all');
+  const [timeFilter, setTimeFilter] = useState<'all' | 'overdue' | 'next30' | 'undefinedTerm' | 'closed'>('all');
+
+  // Queries
+  const { data: meetings = [] } = useQuery({
+    queryKey: ['ohs-board-meetings', selectedFacilityId],
+    queryFn: async () => {
+      if (!selectedFacilityId) return [];
+      const res = await fetch(`${API}/api/operations/board?facilityId=${selectedFacilityId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Toplantılar yüklenemedi');
+      return res.json();
+    },
+    enabled: !!selectedFacilityId
+  });
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/settings/definitions/categories`, { headers: { Authorization: `Bearer ${token}` } });
+      return res.json();
+    }
+  });
+
+  const { data: departments = [] } = useQuery<any[]>({
+    queryKey: ['departments'],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/settings/definitions/departments`, { headers: { Authorization: `Bearer ${token}` } });
+      return res.json();
+    }
+  });
+
+  const { data: facilities = [] } = useQuery<any[]>({
+    queryKey: ['settings-facilities'],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/settings/facilities`, { headers: { Authorization: `Bearer ${token}` } });
+      return res.json();
+    }
+  });
+
+  // Unique Years & Filtered Meetings
+  const allDecisionsUnfiltered = useMemo(() => {
+    let list: any[] = [];
+    meetings.forEach((m: any) => {
+      if (m.decisions) {
+        m.decisions.forEach((d: any) => {
+          list.push({
+            ...d,
+            meetingId: m.id,
+            meetingDate: new Date(m.meetingDate),
+            meetingNo: m.meetingNo,
+            year: new Date(m.meetingDate).getFullYear().toString()
+          });
+        });
+      }
+    });
+    return list;
+  }, [meetings]);
+
+  const uniqueYears = Array.from(new Set(meetings.map((m: any) => new Date(m.meetingDate).getFullYear().toString()))).sort((a,b) => b.localeCompare(a));
+  const meetingsForSelectedYear = useMemo(() => {
+    let mtgs = year === 'all' ? meetings : meetings.filter((m: any) => new Date(m.meetingDate).getFullYear().toString() === year);
+    return mtgs.sort((a,b) => new Date(b.meetingDate).getTime() - new Date(a.meetingDate).getTime());
+  }, [meetings, year]);
+
+  // Apply Filters
+  const filteredDecisions = useMemo(() => {
+    return allDecisionsUnfiltered.filter(d => {
+      const matchSearch = search ? (d.decisionText?.toLowerCase() || '').includes(search.toLowerCase()) || (d.decisionNumber || '').includes(search) : true;
+      const matchYear = year !== 'all' ? d.year === year : true;
+      const matchMeeting = meetingId !== 'all' ? d.meetingId === meetingId : true;
+      const matchCategory = categoryId !== 'all' ? d.categoryId?.toString() === categoryId : true;
+      const matchStatus = status !== 'all' ? d.status === status : true;
+      const matchPriority = priority !== 'all' ? d.priority === priority : true;
+      const matchDepartment = departmentId !== 'all' ? d.departmentId?.toString() === departmentId : true;
+      
+      let matchTime = true;
+      if (timeFilter !== 'all') {
+        const isClosed = d.status === 'Tamamlandı' || d.status === 'İptal Edildi';
+        if (timeFilter === 'closed') {
+          matchTime = isClosed;
+        } else if (!isClosed) {
+          const now = new Date();
+          if (timeFilter === 'overdue') {
+            matchTime = d.dueDateType === 'DATE' && d.dueDate && new Date(d.dueDate) < now;
+          } else if (timeFilter === 'next30') {
+            if (d.dueDateType === 'DATE' && d.dueDate) {
+              const diffDays = Math.ceil((new Date(d.dueDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+              matchTime = diffDays >= 0 && diffDays <= 30;
+            } else {
+              matchTime = false;
+            }
+          } else if (timeFilter === 'undefinedTerm') {
+            matchTime = d.dueDateType !== 'DATE' || !d.dueDate;
+          }
+        } else {
+          matchTime = false; // if it's closed and we're looking for overdue/next30, it doesn't match
+        }
+      }
+
+      return matchSearch && matchYear && matchMeeting && matchCategory && matchStatus && matchPriority && matchDepartment && matchTime;
+    });
+  }, [allDecisionsUnfiltered, search, year, meetingId, categoryId, status, priority, departmentId, timeFilter]);
+
+  // Handle Chart Clicks
+  const onPieClick = (data: any, type: 'status' | 'priority') => {
+    if (data && data.name) {
+      if (type === 'status') {
+        setStatus(data.name === status ? 'all' : data.name);
+      } else {
+        setPriority(data.name === priority ? 'all' : data.name);
+      }
+    }
+  };
+
+  // Compute KPIs
+  const kpis = useMemo(() => {
+    const total = filteredDecisions.length;
+    const completed = filteredDecisions.filter(d => d.status === 'Tamamlandı').length;
+    const canceled = filteredDecisions.filter(d => d.status === 'İptal Edildi').length;
+    const closed = completed + canceled;
+    const openList = filteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
+    
+    const now = new Date();
+    const overdue = openList.filter(d => d.dueDateType === 'DATE' && d.dueDate && new Date(d.dueDate) < now).length;
+    const next30Days = openList.filter(d => {
+      if (d.dueDateType !== 'DATE' || !d.dueDate) return false;
+      const diffTime = new Date(d.dueDate).getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays >= 0 && diffDays <= 30;
+    }).length;
+    
+    const undefinedTerm = openList.filter(d => d.dueDateType !== 'DATE' || !d.dueDate).length;
+    const completionRate = total > 0 ? Math.round((closed / total) * 100) : 0;
+
+    return { total, open: openList.length, overdue, completionRate, closed, undefinedTerm, next30Days };
+  }, [filteredDecisions]);
+
+  // Chart Data: Status Distribution
+  const statusData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredDecisions.forEach(d => {
+      counts[d.status] = (counts[d.status] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
+  }, [filteredDecisions]);
+
+  // Chart Data: Priority Distribution
+  const priorityData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredDecisions.forEach(d => {
+      const p = d.priority || 'Belirtilmedi';
+      counts[p] = (counts[p] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => (PRIORITY_WEIGHTS[b.name] || 0) - (PRIORITY_WEIGHTS[a.name] || 0));
+  }, [filteredDecisions]);
+
+  // Chart Data: Monthly Flow
+  const monthlyData = useMemo(() => {
+    const counts: Record<string, { name: string, Açık: number, Kapalı: number, total: number }> = {};
+    filteredDecisions.forEach(d => {
+      const dDate = new Date(d.meetingDate);
+      const monthKey = `${dDate.getFullYear().toString().slice(2)}-${(dDate.getMonth()+1).toString().padStart(2, '0')}`;
+      if (!counts[monthKey]) counts[monthKey] = { name: monthKey, Açık: 0, Kapalı: 0, total: 0 };
+      counts[monthKey].Açık += (d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi' ? 1 : 0);
+      counts[monthKey].Kapalı += (d.status === 'Tamamlandı' || d.status === 'İptal Edildi' ? 1 : 0);
+      counts[monthKey].total += 1;
+    });
+    return Object.entries(counts).map(([name, data]) => ({ name, ...data })).sort((a,b) => a.name.localeCompare(b.name));
+  }, [filteredDecisions]);
+
+  // Open Task Age
+  const openTaskAge = useMemo(() => {
+    const openList = filteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
+    const now = new Date().getTime();
+    let r0_30 = 0, r31_60 = 0, r61_90 = 0, r91_180 = 0, r180plus = 0;
+    
+    openList.forEach(d => {
+      const diffTime = now - new Date(d.meetingDate).getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays <= 30) r0_30++;
+      else if (diffDays <= 60) r31_60++;
+      else if (diffDays <= 90) r61_90++;
+      else if (diffDays <= 180) r91_180++;
+      else r180plus++;
+    });
+    
+    return [
+      { label: '0-30 gün', count: r0_30 },
+      { label: '31-60 gün', count: r31_60 },
+      { label: '61-90 gün', count: r61_90 },
+      { label: '91-180 gün', count: r91_180 },
+      { label: '180+ gün', count: r180plus }
+    ];
+  }, [filteredDecisions]);
+
+  // Category Workload
+  const categoryWorkloadData = useMemo(() => {
+    const openList = filteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
+    const counts: Record<string, number> = {};
+    openList.forEach(d => {
+      const cat = categories.find((c: any) => c.id === d.categoryId);
+      const catName = cat?.name || 'Bilinmiyor';
+      counts[catName] = (counts[catName] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 6);
+  }, [filteredDecisions, categories]);
+
+  // Responsible Workload
+  const workloadData = useMemo(() => {
+    const openList = filteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
+    const counts: Record<string, number> = {};
+    openList.forEach(d => {
+      const dept = departments.find((dept: any) => dept.id === d.departmentId);
+      const deptName = dept?.name || 'Bilinmiyor';
+      counts[deptName] = (counts[deptName] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 6);
+  }, [filteredDecisions, departments]);
+
+  // Table Data: Sorted by Meeting Date Descending, then Priority
+  const tableTasks = useMemo(() => {
+    return [...filteredDecisions].sort((a, b) => {
+      const dateDiff = new Date(b.meetingDate).getTime() - new Date(a.meetingDate).getTime();
+      if (dateDiff !== 0) return dateDiff;
+      const wA = PRIORITY_WEIGHTS[a.priority] || 0;
+      const wB = PRIORITY_WEIGHTS[b.priority] || 0;
+      return wB - wA; // High priority first if same meeting
+    }).slice(0, 100); // limit to 100
+  }, [filteredDecisions]);
+
+  return (
+    <div className="space-y-6 max-w-[1600px] mx-auto pb-10">
+      
+      {/* Top Search Bar */}
+      <div className="bg-white p-4 rounded-lg border shadow-sm mb-4">
+        <Input 
+          placeholder="Karar, numarası, sorumlu, toplantı veya kelime ara..." 
+          className="w-full bg-slate-50 h-11 text-base"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+      </div>
+
+      {/* Filters Bar */}
+      <div className="bg-white p-3 rounded-lg border shadow-sm flex flex-wrap gap-3 items-center mb-6">
+        <Select value={year} onValueChange={(v) => { setYear(v); setMeetingId('all'); }}>
+          <SelectTrigger className="w-[140px] bg-slate-50 h-9 text-sm">
+            <SelectValue placeholder="Tüm Yıllar">{year === 'all' ? 'Tüm Yıllar' : year}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tüm Yıllar</SelectItem>
+            {uniqueYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+          </SelectContent>
+        </Select>
+
+        <Select value={meetingId} onValueChange={setMeetingId}>
+          <SelectTrigger className="w-[200px] bg-slate-50 h-9 text-sm">
+            <SelectValue placeholder="Tüm Toplantılar">
+              {meetingId === 'all' ? 'Tüm Toplantılar' : `Toplantı: ${meetings.find((m:any) => m.id === meetingId)?.meetingNo || meetingId}`}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tüm Toplantılar</SelectItem>
+            {meetingsForSelectedYear.map(m => (
+              <SelectItem key={m.id} value={m.id}>Toplantı: {m.meetingNo} ({new Date(m.meetingDate).toLocaleDateString('tr-TR')})</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={categoryId} onValueChange={setCategoryId}>
+          <SelectTrigger className="w-[220px] bg-slate-50 h-9 text-sm">
+            <SelectValue placeholder="Tüm Kategoriler">
+              {categoryId === 'all' ? 'Tüm Kategoriler' : (categories.find((c:any) => c.id.toString() === categoryId)?.name || categoryId)}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tüm Kategoriler</SelectItem>
+            {categories.map((c:any) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger className="w-[160px] bg-slate-50 h-9 text-sm">
+            <SelectValue placeholder="Tüm Durumlar">{status === 'all' ? 'Tüm Durumlar' : status}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tüm Durumlar</SelectItem>
+            {['Başlamadı', 'Devam Ediyor', 'Tamamlandı', 'İptal Edildi', 'Sürekli Takip', 'Belirsiz'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+          </SelectContent>
+        </Select>
+
+        <Select value={priority} onValueChange={setPriority}>
+          <SelectTrigger className="w-[160px] bg-slate-50 h-9 text-sm">
+            <SelectValue placeholder="Tüm Öncelikler">{priority === 'all' ? 'Tüm Öncelikler' : priority}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tüm Öncelikler</SelectItem>
+            {['Kritik', 'Yüksek Riskli', 'Riskli', 'Orta', 'Düşük'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+          </SelectContent>
+        </Select>
+
+        <Select value={departmentId} onValueChange={setDepartmentId}>
+          <SelectTrigger className="w-[220px] bg-slate-50 h-9 text-sm">
+            <SelectValue placeholder="Tüm Sorumlu Gruplar">
+              {departmentId === 'all' ? 'Tüm Sorumlu Gruplar' : (departments.find((d:any) => d.id.toString() === departmentId)?.name || departmentId)}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tüm Sorumlu Gruplar</SelectItem>
+            {departments.map((d:any) => <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* KPI Cards */}
+      <div className={`grid grid-cols-2 md:grid-cols-3 ${selectedFacilityId === 'all' ? 'lg:grid-cols-7' : 'lg:grid-cols-6'} gap-4`}>
+        {selectedFacilityId === 'all' && (
+          <Card className="shadow-sm border-slate-200">
+            <CardContent className="p-5 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-100 rounded-bl-full -mr-8 -mt-8 opacity-60" />
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 relative z-10">Tesis Sayısı</p>
+              <h3 className="text-3xl font-black text-slate-800 relative z-10">{new Set(meetings.map((m: any) => m.facilityId)).size}</h3>
+              <p className="text-xs text-slate-500 mt-1 relative z-10">Kapsamdaki tesisler</p>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="shadow-sm border-slate-200">
+          <CardContent className="p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-100 rounded-bl-full -mr-8 -mt-8 opacity-60" />
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 relative z-10">Açık İş</p>
+            <h3 className="text-3xl font-black text-slate-800 relative z-10">{kpis.open}</h3>
+            <p className="text-xs text-slate-500 mt-1 relative z-10">%{(kpis.total ? Math.round(100 - kpis.completionRate) : 0)} karar kapanmamış</p>
+          </CardContent>
+        </Card>
+
+        <Card className={`shadow-sm border-slate-200 cursor-pointer transition-colors ${timeFilter === 'all' ? 'ring-2 ring-indigo-500' : 'hover:bg-slate-50'}`} onClick={() => setTimeFilter('all')}>
+          <CardContent className="p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-slate-100 rounded-bl-full -mr-8 -mt-8 opacity-60" />
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 relative z-10">Tümü</p>
+            <h3 className="text-3xl font-black text-slate-800 relative z-10">{kpis.total}</h3>
+            <p className="text-xs text-slate-500 mt-1 relative z-10">Toplam Kurul Kararı</p>
+          </CardContent>
+        </Card>
+
+        <Card className={`shadow-sm border-red-200 cursor-pointer transition-colors ${timeFilter === 'overdue' ? 'ring-2 ring-red-500 bg-red-50' : 'hover:bg-red-50/70 bg-red-50/30'}`} onClick={() => setTimeFilter('overdue')}>
+          <CardContent className="p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-red-100 rounded-bl-full -mr-8 -mt-8 opacity-60" />
+            <p className="text-xs font-bold text-red-500 uppercase tracking-wider mb-2 relative z-10">Gecikmiş</p>
+            <h3 className="text-3xl font-black text-red-800 relative z-10">{kpis.overdue}</h3>
+            <p className="text-xs text-red-500 mt-1 relative z-10">Termini geçen kararlar</p>
+          </CardContent>
+        </Card>
+
+        <Card className={`shadow-sm border-amber-200 cursor-pointer transition-colors ${timeFilter === 'next30' ? 'ring-2 ring-amber-500 bg-amber-50' : 'hover:bg-amber-50/70 bg-amber-50/30'}`} onClick={() => setTimeFilter('next30')}>
+          <CardContent className="p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-100 rounded-bl-full -mr-8 -mt-8 opacity-60" />
+            <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-2 relative z-10">30 Gün İçinde</p>
+            <h3 className="text-3xl font-black text-amber-800 relative z-10">{kpis.next30Days}</h3>
+            <p className="text-xs text-amber-600 mt-1 relative z-10">Yaklaşan terminler</p>
+          </CardContent>
+        </Card>
+
+        <Card className={`shadow-sm border-slate-200 cursor-pointer transition-colors ${timeFilter === 'undefinedTerm' ? 'ring-2 ring-slate-400' : 'hover:bg-slate-50'}`} onClick={() => setTimeFilter('undefinedTerm')}>
+          <CardContent className="p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-slate-100 rounded-bl-full -mr-8 -mt-8 opacity-60" />
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 relative z-10">Termin Yok</p>
+            <h3 className="text-3xl font-black text-slate-800 relative z-10">{kpis.undefinedTerm}</h3>
+            <p className="text-xs text-slate-500 mt-1 relative z-10">Belirsiz/Sürekli kararlar</p>
+          </CardContent>
+        </Card>
+
+        <Card className={`shadow-sm border-green-200 cursor-pointer transition-colors ${timeFilter === 'closed' ? 'ring-2 ring-green-500 bg-green-50' : 'hover:bg-green-50/70 bg-green-50/30'}`} onClick={() => setTimeFilter('closed')}>
+          <CardContent className="p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-green-100 rounded-bl-full -mr-8 -mt-8 opacity-60" />
+            <p className="text-xs font-bold text-green-600 uppercase tracking-wider mb-2 relative z-10">Kapalı</p>
+            <h3 className="text-3xl font-black text-green-800 relative z-10">{kpis.closed}</h3>
+            <p className="text-xs text-green-600 mt-1 relative z-10">Tamamlanan/İptal edilen</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Row 2: Status, Priority */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        
+        {/* Status Distribution */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-2 border-b border-slate-100">
+            <CardTitle className="text-base font-bold text-slate-800">Durum Dağılımı</CardTitle>
+            <p className="text-[10px] text-muted-foreground">Filtrelemek için dilime tıklayın</p>
+          </CardHeader>
+          <CardContent className="p-4 flex flex-col items-center justify-center gap-4">
+            <div className="w-[140px] h-[140px] relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={statusData} cx="50%" cy="50%" innerRadius={45} outerRadius={65} paddingAngle={2} dataKey="value" stroke="none">
+                    {statusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={(COLORS as any)[entry.name] || '#cbd5e1'} onClick={() => onPieClick(entry, 'status')} className="cursor-pointer hover:opacity-80 transition-opacity" />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-xl font-bold text-slate-800">{kpis.total}</span>
+              </div>
+            </div>
+            <div className="space-y-2 w-full">
+              {statusData.map(s => (
+                <div key={s.name} onClick={() => onPieClick(s, 'status')} className={`flex justify-between items-center text-[11px] w-full gap-2 cursor-pointer hover:bg-slate-50 p-1 -m-1 rounded transition-colors ${status === s.name ? 'ring-1 ring-blue-200 bg-blue-50/50' : ''}`}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: (COLORS as any)[s.name] || '#cbd5e1' }} />
+                    <span className="text-slate-600 font-medium truncate">{s.name}</span>
+                  </div>
+                  <span className="font-bold text-slate-800">{s.value}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Priority Distribution */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-2 border-b border-slate-100">
+            <CardTitle className="text-base font-bold text-slate-800">Öncelik Dağılımı</CardTitle>
+            <p className="text-[10px] text-muted-foreground">Filtrelemek için dilime tıklayın</p>
+          </CardHeader>
+          <CardContent className="p-4 flex flex-col items-center justify-center gap-4">
+            <div className="w-[140px] h-[140px] relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={priorityData} cx="50%" cy="50%" innerRadius={45} outerRadius={65} paddingAngle={2} dataKey="value" stroke="none">
+                    {priorityData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={(PRIORITY_COLORS as any)[entry.name] || '#cbd5e1'} onClick={() => onPieClick(entry, 'priority')} className="cursor-pointer hover:opacity-80 transition-opacity" />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-xl font-bold text-slate-800">{kpis.total}</span>
+              </div>
+            </div>
+            <div className="space-y-2 w-full">
+              {priorityData.map(s => (
+                <div key={s.name} onClick={() => onPieClick(s, 'priority')} className={`flex justify-between items-center text-[11px] w-full gap-2 cursor-pointer hover:bg-slate-50 p-1 -m-1 rounded transition-colors ${priority === s.name ? 'ring-1 ring-blue-200 bg-blue-50/50' : ''}`}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: (PRIORITY_COLORS as any)[s.name] || '#cbd5e1' }} />
+                    <span className="text-slate-600 font-medium truncate">{s.name}</span>
+                  </div>
+                  <span className="font-bold text-slate-800">{s.value}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Row 3: Flow and Age */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        
+        {/* Monthly Flow */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-2 border-b border-slate-100">
+            <CardTitle className="text-base font-bold text-slate-800">Aylık Karar Akışı</CardTitle>
+            <p className="text-xs text-muted-foreground">Alınan karar ve kapanan iş hacmi</p>
+          </CardHeader>
+          <CardContent className="p-6 h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyData.slice(-12)} margin={{ top: 20, right: 0, left: -25, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                <Bar dataKey="Kapalı" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} maxBarSize={40} />
+                <Bar dataKey="Açık" stackId="a" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                    <LabelList 
+                      dataKey="total" 
+                      position="top" 
+                      fill="#64748b"
+                      fontSize={12} 
+                      fontWeight="bold"
+                      formatter={(val: number) => val > 0 ? val : ''} 
+                    />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+        
+        {/* Open Task Age */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-2 border-b border-slate-100">
+            <CardTitle className="text-base font-bold text-slate-800">Açık İş Yaşı</CardTitle>
+            <p className="text-xs text-muted-foreground">Toplantı tarihinden bugüne bekleme süresi</p>
+          </CardHeader>
+          <CardContent className="p-6 flex flex-col justify-center gap-4 h-[250px]">
+            {openTaskAge.map(t => {
+              const max = Math.max(...openTaskAge.map(o => o.count), 1);
+              const percent = (t.count / max) * 100;
+              const isDanger = t.label === '180+ gün' && t.count > 0;
+              return (
+                <div key={t.label} className="flex items-center gap-3">
+                  <span className="w-[70px] text-xs font-medium text-slate-600 shrink-0">{t.label}</span>
+                  <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-500 ${isDanger ? 'bg-red-500' : 'bg-slate-300'}`} 
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
+                  <span className="w-6 text-right text-sm font-bold text-slate-800">{t.count}</span>
+                </div>
+              )
+            })}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Row 3: Workload Distribution */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        {/* Category Workload */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-2 border-b border-slate-100">
+            <CardTitle className="text-base font-bold text-slate-800">Kategorilere Göre İş Yükü</CardTitle>
+            <p className="text-xs text-muted-foreground">Açık kararların kategorilere dağılımı</p>
+          </CardHeader>
+          <CardContent className="p-6 space-y-5">
+            {categoryWorkloadData.length > 0 ? categoryWorkloadData.map(w => {
+              const max = Math.max(...categoryWorkloadData.map(d => d.value), 1);
+              const percent = (w.value / max) * 100;
+              return (
+                <div key={w.name} className="flex items-center gap-4 group">
+                  <span className="w-[120px] text-xs font-medium text-slate-700 truncate cursor-help" title={w.name}>{w.name}</span>
+                  <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-indigo-500 rounded-full group-hover:bg-indigo-600 transition-colors" style={{ width: `${percent}%` }} />
+                  </div>
+                  <span className="w-4 text-right text-sm font-bold text-slate-800">{w.value}</span>
+                </div>
+              )
+            }) : (
+              <div className="text-center py-10 text-slate-400 text-sm">Açık iş yükü bulunmuyor.</div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Responsible Workload */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-2 border-b border-slate-100">
+            <CardTitle className="text-base font-bold text-slate-800">Sorumlu İş Yükü</CardTitle>
+            <p className="text-xs text-muted-foreground">Açık kararların birim gruplarına dağılımı</p>
+          </CardHeader>
+          <CardContent className="p-6 space-y-5">
+            {workloadData.length > 0 ? workloadData.map(w => {
+              const max = Math.max(...workloadData.map(d => d.value), 1);
+              const percent = (w.value / max) * 100;
+              return (
+                <div key={w.name} className="flex items-center gap-4 group">
+                  <span className="w-[120px] text-xs font-medium text-slate-700 truncate cursor-help" title={w.name}>{w.name}</span>
+                  <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full group-hover:bg-blue-600 transition-colors" style={{ width: `${percent}%` }} />
+                  </div>
+                  <span className="w-4 text-right text-sm font-bold text-slate-800">{w.value}</span>
+                </div>
+              )
+            }) : (
+              <div className="text-center py-10 text-slate-400 text-sm">Açık iş yükü bulunmuyor.</div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Row 4: Filtered Tasks Table */}
+      <div className="grid grid-cols-1 gap-4">
+        <div className="space-y-4">
+          <div className="flex gap-2 flex-wrap mb-2">
+            <Badge variant="secondary" className="bg-slate-800 text-white hover:bg-slate-700 px-3 py-1 rounded-full cursor-pointer" onClick={() => setStatus('all')}>Tümü - {filteredDecisions.length}</Badge>
+            <Badge variant="secondary" className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200 px-3 py-1 rounded-full cursor-pointer">Gecikmiş - {kpis.overdue}</Badge>
+            <Badge variant="secondary" className="bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200 px-3 py-1 rounded-full cursor-pointer">30 Gün İçinde - {kpis.next30Days}</Badge>
+            <Badge variant="secondary" className="bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200 px-3 py-1 rounded-full cursor-pointer">Termin Yok - {kpis.undefinedTerm}</Badge>
+          </div>
+
+          <Card className="shadow-sm">
+            <CardHeader className="pb-2 border-b border-slate-100 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-bold text-slate-800">Alınan Kararlar {status !== 'all' ? `(${status})` : ''}</CardTitle>
+                <p className="text-xs text-muted-foreground">Son toplantıdan geriye doğru tarihsel sıralama</p>
+              </div>
+              <Button variant="ghost" size="sm" className="text-blue-600 text-xs font-semibold gap-1 hover:bg-blue-50" onClick={() => navigate('/isg-kurul/meetings')}>
+                Tüm Toplantılar <ArrowRight className="w-3 h-3" />
+              </Button>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-[11px] text-slate-500 bg-slate-50 uppercase font-semibold sticky top-0 z-10 shadow-sm">
+                    <tr>
+                      {selectedFacilityId === 'all' && <th className="px-5 py-3">Tesis</th>}
+                      <th className="px-5 py-3">Toplantı</th>
+                      <th className="px-5 py-3">Karar</th>
+                      <th className="px-5 py-3">Sorumlu</th>
+                      <th className="px-5 py-3">Termin</th>
+                      <th className="px-5 py-3 text-right">Durum / Öncelik</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {tableTasks.length > 0 ? tableTasks.map(d => {
+                      const dept = departments.find((dept: any) => dept.id === d.departmentId);
+                      const isOverdue = d.dueDate && new Date(d.dueDate) < new Date() && d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi';
+                      const meeting = meetings.find((m: any) => m.id === d.meetingId);
+                      const facility = facilities.find((f: any) => f.id === meeting?.facilityId);
+                      
+                      return (
+                      <tr key={d.id} className="hover:bg-slate-50/70 transition-colors cursor-pointer group" onClick={() => navigate(`/isg-kurul/meetings/${d.meetingId}/decisions/${d.id}`)}>
+                        {selectedFacilityId === 'all' && (
+                          <td className="px-5 py-4 align-top whitespace-nowrap">
+                            <span className="text-[13px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">{facility?.shortName || facility?.name || '-'}</span>
+                          </td>
+                        )}
+                        <td className="px-5 py-4 whitespace-nowrap align-top">
+                          <span className="block font-bold text-slate-800">No: {d.meetingNo}</span>
+                          <span className="text-xs text-slate-500">{new Date(d.meetingDate).toLocaleDateString('tr-TR')}</span>
+                        </td>
+                        <td className="px-5 py-4 align-top">
+                          <p className="line-clamp-2 text-slate-700 text-[13px] leading-relaxed group-hover:text-blue-700 transition-colors" title={d.decisionText}>{d.decisionText}</p>
+                        </td>
+                        <td className="px-5 py-4 align-top">
+                          <span className="text-slate-600 text-[13px] leading-tight block w-32">{dept?.name || '-'}</span>
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap align-top">
+                          <span className={`text-[13px] ${isOverdue ? 'text-red-600 font-semibold' : 'text-slate-700'}`}>
+                            {d.dueDateType === 'DATE' && d.dueDate ? new Date(d.dueDate).toLocaleDateString('tr-TR') : d.periodicity || '-'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-right whitespace-nowrap align-top space-y-1.5 flex flex-col items-end">
+                          <Badge variant="outline" className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium border block w-max ${isOverdue ? 'bg-red-50 text-red-600 border-red-200' : 'bg-slate-50 text-slate-700 border-slate-200'}`}>
+                            {isOverdue ? `Gecikmiş - ${d.status}` : d.status}
+                          </Badge>
+                          <Badge variant="outline" className={`rounded-full px-2 py-0.5 text-[10px] font-medium border block w-max ${
+                            d.priority === 'Kritik' ? 'bg-red-600 text-white border-red-700' : 
+                            d.priority === 'Yüksek Riskli' ? 'bg-orange-500 text-white border-orange-600' :
+                            d.priority === 'Riskli' ? 'bg-amber-400 text-slate-900 border-amber-500' :
+                            'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}>
+                            {d.priority || 'Belirtilmedi'}
+                          </Badge>
+                        </td>
+                      </tr>
+                    )
+                    }) : (
+                      <tr>
+                        <td colSpan={selectedFacilityId === 'all' ? 6 : 5} className="px-5 py-12 text-center text-slate-400 text-sm">Filtrelere uygun karar bulunamadı.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -24,12 +24,13 @@ export default function ChecklistDashboardPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await api.get('/checklists/submissions');
+      const endpoint = user?.facilityId ? `/checklists/submissions?facilityId=${user.facilityId}` : '/checklists/submissions';
+      const response = await api.get(endpoint);
       const data = await response.json();
       
       const total = data.length;
       const completed = data.filter((s: any) => s.status === 'TAMAMLANDI');
-      const draft = data.filter((s: any) => s.status === 'TASLAK');
+      const draft = data.filter((s: any) => s.status === 'TASLAK' || s.status === 'BEKLEYEN');
       
       const totalScore = completed.reduce((sum: number, s: any) => sum + (s.percentScore || 0), 0);
       const avgScore = completed.length > 0 ? (totalScore / completed.length) : 0;
@@ -114,12 +115,12 @@ export default function ChecklistDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {stats.recentSubmissions.filter((s: any) => s.status === 'TASLAK').map((sub: any) => (
+              {stats.recentSubmissions.filter((s: any) => s.status === 'TASLAK' || s.status === 'BEKLEYEN').map((sub: any) => (
                 <div key={sub.id} className="flex flex-col gap-2 p-3 bg-white dark:bg-[#2c3135] border border-amber-200 dark:border-amber-900/50 rounded-lg shadow-sm">
                   <div className="flex justify-between items-start">
                     <h4 className="font-semibold text-amber-900 dark:text-amber-400">{sub.template.title}</h4>
                     <span className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300 px-2 py-1 rounded-full">
-                      Taslak
+                      {sub.status === 'BEKLEYEN' ? 'Yeni Atama' : 'Taslak'}
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground">{sub.facility?.name}</p>

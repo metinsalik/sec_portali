@@ -12,6 +12,12 @@ import { Toaster } from 'sonner';
 import LoginPage from './pages/Login';
 import PortalPage from './pages/PortalPage';
 import OperationsManagementPage from './pages/OperationsManagementPage';
+import SafetyManagementPage from './pages/SafetyManagementPage';
+import IsgKurulDashboard from './pages/isg-kurul/IsgKurulDashboard';
+import IsgKurulSettings from './pages/isg-kurul/IsgKurulSettings';
+import IsgKurulMeetings from './pages/isg-kurul/IsgKurulMeetings';
+import IsgKurulMeetingDetails from './pages/isg-kurul/IsgKurulMeetingDetails';
+import IsgKurulDecisionDetails from './pages/isg-kurul/IsgKurulDecisionDetails';
 import ProfilePage from './pages/ProfilePage';
 import RenovationReportPage from './pages/build_management/RenovationReportPage';
 import RenovationReportSettings from './pages/build_management/RenovationReportSettings';
@@ -54,7 +60,8 @@ import AccidentsPage from './pages/operations/AccidentsPage';
 import ExtraordinaryIncidentsPage from './pages/operations/ExtraordinaryIncidentsPage';
 import NotebooksPage from './pages/operations/NotebooksPage';
 import TrainingPage from './pages/operations/TrainingPage';
-import BoardPage from './pages/operations/BoardPage';
+import BoardList from './pages/operations/board/BoardList';
+import BoardForm from './pages/operations/board/BoardForm';
 import InspectionsPage from './pages/operations/InspectionsPage';
 // Workflow
 import WorkflowDashboard from './pages/workflow/WorkflowDashboard';
@@ -186,6 +193,62 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <OperationsManagementPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* ── SAFETY MANAGEMENT ─────────────────────── */}
+                  <Route
+                    path="/safety-management"
+                    element={
+                      <ProtectedRoute>
+                        <SafetyManagementPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* ── İSG KURUL YÖNETİMİ ─────────────────────── */}
+                  <Route
+                    path="/isg-kurul"
+                    element={<Navigate to="/isg-kurul/dashboard" replace />}
+                  />
+                  <Route
+                    path="/isg-kurul/dashboard"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><IsgKurulDashboard /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/isg-kurul/meetings"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><IsgKurulMeetings /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/isg-kurul/meetings/:id"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><IsgKurulMeetingDetails /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/isg-kurul/meetings/:id/decisions/:decisionId"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><IsgKurulDecisionDetails /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/isg-kurul/settings"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><IsgKurulSettings /></AppLayout>
                       </ProtectedRoute>
                     }
                   />
@@ -386,7 +449,23 @@ function App() {
                     path="/operations/board"
                     element={
                       <ProtectedRoute>
-                        <AppLayout><BoardPage /></AppLayout>
+                        <AppLayout><BoardList /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/operations/board/new"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><BoardForm /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/operations/board/:id/edit"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><BoardForm /></AppLayout>
                       </ProtectedRoute>
                     }
                   />

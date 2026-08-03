@@ -192,23 +192,23 @@ export default function PortalPage() {
             </div>
           )}
 
-          {/* Card 2: Aylık Veri Sistemi */}
-          {(hasAdminAccess || user?.modules?.includes('OPERATIONS')) && (
+          {/* Card 2: İş Güvenliği Yönetim Modülü */}
+          {(hasAdminAccess || user?.modules?.includes('OPERATIONS') || user?.modules?.includes('RISKS') || user?.modules?.includes('HAZMAT') || user?.modules?.includes('CHECKLISTS') || user?.modules?.includes('ISG_KURUL')) && (
           <div
-            onClick={() => navigate('/operations')}
+            onClick={() => navigate('/safety-management')}
             className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
           >
             {/* Mobile Card Layout */}
             <div className="flex md:hidden items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#e8f5e9] dark:bg-[#1b5e20]/20 flex items-center justify-center text-[#2e7d32] dark:text-emerald-400">
-                <span className="material-symbols-outlined text-[28px]">description</span>
+              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#fff3e0] dark:bg-[#e65100]/20 flex items-center justify-center text-[#ef6c00] dark:text-orange-400">
+                <span className="material-symbols-outlined text-[28px]">health_and_safety</span>
               </div>
               <div className="flex-1">
-                <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">Aylık Veri Sistemi</h2>
+                <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">İş Güvenliği Yönetim Modülü</h2>
                 <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
-                  Aylık çalışma saatleri, çalışan sayıları, kaza kayıtları ve denetim bulgusu girişleri.
+                  Aylık Veriler, Risk Değerlendirmesi, Tehlikeli Madde Yönetimi ve İSG Kontrolleri.
                 </p>
-                <div className="flex items-center gap-2 text-[#2e7d32] dark:text-emerald-400 text-sm font-medium group-hover:underline">
+                <div className="flex items-center gap-2 text-[#ef6c00] dark:text-orange-400 text-sm font-medium group-hover:underline">
                   Uygulamaya Git
                   <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                 </div>
@@ -218,15 +218,15 @@ export default function PortalPage() {
             {/* Desktop Card Layout */}
             <div className="hidden md:flex flex-col justify-between h-full">
               <div>
-                <div className="w-14 h-14 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center mb-6 text-[#2e7d32] dark:text-emerald-400 transition-transform group-hover:scale-110">
-                  <span className="material-symbols-outlined text-[32px]">description</span>
+                <div className="w-14 h-14 rounded-xl bg-orange-50 dark:bg-orange-950/20 flex items-center justify-center mb-6 text-[#ef6c00] dark:text-orange-400 transition-transform group-hover:scale-110">
+                  <span className="material-symbols-outlined text-[32px]">health_and_safety</span>
                 </div>
-                <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">Aylık Veri Sistemi</h3>
+                <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">İş Güvenliği Yönetim Modülü</h3>
                 <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
-                  Aylık çalışma saatleri, çalışan sayıları, kaza kayıtları ve denetim bulgusu girişleri.
+                  Aylık Veriler, Risk Değerlendirmesi, Tehlikeli Madde Yönetimi ve İSG Kontrolleri modüllerine buradan erişebilirsiniz.
                 </p>
               </div>
-              <div className="inline-flex items-center gap-2 text-[#2e7d32] dark:text-emerald-400 text-sm font-medium group-hover:gap-4 transition-all">
+              <div className="inline-flex items-center gap-2 text-[#ef6c00] dark:text-orange-400 text-sm font-medium group-hover:gap-4 transition-all">
                 Uygulamaya Git
                 <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
               </div>
@@ -276,89 +276,9 @@ export default function PortalPage() {
           </div>
           )}
 
-          {/* Card 4: Risk Değerlendirmesi */}
-          {(hasAdminAccess || user?.modules?.includes('RISKS')) && (
-          <div
-            onClick={() => navigate('/risks')}
-            className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
-          >
-            {/* Mobile Card Layout */}
-            <div className="flex md:hidden items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#fff3e0] dark:bg-[#e65100]/20 flex items-center justify-center text-[#ef6c00] dark:text-orange-400">
-                <span className="material-symbols-outlined text-[28px]">warning</span>
-              </div>
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">Risk Değerlendirmesi</h2>
-                <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
-                  Fine Kinney ve Matris yöntemi ile risk değerlendirme, 4 aşamalı iyileştirme takibi.
-                </p>
-                <div className="flex items-center gap-2 text-[#ef6c00] dark:text-orange-400 text-sm font-medium group-hover:underline">
-                  Uygulamaya Git
-                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                </div>
-              </div>
-            </div>
 
-            {/* Desktop Card Layout */}
-            <div className="hidden md:flex flex-col justify-between h-full">
-              <div>
-                <div className="w-14 h-14 rounded-xl bg-orange-50 dark:bg-orange-950/20 flex items-center justify-center mb-6 text-[#ef6c00] dark:text-orange-400 transition-transform group-hover:scale-110">
-                  <span className="material-symbols-outlined text-[32px]">warning</span>
-                </div>
-                <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">Risk Değerlendirmesi</h3>
-                <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
-                  Fine Kinney ve Matris yöntemi ile risk değerlendirme, 4 aşamalı iyileştirme takibi.
-                </p>
-              </div>
-              <div className="inline-flex items-center gap-2 text-[#ef6c00] dark:text-orange-400 text-sm font-medium group-hover:gap-4 transition-all">
-                Uygulamaya Git
-                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-              </div>
-            </div>
-          </div>
-          )}
 
-          {/* Card 5: Tehlikeli Madde Yönetimi */}
-          {(hasAdminAccess || user?.modules?.includes('HAZMAT')) && (
-          <div
-            onClick={() => navigate('/hazmat/dashboard')}
-            className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
-          >
-            {/* Mobile Card Layout */}
-            <div className="flex md:hidden items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#fff8e1] dark:bg-[#f57f17]/20 flex items-center justify-center text-[#f57f17] dark:text-yellow-500">
-                <span className="material-symbols-outlined text-[28px]">science</span>
-              </div>
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">Tehlikeli Madde Yönetimi</h2>
-                <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
-                  Kimyasal envanteri, SDS kartları yönetimi, KKD ve tehlike etiketleri takibi.
-                </p>
-                <div className="flex items-center gap-2 text-[#f57f17] dark:text-yellow-500 text-sm font-medium group-hover:underline">
-                  Uygulamaya Git
-                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                </div>
-              </div>
-            </div>
 
-            {/* Desktop Card Layout */}
-            <div className="hidden md:flex flex-col justify-between h-full">
-              <div>
-                <div className="w-14 h-14 rounded-xl bg-yellow-50 dark:bg-yellow-950/20 flex items-center justify-center mb-6 text-[#f57f17] dark:text-yellow-500 transition-transform group-hover:scale-110">
-                  <span className="material-symbols-outlined text-[32px]">science</span>
-                </div>
-                <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">Tehlikeli Madde Yönetimi</h3>
-                <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
-                  Kimyasal envanteri, SDS kartları yönetimi, KKD ve tehlike etiketleri takibi.
-                </p>
-              </div>
-              <div className="inline-flex items-center gap-2 text-[#f57f17] dark:text-yellow-500 text-sm font-medium group-hover:gap-4 transition-all">
-                Uygulamaya Git
-                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-              </div>
-            </div>
-          </div>
-          )}
 
           {/* Card 6: Fire Equipment */}
           {(hasAdminAccess || user?.modules?.includes('FIRE_EQUIPMENT')) && (
@@ -445,47 +365,7 @@ export default function PortalPage() {
           </div>
           )}
 
-          {/* Card: İSG Kontrol Listeleri */}
-          {(hasAdminAccess || user?.modules?.includes('CHECKLISTS')) && (
-          <div
-            onClick={() => navigate('/checklists')}
-            className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
-          >
-            {/* Mobile Card Layout */}
-            <div className="flex md:hidden items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#e8f5e9] dark:bg-[#1b5e20]/20 flex items-center justify-center text-[#2e7d32] dark:text-emerald-400">
-                <span className="material-symbols-outlined text-[28px]">fact_check</span>
-              </div>
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">İSG Kontrol Listeleri</h2>
-                <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
-                  Saha denetimleri için esnek formlar oluşturun ve mobil ortamda doldurun.
-                </p>
-                <div className="flex items-center gap-2 text-[#2e7d32] dark:text-emerald-400 text-sm font-medium group-hover:underline">
-                  Uygulamaya Git
-                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                </div>
-              </div>
-            </div>
 
-            {/* Desktop Card Layout */}
-            <div className="hidden md:flex flex-col justify-between h-full">
-              <div>
-                <div className="w-14 h-14 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center mb-6 text-[#2e7d32] dark:text-emerald-400 transition-transform group-hover:scale-110">
-                  <span className="material-symbols-outlined text-[32px]">fact_check</span>
-                </div>
-                <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">İSG Kontrol Listeleri</h3>
-                <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
-                  Saha denetimleri için esnek formlar oluşturun, mobil ortamda doldurun ve Excel'e aktarın.
-                </p>
-              </div>
-              <div className="inline-flex items-center gap-2 text-[#2e7d32] dark:text-emerald-400 text-sm font-medium group-hover:gap-4 transition-all">
-                Uygulamaya Git
-                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-              </div>
-            </div>
-          </div>
-          )}
 
           {/* Card 8: Bina Turu Yönetimi */}
           {(hasAdminAccess || user?.modules?.includes('BUILDING_TOUR')) && (

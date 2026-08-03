@@ -116,6 +116,84 @@ router.post('/', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// Update an existing template
+router.put('/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { title, description, scaleSetId, sections } = req.body;
+
+    const template = await prisma.checklistTemplate.update({
+      where: { id },
+      data: {
+        title,
+        description,
+        scaleSetId: scaleSetId || null,
+      },
+    });
+
+    // Handle sections and items manually to avoid deleting old ones and losing answers
+    // For simplicity, we just update existing sections/items or create new ones if they don't have an id
+    if (sections && Array.isArray(sections)) {
+      for (let sIdx = 0; sIdx < sections.length; sIdx++) {
+        const sec = sections[sIdx];
+        let sectionId = sec.id;
+        
+        if (sectionId) {
+          await prisma.checklistSection.update({
+            where: { id: sectionId },
+            data: { title: sec.title, sortOrder: sIdx }
+          });
+        } else {
+          const newSec = await prisma.checklistSection.create({
+            data: { templateId: id, title: sec.title, sortOrder: sIdx }
+          });
+          sectionId = newSec.id;
+        }
+
+        if (sec.items && Array.isArray(sec.items)) {
+          for (let iIdx = 0; iIdx < sec.items.length; iIdx++) {
+            const item = sec.items[iIdx];
+            if (item.id) {
+              await prisma.checklistItem.update({
+                where: { id: item.id },
+                data: {
+                  itemNo: item.itemNo || (iIdx + 1),
+                  questionText: item.questionText,
+                  questionType: item.questionType || 'SCALE',
+                  weight: item.weight || 1,
+                  isRequired: item.isRequired ?? true,
+                  sortOrder: iIdx,
+                  categoryId: item.categoryId || null,
+                  config: item.config || null
+                }
+              });
+            } else {
+              await prisma.checklistItem.create({
+                data: {
+                  sectionId: sectionId,
+                  itemNo: item.itemNo || (iIdx + 1),
+                  questionText: item.questionText,
+                  questionType: item.questionType || 'SCALE',
+                  weight: item.weight || 1,
+                  isRequired: item.isRequired ?? true,
+                  sortOrder: iIdx,
+                  categoryId: item.categoryId || null,
+                  config: item.config || null
+                }
+              });
+            }
+          }
+        }
+      }
+    }
+
+    res.json({ success: true, template });
+  } catch (error) {
+    console.error('Error updating template:', error);
+    res.status(500).json({ error: 'Failed to update template' });
+  }
+});
+
 // Soft delete template
 router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {

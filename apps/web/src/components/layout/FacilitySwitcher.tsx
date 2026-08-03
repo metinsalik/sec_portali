@@ -38,15 +38,15 @@ export function FacilitySwitcher() {
   const hasAdminAccess = user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management');
   
   const accessibleFacilities = hasAdminAccess 
-    ? facilities 
+    ? [{ id: 'all', name: 'Tüm Tesisler' }, ...facilities]
     : facilities.filter((f: any) => user?.facilities?.includes(f.id));
 
   useEffect(() => {
-    // If no active facility but we have facilities, set the first one as active
+    // If no active facility but we have facilities, set the default
     if (!activeFacilityId && accessibleFacilities.length > 0) {
-      const firstId = accessibleFacilities[0].id;
-      setActiveFacilityId(firstId);
-      localStorage.setItem('activeFacilityId', firstId);
+      const defaultId = hasAdminAccess ? 'all' : accessibleFacilities[0].id;
+      setActiveFacilityId(defaultId);
+      localStorage.setItem('activeFacilityId', defaultId);
       
       // Dispatch a custom event so other components know it changed
       window.dispatchEvent(new Event('facilityChanged'));
@@ -94,7 +94,7 @@ export function FacilitySwitcher() {
             <div className="flex items-center truncate">
               <Building2 className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
               <span className="truncate text-sm font-medium">
-                {activeFacility?.name || 'Tesis Seçin'}
+                {activeFacilityId === 'all' ? 'Tüm Tesisler' : (activeFacility?.name || 'Tesis Seçin')}
               </span>
             </div>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
