@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Users, Calendar, ArrowRight, Trash2, Edit, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { Plus, Users, Calendar, ArrowRight, Trash2, Edit, ChevronDown, ChevronUp, Search, LayoutGrid, List, ArrowLeft, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API = import.meta.env.VITE_API_URL || '';
@@ -24,6 +24,8 @@ export default function IsgKurulMeetings() {
   
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [facilitySearch, setFacilitySearch] = useState('');
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+  const [selectedFacilityForCards, setSelectedFacilityForCards] = useState<string | null>(null);
 
   // Fetch Facilities for Manager Mode
   const { data: facilities = [] } = useQuery<any[]>({
@@ -149,6 +151,30 @@ export default function IsgKurulMeetings() {
           <p className="text-muted-foreground mt-1">Aylık kurul toplantılarını ve kararlarını yönetin.</p>
         </div>
         <div className="flex gap-3">
+          {selectedFacilityId === 'all' && (
+            <div className="flex bg-muted p-1 rounded-md">
+              <button
+                className={`p-1.5 rounded-sm ${viewMode === 'card' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                onClick={() => {
+                  setViewMode('card');
+                  setSelectedFacilityForCards(null);
+                }}
+                title="Kart Görünümü"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                className={`p-1.5 rounded-sm ${viewMode === 'list' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                onClick={() => {
+                  setViewMode('list');
+                  setSelectedFacilityForCards(null);
+                }}
+                title="Liste Görünümü"
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+          )}
           <select 
             className="flex h-10 w-28 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm"
             value={selectedYear}
@@ -186,34 +212,101 @@ export default function IsgKurulMeetings() {
               className="pl-9"
             />
           </div>
-          <div className="space-y-4">
-            {(() => {
-              const grouped: Record<string, any[]> = {};
-              meetings.forEach((m: any) => {
-                 if (!grouped[m.facilityId]) grouped[m.facilityId] = [];
-                 grouped[m.facilityId].push(m);
-              });
+          {viewMode === 'list' ? (
+            <div className="space-y-4">
+              {(() => {
+                const grouped: Record<string, any[]> = {};
+                meetings.forEach((m: any) => {
+                   if (!grouped[m.facilityId]) grouped[m.facilityId] = [];
+                   grouped[m.facilityId].push(m);
+                });
 
-              const filteredFacilities = facilities.filter((f: any) => 
-                f.name.toLowerCase().includes(facilitySearch.toLowerCase()) || 
-                (f.shortName && f.shortName.toLowerCase().includes(facilitySearch.toLowerCase()))
-              ).filter(f => grouped[f.id] && grouped[f.id].length > 0);
+                const filteredFacilities = facilities.filter((f: any) => 
+                  f.name.toLowerCase().includes(facilitySearch.toLowerCase()) || 
+                  (f.shortName && f.shortName.toLowerCase().includes(facilitySearch.toLowerCase()))
+                ).filter(f => grouped[f.id] && grouped[f.id].length > 0);
 
-              if (filteredFacilities.length === 0 && facilitySearch) {
-                return <div className="text-center py-8 text-muted-foreground">Aranan kritere uygun tesis bulunamadı.</div>;
-              }
+                if (filteredFacilities.length === 0 && facilitySearch) {
+                  return <div className="text-center py-8 text-muted-foreground">Aranan kritere uygun tesis bulunamadı.</div>;
+                }
 
-              return filteredFacilities.map(f => (
-                <FacilitySection 
-                  key={f.id} 
-                  facility={f} 
-                  meetings={grouped[f.id]} 
-                  setDeleteId={setDeleteId}
-                  navigate={navigate}
-                />
-              ));
-            })()}
-          </div>
+                return filteredFacilities.map(f => (
+                  <FacilitySection 
+                    key={f.id} 
+                    facility={f} 
+                    meetings={grouped[f.id]} 
+                    setDeleteId={setDeleteId}
+                    navigate={navigate}
+                  />
+                ));
+              })()}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {selectedFacilityForCards ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedFacilityForCards(null)} className="gap-2">
+                      <ArrowLeft className="w-4 h-4" /> Geri Dön
+                    </Button>
+                    <h2 className="text-lg font-semibold border-l pl-3 ml-1 text-slate-700">
+                      {facilities.find(f => f.id === selectedFacilityForCards)?.name} Toplantıları
+                    </h2>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {meetings
+                      .filter((m: any) => m.facilityId === selectedFacilityForCards)
+                      .map((m: any) => (
+                        <MeetingCard key={m.id} meeting={m} setDeleteId={setDeleteId} navigate={navigate} />
+                      ))
+                    }
+                    {meetings.filter((m: any) => m.facilityId === selectedFacilityForCards).length === 0 && (
+                      <div className="col-span-full py-8 text-center text-muted-foreground bg-white rounded-lg border shadow-sm">
+                        Bu tesise ait toplantı bulunamadı.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {(() => {
+                    const grouped: Record<string, any[]> = {};
+                    meetings.forEach((m: any) => {
+                       if (!grouped[m.facilityId]) grouped[m.facilityId] = [];
+                       grouped[m.facilityId].push(m);
+                    });
+
+                    const filteredFacilities = facilities.filter((f: any) => 
+                      f.name.toLowerCase().includes(facilitySearch.toLowerCase()) || 
+                      (f.shortName && f.shortName.toLowerCase().includes(facilitySearch.toLowerCase()))
+                    ).filter(f => grouped[f.id] && grouped[f.id].length > 0);
+
+                    if (filteredFacilities.length === 0 && facilitySearch) {
+                      return <div className="col-span-full text-center py-8 text-muted-foreground">Aranan kritere uygun tesis bulunamadı.</div>;
+                    }
+
+                    return filteredFacilities.map(f => (
+                      <Card 
+                        key={f.id} 
+                        className="cursor-pointer hover:shadow-md transition-all hover:border-primary/50 group bg-white"
+                        onClick={() => setSelectedFacilityForCards(f.id)}
+                      >
+                        <CardContent className="p-6 flex flex-col items-center justify-center text-center gap-3">
+                          <div className="w-14 h-14 bg-slate-100 group-hover:bg-primary/10 text-slate-500 group-hover:text-primary transition-colors rounded-full flex items-center justify-center mb-1">
+                            <Building2 className="w-7 h-7" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-slate-800 line-clamp-2">{f.name}</h3>
+                            <p className="text-primary font-medium text-sm mt-1">{grouped[f.id].length} Toplantı</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ));
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -310,7 +403,7 @@ function FacilitySection({ facility, meetings, setDeleteId, navigate }: { facili
   );
 }
 
-function MeetingCard({ meeting, setDeleteId, navigate }: { meeting: any, setDeleteId: any, navigate: any }) {
+function MeetingCard({ meeting, setDeleteId, navigate, facilityName }: { meeting: any, setDeleteId: any, navigate: any, facilityName?: string }) {
   const date = new Date(meeting.meetingDate).toLocaleDateString('tr-TR');
   const totalDecisions = meeting.decisions?.length || 0;
   const completedDecisions = meeting.decisions?.filter((d: any) => d.status === 'Tamamlandı').length || 0;
@@ -323,6 +416,7 @@ function MeetingCard({ meeting, setDeleteId, navigate }: { meeting: any, setDele
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-lg">Toplantı No: {meeting.meetingNo}</CardTitle>
+            {facilityName && <div className="text-sm font-medium text-primary mt-1">{facilityName}</div>}
             <CardDescription className="flex items-center gap-1 mt-1">
               <Calendar className="w-3.5 h-3.5" /> {date}
             </CardDescription>
