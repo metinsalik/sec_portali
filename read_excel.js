@@ -1,15 +1,12 @@
-const XLSX = require('xlsx');
+const xlsx = require('xlsx');
 
-const workbook = XLSX.readFile('/Users/metinsalik/Desktop/sec_portali/Tesis Yönetimi ve Güvenliği RD_2026 Radyoloji.xlsx');
-const sheetName = 'RD Fine Kinney (Konsolide)';
-const sheet = workbook.Sheets[sheetName];
+const filePath = '/Users/metinsalik/Desktop/Projelerim/sec_portali/Kurul Kararları 2024-2025-2026.xlsx';
+const workbook = xlsx.readFile(filePath);
+const sheetName = workbook.SheetNames[0];
+const worksheet = workbook.Sheets[sheetName];
+const data = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
 
-if (!sheet) {
-  console.log(`Sheet "${sheetName}" not found. Available sheets:`, workbook.SheetNames);
-  process.exit(1);
-}
-
-const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-for (let i = 0; i < Math.min(10, data.length); i++) {
-  console.log(`ROW ${i}:`, data[i]);
-}
+console.log("Headers:", data[0]);
+console.log("Row 1:", data[1]);
+console.log("Row 2:", data[2]);
+console.log("Total rows:", data.length);

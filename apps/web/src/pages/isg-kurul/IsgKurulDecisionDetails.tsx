@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useAuth } from '../../context/AuthContext';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -42,6 +43,8 @@ export default function IsgKurulDecisionDetails() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const token = localStorage.getItem('token');
+  const { user } = useAuth();
+  const isManager = user?.isManagement || user?.isAdmin || user?.roles?.some(r => ['management', 'admin', 'manager', 'yönetici'].includes(r.toLowerCase()));
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [actionText, setActionText] = useState('');
@@ -49,6 +52,10 @@ export default function IsgKurulDecisionDetails() {
   const [newDueDate, setNewDueDate] = useState<string>('');
   const [newPriority, setNewPriority] = useState<string>('');
   const [newBudget, setNewBudget] = useState<string>('');
+
+  const [isReopenDialogOpen, setIsReopenDialogOpen] = useState(false);
+  const [reopenText, setReopenText] = useState('');
+  const [reopenStatus, setReopenStatus] = useState('Devam Ediyor');
 
   // Fetch Meeting Details
   const { data: meeting, isLoading } = useQuery({
@@ -95,7 +102,9 @@ export default function IsgKurulDecisionDetails() {
       queryClient.invalidateQueries({ queryKey: ['ohs-board-meeting-details', id] });
       toast.success('Aksiyon başarıyla eklendi');
       setIsDialogOpen(false);
+      setIsReopenDialogOpen(false);
       setActionText('');
+      setReopenText('');
       setNewStatus('');
       setNewDueDate('');
       setNewPriority('');
@@ -315,16 +324,72 @@ export default function IsgKurulDecisionDetails() {
             <CardContent className="p-6">
               
               {activeViewDecision.status === 'Tamamlandı' && (
-                <div className="mb-8 bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3 shadow-sm">
-                  <div className="bg-green-100 p-2 rounded-full shrink-0">
-                    <CheckCircle2 className="w-5 h-5 text-green-700" />
+                <div className="mb-8 bg-green-50 border border-green-200 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-green-100 p-2 rounded-full shrink-0">
+                      <CheckCircle2 className="w-5 h-5 text-green-700" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-green-900">Bu Karar Tamamlandı</h4>
+                      <p className="text-sm text-green-800 mt-1">
+                        Tamamlanma Tarihi: <strong>{activeViewDecision.dueDate ? new Date(activeViewDecision.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmedi'}</strong>
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-green-900">Bu Karar Tamamlandı</h4>
-                    <p className="text-sm text-green-800 mt-1">
-                      Tamamlanma Tarihi: <strong>{activeViewDecision.dueDate ? new Date(activeViewDecision.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmedi'}</strong>
-                    </p>
-                  </div>
+                  
+                  {isManager && (
+                    <Dialog open={isReopenDialogOpen} onOpenChange={setIsReopenDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button size="sm" variant="outline" className="bg-white border-green-300 text-green-800 hover:bg-green-100 mt-3 sm:mt-0">
+                          <MessageSquare className="w-4 h-4 mr-2" />
+                          Kararı Yeniden Aç
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle className="text-amber-700 flex items-center gap-2">
+                            <AlertCircle className="w-5 h-5" />
+                            Kararı Yeniden Aç
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 mt-4">
+                          <div className="space-y-1.5">
+                            <Label className="text-sm font-semibold">Yeni Durum</Label>
+                            <Select value={reopenStatus} onValueChange={setReopenStatus}>
+                              <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {['Devam Ediyor', 'Başlamadı', 'Sürekli Takip'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-sm font-semibold">Yeniden Açma Gerekçesi (Zorunlu)</Label>
+                            <Textarea 
+                              placeholder="Kararı neden tekrar açtığınızı belirtin..." 
+                              value={reopenText}
+                              onChange={(e) => setReopenText(e.target.value)}
+                              className="bg-white resize-none h-28 focus-visible:ring-amber-500"
+                            />
+                          </div>
+                          <div className="flex justify-end pt-2">
+                            <Button 
+                              disabled={!reopenText || addActionMutation.isPending}
+                              onClick={() => {
+                                addActionMutation.mutate({ 
+                                  decId: activeViewDecision.id, 
+                                  text: reopenText, 
+                                  status: reopenStatus 
+                                });
+                              }}
+                              className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+                            >
+                              Kararı Aç ve Bildir
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
                 </div>
               )}
 

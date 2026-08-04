@@ -421,7 +421,37 @@ router.post('/decisions/:decisionId/actions', async (req: AuthRequest, res: Resp
     const { actionText, newStatus, newDueDate, newDueDateType, newPriority } = req.body;
     const user = getUser(req);
 
-    // 1. Create the action
+    // 1. Check if we are reopening a closed decision
+    let isReopening = false;
+    let userToNotify: string | null = null;
+    let decisionBeforeUpdate: any = null;
+
+    if (newStatus && newStatus !== 'Tamamlandı') {
+      decisionBeforeUpdate = await prisma.ohsBoardDecision.findUnique({
+        where: { id: decisionId },
+        include: { actions: { orderBy: { createdAt: 'desc' }, take: 1 } }
+      });
+      
+      if (decisionBeforeUpdate?.status === 'Tamamlandı') {
+        isReopening = true;
+        const lastAction = decisionBeforeUpdate.actions[0];
+        if (lastAction && lastAction.createdBy) {
+          const closingUser = await prisma.user.findFirst({
+            where: {
+              OR: [
+                { fullName: lastAction.createdBy },
+                { username: lastAction.createdBy }
+              ]
+            }
+          });
+          if (closingUser) {
+            userToNotify = closingUser.username;
+          }
+        }
+      }
+    }
+
+    // 2. Create the action
     const action = await prisma.ohsBoardDecisionAction.create({
       data: {
         decisionId,
@@ -430,7 +460,7 @@ router.post('/decisions/:decisionId/actions', async (req: AuthRequest, res: Resp
       }
     });
 
-    // 2. Update the decision if requested
+    // 3. Update the decision if requested
     if (newStatus || newDueDate || newDueDateType || newPriority) {
       const updateData: any = {};
       if (newStatus) updateData.status = newStatus;
@@ -441,6 +471,20 @@ router.post('/decisions/:decisionId/actions', async (req: AuthRequest, res: Resp
       await prisma.ohsBoardDecision.update({
         where: { id: decisionId },
         data: updateData
+      });
+    }
+
+    // 4. Create Notification if reopened
+    if (isReopening && userToNotify) {
+      await prisma.notification.create({
+        data: {
+          title: "Karar Yeniden Açıldı",
+          message: `${decisionBeforeUpdate.decisionNumber} numaralı karar, ${user.fullName || user.username} tarafından yeniden açıldı. Gerekçe: ${actionText}`,
+          type: "WARNING",
+          module: "ISG_KURUL",
+          username: userToNotify,
+          link: `/isg-kurul/meetings/${decisionBeforeUpdate.meetingId}/decisions/${decisionId}`
+        }
       });
     }
 
