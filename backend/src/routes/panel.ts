@@ -326,6 +326,35 @@ router.put('/professionals/:id', async (req: AuthRequest, res: Response) => {
   }
 });
 
+router.post('/professionals/bulk-archive-unassigned', async (req: AuthRequest, res: Response) => {
+  try {
+    const unassignedProfessionals = await prisma.professional.findMany({
+      where: {
+        isActive: true,
+        assignments: {
+          none: {
+            status: 'Aktif'
+          }
+        }
+      }
+    });
+
+    const ids = unassignedProfessionals.map((p: any) => p.id);
+
+    if (ids.length > 0) {
+      await prisma.professional.updateMany({
+        where: { id: { in: ids } },
+        data: { isActive: false },
+      });
+    }
+
+    res.json({ count: ids.length });
+  } catch (error) {
+    console.error('Bulk archive error:', error);
+    res.status(500).json({ error: 'Toplu arşivleme işlemi başarısız oldu.' });
+  }
+});
+
 router.post('/professionals/:id/archive', async (req: AuthRequest, res: Response) => {
   const id = parseInt(String(req.params.id));
   try {

@@ -66,6 +66,7 @@ export default function ProfessionalsPage() {
   const [editItem, setEditItem] = useState<Professional | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [archiveId, setArchiveId] = useState<number | null>(null);
+  const [bulkArchiveModalOpen, setBulkArchiveModalOpen] = useState(false);
 
   const { data: professionals = [], isLoading } = useQuery<Professional[]>({
     queryKey: ['professionals', showArchived],
@@ -109,6 +110,18 @@ export default function ProfessionalsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['professionals'] });
       setArchiveId(null);
+    },
+  });
+
+  const bulkArchiveMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.post('/panel/professionals/bulk-archive-unassigned', {});
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['professionals'] });
+      setBulkArchiveModalOpen(false);
     },
   });
 
@@ -266,6 +279,13 @@ export default function ProfessionalsPage() {
           <p className="text-sm text-slate-500 font-medium mt-1">Sistemdeki uzman ve hekim kadrosunu yönetin.</p>
         </div>
         <div className="flex items-center gap-3">
+          <Button 
+            variant="outline"
+            className="rounded-xl h-10 px-4 font-semibold text-xs border-amber-200 text-amber-600 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-900/50 dark:hover:bg-amber-900/20"
+            onClick={() => setBulkArchiveModalOpen(true)}
+          >
+            <Archive className="w-4 h-4 mr-2" /> Atamasızları Pasife Al
+          </Button>
           <Button 
             variant={showArchived ? "secondary" : "outline"}
             className="rounded-xl h-10 px-4 font-semibold text-xs border-slate-200"
@@ -548,6 +568,41 @@ export default function ProfessionalsPage() {
               >
                 {archiveMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Archive className="w-4 h-4 mr-2" />}
                 Arşivle
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bulkArchiveModalOpen} onOpenChange={setBulkArchiveModalOpen}>
+        <DialogContent className="sm:max-w-[425px] p-0 border-none shadow-lg rounded-lg overflow-hidden">
+          <DialogHeader className="px-8 py-6 bg-slate-900">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+                <Archive className="w-5 h-5 text-white/70" />
+              </div>
+              <DialogTitle className="text-lg font-semibold text-white tracking-tight">Atamasızları Arşivle</DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="p-8 bg-card text-card-foreground">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+              </div>
+              <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                Herhangi bir tesise aktif ataması bulunmayan <strong>tüm</strong> profesyoneller pasife alınacak (arşivlenecek). Devam etmek istiyor musunuz?
+              </p>
+            </div>
+            <DialogFooter className="gap-3 mt-8">
+              <Button variant="ghost" onClick={() => setBulkArchiveModalOpen(false)} className="rounded-xl font-bold text-xs text-slate-400">İptal</Button>
+              <Button
+                variant="destructive"
+                disabled={bulkArchiveMutation.isPending}
+                onClick={() => bulkArchiveMutation.mutate()}
+                className="rounded-xl px-6 font-bold text-xs bg-amber-600 text-white hover:bg-amber-700"
+              >
+                {bulkArchiveMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Archive className="w-4 h-4 mr-2" />}
+                Tümünü Arşivle
               </Button>
             </DialogFooter>
           </div>
