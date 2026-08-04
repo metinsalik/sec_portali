@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Banknote } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
@@ -116,7 +116,7 @@ export default function IsgKurulDashboard() {
   }, [meetings, year]);
 
   // Apply Filters
-  const filteredDecisions = useMemo(() => {
+  const decisionsWithoutTimeFilter = useMemo(() => {
     return allDecisionsUnfiltered.filter(d => {
       const matchSearch = search ? (d.decisionText?.toLowerCase() || '').includes(search.toLowerCase()) || (d.decisionNumber || '').includes(search) : true;
       const matchYear = year !== 'all' ? d.year === year : true;
@@ -126,6 +126,13 @@ export default function IsgKurulDashboard() {
       const matchPriority = priority !== 'all' ? d.priority === priority : true;
       const matchDepartment = departmentId !== 'all' ? d.departmentId?.toString() === departmentId : true;
       
+      return matchSearch && matchYear && matchMeeting && matchCategory && matchStatus && matchPriority && matchDepartment;
+    });
+  }, [allDecisionsUnfiltered, search, year, meetingId, categoryId, status, priority, departmentId]);
+
+  // Apply Time Filters
+  const filteredDecisions = useMemo(() => {
+    return decisionsWithoutTimeFilter.filter(d => {
       let matchTime = true;
       if (timeFilter !== 'all') {
         const isClosed = d.status === 'Tamamlandı' || d.status === 'İptal Edildi';
@@ -150,9 +157,27 @@ export default function IsgKurulDashboard() {
         }
       }
 
-      return matchSearch && matchYear && matchMeeting && matchCategory && matchStatus && matchPriority && matchDepartment && matchTime;
+      return matchTime;
     });
-  }, [allDecisionsUnfiltered, search, year, meetingId, categoryId, status, priority, departmentId, timeFilter]);
+  }, [decisionsWithoutTimeFilter, timeFilter]);
+
+  const badgeCounts = useMemo(() => {
+    const total = decisionsWithoutTimeFilter.length;
+    const openList = decisionsWithoutTimeFilter.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
+    const now = new Date();
+    
+    const overdue = openList.filter(d => d.dueDateType === 'DATE' && d.dueDate && new Date(d.dueDate) < now).length;
+    const next30Days = openList.filter(d => {
+      if (d.dueDateType !== 'DATE' || !d.dueDate) return false;
+      const diffTime = new Date(d.dueDate).getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays >= 0 && diffDays <= 30;
+    }).length;
+    
+    const undefinedTerm = openList.filter(d => d.dueDateType !== 'DATE' || !d.dueDate).length;
+    
+    return { total, overdue, next30Days, undefinedTerm };
+  }, [decisionsWithoutTimeFilter]);
 
   // Handle Chart Clicks
   const onPieClick = (data: any, type: 'status' | 'priority') => {
@@ -280,6 +305,28 @@ export default function IsgKurulDashboard() {
       return wB - wA; // High priority first if same meeting
     }).slice(0, 100); // limit to 100
   }, [filteredDecisions]);
+
+  // Distribution by facility for the current filters (including time filter via KPIs)
+  const facilityDistribution = useMemo(() => {
+    const dist: Record<string, number> = {};
+    
+    filteredDecisions.forEach(d => {
+      const meeting = meetings.find((m: any) => m.id === d.meetingId);
+      const facilityId = meeting?.facilityId;
+      if (facilityId) {
+        dist[facilityId] = (dist[facilityId] || 0) + 1;
+      }
+    });
+
+    return Object.entries(dist).map(([fId, count]) => {
+      const f = facilities.find((f: any) => f.id === fId);
+      return {
+        id: fId,
+        name: f?.shortName || f?.name || 'Bilinmiyor',
+        count
+      };
+    }).sort((a, b) => b.count - a.count);
+  }, [filteredDecisions, meetings, facilities]);
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-10">
@@ -623,15 +670,89 @@ export default function IsgKurulDashboard() {
         </Card>
       </div>
 
+      {/* Tesis Bazlı Dağılım Grafiği (Sadece Yöneticiler İçin) */}
+      {selectedFacilityId === 'all' && facilityDistribution.length > 0 && (
+        <Card className="shadow-sm mb-6 border-indigo-100 mt-4">
+          <CardHeader className="pb-2 border-b border-indigo-50/50 flex flex-row items-center justify-between bg-indigo-50/30">
+            <div>
+              <CardTitle className="text-base font-bold text-indigo-900">Tesislerin Karar Dağılımı</CardTitle>
+              <p className="text-xs text-indigo-700/70">Toplam karar dağılımı (Adet)</p>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6 h-[250px] bg-white">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={facilityDistribution} margin={{ top: 20, right: 0, left: -25, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} dy={10} interval={0} angle={-45} textAnchor="end" height={60} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                <Tooltip 
+                  cursor={{ fill: '#f8fafc' }} 
+                  contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
+                />
+                <Bar 
+                  dataKey="count" 
+                  fill="#4f46e5" 
+                  radius={[4, 4, 0, 0]} 
+                  maxBarSize={50} 
+                  name="Karar Sayısı"
+                  cursor="pointer"
+                  onClick={(data: any) => {
+                    if (data && data.id) {
+                      localStorage.setItem('activeFacilityId', data.id);
+                      window.dispatchEvent(new Event('storage'));
+                      window.location.reload();
+                    }
+                  }}
+                >
+                  <LabelList dataKey="count" position="top" style={{ fill: '#475569', fontSize: 11, fontWeight: 600 }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Row 4: Filtered Tasks Table */}
       <div className="grid grid-cols-1 gap-4">
         <div className="space-y-4">
           <div className="flex gap-2 flex-wrap mb-2">
-            <Badge variant="secondary" className="bg-slate-800 text-white hover:bg-slate-700 px-3 py-1 rounded-full cursor-pointer" onClick={() => setStatus('all')}>Tümü - {filteredDecisions.length}</Badge>
-            <Badge variant="secondary" className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200 px-3 py-1 rounded-full cursor-pointer">Gecikmiş - {kpis.overdue}</Badge>
-            <Badge variant="secondary" className="bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200 px-3 py-1 rounded-full cursor-pointer">30 Gün İçinde - {kpis.next30Days}</Badge>
-            <Badge variant="secondary" className="bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200 px-3 py-1 rounded-full cursor-pointer">Termin Yok - {kpis.undefinedTerm}</Badge>
+            <Badge 
+              variant="secondary" 
+              className={`px-3 py-1 rounded-full cursor-pointer transition-colors ${timeFilter === 'all' ? 'bg-slate-800 text-white hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`} 
+              onClick={() => setTimeFilter('all')}
+            >
+              Tümü - {badgeCounts.total}
+            </Badge>
+            <Badge 
+              variant="secondary" 
+              className={`px-3 py-1 rounded-full cursor-pointer transition-colors ${timeFilter === 'closed' ? 'bg-green-600 text-white hover:bg-green-700 border-transparent' : 'bg-green-50 text-green-700 hover:bg-green-100 border-green-200'}`} 
+              onClick={() => setTimeFilter('closed')}
+            >
+              Kapalı - {kpis.closed}
+            </Badge>
+            <Badge 
+              variant="secondary" 
+              className={`px-3 py-1 rounded-full cursor-pointer transition-colors ${timeFilter === 'overdue' ? 'bg-red-600 text-white hover:bg-red-700 border-transparent' : 'bg-red-50 text-red-700 hover:bg-red-100 border-red-200'}`} 
+              onClick={() => setTimeFilter('overdue')}
+            >
+              Gecikmiş - {badgeCounts.overdue}
+            </Badge>
+            <Badge 
+              variant="secondary" 
+              className={`px-3 py-1 rounded-full cursor-pointer transition-colors ${timeFilter === 'next30' ? 'bg-amber-500 text-white hover:bg-amber-600 border-transparent' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200'}`} 
+              onClick={() => setTimeFilter('next30')}
+            >
+              30 Gün İçinde - {badgeCounts.next30Days}
+            </Badge>
+            <Badge 
+              variant="secondary" 
+              className={`px-3 py-1 rounded-full cursor-pointer transition-colors ${timeFilter === 'undefinedTerm' ? 'bg-slate-600 text-white hover:bg-slate-700 border-transparent' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200'}`} 
+              onClick={() => setTimeFilter('undefinedTerm')}
+            >
+              Termin Yok - {badgeCounts.undefinedTerm}
+            </Badge>
           </div>
+
 
           <Card className="shadow-sm">
             <CardHeader className="pb-2 border-b border-slate-100 flex flex-row items-center justify-between">
@@ -639,8 +760,8 @@ export default function IsgKurulDashboard() {
                 <CardTitle className="text-base font-bold text-slate-800">Alınan Kararlar {status !== 'all' ? `(${status})` : ''}</CardTitle>
                 <p className="text-xs text-muted-foreground">Son toplantıdan geriye doğru tarihsel sıralama</p>
               </div>
-              <Button variant="ghost" size="sm" className="text-blue-600 text-xs font-semibold gap-1 hover:bg-blue-50" onClick={() => navigate('/isg-kurul/meetings')}>
-                Tüm Toplantılar <ArrowRight className="w-3 h-3" />
+              <Button variant="ghost" size="sm" className="text-blue-600 text-xs font-semibold gap-1 hover:bg-blue-50" onClick={() => navigate('/isg-kurul/decisions')}>
+                Tüm Kararlar <ArrowRight className="w-3 h-3" />
               </Button>
             </CardHeader>
             <CardContent className="p-0">
@@ -662,6 +783,17 @@ export default function IsgKurulDashboard() {
                       const isOverdue = d.dueDate && new Date(d.dueDate) < new Date() && d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi';
                       const meeting = meetings.find((m: any) => m.id === d.meetingId);
                       const facility = facilities.find((f: any) => f.id === meeting?.facilityId);
+                      
+                      let budget = null;
+                      if (d.actions) {
+                        for (const a of d.actions) {
+                          const match = a.actionText?.match(/\[Tahmini Bütçe:\s*(.*?)\]/);
+                          if (match) {
+                            budget = match[1];
+                            break;
+                          }
+                        }
+                      }
                       
                       return (
                       <tr key={d.id} className="hover:bg-slate-50/70 transition-colors cursor-pointer group" onClick={() => navigate(`/isg-kurul/meetings/${d.meetingId}/decisions/${d.id}`)}>
@@ -697,6 +829,12 @@ export default function IsgKurulDashboard() {
                           }`}>
                             {d.priority || 'Belirtilmedi'}
                           </Badge>
+                          {budget && (
+                            <Badge variant="secondary" className="rounded-full px-2 py-0.5 text-[10px] font-medium border border-green-200 bg-green-50 text-green-700 flex items-center gap-1 w-max">
+                              <Banknote className="w-3 h-3" />
+                              {budget}
+                            </Badge>
+                          )}
                         </td>
                       </tr>
                     )

@@ -73,6 +73,9 @@ export default function TemplateListPage() {
                   <CalendarCheck className="w-4 h-4 mr-2" />
                   Görevlendir
                 </Button>
+                <Button variant="outline" size="sm" onClick={() => navigate(`/checklists/templates/${template.id}`)}>
+                  Detay
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => navigate(`/checklists/templates/${template.id}/edit`)}>
                   <Edit className="w-4 h-4" />
                 </Button>

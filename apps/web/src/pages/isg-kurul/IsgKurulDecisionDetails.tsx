@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Send } from 'lucide-react';
+import { ArrowLeft, Send, Gavel, Calendar, Building, Tag, Flag, CheckCircle2, Clock, FileText, AlertCircle, MessageSquare, ChevronRight, Banknote, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -42,9 +43,12 @@ export default function IsgKurulDecisionDetails() {
   const queryClient = useQueryClient();
   const token = localStorage.getItem('token');
 
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [actionText, setActionText] = useState('');
   const [newStatus, setNewStatus] = useState<string>('');
   const [newDueDate, setNewDueDate] = useState<string>('');
+  const [newPriority, setNewPriority] = useState<string>('');
+  const [newBudget, setNewBudget] = useState<string>('');
 
   // Fetch Meeting Details
   const { data: meeting, isLoading } = useQuery({
@@ -59,11 +63,21 @@ export default function IsgKurulDecisionDetails() {
     enabled: !!id
   });
 
+  // Fetch Facilities to get the name
+  const { data: facilities = [] } = useQuery<any[]>({
+    queryKey: ['settings-facilities'],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/settings/facilities`, { headers: { Authorization: `Bearer ${token}` } });
+      return res.json();
+    }
+  });
+
   // Create Action Mutation
   const addActionMutation = useMutation({
-    mutationFn: async ({ decId, text, status, dueDate }: { decId: string, text: string, status?: string, dueDate?: string }) => {
+    mutationFn: async ({ decId, text, status, dueDate, priority }: { decId: string, text: string, status?: string, dueDate?: string, priority?: string }) => {
       const payload: any = { actionText: text };
       if (status) payload.newStatus = status;
+      if (priority) payload.newPriority = priority;
       if (dueDate) {
         payload.newDueDate = dueDate;
         payload.newDueDateType = 'DATE';
@@ -80,9 +94,12 @@ export default function IsgKurulDecisionDetails() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ohs-board-meeting-details', id] });
       toast.success('Aksiyon başarıyla eklendi');
+      setIsDialogOpen(false);
       setActionText('');
       setNewStatus('');
       setNewDueDate('');
+      setNewPriority('');
+      setNewBudget('');
     }
   });
 
@@ -113,135 +130,315 @@ export default function IsgKurulDecisionDetails() {
     );
   }
 
+  const facility = facilities.find((f: any) => f.id === meeting.facilityId);
+
+  const latestBudget = (() => {
+    if (!activeViewDecision.actions) return null;
+    for (const a of activeViewDecision.actions) {
+      const match = a.actionText.match(/\[Tahmini Bütçe:\s*(.*?)\]/);
+      if (match) return match[1];
+    }
+    return null;
+  })();
+
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center bg-white p-4 rounded-lg border shadow-sm">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full hover:bg-slate-100">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold">Karar No: {activeViewDecision.decisionNumber}</h1>
-            <Badge className={`border ${getStatusColor(activeViewDecision.status)}`} variant="outline">
-              {activeViewDecision.status}
-            </Badge>
+      <div className="flex items-start gap-4">
+        <Button variant="outline" size="icon" onClick={() => navigate(-1)} className="rounded-full shrink-0 bg-white shadow-sm mt-1">
+          <ArrowLeft className="w-5 h-5 text-slate-600" />
+        </Button>
+        
+        <div className="flex-1 bg-white rounded-xl border shadow-sm p-5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -mr-10 -mt-10 z-0"></div>
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge className="bg-indigo-600 hover:bg-indigo-700 text-white border-transparent gap-1.5 py-1 px-3 shadow-sm text-xs font-semibold">
+                  <Gavel className="w-3.5 h-3.5" />
+                  İSG Kurul Kararı
+                </Badge>
+                {facility && (
+                  <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200 gap-1.5 py-1 px-3 text-xs">
+                    <Building className="w-3 h-3" />
+                    {facility.shortName || facility.name}
+                  </Badge>
+                )}
+                <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200 gap-1.5 py-1 px-3 text-xs">
+                  <Calendar className="w-3 h-3" />
+                  {new Date(meeting.meetingDate).toLocaleDateString('tr-TR')} Tarihli Toplantı
+                </Badge>
+              </div>
+              <div className="flex items-center gap-3 mt-1">
+                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
+                  Karar No: {activeViewDecision.decisionNumber}
+                </h1>
+              </div>
+            </div>
+            
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              <Badge className={`border px-3 py-1 text-sm font-semibold shadow-sm ${getStatusColor(activeViewDecision.status)}`} variant="outline">
+                {activeViewDecision.status}
+              </Badge>
+            </div>
           </div>
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-6 space-y-6">
-          {/* Info Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-muted/20 rounded-lg border">
-            <div>
-              <span className="text-xs text-muted-foreground block">Kategori</span>
-              <span className="font-semibold text-sm">{activeViewDecision.category?.name}</span>
-              {activeViewDecision.subCategory && <span className="block text-xs text-muted-foreground mt-1">↳ {activeViewDecision.subCategory.name}</span>}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: Details */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="shadow-sm border-slate-200 overflow-hidden">
+            <div className="bg-slate-50/50 border-b px-5 py-4 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-slate-500" />
+              <h3 className="font-semibold text-slate-800">Karar İçeriği</h3>
             </div>
-            <div>
-              <span className="text-xs text-muted-foreground block">Sorumlu Departman</span>
-              <span className="font-semibold text-sm">{activeViewDecision.department?.name}</span>
-            </div>
-            <div>
-              <span className="text-xs text-muted-foreground block">Kritiklik Seviyesi</span>
-              <Badge className={`mt-1 border ${getPriorityColor(activeViewDecision.priority)}`} variant="outline">
-                {activeViewDecision.priority}
-              </Badge>
-            </div>
-            <div>
-              <span className="text-xs text-muted-foreground block">Termin Tipi</span>
-              <span className="font-semibold text-sm mb-1 block">{activeViewDecision.dueDateType === 'DATE' ? 'Belirli Tarih' : 'Periyodik'}</span>
-              {activeViewDecision.dueDateType === 'DATE' ? (
-                <span className="font-semibold text-sm">{activeViewDecision.dueDate ? new Date(activeViewDecision.dueDate).toLocaleDateString('tr-TR') : '-'}</span>
-              ) : (
-                <span className="font-semibold text-sm">{activeViewDecision.periodicity || '-'}</span>
+            <CardContent className="p-0">
+              <div className="p-5">
+                <div className="prose prose-sm max-w-none text-slate-700 leading-relaxed whitespace-pre-wrap">
+                  {activeViewDecision.decisionText}
+                </div>
+              </div>
+              
+              {activeViewDecision.remarks && (
+                <div className="p-5 bg-amber-50/50 border-t border-amber-100">
+                  <h4 className="text-sm font-bold mb-2 flex items-center gap-2 text-amber-800">
+                    <AlertCircle className="w-4 h-4" />
+                    Değerlendirme & Açıklama
+                  </h4>
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap text-amber-900/90 pl-6 border-l-2 border-amber-300">
+                    {activeViewDecision.remarks}
+                  </div>
+                </div>
               )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          {/* Text Blocks */}
-          <div>
-            <h4 className="text-sm font-bold border-b pb-2 mb-3">Alınan Karar Metni</h4>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap bg-white p-4 border rounded-md">{activeViewDecision.decisionText}</p>
-          </div>
-
-          {activeViewDecision.remarks && (
-            <div>
-              <h4 className="text-sm font-bold border-b pb-2 mb-3">Sonuç / Açıklama / Değerlendirme</h4>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap bg-amber-50/50 p-4 border border-amber-100 rounded-md text-amber-900">{activeViewDecision.remarks}</p>
-            </div>
-          )}
-
-          {/* Actions Section */}
-          <div className="pt-6 border-t mt-8">
-            <h4 className="text-sm font-bold mb-4 flex items-center gap-2">
-              Aksiyon Geçmişi ve Yorumlar
-              <Badge variant="secondary" className="rounded-full">{activeViewDecision.actions?.length || 0}</Badge>
-            </h4>
-            
-            {/* Action List */}
-            <div className="space-y-4 mb-6">
-              {activeViewDecision.actions?.length > 0 ? (
-                activeViewDecision.actions.map((action: any) => (
-                  <div key={action.id} className="bg-slate-50 p-4 rounded-lg border flex flex-col gap-2">
-                    <p className="text-sm whitespace-pre-wrap">{action.actionText}</p>
-                    <div className="flex justify-between items-center text-xs text-muted-foreground mt-2 pt-2 border-t border-slate-200 border-dashed">
-                      <span className="font-medium text-primary">{action.createdBy}</span>
-                      <span>{new Date(action.createdAt).toLocaleString('tr-TR')}</span>
+          {/* Action History Timeline */}
+          <Card className="shadow-sm border-slate-200">
+            <div className="bg-slate-50/50 border-b px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-slate-500" />
+                <h3 className="font-semibold text-slate-800">Aksiyon Geçmişi ve Yorumlar</h3>
+                <Badge variant="secondary" className="rounded-full bg-slate-200 text-slate-700 font-bold ml-1">{activeViewDecision.actions?.length || 0}</Badge>
+              </div>
+              {!['Tamamlandı', 'İptal Edildi'].includes(activeViewDecision.status) && (
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 shadow-sm rounded-full px-4">
+                      <Plus className="w-4 h-4" />
+                      Aksiyon / Güncelleme Ekle
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-xl">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2 text-indigo-900">
+                        <Send className="w-4 h-4 text-indigo-600" />
+                        Yeni Aksiyon & Durum Güncellemesi
+                      </DialogTitle>
+                    </DialogHeader>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-slate-600">Durum Güncelle (Opsiyonel)</Label>
+                        <Select value={newStatus} onValueChange={setNewStatus}>
+                          <SelectTrigger className="bg-white border-slate-200 shadow-sm"><SelectValue placeholder="Değiştirme" /></SelectTrigger>
+                          <SelectContent>
+                            {['Başlamadı', 'Devam Ediyor', 'Tamamlandı', 'İptal Edildi', 'Sürekli Takip', 'Belirsiz'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-slate-600">Kritiklik (Opsiyonel)</Label>
+                        <Select value={newPriority} onValueChange={setNewPriority}>
+                          <SelectTrigger className="bg-white border-slate-200 shadow-sm"><SelectValue placeholder="Değiştirme" /></SelectTrigger>
+                          <SelectContent>
+                            {['Kritik', 'Yüksek Riskli', 'Riskli', 'Orta', 'Düşük'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-slate-600">Yeni Termin (Opsiyonel)</Label>
+                        <Input type="date" className="bg-white border-slate-200 shadow-sm text-sm" value={newDueDate} onChange={(e) => setNewDueDate(e.target.value)} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-slate-600">Tahmini Bütçe (Opsiyonel)</Label>
+                        <Select value={newBudget} onValueChange={setNewBudget}>
+                          <SelectTrigger className="bg-white border-slate-200 shadow-sm"><SelectValue placeholder="Belirtilmedi" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Bütçe Gerektirmez">Bütçe Gerektirmez</SelectItem>
+                            <SelectItem value="0 - 10.000 ₺">0 - 10.000 ₺</SelectItem>
+                            <SelectItem value="10.000 - 50.000 ₺">10.000 - 50.000 ₺</SelectItem>
+                            <SelectItem value="50.000 - 100.000 ₺">50.000 - 100.000 ₺</SelectItem>
+                            <SelectItem value="100.000 - 250.000 ₺">100.000 - 250.000 ₺</SelectItem>
+                            <SelectItem value="250.000 - 500.000 ₺">250.000 - 500.000 ₺</SelectItem>
+                            <SelectItem value="500.000 ₺ ve Üzeri">500.000 ₺ ve Üzeri</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center p-8 border border-dashed rounded-lg text-muted-foreground text-sm bg-slate-50/50">
-                  Bu karar için henüz aksiyon veya açıklama girilmemiş.
-                </div>
+                    
+                    <div className="mt-4 space-y-1.5">
+                      <Label className="text-xs font-semibold text-slate-600">Aksiyon Notu (Zorunlu)</Label>
+                      <Textarea 
+                        placeholder="Yapılan çalışmaları, güncellemeleri veya notlarınızı buraya yazın..." 
+                        value={actionText}
+                        onChange={(e) => setActionText(e.target.value)}
+                        className="bg-white resize-none h-28 border-slate-200 shadow-sm focus-visible:ring-indigo-500"
+                      />
+                    </div>
+                    
+                    <div className="flex justify-end mt-4">
+                      <Button 
+                        disabled={!actionText || addActionMutation.isPending}
+                        onClick={() => {
+                          const finalActionText = newBudget ? `[Tahmini Bütçe: ${newBudget}]\n\n${actionText}` : actionText;
+                          addActionMutation.mutate({ 
+                            decId: activeViewDecision.id, 
+                            text: finalActionText, 
+                            status: newStatus, 
+                            dueDate: newDueDate,
+                            priority: newPriority
+                          });
+                        }}
+                        className="px-8 gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-sm w-full sm:w-auto"
+                      >
+                        <Send className="w-4 h-4" /> 
+                        <span>Gönder ve Kaydet</span>
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               )}
             </div>
+            
+            <CardContent className="p-6">
+              
+              {activeViewDecision.status === 'Tamamlandı' && (
+                <div className="mb-8 bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3 shadow-sm">
+                  <div className="bg-green-100 p-2 rounded-full shrink-0">
+                    <CheckCircle2 className="w-5 h-5 text-green-700" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-green-900">Bu Karar Tamamlandı</h4>
+                    <p className="text-sm text-green-800 mt-1">
+                      Tamamlanma Tarihi: <strong>{activeViewDecision.dueDate ? new Date(activeViewDecision.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmedi'}</strong>
+                    </p>
+                  </div>
+                </div>
+              )}
 
-            {/* Add Action Input */}
-            {['Tamamlandı', 'İptal Edildi'].includes(activeViewDecision.status) ? (
-              <div className="bg-slate-50 p-6 rounded-lg border mt-6 text-center text-muted-foreground border-dashed">
-                Bu karar <strong>{activeViewDecision.status}</strong> durumunda olduğu için yeni aksiyon girişi veya durum güncellemesi yapılamaz. Karar kapatılmıştır.
-              </div>
-            ) : (
-              <div className="bg-slate-50 p-4 rounded-lg border mt-6">
-                <h5 className="font-semibold text-sm mb-3">Yeni Aksiyon / Durum Güncellemesi</h5>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Yeni Durum (İsteğe Bağlı)</Label>
-                    <Select value={newStatus} onValueChange={setNewStatus}>
-                      <SelectTrigger className="bg-white"><SelectValue placeholder="Durum Seçin" /></SelectTrigger>
-                      <SelectContent>
-                        {['Başlamadı', 'Devam Ediyor', 'Tamamlandı', 'İptal Edildi', 'Sürekli Takip', 'Belirsiz'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+              <div className="relative pl-6 border-l-2 border-slate-100 space-y-8">
+                {activeViewDecision.actions?.length > 0 ? (
+                  activeViewDecision.actions.map((action: any, idx: number) => {
+                    const displayActionText = action.actionText.replace(/\[Tahmini Bütçe: .*?\]\n\n?/, '');
+                    return (
+                      <div key={action.id} className="relative">
+                        <div className="absolute -left-[35px] bg-white border-2 border-indigo-100 rounded-full w-6 h-6 flex items-center justify-center top-0 shadow-sm">
+                          <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full"></div>
+                        </div>
+                        
+                        <div className="bg-white border rounded-lg shadow-sm overflow-hidden transition-shadow hover:shadow-md">
+                          <div className="px-4 py-3 bg-slate-50/80 border-b flex justify-between items-center text-xs">
+                            <span className="font-semibold text-slate-700">{action.createdBy}</span>
+                            <span className="text-slate-500 flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5" />
+                              {new Date(action.createdAt).toLocaleString('tr-TR')}
+                            </span>
+                          </div>
+                          <div className="p-4 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                            {displayActionText}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-10 text-muted-foreground text-sm flex flex-col items-center gap-3">
+                    <MessageSquare className="w-8 h-8 text-slate-200" />
+                    <p>Bu karar için henüz aksiyon veya açıklama girilmemiş.</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">Yeni Termin Tarihi (İsteğe Bağlı)</Label>
-                    <Input type="date" className="bg-white" value={newDueDate} onChange={(e) => setNewDueDate(e.target.value)} />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column: Meta Data Grid */}
+        <div className="space-y-6">
+          <Card className="shadow-sm border-slate-200 sticky top-6">
+            <CardHeader className="bg-slate-50/50 border-b px-5 py-4">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Tag className="w-4 h-4 text-slate-500" />
+                Karar Özellikleri
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-slate-100">
+                
+                {latestBudget && (
+                  <div className="p-4 hover:bg-slate-50/50 transition-colors bg-green-50/30">
+                    <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Tahmini Bütçe</span>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200 gap-1.5 px-2.5 py-1 text-sm font-bold shadow-sm">
+                      <Banknote className="w-4 h-4" />
+                      {latestBudget}
+                    </Badge>
+                  </div>
+                )}
+
+                <div className="p-4 hover:bg-slate-50/50 transition-colors">
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Sorumlu Departman</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                      <Building className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <span className="font-semibold text-sm text-slate-700">{activeViewDecision.department?.name}</span>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <Textarea 
-                    placeholder="Bu karara yeni bir aksiyon notu ekleyin..." 
-                    value={actionText}
-                    onChange={(e) => setActionText(e.target.value)}
-                    className="bg-white resize-none h-20"
-                  />
-                  <Button 
-                    disabled={!actionText || addActionMutation.isPending}
-                    onClick={() => addActionMutation.mutate({ decId: activeViewDecision.id, text: actionText, status: newStatus, dueDate: newDueDate })}
-                    className="h-20 px-6 gap-2"
-                  >
-                    <Send className="w-4 h-4" /> Kaydet
-                  </Button>
+                
+                <div className="p-4 hover:bg-slate-50/50 transition-colors">
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Kategori</span>
+                  <div className="flex flex-col gap-1">
+                    <span className="font-medium text-sm text-slate-800">{activeViewDecision.category?.name}</span>
+                    {activeViewDecision.subCategory && (
+                      <span className="text-xs text-slate-500 flex items-center gap-1">
+                        <ChevronRight className="w-3 h-3" />
+                        {activeViewDecision.subCategory.name}
+                      </span>
+                    )}
+                  </div>
                 </div>
+
+                <div className="p-4 hover:bg-slate-50/50 transition-colors">
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 block">Kritiklik Seviyesi</span>
+                  <Badge className={`border px-2.5 py-0.5 text-xs font-semibold ${getPriorityColor(activeViewDecision.priority)}`} variant="outline">
+                    <Flag className="w-3 h-3 mr-1.5 inline-block" />
+                    {activeViewDecision.priority}
+                  </Badge>
+                </div>
+
+                <div className="p-4 hover:bg-slate-50/50 transition-colors">
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Termin Bilgisi</span>
+                  <div className="flex flex-col gap-1.5 mt-2">
+                    <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded w-max">
+                      {activeViewDecision.dueDateType === 'DATE' ? 'Belirli Tarih' : 'Periyodik Takip'}
+                    </span>
+                    {activeViewDecision.dueDateType === 'DATE' ? (
+                      <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4 text-slate-400" />
+                        {activeViewDecision.dueDate ? new Date(activeViewDecision.dueDate).toLocaleDateString('tr-TR') : 'Termin atanmamış'}
+                      </span>
+                    ) : (
+                      <span className="font-bold text-slate-700">{activeViewDecision.periodicity || '-'}</span>
+                    )}
+                  </div>
+                </div>
+                
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

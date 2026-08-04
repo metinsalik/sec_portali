@@ -8,7 +8,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useAuth } from '@/context/AuthContext';
+
+const getGradeAndColor = (percentScore: number | undefined | null) => {
+  if (percentScore === undefined || percentScore === null) return { grade: '-', color: 'text-gray-500 bg-gray-50' };
+  if (percentScore >= 90) return { grade: 'A', color: 'text-emerald-700 bg-emerald-100 border border-emerald-200' };
+  if (percentScore >= 80) return { grade: 'B', color: 'text-blue-700 bg-blue-100 border border-blue-200' };
+  if (percentScore >= 70) return { grade: 'C', color: 'text-yellow-700 bg-yellow-100 border border-yellow-200' };
+  if (percentScore >= 60) return { grade: 'D', color: 'text-orange-700 bg-orange-100 border border-orange-200' };
+  if (percentScore >= 50) return { grade: 'E', color: 'text-red-700 bg-red-100 border border-red-200' };
+  return { grade: 'F', color: 'text-red-900 bg-red-200 border border-red-300 font-bold' };
+};
 
 export default function SubmissionFormPage() {
   const { id } = useParams();
@@ -16,9 +27,23 @@ export default function SubmissionFormPage() {
   const { user } = useAuth();
   const [submission, setSubmission] = useState<any>(null);
   const [answers, setAnswers] = useState<any[]>([]);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [setupData, setSetupData] = useState({ 
+    templateId: new URLSearchParams(window.location.search).get('templateId') || '', 
+    auditDate: new Date().toISOString().split('T')[0] 
+  });
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
-    if (id && id !== 'new') {
+    if (id === 'new') {
+      api.get('/checklists/templates').then(async (res) => {
+        const data = await res.json();
+        setTemplates(data.filter((t: any) => t.status === 'YAYINDA' || t.isActive !== false));
+      }).catch(err => console.error(err));
+    } else if (id) {
       api.get(`/checklists/submissions/${id}`).then(async (res) => {
         const data = await res.json();
         setSubmission(data);
@@ -28,6 +53,74 @@ export default function SubmissionFormPage() {
       }).catch(err => console.error(err));
     }
   }, [id]);
+
+  const handleCreateSubmission = async () => {
+    if (!setupData.templateId) {
+      toast.error('Lütfen bir kontrol listesi seçin.');
+      return;
+    }
+    setIsCreating(true);
+    try {
+      const payload = {
+        templateId: setupData.templateId,
+        facilityId: user?.facilityId,
+        auditDate: setupData.auditDate,
+        auditTimeStart: '08:00',
+        auditTimeEnd: '17:00',
+        auditTeam: []
+      };
+      const response = await api.post('/checklists/submissions', payload);
+      const data = await response.json();
+      navigate(`/checklists/submissions/${data.id}`, { replace: true });
+    } catch (err) {
+      console.error(err);
+      toast.error('Oluşturulamadı.');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  if (id === 'new') {
+    return (
+      <div className="container mx-auto p-6 max-w-lg">
+        <Card>
+          <CardHeader>
+            <CardTitle>Yeni Denetim Başlat</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Kontrol Listesi Şablonu</Label>
+              <select 
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                value={setupData.templateId}
+                onChange={e => setSetupData({...setupData, templateId: e.target.value})}
+              >
+                <option value="">Şablon Seçiniz...</option>
+                {templates.map(t => (
+                  <option key={t.id} value={t.id}>{t.title}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>Denetim Tarihi</Label>
+              <input 
+                type="date"
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                value={setupData.auditDate}
+                onChange={e => setSetupData({...setupData, auditDate: e.target.value})}
+              />
+            </div>
+            <div className="pt-4 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => navigate(-1)}>İptal</Button>
+              <Button onClick={handleCreateSubmission} disabled={isCreating}>
+                {isCreating ? 'Başlatılıyor...' : 'Başlat'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!submission) return <div className="p-6">Yükleniyor...</div>;
 
@@ -67,9 +160,12 @@ export default function SubmissionFormPage() {
   };
 
   const handleSave = async (status: string) => {
-    if (status === 'TAMAMLANDI' && !isSubmittable) {
-      toast.error('Lütfen tüm zorunlu soruları yanıtlayıp gerekli ekleri/açıklamaları girin.');
-      return;
+    if (status === 'TAMAMLANDI') {
+      const validationResult = validateSubmission();
+      if (!validationResult.isValid) {
+        toast.error(`Eksik alanlar var:\n${validationResult.errors.join('\n')}`);
+        return;
+      }
     }
     
     try {
@@ -89,31 +185,32 @@ export default function SubmissionFormPage() {
   };
 
   // Validation Logic
-  let isSubmittable = true;
-  template.sections.forEach((section: any) => {
-    section.items.forEach((item: any) => {
-      const currentAnswer = answers.find(a => a.itemId === item.id);
-      if (!currentAnswer) {
-        isSubmittable = false;
-        return;
-      }
-      if (currentAnswer.notApplicable) return;
-      if (!currentAnswer.scaleOptionId) {
-        isSubmittable = false;
-        return;
-      }
-      
-      const selectedOption = template.scaleSet?.options?.find((o: any) => o.id === currentAnswer.scaleOptionId);
-      if (selectedOption?.requiresExplanation && (!currentAnswer.note || currentAnswer.note.trim() === '')) {
-        isSubmittable = false;
-        return;
-      }
-      if (selectedOption?.requiresAttachment && (!currentAnswer.attachments || currentAnswer.attachments.length === 0)) {
-        isSubmittable = false;
-        return;
-      }
+  const validateSubmission = () => {
+    const errors: string[] = [];
+    template.sections.forEach((section: any) => {
+      section.items.forEach((item: any) => {
+        const currentAnswer = answers.find(a => a.itemId === item.id);
+        if (!currentAnswer) {
+          errors.push(`- Soru yanıtlanmadı: Soru No ${item.itemNo}`);
+          return;
+        }
+        if (currentAnswer.notApplicable) return;
+        if (!currentAnswer.scaleOptionId) {
+          errors.push(`- Seçenek seçilmedi: Soru No ${item.itemNo}`);
+          return;
+        }
+        
+        const selectedOption = template.scaleSet?.options?.find((o: any) => o.id === currentAnswer.scaleOptionId);
+        if (selectedOption?.requiresExplanation && (!currentAnswer.note || currentAnswer.note.trim() === '')) {
+          errors.push(`- Açıklama zorunlu: Soru No ${item.itemNo}`);
+        }
+        if (selectedOption?.requiresAttachment && (!currentAnswer.attachments || currentAnswer.attachments.length === 0)) {
+          errors.push(`- Ek dosya/görsel zorunlu: Soru No ${item.itemNo}`);
+        }
+      });
     });
-  });
+    return { isValid: errors.length === 0, errors };
+  };
 
   return (
     <div className="container mx-auto p-6 max-w-4xl space-y-6">
@@ -144,7 +241,6 @@ export default function SubmissionFormPage() {
               <Button 
                 onClick={() => handleSave('TAMAMLANDI')} 
                 className="bg-emerald-600 hover:bg-emerald-700"
-                disabled={!isSubmittable}
               >
                 <CheckCircle className="w-4 h-4 mr-2" /> Onaya Gönder
               </Button>
@@ -153,10 +249,15 @@ export default function SubmissionFormPage() {
         </div>
       </div>
 
-      <div className="bg-card border rounded-lg p-4 sticky top-[88px] z-10 shadow-sm">
-        <div className="flex justify-between text-sm mb-2">
+      <div className="bg-card border rounded-lg p-4 sticky top-[88px] z-10 shadow-sm flex flex-col gap-2">
+        <div className="flex justify-between items-center text-sm">
           <span className="font-medium">İlerleme Skoru</span>
-          <span className="font-bold">{earnedScore} / {maxScore} (%{percentScore.toFixed(1)})</span>
+          <div className="flex items-center gap-4">
+            <span className="font-bold">{earnedScore} / {maxScore} (%{percentScore.toFixed(1)})</span>
+            <span className={`px-2 py-0.5 rounded text-xs font-bold ${getGradeAndColor(percentScore).color}`}>
+              Harf Notu: {getGradeAndColor(percentScore).grade}
+            </span>
+          </div>
         </div>
         <Progress value={percentScore} className="h-2" />
       </div>
@@ -251,9 +352,25 @@ export default function SubmissionFormPage() {
                                     onChange={async (e) => {
                                       if (!e.target.files?.length) return;
                                       const files = Array.from(e.target.files).slice(0, 10);
-                                      // Pseudo-upload for demonstration, assuming the API returns URLs
-                                      // In real implementation, you'd upload them to `/upload` or similar.
-                                      const uploadedPaths = files.map(f => URL.createObjectURL(f)); // MOCK URL
+                                      setIsUploading(true);
+                                      const uploadedPaths = [];
+                                      for (const file of files) {
+                                        const formData = new FormData();
+                                        formData.append('file', file);
+                                        try {
+                                          const uploadRes = await api.customFetch('/checklists/submissions/upload', {
+                                            method: 'POST',
+                                            body: formData
+                                          });
+                                          if (uploadRes.ok) {
+                                            const { url } = await uploadRes.json();
+                                            uploadedPaths.push(url);
+                                          }
+                                        } catch (err) {
+                                          console.error('Upload failed', err);
+                                        }
+                                      }
+                                      setIsUploading(false);
 
                                       const newAnswers = [...answers];
                                       const idx = newAnswers.findIndex(a => a.itemId === item.id);
@@ -265,19 +382,36 @@ export default function SubmissionFormPage() {
                                   />
                                   {currentAnswer.attachments && currentAnswer.attachments.length > 0 && (
                                     <div className="flex flex-wrap gap-2 mt-2">
-                                      {currentAnswer.attachments.map((att: any, aIdx: number) => (
-                                        <div key={aIdx} className="relative border rounded p-1">
-                                          <span className="text-xs">{typeof att === 'string' ? att.split('/').pop() : att.filePath?.split('/').pop()}</span>
-                                          <Button variant="ghost" size="sm" className="h-4 w-4 p-0 absolute -top-2 -right-2 bg-red-500 text-white rounded-full" onClick={() => {
-                                            const newAnswers = [...answers];
-                                            const idx = newAnswers.findIndex(a => a.itemId === item.id);
-                                            if (idx >= 0) {
-                                              newAnswers[idx].attachments = newAnswers[idx].attachments.filter((_: any, i: number) => i !== aIdx);
-                                              setAnswers(newAnswers);
-                                            }
-                                          }}>×</Button>
-                                        </div>
-                                      ))}
+                                      {currentAnswer.attachments.map((att: any, aIdx: number) => {
+                                        const urlStr = typeof att === 'string' ? att : att.filePath;
+                                        const fullUrl = urlStr?.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || ''}${urlStr}` : urlStr;
+                                        
+                                        return (
+                                          <div key={aIdx} className="relative border rounded p-1">
+                                            <div 
+                                              className="w-16 h-16 bg-slate-100 rounded flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80"
+                                              onClick={() => setPreviewImage(fullUrl)}
+                                            >
+                                              {fullUrl?.match(/\.(jpeg|jpg|gif|png)$/i) ? (
+                                                <img src={fullUrl} alt="Eklenti" className="w-full h-full object-cover" />
+                                              ) : (
+                                                <span className="text-[10px] text-center break-all px-1">{urlStr?.split('/').pop()}</span>
+                                              )}
+                                            </div>
+                                            {submission.status !== 'TAMAMLANDI' && (
+                                              <Button variant="ghost" size="sm" className="h-5 w-5 p-0 absolute -top-2 -right-2 bg-red-500 text-white rounded-full hover:bg-red-600" onClick={(e) => {
+                                                e.stopPropagation();
+                                                const newAnswers = [...answers];
+                                                const idx = newAnswers.findIndex(a => a.itemId === item.id);
+                                                if (idx >= 0) {
+                                                  newAnswers[idx].attachments = newAnswers[idx].attachments.filter((_: any, i: number) => i !== aIdx);
+                                                  setAnswers(newAnswers);
+                                                }
+                                              }}>×</Button>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
                                     </div>
                                   )}
                                 </div>
@@ -294,6 +428,15 @@ export default function SubmissionFormPage() {
           </div>
         ))}
       </div>
+      <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
+        <DialogContent className="max-w-4xl w-full h-[80vh] flex items-center justify-center p-0 border-none bg-black/90">
+          {previewImage && previewImage.match(/\.(jpeg|jpg|gif|png)$/i) ? (
+            <img src={previewImage} alt="Önizleme" className="max-w-full max-h-full object-contain" />
+          ) : (
+            <iframe src={previewImage || ''} className="w-full h-full bg-white" title="Önizleme" />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

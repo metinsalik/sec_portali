@@ -1,17 +1,48 @@
 import { Router, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../../middleware/auth';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 const router = Router();
 const prisma = new PrismaClient();
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const dir = path.join(process.cwd(), 'uploads', 'checklists');
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (_req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  }
+});
+const upload = multer({ storage });
 
 // Get submissions for a facility
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const { facilityId } = req.query;
     
-    // If facilityId is provided, filter by it. Otherwise return all (for admins).
-    const whereClause = facilityId && typeof facilityId === 'string' ? { facilityId } : {};
+    let whereClause: any = {};
+    if (facilityId && typeof facilityId === 'string') {
+      whereClause.facilityId = facilityId;
+    }
+
+    if (req.user && !req.user.isAdmin && !req.user.isManagement && !req.user.roles?.includes('admin')) {
+      if (req.user.facilities && req.user.facilities.length > 0) {
+        if (whereClause.facilityId) {
+          if (!req.user.facilities.includes(whereClause.facilityId)) {
+            whereClause.facilityId = 'UNAUTHORIZED';
+          }
+        } else {
+          whereClause.facilityId = { in: req.user.facilities };
+        }
+      } else {
+        whereClause.facilityId = 'UNAUTHORIZED';
+      }
+    }
 
     let submissions = await prisma.checklistSubmission.findMany({
       where: whereClause,
@@ -26,17 +57,21 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       orderBy: { auditDate: 'desc' }
     });
 
-    // Auto-close expired ones
+    // Atamaları (Assignments) toplu çekelim (N+1 problemini azaltmak ve isPeriodic flag'ini eklemek için)
+    const templateIds = [...new Set(submissions.map(s => s.templateId))];
+    const assignments = await prisma.checklistAssignment.findMany({
+      where: { templateId: { in: templateIds } },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const enrichedSubmissions = [];
+
+    // Auto-close expired ones ve isPeriodic flag ekleme
     for (let sub of submissions) {
+      const assignment = assignments.find(a => a.templateId === sub.templateId && a.facilityIds.includes(sub.facilityId));
+      let isPeriodic = assignment?.isPeriodic || false;
+
       if (sub.status === 'TASLAK' || sub.status === 'BEKLEYEN') {
-        const assignment = await prisma.checklistAssignment.findFirst({
-          where: {
-            templateId: sub.templateId,
-            facilityIds: { has: sub.facilityId }
-          },
-          orderBy: { createdAt: 'desc' }
-        });
-        
         if (
           assignment && 
           assignment.endDate && 
@@ -50,9 +85,14 @@ router.get('/', async (req: AuthRequest, res: Response) => {
           sub.status = updated.status;
         }
       }
+
+      enrichedSubmissions.push({
+        ...sub,
+        isPeriodic
+      });
     }
 
-    res.json(submissions);
+    res.json(enrichedSubmissions);
   } catch (error) {
     console.error('Error fetching submissions:', error);
     res.status(500).json({ error: 'Failed to fetch submissions' });
@@ -84,6 +124,12 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 
     if (!submission) {
       return res.status(404).json({ error: 'Submission not found' });
+    }
+
+    if (req.user && !req.user.isAdmin && !req.user.isManagement && !req.user.roles?.includes('admin')) {
+      if (!req.user.facilities || !req.user.facilities.includes(submission.facilityId)) {
+        return res.status(403).json({ error: 'Bu denetime erişim yetkiniz yok' });
+      }
     }
 
     // Auto-close if assignment endDate passed
@@ -199,7 +245,19 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     res.json({ success: true, submissionId: id });
   } catch (error) {
     console.error('Error updating submission:', error);
-    res.status(500).json({ error: 'Failed to update submission' });
+    res.status(500).json({ error: 'Denetim iptal edilemedi.' });
+  }
+});
+
+router.post('/upload', upload.single('file'), async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Dosya bulunamadı' });
+    }
+    const fileUrl = `/uploads/checklists/${req.file.filename}`;
+    res.json({ url: fileUrl });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Dosya yüklenemedi' });
   }
 });
 

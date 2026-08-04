@@ -33,7 +33,13 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         meetingDate: 'desc'
       },
       include: {
-        decisions: true
+        decisions: {
+          include: {
+            actions: {
+              orderBy: { createdAt: 'desc' }
+            }
+          }
+        }
       }
     });
 
@@ -412,7 +418,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
 router.post('/decisions/:decisionId/actions', async (req: AuthRequest, res: Response) => {
   try {
     const { decisionId } = req.params;
-    const { actionText, newStatus, newDueDate, newDueDateType } = req.body;
+    const { actionText, newStatus, newDueDate, newDueDateType, newPriority } = req.body;
     const user = getUser(req);
 
     // 1. Create the action
@@ -425,9 +431,10 @@ router.post('/decisions/:decisionId/actions', async (req: AuthRequest, res: Resp
     });
 
     // 2. Update the decision if requested
-    if (newStatus || newDueDate || newDueDateType) {
+    if (newStatus || newDueDate || newDueDateType || newPriority) {
       const updateData: any = {};
       if (newStatus) updateData.status = newStatus;
+      if (newPriority) updateData.priority = newPriority;
       if (newDueDateType) updateData.dueDateType = newDueDateType;
       if (newDueDate) updateData.dueDate = new Date(newDueDate);
 

@@ -16,6 +16,7 @@ import SafetyManagementPage from './pages/SafetyManagementPage';
 import IsgKurulDashboard from './pages/isg-kurul/IsgKurulDashboard';
 import IsgKurulSettings from './pages/isg-kurul/IsgKurulSettings';
 import IsgKurulMeetings from './pages/isg-kurul/IsgKurulMeetings';
+import IsgKurulDecisions from './pages/isg-kurul/IsgKurulDecisions';
 import IsgKurulMeetingDetails from './pages/isg-kurul/IsgKurulMeetingDetails';
 import IsgKurulDecisionDetails from './pages/isg-kurul/IsgKurulDecisionDetails';
 import ProfilePage from './pages/ProfilePage';
@@ -149,6 +150,7 @@ import UygunsuzlukYillikRaporu from './pages/bina-turu/UygunsuzlukYillikRaporu';
 // İSG Kontrol Listeleri
 import TemplateListPage from './pages/checklists/TemplateListPage';
 import TemplateBuilderPage from './pages/checklists/TemplateBuilderPage';
+import TemplateViewPage from './pages/checklists/TemplateViewPage';
 import SubmissionListPage from './pages/checklists/SubmissionListPage';
 import SubmissionFormPage from './pages/checklists/SubmissionFormPage';
 import ReportsPage from './pages/checklists/ReportsPage';
@@ -225,6 +227,14 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <AppLayout><IsgKurulMeetings /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/isg-kurul/decisions"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><IsgKurulDecisions /></AppLayout>
                       </ProtectedRoute>
                     }
                   />
@@ -1163,6 +1173,7 @@ function App() {
                   <Route path="/checklists" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><ChecklistDashboardPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/checklists/templates" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><TemplateListPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/checklists/templates/new" element={<ProtectedRoute allowedRoles={['admin','specialist']}><AppLayout><TemplateBuilderPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/templates/:id" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><TemplateViewPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/checklists/templates/:id/edit" element={<ProtectedRoute allowedRoles={['admin','specialist']}><AppLayout><TemplateBuilderPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/checklists/submissions" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><SubmissionListPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/checklists/submissions/new" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><SubmissionFormPage /></AppLayout></ProtectedRoute>} />

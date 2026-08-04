@@ -167,16 +167,16 @@ const renovationReportNavItems = [
   { label: 'Modül Ayarları', icon: Settings, to: '/renovation-report/settings' },
 ];
 
-const checklistNavItems = (hasAdminAccess: boolean) => [
+const checklistNavItems = (hasAdminAccess: boolean, hasSpecialistAccess: boolean) => [
   { label: 'GENEL', type: 'group' },
   { label: 'Dashboard', icon: LayoutDashboard, to: '/checklists', end: true },
   { label: 'UYGULAMA', type: 'group' },
   { label: 'Saha Denetimleri', icon: ClipboardList, to: '/checklists/submissions' },
   { label: 'Raporlar', icon: ClipboardList, to: '/checklists/reports' },
-  ...(hasAdminAccess ? [
+  ...(hasAdminAccess || hasSpecialistAccess ? [
     { label: 'YÖNETİM', type: 'group' },
     { label: 'Şablonlar', icon: FileText, to: '/checklists/templates' },
-    { label: 'Ayarlar', icon: Settings, to: '/checklists/settings' },
+    ...(hasAdminAccess ? [{ label: 'Ayarlar', icon: Settings, to: '/checklists/settings' }] : []),
   ] : []),
 ];
 
@@ -207,6 +207,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Route'a göre sidebar menüsünü belirle
   const path = location.pathname;
   const hasAdminAccess = user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management');
+  const hasSpecialistAccess = user?.roles?.includes('specialist');
   
   let navItems = operationsNavItems(!!hasAdminAccess);
   let moduleName = 'Aylık Veri Sistemi';
@@ -236,7 +237,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     navItems = renovationReportNavItems;
     moduleName = 'İnşaat Renovasyon Teslim Raporu';
   } else if (path.startsWith('/checklists')) {
-    navItems = checklistNavItems(hasAdminAccess);
+    navItems = checklistNavItems(!!hasAdminAccess, !!hasSpecialistAccess);
     moduleName = 'İSG Kontrol Listeleri';
   } else if (path.startsWith('/settings')) {
     navItems = settingsNavItems(hasAdminAccess);

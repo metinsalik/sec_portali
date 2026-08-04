@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Users, Calendar, ArrowRight, Trash2, Edit } from 'lucide-react';
+import { Plus, Users, Calendar, ArrowRight, Trash2, Edit, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API = import.meta.env.VITE_API_URL || '';
@@ -23,6 +23,17 @@ export default function IsgKurulMeetings() {
   const [meetingNo, setMeetingNo] = useState('');
   
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [facilitySearch, setFacilitySearch] = useState('');
+
+  // Fetch Facilities for Manager Mode
+  const { data: facilities = [] } = useQuery<any[]>({
+    queryKey: ['settings-facilities'],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/settings/facilities`, { headers: { Authorization: `Bearer ${token}` } });
+      return res.json();
+    },
+    enabled: selectedFacilityId === 'all'
+  });
 
   // Fetch Meetings
   const { data: meetings = [], isLoading } = useQuery({
@@ -131,7 +142,7 @@ export default function IsgKurulMeetings() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="space-y-6 pb-10">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">İSG Kurul Toplantıları</h1>
@@ -161,67 +172,54 @@ export default function IsgKurulMeetings() {
         <Card className="bg-muted/30 border-dashed">
           <CardContent className="p-12 text-center text-muted-foreground">
             <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>Bu tesise ait {selectedYear} yılında henüz bir Kurul Toplantısı bulunmamaktadır.</p>
+            <p>Seçili yıl için henüz bir Kurul Toplantısı bulunmamaktadır.</p>
           </CardContent>
         </Card>
+      ) : selectedFacilityId === 'all' ? (
+        <div className="space-y-4">
+          <div className="max-w-md relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Tesis ara..." 
+              value={facilitySearch} 
+              onChange={e => setFacilitySearch(e.target.value)} 
+              className="pl-9"
+            />
+          </div>
+          <div className="space-y-4">
+            {(() => {
+              const grouped: Record<string, any[]> = {};
+              meetings.forEach((m: any) => {
+                 if (!grouped[m.facilityId]) grouped[m.facilityId] = [];
+                 grouped[m.facilityId].push(m);
+              });
+
+              const filteredFacilities = facilities.filter((f: any) => 
+                f.name.toLowerCase().includes(facilitySearch.toLowerCase()) || 
+                (f.shortName && f.shortName.toLowerCase().includes(facilitySearch.toLowerCase()))
+              ).filter(f => grouped[f.id] && grouped[f.id].length > 0);
+
+              if (filteredFacilities.length === 0 && facilitySearch) {
+                return <div className="text-center py-8 text-muted-foreground">Aranan kritere uygun tesis bulunamadı.</div>;
+              }
+
+              return filteredFacilities.map(f => (
+                <FacilitySection 
+                  key={f.id} 
+                  facility={f} 
+                  meetings={grouped[f.id]} 
+                  setDeleteId={setDeleteId}
+                  navigate={navigate}
+                />
+              ));
+            })()}
+          </div>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {meetings.map((meeting: any) => {
-            const date = new Date(meeting.meetingDate).toLocaleDateString('tr-TR');
-            const totalDecisions = meeting.decisions?.length || 0;
-            const completedDecisions = meeting.decisions?.filter((d: any) => d.status === 'Tamamlandı').length || 0;
-            const openDecisions = totalDecisions - completedDecisions;
-
-            return (
-              <Card key={meeting.id} className="group hover:shadow-md transition-shadow relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-lg">Toplantı No: {meeting.meetingNo}</CardTitle>
-                      <CardDescription className="flex items-center gap-1 mt-1">
-                        <Calendar className="w-3.5 h-3.5" /> {date}
-                      </CardDescription>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 -mr-2 -mt-2"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteId(meeting.id);
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-4 text-sm mb-4">
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground text-xs">Toplam Karar</span>
-                      <span className="font-semibold">{totalDecisions}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground text-xs">Açık/Devam Eden</span>
-                      <span className="font-semibold text-amber-600">{openDecisions}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground text-xs">Tamamlanan</span>
-                      <span className="font-semibold text-green-600">{completedDecisions}</span>
-                    </div>
-                  </div>
-                  <Button 
-                    className="w-full gap-2" 
-                    variant="outline"
-                    onClick={() => navigate(`/isg-kurul/meetings/${meeting.id}`)}
-                  >
-                    Kararları Görüntüle <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {meetings.map((meeting: any) => (
+            <MeetingCard key={meeting.id} meeting={meeting} setDeleteId={setDeleteId} navigate={navigate} />
+          ))}
         </div>
       )}
 
@@ -279,5 +277,92 @@ export default function IsgKurulMeetings() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+function FacilitySection({ facility, meetings, setDeleteId, navigate }: { facility: any, meetings: any[], setDeleteId: any, navigate: any }) {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  return (
+    <div className="border bg-white rounded-lg shadow-sm overflow-hidden">
+      <button 
+        className="w-full px-6 py-4 flex items-center justify-between bg-slate-50 hover:bg-slate-100 transition-colors"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex items-center gap-3">
+          <span className="font-semibold text-slate-800 text-lg">{facility.name}</span>
+          <span className="text-sm text-slate-500 font-normal bg-white border px-2 py-0.5 rounded-full shadow-sm">
+            {meetings.length} Toplantı
+          </span>
+        </div>
+        {isOpen ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+      </button>
+      {isOpen && (
+        <div className="p-6 border-t bg-white">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {meetings.map(m => (
+              <MeetingCard key={m.id} meeting={m} setDeleteId={setDeleteId} navigate={navigate} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MeetingCard({ meeting, setDeleteId, navigate }: { meeting: any, setDeleteId: any, navigate: any }) {
+  const date = new Date(meeting.meetingDate).toLocaleDateString('tr-TR');
+  const totalDecisions = meeting.decisions?.length || 0;
+  const completedDecisions = meeting.decisions?.filter((d: any) => d.status === 'Tamamlandı').length || 0;
+  const openDecisions = totalDecisions - completedDecisions;
+
+  return (
+    <Card className="group hover:shadow-md transition-shadow relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-lg">Toplantı No: {meeting.meetingNo}</CardTitle>
+            <CardDescription className="flex items-center gap-1 mt-1">
+              <Calendar className="w-3.5 h-3.5" /> {date}
+            </CardDescription>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 -mr-2 -mt-2"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteId(meeting.id);
+            }}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center gap-4 text-sm mb-4">
+          <div className="flex flex-col">
+            <span className="text-muted-foreground text-xs">Toplam Karar</span>
+            <span className="font-semibold">{totalDecisions}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-muted-foreground text-xs">Açık/Devam Eden</span>
+            <span className="font-semibold text-amber-600">{openDecisions}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-muted-foreground text-xs">Tamamlanan</span>
+            <span className="font-semibold text-green-600">{completedDecisions}</span>
+          </div>
+        </div>
+        <Button 
+          className="w-full gap-2" 
+          variant="outline"
+          onClick={() => navigate(`/isg-kurul/meetings/${meeting.id}`)}
+        >
+          Kararları Görüntüle <ArrowRight className="w-4 h-4" />
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
