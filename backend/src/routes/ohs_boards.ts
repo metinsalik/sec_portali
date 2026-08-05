@@ -495,6 +495,28 @@ router.post('/decisions/:decisionId/actions', async (req: AuthRequest, res: Resp
   }
 });
 
+// PUT /api/operations/board/actions/:actionId - Update action
+router.put('/actions/:actionId', async (req: AuthRequest, res: Response) => {
+  try {
+    const { actionId } = req.params;
+    const { actionText } = req.body;
+    
+    if (!actionText) {
+      return res.status(400).json({ error: 'Action text is required' });
+    }
+
+    const updatedAction = await prisma.ohsBoardDecisionAction.update({
+      where: { id: actionId },
+      data: { actionText }
+    });
+    
+    res.json(updatedAction);
+  } catch (error) {
+    console.error('Error updating action:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // DELETE /api/operations/board/actions/:actionId - Delete action
 router.delete('/actions/:actionId', async (req: AuthRequest, res: Response) => {
   try {

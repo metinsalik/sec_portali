@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Send, Gavel, Calendar, Building, Tag, Flag, CheckCircle2, Clock, FileText, AlertCircle, MessageSquare, ChevronRight, Banknote, Plus } from 'lucide-react';
+import { ArrowLeft, Send, Gavel, Calendar, Building, Tag, Flag, CheckCircle2, Clock, FileText, AlertCircle, MessageSquare, ChevronRight, Banknote, Plus, Edit2, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -56,6 +56,9 @@ export default function IsgKurulDecisionDetails() {
   const [isReopenDialogOpen, setIsReopenDialogOpen] = useState(false);
   const [reopenText, setReopenText] = useState('');
   const [reopenStatus, setReopenStatus] = useState('Devam Ediyor');
+
+  const [editingActionId, setEditingActionId] = useState<string | null>(null);
+  const [editActionText, setEditActionText] = useState('');
 
   // Fetch Meeting Details
   const { data: meeting, isLoading } = useQuery({
@@ -109,6 +112,38 @@ export default function IsgKurulDecisionDetails() {
       setNewDueDate('');
       setNewPriority('');
       setNewBudget('');
+    }
+  });
+
+  const editActionMutation = useMutation({
+    mutationFn: async ({ actionId, text }: { actionId: string, text: string }) => {
+      const res = await fetch(`${API}/api/operations/board/actions/${actionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ actionText: text })
+      });
+      if (!res.ok) throw new Error('Aksiyon güncellenemedi');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ohs-board-meeting-details', id] });
+      toast.success('Aksiyon başarıyla güncellendi');
+      setEditingActionId(null);
+      setEditActionText('');
+    }
+  });
+
+  const deleteActionMutation = useMutation({
+    mutationFn: async (actionId: string) => {
+      const res = await fetch(`${API}/api/operations/board/actions/${actionId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Aksiyon silinemedi');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ohs-board-meeting-details', id] });
+      toast.success('Aksiyon silindi');
     }
   });
 
@@ -406,13 +441,54 @@ export default function IsgKurulDecisionDetails() {
                         <div className="bg-white border rounded-lg shadow-sm overflow-hidden transition-shadow hover:shadow-md">
                           <div className="px-4 py-3 bg-slate-50/80 border-b flex justify-between items-center text-xs">
                             <span className="font-semibold text-slate-700">{action.createdBy}</span>
-                            <span className="text-slate-500 flex items-center gap-1.5">
-                              <Clock className="w-3.5 h-3.5" />
-                              {new Date(action.createdAt).toLocaleString('tr-TR')}
-                            </span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-slate-500 flex items-center gap-1.5">
+                                <Clock className="w-3.5 h-3.5" />
+                                {new Date(action.createdAt).toLocaleString('tr-TR')}
+                              </span>
+                              
+                              {/* Edit / Delete Buttons */}
+                              {(action.createdBy === user?.fullName || action.createdBy === user?.username || isManager) && (
+                                <div className="flex items-center gap-2 border-l pl-3 ml-1">
+                                  <button onClick={() => {
+                                      setEditingActionId(action.id);
+                                      setEditActionText(action.actionText);
+                                  }} className="text-slate-400 hover:text-indigo-600 transition-colors" title="Düzenle">
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button onClick={() => {
+                                      if(window.confirm('Bu aksiyonu silmek istediğinize emin misiniz?')) {
+                                          deleteActionMutation.mutate(action.id);
+                                      }
+                                  }} className="text-slate-400 hover:text-red-600 transition-colors" title="Sil">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <div className="p-4 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
-                            {displayActionText}
+                            {editingActionId === action.id ? (
+                               <div className="space-y-3">
+                                 <Textarea 
+                                   value={editActionText} 
+                                   onChange={(e) => setEditActionText(e.target.value)} 
+                                   className="min-h-[100px] text-sm" 
+                                 />
+                                 <div className="flex justify-end gap-2">
+                                    <Button variant="outline" size="sm" onClick={() => setEditingActionId(null)}>İptal</Button>
+                                    <Button 
+                                      size="sm" 
+                                      onClick={() => editActionMutation.mutate({ actionId: action.id, text: editActionText })} 
+                                      disabled={editActionMutation.isPending || !editActionText.trim()}
+                                    >
+                                      Kaydet
+                                    </Button>
+                                 </div>
+                               </div>
+                            ) : (
+                                displayActionText
+                            )}
                           </div>
                         </div>
                       </div>

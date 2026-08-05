@@ -356,130 +356,129 @@ export default function SubmissionFormPage() {
                       const currentAnswer = answers.find(a => a.itemId === item.id) || {};
                       
                       return (
-                        <div key={item.id} className="group relative bg-white dark:bg-slate-950 rounded-2xl p-6 shadow-sm border border-slate-200/60 dark:border-slate-800/60 hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col lg:flex-row gap-6">
-                          {/* Left Accent Bar */}
-                          <div className="absolute left-0 top-0 bottom-0 w-1.5 transition-colors duration-300" style={{ backgroundColor: stat?.color || '#94a3b8' }} />
-                          
-                          {/* Left Side: Question */}
-                          <div className="flex-1 lg:w-1/2 flex gap-4 border-b lg:border-b-0 lg:border-r border-slate-100 dark:border-slate-800 pb-6 lg:pb-0 lg:pr-6">
-                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm font-bold text-slate-500 shrink-0 mt-0.5">
+                        <div key={item.id} className="relative bg-white dark:bg-slate-950 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col gap-4">
+                          <div className="flex gap-4">
+                            {/* Number */}
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 font-bold text-sm shrink-0">
                               {item.itemNo}
                             </div>
-                            <div className="flex-1">
-                              <div className="inline-block px-3 py-1 bg-slate-100 dark:bg-slate-900 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-3">
-                                {item.sectionTitle}
+                            
+                            {/* Content */}
+                            <div className="flex-1 flex flex-col min-w-0">
+                              {/* Top row with Tag and Badge */}
+                              <div className="flex justify-between items-start mb-2 gap-4">
+                                <div className="inline-block px-2 py-1 bg-slate-100 dark:bg-slate-900 rounded text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                                  {item.sectionTitle}
+                                </div>
+                                <div className="inline-flex shrink-0 items-center gap-1.5 px-3 py-1 rounded-full border bg-white dark:bg-slate-950 shadow-sm" style={{ borderColor: `${stat?.color}40` }}>
+                                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: stat?.color }} />
+                                  <span className="text-xs font-bold" style={{ color: stat?.color }}>{stat?.label}</span>
+                                </div>
                               </div>
-                              <p className="text-lg font-semibold leading-relaxed text-slate-800 dark:text-slate-200">
+                              
+                              {/* Question Text */}
+                              <p className="text-sm font-medium leading-relaxed text-slate-800 dark:text-slate-200">
                                 {item.questionText}
                               </p>
+                              
+                              {/* Question Config Explanation (i) */}
                               {item.config?.description && (
-                                <div className="mt-3 flex items-start gap-2 text-sm text-slate-500 dark:text-slate-400 bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-lg border border-blue-100/50 dark:border-blue-900/30">
-                                  <div className="shrink-0 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs mt-0.5">i</div>
-                                  <p className="leading-relaxed">{item.config.description}</p>
+                                <div className="mt-3 flex items-start gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                  <div className="shrink-0 w-4 h-4 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-[10px] mt-0.5">i</div>
+                                  <p>{item.config.description}</p>
                                 </div>
                               )}
+                              
+                              {/* Question Config Image */}
                               {item.config?.imageUrl && (
                                 <div className="mt-3">
                                   <img 
                                     src={item.config.imageUrl.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || ''}${item.config.imageUrl}` : item.config.imageUrl} 
                                     alt="Soru Görseli" 
-                                    className="rounded-lg max-h-48 object-cover border border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-90 transition-opacity shadow-sm"
+                                    className="rounded-lg h-24 object-cover border border-slate-200 dark:border-slate-800 cursor-pointer hover:opacity-90 transition-opacity shadow-sm"
                                     onClick={() => setPreviewImage(item.config.imageUrl.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || ''}${item.config.imageUrl}` : item.config.imageUrl)}
                                   />
+                                </div>
+                              )}
+                        
+                              {/* Answer Note (AÇIKLAMA) */}
+                              {currentAnswer.note && (
+                                <div className="bg-blue-50/50 dark:bg-slate-900/50 rounded-lg p-3 mt-4">
+                                  <strong className="text-[10px] uppercase tracking-widest text-blue-800 dark:text-blue-400 block mb-1.5">Açıklama</strong>
+                                  <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{currentAnswer.note}</p>
+                                </div>
+                              )}
+                        
+                              {/* Attachments */}
+                              {currentAnswer.attachments && currentAnswer.attachments.length > 0 && (
+                                <div className="mt-3">
+                                  {(() => {
+                                    const images = currentAnswer.attachments.filter((att: any) => {
+                                      const url = typeof att === 'string' ? att : att.filePath;
+                                      return url?.match(/\.(jpeg|jpg|gif|png)$/i);
+                                    });
+                                    const docs = currentAnswer.attachments.filter((att: any) => {
+                                      const url = typeof att === 'string' ? att : att.filePath;
+                                      return !url?.match(/\.(jpeg|jpg|gif|png)$/i);
+                                    });
+                        
+                                    return (
+                                      <div className="flex flex-col gap-3">
+                                        {images.length > 0 && (
+                                          <div className="flex flex-wrap gap-2">
+                                            {images.map((img: any, idx: number) => {
+                                              const urlStr = typeof img === 'string' ? img : img.filePath;
+                                              const fullUrl = urlStr?.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || ''}${urlStr}` : urlStr;
+                                              return (
+                                                <div 
+                                                  key={idx}
+                                                  className="group/img relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-all duration-300"
+                                                  onClick={() => setPreviewImage(fullUrl)}
+                                                >
+                                                  <img src={fullUrl} className="w-full h-full object-cover group-hover/img:scale-110 transition-transform duration-500" alt="Görsel" />
+                                                  <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                                                    <span className="opacity-0 group-hover/img:opacity-100 text-white font-bold bg-black/60 px-2 py-1 rounded text-[10px] backdrop-blur-sm transition-opacity duration-300">Büyüt</span>
+                                                  </div>
+                                                </div>
+                                              )
+                                            })}
+                                          </div>
+                                        )}
+                        
+                                        {docs.length > 0 && (
+                                          <div className="flex flex-wrap gap-2 mt-1">
+                                            {docs.map((doc: any, idx: number) => {
+                                              const urlStr = typeof doc === 'string' ? doc : doc.filePath;
+                                              const fullUrl = urlStr?.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || ''}${urlStr}` : urlStr;
+                                              return (
+                                                <a 
+                                                  key={idx}
+                                                  href={fullUrl}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md text-xs font-medium text-slate-700 dark:text-slate-300 hover:border-primary/50 hover:shadow-sm hover:text-primary transition-all duration-300"
+                                                >
+                                                  <FileText className="w-3 h-3" />
+                                                  <span className="truncate max-w-[150px]">{urlStr.split('/').pop()}</span>
+                                                </a>
+                                              )
+                                            })}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )
+                                  })()}
                                 </div>
                               )}
                             </div>
                           </div>
                           
-                          {/* Right Side: Answer, Notes, Photos */}
-                          <div className="flex-1 lg:w-1/2 flex flex-col gap-5">
-                            {/* Answer Badge & Score */}
-                            <div className="flex items-center justify-between">
-                              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border shadow-sm" style={{ borderColor: `${stat?.color}40`, backgroundColor: `${stat?.color}10` }}>
-                                <span className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: stat?.color }} />
-                                <span className="text-sm font-bold" style={{ color: stat?.color }}>{stat?.label}</span>
-                              </div>
-                              {currentAnswer.earnedScore !== undefined && (
-                                <div className="text-sm font-bold text-slate-400 bg-slate-50 dark:bg-slate-900 px-3 py-1 rounded-lg">
-                                  Skor: <span className="text-slate-700 dark:text-slate-300">{currentAnswer.earnedScore}</span>
-                                </div>
-                              )}
+                          {/* Score at bottom right */}
+                          {currentAnswer.earnedScore !== undefined && (
+                            <div className="flex justify-end mt-1">
+                              <span className="text-xs text-slate-500 font-medium">Skor: <span className="font-bold text-slate-700 dark:text-slate-300">{currentAnswer.earnedScore}</span></span>
                             </div>
-
-                            {/* Note Box */}
-                            {currentAnswer.note && (
-                              <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/50 p-4 rounded-xl relative mt-2">
-                                <div className="absolute -top-3 left-4 bg-white dark:bg-slate-950 px-3 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500 rounded-full border border-slate-100 dark:border-slate-800 shadow-sm">
-                                  Açıklama
-                                </div>
-                                <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap pt-2 text-sm leading-relaxed">
-                                  {currentAnswer.note}
-                                </p>
-                              </div>
-                            )}
-
-                            {/* Attachments Gallery */}
-                            {currentAnswer.attachments && currentAnswer.attachments.length > 0 && (
-                              <div className="pt-2">
-                                {(() => {
-                                  const images = currentAnswer.attachments.filter((att: any) => {
-                                    const url = typeof att === 'string' ? att : att.filePath;
-                                    return url?.match(/\.(jpeg|jpg|gif|png)$/i);
-                                  });
-                                  const docs = currentAnswer.attachments.filter((att: any) => {
-                                    const url = typeof att === 'string' ? att : att.filePath;
-                                    return !url?.match(/\.(jpeg|jpg|gif|png)$/i);
-                                  });
-
-                                  return (
-                                    <div className="flex flex-col gap-3">
-                                      {images.length > 0 && (
-                                        <div className="flex flex-wrap gap-3">
-                                          {images.map((img: any, idx: number) => {
-                                            const urlStr = typeof img === 'string' ? img : img.filePath;
-                                            const fullUrl = urlStr?.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || ''}${urlStr}` : urlStr;
-                                            return (
-                                              <div 
-                                                key={idx}
-                                                className="group/img relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-all duration-300"
-                                                onClick={() => setPreviewImage(fullUrl)}
-                                              >
-                                                <img src={fullUrl} className="w-full h-full object-cover group-hover/img:scale-110 transition-transform duration-500" alt="Görsel" />
-                                                <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/20 transition-colors duration-300 flex items-center justify-center">
-                                                  <span className="opacity-0 group-hover/img:opacity-100 text-white font-bold bg-black/60 px-2 py-1 rounded text-xs backdrop-blur-sm transition-opacity duration-300">Büyüt</span>
-                                                </div>
-                                              </div>
-                                            )
-                                          })}
-                                        </div>
-                                      )}
-
-                                      {docs.length > 0 && (
-                                        <div className="flex flex-wrap gap-2 mt-1">
-                                          {docs.map((doc: any, idx: number) => {
-                                            const urlStr = typeof doc === 'string' ? doc : doc.filePath;
-                                            const fullUrl = urlStr?.startsWith('/uploads') ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || ''}${urlStr}` : urlStr;
-                                            return (
-                                              <a 
-                                                key={idx}
-                                                href={fullUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:border-primary/50 hover:shadow-sm hover:text-primary transition-all duration-300"
-                                              >
-                                                <FileText className="w-4 h-4" />
-                                                <span className="truncate max-w-[200px]">{urlStr.split('/').pop()}</span>
-                                              </a>
-                                            )
-                                          })}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )
-                                })()}
-                              </div>
-                            )}
-                          </div>
+                          )}
                         </div>
                       );
                     })}
