@@ -38,7 +38,9 @@ const PRIORITY_WEIGHTS: Record<string, number> = {
 };
 
 export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boolean }) {
-  const selectedFacilityId = localStorage.getItem('activeFacilityId') || '';
+  const activeFacilityId = localStorage.getItem('activeFacilityId') || '';
+  const [publicFacilityId, setPublicFacilityId] = useState('all');
+  const effectiveFacilityId = isPublic ? publicFacilityId : activeFacilityId;
   const token = localStorage.getItem('token');
   const navigate = useNavigate();
 
@@ -54,10 +56,10 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
 
   // Queries
   const { data: publicData, isLoading: publicLoading } = useQuery({
-    queryKey: ['public-dashboard', selectedFacilityId],
+    queryKey: ['public-dashboard', effectiveFacilityId],
     queryFn: async () => {
-      const url = selectedFacilityId && selectedFacilityId !== 'all' 
-        ? `${API}/api/public/isg-kurul/dashboard?facilityId=${selectedFacilityId}`
+      const url = effectiveFacilityId && effectiveFacilityId !== 'all' 
+        ? `${API}/api/public/isg-kurul/dashboard?facilityId=${effectiveFacilityId}`
         : `${API}/api/public/isg-kurul/dashboard`;
       const res = await fetch(url);
       if (!res.ok) throw new Error('Veriler yüklenemedi');
@@ -67,16 +69,16 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
   });
 
   const { data: authMeetings = [] } = useQuery({
-    queryKey: ['ohs-board-meetings', selectedFacilityId],
+    queryKey: ['ohs-board-meetings', effectiveFacilityId],
     queryFn: async () => {
-      if (!selectedFacilityId) return [];
-      const res = await fetch(`${API}/api/operations/board?facilityId=${selectedFacilityId}`, {
+      if (!effectiveFacilityId) return [];
+      const res = await fetch(`${API}/api/operations/board?facilityId=${effectiveFacilityId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Toplantılar yüklenemedi');
       return res.json();
     },
-    enabled: !isPublic && !!selectedFacilityId
+    enabled: !isPublic && !!effectiveFacilityId
   });
 
   const { data: authCategories = [] } = useQuery({
@@ -364,6 +366,21 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
 
       {/* Filters Bar */}
       <div className="bg-white p-3 rounded-lg border shadow-sm flex flex-wrap gap-3 items-center mb-6">
+        {isPublic && (
+          <Select value={publicFacilityId} onValueChange={setPublicFacilityId}>
+            <SelectTrigger className="w-[180px] bg-slate-50 h-9 text-sm">
+              <SelectValue placeholder="Tüm Tesisler">
+                {publicFacilityId === 'all' ? 'Tüm Tesisler' : facilities.find((f:any) => f.id === publicFacilityId)?.name}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tüm Tesisler</SelectItem>
+              {facilities.map((f: any) => (
+                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Select value={year} onValueChange={(v) => { setYear(v); setMeetingId('all'); }}>
           <SelectTrigger className="w-[140px] bg-slate-50 h-9 text-sm">
             <SelectValue placeholder="Tüm Yıllar">{year === 'all' ? 'Tüm Yıllar' : year}</SelectValue>
@@ -434,8 +451,8 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       </div>
 
       {/* KPI Cards */}
-      <div className={`grid grid-cols-2 md:grid-cols-3 ${selectedFacilityId === 'all' ? 'lg:grid-cols-7' : 'lg:grid-cols-6'} gap-4`}>
-        {selectedFacilityId === 'all' && (
+      <div className={`grid grid-cols-2 md:grid-cols-3 ${effectiveFacilityId === 'all' ? 'lg:grid-cols-7' : 'lg:grid-cols-6'} gap-4`}>
+        {effectiveFacilityId === 'all' && (
           <Card className="shadow-sm border-slate-200">
             <CardContent className="p-5 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-100 rounded-bl-full -mr-8 -mt-8 opacity-60" />
@@ -692,7 +709,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       </div>
 
       {/* Tesis Bazlı Dağılım Grafiği (Sadece Yöneticiler İçin) */}
-      {selectedFacilityId === 'all' && facilityDistribution.length > 0 && (
+      {effectiveFacilityId === 'all' && facilityDistribution.length > 0 && (
         <Card className="shadow-sm mb-6 border-indigo-100 mt-4">
           <CardHeader className="pb-2 border-b border-indigo-50/50 flex flex-row items-center justify-between bg-indigo-50/30">
             <div>
@@ -792,7 +809,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
                 <table className="w-full text-sm text-left">
                   <thead className="text-[11px] text-slate-500 bg-slate-50 uppercase font-semibold sticky top-0 z-10 shadow-sm">
                     <tr>
-                      {selectedFacilityId === 'all' && <th className="px-5 py-3">Tesis</th>}
+                      {effectiveFacilityId === 'all' && <th className="px-5 py-3">Tesis</th>}
                       <th className="px-5 py-3">Toplantı</th>
                       <th className="px-5 py-3">Karar</th>
                       <th className="px-5 py-3">Sorumlu</th>
@@ -820,7 +837,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
                       
                       return (
                       <tr key={d.id} className={`transition-colors ${!isPublic ? 'hover:bg-slate-50/70 cursor-pointer group' : ''}`} onClick={() => !isPublic && navigate(`/isg-kurul/meetings/${d.meetingId}/decisions/${d.id}`)}>
-                        {selectedFacilityId === 'all' && (
+                        {effectiveFacilityId === 'all' && (
                           <td className="px-5 py-4 align-top whitespace-nowrap">
                             <span className="text-[13px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">{facility?.shortName || facility?.name || '-'}</span>
                           </td>
@@ -863,7 +880,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
                     )
                     }) : (
                       <tr>
-                        <td colSpan={selectedFacilityId === 'all' ? 6 : 5} className="px-5 py-12 text-center text-slate-400 text-sm">Filtrelere uygun karar bulunamadı.</td>
+                        <td colSpan={effectiveFacilityId === 'all' ? 6 : 5} className="px-5 py-12 text-center text-slate-400 text-sm">Filtrelere uygun karar bulunamadı.</td>
                       </tr>
                     )}
                   </tbody>
