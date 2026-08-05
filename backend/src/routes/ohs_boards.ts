@@ -53,9 +53,14 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 // POST /api/operations/board/bulk-import - Import decisions
 router.post('/bulk-import', async (req: AuthRequest, res: Response) => {
   try {
-    const { data } = req.body;
+    const { data, targetFacilityId } = req.body;
     if (!Array.isArray(data)) {
       return res.status(400).json({ error: 'Data must be an array' });
+    }
+    
+    let globalFacility: any = null;
+    if (targetFacilityId) {
+      globalFacility = await prisma.facility.findUnique({ where: { id: targetFacilityId } });
     }
 
     // Helper to parse Excel dates (which can be numbers or strings)
@@ -74,18 +79,22 @@ router.post('/bulk-import', async (req: AuthRequest, res: Response) => {
     
     // Process sequentially or batch
     for (const item of data) {
-      if (!item.facilityName || !item.meetingNo || !item.decisionText) continue;
+      if (!item.meetingNo || !item.decisionText) continue;
 
       try {
         // 1. Find Facility
-      const facility = await prisma.facility.findFirst({
-        where: {
-          OR: [
-            { name: { contains: item.facilityName, mode: 'insensitive' } },
-            { shortName: { contains: item.facilityName, mode: 'insensitive' } }
-          ]
-        }
-      });
+      let facility = globalFacility;
+      
+      if (!facility && item.facilityName) {
+        facility = await prisma.facility.findFirst({
+          where: {
+            OR: [
+              { name: { contains: item.facilityName, mode: 'insensitive' } },
+              { shortName: { contains: item.facilityName, mode: 'insensitive' } }
+            ]
+          }
+        });
+      }
 
       if (!facility) continue; // Skip if facility not found
 

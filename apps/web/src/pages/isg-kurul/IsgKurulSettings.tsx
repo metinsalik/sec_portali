@@ -79,6 +79,7 @@ export default function IsgKurulSettings() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<any[]>([]);
   const [isParsing, setIsParsing] = useState(false);
+  const [importTargetFacilityId, setImportTargetFacilityId] = useState<string>('');
   
   const toggleCat = (id: number) => {
     const newSet = new Set(expandedCats);
@@ -105,6 +106,14 @@ export default function IsgKurulSettings() {
       if (!res.ok) throw new Error('Departmanlar alınamadı');
       return res.json();
     },
+  });
+
+  const { data: facilities = [] } = useQuery<any[]>({
+    queryKey: ['settings-facilities'],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/settings/facilities`, { headers: { Authorization: `Bearer ${token}` } });
+      return res.json();
+    }
   });
 
   const { data: members = [], isLoading: membersLoading } = useQuery<BoardMember[]>({
@@ -221,8 +230,8 @@ export default function IsgKurulSettings() {
 
   // Import Mutation
   const importMutation = useMutation({
-    mutationFn: async (data: any[]) => {
-      const res = await api.post('/operations/board/bulk-import', { data });
+    mutationFn: async ({ data, targetFacilityId }: { data: any[], targetFacilityId: string }) => {
+      const res = await api.post('/operations/board/bulk-import', { data, targetFacilityId });
       return res.json();
     },
     onSuccess: (res) => {
@@ -604,7 +613,23 @@ export default function IsgKurulSettings() {
                   </label>
                 ) : (
                   <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-6">
-                    <div className="flex items-start justify-between">
+                    <div className="mb-6 space-y-2">
+                      <label className="text-sm font-medium">Hedef Tesis Seçimi (Opsiyonel)</label>
+                      <Select value={importTargetFacilityId} onValueChange={setImportTargetFacilityId}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Tesis seçerseniz tüm kararlar bu tesise aktarılır" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Excel'deki tesis adlarını kullan</SelectItem>
+                          {facilities.map((fac: any) => (
+                            <SelectItem key={fac.id} value={fac.id}>{fac.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">Eğer bir tesis seçerseniz, Excel'deki Tesis Adı sütunu yok sayılır.</p>
+                    </div>
+
+                    <div className="flex items-start justify-between border-t border-slate-100 dark:border-slate-800 pt-6">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-green-50 text-green-600 rounded flex items-center justify-center">
                           <FileText className="w-6 h-6" />
@@ -632,7 +657,10 @@ export default function IsgKurulSettings() {
                     
                     <div className="mt-6 flex justify-end">
                       <Button 
-                        onClick={() => importMutation.mutate(parsedData)} 
+                        onClick={() => importMutation.mutate({ 
+                          data: parsedData, 
+                          targetFacilityId: importTargetFacilityId === 'none' ? '' : importTargetFacilityId 
+                        })} 
                         disabled={isParsing || parsedData.length === 0 || importMutation.isPending}
                         className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]"
                       >
