@@ -37,7 +37,7 @@ const PRIORITY_WEIGHTS: Record<string, number> = {
   'Düşük': 1,
 };
 
-export default function IsgKurulDashboard() {
+export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boolean }) {
   const selectedFacilityId = localStorage.getItem('activeFacilityId') || '';
   const token = localStorage.getItem('token');
   const navigate = useNavigate();
@@ -53,7 +53,20 @@ export default function IsgKurulDashboard() {
   const [timeFilter, setTimeFilter] = useState<'all' | 'overdue' | 'next30' | 'undefinedTerm' | 'closed'>('all');
 
   // Queries
-  const { data: meetings = [] } = useQuery({
+  const { data: publicData, isLoading: publicLoading } = useQuery({
+    queryKey: ['public-dashboard', selectedFacilityId],
+    queryFn: async () => {
+      const url = selectedFacilityId && selectedFacilityId !== 'all' 
+        ? `${API}/api/public/isg-kurul/dashboard?facilityId=${selectedFacilityId}`
+        : `${API}/api/public/isg-kurul/dashboard`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Veriler yüklenemedi');
+      return res.json();
+    },
+    enabled: isPublic
+  });
+
+  const { data: authMeetings = [] } = useQuery({
     queryKey: ['ohs-board-meetings', selectedFacilityId],
     queryFn: async () => {
       if (!selectedFacilityId) return [];
@@ -63,32 +76,40 @@ export default function IsgKurulDashboard() {
       if (!res.ok) throw new Error('Toplantılar yüklenemedi');
       return res.json();
     },
-    enabled: !!selectedFacilityId
+    enabled: !isPublic && !!selectedFacilityId
   });
 
-  const { data: categories = [] } = useQuery({
+  const { data: authCategories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
       const res = await fetch(`${API}/api/settings/definitions/categories`, { headers: { Authorization: `Bearer ${token}` } });
       return res.json();
-    }
+    },
+    enabled: !isPublic
   });
 
-  const { data: departments = [] } = useQuery<any[]>({
+  const { data: authDepartments = [] } = useQuery<any[]>({
     queryKey: ['departments'],
     queryFn: async () => {
       const res = await fetch(`${API}/api/settings/definitions/departments`, { headers: { Authorization: `Bearer ${token}` } });
       return res.json();
-    }
+    },
+    enabled: !isPublic
   });
 
-  const { data: facilities = [] } = useQuery<any[]>({
+  const { data: authFacilities = [] } = useQuery<any[]>({
     queryKey: ['settings-facilities'],
     queryFn: async () => {
       const res = await fetch(`${API}/api/settings/facilities`, { headers: { Authorization: `Bearer ${token}` } });
       return res.json();
-    }
+    },
+    enabled: !isPublic
   });
+
+  const meetings = isPublic ? (publicData?.meetings || []) : authMeetings;
+  const categories = isPublic ? (publicData?.categories || []) : authCategories;
+  const departments = isPublic ? (publicData?.departments || []) : authDepartments;
+  const facilities = isPublic ? (publicData?.facilities || []) : authFacilities;
 
   // Unique Years & Filtered Meetings
   const allDecisionsUnfiltered = useMemo(() => {
@@ -760,9 +781,11 @@ export default function IsgKurulDashboard() {
                 <CardTitle className="text-base font-bold text-slate-800">Alınan Kararlar {status !== 'all' ? `(${status})` : ''}</CardTitle>
                 <p className="text-xs text-muted-foreground">Son toplantıdan geriye doğru tarihsel sıralama</p>
               </div>
-              <Button variant="ghost" size="sm" className="text-blue-600 text-xs font-semibold gap-1 hover:bg-blue-50" onClick={() => navigate('/isg-kurul/decisions')}>
-                Tüm Kararlar <ArrowRight className="w-3 h-3" />
-              </Button>
+              {!isPublic && (
+                <Button variant="ghost" size="sm" className="text-blue-600 text-xs font-semibold gap-1 hover:bg-blue-50" onClick={() => navigate('/isg-kurul/decisions')}>
+                  Tüm Kararlar <ArrowRight className="w-3 h-3" />
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
@@ -796,7 +819,7 @@ export default function IsgKurulDashboard() {
                       }
                       
                       return (
-                      <tr key={d.id} className="hover:bg-slate-50/70 transition-colors cursor-pointer group" onClick={() => navigate(`/isg-kurul/meetings/${d.meetingId}/decisions/${d.id}`)}>
+                      <tr key={d.id} className={`transition-colors ${!isPublic ? 'hover:bg-slate-50/70 cursor-pointer group' : ''}`} onClick={() => !isPublic && navigate(`/isg-kurul/meetings/${d.meetingId}/decisions/${d.id}`)}>
                         {selectedFacilityId === 'all' && (
                           <td className="px-5 py-4 align-top whitespace-nowrap">
                             <span className="text-[13px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">{facility?.shortName || facility?.name || '-'}</span>

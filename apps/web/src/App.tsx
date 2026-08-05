@@ -14,6 +14,7 @@ import PortalPage from './pages/PortalPage';
 import OperationsManagementPage from './pages/OperationsManagementPage';
 import SafetyManagementPage from './pages/SafetyManagementPage';
 import IsgKurulDashboard from './pages/isg-kurul/IsgKurulDashboard';
+import IsgKurulDashboardWrapper from './components/IsgKurulDashboardWrapper';
 import IsgKurulSettings from './pages/isg-kurul/IsgKurulSettings';
 import IsgKurulMeetings from './pages/isg-kurul/IsgKurulMeetings';
 import IsgKurulDecisions from './pages/isg-kurul/IsgKurulDecisions';
@@ -216,11 +217,7 @@ function App() {
                   />
                   <Route
                     path="/isg-kurul/dashboard"
-                    element={
-                      <ProtectedRoute>
-                        <AppLayout><IsgKurulDashboard /></AppLayout>
-                      </ProtectedRoute>
-                    }
+                    element={<IsgKurulDashboardWrapper />}
                   />
                   <Route
                     path="/isg-kurul/meetings"

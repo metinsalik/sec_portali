@@ -197,9 +197,27 @@ router.post('/bulk-import', async (req: AuthRequest, res: Response) => {
 // DELETE /api/operations/board/bulk-delete - Delete all decisions and meetings
 router.delete('/bulk-delete', async (req: AuthRequest, res: Response) => {
   try {
-    await prisma.ohsBoardDecision.deleteMany({});
-    await prisma.ohsBoardMeeting.deleteMany({});
-    res.json({ message: 'Tüm kurul toplantıları ve kararları başarıyla silindi.' });
+    const { facilityId } = req.query;
+    
+    if (facilityId) {
+      const meetings = await prisma.ohsBoardMeeting.findMany({
+        where: { facilityId: String(facilityId) },
+        select: { id: true }
+      });
+      const meetingIds = meetings.map((m: any) => m.id);
+      
+      await prisma.ohsBoardDecision.deleteMany({
+        where: { meetingId: { in: meetingIds } }
+      });
+      await prisma.ohsBoardMeeting.deleteMany({
+        where: { facilityId: String(facilityId) }
+      });
+      res.json({ message: 'Seçili tesise ait kurul toplantıları ve kararları başarıyla silindi.' });
+    } else {
+      await prisma.ohsBoardDecision.deleteMany({});
+      await prisma.ohsBoardMeeting.deleteMany({});
+      res.json({ message: 'Tüm kurul toplantıları ve kararları başarıyla silindi.' });
+    }
   } catch (error) {
     console.error('Error bulk deleting:', error);
     res.status(500).json({ error: 'Internal server error' });

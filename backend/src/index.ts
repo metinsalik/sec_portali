@@ -25,6 +25,7 @@ import fireEquipmentRoutes from './routes/fire_equipment';
 import buildManagementRoutes from './routes/build_management';
 import checklistRoutes from './routes/checklists';
 import ohsBoardRoutes from './routes/ohs_boards';
+import publicRoutes from './routes/public';
 
 // Middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
@@ -53,6 +54,7 @@ import renovationReportRoutes from './routes/renovation_report';
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Route Entegrasyonu
+app.use('/api/public', publicRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/settings/telegram', telegramRoutes);
 app.use('/api/settings', settingsRoutes);

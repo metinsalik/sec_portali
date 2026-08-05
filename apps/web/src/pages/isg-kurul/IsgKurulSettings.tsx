@@ -217,7 +217,7 @@ export default function IsgKurulSettings() {
   // Delete All Data Mutation
   const deleteAllMutation = useMutation({
     mutationFn: async () => {
-      const res = await api.delete('/operations/board/bulk-delete');
+      const res = await api.delete(`/operations/board/bulk-delete?facilityId=${selectedFacilityId}`);
       return res.json();
     },
     onSuccess: (res) => {
@@ -676,17 +676,17 @@ export default function IsgKurulSettings() {
               <div className="mt-10 border-t border-slate-200 dark:border-slate-700/50 pt-8">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-red-50 dark:bg-red-900/10 p-5 rounded-lg border border-red-100 dark:border-red-900/30 gap-4">
                   <div>
-                    <h4 className="text-red-800 dark:text-red-400 font-semibold mb-1">Tüm Kurul Verilerini Temizle</h4>
-                    <p className="text-sm text-red-600 dark:text-red-500/80">Sistemdeki tüm Kurul Toplantılarını ve Kararlarını kalıcı olarak siler. Bu işlem geri alınamaz ve tüm geçmiş kayıtlar gider.</p>
+                    <h4 className="text-red-800 dark:text-red-400 font-semibold mb-1">Bu Tesisin Kurul Verilerini Temizle</h4>
+                    <p className="text-sm text-red-600 dark:text-red-500/80">Sadece <b>seçili tesise</b> ait tüm Kurul Toplantılarını ve Kararlarını kalıcı olarak siler. Diğer tesisler etkilenmez.</p>
                   </div>
                   <Button 
                     variant="destructive" 
                     onClick={() => setDeleteConfirm({ open: true, type: 'all-data', id: null })}
-                    disabled={deleteAllMutation.isPending}
+                    disabled={deleteAllMutation.isPending || !selectedFacilityId}
                     className="shrink-0"
                   >
                     {deleteAllMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                    Tümünü Sil
+                    Bu Tesisin Verilerini Sil
                   </Button>
                 </div>
               </div>
