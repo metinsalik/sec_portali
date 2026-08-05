@@ -171,7 +171,7 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="system" storageKey="sec-portali-theme">
+      <ThemeProvider defaultTheme="light" storageKey="sec-portali-theme">
         <AuthProvider>
           <ChatProvider>
             <TooltipProvider>
