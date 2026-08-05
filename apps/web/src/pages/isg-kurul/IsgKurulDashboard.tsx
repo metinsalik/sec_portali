@@ -365,6 +365,41 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
     }).sort((a, b) => b.count - a.count);
   }, [filteredDecisions, urlAgeBucket, meetings, facilities]);
 
+  // Category Workload
+  const categoryWorkloadData = useMemo(() => {
+    const openList = finalFilteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
+    const counts: Record<string, number> = {};
+    openList.forEach(d => {
+      const cat = categories.find((c: any) => c.id === d.categoryId);
+      const catName = cat?.name || 'Bilinmiyor';
+      counts[catName] = (counts[catName] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 6);
+  }, [finalFilteredDecisions, categories]);
+
+  // Responsible Workload
+  const workloadData = useMemo(() => {
+    const openList = finalFilteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
+    const counts: Record<string, number> = {};
+    openList.forEach(d => {
+      const dept = departments.find((dept: any) => dept.id === d.departmentId);
+      const deptName = dept?.name || 'Bilinmiyor';
+      counts[deptName] = (counts[deptName] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 6);
+  }, [finalFilteredDecisions, departments]);
+
+  // Table Data: Sorted by Meeting Date Descending, then Priority
+  const tableTasks = useMemo(() => {
+    return [...finalFilteredDecisions].sort((a, b) => {
+      const dateDiff = new Date(b.meetingDate).getTime() - new Date(a.meetingDate).getTime();
+      if (dateDiff !== 0) return dateDiff;
+      const wA = PRIORITY_WEIGHTS[a.priority] || 0;
+      const wB = PRIORITY_WEIGHTS[b.priority] || 0;
+      return wB - wA; // High priority first if same meeting
+    }).slice(0, 100); // limit to 100
+  }, [finalFilteredDecisions]);
+
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-10">
       
