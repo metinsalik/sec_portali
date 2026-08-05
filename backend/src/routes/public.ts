@@ -18,12 +18,11 @@ router.get('/isg-kurul/dashboard', async (req: Request, res: Response) => {
     const meetings = await prisma.ohsBoardMeeting.findMany({
       where: whereClause,
       include: {
-        facility: { select: { name: true } },
         decisions: {
           include: {
-            category: { select: { id: true, name: true, color: true } },
-            department: { select: { id: true, name: true } },
-            actions: { select: { id: true, text: true, isCompleted: true } }
+            actions: {
+              orderBy: { createdAt: 'desc' }
+            }
           }
         }
       },
