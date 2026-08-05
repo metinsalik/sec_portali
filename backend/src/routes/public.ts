@@ -30,8 +30,8 @@ router.get('/isg-kurul/dashboard', async (req: Request, res: Response) => {
       orderBy: { meetingDate: 'desc' }
     });
 
-    const categories = await prisma.definitionCategory.findMany();
-    const departments = await prisma.definitionDepartment.findMany();
+    const categories = await prisma.category.findMany();
+    const departments = await prisma.department.findMany();
     const facilities = await prisma.facility.findMany();
 
     res.json({
