@@ -8,6 +8,7 @@ import { ArrowRight, Banknote } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -53,6 +54,9 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
   const [priority, setPriority] = useState('all');
   const [departmentId, setDepartmentId] = useState('all');
   const [timeFilter, setTimeFilter] = useState<'all' | 'overdue' | 'next30' | 'undefinedTerm' | 'closed'>('all');
+  
+  // Public dialog state
+  const [selectedPublicDecision, setSelectedPublicDecision] = useState<any>(null);
 
   // Queries
   const { data: publicData, isLoading: publicLoading } = useQuery({
@@ -836,7 +840,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
                       }
                       
                       return (
-                      <tr key={d.id} className={`transition-colors ${!isPublic ? 'hover:bg-slate-50/70 cursor-pointer group' : ''}`} onClick={() => !isPublic && navigate(`/isg-kurul/meetings/${d.meetingId}/decisions/${d.id}`)}>
+                      <tr key={d.id} className="hover:bg-slate-50/70 transition-colors cursor-pointer group" onClick={() => isPublic ? setSelectedPublicDecision(d) : navigate(`/isg-kurul/meetings/${d.meetingId}/decisions/${d.id}`)}>
                         {effectiveFacilityId === 'all' && (
                           <td className="px-5 py-4 align-top whitespace-nowrap">
                             <span className="text-[13px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">{facility?.shortName || facility?.name || '-'}</span>
@@ -890,6 +894,82 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           </Card>
         </div>
       </div>
+      {/* Public View Decision Dialog */}
+      {isPublic && (
+        <Dialog open={!!selectedPublicDecision} onOpenChange={(open) => !open && setSelectedPublicDecision(null)}>
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-slate-800">
+                Karar Detayı
+              </DialogTitle>
+            </DialogHeader>
+            {selectedPublicDecision && (
+              <div className="space-y-6 mt-4">
+                <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="font-bold text-slate-900 bg-white px-2 py-1 rounded border shadow-sm">No: {selectedPublicDecision.meetingNo}</span>
+                    <Badge variant="outline" className={`px-2 py-0.5 text-xs font-medium border ${
+                      selectedPublicDecision.status === 'Tamamlandı' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                      selectedPublicDecision.status === 'İptal Edildi' ? 'bg-violet-50 text-violet-700 border-violet-200' :
+                      'bg-blue-50 text-blue-700 border-blue-200'
+                    }`}>
+                      {selectedPublicDecision.status}
+                    </Badge>
+                  </div>
+                  <p className="text-slate-800 font-medium text-[15px] leading-relaxed">
+                    {selectedPublicDecision.decisionText}
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-xs text-slate-500 font-semibold mb-1 uppercase">Sorumlu Grup</p>
+                    <p className="text-sm text-slate-800">{departments.find((dept: any) => dept.id === selectedPublicDecision.departmentId)?.name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 font-semibold mb-1 uppercase">Kategori</p>
+                    <p className="text-sm text-slate-800">{categories.find((cat: any) => cat.id === selectedPublicDecision.categoryId)?.name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 font-semibold mb-1 uppercase">Öncelik</p>
+                    <p className="text-sm text-slate-800">{selectedPublicDecision.priority || 'Belirtilmedi'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 font-semibold mb-1 uppercase">Termin</p>
+                    <p className="text-sm text-slate-800">
+                      {selectedPublicDecision.dueDateType === 'DATE' && selectedPublicDecision.dueDate 
+                        ? new Date(selectedPublicDecision.dueDate).toLocaleDateString('tr-TR') 
+                        : selectedPublicDecision.periodicity || '-'}
+                    </p>
+                  </div>
+                </div>
+
+                {selectedPublicDecision.actions && selectedPublicDecision.actions.length > 0 && (
+                  <div className="pt-4 border-t border-slate-100">
+                    <h3 className="font-semibold text-slate-800 mb-3 text-sm uppercase">Aksiyonlar</h3>
+                    <div className="space-y-2">
+                      {selectedPublicDecision.actions.map((action: any) => (
+                        <div key={action.id} className="flex gap-3 p-3 bg-white rounded-md border border-slate-200 shadow-sm">
+                          <div className={`mt-0.5 w-4 h-4 rounded-full flex-shrink-0 border-2 ${
+                            action.isCompleted 
+                              ? 'bg-emerald-500 border-emerald-500' 
+                              : 'bg-white border-slate-300'
+                          }`} />
+                          <div>
+                            <p className={`text-sm ${action.isCompleted ? 'text-slate-500 line-through' : 'text-slate-800'}`}>
+                              {action.actionText || action.text}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
