@@ -328,21 +328,21 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
     });
   }, [filteredDecisions, urlAgeBucket, urlFacilityId, meetings]);
 
-  // Age Bucket Facility List
-  const ageBucketFacilities = useMemo(() => {
-    if (urlAgeBucket === 'all') return [];
-    
+  // Distribution by facility for the current filters (including time filter via KPIs)
+  const facilityDistribution = useMemo(() => {
     // First, filter by the age bucket but NOT by the specific facility
     const bucketDecisions = filteredDecisions.filter(d => {
       const isClosed = d.status === 'Tamamlandı' || d.status === 'İptal Edildi';
       if (isClosed) return false;
-      const diffTime = new Date().getTime() - new Date(d.meetingDate).getTime();
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      if (urlAgeBucket === '0-30' && diffDays > 30) return false;
-      if (urlAgeBucket === '31-60' && (diffDays <= 30 || diffDays > 60)) return false;
-      if (urlAgeBucket === '61-90' && (diffDays <= 60 || diffDays > 90)) return false;
-      if (urlAgeBucket === '91-180' && (diffDays <= 90 || diffDays > 180)) return false;
-      if (urlAgeBucket === '180+' && diffDays <= 180) return false;
+      if (urlAgeBucket !== 'all') {
+        const diffTime = new Date().getTime() - new Date(d.meetingDate).getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        if (urlAgeBucket === '0-30' && diffDays > 30) return false;
+        if (urlAgeBucket === '31-60' && (diffDays <= 30 || diffDays > 60)) return false;
+        if (urlAgeBucket === '61-90' && (diffDays <= 60 || diffDays > 90)) return false;
+        if (urlAgeBucket === '91-180' && (diffDays <= 90 || diffDays > 180)) return false;
+        if (urlAgeBucket === '180+' && diffDays <= 180) return false;
+      }
       return true;
     });
 
@@ -365,63 +365,6 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
     }).sort((a, b) => b.count - a.count);
   }, [filteredDecisions, urlAgeBucket, meetings, facilities]);
 
-  // Category Workload
-  const categoryWorkloadData = useMemo(() => {
-    const openList = finalFilteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
-    const counts: Record<string, number> = {};
-    openList.forEach(d => {
-      const cat = categories.find((c: any) => c.id === d.categoryId);
-      const catName = cat?.name || 'Bilinmiyor';
-      counts[catName] = (counts[catName] || 0) + 1;
-    });
-    return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 6);
-  }, [finalFilteredDecisions, categories]);
-
-  // Responsible Workload
-  const workloadData = useMemo(() => {
-    const openList = finalFilteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
-    const counts: Record<string, number> = {};
-    openList.forEach(d => {
-      const dept = departments.find((dept: any) => dept.id === d.departmentId);
-      const deptName = dept?.name || 'Bilinmiyor';
-      counts[deptName] = (counts[deptName] || 0) + 1;
-    });
-    return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 6);
-  }, [finalFilteredDecisions, departments]);
-
-  // Table Data: Sorted by Meeting Date Descending, then Priority
-  const tableTasks = useMemo(() => {
-    return [...finalFilteredDecisions].sort((a, b) => {
-      const dateDiff = new Date(b.meetingDate).getTime() - new Date(a.meetingDate).getTime();
-      if (dateDiff !== 0) return dateDiff;
-      const wA = PRIORITY_WEIGHTS[a.priority] || 0;
-      const wB = PRIORITY_WEIGHTS[b.priority] || 0;
-      return wB - wA; // High priority first if same meeting
-    }).slice(0, 100); // limit to 100
-  }, [finalFilteredDecisions]);
-
-  // Distribution by facility for the current filters (including time filter via KPIs)
-  const facilityDistribution = useMemo(() => {
-    const dist: Record<string, number> = {};
-    
-    filteredDecisions.forEach(d => {
-      const meeting = meetings.find((m: any) => m.id === d.meetingId);
-      const facilityId = meeting?.facilityId;
-      if (facilityId) {
-        dist[facilityId] = (dist[facilityId] || 0) + 1;
-      }
-    });
-
-    return Object.entries(dist).map(([fId, count]) => {
-      const f = facilities.find((f: any) => f.id === fId);
-      return {
-        id: fId,
-        name: f?.shortName || f?.name || 'Bilinmiyor',
-        count
-      };
-    }).sort((a, b) => b.count - a.count);
-  }, [filteredDecisions, meetings, facilities]);
-
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-10">
       
@@ -435,84 +378,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
         />
       </div>
 
-      {/* NEW: Open Task Age Funnel (Açık İş Yaşı Hunisi) */}
-      <div className="space-y-3 mb-6">
-        <div className="flex flex-wrap gap-3">
-          {urlAgeBucket !== 'all' && (
-            <div 
-              className="px-4 py-2 bg-slate-800 text-white rounded-lg border border-slate-700 shadow-sm cursor-pointer flex items-center justify-center font-bold text-sm hover:bg-slate-700 transition-colors"
-              onClick={() => {
-                searchParams.delete('ageBucket');
-                searchParams.delete('facility');
-                setSearchParams(searchParams);
-              }}
-            >
-              Tümünü Göster
-            </div>
-          )}
-          {openTaskAge.map(bucket => (
-            <div 
-              key={bucket.id}
-              onClick={() => {
-                if (urlAgeBucket === bucket.id) {
-                  searchParams.delete('ageBucket');
-                  searchParams.delete('facility');
-                } else {
-                  searchParams.set('ageBucket', bucket.id);
-                  searchParams.delete('facility'); // Reset facility when bucket changes
-                }
-                setSearchParams(searchParams);
-              }}
-              className={`flex-1 min-w-[150px] cursor-pointer rounded-lg border p-3 flex flex-col items-center justify-center transition-all ${bucket.color} ${urlAgeBucket === bucket.id ? bucket.active : 'opacity-90'}`}
-            >
-              <span className="text-xs font-semibold uppercase tracking-wider mb-1">{bucket.label} Bekleyen</span>
-              <span className="text-2xl font-black">{bucket.count}</span>
-            </div>
-          ))}
-        </div>
 
-        {/* Facility Carousel for Selected Bucket */}
-        {urlAgeBucket !== 'all' && ageBucketFacilities.length > 0 && (
-          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-            <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-              <ArrowRight className="w-4 h-4 text-slate-400" />
-              Tesis Bazlı Dağılım ({openTaskAge.find(b => b.id === urlAgeBucket)?.label})
-            </h4>
-            <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-thin scrollbar-thumb-slate-300">
-              {urlFacilityId !== 'all' && (
-                <div 
-                  className="shrink-0 cursor-pointer rounded-md px-3 py-2 border bg-white hover:bg-slate-100 flex items-center gap-2 text-sm font-medium transition-colors"
-                  onClick={() => {
-                    searchParams.delete('facility');
-                    setSearchParams(searchParams);
-                  }}
-                >
-                  <span className="text-slate-600">Tüm Tesisler</span>
-                </div>
-              )}
-              {ageBucketFacilities.map(f => (
-                <div 
-                  key={f.id}
-                  onClick={() => {
-                    if (urlFacilityId === f.id) {
-                      searchParams.delete('facility');
-                    } else {
-                      searchParams.set('facility', f.id);
-                    }
-                    setSearchParams(searchParams);
-                  }}
-                  className={`shrink-0 cursor-pointer rounded-md px-3 py-2 border flex items-center gap-2 text-sm font-medium transition-colors ${urlFacilityId === f.id ? 'bg-indigo-600 text-white border-indigo-700 shadow-sm' : 'bg-white hover:bg-indigo-50 border-slate-200 text-slate-700'}`}
-                >
-                  <span>{f.name}</span>
-                  <Badge variant="secondary" className={`${urlFacilityId === f.id ? 'bg-indigo-500 text-white' : 'bg-slate-100 text-slate-600'} rounded-full px-1.5 py-0 min-w-[20px] text-center`}>
-                    {f.count}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Filters Bar */}
       <div className="bg-white p-3 rounded-lg border shadow-sm flex flex-wrap gap-3 items-center mb-6">
@@ -775,7 +641,58 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
             </ResponsiveContainer>
           </CardContent>
         </Card>
-        {/* Open Task Age (Removed from here because it's now at the top funnel) */}
+        {/* Open Task Age */}
+        <Card className="shadow-sm relative">
+          <CardHeader className="pb-2 border-b border-slate-100 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-bold text-slate-800">Açık İş Yaşı</CardTitle>
+              <p className="text-xs text-muted-foreground">Toplantı tarihinden bugüne bekleme süresi</p>
+            </div>
+            {urlAgeBucket !== 'all' && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 px-2 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 font-medium"
+                onClick={() => { searchParams.delete('ageBucket'); searchParams.delete('facility'); setSearchParams(searchParams); }}
+              >
+                Filtreyi Temizle
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent className="p-6 flex flex-col justify-center gap-4 h-[250px]">
+            {openTaskAge.map(t => {
+              const max = Math.max(...openTaskAge.map(o => o.count), 1);
+              const percent = (t.count / max) * 100;
+              const isDanger = t.label === '180+ Gün' && t.count > 0;
+              const isActive = urlAgeBucket === t.id;
+              return (
+                <div 
+                  key={t.id} 
+                  className={`flex items-center gap-3 cursor-pointer p-1.5 -mx-1.5 rounded transition-colors ${isActive ? 'bg-indigo-50 ring-1 ring-indigo-200' : 'hover:bg-slate-50'}`}
+                  onClick={() => {
+                    if (isActive) {
+                      searchParams.delete('ageBucket');
+                      searchParams.delete('facility');
+                    } else {
+                      searchParams.set('ageBucket', t.id);
+                      searchParams.delete('facility');
+                    }
+                    setSearchParams(searchParams);
+                  }}
+                >
+                  <span className={`w-[70px] text-xs font-medium shrink-0 ${isActive ? 'text-indigo-700' : 'text-slate-600'}`}>{t.label}</span>
+                  <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-500 ${isDanger ? 'bg-red-500' : (isActive ? 'bg-indigo-500' : 'bg-slate-300')}`} 
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
+                  <span className={`w-6 text-right text-sm font-bold ${isActive ? 'text-indigo-700' : 'text-slate-800'}`}>{t.count}</span>
+                </div>
+              )
+            })}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Row 3: Workload Distribution */}
@@ -834,12 +751,24 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
 
       {/* Tesis Bazlı Dağılım Grafiği (Sadece Yöneticiler İçin) */}
       {effectiveFacilityId === 'all' && facilityDistribution.length > 0 && (
-        <Card className="shadow-sm mb-6 border-indigo-100 mt-4">
+        <Card className="shadow-sm mb-6 border-indigo-100 mt-4 relative">
           <CardHeader className="pb-2 border-b border-indigo-50/50 flex flex-row items-center justify-between bg-indigo-50/30">
             <div>
-              <CardTitle className="text-base font-bold text-indigo-900">Tesislerin Karar Dağılımı</CardTitle>
+              <CardTitle className="text-base font-bold text-indigo-900">
+                Tesislerin Karar Dağılımı {urlAgeBucket !== 'all' ? `(${openTaskAge.find(b => b.id === urlAgeBucket)?.label} Bekleyen)` : ''}
+              </CardTitle>
               <p className="text-xs text-indigo-700/70">Toplam karar dağılımı (Adet)</p>
             </div>
+            {urlFacilityId !== 'all' && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-7 px-3 text-xs bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50 font-semibold shadow-sm"
+                onClick={() => { searchParams.delete('facility'); setSearchParams(searchParams); }}
+              >
+                Tüm Tesisleri Göster
+              </Button>
+            )}
           </CardHeader>
           <CardContent className="p-6 h-[250px] bg-white">
             <ResponsiveContainer width="100%" height="100%">
@@ -853,19 +782,26 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
                 />
                 <Bar 
                   dataKey="count" 
-                  fill="#4f46e5" 
                   radius={[4, 4, 0, 0]} 
                   maxBarSize={50} 
                   name="Karar Sayısı"
                   cursor="pointer"
                   onClick={(data: any) => {
                     if (data && data.id) {
-                      localStorage.setItem('activeFacilityId', data.id);
-                      window.dispatchEvent(new Event('storage'));
-                      window.location.reload();
+                      if (urlFacilityId === data.id) {
+                        searchParams.delete('facility');
+                      } else {
+                        searchParams.set('facility', data.id);
+                      }
+                      setSearchParams(searchParams);
                     }
                   }}
                 >
+                  {
+                    facilityDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={urlFacilityId === 'all' || urlFacilityId === entry.id ? '#4f46e5' : '#cbd5e1'} />
+                    ))
+                  }
                   <LabelList dataKey="count" position="top" style={{ fill: '#475569', fontSize: 11, fontWeight: 600 }} />
                 </Bar>
               </BarChart>
