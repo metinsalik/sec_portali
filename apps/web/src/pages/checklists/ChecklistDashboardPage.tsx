@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -16,9 +16,20 @@ const COLORS = ['#10b981', '#f59e0b', '#ef4444']; // Green, Amber, Red for statu
 export default function ChecklistDashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('all');
+  const [selectedTemplate, setSelectedTemplate] = useState<string>(searchParams.get('templateId') || 'all');
+  
+  const handleTemplateChange = (value: string) => {
+    setSelectedTemplate(value);
+    if (value === 'all') {
+      searchParams.delete('templateId');
+    } else {
+      searchParams.set('templateId', value);
+    }
+    setSearchParams(searchParams);
+  };
   
   useEffect(() => {
     fetchData();
@@ -88,7 +99,7 @@ export default function ChecklistDashboardPage() {
           </p>
         </div>
         <div className="w-full md:w-64">
-          <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+          <Select value={selectedTemplate} onValueChange={handleTemplateChange}>
             <SelectTrigger>
               <SelectValue placeholder="Şablon Seçiniz" />
             </SelectTrigger>

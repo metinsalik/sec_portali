@@ -52,6 +52,9 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         },
         conductedBy: {
           select: { fullName: true }
+        },
+        facility: {
+          select: { name: true }
         }
       },
       orderBy: { auditDate: 'desc' }
@@ -116,7 +119,9 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
             }
           }
         },
-        answers: true,
+        answers: {
+          include: { attachments: true }
+        },
         attachments: true,
         conductedBy: { select: { fullName: true } }
       }

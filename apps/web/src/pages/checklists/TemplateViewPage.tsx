@@ -11,6 +11,16 @@ import { Progress } from '@/components/ui/progress';
 
 const COLORS = ['#10b981', '#f59e0b', '#ef4444'];
 
+const getGradeAndColor = (percentScore: number | undefined | null) => {
+  if (percentScore === undefined || percentScore === null) return { grade: '-', color: 'text-gray-500 bg-gray-50' };
+  if (percentScore >= 90) return { grade: 'A', color: 'text-emerald-700 bg-emerald-100 border border-emerald-200' };
+  if (percentScore >= 80) return { grade: 'B', color: 'text-blue-700 bg-blue-100 border border-blue-200' };
+  if (percentScore >= 70) return { grade: 'C', color: 'text-yellow-700 bg-yellow-100 border border-yellow-200' };
+  if (percentScore >= 60) return { grade: 'D', color: 'text-orange-700 bg-orange-100 border border-orange-200' };
+  if (percentScore >= 50) return { grade: 'E', color: 'text-red-700 bg-red-100 border border-red-200' };
+  return { grade: 'F', color: 'text-red-900 bg-red-200 border border-red-300 font-bold' };
+};
+
 export default function TemplateViewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -208,7 +218,7 @@ export default function TemplateViewPage() {
               <div key={sub.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-slate-100 dark:border-slate-800 rounded-xl hover:shadow-md transition-all bg-white dark:bg-slate-950 gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-semibold text-lg">{sub.facility?.name || 'Bilinmeyen Tesis'}</h4>
+                    <h4 className="font-semibold text-lg">{sub.facility?.name || 'Kendi Tesisi'}</h4>
                     {sub.isPeriodic && (
                       <span className="text-[10px] uppercase tracking-wider font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Periyodik</span>
                     )}
@@ -225,12 +235,30 @@ export default function TemplateViewPage() {
                       {sub.status}
                     </span>
                     {sub.status === 'TAMAMLANDI' && (
-                      <div className="mt-1.5 font-bold text-lg leading-none">%{sub.percentScore?.toFixed(1)}</div>
+                      <div className="flex flex-col items-end mt-1.5">
+                        <div className="font-bold text-lg leading-none">%{sub.percentScore?.toFixed(1)}</div>
+                        <div className={`px-2 py-0.5 rounded text-[10px] font-bold mt-1 ${getGradeAndColor(sub.percentScore).color}`}>
+                          Not: {getGradeAndColor(sub.percentScore).grade}
+                        </div>
+                      </div>
                     )}
                   </div>
-                  <Button variant={sub.status === 'TAMAMLANDI' ? "outline" : "default"} size="sm" onClick={() => navigate(`/checklists/submissions/${sub.id}`)} className="rounded-full px-6">
-                    {sub.status === 'TAMAMLANDI' ? 'İncele' : 'Devam Et'}
-                  </Button>
+                  <div className="flex gap-2">
+                    {sub.status === 'TAMAMLANDI' ? (
+                      <>
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/checklists/submissions/${sub.id}?mode=view`)} className="rounded-full px-4">
+                          Görüntüle
+                        </Button>
+                        <Button variant="default" size="sm" onClick={() => navigate(`/checklists/submissions/${sub.id}?mode=edit`)} className="rounded-full px-4 bg-blue-600 hover:bg-blue-700">
+                          Düzenle
+                        </Button>
+                      </>
+                    ) : (
+                      <Button variant="default" size="sm" onClick={() => navigate(`/checklists/submissions/${sub.id}`)} className="rounded-full px-6">
+                        Devam Et
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

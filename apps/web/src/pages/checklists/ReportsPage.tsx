@@ -41,7 +41,7 @@ export default function ReportsPage() {
     const groups: Record<string, any> = {};
     
     reports.forEach(sub => {
-      const tId = sub.template?.id || 'unknown_template_id';
+      const tId = sub.templateId || sub.template?.id || 'unknown_template_id';
       
       if (!groups[tId]) {
         groups[tId] = {
@@ -142,7 +142,7 @@ export default function ReportsPage() {
               {group.templateId !== 'unknown_template_id' ? (
                 <div className="mt-6">
                   <Button className="w-full" variant="default" onClick={() => navigate(`/checklists/templates/${group.templateId}`)}>
-                    Analiz & Detaylar <ArrowRight className="w-4 h-4 ml-2" />
+                    Dashboard'a Git <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </div>
               ) : (
