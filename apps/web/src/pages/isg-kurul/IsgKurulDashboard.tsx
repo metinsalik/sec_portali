@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Banknote } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import { Badge } from '@/components/ui/badge';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const API = import.meta.env.VITE_API_URL || '';
@@ -40,6 +40,10 @@ const PRIORITY_WEIGHTS: Record<string, number> = {
 
 export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boolean }) {
   const activeFacilityId = localStorage.getItem('activeFacilityId') || '';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlAgeBucket = searchParams.get('ageBucket') || 'all';
+  const urlFacilityId = searchParams.get('facility') || 'all';
+
   const [publicFacilityId, setPublicFacilityId] = useState('all');
   const effectiveFacilityId = isPublic ? publicFacilityId : activeFacilityId;
   const token = localStorage.getItem('token');
@@ -290,17 +294,80 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
     });
     
     return [
-      { label: '0-30 gün', count: r0_30 },
-      { label: '31-60 gün', count: r31_60 },
-      { label: '61-90 gün', count: r61_90 },
-      { label: '91-180 gün', count: r91_180 },
-      { label: '180+ gün', count: r180plus }
+      { id: '0-30', label: '0-30 Gün', count: r0_30, color: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100', active: 'ring-2 ring-emerald-500 bg-emerald-100' },
+      { id: '31-60', label: '31-60 Gün', count: r31_60, color: 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100', active: 'ring-2 ring-yellow-500 bg-yellow-100' },
+      { id: '61-90', label: '61-90 Gün', count: r61_90, color: 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100', active: 'ring-2 ring-orange-500 bg-orange-100' },
+      { id: '91-180', label: '91-180 Gün', count: r91_180, color: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100', active: 'ring-2 ring-red-500 bg-red-100' },
+      { id: '180+', label: '180+ Gün', count: r180plus, color: 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100 font-bold', active: 'ring-2 ring-rose-600 bg-rose-200' }
     ];
   }, [filteredDecisions]);
 
+  // Final Filtered Decisions (Applies URL filters)
+  const finalFilteredDecisions = useMemo(() => {
+    return filteredDecisions.filter(d => {
+      const isClosed = d.status === 'Tamamlandı' || d.status === 'İptal Edildi';
+      
+      // Age Bucket Filter
+      if (urlAgeBucket !== 'all' && !isClosed) {
+        const diffTime = new Date().getTime() - new Date(d.meetingDate).getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        if (urlAgeBucket === '0-30' && diffDays > 30) return false;
+        if (urlAgeBucket === '31-60' && (diffDays <= 30 || diffDays > 60)) return false;
+        if (urlAgeBucket === '61-90' && (diffDays <= 60 || diffDays > 90)) return false;
+        if (urlAgeBucket === '91-180' && (diffDays <= 90 || diffDays > 180)) return false;
+        if (urlAgeBucket === '180+' && diffDays <= 180) return false;
+      }
+      
+      // Facility Filter
+      if (urlFacilityId !== 'all') {
+        const meeting = meetings.find((m: any) => m.id === d.meetingId);
+        if (meeting?.facilityId !== urlFacilityId) return false;
+      }
+      
+      return true;
+    });
+  }, [filteredDecisions, urlAgeBucket, urlFacilityId, meetings]);
+
+  // Age Bucket Facility List
+  const ageBucketFacilities = useMemo(() => {
+    if (urlAgeBucket === 'all') return [];
+    
+    // First, filter by the age bucket but NOT by the specific facility
+    const bucketDecisions = filteredDecisions.filter(d => {
+      const isClosed = d.status === 'Tamamlandı' || d.status === 'İptal Edildi';
+      if (isClosed) return false;
+      const diffTime = new Date().getTime() - new Date(d.meetingDate).getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      if (urlAgeBucket === '0-30' && diffDays > 30) return false;
+      if (urlAgeBucket === '31-60' && (diffDays <= 30 || diffDays > 60)) return false;
+      if (urlAgeBucket === '61-90' && (diffDays <= 60 || diffDays > 90)) return false;
+      if (urlAgeBucket === '91-180' && (diffDays <= 90 || diffDays > 180)) return false;
+      if (urlAgeBucket === '180+' && diffDays <= 180) return false;
+      return true;
+    });
+
+    const dist: Record<string, number> = {};
+    bucketDecisions.forEach(d => {
+      const meeting = meetings.find((m: any) => m.id === d.meetingId);
+      const facilityId = meeting?.facilityId;
+      if (facilityId) {
+        dist[facilityId] = (dist[facilityId] || 0) + 1;
+      }
+    });
+
+    return Object.entries(dist).map(([fId, count]) => {
+      const f = facilities.find((f: any) => f.id === fId);
+      return {
+        id: fId,
+        name: f?.shortName || f?.name || 'Bilinmiyor',
+        count
+      };
+    }).sort((a, b) => b.count - a.count);
+  }, [filteredDecisions, urlAgeBucket, meetings, facilities]);
+
   // Category Workload
   const categoryWorkloadData = useMemo(() => {
-    const openList = filteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
+    const openList = finalFilteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
     const counts: Record<string, number> = {};
     openList.forEach(d => {
       const cat = categories.find((c: any) => c.id === d.categoryId);
@@ -308,11 +375,11 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       counts[catName] = (counts[catName] || 0) + 1;
     });
     return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 6);
-  }, [filteredDecisions, categories]);
+  }, [finalFilteredDecisions, categories]);
 
   // Responsible Workload
   const workloadData = useMemo(() => {
-    const openList = filteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
+    const openList = finalFilteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
     const counts: Record<string, number> = {};
     openList.forEach(d => {
       const dept = departments.find((dept: any) => dept.id === d.departmentId);
@@ -320,18 +387,18 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       counts[deptName] = (counts[deptName] || 0) + 1;
     });
     return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 6);
-  }, [filteredDecisions, departments]);
+  }, [finalFilteredDecisions, departments]);
 
   // Table Data: Sorted by Meeting Date Descending, then Priority
   const tableTasks = useMemo(() => {
-    return [...filteredDecisions].sort((a, b) => {
+    return [...finalFilteredDecisions].sort((a, b) => {
       const dateDiff = new Date(b.meetingDate).getTime() - new Date(a.meetingDate).getTime();
       if (dateDiff !== 0) return dateDiff;
       const wA = PRIORITY_WEIGHTS[a.priority] || 0;
       const wB = PRIORITY_WEIGHTS[b.priority] || 0;
       return wB - wA; // High priority first if same meeting
     }).slice(0, 100); // limit to 100
-  }, [filteredDecisions]);
+  }, [finalFilteredDecisions]);
 
   // Distribution by facility for the current filters (including time filter via KPIs)
   const facilityDistribution = useMemo(() => {
@@ -366,6 +433,85 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
+      </div>
+
+      {/* NEW: Open Task Age Funnel (Açık İş Yaşı Hunisi) */}
+      <div className="space-y-3 mb-6">
+        <div className="flex flex-wrap gap-3">
+          {urlAgeBucket !== 'all' && (
+            <div 
+              className="px-4 py-2 bg-slate-800 text-white rounded-lg border border-slate-700 shadow-sm cursor-pointer flex items-center justify-center font-bold text-sm hover:bg-slate-700 transition-colors"
+              onClick={() => {
+                searchParams.delete('ageBucket');
+                searchParams.delete('facility');
+                setSearchParams(searchParams);
+              }}
+            >
+              Tümünü Göster
+            </div>
+          )}
+          {openTaskAge.map(bucket => (
+            <div 
+              key={bucket.id}
+              onClick={() => {
+                if (urlAgeBucket === bucket.id) {
+                  searchParams.delete('ageBucket');
+                  searchParams.delete('facility');
+                } else {
+                  searchParams.set('ageBucket', bucket.id);
+                  searchParams.delete('facility'); // Reset facility when bucket changes
+                }
+                setSearchParams(searchParams);
+              }}
+              className={`flex-1 min-w-[150px] cursor-pointer rounded-lg border p-3 flex flex-col items-center justify-center transition-all ${bucket.color} ${urlAgeBucket === bucket.id ? bucket.active : 'opacity-90'}`}
+            >
+              <span className="text-xs font-semibold uppercase tracking-wider mb-1">{bucket.label} Bekleyen</span>
+              <span className="text-2xl font-black">{bucket.count}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Facility Carousel for Selected Bucket */}
+        {urlAgeBucket !== 'all' && ageBucketFacilities.length > 0 && (
+          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+            <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+              <ArrowRight className="w-4 h-4 text-slate-400" />
+              Tesis Bazlı Dağılım ({openTaskAge.find(b => b.id === urlAgeBucket)?.label})
+            </h4>
+            <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-thin scrollbar-thumb-slate-300">
+              {urlFacilityId !== 'all' && (
+                <div 
+                  className="shrink-0 cursor-pointer rounded-md px-3 py-2 border bg-white hover:bg-slate-100 flex items-center gap-2 text-sm font-medium transition-colors"
+                  onClick={() => {
+                    searchParams.delete('facility');
+                    setSearchParams(searchParams);
+                  }}
+                >
+                  <span className="text-slate-600">Tüm Tesisler</span>
+                </div>
+              )}
+              {ageBucketFacilities.map(f => (
+                <div 
+                  key={f.id}
+                  onClick={() => {
+                    if (urlFacilityId === f.id) {
+                      searchParams.delete('facility');
+                    } else {
+                      searchParams.set('facility', f.id);
+                    }
+                    setSearchParams(searchParams);
+                  }}
+                  className={`shrink-0 cursor-pointer rounded-md px-3 py-2 border flex items-center gap-2 text-sm font-medium transition-colors ${urlFacilityId === f.id ? 'bg-indigo-600 text-white border-indigo-700 shadow-sm' : 'bg-white hover:bg-indigo-50 border-slate-200 text-slate-700'}`}
+                >
+                  <span>{f.name}</span>
+                  <Badge variant="secondary" className={`${urlFacilityId === f.id ? 'bg-indigo-500 text-white' : 'bg-slate-100 text-slate-600'} rounded-full px-1.5 py-0 min-w-[20px] text-center`}>
+                    {f.count}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Filters Bar */}
@@ -629,33 +775,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
             </ResponsiveContainer>
           </CardContent>
         </Card>
-        
-        {/* Open Task Age */}
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2 border-b border-slate-100">
-            <CardTitle className="text-base font-bold text-slate-800">Açık İş Yaşı</CardTitle>
-            <p className="text-xs text-muted-foreground">Toplantı tarihinden bugüne bekleme süresi</p>
-          </CardHeader>
-          <CardContent className="p-6 flex flex-col justify-center gap-4 h-[250px]">
-            {openTaskAge.map(t => {
-              const max = Math.max(...openTaskAge.map(o => o.count), 1);
-              const percent = (t.count / max) * 100;
-              const isDanger = t.label === '180+ gün' && t.count > 0;
-              return (
-                <div key={t.label} className="flex items-center gap-3">
-                  <span className="w-[70px] text-xs font-medium text-slate-600 shrink-0">{t.label}</span>
-                  <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full transition-all duration-500 ${isDanger ? 'bg-red-500' : 'bg-slate-300'}`} 
-                      style={{ width: `${percent}%` }}
-                    />
-                  </div>
-                  <span className="w-6 text-right text-sm font-bold text-slate-800">{t.count}</span>
-                </div>
-              )
-            })}
-          </CardContent>
-        </Card>
+        {/* Open Task Age (Removed from here because it's now at the top funnel) */}
       </div>
 
       {/* Row 3: Workload Distribution */}
