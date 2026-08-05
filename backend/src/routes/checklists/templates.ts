@@ -131,8 +131,44 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
       },
     });
 
-    // Handle sections and items manually to avoid deleting old ones and losing answers
-    // For simplicity, we just update existing sections/items or create new ones if they don't have an id
+    // Handle sections and items: delete missing ones first, then update/create
+    const existingTemplate = await prisma.checklistTemplate.findUnique({
+      where: { id },
+      include: {
+        sections: {
+          include: { items: true }
+        }
+      }
+    });
+
+    if (existingTemplate && sections && Array.isArray(sections)) {
+      const incomingSectionIds = sections.map((s: any) => s.id).filter(Boolean);
+      const existingSectionIds = existingTemplate.sections.map((s: any) => s.id);
+      
+      const sectionsToDelete = existingSectionIds.filter((id: string) => !incomingSectionIds.includes(id));
+      if (sectionsToDelete.length > 0) {
+        await prisma.checklistSection.deleteMany({
+          where: { id: { in: sectionsToDelete } }
+        });
+      }
+
+      for (const existingSection of existingTemplate.sections) {
+        if (sectionsToDelete.includes(existingSection.id)) continue;
+        
+        const incomingSection = sections.find((s: any) => s.id === existingSection.id);
+        if (incomingSection && incomingSection.items && Array.isArray(incomingSection.items)) {
+          const incomingItemIds = incomingSection.items.map((i: any) => i.id).filter(Boolean);
+          const existingItemIds = existingSection.items.map((i: any) => i.id);
+          const itemsToDelete = existingItemIds.filter((id: string) => !incomingItemIds.includes(id));
+          if (itemsToDelete.length > 0) {
+            await prisma.checklistItem.deleteMany({
+              where: { id: { in: itemsToDelete } }
+            });
+          }
+        }
+      }
+    }
+
     if (sections && Array.isArray(sections)) {
       for (let sIdx = 0; sIdx < sections.length; sIdx++) {
         const sec = sections[sIdx];
