@@ -38,6 +38,15 @@ const PRIORITY_WEIGHTS: Record<string, number> = {
   'Önemsiz Risk': 1,
 };
 
+const normalizePriority = (p: string) => {
+  if (p === 'Kritik') return 'Tolere Gösterilmez Risk';
+  if (p === 'Yüksek Riskli') return 'Yüksek Risk';
+  if (p === 'Riskli') return 'Önemli Risk';
+  if (p === 'Orta') return 'Olası Risk';
+  if (p === 'Düşük') return 'Önemsiz Risk';
+  return p || 'Belirtilmedi';
+};
+
 export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boolean }) {
   const activeFacilityId = localStorage.getItem('activeFacilityId') || '';
   const [searchParams, setSearchParams] = useSearchParams();
@@ -165,7 +174,8 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       const matchMeeting = meetingId !== 'all' ? d.meetingId === meetingId : true;
       const matchCategory = categoryId !== 'all' ? d.categoryId?.toString() === categoryId : true;
       const matchStatus = status !== 'all' ? d.status === status : true;
-      const matchPriority = priority !== 'all' ? d.priority === priority : true;
+      const normalizedDPriority = normalizePriority(d.priority);
+      const matchPriority = priority !== 'all' ? normalizedDPriority === priority : true;
       const matchDepartment = departmentId !== 'all' ? d.departmentId?.toString() === departmentId : true;
       
       return matchSearch && matchYear && matchMeeting && matchCategory && matchStatus && matchPriority && matchDepartment;
@@ -263,7 +273,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
   const priorityData = useMemo(() => {
     const counts: Record<string, number> = {};
     filteredDecisions.forEach(d => {
-      const p = d.priority || 'Belirtilmedi';
+      const p = normalizePriority(d.priority);
       counts[p] = (counts[p] || 0) + 1;
     });
     return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => (PRIORITY_WEIGHTS[b.name] || 0) - (PRIORITY_WEIGHTS[a.name] || 0));
@@ -401,8 +411,8 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
     return [...finalFilteredDecisions].sort((a, b) => {
       const dateDiff = new Date(b.meetingDate).getTime() - new Date(a.meetingDate).getTime();
       if (dateDiff !== 0) return dateDiff;
-      const wA = PRIORITY_WEIGHTS[a.priority] || 0;
-      const wB = PRIORITY_WEIGHTS[b.priority] || 0;
+      const wA = PRIORITY_WEIGHTS[normalizePriority(a.priority)] || 0;
+      const wB = PRIORITY_WEIGHTS[normalizePriority(b.priority)] || 0;
       return wB - wA; // High priority first if same meeting
     }).slice(0, 100); // limit to 100
   }, [finalFilteredDecisions]);
@@ -481,7 +491,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tüm Durumlar</SelectItem>
-            {['Başlamadı', 'Devam Ediyor', 'Tamamlandı', 'İptal Edildi', 'Sürekli Takip', 'Belirsiz'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            {['Başlamadı', 'Devam Ediyor', 'Sürekli Takip', 'Tamamlandı', 'İptal Edildi', 'Belirsiz'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
           </SelectContent>
         </Select>
 
@@ -506,6 +516,17 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
             {departments.map((d:any) => <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>)}
           </SelectContent>
         </Select>
+        
+        {(search || year !== 'all' || meetingId !== 'all' || categoryId !== 'all' || status !== 'all' || priority !== 'all' || departmentId !== 'all' || timeFilter !== 'all') && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-red-600 hover:bg-red-50 hover:text-red-700 h-9 ml-auto"
+            onClick={() => setSearchParams({})}
+          >
+            Tüm Filtreleri Temizle
+          </Button>
+        )}
       </div>
 
       {/* KPI Cards */}
@@ -521,7 +542,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           </Card>
         )}
 
-        <Card className={`shadow-sm border-slate-200 cursor-pointer transition-colors ${timeFilter === 'all' ? 'ring-2 ring-indigo-500' : 'hover:bg-slate-50'}`} onClick={() => setTimeFilter('all')}>
+        <Card className={`shadow-sm border-slate-200 cursor-pointer transition-colors ${timeFilter === 'all' ? 'ring-2 ring-indigo-500' : 'hover:bg-slate-50'}`} onClick={() => updateFilter('timeFilter', 'all')}>
           <CardContent className="p-5 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-slate-100 rounded-bl-full -mr-8 -mt-8 opacity-60" />
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 relative z-10">Tümü</p>
@@ -539,7 +560,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           </CardContent>
         </Card>
 
-        <Card className={`shadow-sm border-red-200 cursor-pointer transition-colors ${timeFilter === 'overdue' ? 'ring-2 ring-red-500 bg-red-50' : 'hover:bg-red-50/70 bg-red-50/30'}`} onClick={() => setTimeFilter('overdue')}>
+        <Card className={`shadow-sm border-red-200 cursor-pointer transition-colors ${timeFilter === 'overdue' ? 'ring-2 ring-red-500 bg-red-50' : 'hover:bg-red-50/70 bg-red-50/30'}`} onClick={() => updateFilter('timeFilter', 'overdue')}>
           <CardContent className="p-5 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-red-100 rounded-bl-full -mr-8 -mt-8 opacity-60" />
             <p className="text-xs font-bold text-red-500 uppercase tracking-wider mb-2 relative z-10">Gecikmiş</p>
@@ -548,7 +569,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           </CardContent>
         </Card>
 
-        <Card className={`shadow-sm border-amber-200 cursor-pointer transition-colors ${timeFilter === 'next30' ? 'ring-2 ring-amber-500 bg-amber-50' : 'hover:bg-amber-50/70 bg-amber-50/30'}`} onClick={() => setTimeFilter('next30')}>
+        <Card className={`shadow-sm border-amber-200 cursor-pointer transition-colors ${timeFilter === 'next30' ? 'ring-2 ring-amber-500 bg-amber-50' : 'hover:bg-amber-50/70 bg-amber-50/30'}`} onClick={() => updateFilter('timeFilter', 'next30')}>
           <CardContent className="p-5 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-amber-100 rounded-bl-full -mr-8 -mt-8 opacity-60" />
             <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-2 relative z-10">30 Gün İçinde</p>
@@ -557,7 +578,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           </CardContent>
         </Card>
 
-        <Card className={`shadow-sm border-green-200 cursor-pointer transition-colors ${timeFilter === 'closed' ? 'ring-2 ring-green-500 bg-green-50' : 'hover:bg-green-50/70 bg-green-50/30'}`} onClick={() => setTimeFilter('closed')}>
+        <Card className={`shadow-sm border-green-200 cursor-pointer transition-colors ${timeFilter === 'closed' ? 'ring-2 ring-green-500 bg-green-50' : 'hover:bg-green-50/70 bg-green-50/30'}`} onClick={() => updateFilter('timeFilter', 'closed')}>
           <CardContent className="p-5 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-green-100 rounded-bl-full -mr-8 -mt-8 opacity-60" />
             <p className="text-xs font-bold text-green-600 uppercase tracking-wider mb-2 relative z-10">Kapalı</p>
@@ -959,12 +980,14 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
                             {isOverdue ? `Gecikmiş - ${d.status}` : d.status}
                           </Badge>
                           <Badge variant="outline" className={`rounded-full px-2 py-0.5 text-[10px] font-medium border block w-max ${
-                            d.priority === 'Tolere Gösterilmez Risk' ? 'bg-red-600 text-white border-red-700' : 
-                            d.priority === 'Yüksek Risk' ? 'bg-orange-500 text-white border-orange-600' :
-                            d.priority === 'Önemli Risk' ? 'bg-amber-400 text-slate-900 border-amber-500' :
+                            normalizePriority(d.priority) === 'Tolere Gösterilmez Risk' ? 'bg-red-600 text-white border-red-700' : 
+                            normalizePriority(d.priority) === 'Yüksek Risk' ? 'bg-orange-500 text-white border-orange-600' :
+                            normalizePriority(d.priority) === 'Önemli Risk' ? 'bg-amber-400 text-slate-900 border-amber-500' :
+                            normalizePriority(d.priority) === 'Olası Risk' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                            normalizePriority(d.priority) === 'Önemsiz Risk' ? 'bg-green-500 text-white border-green-600' :
                             'bg-slate-100 text-slate-600 border-slate-200'
                           }`}>
-                            {d.priority || 'Belirtilmedi'}
+                            {normalizePriority(d.priority)}
                           </Badge>
                           {budget && (
                             <Badge variant="secondary" className="rounded-full px-2 py-0.5 text-[10px] font-medium border border-green-200 bg-green-50 text-green-700 flex items-center gap-1 w-max">

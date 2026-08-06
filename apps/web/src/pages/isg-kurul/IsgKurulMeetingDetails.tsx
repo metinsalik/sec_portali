@@ -10,11 +10,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Plus, Calendar, AlertCircle, Edit, Trash2, Maximize2 } from 'lucide-react';
+import { ArrowLeft, Plus, Calendar as CalendarIcon, AlertCircle, Edit, Trash2, Maximize2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { tr } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 const API = import.meta.env.VITE_API_URL || '';
+
+const normalizePriority = (p: string) => {
+  if (p === 'Kritik') return 'Tolere Gösterilmez Risk';
+  if (p === 'Yüksek Riskli') return 'Yüksek Risk';
+  if (p === 'Riskli') return 'Önemli Risk';
+  if (p === 'Orta') return 'Olası Risk';
+  if (p === 'Düşük') return 'Önemsiz Risk';
+  return p || 'Belirtilmedi';
+};
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -260,7 +273,7 @@ export default function IsgKurulMeetingDetails() {
           </Card>
         ) : (
           decisions.map((decision: any, index: number) => (
-            <Card key={decision.id} className="overflow-hidden border-l-4" style={{ borderLeftColor: decision.priority === 'Tolere Gösterilmez Risk' ? '#dc2626' : decision.priority === 'Yüksek Risk' ? '#f87171' : decision.priority === 'Önemli Risk' ? '#fb923c' : decision.priority === 'Olası Risk' ? '#fbbf24' : '#22c55e' }}>
+            <Card key={decision.id} className="overflow-hidden border-l-4" style={{ borderLeftColor: normalizePriority(decision.priority) === 'Tolere Gösterilmez Risk' ? '#dc2626' : normalizePriority(decision.priority) === 'Yüksek Risk' ? '#f87171' : normalizePriority(decision.priority) === 'Önemli Risk' ? '#fb923c' : normalizePriority(decision.priority) === 'Olası Risk' ? '#fbbf24' : '#22c55e' }}>
               <div className="border-b bg-muted/10 px-4 py-3 flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <span className="font-bold text-sm bg-primary/10 text-primary px-2 py-1 rounded">
@@ -269,8 +282,8 @@ export default function IsgKurulMeetingDetails() {
                   <Badge className={`border ${getStatusColor(decision.status)}`} variant="outline">
                     {decision.status}
                   </Badge>
-                  <Badge className={`border ${getPriorityColor(decision.priority)}`} variant="outline">
-                    {decision.priority}
+                  <Badge className={`border ${getPriorityColor(normalizePriority(decision.priority))}`} variant="outline">
+                    {normalizePriority(decision.priority)}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">

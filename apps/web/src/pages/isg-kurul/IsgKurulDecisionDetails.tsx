@@ -12,8 +12,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAuth } from '../../context/AuthContext';
+import { format } from 'date-fns';
+import { tr } from 'date-fns/locale';
 
 const API = import.meta.env.VITE_API_URL || '';
+
+const normalizePriority = (p: string) => {
+  if (p === 'Kritik') return 'Tolere Gösterilmez Risk';
+  if (p === 'Yüksek Riskli') return 'Yüksek Risk';
+  if (p === 'Riskli') return 'Önemli Risk';
+  if (p === 'Orta') return 'Olası Risk';
+  if (p === 'Düşük') return 'Önemsiz Risk';
+  return p || 'Belirtilmedi';
+};
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -552,9 +563,9 @@ export default function IsgKurulDecisionDetails() {
 
                 <div className="p-4 hover:bg-slate-50/50 transition-colors">
                   <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 block">Kritiklik Seviyesi</span>
-                  <Badge className={`border px-2.5 py-0.5 text-xs font-semibold ${getPriorityColor(activeViewDecision.priority)}`} variant="outline">
-                    <Flag className="w-3 h-3 mr-1.5 inline-block" />
-                    {activeViewDecision.priority}
+                  <Badge className={`border px-2.5 py-0.5 text-xs font-semibold ${getPriorityColor(normalizePriority(activeViewDecision.priority))}`} variant="outline">
+                    <AlertTriangle className="w-3.5 h-3.5 mr-1 opacity-70" />
+                    {normalizePriority(activeViewDecision.priority)}
                   </Badge>
                 </div>
 

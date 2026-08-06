@@ -4,7 +4,18 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Search, Banknote } from 'lucide-react';
+import { Search, Banknote, MoreHorizontal } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+
+const normalizePriority = (p: string) => {
+  if (p === 'Kritik') return 'Tolere Gösterilmez Risk';
+  if (p === 'Yüksek Riskli') return 'Yüksek Risk';
+  if (p === 'Riskli') return 'Önemli Risk';
+  if (p === 'Orta') return 'Olası Risk';
+  if (p === 'Düşük') return 'Önemsiz Risk';
+  return p || 'Belirtilmedi';
+};
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -171,12 +182,14 @@ export default function IsgKurulDecisions() {
                         {isOverdue ? `Gecikmiş - ${d.status}` : d.status}
                       </Badge>
                       <Badge variant="outline" className={`rounded-full px-2 py-0.5 text-[10px] font-medium border block w-max ${
-                        d.priority === 'Tolere Gösterilmez Risk' ? 'bg-red-600 text-white border-red-700' : 
-                        d.priority === 'Yüksek Risk' ? 'bg-orange-500 text-white border-orange-600' :
-                        d.priority === 'Önemli Risk' ? 'bg-amber-400 text-slate-900 border-amber-500' :
+                        normalizePriority(d.priority) === 'Tolere Gösterilmez Risk' ? 'bg-red-600 text-white border-red-700' : 
+                        normalizePriority(d.priority) === 'Yüksek Risk' ? 'bg-orange-500 text-white border-orange-600' :
+                        normalizePriority(d.priority) === 'Önemli Risk' ? 'bg-amber-400 text-slate-900 border-amber-500' :
+                        normalizePriority(d.priority) === 'Olası Risk' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                        normalizePriority(d.priority) === 'Önemsiz Risk' ? 'bg-green-500 text-white border-green-600' :
                         'bg-slate-100 text-slate-600 border-slate-200'
                       }`}>
-                        {d.priority || 'Belirtilmedi'}
+                        {normalizePriority(d.priority)}
                       </Badge>
                       {budget && (
                         <Badge variant="secondary" className="rounded-full px-2 py-0.5 text-[10px] font-medium border border-green-200 bg-green-50 text-green-700 flex items-center gap-1 w-max">
