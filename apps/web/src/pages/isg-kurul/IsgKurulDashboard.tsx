@@ -49,15 +49,26 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
   const token = localStorage.getItem('token');
   const navigate = useNavigate();
 
-  // Filters state
-  const [search, setSearch] = useState('');
-  const [year, setYear] = useState('all');
-  const [meetingId, setMeetingId] = useState('all');
-  const [categoryId, setCategoryId] = useState('all');
-  const [status, setStatus] = useState('all');
-  const [priority, setPriority] = useState('all');
-  const [departmentId, setDepartmentId] = useState('all');
-  const [timeFilter, setTimeFilter] = useState<'all' | 'overdue' | 'next30' | 'undefinedTerm' | 'closed'>('all');
+  // Filters state from URL
+  const search = searchParams.get('q') || '';
+  const year = searchParams.get('year') || 'all';
+  const meetingId = searchParams.get('meetingId') || 'all';
+  const categoryId = searchParams.get('categoryId') || 'all';
+  const status = searchParams.get('status') || 'all';
+  const priority = searchParams.get('priority') || 'all';
+  const departmentId = searchParams.get('departmentId') || 'all';
+  const timeFilter = searchParams.get('timeFilter') || 'all';
+
+  const updateFilter = (key: string, value: string) => {
+    setSearchParams(prev => {
+      if (value === 'all' || value === '') {
+        prev.delete(key);
+      } else {
+        prev.set(key, value);
+      }
+      return prev;
+    }, { replace: true });
+  };
   
   // Public dialog state
   const [selectedPublicDecision, setSelectedPublicDecision] = useState<any>(null);
@@ -210,9 +221,9 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
   const onPieClick = (data: any, type: 'status' | 'priority') => {
     if (data && data.name) {
       if (type === 'status') {
-        setStatus(data.name === status ? 'all' : data.name);
+        updateFilter('status', data.name === status ? 'all' : data.name);
       } else {
-        setPriority(data.name === priority ? 'all' : data.name);
+        updateFilter('priority', data.name === priority ? 'all' : data.name);
       }
     }
   };
@@ -363,13 +374,14 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
   // Category Workload
   const categoryWorkloadData = useMemo(() => {
     const openList = finalFilteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
-    const counts: Record<string, number> = {};
+    const counts: Record<string, { id: string, count: number }> = {};
     openList.forEach(d => {
       const cat = categories.find((c: any) => c.id === d.categoryId);
       const catName = cat?.name || 'Bilinmiyor';
-      counts[catName] = (counts[catName] || 0) + 1;
+      if (!counts[catName]) counts[catName] = { id: d.categoryId?.toString() || 'all', count: 0 };
+      counts[catName].count += 1;
     });
-    return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 6);
+    return Object.entries(counts).map(([name, data]) => ({ name, id: data.id, value: data.count })).sort((a,b) => b.value - a.value).slice(0, 6);
   }, [finalFilteredDecisions, categories]);
 
   // Responsible Workload
@@ -404,7 +416,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           placeholder="Karar, numarası, sorumlu, toplantı veya kelime ara..." 
           className="w-full bg-slate-50 h-11 text-base"
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => updateFilter('q', e.target.value)}
         />
       </div>
 
@@ -427,7 +439,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
             </SelectContent>
           </Select>
         )}
-        <Select value={year} onValueChange={(v) => { setYear(v); setMeetingId('all'); }}>
+        <Select value={year} onValueChange={(v) => { updateFilter('year', v); updateFilter('meetingId', 'all'); }}>
           <SelectTrigger className="w-[140px] bg-slate-50 h-9 text-sm">
             <SelectValue placeholder="Tüm Yıllar">{year === 'all' ? 'Tüm Yıllar' : year}</SelectValue>
           </SelectTrigger>
@@ -437,7 +449,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           </SelectContent>
         </Select>
 
-        <Select value={meetingId} onValueChange={setMeetingId}>
+        <Select value={meetingId} onValueChange={(v) => updateFilter('meetingId', v)}>
           <SelectTrigger className="w-[200px] bg-slate-50 h-9 text-sm">
             <SelectValue placeholder="Tüm Toplantılar">
               {meetingId === 'all' ? 'Tüm Toplantılar' : `Toplantı: ${meetings.find((m:any) => m.id === meetingId)?.meetingNo || meetingId}`}
@@ -451,7 +463,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           </SelectContent>
         </Select>
 
-        <Select value={categoryId} onValueChange={setCategoryId}>
+        <Select value={categoryId} onValueChange={(v) => updateFilter('categoryId', v)}>
           <SelectTrigger className="w-[220px] bg-slate-50 h-9 text-sm">
             <SelectValue placeholder="Tüm Kategoriler">
               {categoryId === 'all' ? 'Tüm Kategoriler' : (categories.find((c:any) => c.id.toString() === categoryId)?.name || categoryId)}
@@ -463,7 +475,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           </SelectContent>
         </Select>
 
-        <Select value={status} onValueChange={setStatus}>
+        <Select value={status} onValueChange={(v) => updateFilter('status', v)}>
           <SelectTrigger className="w-[160px] bg-slate-50 h-9 text-sm">
             <SelectValue placeholder="Tüm Durumlar">{status === 'all' ? 'Tüm Durumlar' : status}</SelectValue>
           </SelectTrigger>
@@ -473,7 +485,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           </SelectContent>
         </Select>
 
-        <Select value={priority} onValueChange={setPriority}>
+        <Select value={priority} onValueChange={(v) => updateFilter('priority', v)}>
           <SelectTrigger className="w-[160px] bg-slate-50 h-9 text-sm">
             <SelectValue placeholder="Tüm Öncelikler">{priority === 'all' ? 'Tüm Öncelikler' : priority}</SelectValue>
           </SelectTrigger>
@@ -483,7 +495,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           </SelectContent>
         </Select>
 
-        <Select value={departmentId} onValueChange={setDepartmentId}>
+        <Select value={departmentId} onValueChange={(v) => updateFilter('departmentId', v)}>
           <SelectTrigger className="w-[220px] bg-slate-50 h-9 text-sm">
             <SelectValue placeholder="Tüm Sorumlu Gruplar">
               {departmentId === 'all' ? 'Tüm Sorumlu Gruplar' : (departments.find((d:any) => d.id.toString() === departmentId)?.name || departmentId)}
@@ -730,12 +742,16 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
               const max = Math.max(...categoryWorkloadData.map(d => d.value), 1);
               const percent = (w.value / max) * 100;
               return (
-                <div key={w.name} className="flex items-center gap-4 group">
-                  <span className="w-[120px] text-xs font-medium text-slate-700 truncate cursor-help" title={w.name}>{w.name}</span>
+                <div 
+                  key={w.name} 
+                  className={`flex items-center gap-4 group cursor-pointer p-1.5 -mx-1.5 rounded transition-colors ${categoryId === w.id ? 'bg-indigo-50 ring-1 ring-indigo-200' : 'hover:bg-slate-50'}`}
+                  onClick={() => updateFilter('categoryId', categoryId === w.id ? 'all' : w.id)}
+                >
+                  <span className={`w-[120px] text-xs font-medium truncate ${categoryId === w.id ? 'text-indigo-700' : 'text-slate-700'}`} title={w.name}>{w.name}</span>
                   <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-indigo-500 rounded-full group-hover:bg-indigo-600 transition-colors" style={{ width: `${percent}%` }} />
+                    <div className={`h-full rounded-full transition-all duration-500 ${categoryId === w.id ? 'bg-indigo-600' : 'bg-indigo-500 group-hover:bg-indigo-600'}`} style={{ width: `${percent}%` }} />
                   </div>
-                  <span className="w-4 text-right text-sm font-bold text-slate-800">{w.value}</span>
+                  <span className={`w-6 text-right text-sm font-bold ${categoryId === w.id ? 'text-indigo-700' : 'text-slate-800'}`}>{w.value}</span>
                 </div>
               )
             }) : (
@@ -845,21 +861,21 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
             <Badge 
               variant="secondary" 
               className={`px-3 py-1 rounded-full cursor-pointer transition-colors ${timeFilter === 'closed' ? 'bg-green-600 text-white hover:bg-green-700 border-transparent' : 'bg-green-50 text-green-700 hover:bg-green-100 border-green-200'}`} 
-              onClick={() => setTimeFilter('closed')}
+              onClick={() => updateFilter('timeFilter', timeFilter === 'closed' ? 'all' : 'closed')}
             >
               Kapalı - {kpis.closed}
             </Badge>
             <Badge 
               variant="secondary" 
               className={`px-3 py-1 rounded-full cursor-pointer transition-colors ${timeFilter === 'overdue' ? 'bg-red-600 text-white hover:bg-red-700 border-transparent' : 'bg-red-50 text-red-700 hover:bg-red-100 border-red-200'}`} 
-              onClick={() => setTimeFilter('overdue')}
+              onClick={() => updateFilter('timeFilter', timeFilter === 'overdue' ? 'all' : 'overdue')}
             >
               Gecikmiş - {badgeCounts.overdue}
             </Badge>
             <Badge 
               variant="secondary" 
               className={`px-3 py-1 rounded-full cursor-pointer transition-colors ${timeFilter === 'next30' ? 'bg-amber-500 text-white hover:bg-amber-600 border-transparent' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200'}`} 
-              onClick={() => setTimeFilter('next30')}
+              onClick={() => updateFilter('timeFilter', timeFilter === 'next30' ? 'all' : 'next30')}
             >
               30 Gün İçinde - {badgeCounts.next30Days}
             </Badge>
