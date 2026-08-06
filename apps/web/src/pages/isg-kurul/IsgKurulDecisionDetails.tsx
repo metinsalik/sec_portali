@@ -27,14 +27,14 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const getPriorityColor = (priority: string) => {
-  switch (priority) {
-    case 'Kritik': return 'bg-red-600 text-white border-red-700';
-    case 'Yüksek Riskli': return 'bg-red-400 text-white border-red-500';
-    case 'Riskli': return 'bg-orange-400 text-white border-orange-500';
-    case 'Orta': return 'bg-amber-400 text-white border-amber-500';
-    case 'Düşük': return 'bg-green-500 text-white border-green-600';
-    default: return 'bg-slate-100 text-slate-800 border-slate-200';
+const getPriorityColor = (p: string) => {
+  switch (p) {
+    case 'Tolere Gösterilmez Risk': return 'bg-red-600 text-white border-red-700';
+    case 'Yüksek Risk': return 'bg-orange-500 text-white border-orange-600';
+    case 'Önemli Risk': return 'bg-yellow-400 text-slate-800 border-yellow-500';
+    case 'Olası Risk': return 'bg-blue-100 text-blue-700 border-blue-200';
+    case 'Önemsiz Risk': return 'bg-slate-100 text-slate-600 border-slate-200';
+    default: return 'bg-slate-100 text-slate-600 border-slate-200';
   }
 };
 
@@ -297,7 +297,7 @@ export default function IsgKurulDecisionDetails() {
                         <Select value={newPriority} onValueChange={setNewPriority}>
                           <SelectTrigger className="bg-white border-slate-200 shadow-sm"><SelectValue placeholder="Değiştirme" /></SelectTrigger>
                           <SelectContent>
-                            {['Kritik', 'Yüksek Riskli', 'Riskli', 'Orta', 'Düşük'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                          {['Tolere Gösterilmez Risk', 'Yüksek Risk', 'Önemli Risk', 'Olası Risk', 'Önemsiz Risk'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>

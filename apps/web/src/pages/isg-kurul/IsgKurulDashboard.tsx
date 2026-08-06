@@ -479,7 +479,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tüm Öncelikler</SelectItem>
-            {['Kritik', 'Yüksek Riskli', 'Riskli', 'Orta', 'Düşük'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            {['Tolere Gösterilmez Risk', 'Yüksek Risk', 'Önemli Risk', 'Olası Risk', 'Önemsiz Risk'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
           </SelectContent>
         </Select>
 

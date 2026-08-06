@@ -2184,7 +2184,7 @@ model OhsBoardDecision {
   departmentId    Int
   department      Department @relation(fields: [departmentId], references: [id])
   
-  priority        String   // "Kritik", "Yüksek Riskli", "Riskli", "Orta", "Düşük"
+  priority        String   // "Tolere Gösterilmez Risk", "Yüksek Risk", "Önemli Risk", "Olası Risk", "Önemsiz Risk"
   status          String   // "Başlamadı", "Devam Ediyor", "Tamamlandı", "İptal Edildi", "Sürekli Takip", "Belirsiz"
   
   dueDateType     String   // "DATE" veya "PERIOD"

@@ -170,14 +170,15 @@ export default function IsgKurulDecisions() {
                       <Badge variant="outline" className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium border block w-max ${isOverdue ? 'bg-red-50 text-red-600 border-red-200' : 'bg-slate-50 text-slate-700 border-slate-200'}`}>
                         {isOverdue ? `Gecikmiş - ${d.status}` : d.status}
                       </Badge>
-                      <Badge variant="outline" className={`rounded-full px-2 py-0.5 text-[10px] font-medium border block w-max ${
-                        d.priority === 'Kritik' ? 'bg-red-600 text-white border-red-700' : 
-                        d.priority === 'Yüksek Riskli' ? 'bg-orange-500 text-white border-orange-600' :
-                        d.priority === 'Riskli' ? 'bg-amber-400 text-slate-900 border-amber-500' :
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                        d.priority === 'Tolere Gösterilmez Risk' ? 'bg-red-600 text-white border-red-700' : 
+                        d.priority === 'Yüksek Risk' ? 'bg-orange-500 text-white border-orange-600' :
+                        d.priority === 'Önemli Risk' ? 'bg-yellow-400 text-slate-800 border-yellow-500' :
+                        d.priority === 'Olası Risk' ? 'bg-blue-100 text-blue-700 border-blue-200' :
                         'bg-slate-100 text-slate-600 border-slate-200'
                       }`}>
                         {d.priority || 'Belirtilmedi'}
-                      </Badge>
+                      </span>
                       {budget && (
                         <Badge variant="secondary" className="rounded-full px-2 py-0.5 text-[10px] font-medium border border-green-200 bg-green-50 text-green-700 flex items-center gap-1 w-max">
                           <Banknote className="w-3 h-3" />

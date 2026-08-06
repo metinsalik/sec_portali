@@ -28,13 +28,13 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const getPriorityColor = (priority: string) => {
-  switch (priority) {
-    case 'Kritik': return 'bg-red-600 text-white border-red-700';
-    case 'Yüksek Riskli': return 'bg-red-400 text-white border-red-500';
-    case 'Riskli': return 'bg-orange-400 text-white border-orange-500';
-    case 'Orta': return 'bg-amber-400 text-white border-amber-500';
-    case 'Düşük': return 'bg-green-500 text-white border-green-600';
+const getPriorityColor = (p: string) => {
+  switch (p) {
+    case 'Tolere Gösterilmez Risk': return 'bg-red-600 text-white border-red-700';
+    case 'Yüksek Risk': return 'bg-orange-500 text-white border-orange-600';
+    case 'Önemli Risk': return 'bg-yellow-400 text-slate-800 border-yellow-500';
+    case 'Olası Risk': return 'bg-blue-100 text-blue-700 border-blue-200';
+    case 'Önemsiz Risk': return 'bg-slate-100 text-slate-600 border-slate-200';
     default: return 'bg-slate-100 text-slate-800 border-slate-200';
   }
 };
@@ -260,7 +260,7 @@ export default function IsgKurulMeetingDetails() {
           </Card>
         ) : (
           decisions.map((decision: any, index: number) => (
-            <Card key={decision.id} className="overflow-hidden border-l-4" style={{ borderLeftColor: decision.priority === 'Kritik' ? '#dc2626' : decision.priority === 'Yüksek Riskli' ? '#f87171' : decision.priority === 'Riskli' ? '#fb923c' : decision.priority === 'Orta' ? '#fbbf24' : '#22c55e' }}>
+            <Card key={decision.id} className="overflow-hidden border-l-4" style={{ borderLeftColor: decision.priority === 'Tolere Gösterilmez Risk' ? '#dc2626' : decision.priority === 'Yüksek Risk' ? '#f87171' : decision.priority === 'Önemli Risk' ? '#fb923c' : decision.priority === 'Olası Risk' ? '#fbbf24' : '#22c55e' }}>
               <div className="border-b bg-muted/10 px-4 py-3 flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <span className="font-bold text-sm bg-primary/10 text-primary px-2 py-1 rounded">
@@ -394,7 +394,7 @@ export default function IsgKurulMeetingDetails() {
                 <Select value={formData.priority} onValueChange={(val) => setFormData({...formData, priority: val})}>
                   <SelectTrigger><SelectValue placeholder="Seviye" /></SelectTrigger>
                   <SelectContent>
-                    {['Kritik', 'Yüksek Riskli', 'Riskli', 'Orta', 'Düşük'].map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                    {['Tolere Gösterilmez Risk', 'Yüksek Risk', 'Önemli Risk', 'Olası Risk', 'Önemsiz Risk'].map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
