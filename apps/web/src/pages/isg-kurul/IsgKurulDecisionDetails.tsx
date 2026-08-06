@@ -564,7 +564,7 @@ export default function IsgKurulDecisionDetails() {
                 <div className="p-4 hover:bg-slate-50/50 transition-colors">
                   <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 block">Kritiklik Seviyesi</span>
                   <Badge className={`border px-2.5 py-0.5 text-xs font-semibold ${getPriorityColor(normalizePriority(activeViewDecision.priority))}`} variant="outline">
-                    <AlertTriangle className="w-3.5 h-3.5 mr-1 opacity-70" />
+                    <Flag className="w-3 h-3 mr-1.5 inline-block" />
                     {normalizePriority(activeViewDecision.priority)}
                   </Badge>
                 </div>
