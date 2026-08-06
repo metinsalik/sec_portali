@@ -48,7 +48,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       where: whereClause,
       include: {
         template: {
-          select: { title: true, version: true }
+          select: { id: true, title: true, version: true, group: true }
         },
         conductedBy: {
           select: { fullName: true }

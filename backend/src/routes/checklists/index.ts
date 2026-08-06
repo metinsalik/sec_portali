@@ -6,6 +6,7 @@ import reportsRouter from './reports';
 import categoriesRouter from './categories';
 import scalesRouter from './scales';
 import assignmentsRouter from './assignments';
+import groupsRouter from './groups';
 
 const router = express.Router();
 
@@ -17,5 +18,6 @@ router.use('/reports', reportsRouter);
 router.use('/categories', categoriesRouter);
 router.use('/scales', scalesRouter);
 router.use('/assignments', assignmentsRouter);
+router.use('/groups', groupsRouter);
 
 export default router;

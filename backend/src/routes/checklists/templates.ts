@@ -11,6 +11,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     const templates = await prisma.checklistTemplate.findMany({
       where: { isActive: true },
       include: {
+        group: true,
         scaleSet: {
           include: {
             options: { orderBy: { sortOrder: 'asc' } }
@@ -36,6 +37,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
     const template = await prisma.checklistTemplate.findUnique({
       where: { id },
       include: {
+        group: true,
         scaleSet: {
           include: {
             options: { orderBy: { sortOrder: 'asc' } }
@@ -67,7 +69,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 // Create a new template
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { title, description, scaleSetId, sections } = req.body;
+    const { title, description, scaleSetId, groupId, sections } = req.body;
     const username = req.user?.username;
 
     if (!username) {
@@ -80,6 +82,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         description,
         createdById: username,
         scaleSetId: scaleSetId || null,
+        groupId: groupId || null,
         sections: {
           create: sections.map((sec: any, sIdx: number) => ({
             title: sec.title,
@@ -120,7 +123,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 router.put('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { title, description, scaleSetId, sections } = req.body;
+    const { title, description, scaleSetId, groupId, sections } = req.body;
 
     const template = await prisma.checklistTemplate.update({
       where: { id },
@@ -128,6 +131,7 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
         title,
         description,
         scaleSetId: scaleSetId || null,
+        groupId: groupId || null,
       },
     });
 

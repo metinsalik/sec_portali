@@ -68,15 +68,22 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
   const departmentId = searchParams.get('departmentId') || 'all';
   const timeFilter = searchParams.get('timeFilter') || 'all';
 
-  const updateFilter = (key: string, value: string) => {
+  const updateFilters = (updates: Record<string, string>) => {
     setSearchParams(prev => {
-      if (value === 'all' || value === '') {
-        prev.delete(key);
-      } else {
-        prev.set(key, value);
-      }
-      return prev;
+      const next = new URLSearchParams(prev);
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === 'all' || value === '') {
+          next.delete(key);
+        } else {
+          next.set(key, value);
+        }
+      });
+      return next;
     }, { replace: true });
+  };
+
+  const updateFilter = (key: string, value: string) => {
+    updateFilters({ [key]: value });
   };
   
   // Public dialog state
@@ -449,7 +456,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
             </SelectContent>
           </Select>
         )}
-        <Select value={year} onValueChange={(v) => { updateFilter('year', v); updateFilter('meetingId', 'all'); }}>
+        <Select value={year} onValueChange={(v) => updateFilters({ year: v, meetingId: 'all' })}>
           <SelectTrigger className="w-[140px] bg-slate-50 h-9 text-sm">
             <SelectValue placeholder="Tüm Yıllar">{year === 'all' ? 'Tüm Yıllar' : year}</SelectValue>
           </SelectTrigger>

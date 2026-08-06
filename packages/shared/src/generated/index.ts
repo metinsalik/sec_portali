@@ -294,7 +294,9 @@ export const ChecklistScaleSetScalarFieldEnumSchema = z.enum(['id','name','descr
 
 export const ChecklistScaleOptionScalarFieldEnumSchema = z.enum(['id','scaleSetId','label','multiplier','sortOrder','color','requiresExplanation','requiresAttachment']);
 
-export const ChecklistTemplateScalarFieldEnumSchema = z.enum(['id','title','description','version','createdById','scaleSetId','isActive','createdAt','updatedAt']);
+export const ChecklistTemplateScalarFieldEnumSchema = z.enum(['id','title','description','version','createdById','scaleSetId','groupId','isActive','createdAt','updatedAt']);
+
+export const ChecklistTemplateGroupScalarFieldEnumSchema = z.enum(['id','name','description','createdAt','updatedAt']);
 
 export const ChecklistSectionScalarFieldEnumSchema = z.enum(['id','templateId','title','sortOrder']);
 
@@ -4404,6 +4406,7 @@ export const ChecklistTemplateSchema = z.object({
   version: z.number().int(),
   createdById: z.string(),
   scaleSetId: z.string().nullable(),
+  groupId: z.string().nullable(),
   isActive: z.boolean(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
@@ -4420,6 +4423,7 @@ export type ChecklistTemplateRelations = {
   submissions: ChecklistSubmissionWithRelations[];
   assignments: ChecklistAssignmentWithRelations[];
   createdBy: UserWithRelations;
+  group?: ChecklistTemplateGroupWithRelations | null;
 };
 
 export type ChecklistTemplateWithRelations = z.infer<typeof ChecklistTemplateSchema> & ChecklistTemplateRelations
@@ -4430,6 +4434,34 @@ export const ChecklistTemplateWithRelationsSchema: z.ZodType<ChecklistTemplateWi
   submissions: z.lazy(() => ChecklistSubmissionWithRelationsSchema).array(),
   assignments: z.lazy(() => ChecklistAssignmentWithRelationsSchema).array(),
   createdBy: z.lazy(() => UserWithRelationsSchema),
+  group: z.lazy(() => ChecklistTemplateGroupWithRelationsSchema).nullable(),
+}))
+
+/////////////////////////////////////////
+// CHECKLIST TEMPLATE GROUP SCHEMA
+/////////////////////////////////////////
+
+export const ChecklistTemplateGroupSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type ChecklistTemplateGroup = z.infer<typeof ChecklistTemplateGroupSchema>
+
+// CHECKLIST TEMPLATE GROUP RELATION SCHEMA
+//------------------------------------------------------
+
+export type ChecklistTemplateGroupRelations = {
+  templates: ChecklistTemplateWithRelations[];
+};
+
+export type ChecklistTemplateGroupWithRelations = z.infer<typeof ChecklistTemplateGroupSchema> & ChecklistTemplateGroupRelations
+
+export const ChecklistTemplateGroupWithRelationsSchema: z.ZodType<ChecklistTemplateGroupWithRelations> = ChecklistTemplateGroupSchema.merge(z.object({
+  templates: z.lazy(() => ChecklistTemplateWithRelationsSchema).array(),
 }))
 
 /////////////////////////////////////////
@@ -8771,6 +8803,7 @@ export const ChecklistTemplateIncludeSchema: z.ZodType<Prisma.ChecklistTemplateI
   submissions: z.union([z.boolean(),z.lazy(() => ChecklistSubmissionFindManyArgsSchema)]).optional(),
   assignments: z.union([z.boolean(),z.lazy(() => ChecklistAssignmentFindManyArgsSchema)]).optional(),
   createdBy: z.union([z.boolean(),z.lazy(() => UserArgsSchema)]).optional(),
+  group: z.union([z.boolean(),z.lazy(() => ChecklistTemplateGroupArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => ChecklistTemplateCountOutputTypeArgsSchema)]).optional(),
 }).strict();
 
@@ -8796,6 +8829,7 @@ export const ChecklistTemplateSelectSchema: z.ZodType<Prisma.ChecklistTemplateSe
   version: z.boolean().optional(),
   createdById: z.boolean().optional(),
   scaleSetId: z.boolean().optional(),
+  groupId: z.boolean().optional(),
   isActive: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
@@ -8804,7 +8838,39 @@ export const ChecklistTemplateSelectSchema: z.ZodType<Prisma.ChecklistTemplateSe
   submissions: z.union([z.boolean(),z.lazy(() => ChecklistSubmissionFindManyArgsSchema)]).optional(),
   assignments: z.union([z.boolean(),z.lazy(() => ChecklistAssignmentFindManyArgsSchema)]).optional(),
   createdBy: z.union([z.boolean(),z.lazy(() => UserArgsSchema)]).optional(),
+  group: z.union([z.boolean(),z.lazy(() => ChecklistTemplateGroupArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => ChecklistTemplateCountOutputTypeArgsSchema)]).optional(),
+}).strict()
+
+// CHECKLIST TEMPLATE GROUP
+//------------------------------------------------------
+
+export const ChecklistTemplateGroupIncludeSchema: z.ZodType<Prisma.ChecklistTemplateGroupInclude> = z.object({
+  templates: z.union([z.boolean(),z.lazy(() => ChecklistTemplateFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => ChecklistTemplateGroupCountOutputTypeArgsSchema)]).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupArgsSchema: z.ZodType<Prisma.ChecklistTemplateGroupDefaultArgs> = z.object({
+  select: z.lazy(() => ChecklistTemplateGroupSelectSchema).optional(),
+  include: z.lazy(() => ChecklistTemplateGroupIncludeSchema).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupCountOutputTypeArgsSchema: z.ZodType<Prisma.ChecklistTemplateGroupCountOutputTypeDefaultArgs> = z.object({
+  select: z.lazy(() => ChecklistTemplateGroupCountOutputTypeSelectSchema).nullish(),
+}).strict();
+
+export const ChecklistTemplateGroupCountOutputTypeSelectSchema: z.ZodType<Prisma.ChecklistTemplateGroupCountOutputTypeSelect> = z.object({
+  templates: z.boolean().optional(),
+}).strict();
+
+export const ChecklistTemplateGroupSelectSchema: z.ZodType<Prisma.ChecklistTemplateGroupSelect> = z.object({
+  id: z.boolean().optional(),
+  name: z.boolean().optional(),
+  description: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  templates: z.union([z.boolean(),z.lazy(() => ChecklistTemplateFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => ChecklistTemplateGroupCountOutputTypeArgsSchema)]).optional(),
 }).strict()
 
 // CHECKLIST SECTION
@@ -19802,6 +19868,7 @@ export const ChecklistTemplateWhereInputSchema: z.ZodType<Prisma.ChecklistTempla
   version: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
   createdById: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   scaleSetId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  groupId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   isActive: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
@@ -19810,6 +19877,7 @@ export const ChecklistTemplateWhereInputSchema: z.ZodType<Prisma.ChecklistTempla
   submissions: z.lazy(() => ChecklistSubmissionListRelationFilterSchema).optional(),
   assignments: z.lazy(() => ChecklistAssignmentListRelationFilterSchema).optional(),
   createdBy: z.union([ z.lazy(() => UserRelationFilterSchema), z.lazy(() => UserWhereInputSchema) ]).optional(),
+  group: z.union([ z.lazy(() => ChecklistTemplateGroupNullableRelationFilterSchema), z.lazy(() => ChecklistTemplateGroupWhereInputSchema) ]).optional().nullable(),
 }).strict();
 
 export const ChecklistTemplateOrderByWithRelationInputSchema: z.ZodType<Prisma.ChecklistTemplateOrderByWithRelationInput> = z.object({
@@ -19819,6 +19887,7 @@ export const ChecklistTemplateOrderByWithRelationInputSchema: z.ZodType<Prisma.C
   version: z.lazy(() => SortOrderSchema).optional(),
   createdById: z.lazy(() => SortOrderSchema).optional(),
   scaleSetId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  groupId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   isActive: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
@@ -19827,6 +19896,7 @@ export const ChecklistTemplateOrderByWithRelationInputSchema: z.ZodType<Prisma.C
   submissions: z.lazy(() => ChecklistSubmissionOrderByRelationAggregateInputSchema).optional(),
   assignments: z.lazy(() => ChecklistAssignmentOrderByRelationAggregateInputSchema).optional(),
   createdBy: z.lazy(() => UserOrderByWithRelationInputSchema).optional(),
+  group: z.lazy(() => ChecklistTemplateGroupOrderByWithRelationInputSchema).optional(),
 }).strict();
 
 export const ChecklistTemplateWhereUniqueInputSchema: z.ZodType<Prisma.ChecklistTemplateWhereUniqueInput> = z.object({
@@ -19842,6 +19912,7 @@ export const ChecklistTemplateWhereUniqueInputSchema: z.ZodType<Prisma.Checklist
   version: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
   createdById: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   scaleSetId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  groupId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   isActive: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
@@ -19850,6 +19921,7 @@ export const ChecklistTemplateWhereUniqueInputSchema: z.ZodType<Prisma.Checklist
   submissions: z.lazy(() => ChecklistSubmissionListRelationFilterSchema).optional(),
   assignments: z.lazy(() => ChecklistAssignmentListRelationFilterSchema).optional(),
   createdBy: z.union([ z.lazy(() => UserRelationFilterSchema), z.lazy(() => UserWhereInputSchema) ]).optional(),
+  group: z.union([ z.lazy(() => ChecklistTemplateGroupNullableRelationFilterSchema), z.lazy(() => ChecklistTemplateGroupWhereInputSchema) ]).optional().nullable(),
 }).strict());
 
 export const ChecklistTemplateOrderByWithAggregationInputSchema: z.ZodType<Prisma.ChecklistTemplateOrderByWithAggregationInput> = z.object({
@@ -19859,6 +19931,7 @@ export const ChecklistTemplateOrderByWithAggregationInputSchema: z.ZodType<Prism
   version: z.lazy(() => SortOrderSchema).optional(),
   createdById: z.lazy(() => SortOrderSchema).optional(),
   scaleSetId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  groupId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   isActive: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
@@ -19879,7 +19952,75 @@ export const ChecklistTemplateScalarWhereWithAggregatesInputSchema: z.ZodType<Pr
   version: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
   createdById: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
   scaleSetId: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  groupId: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   isActive: z.union([ z.lazy(() => BoolWithAggregatesFilterSchema), z.boolean() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupWhereInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => ChecklistTemplateGroupWhereInputSchema), z.lazy(() => ChecklistTemplateGroupWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => ChecklistTemplateGroupWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => ChecklistTemplateGroupWhereInputSchema), z.lazy(() => ChecklistTemplateGroupWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  name: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  description: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  templates: z.lazy(() => ChecklistTemplateListRelationFilterSchema).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupOrderByWithRelationInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  description: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  templates: z.lazy(() => ChecklistTemplateOrderByRelationAggregateInputSchema).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupWhereUniqueInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupWhereUniqueInput> = z.union([
+  z.object({
+    id: z.string(),
+    name: z.string(),
+  }),
+  z.object({
+    id: z.string(),
+  }),
+  z.object({
+    name: z.string(),
+  }),
+])
+.and(z.object({
+  id: z.string().optional(),
+  name: z.string().optional(),
+  AND: z.union([ z.lazy(() => ChecklistTemplateGroupWhereInputSchema), z.lazy(() => ChecklistTemplateGroupWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => ChecklistTemplateGroupWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => ChecklistTemplateGroupWhereInputSchema), z.lazy(() => ChecklistTemplateGroupWhereInputSchema).array() ]).optional(),
+  description: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  templates: z.lazy(() => ChecklistTemplateListRelationFilterSchema).optional(),
+}).strict());
+
+export const ChecklistTemplateGroupOrderByWithAggregationInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  description: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => ChecklistTemplateGroupCountOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => ChecklistTemplateGroupMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => ChecklistTemplateGroupMinOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => ChecklistTemplateGroupScalarWhereWithAggregatesInputSchema), z.lazy(() => ChecklistTemplateGroupScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => ChecklistTemplateGroupScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => ChecklistTemplateGroupScalarWhereWithAggregatesInputSchema), z.lazy(() => ChecklistTemplateGroupScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  name: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  description: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
 }).strict();
@@ -31431,6 +31572,7 @@ export const ChecklistTemplateCreateInputSchema: z.ZodType<Prisma.ChecklistTempl
   submissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutTemplateInputSchema).optional(),
   assignments: z.lazy(() => ChecklistAssignmentCreateNestedManyWithoutTemplateInputSchema).optional(),
   createdBy: z.lazy(() => UserCreateNestedOneWithoutChecklistTemplatesInputSchema),
+  group: z.lazy(() => ChecklistTemplateGroupCreateNestedOneWithoutTemplatesInputSchema).optional(),
 }).strict();
 
 export const ChecklistTemplateUncheckedCreateInputSchema: z.ZodType<Prisma.ChecklistTemplateUncheckedCreateInput> = z.object({
@@ -31440,6 +31582,7 @@ export const ChecklistTemplateUncheckedCreateInputSchema: z.ZodType<Prisma.Check
   version: z.number().int().optional(),
   createdById: z.string(),
   scaleSetId: z.string().optional().nullable(),
+  groupId: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -31461,6 +31604,7 @@ export const ChecklistTemplateUpdateInputSchema: z.ZodType<Prisma.ChecklistTempl
   submissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutTemplateNestedInputSchema).optional(),
   assignments: z.lazy(() => ChecklistAssignmentUpdateManyWithoutTemplateNestedInputSchema).optional(),
   createdBy: z.lazy(() => UserUpdateOneRequiredWithoutChecklistTemplatesNestedInputSchema).optional(),
+  group: z.lazy(() => ChecklistTemplateGroupUpdateOneWithoutTemplatesNestedInputSchema).optional(),
 }).strict();
 
 export const ChecklistTemplateUncheckedUpdateInputSchema: z.ZodType<Prisma.ChecklistTemplateUncheckedUpdateInput> = z.object({
@@ -31470,6 +31614,7 @@ export const ChecklistTemplateUncheckedUpdateInputSchema: z.ZodType<Prisma.Check
   version: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   createdById: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   scaleSetId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  groupId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -31485,6 +31630,7 @@ export const ChecklistTemplateCreateManyInputSchema: z.ZodType<Prisma.ChecklistT
   version: z.number().int().optional(),
   createdById: z.string(),
   scaleSetId: z.string().optional().nullable(),
+  groupId: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -31507,7 +31653,68 @@ export const ChecklistTemplateUncheckedUpdateManyInputSchema: z.ZodType<Prisma.C
   version: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   createdById: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   scaleSetId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  groupId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupCreateInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupCreateInput> = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  description: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  templates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutGroupInputSchema).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupUncheckedCreateInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupUncheckedCreateInput> = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  description: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  templates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutGroupInputSchema).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupUpdateInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  templates: z.lazy(() => ChecklistTemplateUpdateManyWithoutGroupNestedInputSchema).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupUncheckedUpdateInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupUncheckedUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  templates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutGroupNestedInputSchema).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupCreateManyInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupCreateManyInput> = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  description: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const ChecklistTemplateGroupUpdateManyMutationInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupUpdateManyMutationInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupUncheckedUpdateManyInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
@@ -39147,6 +39354,11 @@ export const ChecklistAssignmentListRelationFilterSchema: z.ZodType<Prisma.Check
   none: z.lazy(() => ChecklistAssignmentWhereInputSchema).optional(),
 }).strict();
 
+export const ChecklistTemplateGroupNullableRelationFilterSchema: z.ZodType<Prisma.ChecklistTemplateGroupNullableRelationFilter> = z.object({
+  is: z.lazy(() => ChecklistTemplateGroupWhereInputSchema).optional().nullable(),
+  isNot: z.lazy(() => ChecklistTemplateGroupWhereInputSchema).optional().nullable(),
+}).strict();
+
 export const ChecklistSectionOrderByRelationAggregateInputSchema: z.ZodType<Prisma.ChecklistSectionOrderByRelationAggregateInput> = z.object({
   _count: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
@@ -39162,6 +39374,7 @@ export const ChecklistTemplateCountOrderByAggregateInputSchema: z.ZodType<Prisma
   version: z.lazy(() => SortOrderSchema).optional(),
   createdById: z.lazy(() => SortOrderSchema).optional(),
   scaleSetId: z.lazy(() => SortOrderSchema).optional(),
+  groupId: z.lazy(() => SortOrderSchema).optional(),
   isActive: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
@@ -39178,6 +39391,7 @@ export const ChecklistTemplateMaxOrderByAggregateInputSchema: z.ZodType<Prisma.C
   version: z.lazy(() => SortOrderSchema).optional(),
   createdById: z.lazy(() => SortOrderSchema).optional(),
   scaleSetId: z.lazy(() => SortOrderSchema).optional(),
+  groupId: z.lazy(() => SortOrderSchema).optional(),
   isActive: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
@@ -39190,6 +39404,7 @@ export const ChecklistTemplateMinOrderByAggregateInputSchema: z.ZodType<Prisma.C
   version: z.lazy(() => SortOrderSchema).optional(),
   createdById: z.lazy(() => SortOrderSchema).optional(),
   scaleSetId: z.lazy(() => SortOrderSchema).optional(),
+  groupId: z.lazy(() => SortOrderSchema).optional(),
   isActive: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
@@ -39197,6 +39412,30 @@ export const ChecklistTemplateMinOrderByAggregateInputSchema: z.ZodType<Prisma.C
 
 export const ChecklistTemplateSumOrderByAggregateInputSchema: z.ZodType<Prisma.ChecklistTemplateSumOrderByAggregateInput> = z.object({
   version: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupCountOrderByAggregateInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  description: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupMaxOrderByAggregateInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  description: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupMinOrderByAggregateInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  description: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const ChecklistTemplateRelationFilterSchema: z.ZodType<Prisma.ChecklistTemplateRelationFilter> = z.object({
@@ -49258,6 +49497,12 @@ export const UserCreateNestedOneWithoutChecklistTemplatesInputSchema: z.ZodType<
   connect: z.lazy(() => UserWhereUniqueInputSchema).optional(),
 }).strict();
 
+export const ChecklistTemplateGroupCreateNestedOneWithoutTemplatesInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupCreateNestedOneWithoutTemplatesInput> = z.object({
+  create: z.union([ z.lazy(() => ChecklistTemplateGroupCreateWithoutTemplatesInputSchema), z.lazy(() => ChecklistTemplateGroupUncheckedCreateWithoutTemplatesInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => ChecklistTemplateGroupCreateOrConnectWithoutTemplatesInputSchema).optional(),
+  connect: z.lazy(() => ChecklistTemplateGroupWhereUniqueInputSchema).optional(),
+}).strict();
+
 export const ChecklistSectionUncheckedCreateNestedManyWithoutTemplateInputSchema: z.ZodType<Prisma.ChecklistSectionUncheckedCreateNestedManyWithoutTemplateInput> = z.object({
   create: z.union([ z.lazy(() => ChecklistSectionCreateWithoutTemplateInputSchema), z.lazy(() => ChecklistSectionCreateWithoutTemplateInputSchema).array(), z.lazy(() => ChecklistSectionUncheckedCreateWithoutTemplateInputSchema), z.lazy(() => ChecklistSectionUncheckedCreateWithoutTemplateInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => ChecklistSectionCreateOrConnectWithoutTemplateInputSchema), z.lazy(() => ChecklistSectionCreateOrConnectWithoutTemplateInputSchema).array() ]).optional(),
@@ -49339,6 +49584,16 @@ export const UserUpdateOneRequiredWithoutChecklistTemplatesNestedInputSchema: z.
   update: z.union([ z.lazy(() => UserUpdateToOneWithWhereWithoutChecklistTemplatesInputSchema), z.lazy(() => UserUpdateWithoutChecklistTemplatesInputSchema), z.lazy(() => UserUncheckedUpdateWithoutChecklistTemplatesInputSchema) ]).optional(),
 }).strict();
 
+export const ChecklistTemplateGroupUpdateOneWithoutTemplatesNestedInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupUpdateOneWithoutTemplatesNestedInput> = z.object({
+  create: z.union([ z.lazy(() => ChecklistTemplateGroupCreateWithoutTemplatesInputSchema), z.lazy(() => ChecklistTemplateGroupUncheckedCreateWithoutTemplatesInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => ChecklistTemplateGroupCreateOrConnectWithoutTemplatesInputSchema).optional(),
+  upsert: z.lazy(() => ChecklistTemplateGroupUpsertWithoutTemplatesInputSchema).optional(),
+  disconnect: z.union([ z.boolean(),z.lazy(() => ChecklistTemplateGroupWhereInputSchema) ]).optional(),
+  delete: z.union([ z.boolean(),z.lazy(() => ChecklistTemplateGroupWhereInputSchema) ]).optional(),
+  connect: z.lazy(() => ChecklistTemplateGroupWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => ChecklistTemplateGroupUpdateToOneWithWhereWithoutTemplatesInputSchema), z.lazy(() => ChecklistTemplateGroupUpdateWithoutTemplatesInputSchema), z.lazy(() => ChecklistTemplateGroupUncheckedUpdateWithoutTemplatesInputSchema) ]).optional(),
+}).strict();
+
 export const ChecklistSectionUncheckedUpdateManyWithoutTemplateNestedInputSchema: z.ZodType<Prisma.ChecklistSectionUncheckedUpdateManyWithoutTemplateNestedInput> = z.object({
   create: z.union([ z.lazy(() => ChecklistSectionCreateWithoutTemplateInputSchema), z.lazy(() => ChecklistSectionCreateWithoutTemplateInputSchema).array(), z.lazy(() => ChecklistSectionUncheckedCreateWithoutTemplateInputSchema), z.lazy(() => ChecklistSectionUncheckedCreateWithoutTemplateInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => ChecklistSectionCreateOrConnectWithoutTemplateInputSchema), z.lazy(() => ChecklistSectionCreateOrConnectWithoutTemplateInputSchema).array() ]).optional(),
@@ -49379,6 +49634,48 @@ export const ChecklistAssignmentUncheckedUpdateManyWithoutTemplateNestedInputSch
   update: z.union([ z.lazy(() => ChecklistAssignmentUpdateWithWhereUniqueWithoutTemplateInputSchema), z.lazy(() => ChecklistAssignmentUpdateWithWhereUniqueWithoutTemplateInputSchema).array() ]).optional(),
   updateMany: z.union([ z.lazy(() => ChecklistAssignmentUpdateManyWithWhereWithoutTemplateInputSchema), z.lazy(() => ChecklistAssignmentUpdateManyWithWhereWithoutTemplateInputSchema).array() ]).optional(),
   deleteMany: z.union([ z.lazy(() => ChecklistAssignmentScalarWhereInputSchema), z.lazy(() => ChecklistAssignmentScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const ChecklistTemplateCreateNestedManyWithoutGroupInputSchema: z.ZodType<Prisma.ChecklistTemplateCreateNestedManyWithoutGroupInput> = z.object({
+  create: z.union([ z.lazy(() => ChecklistTemplateCreateWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateCreateWithoutGroupInputSchema).array(), z.lazy(() => ChecklistTemplateUncheckedCreateWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateUncheckedCreateWithoutGroupInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => ChecklistTemplateCreateOrConnectWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateCreateOrConnectWithoutGroupInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => ChecklistTemplateCreateManyGroupInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => ChecklistTemplateWhereUniqueInputSchema), z.lazy(() => ChecklistTemplateWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const ChecklistTemplateUncheckedCreateNestedManyWithoutGroupInputSchema: z.ZodType<Prisma.ChecklistTemplateUncheckedCreateNestedManyWithoutGroupInput> = z.object({
+  create: z.union([ z.lazy(() => ChecklistTemplateCreateWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateCreateWithoutGroupInputSchema).array(), z.lazy(() => ChecklistTemplateUncheckedCreateWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateUncheckedCreateWithoutGroupInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => ChecklistTemplateCreateOrConnectWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateCreateOrConnectWithoutGroupInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => ChecklistTemplateCreateManyGroupInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => ChecklistTemplateWhereUniqueInputSchema), z.lazy(() => ChecklistTemplateWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const ChecklistTemplateUpdateManyWithoutGroupNestedInputSchema: z.ZodType<Prisma.ChecklistTemplateUpdateManyWithoutGroupNestedInput> = z.object({
+  create: z.union([ z.lazy(() => ChecklistTemplateCreateWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateCreateWithoutGroupInputSchema).array(), z.lazy(() => ChecklistTemplateUncheckedCreateWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateUncheckedCreateWithoutGroupInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => ChecklistTemplateCreateOrConnectWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateCreateOrConnectWithoutGroupInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => ChecklistTemplateUpsertWithWhereUniqueWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateUpsertWithWhereUniqueWithoutGroupInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => ChecklistTemplateCreateManyGroupInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => ChecklistTemplateWhereUniqueInputSchema), z.lazy(() => ChecklistTemplateWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => ChecklistTemplateWhereUniqueInputSchema), z.lazy(() => ChecklistTemplateWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => ChecklistTemplateWhereUniqueInputSchema), z.lazy(() => ChecklistTemplateWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => ChecklistTemplateWhereUniqueInputSchema), z.lazy(() => ChecklistTemplateWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => ChecklistTemplateUpdateWithWhereUniqueWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateUpdateWithWhereUniqueWithoutGroupInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => ChecklistTemplateUpdateManyWithWhereWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateUpdateManyWithWhereWithoutGroupInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => ChecklistTemplateScalarWhereInputSchema), z.lazy(() => ChecklistTemplateScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const ChecklistTemplateUncheckedUpdateManyWithoutGroupNestedInputSchema: z.ZodType<Prisma.ChecklistTemplateUncheckedUpdateManyWithoutGroupNestedInput> = z.object({
+  create: z.union([ z.lazy(() => ChecklistTemplateCreateWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateCreateWithoutGroupInputSchema).array(), z.lazy(() => ChecklistTemplateUncheckedCreateWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateUncheckedCreateWithoutGroupInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => ChecklistTemplateCreateOrConnectWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateCreateOrConnectWithoutGroupInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => ChecklistTemplateUpsertWithWhereUniqueWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateUpsertWithWhereUniqueWithoutGroupInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => ChecklistTemplateCreateManyGroupInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => ChecklistTemplateWhereUniqueInputSchema), z.lazy(() => ChecklistTemplateWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => ChecklistTemplateWhereUniqueInputSchema), z.lazy(() => ChecklistTemplateWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => ChecklistTemplateWhereUniqueInputSchema), z.lazy(() => ChecklistTemplateWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => ChecklistTemplateWhereUniqueInputSchema), z.lazy(() => ChecklistTemplateWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => ChecklistTemplateUpdateWithWhereUniqueWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateUpdateWithWhereUniqueWithoutGroupInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => ChecklistTemplateUpdateManyWithWhereWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateUpdateManyWithWhereWithoutGroupInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => ChecklistTemplateScalarWhereInputSchema), z.lazy(() => ChecklistTemplateScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
 export const ChecklistTemplateCreateNestedOneWithoutSectionsInputSchema: z.ZodType<Prisma.ChecklistTemplateCreateNestedOneWithoutSectionsInput> = z.object({
@@ -51217,6 +51514,7 @@ export const ChecklistTemplateCreateWithoutCreatedByInputSchema: z.ZodType<Prism
   sections: z.lazy(() => ChecklistSectionCreateNestedManyWithoutTemplateInputSchema).optional(),
   submissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutTemplateInputSchema).optional(),
   assignments: z.lazy(() => ChecklistAssignmentCreateNestedManyWithoutTemplateInputSchema).optional(),
+  group: z.lazy(() => ChecklistTemplateGroupCreateNestedOneWithoutTemplatesInputSchema).optional(),
 }).strict();
 
 export const ChecklistTemplateUncheckedCreateWithoutCreatedByInputSchema: z.ZodType<Prisma.ChecklistTemplateUncheckedCreateWithoutCreatedByInput> = z.object({
@@ -51225,6 +51523,7 @@ export const ChecklistTemplateUncheckedCreateWithoutCreatedByInputSchema: z.ZodT
   description: z.string().optional().nullable(),
   version: z.number().int().optional(),
   scaleSetId: z.string().optional().nullable(),
+  groupId: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -51945,6 +52244,7 @@ export const ChecklistTemplateScalarWhereInputSchema: z.ZodType<Prisma.Checklist
   version: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
   createdById: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   scaleSetId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  groupId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   isActive: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
@@ -83238,6 +83538,7 @@ export const ChecklistTemplateCreateWithoutScaleSetInputSchema: z.ZodType<Prisma
   submissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutTemplateInputSchema).optional(),
   assignments: z.lazy(() => ChecklistAssignmentCreateNestedManyWithoutTemplateInputSchema).optional(),
   createdBy: z.lazy(() => UserCreateNestedOneWithoutChecklistTemplatesInputSchema),
+  group: z.lazy(() => ChecklistTemplateGroupCreateNestedOneWithoutTemplatesInputSchema).optional(),
 }).strict();
 
 export const ChecklistTemplateUncheckedCreateWithoutScaleSetInputSchema: z.ZodType<Prisma.ChecklistTemplateUncheckedCreateWithoutScaleSetInput> = z.object({
@@ -83246,6 +83547,7 @@ export const ChecklistTemplateUncheckedCreateWithoutScaleSetInputSchema: z.ZodTy
   description: z.string().optional().nullable(),
   version: z.number().int().optional(),
   createdById: z.string(),
+  groupId: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -83651,6 +83953,27 @@ export const UserCreateOrConnectWithoutChecklistTemplatesInputSchema: z.ZodType<
   create: z.union([ z.lazy(() => UserCreateWithoutChecklistTemplatesInputSchema), z.lazy(() => UserUncheckedCreateWithoutChecklistTemplatesInputSchema) ]),
 }).strict();
 
+export const ChecklistTemplateGroupCreateWithoutTemplatesInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupCreateWithoutTemplatesInput> = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  description: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const ChecklistTemplateGroupUncheckedCreateWithoutTemplatesInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupUncheckedCreateWithoutTemplatesInput> = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  description: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const ChecklistTemplateGroupCreateOrConnectWithoutTemplatesInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupCreateOrConnectWithoutTemplatesInput> = z.object({
+  where: z.lazy(() => ChecklistTemplateGroupWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => ChecklistTemplateGroupCreateWithoutTemplatesInputSchema), z.lazy(() => ChecklistTemplateGroupUncheckedCreateWithoutTemplatesInputSchema) ]),
+}).strict();
+
 export const ChecklistScaleSetUpsertWithoutTemplatesInputSchema: z.ZodType<Prisma.ChecklistScaleSetUpsertWithoutTemplatesInput> = z.object({
   update: z.union([ z.lazy(() => ChecklistScaleSetUpdateWithoutTemplatesInputSchema), z.lazy(() => ChecklistScaleSetUncheckedUpdateWithoutTemplatesInputSchema) ]),
   create: z.union([ z.lazy(() => ChecklistScaleSetCreateWithoutTemplatesInputSchema), z.lazy(() => ChecklistScaleSetUncheckedCreateWithoutTemplatesInputSchema) ]),
@@ -83843,6 +84166,89 @@ export const UserUncheckedUpdateWithoutChecklistTemplatesInputSchema: z.ZodType<
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
 }).strict();
 
+export const ChecklistTemplateGroupUpsertWithoutTemplatesInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupUpsertWithoutTemplatesInput> = z.object({
+  update: z.union([ z.lazy(() => ChecklistTemplateGroupUpdateWithoutTemplatesInputSchema), z.lazy(() => ChecklistTemplateGroupUncheckedUpdateWithoutTemplatesInputSchema) ]),
+  create: z.union([ z.lazy(() => ChecklistTemplateGroupCreateWithoutTemplatesInputSchema), z.lazy(() => ChecklistTemplateGroupUncheckedCreateWithoutTemplatesInputSchema) ]),
+  where: z.lazy(() => ChecklistTemplateGroupWhereInputSchema).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupUpdateToOneWithWhereWithoutTemplatesInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupUpdateToOneWithWhereWithoutTemplatesInput> = z.object({
+  where: z.lazy(() => ChecklistTemplateGroupWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => ChecklistTemplateGroupUpdateWithoutTemplatesInputSchema), z.lazy(() => ChecklistTemplateGroupUncheckedUpdateWithoutTemplatesInputSchema) ]),
+}).strict();
+
+export const ChecklistTemplateGroupUpdateWithoutTemplatesInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupUpdateWithoutTemplatesInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupUncheckedUpdateWithoutTemplatesInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupUncheckedUpdateWithoutTemplatesInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const ChecklistTemplateCreateWithoutGroupInputSchema: z.ZodType<Prisma.ChecklistTemplateCreateWithoutGroupInput> = z.object({
+  id: z.string().optional(),
+  title: z.string(),
+  description: z.string().optional().nullable(),
+  version: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  scaleSet: z.lazy(() => ChecklistScaleSetCreateNestedOneWithoutTemplatesInputSchema).optional(),
+  sections: z.lazy(() => ChecklistSectionCreateNestedManyWithoutTemplateInputSchema).optional(),
+  submissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutTemplateInputSchema).optional(),
+  assignments: z.lazy(() => ChecklistAssignmentCreateNestedManyWithoutTemplateInputSchema).optional(),
+  createdBy: z.lazy(() => UserCreateNestedOneWithoutChecklistTemplatesInputSchema),
+}).strict();
+
+export const ChecklistTemplateUncheckedCreateWithoutGroupInputSchema: z.ZodType<Prisma.ChecklistTemplateUncheckedCreateWithoutGroupInput> = z.object({
+  id: z.string().optional(),
+  title: z.string(),
+  description: z.string().optional().nullable(),
+  version: z.number().int().optional(),
+  createdById: z.string(),
+  scaleSetId: z.string().optional().nullable(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  sections: z.lazy(() => ChecklistSectionUncheckedCreateNestedManyWithoutTemplateInputSchema).optional(),
+  submissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutTemplateInputSchema).optional(),
+  assignments: z.lazy(() => ChecklistAssignmentUncheckedCreateNestedManyWithoutTemplateInputSchema).optional(),
+}).strict();
+
+export const ChecklistTemplateCreateOrConnectWithoutGroupInputSchema: z.ZodType<Prisma.ChecklistTemplateCreateOrConnectWithoutGroupInput> = z.object({
+  where: z.lazy(() => ChecklistTemplateWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => ChecklistTemplateCreateWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateUncheckedCreateWithoutGroupInputSchema) ]),
+}).strict();
+
+export const ChecklistTemplateCreateManyGroupInputEnvelopeSchema: z.ZodType<Prisma.ChecklistTemplateCreateManyGroupInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => ChecklistTemplateCreateManyGroupInputSchema), z.lazy(() => ChecklistTemplateCreateManyGroupInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const ChecklistTemplateUpsertWithWhereUniqueWithoutGroupInputSchema: z.ZodType<Prisma.ChecklistTemplateUpsertWithWhereUniqueWithoutGroupInput> = z.object({
+  where: z.lazy(() => ChecklistTemplateWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => ChecklistTemplateUpdateWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateUncheckedUpdateWithoutGroupInputSchema) ]),
+  create: z.union([ z.lazy(() => ChecklistTemplateCreateWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateUncheckedCreateWithoutGroupInputSchema) ]),
+}).strict();
+
+export const ChecklistTemplateUpdateWithWhereUniqueWithoutGroupInputSchema: z.ZodType<Prisma.ChecklistTemplateUpdateWithWhereUniqueWithoutGroupInput> = z.object({
+  where: z.lazy(() => ChecklistTemplateWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => ChecklistTemplateUpdateWithoutGroupInputSchema), z.lazy(() => ChecklistTemplateUncheckedUpdateWithoutGroupInputSchema) ]),
+}).strict();
+
+export const ChecklistTemplateUpdateManyWithWhereWithoutGroupInputSchema: z.ZodType<Prisma.ChecklistTemplateUpdateManyWithWhereWithoutGroupInput> = z.object({
+  where: z.lazy(() => ChecklistTemplateScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => ChecklistTemplateUpdateManyMutationInputSchema), z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutGroupInputSchema) ]),
+}).strict();
+
 export const ChecklistTemplateCreateWithoutSectionsInputSchema: z.ZodType<Prisma.ChecklistTemplateCreateWithoutSectionsInput> = z.object({
   id: z.string().optional(),
   title: z.string(),
@@ -83855,6 +84261,7 @@ export const ChecklistTemplateCreateWithoutSectionsInputSchema: z.ZodType<Prisma
   submissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutTemplateInputSchema).optional(),
   assignments: z.lazy(() => ChecklistAssignmentCreateNestedManyWithoutTemplateInputSchema).optional(),
   createdBy: z.lazy(() => UserCreateNestedOneWithoutChecklistTemplatesInputSchema),
+  group: z.lazy(() => ChecklistTemplateGroupCreateNestedOneWithoutTemplatesInputSchema).optional(),
 }).strict();
 
 export const ChecklistTemplateUncheckedCreateWithoutSectionsInputSchema: z.ZodType<Prisma.ChecklistTemplateUncheckedCreateWithoutSectionsInput> = z.object({
@@ -83864,6 +84271,7 @@ export const ChecklistTemplateUncheckedCreateWithoutSectionsInputSchema: z.ZodTy
   version: z.number().int().optional(),
   createdById: z.string(),
   scaleSetId: z.string().optional().nullable(),
+  groupId: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -83935,6 +84343,7 @@ export const ChecklistTemplateUpdateWithoutSectionsInputSchema: z.ZodType<Prisma
   submissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutTemplateNestedInputSchema).optional(),
   assignments: z.lazy(() => ChecklistAssignmentUpdateManyWithoutTemplateNestedInputSchema).optional(),
   createdBy: z.lazy(() => UserUpdateOneRequiredWithoutChecklistTemplatesNestedInputSchema).optional(),
+  group: z.lazy(() => ChecklistTemplateGroupUpdateOneWithoutTemplatesNestedInputSchema).optional(),
 }).strict();
 
 export const ChecklistTemplateUncheckedUpdateWithoutSectionsInputSchema: z.ZodType<Prisma.ChecklistTemplateUncheckedUpdateWithoutSectionsInput> = z.object({
@@ -83944,6 +84353,7 @@ export const ChecklistTemplateUncheckedUpdateWithoutSectionsInputSchema: z.ZodTy
   version: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   createdById: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   scaleSetId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  groupId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -84125,6 +84535,7 @@ export const ChecklistTemplateCreateWithoutAssignmentsInputSchema: z.ZodType<Pri
   sections: z.lazy(() => ChecklistSectionCreateNestedManyWithoutTemplateInputSchema).optional(),
   submissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutTemplateInputSchema).optional(),
   createdBy: z.lazy(() => UserCreateNestedOneWithoutChecklistTemplatesInputSchema),
+  group: z.lazy(() => ChecklistTemplateGroupCreateNestedOneWithoutTemplatesInputSchema).optional(),
 }).strict();
 
 export const ChecklistTemplateUncheckedCreateWithoutAssignmentsInputSchema: z.ZodType<Prisma.ChecklistTemplateUncheckedCreateWithoutAssignmentsInput> = z.object({
@@ -84134,6 +84545,7 @@ export const ChecklistTemplateUncheckedCreateWithoutAssignmentsInputSchema: z.Zo
   version: z.number().int().optional(),
   createdById: z.string(),
   scaleSetId: z.string().optional().nullable(),
+  groupId: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -84169,6 +84581,7 @@ export const ChecklistTemplateUpdateWithoutAssignmentsInputSchema: z.ZodType<Pri
   sections: z.lazy(() => ChecklistSectionUpdateManyWithoutTemplateNestedInputSchema).optional(),
   submissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutTemplateNestedInputSchema).optional(),
   createdBy: z.lazy(() => UserUpdateOneRequiredWithoutChecklistTemplatesNestedInputSchema).optional(),
+  group: z.lazy(() => ChecklistTemplateGroupUpdateOneWithoutTemplatesNestedInputSchema).optional(),
 }).strict();
 
 export const ChecklistTemplateUncheckedUpdateWithoutAssignmentsInputSchema: z.ZodType<Prisma.ChecklistTemplateUncheckedUpdateWithoutAssignmentsInput> = z.object({
@@ -84178,6 +84591,7 @@ export const ChecklistTemplateUncheckedUpdateWithoutAssignmentsInputSchema: z.Zo
   version: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   createdById: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   scaleSetId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  groupId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -84197,6 +84611,7 @@ export const ChecklistTemplateCreateWithoutSubmissionsInputSchema: z.ZodType<Pri
   sections: z.lazy(() => ChecklistSectionCreateNestedManyWithoutTemplateInputSchema).optional(),
   assignments: z.lazy(() => ChecklistAssignmentCreateNestedManyWithoutTemplateInputSchema).optional(),
   createdBy: z.lazy(() => UserCreateNestedOneWithoutChecklistTemplatesInputSchema),
+  group: z.lazy(() => ChecklistTemplateGroupCreateNestedOneWithoutTemplatesInputSchema).optional(),
 }).strict();
 
 export const ChecklistTemplateUncheckedCreateWithoutSubmissionsInputSchema: z.ZodType<Prisma.ChecklistTemplateUncheckedCreateWithoutSubmissionsInput> = z.object({
@@ -84206,6 +84621,7 @@ export const ChecklistTemplateUncheckedCreateWithoutSubmissionsInputSchema: z.Zo
   version: z.number().int().optional(),
   createdById: z.string(),
   scaleSetId: z.string().optional().nullable(),
+  groupId: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -84521,6 +84937,7 @@ export const ChecklistTemplateUpdateWithoutSubmissionsInputSchema: z.ZodType<Pri
   sections: z.lazy(() => ChecklistSectionUpdateManyWithoutTemplateNestedInputSchema).optional(),
   assignments: z.lazy(() => ChecklistAssignmentUpdateManyWithoutTemplateNestedInputSchema).optional(),
   createdBy: z.lazy(() => UserUpdateOneRequiredWithoutChecklistTemplatesNestedInputSchema).optional(),
+  group: z.lazy(() => ChecklistTemplateGroupUpdateOneWithoutTemplatesNestedInputSchema).optional(),
 }).strict();
 
 export const ChecklistTemplateUncheckedUpdateWithoutSubmissionsInputSchema: z.ZodType<Prisma.ChecklistTemplateUncheckedUpdateWithoutSubmissionsInput> = z.object({
@@ -84530,6 +84947,7 @@ export const ChecklistTemplateUncheckedUpdateWithoutSubmissionsInputSchema: z.Zo
   version: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   createdById: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   scaleSetId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  groupId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -86513,6 +86931,7 @@ export const ChecklistTemplateCreateManyCreatedByInputSchema: z.ZodType<Prisma.C
   description: z.string().optional().nullable(),
   version: z.number().int().optional(),
   scaleSetId: z.string().optional().nullable(),
+  groupId: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -87447,6 +87866,7 @@ export const ChecklistTemplateUpdateWithoutCreatedByInputSchema: z.ZodType<Prism
   sections: z.lazy(() => ChecklistSectionUpdateManyWithoutTemplateNestedInputSchema).optional(),
   submissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutTemplateNestedInputSchema).optional(),
   assignments: z.lazy(() => ChecklistAssignmentUpdateManyWithoutTemplateNestedInputSchema).optional(),
+  group: z.lazy(() => ChecklistTemplateGroupUpdateOneWithoutTemplatesNestedInputSchema).optional(),
 }).strict();
 
 export const ChecklistTemplateUncheckedUpdateWithoutCreatedByInputSchema: z.ZodType<Prisma.ChecklistTemplateUncheckedUpdateWithoutCreatedByInput> = z.object({
@@ -87455,6 +87875,7 @@ export const ChecklistTemplateUncheckedUpdateWithoutCreatedByInputSchema: z.ZodT
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   version: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   scaleSetId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  groupId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -87469,6 +87890,7 @@ export const ChecklistTemplateUncheckedUpdateManyWithoutCreatedByInputSchema: z.
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   version: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   scaleSetId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  groupId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -95686,6 +96108,7 @@ export const ChecklistTemplateCreateManyScaleSetInputSchema: z.ZodType<Prisma.Ch
   description: z.string().optional().nullable(),
   version: z.number().int().optional(),
   createdById: z.string(),
+  groupId: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -95735,6 +96158,7 @@ export const ChecklistTemplateUpdateWithoutScaleSetInputSchema: z.ZodType<Prisma
   submissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutTemplateNestedInputSchema).optional(),
   assignments: z.lazy(() => ChecklistAssignmentUpdateManyWithoutTemplateNestedInputSchema).optional(),
   createdBy: z.lazy(() => UserUpdateOneRequiredWithoutChecklistTemplatesNestedInputSchema).optional(),
+  group: z.lazy(() => ChecklistTemplateGroupUpdateOneWithoutTemplatesNestedInputSchema).optional(),
 }).strict();
 
 export const ChecklistTemplateUncheckedUpdateWithoutScaleSetInputSchema: z.ZodType<Prisma.ChecklistTemplateUncheckedUpdateWithoutScaleSetInput> = z.object({
@@ -95743,6 +96167,7 @@ export const ChecklistTemplateUncheckedUpdateWithoutScaleSetInputSchema: z.ZodTy
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   version: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   createdById: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  groupId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -95757,6 +96182,7 @@ export const ChecklistTemplateUncheckedUpdateManyWithoutScaleSetInputSchema: z.Z
   description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   version: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   createdById: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  groupId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -95966,6 +96392,60 @@ export const ChecklistAssignmentUncheckedUpdateManyWithoutTemplateInputSchema: z
   periodType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   startDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   endDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const ChecklistTemplateCreateManyGroupInputSchema: z.ZodType<Prisma.ChecklistTemplateCreateManyGroupInput> = z.object({
+  id: z.string().optional(),
+  title: z.string(),
+  description: z.string().optional().nullable(),
+  version: z.number().int().optional(),
+  createdById: z.string(),
+  scaleSetId: z.string().optional().nullable(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const ChecklistTemplateUpdateWithoutGroupInputSchema: z.ZodType<Prisma.ChecklistTemplateUpdateWithoutGroupInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  version: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  scaleSet: z.lazy(() => ChecklistScaleSetUpdateOneWithoutTemplatesNestedInputSchema).optional(),
+  sections: z.lazy(() => ChecklistSectionUpdateManyWithoutTemplateNestedInputSchema).optional(),
+  submissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutTemplateNestedInputSchema).optional(),
+  assignments: z.lazy(() => ChecklistAssignmentUpdateManyWithoutTemplateNestedInputSchema).optional(),
+  createdBy: z.lazy(() => UserUpdateOneRequiredWithoutChecklistTemplatesNestedInputSchema).optional(),
+}).strict();
+
+export const ChecklistTemplateUncheckedUpdateWithoutGroupInputSchema: z.ZodType<Prisma.ChecklistTemplateUncheckedUpdateWithoutGroupInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  version: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  createdById: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  scaleSetId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  sections: z.lazy(() => ChecklistSectionUncheckedUpdateManyWithoutTemplateNestedInputSchema).optional(),
+  submissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutTemplateNestedInputSchema).optional(),
+  assignments: z.lazy(() => ChecklistAssignmentUncheckedUpdateManyWithoutTemplateNestedInputSchema).optional(),
+}).strict();
+
+export const ChecklistTemplateUncheckedUpdateManyWithoutGroupInputSchema: z.ZodType<Prisma.ChecklistTemplateUncheckedUpdateManyWithoutGroupInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  version: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  createdById: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  scaleSetId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
@@ -103694,6 +104174,68 @@ export const ChecklistTemplateFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.Chec
   where: ChecklistTemplateWhereUniqueInputSchema, 
 }).strict();
 
+export const ChecklistTemplateGroupFindFirstArgsSchema: z.ZodType<Prisma.ChecklistTemplateGroupFindFirstArgs> = z.object({
+  select: ChecklistTemplateGroupSelectSchema.optional(),
+  include: ChecklistTemplateGroupIncludeSchema.optional(),
+  where: ChecklistTemplateGroupWhereInputSchema.optional(), 
+  orderBy: z.union([ ChecklistTemplateGroupOrderByWithRelationInputSchema.array(), ChecklistTemplateGroupOrderByWithRelationInputSchema ]).optional(),
+  cursor: ChecklistTemplateGroupWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ ChecklistTemplateGroupScalarFieldEnumSchema, ChecklistTemplateGroupScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupFindFirstOrThrowArgsSchema: z.ZodType<Prisma.ChecklistTemplateGroupFindFirstOrThrowArgs> = z.object({
+  select: ChecklistTemplateGroupSelectSchema.optional(),
+  include: ChecklistTemplateGroupIncludeSchema.optional(),
+  where: ChecklistTemplateGroupWhereInputSchema.optional(), 
+  orderBy: z.union([ ChecklistTemplateGroupOrderByWithRelationInputSchema.array(), ChecklistTemplateGroupOrderByWithRelationInputSchema ]).optional(),
+  cursor: ChecklistTemplateGroupWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ ChecklistTemplateGroupScalarFieldEnumSchema, ChecklistTemplateGroupScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupFindManyArgsSchema: z.ZodType<Prisma.ChecklistTemplateGroupFindManyArgs> = z.object({
+  select: ChecklistTemplateGroupSelectSchema.optional(),
+  include: ChecklistTemplateGroupIncludeSchema.optional(),
+  where: ChecklistTemplateGroupWhereInputSchema.optional(), 
+  orderBy: z.union([ ChecklistTemplateGroupOrderByWithRelationInputSchema.array(), ChecklistTemplateGroupOrderByWithRelationInputSchema ]).optional(),
+  cursor: ChecklistTemplateGroupWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ ChecklistTemplateGroupScalarFieldEnumSchema, ChecklistTemplateGroupScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const ChecklistTemplateGroupAggregateArgsSchema: z.ZodType<Prisma.ChecklistTemplateGroupAggregateArgs> = z.object({
+  where: ChecklistTemplateGroupWhereInputSchema.optional(), 
+  orderBy: z.union([ ChecklistTemplateGroupOrderByWithRelationInputSchema.array(), ChecklistTemplateGroupOrderByWithRelationInputSchema ]).optional(),
+  cursor: ChecklistTemplateGroupWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const ChecklistTemplateGroupGroupByArgsSchema: z.ZodType<Prisma.ChecklistTemplateGroupGroupByArgs> = z.object({
+  where: ChecklistTemplateGroupWhereInputSchema.optional(), 
+  orderBy: z.union([ ChecklistTemplateGroupOrderByWithAggregationInputSchema.array(), ChecklistTemplateGroupOrderByWithAggregationInputSchema ]).optional(),
+  by: ChecklistTemplateGroupScalarFieldEnumSchema.array(), 
+  having: ChecklistTemplateGroupScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const ChecklistTemplateGroupFindUniqueArgsSchema: z.ZodType<Prisma.ChecklistTemplateGroupFindUniqueArgs> = z.object({
+  select: ChecklistTemplateGroupSelectSchema.optional(),
+  include: ChecklistTemplateGroupIncludeSchema.optional(),
+  where: ChecklistTemplateGroupWhereUniqueInputSchema, 
+}).strict();
+
+export const ChecklistTemplateGroupFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.ChecklistTemplateGroupFindUniqueOrThrowArgs> = z.object({
+  select: ChecklistTemplateGroupSelectSchema.optional(),
+  include: ChecklistTemplateGroupIncludeSchema.optional(),
+  where: ChecklistTemplateGroupWhereUniqueInputSchema, 
+}).strict();
+
 export const ChecklistSectionFindFirstArgsSchema: z.ZodType<Prisma.ChecklistSectionFindFirstArgs> = z.object({
   select: ChecklistSectionSelectSchema.optional(),
   include: ChecklistSectionIncludeSchema.optional(),
@@ -109784,6 +110326,52 @@ export const ChecklistTemplateUpdateManyArgsSchema: z.ZodType<Prisma.ChecklistTe
 
 export const ChecklistTemplateDeleteManyArgsSchema: z.ZodType<Prisma.ChecklistTemplateDeleteManyArgs> = z.object({
   where: ChecklistTemplateWhereInputSchema.optional(), 
+}).strict();
+
+export const ChecklistTemplateGroupCreateArgsSchema: z.ZodType<Prisma.ChecklistTemplateGroupCreateArgs> = z.object({
+  select: ChecklistTemplateGroupSelectSchema.optional(),
+  include: ChecklistTemplateGroupIncludeSchema.optional(),
+  data: z.union([ ChecklistTemplateGroupCreateInputSchema, ChecklistTemplateGroupUncheckedCreateInputSchema ]),
+}).strict();
+
+export const ChecklistTemplateGroupUpsertArgsSchema: z.ZodType<Prisma.ChecklistTemplateGroupUpsertArgs> = z.object({
+  select: ChecklistTemplateGroupSelectSchema.optional(),
+  include: ChecklistTemplateGroupIncludeSchema.optional(),
+  where: ChecklistTemplateGroupWhereUniqueInputSchema, 
+  create: z.union([ ChecklistTemplateGroupCreateInputSchema, ChecklistTemplateGroupUncheckedCreateInputSchema ]),
+  update: z.union([ ChecklistTemplateGroupUpdateInputSchema, ChecklistTemplateGroupUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const ChecklistTemplateGroupCreateManyArgsSchema: z.ZodType<Prisma.ChecklistTemplateGroupCreateManyArgs> = z.object({
+  data: z.union([ ChecklistTemplateGroupCreateManyInputSchema, ChecklistTemplateGroupCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const ChecklistTemplateGroupCreateManyAndReturnArgsSchema: z.ZodType<Prisma.ChecklistTemplateGroupCreateManyAndReturnArgs> = z.object({
+  data: z.union([ ChecklistTemplateGroupCreateManyInputSchema, ChecklistTemplateGroupCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const ChecklistTemplateGroupDeleteArgsSchema: z.ZodType<Prisma.ChecklistTemplateGroupDeleteArgs> = z.object({
+  select: ChecklistTemplateGroupSelectSchema.optional(),
+  include: ChecklistTemplateGroupIncludeSchema.optional(),
+  where: ChecklistTemplateGroupWhereUniqueInputSchema, 
+}).strict();
+
+export const ChecklistTemplateGroupUpdateArgsSchema: z.ZodType<Prisma.ChecklistTemplateGroupUpdateArgs> = z.object({
+  select: ChecklistTemplateGroupSelectSchema.optional(),
+  include: ChecklistTemplateGroupIncludeSchema.optional(),
+  data: z.union([ ChecklistTemplateGroupUpdateInputSchema, ChecklistTemplateGroupUncheckedUpdateInputSchema ]),
+  where: ChecklistTemplateGroupWhereUniqueInputSchema, 
+}).strict();
+
+export const ChecklistTemplateGroupUpdateManyArgsSchema: z.ZodType<Prisma.ChecklistTemplateGroupUpdateManyArgs> = z.object({
+  data: z.union([ ChecklistTemplateGroupUpdateManyMutationInputSchema, ChecklistTemplateGroupUncheckedUpdateManyInputSchema ]),
+  where: ChecklistTemplateGroupWhereInputSchema.optional(), 
+}).strict();
+
+export const ChecklistTemplateGroupDeleteManyArgsSchema: z.ZodType<Prisma.ChecklistTemplateGroupDeleteManyArgs> = z.object({
+  where: ChecklistTemplateGroupWhereInputSchema.optional(), 
 }).strict();
 
 export const ChecklistSectionCreateArgsSchema: z.ZodType<Prisma.ChecklistSectionCreateArgs> = z.object({

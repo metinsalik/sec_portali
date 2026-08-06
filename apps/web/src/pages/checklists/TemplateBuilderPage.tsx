@@ -18,6 +18,7 @@ export default function TemplateBuilderPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [scaleSetId, setScaleSetId] = useState<string>('');
+  const [groupId, setGroupId] = useState<string>('');
   
   const [sections, setSections] = useState<any[]>([
     {
@@ -38,6 +39,11 @@ export default function TemplateBuilderPage() {
     queryFn: async () => (await api.get('/checklists/categories')).json(),
   });
 
+  const { data: groups = [] } = useQuery({
+    queryKey: ['checklist-groups'],
+    queryFn: async () => (await api.get('/checklists/groups')).json(),
+  });
+
   useEffect(() => {
     if (isEdit) {
       api.get(`/checklists/templates/${id}`).then(async (res) => {
@@ -45,6 +51,7 @@ export default function TemplateBuilderPage() {
         setTitle(data.title);
         setDescription(data.description || '');
         if (data.scaleSetId) setScaleSetId(data.scaleSetId);
+        if (data.groupId) setGroupId(data.groupId);
         if (data.sections && data.sections.length > 0) setSections(data.sections);
       }).catch(err => console.error(err));
     }
@@ -65,7 +72,7 @@ export default function TemplateBuilderPage() {
         return;
       }
 
-      const payload = { title, description, scaleSetId, sections };
+      const payload = { title, description, scaleSetId, groupId, sections };
       if (isEdit) {
         await api.put(`/checklists/templates/${id}`, payload);
         toast.success('Şablon güncellendi');
@@ -127,6 +134,19 @@ export default function TemplateBuilderPage() {
               <div className="space-y-2">
                 <Label>Açıklama</Label>
                 <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Kısa açıklama..." />
+              </div>
+              <div className="space-y-2">
+                <Label>Şablon Grubu (Opsiyonel)</Label>
+                <select
+                  className="w-full p-2 border rounded bg-background"
+                  value={groupId || ''}
+                  onChange={(e) => setGroupId(e.target.value)}
+                >
+                  <option value="">-- Grup Yok --</option>
+                  {groups.map((g: any) => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
               </div>
             </CardContent>
           </Card>

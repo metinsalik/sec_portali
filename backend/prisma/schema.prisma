@@ -2040,6 +2040,7 @@ model ChecklistTemplate {
   version     Int      @default(1)
   createdById String
   scaleSetId  String?
+  groupId     String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -2049,6 +2050,17 @@ model ChecklistTemplate {
   submissions ChecklistSubmission[]
   assignments ChecklistAssignment[]
   createdBy   User                  @relation(fields: [createdById], references: [username])
+  group       ChecklistTemplateGroup? @relation(fields: [groupId], references: [id])
+}
+
+model ChecklistTemplateGroup {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  templates   ChecklistTemplate[]
 }
 
 model ChecklistSection {
