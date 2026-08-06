@@ -509,21 +509,21 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           </Card>
         )}
 
-        <Card className="shadow-sm border-slate-200">
-          <CardContent className="p-5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-100 rounded-bl-full -mr-8 -mt-8 opacity-60" />
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 relative z-10">Açık İş</p>
-            <h3 className="text-3xl font-black text-slate-800 relative z-10">{kpis.open}</h3>
-            <p className="text-xs text-slate-500 mt-1 relative z-10">%{(kpis.total ? Math.round(100 - kpis.completionRate) : 0)} karar kapanmamış</p>
-          </CardContent>
-        </Card>
-
         <Card className={`shadow-sm border-slate-200 cursor-pointer transition-colors ${timeFilter === 'all' ? 'ring-2 ring-indigo-500' : 'hover:bg-slate-50'}`} onClick={() => setTimeFilter('all')}>
           <CardContent className="p-5 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-slate-100 rounded-bl-full -mr-8 -mt-8 opacity-60" />
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 relative z-10">Tümü</p>
             <h3 className="text-3xl font-black text-slate-800 relative z-10">{kpis.total}</h3>
             <p className="text-xs text-slate-500 mt-1 relative z-10">Toplam Kurul Kararı</p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border-slate-200">
+          <CardContent className="p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-100 rounded-bl-full -mr-8 -mt-8 opacity-60" />
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 relative z-10">Açık İş</p>
+            <h3 className="text-3xl font-black text-slate-800 relative z-10">{kpis.open}</h3>
+            <p className="text-xs text-slate-500 mt-1 relative z-10">%{(kpis.total ? Math.round(100 - kpis.completionRate) : 0)} karar kapanmamış</p>
           </CardContent>
         </Card>
 
