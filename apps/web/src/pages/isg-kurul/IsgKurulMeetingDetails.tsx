@@ -31,10 +31,10 @@ const getStatusColor = (status: string) => {
 const getPriorityColor = (p: string) => {
   switch (p) {
     case 'Tolere Gösterilmez Risk': return 'bg-red-600 text-white border-red-700';
-    case 'Yüksek Risk': return 'bg-orange-500 text-white border-orange-600';
-    case 'Önemli Risk': return 'bg-yellow-400 text-slate-800 border-yellow-500';
-    case 'Olası Risk': return 'bg-blue-100 text-blue-700 border-blue-200';
-    case 'Önemsiz Risk': return 'bg-slate-100 text-slate-600 border-slate-200';
+    case 'Yüksek Risk': return 'bg-red-400 text-white border-red-500';
+    case 'Önemli Risk': return 'bg-orange-400 text-white border-orange-500';
+    case 'Olası Risk': return 'bg-amber-400 text-white border-amber-500';
+    case 'Önemsiz Risk': return 'bg-green-500 text-white border-green-600';
     default: return 'bg-slate-100 text-slate-800 border-slate-200';
   }
 };

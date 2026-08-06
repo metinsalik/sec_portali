@@ -22,20 +22,20 @@ const COLORS = {
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
-  'Kritik': '#dc2626', // red-600
-  'Yüksek Riskli': '#f97316', // orange-500
-  'Riskli': '#fbbf24', // amber-400
-  'Orta': '#22c55e', // green-500
-  'Düşük': '#15803d', // green-700
+  'Tolere Gösterilmez Risk': '#dc2626', // red-600
+  'Yüksek Risk': '#f97316', // orange-500
+  'Önemli Risk': '#fbbf24', // amber-400
+  'Olası Risk': '#22c55e', // green-500
+  'Önemsiz Risk': '#15803d', // green-700
   'Belirtilmedi': '#f1f5f9'
 };
 
 const PRIORITY_WEIGHTS: Record<string, number> = {
-  'Kritik': 5,
-  'Yüksek Riskli': 4,
-  'Riskli': 3,
-  'Orta': 2,
-  'Düşük': 1,
+  'Tolere Gösterilmez Risk': 5,
+  'Yüksek Risk': 4,
+  'Önemli Risk': 3,
+  'Olası Risk': 2,
+  'Önemsiz Risk': 1,
 };
 
 export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boolean }) {
@@ -943,9 +943,9 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
                             {isOverdue ? `Gecikmiş - ${d.status}` : d.status}
                           </Badge>
                           <Badge variant="outline" className={`rounded-full px-2 py-0.5 text-[10px] font-medium border block w-max ${
-                            d.priority === 'Kritik' ? 'bg-red-600 text-white border-red-700' : 
-                            d.priority === 'Yüksek Riskli' ? 'bg-orange-500 text-white border-orange-600' :
-                            d.priority === 'Riskli' ? 'bg-amber-400 text-slate-900 border-amber-500' :
+                            d.priority === 'Tolere Gösterilmez Risk' ? 'bg-red-600 text-white border-red-700' : 
+                            d.priority === 'Yüksek Risk' ? 'bg-orange-500 text-white border-orange-600' :
+                            d.priority === 'Önemli Risk' ? 'bg-amber-400 text-slate-900 border-amber-500' :
                             'bg-slate-100 text-slate-600 border-slate-200'
                           }`}>
                             {d.priority || 'Belirtilmedi'}
