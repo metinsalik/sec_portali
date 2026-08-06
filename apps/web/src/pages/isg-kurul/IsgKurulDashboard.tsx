@@ -172,7 +172,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
         } else if (!isClosed) {
           const now = new Date();
           if (timeFilter === 'overdue') {
-            matchTime = d.dueDateType === 'DATE' && d.dueDate && new Date(d.dueDate) < now;
+            matchTime = (d.status === 'Devam Ediyor' || d.status === 'Başlamadı') && d.dueDateType === 'DATE' && d.dueDate && new Date(d.dueDate) < now;
           } else if (timeFilter === 'next30') {
             if (d.dueDateType === 'DATE' && d.dueDate) {
               const diffDays = Math.ceil((new Date(d.dueDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
@@ -180,11 +180,9 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
             } else {
               matchTime = false;
             }
-          } else if (timeFilter === 'undefinedTerm') {
-            matchTime = d.dueDateType !== 'DATE' || !d.dueDate;
           }
         } else {
-          matchTime = false; // if it's closed and we're looking for overdue/next30, it doesn't match
+          matchTime = false;
         }
       }
 
@@ -197,7 +195,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
     const openList = decisionsWithoutTimeFilter.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
     const now = new Date();
     
-    const overdue = openList.filter(d => d.dueDateType === 'DATE' && d.dueDate && new Date(d.dueDate) < now).length;
+    const overdue = openList.filter(d => (d.status === 'Devam Ediyor' || d.status === 'Başlamadı') && d.dueDateType === 'DATE' && d.dueDate && new Date(d.dueDate) < now).length;
     const next30Days = openList.filter(d => {
       if (d.dueDateType !== 'DATE' || !d.dueDate) return false;
       const diffTime = new Date(d.dueDate).getTime() - now.getTime();
@@ -205,9 +203,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       return diffDays >= 0 && diffDays <= 30;
     }).length;
     
-    const undefinedTerm = openList.filter(d => d.dueDateType !== 'DATE' || !d.dueDate).length;
-    
-    return { total, overdue, next30Days, undefinedTerm };
+    return { total, overdue, next30Days };
   }, [decisionsWithoutTimeFilter]);
 
   // Handle Chart Clicks
@@ -230,7 +226,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
     const openList = filteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
     
     const now = new Date();
-    const overdue = openList.filter(d => d.dueDateType === 'DATE' && d.dueDate && new Date(d.dueDate) < now).length;
+    const overdue = openList.filter(d => (d.status === 'Devam Ediyor' || d.status === 'Başlamadı') && d.dueDateType === 'DATE' && d.dueDate && new Date(d.dueDate) < now).length;
     const next30Days = openList.filter(d => {
       if (d.dueDateType !== 'DATE' || !d.dueDate) return false;
       const diffTime = new Date(d.dueDate).getTime() - now.getTime();
@@ -238,10 +234,9 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       return diffDays >= 0 && diffDays <= 30;
     }).length;
     
-    const undefinedTerm = openList.filter(d => d.dueDateType !== 'DATE' || !d.dueDate).length;
     const completionRate = total > 0 ? Math.round((closed / total) * 100) : 0;
 
-    return { total, open: openList.length, overdue, completionRate, closed, undefinedTerm, next30Days };
+    return { total, open: openList.length, overdue, completionRate, closed, next30Days };
   }, [filteredDecisions]);
 
   // Chart Data: Status Distribution
@@ -502,7 +497,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       </div>
 
       {/* KPI Cards */}
-      <div className={`grid grid-cols-2 md:grid-cols-3 ${effectiveFacilityId === 'all' ? 'lg:grid-cols-7' : 'lg:grid-cols-6'} gap-4`}>
+      <div className={`grid grid-cols-2 md:grid-cols-3 ${effectiveFacilityId === 'all' ? 'lg:grid-cols-6' : 'lg:grid-cols-5'} gap-4`}>
         {effectiveFacilityId === 'all' && (
           <Card className="shadow-sm border-slate-200">
             <CardContent className="p-5 relative overflow-hidden">
@@ -547,15 +542,6 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
             <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-2 relative z-10">30 Gün İçinde</p>
             <h3 className="text-3xl font-black text-amber-800 relative z-10">{kpis.next30Days}</h3>
             <p className="text-xs text-amber-600 mt-1 relative z-10">Yaklaşan terminler</p>
-          </CardContent>
-        </Card>
-
-        <Card className={`shadow-sm border-slate-200 cursor-pointer transition-colors ${timeFilter === 'undefinedTerm' ? 'ring-2 ring-slate-400' : 'hover:bg-slate-50'}`} onClick={() => setTimeFilter('undefinedTerm')}>
-          <CardContent className="p-5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-slate-100 rounded-bl-full -mr-8 -mt-8 opacity-60" />
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 relative z-10">Termin Yok</p>
-            <h3 className="text-3xl font-black text-slate-800 relative z-10">{kpis.undefinedTerm}</h3>
-            <p className="text-xs text-slate-500 mt-1 relative z-10">Belirsiz/Sürekli kararlar</p>
           </CardContent>
         </Card>
 
