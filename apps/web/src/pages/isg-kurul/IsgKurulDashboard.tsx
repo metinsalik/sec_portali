@@ -702,6 +702,39 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
             </ResponsiveContainer>
           </CardContent>
         </Card>
+        {/* Category Workload */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-2 border-b border-slate-100">
+            <CardTitle className="text-base font-bold text-slate-800">Kategorilere Göre İş Yükü</CardTitle>
+            <p className="text-xs text-muted-foreground">Açık kararların kategorilere dağılımı</p>
+          </CardHeader>
+          <CardContent className="p-6 space-y-5">
+            {categoryWorkloadData.length > 0 ? categoryWorkloadData.map(w => {
+              const max = Math.max(...categoryWorkloadData.map(d => d.value), 1);
+              const percent = (w.value / max) * 100;
+              return (
+                <div 
+                  key={w.name} 
+                  className={`flex items-center gap-4 group cursor-pointer p-1.5 -mx-1.5 rounded transition-colors ${categoryId === w.id ? 'bg-indigo-50 ring-1 ring-indigo-200' : 'hover:bg-slate-50'}`}
+                  onClick={() => updateFilter('categoryId', categoryId === w.id ? 'all' : w.id)}
+                >
+                  <span className={`w-[120px] text-xs font-medium truncate ${categoryId === w.id ? 'text-indigo-700' : 'text-slate-700'}`} title={w.name}>{w.name}</span>
+                  <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-500 ${categoryId === w.id ? 'bg-indigo-600' : 'bg-indigo-500 group-hover:bg-indigo-600'}`} style={{ width: `${percent}%` }} />
+                  </div>
+                  <span className={`w-6 text-right text-sm font-bold ${categoryId === w.id ? 'text-indigo-700' : 'text-slate-800'}`}>{w.value}</span>
+                </div>
+              )
+            }) : (
+              <div className="text-center py-10 text-slate-400 text-sm">Açık iş yükü bulunmuyor.</div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Row 3: Workload Distribution */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
         {/* Open Task Age */}
         <Card className="shadow-sm relative">
           <CardHeader className="pb-2 border-b border-slate-100 flex flex-row items-center justify-between">
@@ -752,39 +785,6 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
                 </div>
               )
             })}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Row 3: Workload Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        
-        {/* Category Workload */}
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2 border-b border-slate-100">
-            <CardTitle className="text-base font-bold text-slate-800">Kategorilere Göre İş Yükü</CardTitle>
-            <p className="text-xs text-muted-foreground">Açık kararların kategorilere dağılımı</p>
-          </CardHeader>
-          <CardContent className="p-6 space-y-5">
-            {categoryWorkloadData.length > 0 ? categoryWorkloadData.map(w => {
-              const max = Math.max(...categoryWorkloadData.map(d => d.value), 1);
-              const percent = (w.value / max) * 100;
-              return (
-                <div 
-                  key={w.name} 
-                  className={`flex items-center gap-4 group cursor-pointer p-1.5 -mx-1.5 rounded transition-colors ${categoryId === w.id ? 'bg-indigo-50 ring-1 ring-indigo-200' : 'hover:bg-slate-50'}`}
-                  onClick={() => updateFilter('categoryId', categoryId === w.id ? 'all' : w.id)}
-                >
-                  <span className={`w-[120px] text-xs font-medium truncate ${categoryId === w.id ? 'text-indigo-700' : 'text-slate-700'}`} title={w.name}>{w.name}</span>
-                  <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full transition-all duration-500 ${categoryId === w.id ? 'bg-indigo-600' : 'bg-indigo-500 group-hover:bg-indigo-600'}`} style={{ width: `${percent}%` }} />
-                  </div>
-                  <span className={`w-6 text-right text-sm font-bold ${categoryId === w.id ? 'text-indigo-700' : 'text-slate-800'}`}>{w.value}</span>
-                </div>
-              )
-            }) : (
-              <div className="text-center py-10 text-slate-400 text-sm">Açık iş yükü bulunmuyor.</div>
-            )}
           </CardContent>
         </Card>
 
