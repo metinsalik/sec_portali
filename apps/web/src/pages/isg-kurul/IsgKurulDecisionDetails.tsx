@@ -524,7 +524,7 @@ export default function IsgKurulDecisionDetails() {
                                      <Select value={editPriority} onValueChange={setEditPriority}>
                                        <SelectTrigger className="bg-white"><SelectValue placeholder="Değiştirme" /></SelectTrigger>
                                        <SelectContent>
-                                         {['Yüksek Risk', 'Önemli Risk', 'Orta Risk', 'Olası Risk', 'Önemsiz Risk'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                         {['Tolere Gösterilmez Risk', 'Yüksek Risk', 'Önemli Risk', 'Olası Risk', 'Önemsiz Risk'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                                        </SelectContent>
                                      </Select>
                                    </div>
