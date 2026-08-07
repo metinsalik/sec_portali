@@ -526,15 +526,42 @@ router.post('/decisions/:decisionId/actions', async (req: AuthRequest, res: Resp
 router.put('/actions/:actionId', async (req: AuthRequest, res: Response) => {
   try {
     const { actionId } = req.params;
-    const { actionText } = req.body;
+    const { actionText, newStatus, newPriority, newDueDate, newDueDateType } = req.body;
     
     if (!actionText) {
       return res.status(400).json({ error: 'Action text is required' });
     }
 
-    const updatedAction = await prisma.ohsBoardDecisionAction.update({
-      where: { id: actionId },
-      data: { actionText }
+    const updatedAction = await prisma.$transaction(async (tx) => {
+      const action = await tx.ohsBoardDecisionAction.findUnique({
+        where: { id: actionId }
+      });
+
+      if (!action) {
+        throw new Error('Action not found');
+      }
+
+      // 1. Update the action text
+      const updated = await tx.ohsBoardDecisionAction.update({
+        where: { id: actionId },
+        data: { actionText }
+      });
+
+      // 2. Update the decision if requested
+      if (newStatus || newDueDate || newDueDateType || newPriority) {
+        const updateData: any = {};
+        if (newStatus) updateData.status = newStatus;
+        if (newPriority) updateData.priority = newPriority;
+        if (newDueDateType) updateData.dueDateType = newDueDateType;
+        if (newDueDate) updateData.dueDate = new Date(newDueDate);
+
+        await tx.ohsBoardDecision.update({
+          where: { id: action.decisionId },
+          data: updateData
+        });
+      }
+
+      return updated;
     });
     
     res.json(updatedAction);

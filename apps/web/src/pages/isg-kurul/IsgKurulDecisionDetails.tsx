@@ -70,6 +70,10 @@ export default function IsgKurulDecisionDetails() {
 
   const [editingActionId, setEditingActionId] = useState<string | null>(null);
   const [editActionText, setEditActionText] = useState('');
+  const [editStatus, setEditStatus] = useState<string>('');
+  const [editPriority, setEditPriority] = useState<string>('');
+  const [editBudget, setEditBudget] = useState<string>('');
+  const [editDueDate, setEditDueDate] = useState<string>('');
 
   // Fetch Meeting Details
   const { data: meeting, isLoading } = useQuery({
@@ -127,11 +131,19 @@ export default function IsgKurulDecisionDetails() {
   });
 
   const editActionMutation = useMutation({
-    mutationFn: async ({ actionId, text }: { actionId: string, text: string }) => {
+    mutationFn: async ({ actionId, text, status, dueDate, priority, budget }: { actionId: string, text: string, status?: string, dueDate?: string, priority?: string, budget?: string }) => {
+      const payload: any = { actionText: text };
+      if (status) payload.newStatus = status;
+      if (priority) payload.newPriority = priority;
+      if (dueDate) {
+        payload.newDueDate = dueDate;
+        payload.newDueDateType = 'DATE';
+      }
+
       const res = await fetch(`${API}/api/operations/board/actions/${actionId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ actionText: text })
+        body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error('Aksiyon güncellenemedi');
       return res.json();
@@ -141,6 +153,10 @@ export default function IsgKurulDecisionDetails() {
       toast.success('Aksiyon başarıyla güncellendi');
       setEditingActionId(null);
       setEditActionText('');
+      setEditStatus('');
+      setEditPriority('');
+      setEditBudget('');
+      setEditDueDate('');
     }
   });
 
@@ -464,6 +480,17 @@ export default function IsgKurulDecisionDetails() {
                                   <button onClick={() => {
                                       setEditingActionId(action.id);
                                       setEditActionText(action.actionText);
+                                      // Extract budget from action text if it exists
+                                      const budgetMatch = action.actionText.match(/\[Tahmini Bütçe: (.*?)\]/);
+                                      if (budgetMatch) {
+                                        setEditBudget(budgetMatch[1]);
+                                        setEditActionText(action.actionText.replace(/\[Tahmini Bütçe: .*?\]\n\n/, ''));
+                                      } else {
+                                        setEditBudget('');
+                                      }
+                                      setEditStatus('');
+                                      setEditPriority('');
+                                      setEditDueDate('');
                                   }} className="text-slate-400 hover:text-indigo-600 transition-colors" title="Düzenle">
                                     <Edit2 className="w-3.5 h-3.5" />
                                   </button>
@@ -480,17 +507,64 @@ export default function IsgKurulDecisionDetails() {
                           </div>
                           <div className="p-4 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
                             {editingActionId === action.id ? (
-                               <div className="space-y-3">
-                                 <Textarea 
-                                   value={editActionText} 
-                                   onChange={(e) => setEditActionText(e.target.value)} 
-                                   className="min-h-[100px] text-sm" 
-                                 />
-                                 <div className="flex justify-end gap-2">
+                               <div className="space-y-4 p-4 border border-indigo-100 rounded-lg bg-indigo-50/30">
+                                 <h4 className="text-sm font-semibold text-indigo-900 mb-2">Aksiyonu Düzenle</h4>
+                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                   <div className="space-y-1.5">
+                                     <Label className="text-xs font-semibold text-slate-600">Durum Güncelle (Opsiyonel)</Label>
+                                     <Select value={editStatus} onValueChange={setEditStatus}>
+                                       <SelectTrigger className="bg-white"><SelectValue placeholder="Değiştirme" /></SelectTrigger>
+                                       <SelectContent>
+                                         {['Başlamadı', 'Devam Ediyor', 'Tamamlandı', 'İptal Edildi', 'Sürekli Takip', 'Belirsiz'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                       </SelectContent>
+                                     </Select>
+                                   </div>
+                                   <div className="space-y-1.5">
+                                     <Label className="text-xs font-semibold text-slate-600">Öncelik (Opsiyonel)</Label>
+                                     <Select value={editPriority} onValueChange={setEditPriority}>
+                                       <SelectTrigger className="bg-white"><SelectValue placeholder="Değiştirme" /></SelectTrigger>
+                                       <SelectContent>
+                                         {['Yüksek Risk', 'Önemli Risk', 'Orta Risk', 'Olası Risk', 'Önemsiz Risk'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                       </SelectContent>
+                                     </Select>
+                                   </div>
+                                   <div className="space-y-1.5">
+                                     <Label className="text-xs font-semibold text-slate-600">Tahmini Bütçe (Opsiyonel)</Label>
+                                     <Select value={editBudget} onValueChange={setEditBudget}>
+                                       <SelectTrigger className="bg-white"><SelectValue placeholder="Belirtilmedi" /></SelectTrigger>
+                                       <SelectContent>
+                                         {['Masrafsız', 'Düşük (0 - 5.000 TL)', 'Orta (5.000 - 20.000 TL)', 'Yüksek (20.000 - 50.000 TL)', 'Çok Yüksek (50.000 TL+)'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                       </SelectContent>
+                                     </Select>
+                                   </div>
+                                   <div className="space-y-1.5">
+                                     <Label className="text-xs font-semibold text-slate-600">Yeni Termin (Opsiyonel)</Label>
+                                     <Input type="date" value={editDueDate} onChange={(e) => setEditDueDate(e.target.value)} className="bg-white" />
+                                   </div>
+                                 </div>
+                                 <div className="space-y-1.5">
+                                   <Label className="text-xs font-semibold text-slate-600">Aksiyon Notu (Zorunlu)</Label>
+                                   <Textarea 
+                                     value={editActionText} 
+                                     onChange={(e) => setEditActionText(e.target.value)} 
+                                     className="min-h-[100px] text-sm bg-white" 
+                                   />
+                                 </div>
+                                 <div className="flex justify-end gap-2 pt-2">
                                     <Button variant="outline" size="sm" onClick={() => setEditingActionId(null)}>İptal</Button>
                                     <Button 
                                       size="sm" 
-                                      onClick={() => editActionMutation.mutate({ actionId: action.id, text: editActionText })} 
+                                      onClick={() => {
+                                        const finalActionText = editBudget ? `[Tahmini Bütçe: ${editBudget}]\n\n${editActionText}` : editActionText;
+                                        editActionMutation.mutate({ 
+                                          actionId: action.id, 
+                                          text: finalActionText,
+                                          status: editStatus,
+                                          priority: editPriority,
+                                          budget: editBudget,
+                                          dueDate: editDueDate
+                                        });
+                                      }} 
                                       disabled={editActionMutation.isPending || !editActionText.trim()}
                                     >
                                       Kaydet
