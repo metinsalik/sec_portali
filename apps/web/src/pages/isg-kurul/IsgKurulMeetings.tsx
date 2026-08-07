@@ -184,9 +184,11 @@ export default function IsgKurulMeetings() {
               <option key={year} value={year.toString()}>{year}</option>
             ))}
           </select>
-          <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2">
-            <Plus className="w-4 h-4" /> Yeni Toplantı
-          </Button>
+          {selectedFacilityId !== 'all' && (
+            <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2">
+              <Plus className="w-4 h-4" /> Yeni Toplantı
+            </Button>
+          )}
         </div>
       </div>
 
