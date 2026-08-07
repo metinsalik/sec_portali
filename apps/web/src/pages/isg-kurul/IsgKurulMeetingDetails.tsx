@@ -113,36 +113,67 @@ export default function IsgKurulMeetingDetails() {
   const selectedCategory = categories.find((c: any) => c.id.toString() === formData.categoryId);
   const subCategories = selectedCategory?.subCategories || [];
 
-  // Update Meeting Mutation (Overwrites decisions array)
-  const updateMeetingMutation = useMutation({
-    mutationFn: async (updatedDecisions: any[]) => {
-      if (!meeting) return;
-      const payload = {
-        meetingDate: meeting.meetingDate,
-        meetingNo: meeting.meetingNo,
-        decisions: updatedDecisions
-      };
-      const res = await fetch(`${API}/api/operations/board/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
+  // Add Decision Mutation
+  const addDecisionMutation = useMutation({
+    mutationFn: async (decisionData: any) => {
+      const res = await fetch(`${API}/api/operations/board/${id}/decisions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(decisionData)
       });
-      if (!res.ok) throw new Error('İşlem başarısız');
+      if (!res.ok) throw new Error('Karar eklenemedi');
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ohs-board-meeting-details', id] });
-      toast.success('İşlem başarılı');
+      toast.success('Karar eklendi');
       setIsAddDecisionOpen(false);
-      setDeleteIndex(null);
+      setFormData({
+        decisionText: '', categoryId: '', subCategoryId: '', departmentId: '',
+        priority: 'Orta', status: 'Başlamadı', dueDateType: 'DATE', dueDate: '', periodicity: '', remarks: ''
+      });
+    },
+    onError: (error) => toast.error(error.message)
+  });
+
+  // Edit Decision Mutation
+  const editDecisionMutation = useMutation({
+    mutationFn: async ({ decisionId, data }: { decisionId: string, data: any }) => {
+      const res = await fetch(`${API}/api/operations/board/decisions/${decisionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Karar güncellenemedi');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ohs-board-meeting-details', id] });
+      toast.success('Karar güncellendi');
+      setIsAddDecisionOpen(false);
       setEditingIndex(null);
       setFormData({
         decisionText: '', categoryId: '', subCategoryId: '', departmentId: '',
         priority: 'Orta', status: 'Başlamadı', dueDateType: 'DATE', dueDate: '', periodicity: '', remarks: ''
       });
+    },
+    onError: (error) => toast.error(error.message)
+  });
+
+  // Delete Decision Mutation
+  const deleteDecisionMutation = useMutation({
+    mutationFn: async (decisionId: string) => {
+      const res = await fetch(`${API}/api/operations/board/decisions/${decisionId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Karar silinemedi');
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ohs-board-meeting-details', id] });
+      toast.success('Karar silindi');
+      setDeleteIndex(null);
     },
     onError: (error) => toast.error(error.message)
   });
@@ -173,29 +204,24 @@ export default function IsgKurulMeetingDetails() {
       return;
     }
 
-    const currentDecisions = meeting?.decisions || [];
-    let updatedDecisions = [...currentDecisions];
-
     if (editingIndex !== null) {
       // Edit existing
-      updatedDecisions[editingIndex] = {
-        ...updatedDecisions[editingIndex],
-        ...formData
-      };
+      const decisionToEdit = meeting?.decisions[editingIndex];
+      if (decisionToEdit) {
+        editDecisionMutation.mutate({ decisionId: decisionToEdit.id, data: formData });
+      }
     } else {
       // Add new
-      const newDecision = { ...formData };
-      updatedDecisions.push(newDecision);
+      addDecisionMutation.mutate(formData);
     }
-
-    updateMeetingMutation.mutate(updatedDecisions);
   };
 
   const handleDeleteDecision = () => {
     if (deleteIndex === null) return;
-    const currentDecisions = meeting?.decisions || [];
-    const updatedDecisions = currentDecisions.filter((_: any, idx: number) => idx !== deleteIndex);
-    updateMeetingMutation.mutate(updatedDecisions);
+    const decisionToDelete = meeting?.decisions[deleteIndex];
+    if (decisionToDelete) {
+      deleteDecisionMutation.mutate(decisionToDelete.id);
+    }
   };
 
   const openEdit = (decision: any, index: number) => {
@@ -464,7 +490,7 @@ export default function IsgKurulMeetingDetails() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDecisionOpen(false)}>İptal</Button>
-            <Button onClick={handleSaveDecision} disabled={updateMeetingMutation.isPending}>Kaydet</Button>
+            <Button onClick={handleSaveDecision} disabled={addDecisionMutation.isPending || editDecisionMutation.isPending}>Kaydet</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

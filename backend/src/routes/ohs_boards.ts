@@ -386,34 +386,13 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 router.put('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { meetingDate, meetingNo, decisions } = req.body;
+    const { meetingDate, meetingNo } = req.body;
 
-    // Delete existing decisions (cascade will drop actions)
-    await prisma.ohsBoardDecision.deleteMany({
-      where: { meetingId: id }
-    });
-
-    // Update meeting and recreate decisions
     const updatedMeeting = await prisma.ohsBoardMeeting.update({
       where: { id },
       data: {
         meetingDate: new Date(meetingDate),
-        meetingNo,
-        decisions: {
-          create: decisions.map((d: any, index: number) => ({
-            decisionNumber: d.decisionNumber || `${meetingNo}-${index + 1}`,
-            decisionText: d.decisionText,
-            categoryId: Number(d.categoryId),
-            subCategoryId: d.subCategoryId ? Number(d.subCategoryId) : null,
-            departmentId: Number(d.departmentId),
-            priority: d.priority || 'Orta',
-            status: d.status || 'Başlamadı',
-            dueDateType: d.dueDateType || 'DATE',
-            dueDate: d.dueDate ? new Date(d.dueDate) : null,
-            periodicity: d.periodicity || null,
-            remarks: d.remarks || null
-          }))
-        }
+        meetingNo
       },
       include: {
         decisions: true
@@ -423,6 +402,88 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     res.json(updatedMeeting);
   } catch (error) {
     console.error('Error updating meeting:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/operations/board/:id/decisions - Add Decision to Meeting
+router.post('/:id/decisions', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const d = req.body;
+    
+    // Auto-generate decision number if not provided
+    let decisionNumber = d.decisionNumber;
+    if (!decisionNumber) {
+      const meeting = await prisma.ohsBoardMeeting.findUnique({
+        where: { id },
+        include: { decisions: true }
+      });
+      if (!meeting) return res.status(404).json({ error: 'Meeting not found' });
+      decisionNumber = `${meeting.meetingNo}-${meeting.decisions.length + 1}`;
+    }
+
+    const decision = await prisma.ohsBoardDecision.create({
+      data: {
+        meetingId: id,
+        decisionNumber,
+        decisionText: d.decisionText,
+        categoryId: Number(d.categoryId),
+        subCategoryId: d.subCategoryId ? Number(d.subCategoryId) : null,
+        departmentId: Number(d.departmentId),
+        priority: d.priority || 'Orta',
+        status: d.status || 'Başlamadı',
+        dueDateType: d.dueDateType || 'DATE',
+        dueDate: d.dueDate ? new Date(d.dueDate) : null,
+        periodicity: d.periodicity || null,
+        remarks: d.remarks || null
+      }
+    });
+    res.status(201).json(decision);
+  } catch (error) {
+    console.error('Error creating decision:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT /api/operations/board/decisions/:decisionId - Update Decision
+router.put('/decisions/:decisionId', async (req: AuthRequest, res: Response) => {
+  try {
+    const { decisionId } = req.params;
+    const d = req.body;
+    
+    const decision = await prisma.ohsBoardDecision.update({
+      where: { id: decisionId },
+      data: {
+        decisionText: d.decisionText,
+        categoryId: Number(d.categoryId),
+        subCategoryId: d.subCategoryId ? Number(d.subCategoryId) : null,
+        departmentId: Number(d.departmentId),
+        priority: d.priority,
+        status: d.status,
+        dueDateType: d.dueDateType,
+        dueDate: d.dueDate ? new Date(d.dueDate) : null,
+        periodicity: d.periodicity,
+        remarks: d.remarks
+      }
+    });
+    res.json(decision);
+  } catch (error) {
+    console.error('Error updating decision:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/operations/board/decisions/:decisionId
+router.delete('/decisions/:decisionId', async (req: AuthRequest, res: Response) => {
+  try {
+    const { decisionId } = req.params;
+    await prisma.ohsBoardDecision.delete({
+      where: { id: decisionId }
+    });
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting decision:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

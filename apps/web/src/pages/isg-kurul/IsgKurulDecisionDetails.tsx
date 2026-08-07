@@ -75,6 +75,11 @@ export default function IsgKurulDecisionDetails() {
   const [editBudget, setEditBudget] = useState<string>('');
   const [editDueDate, setEditDueDate] = useState<string>('');
 
+  const [isEditDecisionOpen, setIsEditDecisionOpen] = useState(false);
+  const [editDecisionData, setEditDecisionData] = useState({
+    decisionText: '', categoryId: '', subCategoryId: '', departmentId: ''
+  });
+
   // Fetch Meeting Details
   const { data: meeting, isLoading } = useQuery({
     queryKey: ['ohs-board-meeting-details', id],
@@ -93,6 +98,26 @@ export default function IsgKurulDecisionDetails() {
     queryKey: ['settings-facilities'],
     queryFn: async () => {
       const res = await fetch(`${API}/api/settings/facilities`, { headers: { Authorization: `Bearer ${token}` } });
+      return res.json();
+    }
+  });
+
+  // Fetch Categories
+  const { data: categories = [] } = useQuery({
+    queryKey: ['settings-categories'],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/settings/definitions/categories`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('Kategoriler alınamadı');
+      return res.json();
+    }
+  });
+
+  // Fetch Departments
+  const { data: departments = [] } = useQuery({
+    queryKey: ['settings-departments'],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/settings/definitions/departments`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('Departmanlar alınamadı');
       return res.json();
     }
   });
@@ -157,6 +182,23 @@ export default function IsgKurulDecisionDetails() {
       setEditPriority('');
       setEditBudget('');
       setEditDueDate('');
+    }
+  });
+
+  const updateDecisionMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch(`${API}/api/operations/board/decisions/${decisionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Karar güncellenemedi');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ohs-board-meeting-details', id] });
+      toast.success('Karar başarıyla güncellendi');
+      setIsEditDecisionOpen(false);
     }
   });
 
@@ -251,10 +293,106 @@ export default function IsgKurulDecisionDetails() {
               <Badge className={`border px-3 py-1 text-sm font-semibold shadow-sm ${getStatusColor(activeViewDecision.status)}`} variant="outline">
                 {activeViewDecision.status}
               </Badge>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2 h-8 mt-1 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                onClick={() => {
+                  setEditDecisionData({
+                    decisionText: activeViewDecision.decisionText || '',
+                    categoryId: activeViewDecision.categoryId?.toString() || '',
+                    subCategoryId: activeViewDecision.subCategoryId?.toString() || '',
+                    departmentId: activeViewDecision.departmentId?.toString() || '',
+                  });
+                  setIsEditDecisionOpen(true);
+                }}
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                Kararı Düzenle
+              </Button>
             </div>
           </div>
         </div>
       </div>
+      
+      <Dialog open={isEditDecisionOpen} onOpenChange={setIsEditDecisionOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Kararı Düzenle</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Kategori *</Label>
+                <Select 
+                  value={editDecisionData.categoryId} 
+                  onValueChange={(val) => setEditDecisionData({...editDecisionData, categoryId: val, subCategoryId: ''})}
+                >
+                  <SelectTrigger><SelectValue placeholder="Kategori Seçin" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c: any) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {(() => {
+                const selectedCat = categories.find((c: any) => c.id.toString() === editDecisionData.categoryId);
+                const subCats = selectedCat?.subCategories || [];
+                if (subCats.length > 0) {
+                  return (
+                    <div className="space-y-2">
+                      <Label>Alt Kategori</Label>
+                      <Select 
+                        value={editDecisionData.subCategoryId} 
+                        onValueChange={(val) => setEditDecisionData({...editDecisionData, subCategoryId: val})}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Alt Kategori Seçin" /></SelectTrigger>
+                        <SelectContent>
+                          {subCats.map((sc: any) => <SelectItem key={sc.id} value={sc.id.toString()}>{sc.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
+              <div className="space-y-2">
+                <Label>Sorumlu Departman / Birim *</Label>
+                <Select 
+                  value={editDecisionData.departmentId} 
+                  onValueChange={(val) => setEditDecisionData({...editDecisionData, departmentId: val})}
+                >
+                  <SelectTrigger><SelectValue placeholder="Departman Seçin" /></SelectTrigger>
+                  <SelectContent>
+                    {departments.map((d: any) => <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Karar Metni *</Label>
+              <Textarea 
+                placeholder="Alınan karar, yapılacak iş veya gözlem..." 
+                value={editDecisionData.decisionText}
+                onChange={(e) => setEditDecisionData({...editDecisionData, decisionText: e.target.value})}
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsEditDecisionOpen(false)}>İptal</Button>
+            <Button 
+              onClick={() => updateDecisionMutation.mutate(editDecisionData)} 
+              disabled={updateDecisionMutation.isPending || !editDecisionData.decisionText || !editDecisionData.categoryId || !editDecisionData.departmentId}
+            >
+              Kaydet
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Details */}
