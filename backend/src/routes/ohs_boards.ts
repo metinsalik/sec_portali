@@ -412,14 +412,26 @@ router.post('/:id/decisions', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const d = req.body;
     
+    // Validate due date
+    let meeting = await prisma.ohsBoardMeeting.findUnique({
+      where: { id },
+      include: { decisions: true }
+    });
+    if (!meeting) return res.status(404).json({ error: 'Meeting not found' });
+    
+    if (d.dueDate) {
+      const dueDate = new Date(d.dueDate);
+      const meetingDate = new Date(meeting.meetingDate);
+      dueDate.setHours(0,0,0,0);
+      meetingDate.setHours(0,0,0,0);
+      if (dueDate < meetingDate) {
+        return res.status(400).json({ error: 'Termin tarihi toplantı tarihinden önce olamaz.' });
+      }
+    }
+
     // Auto-generate decision number if not provided
     let decisionNumber = d.decisionNumber;
     if (!decisionNumber) {
-      const meeting = await prisma.ohsBoardMeeting.findUnique({
-        where: { id },
-        include: { decisions: true }
-      });
-      if (!meeting) return res.status(404).json({ error: 'Meeting not found' });
       decisionNumber = `${meeting.meetingNo}-${meeting.decisions.length + 1}`;
     }
 
@@ -451,6 +463,23 @@ router.put('/decisions/:decisionId', async (req: AuthRequest, res: Response) => 
   try {
     const { decisionId } = req.params;
     const d = req.body;
+    
+    // Validate due date
+    if (d.dueDate) {
+      const existingDecision = await prisma.ohsBoardDecision.findUnique({
+        where: { id: decisionId },
+        include: { meeting: true }
+      });
+      if (existingDecision?.meeting) {
+        const dueDate = new Date(d.dueDate);
+        const meetingDate = new Date(existingDecision.meeting.meetingDate);
+        dueDate.setHours(0,0,0,0);
+        meetingDate.setHours(0,0,0,0);
+        if (dueDate < meetingDate) {
+          return res.status(400).json({ error: 'Termin tarihi toplantı tarihinden önce olamaz.' });
+        }
+      }
+    }
     
     const decision = await prisma.ohsBoardDecision.update({
       where: { id: decisionId },
@@ -508,6 +537,23 @@ router.post('/decisions/:decisionId/actions', async (req: AuthRequest, res: Resp
     const { decisionId } = req.params;
     const { actionText, newStatus, newDueDate, newDueDateType, newPriority } = req.body;
     const user = getUser(req);
+
+    // Validate due date
+    if (newDueDate) {
+      const existingDecision = await prisma.ohsBoardDecision.findUnique({
+        where: { id: decisionId },
+        include: { meeting: true }
+      });
+      if (existingDecision?.meeting) {
+        const dueDate = new Date(newDueDate);
+        const meetingDate = new Date(existingDecision.meeting.meetingDate);
+        dueDate.setHours(0,0,0,0);
+        meetingDate.setHours(0,0,0,0);
+        if (dueDate < meetingDate) {
+          return res.status(400).json({ error: 'Termin tarihi toplantı tarihinden önce olamaz.' });
+        }
+      }
+    }
 
     // 1. Check if we are reopening a closed decision
     let isReopening = false;
@@ -595,11 +641,23 @@ router.put('/actions/:actionId', async (req: AuthRequest, res: Response) => {
 
     const updatedAction = await prisma.$transaction(async (tx) => {
       const action = await tx.ohsBoardDecisionAction.findUnique({
-        where: { id: actionId }
+        where: { id: actionId },
+        include: { decision: { include: { meeting: true } } }
       });
 
       if (!action) {
         throw new Error('Action not found');
+      }
+
+      // Validate due date
+      if (newDueDate && action.decision?.meeting) {
+        const dueDate = new Date(newDueDate);
+        const meetingDate = new Date(action.decision.meeting.meetingDate);
+        dueDate.setHours(0,0,0,0);
+        meetingDate.setHours(0,0,0,0);
+        if (dueDate < meetingDate) {
+          throw new Error('Termin tarihi toplantı tarihinden önce olamaz.');
+        }
       }
 
       // 1. Update the action text
@@ -626,8 +684,11 @@ router.put('/actions/:actionId', async (req: AuthRequest, res: Response) => {
     });
     
     res.json(updatedAction);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating action:', error);
+    if (error.message === 'Termin tarihi toplantı tarihinden önce olamaz.') {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: 'Internal server error' });
   }
 });
