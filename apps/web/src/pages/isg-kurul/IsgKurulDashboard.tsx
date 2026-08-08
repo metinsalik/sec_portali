@@ -297,18 +297,18 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
     if (isOpen) {
       if (ratio <= 50) return '0-50';
       if (ratio <= 75) return '51-75';
-      if (ratio <= 90) return '76-90';
-      if (ratio <= 100) return '91-100';
-      if (ratio <= 150) return '101-150';
-      if (ratio <= 200) return '151-200';
-      return '200+';
+      if (ratio <= 100) return '76-100';
+      if (ratio <= 200) return '101-200';
+      if (ratio <= 500) return '201-500';
+      if (ratio <= 1000) return '501-1000';
+      return '1000+';
     } else {
       if (ratio <= 75) return '0-75';
       if (ratio <= 100) return '76-100';
-      if (ratio <= 125) return '101-125';
-      if (ratio <= 150) return '126-150';
-      if (ratio <= 200) return '151-200';
-      return '200+';
+      if (ratio <= 200) return '101-200';
+      if (ratio <= 500) return '201-500';
+      if (ratio <= 1000) return '501-1000';
+      return '1000+';
     }
   };
 
@@ -323,20 +323,20 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
     const openBuckets = {
       '0-50': { id: '0-50', label: '≤ %50', state: 'Normal', note: 'Termin süresinin ilk yarısı.', tone: '#6f7d93', count: 0 },
       '51-75': { id: '51-75', label: '%51–75', state: 'İlerleyen', note: 'Sürenin önemli bölümü kullanılmış.', tone: '#8794a8', count: 0 },
-      '76-90': { id: '76-90', label: '%76–90', state: 'İzlenmeli', note: 'Termin sınırına yaklaşmaya başlamış.', tone: '#c6a54b', count: 0 },
-      '91-100': { id: '91-100', label: '%91–100', state: 'Termin Yakın', note: 'Termin süresinin neredeyse tamamı kullanılmış.', tone: '#d58b3b', count: 0 },
-      '101-150': { id: '101-150', label: '%101–150', state: 'Gecikmiş', note: 'Termin aşılmış.', tone: '#d7644f', count: 0 },
-      '151-200': { id: '151-200', label: '%151–200', state: 'Ciddi Gecikmiş', note: 'Termin süresinin 1,5–2 katı kadar açık.', tone: '#bf4e4e', count: 0 },
-      '200+': { id: '200+', label: '%200+', state: 'Kronik', note: 'Termin süresinin iki katından fazla açık.', tone: '#963e46', count: 0 }
+      '76-100': { id: '76-100', label: '%76–100', state: 'Termin Yakın', note: 'Termin süresinin son çeyreği.', tone: '#c6a54b', count: 0 },
+      '101-200': { id: '101-200', label: '%101–200', state: 'Gecikmiş', note: 'Termin süresi aşılmış.', tone: '#d58b3b', count: 0 },
+      '201-500': { id: '201-500', label: '%201–500', state: 'Ciddi Gecikmiş', note: 'Planlanan sürenin 2 ila 5 katı arası geçmiş.', tone: '#d7644f', count: 0 },
+      '501-1000': { id: '501-1000', label: '%501–1000', state: 'Kronik Gecikmiş', note: 'Planlanan sürenin 5 ila 10 katı arası geçmiş.', tone: '#bf4e4e', count: 0 },
+      '1000+': { id: '1000+', label: '%1000+', state: 'Aşırı Gecikmiş', note: 'Planlanan sürenin 10 katından fazla açık.', tone: '#963e46', count: 0 }
     };
 
     const closedBuckets = {
       '0-75': { id: '0-75', label: '≤ %75', state: 'Erken Tamamlandı', note: "Planlanan sürenin en fazla %75'i kullanılarak kapatıldı.", tone: '#6f7d93', count: 0 },
       '76-100': { id: '76-100', label: '%76–100', state: 'Termininde', note: 'Termin süresi aşılmadan kapatıldı.', tone: '#8794a8', count: 0 },
-      '101-125': { id: '101-125', label: '%101–125', state: 'Hafif Gecikmeli', note: "Planlanan sürenin %25'ine kadar aşım ile kapatıldı.", tone: '#c6a54b', count: 0 },
-      '126-150': { id: '126-150', label: '%126–150', state: 'Gecikmeli', note: 'Planlanan sürenin %26–50 üzerinde kapatıldı.', tone: '#d58b3b', count: 0 },
-      '151-200': { id: '151-200', label: '%151–200', state: 'Ciddi Gecikmeli', note: 'Planlanan sürenin 1,5–2 katında kapatıldı.', tone: '#d7644f', count: 0 },
-      '200+': { id: '200+', label: '%200+', state: 'Çok Gecikmeli', note: 'Planlanan sürenin iki katından daha uzun sürede kapatıldı.', tone: '#963e46', count: 0 }
+      '101-200': { id: '101-200', label: '%101–200', state: 'Gecikmeli', note: 'Planlanan sürenin 2 katına kadar sürede kapatıldı.', tone: '#c6a54b', count: 0 },
+      '201-500': { id: '201-500', label: '%201–500', state: 'Ciddi Gecikmeli', note: 'Planlanan sürenin 2 ila 5 katı sürede kapatıldı.', tone: '#d58b3b', count: 0 },
+      '501-1000': { id: '501-1000', label: '%501–1000', state: 'Çok Gecikmeli', note: 'Planlanan sürenin 5 ila 10 katı sürede kapatıldı.', tone: '#d7644f', count: 0 },
+      '1000+': { id: '1000+', label: '%1000+', state: 'Aşırı Gecikmeli', note: 'Planlanan sürenin 10 katından daha uzun sürede kapatıldı.', tone: '#963e46', count: 0 }
     };
 
     filteredDecisions.forEach(d => {
@@ -889,7 +889,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
                 <div className="text-xs text-slate-500 mb-1">Kronik Açık Karar</div>
                 <div className="text-xl font-[850] text-slate-900">{terminStats.open[terminStats.open.length-1].count.toLocaleString('tr-TR')}</div>
-                <div className="text-[11px] text-slate-500 mt-0.5">%200+ termin kullanım oranı</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">%1000+ termin kullanım oranı</div>
               </div>
             </div>
 
@@ -974,8 +974,8 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
               </div>
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
                 <div className="text-xs text-slate-500 mb-1">Ciddi Gecikmeli Kapanan</div>
-                <div className="text-xl font-[850] text-slate-900">{terminStats.closed.slice(4).reduce((s,d)=>s+d.count,0).toLocaleString('tr-TR')}</div>
-                <div className="text-[11px] text-slate-500 mt-0.5">%150+ gerçekleşme oranı</div>
+                <div className="text-xl font-[850] text-slate-900">{terminStats.closed.slice(3).reduce((s,d)=>s+d.count,0).toLocaleString('tr-TR')}</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">%200+ gerçekleşme oranı</div>
               </div>
             </div>
 
@@ -1218,6 +1218,11 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           </Card>
         </div>
       </div>
+
+      <div className="mt-6 bg-white border border-slate-200 rounded-xl p-5 shadow-sm text-sm text-slate-600 leading-relaxed">
+        <strong className="text-slate-900">Metodoloji:</strong> Açık karar kartı "bugüne kadar geçen süreyi", kapalı karar kartı ise "karar tarihinden gerçek kapanış tarihine kadar geçen süreyi" planlanan termin süresine oranlar. Böylece 30 günlük, 90 günlük veya 180 günlük kararlar aynı ölçekte karşılaştırılabilir. Kapalı kararlarda temel performans göstergesi <strong className="text-slate-900">Termin Uyum Oranı</strong>dır.
+      </div>
+
       {/* Public View Decision Dialog */}
       {isPublic && (
         <Dialog open={!!selectedPublicDecision} onOpenChange={(open) => !open && setSelectedPublicDecision(null)}>
