@@ -355,9 +355,10 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
   const facilityDistribution = useMemo(() => {
     // First, filter by the age bucket but NOT by the specific facility
     const bucketDecisions = filteredDecisions.filter(d => {
-      const isClosed = d.status === 'Tamamlandı' || d.status === 'İptal Edildi';
-      if (isClosed) return false;
       if (urlAgeBucket !== 'all') {
+        const isClosed = d.status === 'Tamamlandı' || d.status === 'İptal Edildi';
+        if (isClosed) return false;
+        
         const diffTime = new Date().getTime() - new Date(d.meetingDate).getTime();
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
         if (urlAgeBucket === '0-30' && diffDays > 30) return false;
