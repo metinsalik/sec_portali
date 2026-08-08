@@ -9,7 +9,7 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 import { Badge } from '@/components/ui/badge';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 const API = import.meta.env.VITE_API_URL || '';
 
 const COLORS = {
@@ -543,6 +543,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
   }, [finalFilteredDecisions]);
 
   return (
+    <TooltipProvider delay={0}>
     <div className="space-y-6 max-w-[1600px] mx-auto pb-10">
       
       {/* Top Search Bar */}
@@ -845,32 +846,41 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
                 const isActive = urlOpenTerminBucket === t.id;
                 
                 return (
-                  <div 
-                    key={t.id} 
-                    title={`${t.label} · ${t.state}\n${t.note}`}
-                    className={`grid grid-cols-[110px_1fr_60px_60px] items-center gap-3 cursor-pointer p-1 rounded-xl transition-all min-h-[42px] ${isActive ? 'bg-slate-50 ring-2 ring-slate-200' : 'hover:bg-slate-50'}`}
-                    onClick={() => {
-                      if (isActive) {
-                        searchParams.delete('openTermin');
-                        searchParams.delete('facility');
-                      } else {
-                        searchParams.set('openTermin', t.id);
-                        searchParams.delete('closedTermin');
-                        searchParams.delete('facility');
-                      }
-                      setSearchParams(searchParams);
-                    }}
-                  >
-                    <div className="text-[13px] font-[750] text-slate-800 px-1">{t.label}</div>
-                    <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                  <UITooltip key={t.id}>
+                    <TooltipTrigger asChild>
                       <div 
-                        className="h-full rounded-full transition-all duration-700" 
-                        style={{ width: `${percentBar}%`, backgroundColor: t.tone }}
-                      />
-                    </div>
-                    <div className="text-right text-[13px] font-[800] text-slate-900">{t.count.toLocaleString('tr-TR')}</div>
-                    <div className="text-right text-[13px] text-slate-500 pr-1">%{(percentVal).toFixed(1).replace('.',',')}</div>
-                  </div>
+                        className={`grid grid-cols-[110px_1fr_60px_60px] items-center gap-3 cursor-pointer p-1 rounded-xl transition-all min-h-[42px] ${isActive ? 'bg-slate-50 ring-2 ring-slate-200' : 'hover:bg-slate-50'}`}
+                        onClick={() => {
+                          if (isActive) {
+                            searchParams.delete('openTermin');
+                            searchParams.delete('facility');
+                          } else {
+                            searchParams.set('openTermin', t.id);
+                            searchParams.delete('closedTermin');
+                            searchParams.delete('facility');
+                          }
+                          setSearchParams(searchParams);
+                        }}
+                      >
+                        <div className="text-[13px] font-[750] text-slate-800 px-1">{t.label}</div>
+                        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full rounded-full transition-all duration-700" 
+                            style={{ width: `${percentBar}%`, backgroundColor: t.tone }}
+                          />
+                        </div>
+                        <div className="text-right text-[13px] font-[800] text-slate-900">{t.count.toLocaleString('tr-TR')}</div>
+                        <div className="text-right text-[13px] text-slate-500 pr-1">%{(percentVal).toFixed(1).replace('.',',')}</div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="bg-slate-900 text-slate-50 border-slate-800">
+                      <div className="flex flex-col gap-1 w-64 p-1">
+                        <div className="font-bold border-b border-slate-700 pb-2 mb-1">{t.label} • {t.state}</div>
+                        <div className="text-slate-300 mb-1"><strong className="text-white">{t.count.toLocaleString('tr-TR')}</strong> karar • %{(percentVal).toFixed(1).replace('.',',')}</div>
+                        <div className="text-slate-400 text-xs leading-relaxed">{t.note}</div>
+                      </div>
+                    </TooltipContent>
+                  </UITooltip>
                 )
               })}
             </div>
@@ -931,32 +941,41 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
                 const isActive = urlClosedTerminBucket === t.id;
                 
                 return (
-                  <div 
-                    key={t.id} 
-                    title={`${t.label} · ${t.state}\n${t.note}`}
-                    className={`grid grid-cols-[110px_1fr_60px_60px] items-center gap-3 cursor-pointer p-1 rounded-xl transition-all min-h-[42px] ${isActive ? 'bg-slate-50 ring-2 ring-slate-200' : 'hover:bg-slate-50'}`}
-                    onClick={() => {
-                      if (isActive) {
-                        searchParams.delete('closedTermin');
-                        searchParams.delete('facility');
-                      } else {
-                        searchParams.set('closedTermin', t.id);
-                        searchParams.delete('openTermin');
-                        searchParams.delete('facility');
-                      }
-                      setSearchParams(searchParams);
-                    }}
-                  >
-                    <div className="text-[13px] font-[750] text-slate-800 px-1">{t.label}</div>
-                    <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                  <UITooltip key={t.id}>
+                    <TooltipTrigger asChild>
                       <div 
-                        className="h-full rounded-full transition-all duration-700" 
-                        style={{ width: `${percentBar}%`, backgroundColor: t.tone }}
-                      />
-                    </div>
-                    <div className="text-right text-[13px] font-[800] text-slate-900">{t.count.toLocaleString('tr-TR')}</div>
-                    <div className="text-right text-[13px] text-slate-500 pr-1">%{(percentVal).toFixed(1).replace('.',',')}</div>
-                  </div>
+                        className={`grid grid-cols-[110px_1fr_60px_60px] items-center gap-3 cursor-pointer p-1 rounded-xl transition-all min-h-[42px] ${isActive ? 'bg-slate-50 ring-2 ring-slate-200' : 'hover:bg-slate-50'}`}
+                        onClick={() => {
+                          if (isActive) {
+                            searchParams.delete('closedTermin');
+                            searchParams.delete('facility');
+                          } else {
+                            searchParams.set('closedTermin', t.id);
+                            searchParams.delete('openTermin');
+                            searchParams.delete('facility');
+                          }
+                          setSearchParams(searchParams);
+                        }}
+                      >
+                        <div className="text-[13px] font-[750] text-slate-800 px-1">{t.label}</div>
+                        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full rounded-full transition-all duration-700" 
+                            style={{ width: `${percentBar}%`, backgroundColor: t.tone }}
+                          />
+                        </div>
+                        <div className="text-right text-[13px] font-[800] text-slate-900">{t.count.toLocaleString('tr-TR')}</div>
+                        <div className="text-right text-[13px] text-slate-500 pr-1">%{(percentVal).toFixed(1).replace('.',',')}</div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="bg-slate-900 text-slate-50 border-slate-800">
+                      <div className="flex flex-col gap-1 w-64 p-1">
+                        <div className="font-bold border-b border-slate-700 pb-2 mb-1">{t.label} • {t.state}</div>
+                        <div className="text-slate-300 mb-1"><strong className="text-white">{t.count.toLocaleString('tr-TR')}</strong> karar • %{(percentVal).toFixed(1).replace('.',',')}</div>
+                        <div className="text-slate-400 text-xs leading-relaxed">{t.note}</div>
+                      </div>
+                    </TooltipContent>
+                  </UITooltip>
                 )
               })}
             </div>
@@ -1300,5 +1319,6 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
         </Dialog>
       )}
     </div>
+    </TooltipProvider>
   );
 }
