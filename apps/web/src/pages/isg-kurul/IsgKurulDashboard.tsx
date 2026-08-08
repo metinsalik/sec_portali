@@ -464,7 +464,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
         count
       };
     }).sort((a, b) => b.count - a.count);
-  }, [filteredDecisions, urlAgeBucket, meetings, facilities]);
+  }, [filteredDecisions, urlOpenTerminBucket, urlClosedTerminBucket, meetings, facilities]);
 
   // Category Workload
   const categoryWorkloadData = useMemo(() => {
@@ -980,7 +980,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           <CardHeader className="pb-2 border-b border-indigo-50/50 flex flex-row items-center justify-between bg-indigo-50/30">
             <div>
               <CardTitle className="text-base font-bold text-indigo-900">
-                Tesislerin Karar Dağılımı {urlAgeBucket !== 'all' ? `(${openTaskAge.find(b => b.id === urlAgeBucket)?.label} Bekleyen)` : ''}
+                Tesislerin Karar Dağılımı {urlOpenTerminBucket !== 'all' ? `(${terminStats.open.find(b => b.id === urlOpenTerminBucket)?.label} Açık)` : (urlClosedTerminBucket !== 'all' ? `(${terminStats.closed.find(b => b.id === urlClosedTerminBucket)?.label} Kapalı)` : '')}
               </CardTitle>
               <p className="text-xs text-indigo-700/70">Toplam karar dağılımı (Adet)</p>
             </div>
