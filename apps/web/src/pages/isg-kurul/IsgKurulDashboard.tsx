@@ -634,8 +634,8 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
             <CardContent className="p-5 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-100 rounded-bl-full -mr-8 -mt-8 opacity-60" />
               <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 relative z-10">Tesis Sayısı</p>
-              <h3 className="text-3xl font-black text-slate-800 relative z-10">{new Set(meetings.map((m: any) => m.facilityId)).size}</h3>
-              <p className="text-xs text-slate-500 mt-1 relative z-10">Kapsamdaki tesisler</p>
+              <h3 className="text-3xl font-black text-slate-800 relative z-10">{facilities.length}</h3>
+              <p className="text-xs text-slate-500 mt-1 relative z-10">Aktif Hastaneler</p>
             </CardContent>
           </Card>
         )}
