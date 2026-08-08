@@ -847,7 +847,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
                 
                 return (
                   <UITooltip key={t.id}>
-                    <TooltipTrigger asChild>
+                    <TooltipTrigger className="block w-full p-0 bg-transparent border-none m-0 text-left focus:outline-none">
                       <div 
                         className={`grid grid-cols-[110px_1fr_60px_60px] items-center gap-3 cursor-pointer p-1 rounded-xl transition-all min-h-[42px] ${isActive ? 'bg-slate-50 ring-2 ring-slate-200' : 'hover:bg-slate-50'}`}
                         onClick={() => {
@@ -863,7 +863,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
                         }}
                       >
                         <div className="text-[13px] font-[750] text-slate-800 px-1">{t.label}</div>
-                        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden w-full">
                           <div 
                             className="h-full rounded-full transition-all duration-700" 
                             style={{ width: `${percentBar}%`, backgroundColor: t.tone }}
@@ -942,7 +942,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
                 
                 return (
                   <UITooltip key={t.id}>
-                    <TooltipTrigger asChild>
+                    <TooltipTrigger className="block w-full p-0 bg-transparent border-none m-0 text-left focus:outline-none">
                       <div 
                         className={`grid grid-cols-[110px_1fr_60px_60px] items-center gap-3 cursor-pointer p-1 rounded-xl transition-all min-h-[42px] ${isActive ? 'bg-slate-50 ring-2 ring-slate-200' : 'hover:bg-slate-50'}`}
                         onClick={() => {
@@ -958,7 +958,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
                         }}
                       >
                         <div className="text-[13px] font-[750] text-slate-800 px-1">{t.label}</div>
-                        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden w-full">
                           <div 
                             className="h-full rounded-full transition-all duration-700" 
                             style={{ width: `${percentBar}%`, backgroundColor: t.tone }}
