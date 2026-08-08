@@ -449,22 +449,26 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
     });
 
     const dist: Record<string, number> = {};
+    facilities.forEach((f: any) => {
+      dist[f.id] = 0;
+    });
+
     bucketDecisions.forEach(d => {
       const meeting = meetings.find((m: any) => m.id === d.meetingId);
       const facilityId = meeting?.facilityId;
-      if (facilityId) {
-        dist[facilityId] = (dist[facilityId] || 0) + 1;
+      if (facilityId && dist[facilityId] !== undefined) {
+        dist[facilityId] += 1;
       }
     });
 
-    return Object.entries(dist).map(([fId, count]) => {
-      const f = facilities.find((f: any) => f.id === fId);
-      return {
-        id: fId,
-        name: f?.shortName || f?.name || 'Bilinmiyor',
-        count
-      };
-    }).sort((a, b) => b.count - a.count);
+    return facilities.map((f: any) => ({
+      id: f.id,
+      name: f.shortName || f.name || 'Bilinmiyor',
+      count: dist[f.id] || 0
+    })).sort((a: any, b: any) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.name.localeCompare(b.name);
+    });
   }, [filteredDecisions, urlOpenTerminBucket, urlClosedTerminBucket, meetings, facilities]);
 
   // Category Workload
