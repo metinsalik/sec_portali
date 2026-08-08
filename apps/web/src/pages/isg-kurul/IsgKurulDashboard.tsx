@@ -144,10 +144,20 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
     enabled: !isPublic
   });
 
-  const meetings = isPublic ? (publicData?.meetings || []) : authMeetings;
-  const categories = isPublic ? (publicData?.categories || []) : authCategories;
-  const departments = isPublic ? (publicData?.departments || []) : authDepartments;
-  const facilities = isPublic ? (publicData?.facilities || []) : authFacilities;
+  const rawMeetings = isPublic ? (publicData?.meetings || []) : (authMeetings || []);
+  const rawFacilities = isPublic ? (publicData?.facilities || []) : (authFacilities || []);
+  
+  const facilities = useMemo(() => {
+    return rawFacilities.filter((f: any) => f.isActive && f.type === 'Hastane');
+  }, [rawFacilities]);
+
+  const meetings = useMemo(() => {
+    const facIds = new Set(facilities.map((f: any) => f.id));
+    return rawMeetings.filter((m: any) => facIds.has(m.facilityId));
+  }, [rawMeetings, facilities]);
+
+  const categories = isPublic ? (publicData?.categories || []) : (authCategories || []);
+  const departments = isPublic ? (publicData?.departments || []) : (authDepartments || []);
 
   // Unique Years & Filtered Meetings
   const allDecisionsUnfiltered = useMemo(() => {
