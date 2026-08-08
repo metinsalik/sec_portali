@@ -287,6 +287,52 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
     return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => (PRIORITY_WEIGHTS[b.name] || 0) - (PRIORITY_WEIGHTS[a.name] || 0));
   }, [filteredDecisions]);
 
+  // Helper to calculate termin performance
+  const getTerminInfo = (d: any) => {
+    if (!d.dueDate || d.dueDateType !== 'DATE') return { ratio: null, isPeriodic: true, hasError: false };
+    
+    const dueDate = new Date(d.dueDate).getTime();
+    const meetingDate = new Date(d.meetingDate).getTime();
+    
+    if (dueDate <= meetingDate) return { ratio: null, isPeriodic: false, hasError: true };
+
+    const plannedDuration = dueDate - meetingDate;
+    const isClosed = d.status === 'Tamamlandı';
+    
+    if (isClosed) {
+      let closedTime = d.updatedAt ? new Date(d.updatedAt).getTime() : new Date().getTime();
+      if (d.actions && d.actions.length > 0) {
+        closedTime = new Date(d.actions[0].createdAt).getTime();
+      }
+      let actualDuration = closedTime - meetingDate;
+      if (actualDuration < 0) actualDuration = 0;
+      return { ratio: (actualDuration / plannedDuration) * 100, isPeriodic: false, hasError: false };
+    } else {
+      let actualDuration = new Date().getTime() - meetingDate;
+      if (actualDuration < 0) actualDuration = 0;
+      return { ratio: (actualDuration / plannedDuration) * 100, isPeriodic: false, hasError: false };
+    }
+  };
+
+  const getBucketInfo = (ratio: number, isOpen: boolean) => {
+    if (isOpen) {
+      if (ratio <= 50) return '0-50';
+      if (ratio <= 75) return '51-75';
+      if (ratio <= 90) return '76-90';
+      if (ratio <= 100) return '91-100';
+      if (ratio <= 150) return '101-150';
+      if (ratio <= 200) return '151-200';
+      return '200+';
+    } else {
+      if (ratio <= 75) return '0-75';
+      if (ratio <= 100) return '76-100';
+      if (ratio <= 125) return '101-125';
+      if (ratio <= 150) return '126-150';
+      if (ratio <= 200) return '151-200';
+      return '200+';
+    }
+  };
+
   // Termin Statistics
   const terminStats = useMemo(() => {
     let openMissingTermin = 0;
@@ -355,51 +401,6 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
     };
   }, [filteredDecisions]);
 
-  // Helper to calculate termin performance
-  const getTerminInfo = (d: any) => {
-    if (!d.dueDate || d.dueDateType !== 'DATE') return { ratio: null, isPeriodic: true, hasError: false };
-    
-    const dueDate = new Date(d.dueDate).getTime();
-    const meetingDate = new Date(d.meetingDate).getTime();
-    
-    if (dueDate <= meetingDate) return { ratio: null, isPeriodic: false, hasError: true };
-
-    const plannedDuration = dueDate - meetingDate;
-    const isClosed = d.status === 'Tamamlandı';
-    
-    if (isClosed) {
-      let closedTime = d.updatedAt ? new Date(d.updatedAt).getTime() : new Date().getTime();
-      if (d.actions && d.actions.length > 0) {
-        closedTime = new Date(d.actions[0].createdAt).getTime();
-      }
-      let actualDuration = closedTime - meetingDate;
-      if (actualDuration < 0) actualDuration = 0;
-      return { ratio: (actualDuration / plannedDuration) * 100, isPeriodic: false, hasError: false };
-    } else {
-      let actualDuration = new Date().getTime() - meetingDate;
-      if (actualDuration < 0) actualDuration = 0;
-      return { ratio: (actualDuration / plannedDuration) * 100, isPeriodic: false, hasError: false };
-    }
-  };
-
-  const getBucketInfo = (ratio: number, isOpen: boolean) => {
-    if (isOpen) {
-      if (ratio <= 50) return '0-50';
-      if (ratio <= 75) return '51-75';
-      if (ratio <= 90) return '76-90';
-      if (ratio <= 100) return '91-100';
-      if (ratio <= 150) return '101-150';
-      if (ratio <= 200) return '151-200';
-      return '200+';
-    } else {
-      if (ratio <= 75) return '0-75';
-      if (ratio <= 100) return '76-100';
-      if (ratio <= 125) return '101-125';
-      if (ratio <= 150) return '126-150';
-      if (ratio <= 200) return '151-200';
-      return '200+';
-    }
-  };
 
   // Final Filtered Decisions (Applies URL filters)
   const finalFilteredDecisions = useMemo(() => {
