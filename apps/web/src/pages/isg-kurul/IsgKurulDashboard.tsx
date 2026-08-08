@@ -469,9 +469,8 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
 
   // Category Workload
   const categoryWorkloadData = useMemo(() => {
-    const openList = finalFilteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
     const counts: Record<string, { id: string, count: number }> = {};
-    openList.forEach(d => {
+    finalFilteredDecisions.forEach(d => {
       const cat = categories.find((c: any) => c.id === d.categoryId);
       const catName = cat?.name || 'Bilinmiyor';
       if (!counts[catName]) counts[catName] = { id: d.categoryId?.toString() || 'all', count: 0 };
@@ -482,9 +481,8 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
 
   // Responsible Workload
   const workloadData = useMemo(() => {
-    const openList = finalFilteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
     const counts: Record<string, number> = {};
-    openList.forEach(d => {
+    finalFilteredDecisions.forEach(d => {
       const dept = departments.find((dept: any) => dept.id === d.departmentId);
       const deptName = dept?.name || 'Bilinmiyor';
       counts[deptName] = (counts[deptName] || 0) + 1;
@@ -757,7 +755,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
         <Card className="shadow-sm">
           <CardHeader className="pb-2 border-b border-slate-100">
             <CardTitle className="text-base font-bold text-slate-800">Kategorilere Göre İş Yükü</CardTitle>
-            <p className="text-xs text-muted-foreground">Açık kararların kategorilere dağılımı</p>
+            <p className="text-xs text-muted-foreground">Kararların kategorilere dağılımı</p>
           </CardHeader>
           <CardContent className="p-6 space-y-5">
             {categoryWorkloadData.length > 0 ? categoryWorkloadData.map(w => {
@@ -777,7 +775,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
                 </div>
               )
             }) : (
-              <div className="text-center py-10 text-slate-400 text-sm">Açık iş yükü bulunmuyor.</div>
+              <div className="text-center py-10 text-slate-400 text-sm">İş yükü bulunmuyor.</div>
             )}
           </CardContent>
         </Card>
@@ -954,7 +952,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
         <Card className="shadow-sm">
           <CardHeader className="pb-2 border-b border-slate-100">
             <CardTitle className="text-base font-bold text-slate-800">Sorumlu İş Yükü</CardTitle>
-            <p className="text-xs text-muted-foreground">Açık kararların birim gruplarına dağılımı</p>
+            <p className="text-xs text-muted-foreground">Kararların birim gruplarına dağılımı</p>
           </CardHeader>
           <CardContent className="p-6 space-y-5">
             {workloadData.length > 0 ? workloadData.map(w => {
@@ -970,7 +968,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
                 </div>
               )
             }) : (
-              <div className="text-center py-10 text-slate-400 text-sm">Açık iş yükü bulunmuyor.</div>
+              <div className="text-center py-10 text-slate-400 text-sm">İş yükü bulunmuyor.</div>
             )}
           </CardContent>
         </Card>
