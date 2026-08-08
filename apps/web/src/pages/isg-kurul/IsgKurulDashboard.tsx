@@ -229,21 +229,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
     });
   }, [decisionsWithoutTimeFilter, timeFilter]);
 
-  const badgeCounts = useMemo(() => {
-    const total = decisionsWithoutTimeFilter.length;
-    const openList = decisionsWithoutTimeFilter.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
-    const now = new Date();
-    
-    const overdue = openList.filter(d => (d.status === 'Devam Ediyor' || d.status === 'Başlamadı') && d.dueDateType === 'DATE' && d.dueDate && new Date(d.dueDate) < now).length;
-    const next30Days = openList.filter(d => {
-      if (d.dueDateType !== 'DATE' || !d.dueDate) return false;
-      const diffTime = new Date(d.dueDate).getTime() - now.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays >= 0 && diffDays <= 30;
-    }).length;
-    
-    return { total, overdue, next30Days };
-  }, [decisionsWithoutTimeFilter]);
+
 
   // Handle Chart Clicks
   const onPieClick = (data: any, type: 'status' | 'priority') => {
@@ -257,26 +243,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
   };
 
   // Compute KPIs
-  const kpis = useMemo(() => {
-    const total = filteredDecisions.length;
-    const completed = filteredDecisions.filter(d => d.status === 'Tamamlandı').length;
-    const canceled = filteredDecisions.filter(d => d.status === 'İptal Edildi').length;
-    const closed = completed + canceled;
-    const openList = filteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
-    
-    const now = new Date();
-    const overdue = openList.filter(d => (d.status === 'Devam Ediyor' || d.status === 'Başlamadı') && d.dueDateType === 'DATE' && d.dueDate && new Date(d.dueDate) < now).length;
-    const next30Days = openList.filter(d => {
-      if (d.dueDateType !== 'DATE' || !d.dueDate) return false;
-      const diffTime = new Date(d.dueDate).getTime() - now.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays >= 0 && diffDays <= 30;
-    }).length;
-    
-    const completionRate = total > 0 ? Math.round((closed / total) * 100) : 0;
 
-    return { total, open: openList.length, overdue, completionRate, closed, next30Days };
-  }, [filteredDecisions]);
 
   // Chart Data: Status Distribution
   const statusData = useMemo(() => {
@@ -437,6 +404,64 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       return true;
     });
   }, [filteredDecisions, urlOpenTerminBucket, urlClosedTerminBucket, urlFacilityId, meetings]);
+
+  const decisionsWithDrillDownsButNoTimeFilter = useMemo(() => {
+    return decisionsWithoutTimeFilter.filter(d => {
+      const isClosed = d.status === 'Tamamlandı';
+      const isCanceled = d.status === 'İptal Edildi';
+      
+      if (urlOpenTerminBucket !== 'all' && !isClosed && !isCanceled) {
+        const info = getTerminInfo(d);
+        if (info.ratio === null || getBucketInfo(info.ratio, true) !== urlOpenTerminBucket) return false;
+      }
+      if (urlClosedTerminBucket !== 'all' && isClosed) {
+        const info = getTerminInfo(d);
+        if (info.ratio === null || getBucketInfo(info.ratio, false) !== urlClosedTerminBucket) return false;
+      }
+      if (urlFacilityId !== 'all') {
+        const meeting = meetings.find((m: any) => m.id === d.meetingId);
+        if (meeting?.facilityId !== urlFacilityId) return false;
+      }
+      return true;
+    });
+  }, [decisionsWithoutTimeFilter, urlOpenTerminBucket, urlClosedTerminBucket, urlFacilityId, meetings]);
+
+  const badgeCounts = useMemo(() => {
+    const total = decisionsWithDrillDownsButNoTimeFilter.length;
+    const openList = decisionsWithDrillDownsButNoTimeFilter.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
+    const now = new Date();
+    
+    const overdue = openList.filter(d => (d.status === 'Devam Ediyor' || d.status === 'Başlamadı') && d.dueDateType === 'DATE' && d.dueDate && new Date(d.dueDate) < now).length;
+    const next30Days = openList.filter(d => {
+      if (d.dueDateType !== 'DATE' || !d.dueDate) return false;
+      const diffTime = new Date(d.dueDate).getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays >= 0 && diffDays <= 30;
+    }).length;
+    
+    return { total, overdue, next30Days };
+  }, [decisionsWithDrillDownsButNoTimeFilter]);
+
+  const kpis = useMemo(() => {
+    const total = finalFilteredDecisions.length;
+    const completed = finalFilteredDecisions.filter(d => d.status === 'Tamamlandı').length;
+    const canceled = finalFilteredDecisions.filter(d => d.status === 'İptal Edildi').length;
+    const closed = completed + canceled;
+    const openList = finalFilteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
+    
+    const now = new Date();
+    const overdue = openList.filter(d => (d.status === 'Devam Ediyor' || d.status === 'Başlamadı') && d.dueDateType === 'DATE' && d.dueDate && new Date(d.dueDate) < now).length;
+    const next30Days = openList.filter(d => {
+      if (d.dueDateType !== 'DATE' || !d.dueDate) return false;
+      const diffTime = new Date(d.dueDate).getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays >= 0 && diffDays <= 30;
+    }).length;
+    
+    const completionRate = total > 0 ? Math.round((closed / total) * 100) : 0;
+
+    return { total, open: openList.length, overdue, completionRate, closed, next30Days };
+  }, [finalFilteredDecisions]);
 
   // Distribution by facility for the current filters (including time filter via KPIs)
   const facilityDistribution = useMemo(() => {
