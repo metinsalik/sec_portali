@@ -50,7 +50,8 @@ const normalizePriority = (p: string) => {
 export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boolean }) {
   const activeFacilityId = localStorage.getItem('activeFacilityId') || '';
   const [searchParams, setSearchParams] = useSearchParams();
-  const urlAgeBucket = searchParams.get('ageBucket') || 'all';
+  const urlOpenTerminBucket = searchParams.get('openTermin') || 'all';
+  const urlClosedTerminBucket = searchParams.get('closedTermin') || 'all';
   const urlFacilityId = searchParams.get('facility') || 'all';
 
   const [publicFacilityId, setPublicFacilityId] = useState('all');
@@ -286,59 +287,134 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
     return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => (PRIORITY_WEIGHTS[b.name] || 0) - (PRIORITY_WEIGHTS[a.name] || 0));
   }, [filteredDecisions]);
 
-  // Chart Data: Monthly Flow
-  const monthlyData = useMemo(() => {
-    const counts: Record<string, { name: string, Açık: number, Kapalı: number, total: number }> = {};
+  // Termin Statistics
+  const terminStats = useMemo(() => {
+    let openMissingTermin = 0;
+    let openInvalidDate = 0;
+    
+    let closedOnTime = 0;
+    let closedLate = 0;
+
+    const openBuckets = {
+      '0-50': { id: '0-50', label: '≤ %50', state: 'Normal', note: 'Termin süresinin ilk yarısı.', tone: '#6f7d93', count: 0 },
+      '51-75': { id: '51-75', label: '%51–75', state: 'İlerleyen', note: 'Sürenin önemli bölümü kullanılmış.', tone: '#8794a8', count: 0 },
+      '76-90': { id: '76-90', label: '%76–90', state: 'İzlenmeli', note: 'Termin sınırına yaklaşmaya başlamış.', tone: '#c6a54b', count: 0 },
+      '91-100': { id: '91-100', label: '%91–100', state: 'Termin Yakın', note: 'Termin süresinin neredeyse tamamı kullanılmış.', tone: '#d58b3b', count: 0 },
+      '101-150': { id: '101-150', label: '%101–150', state: 'Gecikmiş', note: 'Termin aşılmış.', tone: '#d7644f', count: 0 },
+      '151-200': { id: '151-200', label: '%151–200', state: 'Ciddi Gecikmiş', note: 'Termin süresinin 1,5–2 katı kadar açık.', tone: '#bf4e4e', count: 0 },
+      '200+': { id: '200+', label: '%200+', state: 'Kronik', note: 'Termin süresinin iki katından fazla açık.', tone: '#963e46', count: 0 }
+    };
+
+    const closedBuckets = {
+      '0-75': { id: '0-75', label: '≤ %75', state: 'Erken Tamamlandı', note: "Planlanan sürenin en fazla %75'i kullanılarak kapatıldı.", tone: '#6f7d93', count: 0 },
+      '76-100': { id: '76-100', label: '%76–100', state: 'Termininde', note: 'Termin süresi aşılmadan kapatıldı.', tone: '#8794a8', count: 0 },
+      '101-125': { id: '101-125', label: '%101–125', state: 'Hafif Gecikmeli', note: "Planlanan sürenin %25'ine kadar aşım ile kapatıldı.", tone: '#c6a54b', count: 0 },
+      '126-150': { id: '126-150', label: '%126–150', state: 'Gecikmeli', note: 'Planlanan sürenin %26–50 üzerinde kapatıldı.', tone: '#d58b3b', count: 0 },
+      '151-200': { id: '151-200', label: '%151–200', state: 'Ciddi Gecikmeli', note: 'Planlanan sürenin 1,5–2 katında kapatıldı.', tone: '#d7644f', count: 0 },
+      '200+': { id: '200+', label: '%200+', state: 'Çok Gecikmeli', note: 'Planlanan sürenin iki katından daha uzun sürede kapatıldı.', tone: '#963e46', count: 0 }
+    };
+
     filteredDecisions.forEach(d => {
-      const dDate = new Date(d.meetingDate);
-      const monthKey = `${dDate.getFullYear().toString().slice(2)}-${(dDate.getMonth()+1).toString().padStart(2, '0')}`;
-      if (!counts[monthKey]) counts[monthKey] = { name: monthKey, Açık: 0, Kapalı: 0, total: 0 };
-      counts[monthKey].Açık += (d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi' ? 1 : 0);
-      counts[monthKey].Kapalı += (d.status === 'Tamamlandı' || d.status === 'İptal Edildi' ? 1 : 0);
-      counts[monthKey].total += 1;
+      const isClosed = d.status === 'Tamamlandı';
+      const isCanceled = d.status === 'İptal Edildi';
+
+      if (isCanceled) return;
+
+      const info = getTerminInfo(d);
+
+      if (!isClosed) {
+        if (info.isPeriodic) openMissingTermin++;
+        else if (info.hasError) openInvalidDate++;
+        else if (info.ratio !== null) {
+          const b = getBucketInfo(info.ratio, true) as keyof typeof openBuckets;
+          if (openBuckets[b]) openBuckets[b].count++;
+        }
+      } else {
+        if (info.isPeriodic || info.hasError) {
+          // Closed but no proper termin info
+        } else if (info.ratio !== null) {
+          if (info.ratio <= 100) closedOnTime++;
+          else closedLate++;
+          
+          const b = getBucketInfo(info.ratio, false) as keyof typeof closedBuckets;
+          if (closedBuckets[b]) closedBuckets[b].count++;
+        }
+      }
     });
-    return Object.entries(counts).map(([name, data]) => ({ name, ...data })).sort((a,b) => a.name.localeCompare(b.name));
+
+    const openArray = Object.values(openBuckets);
+    const closedArray = Object.values(closedBuckets);
+    
+    return {
+      open: openArray,
+      closed: closedArray,
+      openMissingTermin,
+      openInvalidDate,
+      closedOnTime,
+      closedLate
+    };
   }, [filteredDecisions]);
 
-  // Open Task Age
-  const openTaskAge = useMemo(() => {
-    const openList = filteredDecisions.filter(d => d.status !== 'Tamamlandı' && d.status !== 'İptal Edildi');
-    const now = new Date().getTime();
-    let r0_30 = 0, r31_60 = 0, r61_90 = 0, r91_180 = 0, r180plus = 0;
+  // Helper to calculate termin performance
+  const getTerminInfo = (d: any) => {
+    if (!d.dueDate || d.dueDateType !== 'DATE') return { ratio: null, isPeriodic: true, hasError: false };
     
-    openList.forEach(d => {
-      const diffTime = now - new Date(d.meetingDate).getTime();
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      if (diffDays <= 30) r0_30++;
-      else if (diffDays <= 60) r31_60++;
-      else if (diffDays <= 90) r61_90++;
-      else if (diffDays <= 180) r91_180++;
-      else r180plus++;
-    });
+    const dueDate = new Date(d.dueDate).getTime();
+    const meetingDate = new Date(d.meetingDate).getTime();
     
-    return [
-      { id: '0-30', label: '0-30 Gün', count: r0_30, color: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100', active: 'ring-2 ring-emerald-500 bg-emerald-100' },
-      { id: '31-60', label: '31-60 Gün', count: r31_60, color: 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100', active: 'ring-2 ring-yellow-500 bg-yellow-100' },
-      { id: '61-90', label: '61-90 Gün', count: r61_90, color: 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100', active: 'ring-2 ring-orange-500 bg-orange-100' },
-      { id: '91-180', label: '91-180 Gün', count: r91_180, color: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100', active: 'ring-2 ring-red-500 bg-red-100' },
-      { id: '180+', label: '180+ Gün', count: r180plus, color: 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100 font-bold', active: 'ring-2 ring-rose-600 bg-rose-200' }
-    ];
-  }, [filteredDecisions]);
+    if (dueDate <= meetingDate) return { ratio: null, isPeriodic: false, hasError: true };
+
+    const plannedDuration = dueDate - meetingDate;
+    const isClosed = d.status === 'Tamamlandı';
+    
+    if (isClosed) {
+      let closedTime = d.updatedAt ? new Date(d.updatedAt).getTime() : new Date().getTime();
+      if (d.actions && d.actions.length > 0) {
+        closedTime = new Date(d.actions[0].createdAt).getTime();
+      }
+      let actualDuration = closedTime - meetingDate;
+      if (actualDuration < 0) actualDuration = 0;
+      return { ratio: (actualDuration / plannedDuration) * 100, isPeriodic: false, hasError: false };
+    } else {
+      let actualDuration = new Date().getTime() - meetingDate;
+      if (actualDuration < 0) actualDuration = 0;
+      return { ratio: (actualDuration / plannedDuration) * 100, isPeriodic: false, hasError: false };
+    }
+  };
+
+  const getBucketInfo = (ratio: number, isOpen: boolean) => {
+    if (isOpen) {
+      if (ratio <= 50) return '0-50';
+      if (ratio <= 75) return '51-75';
+      if (ratio <= 90) return '76-90';
+      if (ratio <= 100) return '91-100';
+      if (ratio <= 150) return '101-150';
+      if (ratio <= 200) return '151-200';
+      return '200+';
+    } else {
+      if (ratio <= 75) return '0-75';
+      if (ratio <= 100) return '76-100';
+      if (ratio <= 125) return '101-125';
+      if (ratio <= 150) return '126-150';
+      if (ratio <= 200) return '151-200';
+      return '200+';
+    }
+  };
 
   // Final Filtered Decisions (Applies URL filters)
   const finalFilteredDecisions = useMemo(() => {
     return filteredDecisions.filter(d => {
-      const isClosed = d.status === 'Tamamlandı' || d.status === 'İptal Edildi';
+      const isClosed = d.status === 'Tamamlandı';
+      const isCanceled = d.status === 'İptal Edildi';
       
-      // Age Bucket Filter
-      if (urlAgeBucket !== 'all' && !isClosed) {
-        const diffTime = new Date().getTime() - new Date(d.meetingDate).getTime();
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        if (urlAgeBucket === '0-30' && diffDays > 30) return false;
-        if (urlAgeBucket === '31-60' && (diffDays <= 30 || diffDays > 60)) return false;
-        if (urlAgeBucket === '61-90' && (diffDays <= 60 || diffDays > 90)) return false;
-        if (urlAgeBucket === '91-180' && (diffDays <= 90 || diffDays > 180)) return false;
-        if (urlAgeBucket === '180+' && diffDays <= 180) return false;
+      // Termin Bucket Filters
+      if (urlOpenTerminBucket !== 'all' && !isClosed && !isCanceled) {
+        const info = getTerminInfo(d);
+        if (info.ratio === null || getBucketInfo(info.ratio, true) !== urlOpenTerminBucket) return false;
+      }
+      if (urlClosedTerminBucket !== 'all' && isClosed) {
+        const info = getTerminInfo(d);
+        if (info.ratio === null || getBucketInfo(info.ratio, false) !== urlClosedTerminBucket) return false;
       }
       
       // Facility Filter
@@ -349,23 +425,24 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       
       return true;
     });
-  }, [filteredDecisions, urlAgeBucket, urlFacilityId, meetings]);
+  }, [filteredDecisions, urlOpenTerminBucket, urlClosedTerminBucket, urlFacilityId, meetings]);
 
   // Distribution by facility for the current filters (including time filter via KPIs)
   const facilityDistribution = useMemo(() => {
-    // First, filter by the age bucket but NOT by the specific facility
+    // First, filter by the termin buckets but NOT by the specific facility
     const bucketDecisions = filteredDecisions.filter(d => {
-      if (urlAgeBucket !== 'all') {
-        const isClosed = d.status === 'Tamamlandı' || d.status === 'İptal Edildi';
-        if (isClosed) return false;
-        
-        const diffTime = new Date().getTime() - new Date(d.meetingDate).getTime();
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        if (urlAgeBucket === '0-30' && diffDays > 30) return false;
-        if (urlAgeBucket === '31-60' && (diffDays <= 30 || diffDays > 60)) return false;
-        if (urlAgeBucket === '61-90' && (diffDays <= 60 || diffDays > 90)) return false;
-        if (urlAgeBucket === '91-180' && (diffDays <= 90 || diffDays > 180)) return false;
-        if (urlAgeBucket === '180+' && diffDays <= 180) return false;
+      const isClosed = d.status === 'Tamamlandı';
+      const isCanceled = d.status === 'İptal Edildi';
+
+      if (urlOpenTerminBucket !== 'all') {
+        if (isClosed || isCanceled) return false;
+        const info = getTerminInfo(d);
+        if (info.ratio === null || getBucketInfo(info.ratio, true) !== urlOpenTerminBucket) return false;
+      }
+      if (urlClosedTerminBucket !== 'all') {
+        if (!isClosed) return false;
+        const info = getTerminInfo(d);
+        if (info.ratio === null || getBucketInfo(info.ratio, false) !== urlClosedTerminBucket) return false;
       }
       return true;
     });
@@ -675,32 +752,85 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       {/* Row 3: Flow and Age */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         
-        {/* Monthly Flow */}
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2 border-b border-slate-100">
-            <CardTitle className="text-base font-bold text-slate-800">Aylık Karar Akışı</CardTitle>
-            <p className="text-xs text-muted-foreground">Alınan karar ve kapanan iş hacmi</p>
+        {/* Kapatılan Kararlarda Termine Uyum */}
+        <Card className="shadow-sm relative border-slate-200">
+          <CardHeader className="pb-4 border-b border-slate-100 flex flex-row items-start justify-between">
+            <div>
+              <CardTitle className="text-lg font-extrabold text-slate-800 tracking-tight">Kapatılan Kararlarda Termine Uyum</CardTitle>
+              <p className="text-[13px] text-slate-500 mt-1">Kapatılmış kararların termin süresi içinde tamamlanıp tamamlanmadığı.</p>
+            </div>
+            <div className="flex flex-col items-end text-[13px] text-slate-500 shrink-0">
+              <strong className="text-[26px] leading-[1.05] text-slate-900 mb-1">
+                {terminStats.closed.reduce((s, d) => s + d.count, 0).toLocaleString('tr-TR')}
+              </strong>
+              Kapalı Karar
+            </div>
           </CardHeader>
-          <CardContent className="p-6 h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyData.slice(-12)} margin={{ top: 20, right: 0, left: -25, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                <Bar dataKey="Kapalı" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} maxBarSize={40} />
-                <Bar dataKey="Açık" stackId="a" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                    <LabelList 
-                      dataKey="total" 
-                      position="top" 
-                      fill="#64748b"
-                      fontSize={12} 
-                      fontWeight="bold"
-                      formatter={(val: number) => val > 0 ? val : ''} 
-                    />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <CardContent className="p-0">
+            <div className="p-5 px-6 space-y-3">
+              {terminStats.closed.map(t => {
+                const max = Math.max(...terminStats.closed.map(o => o.count), 1);
+                const total = terminStats.closed.reduce((s, d) => s + d.count, 0) || 1;
+                const percentBar = (t.count / max) * 100;
+                const percentVal = (t.count / total) * 100;
+                const isActive = urlClosedTerminBucket === t.id;
+                
+                return (
+                  <div 
+                    key={t.id} 
+                    title={`${t.label} · ${t.state}\n${t.note}`}
+                    className={`grid grid-cols-[110px_1fr_60px_60px] items-center gap-3 cursor-pointer p-1 rounded-xl transition-all min-h-[42px] ${isActive ? 'bg-slate-50 ring-2 ring-slate-200' : 'hover:bg-slate-50'}`}
+                    onClick={() => {
+                      if (isActive) {
+                        searchParams.delete('closedTermin');
+                        searchParams.delete('facility');
+                      } else {
+                        searchParams.set('closedTermin', t.id);
+                        searchParams.delete('openTermin');
+                        searchParams.delete('facility');
+                      }
+                      setSearchParams(searchParams);
+                    }}
+                  >
+                    <div className="text-[13px] font-[750] text-slate-800 px-1">{t.label}</div>
+                    <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full rounded-full transition-all duration-700" 
+                        style={{ width: `${percentBar}%`, backgroundColor: t.tone }}
+                      />
+                    </div>
+                    <div className="text-right text-[13px] font-[800] text-slate-900">{t.count.toLocaleString('tr-TR')}</div>
+                    <div className="text-right text-[13px] text-slate-500 pr-1">%{(percentVal).toFixed(1).replace('.',',')}</div>
+                  </div>
+                )
+              })}
+            </div>
+            
+            <div className="grid grid-cols-3 gap-3 px-6 pb-6">
+              <div className="bg-white border-[1.5px] border-slate-200 rounded-2xl p-3.5">
+                <div className="text-xs text-slate-500 mb-1">Termin Uyum Oranı</div>
+                <div className="text-xl font-[850] text-slate-900">%{(terminStats.closedOnTime / (terminStats.closedOnTime + terminStats.closedLate || 1) * 100).toFixed(1).replace('.',',')}</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">Termininde veya önce kapananlar</div>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
+                <div className="text-xs text-slate-500 mb-1">Termin Sonrası Kapanan</div>
+                <div className="text-xl font-[850] text-slate-900">%{(terminStats.closedLate / (terminStats.closedOnTime + terminStats.closedLate || 1) * 100).toFixed(1).replace('.',',')}</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">Planlanan süreyi aşarak kapananlar</div>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
+                <div className="text-xs text-slate-500 mb-1">Ciddi Gecikmeli Kapanan</div>
+                <div className="text-xl font-[850] text-slate-900">{terminStats.closed.slice(4).reduce((s,d)=>s+d.count,0).toLocaleString('tr-TR')}</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">%150+ gerçekleşme oranı</div>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100 px-6 py-4 flex justify-between items-center text-xs text-slate-500">
+              <div className="flex gap-2">
+                <Badge variant="outline" className="font-normal bg-white text-slate-600">Termininde kapanan: <strong className="ml-1 text-slate-900">{terminStats.closedOnTime}</strong></Badge>
+                <Badge variant="outline" className="font-normal bg-white text-slate-600">Termin sonrası: <strong className="ml-1 text-slate-900">{terminStats.closedLate}</strong></Badge>
+              </div>
+              <span>Gerçekleşen süre ÷ Planlanan süre × 100</span>
+            </div>
           </CardContent>
         </Card>
         {/* Category Workload */}
@@ -736,56 +866,85 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       {/* Row 3: Workload Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         
-        {/* Open Task Age */}
-        <Card className="shadow-sm relative">
-          <CardHeader className="pb-2 border-b border-slate-100 flex flex-row items-center justify-between">
+        {/* Open Task Termin */}
+        <Card className="shadow-sm relative border-slate-200">
+          <CardHeader className="pb-4 border-b border-slate-100 flex flex-row items-start justify-between">
             <div>
-              <CardTitle className="text-base font-bold text-slate-800">Açık İş Yaşı</CardTitle>
-              <p className="text-xs text-muted-foreground">Toplantı tarihinden bugüne bekleme süresi</p>
+              <CardTitle className="text-lg font-extrabold text-slate-800 tracking-tight">Açık Kararlarda Termin Kullanımı</CardTitle>
+              <p className="text-[13px] text-slate-500 mt-1">Açık kararların kendilerine tanımlanan toplam süresinin ne kadarını kullandığı.</p>
             </div>
-            {urlAgeBucket !== 'all' && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-7 px-2 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 font-medium"
-                onClick={() => { searchParams.delete('ageBucket'); searchParams.delete('facility'); setSearchParams(searchParams); }}
-              >
-                Filtreyi Temizle
-              </Button>
-            )}
+            <div className="flex flex-col items-end text-[13px] text-slate-500 shrink-0">
+              <strong className="text-[26px] leading-[1.05] text-slate-900 mb-1">
+                {terminStats.open.reduce((s, d) => s + d.count, 0).toLocaleString('tr-TR')}
+              </strong>
+              Açık Karar
+            </div>
           </CardHeader>
-          <CardContent className="p-6 flex flex-col justify-center gap-4 h-[250px]">
-            {openTaskAge.map(t => {
-              const max = Math.max(...openTaskAge.map(o => o.count), 1);
-              const percent = (t.count / max) * 100;
-              const isDanger = t.label === '180+ Gün' && t.count > 0;
-              const isActive = urlAgeBucket === t.id;
-              return (
-                <div 
-                  key={t.id} 
-                  className={`flex items-center gap-3 cursor-pointer p-1.5 -mx-1.5 rounded transition-colors ${isActive ? 'bg-indigo-50 ring-1 ring-indigo-200' : 'hover:bg-slate-50'}`}
-                  onClick={() => {
-                    if (isActive) {
-                      searchParams.delete('ageBucket');
-                      searchParams.delete('facility');
-                    } else {
-                      searchParams.set('ageBucket', t.id);
-                      searchParams.delete('facility');
-                    }
-                    setSearchParams(searchParams);
-                  }}
-                >
-                  <span className={`w-[70px] text-xs font-medium shrink-0 ${isActive ? 'text-indigo-700' : 'text-slate-600'}`}>{t.label}</span>
-                  <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full transition-all duration-500 ${isDanger ? 'bg-red-500' : (isActive ? 'bg-indigo-500' : 'bg-slate-300')}`} 
-                      style={{ width: `${percent}%` }}
-                    />
+          <CardContent className="p-0">
+            <div className="p-5 px-6 space-y-3">
+              {terminStats.open.map(t => {
+                const max = Math.max(...terminStats.open.map(o => o.count), 1);
+                const total = terminStats.open.reduce((s, d) => s + d.count, 0) || 1;
+                const percentBar = (t.count / max) * 100;
+                const percentVal = (t.count / total) * 100;
+                const isActive = urlOpenTerminBucket === t.id;
+                
+                return (
+                  <div 
+                    key={t.id} 
+                    title={`${t.label} · ${t.state}\n${t.note}`}
+                    className={`grid grid-cols-[110px_1fr_60px_60px] items-center gap-3 cursor-pointer p-1 rounded-xl transition-all min-h-[42px] ${isActive ? 'bg-slate-50 ring-2 ring-slate-200' : 'hover:bg-slate-50'}`}
+                    onClick={() => {
+                      if (isActive) {
+                        searchParams.delete('openTermin');
+                        searchParams.delete('facility');
+                      } else {
+                        searchParams.set('openTermin', t.id);
+                        searchParams.delete('closedTermin');
+                        searchParams.delete('facility');
+                      }
+                      setSearchParams(searchParams);
+                    }}
+                  >
+                    <div className="text-[13px] font-[750] text-slate-800 px-1">{t.label}</div>
+                    <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full rounded-full transition-all duration-700" 
+                        style={{ width: `${percentBar}%`, backgroundColor: t.tone }}
+                      />
+                    </div>
+                    <div className="text-right text-[13px] font-[800] text-slate-900">{t.count.toLocaleString('tr-TR')}</div>
+                    <div className="text-right text-[13px] text-slate-500 pr-1">%{(percentVal).toFixed(1).replace('.',',')}</div>
                   </div>
-                  <span className={`w-6 text-right text-sm font-bold ${isActive ? 'text-indigo-700' : 'text-slate-800'}`}>{t.count}</span>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
+            
+            <div className="grid grid-cols-3 gap-3 px-6 pb-6">
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
+                <div className="text-xs text-slate-500 mb-1">Termin İçinde</div>
+                <div className="text-xl font-[850] text-slate-900">%{(terminStats.open.slice(0,4).reduce((s,d)=>s+d.count,0) / (terminStats.open.reduce((s,d)=>s+d.count,0) || 1) * 100).toFixed(1).replace('.',',')}</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">%100 ve altındaki açık kararlar</div>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
+                <div className="text-xs text-slate-500 mb-1">Terminini Aşmış</div>
+                <div className="text-xl font-[850] text-slate-900">%{(terminStats.open.slice(4).reduce((s,d)=>s+d.count,0) / (terminStats.open.reduce((s,d)=>s+d.count,0) || 1) * 100).toFixed(1).replace('.',',')}</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">%100 üzerindeki açık kararlar</div>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
+                <div className="text-xs text-slate-500 mb-1">Kronik Açık Karar</div>
+                <div className="text-xl font-[850] text-slate-900">{terminStats.open[terminStats.open.length-1].count.toLocaleString('tr-TR')}</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">%200+ termin kullanım oranı</div>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100 px-6 py-4 flex justify-between items-center text-xs text-slate-500">
+              <div className="flex gap-2">
+                {terminStats.openMissingTermin > 0 && <Badge variant="outline" className="font-normal bg-white text-slate-600">Periyodik Takip: <strong className="ml-1 text-slate-900">{terminStats.openMissingTermin}</strong></Badge>}
+                {terminStats.openInvalidDate > 0 && <Badge variant="outline" className="font-normal bg-rose-50 text-rose-700 border-rose-200">Hatalı tarih: <strong className="ml-1 text-rose-900">{terminStats.openInvalidDate}</strong></Badge>}
+              </div>
+              <span>Geçen süre ÷ Planlanan süre × 100</span>
+            </div>
           </CardContent>
         </Card>
 
