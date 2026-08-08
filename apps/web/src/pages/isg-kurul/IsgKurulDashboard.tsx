@@ -219,6 +219,8 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
             } else {
               matchTime = false;
             }
+          } else if (timeFilter === 'undefinedTerm') {
+            matchTime = !d.dueDate || d.dueDateType !== 'DATE';
           }
         } else {
           matchTime = false;
@@ -439,7 +441,9 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       return diffDays >= 0 && diffDays <= 30;
     }).length;
     
-    return { total, overdue, next30Days };
+    const undefinedTerm = openList.filter(d => !d.dueDate || d.dueDateType !== 'DATE').length;
+    
+    return { total, overdue, next30Days, undefinedTerm };
   }, [decisionsWithDrillDownsButNoTimeFilter]);
 
   const kpis = useMemo(() => {
@@ -458,9 +462,11 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       return diffDays >= 0 && diffDays <= 30;
     }).length;
     
+    const undefinedTerm = openList.filter(d => !d.dueDate || d.dueDateType !== 'DATE').length;
+    
     const completionRate = total > 0 ? Math.round((closed / total) * 100) : 0;
 
-    return { total, open: openList.length, overdue, completionRate, closed, next30Days };
+    return { total, open: openList.length, overdue, completionRate, closed, next30Days, undefinedTerm };
   }, [finalFilteredDecisions]);
 
   // Distribution by facility for the current filters (including time filter via KPIs)
@@ -1107,7 +1113,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
               className={`px-3 py-1 rounded-full cursor-pointer transition-colors ${timeFilter === 'undefinedTerm' ? 'bg-slate-600 text-white hover:bg-slate-700 border-transparent' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200'}`} 
               onClick={() => setTimeFilter('undefinedTerm')}
             >
-              Termin Yok - {badgeCounts.undefinedTerm}
+              Periyodik Takip - {badgeCounts.undefinedTerm}
             </Badge>
           </div>
 
