@@ -822,6 +822,63 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           </CardContent>
         </Card>
 
+        {/* Responsible Workload */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-2 border-b border-slate-100">
+            <CardTitle className="text-base font-bold text-slate-800">Sorumlu İş Yükü</CardTitle>
+            <p className="text-xs text-muted-foreground">Kararların birim gruplarına dağılımı</p>
+          </CardHeader>
+          <CardContent className="p-6 space-y-5">
+            {workloadData.length > 0 ? workloadData.map(w => {
+              const max = Math.max(...workloadData.map(d => d.value), 1);
+              const percent = (w.value / max) * 100;
+              return (
+                <div key={w.name} className="flex items-center gap-4 group">
+                  <span className="w-[120px] text-xs font-medium text-slate-700 truncate cursor-help" title={w.name}>{w.name}</span>
+                  <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full group-hover:bg-blue-600 transition-colors" style={{ width: `${percent}%` }} />
+                  </div>
+                  <span className="w-4 text-right text-sm font-bold text-slate-800">{w.value}</span>
+                </div>
+              )
+            }) : (
+              <div className="text-center py-10 text-slate-400 text-sm">İş yükü bulunmuyor.</div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Row 4: Closed Termin and Responsible Workload */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        {/* Kapatılan Kararlarda Termine Uyum */}
+        <Card className="shadow-sm relative border-slate-200">
+          <CardHeader className="pb-4 border-b border-slate-100 flex flex-row items-start justify-between">
+            <div>
+              <CardTitle className="text-lg font-extrabold text-slate-800 tracking-tight">Kapatılan Kararlarda Termine Uyum</CardTitle>
+              <p className="text-[13px] text-slate-500 mt-1">Kapatılmış kararların termin süresi içinde tamamlanıp tamamlanmadığı.</p>
+            </div>
+            <div className="flex flex-col items-end text-[13px] text-slate-500 shrink-0">
+              <strong className="text-[26px] leading-[1.05] text-slate-900 mb-1">
+                {terminStats.closed.reduce((s, d) => s + d.count, 0).toLocaleString('tr-TR')}
+              </strong>
+              Kapalı Karar
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="p-5 px-6 space-y-3 pb-2">
+
+            <div className="border-t border-slate-100 px-6 py-4 flex justify-between items-center text-xs text-slate-500">
+              <div className="flex gap-2">
+                <Badge variant="outline" className="font-normal bg-white text-slate-600">Termininde kapanan: <strong className="ml-1 text-slate-900">{terminStats.closedOnTime}</strong></Badge>
+                <Badge variant="outline" className="font-normal bg-white text-slate-600">Termin sonrası: <strong className="ml-1 text-slate-900">{terminStats.closedLate}</strong></Badge>
+              </div>
+              <span>Gerçekleşen süre ÷ Planlanan süre × 100</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Responsible Workload */}
         {/* Open Task Termin */}
         <Card className="shadow-sm relative border-slate-200">
           <CardHeader className="pb-4 border-b border-slate-100 flex flex-row items-start justify-between">
@@ -837,7 +894,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="p-5 px-6 space-y-3">
+            <div className="p-5 px-6 space-y-3 pb-2">
               {terminStats.open.map(t => {
                 const max = Math.max(...terminStats.open.map(o => o.count), 1);
                 const total = terminStats.open.reduce((s, d) => s + d.count, 0) || 1;
@@ -884,24 +941,6 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
                 )
               })}
             </div>
-            
-            <div className="grid grid-cols-3 gap-3 px-6 pb-6">
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
-                <div className="text-xs text-slate-500 mb-1">Termin İçinde</div>
-                <div className="text-xl font-[850] text-slate-900">%{(terminStats.open.slice(0,4).reduce((s,d)=>s+d.count,0) / (terminStats.open.reduce((s,d)=>s+d.count,0) || 1) * 100).toFixed(1).replace('.',',')}</div>
-                <div className="text-[11px] text-slate-500 mt-0.5">%100 ve altındaki açık kararlar</div>
-              </div>
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
-                <div className="text-xs text-slate-500 mb-1">Terminini Aşmış</div>
-                <div className="text-xl font-[850] text-slate-900">%{(terminStats.open.slice(4).reduce((s,d)=>s+d.count,0) / (terminStats.open.reduce((s,d)=>s+d.count,0) || 1) * 100).toFixed(1).replace('.',',')}</div>
-                <div className="text-[11px] text-slate-500 mt-0.5">%100 üzerindeki açık kararlar</div>
-              </div>
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
-                <div className="text-xs text-slate-500 mb-1">Kronik Açık Karar</div>
-                <div className="text-xl font-[850] text-slate-900">{terminStats.open[terminStats.open.length-1].count.toLocaleString('tr-TR')}</div>
-                <div className="text-[11px] text-slate-500 mt-0.5">%1000+ termin kullanım oranı</div>
-              </div>
-            </div>
 
             <div className="border-t border-slate-100 px-6 py-4 flex justify-between items-center text-xs text-slate-500">
               <div className="flex gap-2">
@@ -910,126 +949,6 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
               </div>
               <span>Geçen süre ÷ Planlanan süre × 100</span>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Row 4: Closed Termin and Responsible Workload */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        
-        {/* Kapatılan Kararlarda Termine Uyum */}
-        <Card className="shadow-sm relative border-slate-200">
-          <CardHeader className="pb-4 border-b border-slate-100 flex flex-row items-start justify-between">
-            <div>
-              <CardTitle className="text-lg font-extrabold text-slate-800 tracking-tight">Kapatılan Kararlarda Termine Uyum</CardTitle>
-              <p className="text-[13px] text-slate-500 mt-1">Kapatılmış kararların termin süresi içinde tamamlanıp tamamlanmadığı.</p>
-            </div>
-            <div className="flex flex-col items-end text-[13px] text-slate-500 shrink-0">
-              <strong className="text-[26px] leading-[1.05] text-slate-900 mb-1">
-                {terminStats.closed.reduce((s, d) => s + d.count, 0).toLocaleString('tr-TR')}
-              </strong>
-              Kapalı Karar
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="p-5 px-6 space-y-3">
-              {terminStats.closed.map(t => {
-                const max = Math.max(...terminStats.closed.map(o => o.count), 1);
-                const total = terminStats.closed.reduce((s, d) => s + d.count, 0) || 1;
-                const percentBar = (t.count / max) * 100;
-                const percentVal = (t.count / total) * 100;
-                const isActive = urlClosedTerminBucket === t.id;
-                
-                return (
-                  <UITooltip key={t.id}>
-                    <TooltipTrigger className="block w-full p-0 bg-transparent border-none m-0 text-left focus:outline-none">
-                      <div 
-                        className={`grid grid-cols-[110px_1fr_60px_60px] items-center gap-3 cursor-pointer p-1 rounded-xl transition-all min-h-[42px] ${isActive ? 'bg-slate-50 ring-2 ring-slate-200' : 'hover:bg-slate-50'}`}
-                        onClick={() => {
-                          if (isActive) {
-                            searchParams.delete('closedTermin');
-                            searchParams.delete('facility');
-                          } else {
-                            searchParams.set('closedTermin', t.id);
-                            searchParams.delete('openTermin');
-                            searchParams.delete('facility');
-                          }
-                          setSearchParams(searchParams);
-                        }}
-                      >
-                        <div className="text-[13px] font-[750] text-slate-800 px-1">{t.label}</div>
-                        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden w-full">
-                          <div 
-                            className="h-full rounded-full transition-all duration-700" 
-                            style={{ width: `${percentBar}%`, backgroundColor: t.tone }}
-                          />
-                        </div>
-                        <div className="text-right text-[13px] font-[800] text-slate-900">{t.count.toLocaleString('tr-TR')}</div>
-                        <div className="text-right text-[13px] text-slate-500 pr-1">%{(percentVal).toFixed(1).replace('.',',')}</div>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="bg-slate-900 text-slate-50 border-slate-800">
-                      <div className="flex flex-col gap-1 w-64 p-1">
-                        <div className="font-bold border-b border-slate-700 pb-2 mb-1">{t.label} • {t.state}</div>
-                        <div className="text-slate-300 mb-1"><strong className="text-white">{t.count.toLocaleString('tr-TR')}</strong> karar • %{(percentVal).toFixed(1).replace('.',',')}</div>
-                        <div className="text-slate-400 text-xs leading-relaxed">{t.note}</div>
-                      </div>
-                    </TooltipContent>
-                  </UITooltip>
-                )
-              })}
-            </div>
-            
-            <div className="grid grid-cols-3 gap-3 px-6 pb-6">
-              <div className="bg-white border-[1.5px] border-slate-200 rounded-2xl p-3.5">
-                <div className="text-xs text-slate-500 mb-1">Termin Uyum Oranı</div>
-                <div className="text-xl font-[850] text-slate-900">%{(terminStats.closedOnTime / (terminStats.closedOnTime + terminStats.closedLate || 1) * 100).toFixed(1).replace('.',',')}</div>
-                <div className="text-[11px] text-slate-500 mt-0.5">Termininde veya önce kapananlar</div>
-              </div>
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
-                <div className="text-xs text-slate-500 mb-1">Termin Sonrası Kapanan</div>
-                <div className="text-xl font-[850] text-slate-900">%{(terminStats.closedLate / (terminStats.closedOnTime + terminStats.closedLate || 1) * 100).toFixed(1).replace('.',',')}</div>
-                <div className="text-[11px] text-slate-500 mt-0.5">Planlanan süreyi aşarak kapananlar</div>
-              </div>
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
-                <div className="text-xs text-slate-500 mb-1">Ciddi Gecikmeli Kapanan</div>
-                <div className="text-xl font-[850] text-slate-900">{terminStats.closed.slice(3).reduce((s,d)=>s+d.count,0).toLocaleString('tr-TR')}</div>
-                <div className="text-[11px] text-slate-500 mt-0.5">%200+ gerçekleşme oranı</div>
-              </div>
-            </div>
-
-            <div className="border-t border-slate-100 px-6 py-4 flex justify-between items-center text-xs text-slate-500">
-              <div className="flex gap-2">
-                <Badge variant="outline" className="font-normal bg-white text-slate-600">Termininde kapanan: <strong className="ml-1 text-slate-900">{terminStats.closedOnTime}</strong></Badge>
-                <Badge variant="outline" className="font-normal bg-white text-slate-600">Termin sonrası: <strong className="ml-1 text-slate-900">{terminStats.closedLate}</strong></Badge>
-              </div>
-              <span>Gerçekleşen süre ÷ Planlanan süre × 100</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Responsible Workload */}
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2 border-b border-slate-100">
-            <CardTitle className="text-base font-bold text-slate-800">Sorumlu İş Yükü</CardTitle>
-            <p className="text-xs text-muted-foreground">Kararların birim gruplarına dağılımı</p>
-          </CardHeader>
-          <CardContent className="p-6 space-y-5">
-            {workloadData.length > 0 ? workloadData.map(w => {
-              const max = Math.max(...workloadData.map(d => d.value), 1);
-              const percent = (w.value / max) * 100;
-              return (
-                <div key={w.name} className="flex items-center gap-4 group">
-                  <span className="w-[120px] text-xs font-medium text-slate-700 truncate cursor-help" title={w.name}>{w.name}</span>
-                  <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded-full group-hover:bg-blue-600 transition-colors" style={{ width: `${percent}%` }} />
-                  </div>
-                  <span className="w-4 text-right text-sm font-bold text-slate-800">{w.value}</span>
-                </div>
-              )
-            }) : (
-              <div className="text-center py-10 text-slate-400 text-sm">İş yükü bulunmuyor.</div>
-            )}
           </CardContent>
         </Card>
       </div>
@@ -1238,9 +1157,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
         </div>
       </div>
 
-      <div className="mt-6 bg-white border border-slate-200 rounded-xl p-5 shadow-sm text-sm text-slate-600 leading-relaxed">
-        <strong className="text-slate-900">Metodoloji:</strong> Açık karar kartı "bugüne kadar geçen süreyi", kapalı karar kartı ise "karar tarihinden gerçek kapanış tarihine kadar geçen süreyi" planlanan termin süresine oranlar. Böylece 30 günlük, 90 günlük veya 180 günlük kararlar aynı ölçekte karşılaştırılabilir. Kapalı kararlarda temel performans göstergesi <strong className="text-slate-900">Termin Uyum Oranı</strong>dır.
-      </div>
+
 
       {/* Public View Decision Dialog */}
       {isPublic && (
