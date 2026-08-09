@@ -117,4 +117,8 @@ io.on('connection', (socket) => {
 httpServer.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Backend server running on http://0.0.0.0:${PORT}`);
   initTelegramBot(); // Start Telegram bot polling
+  startCronJobs();
+  
+  const { startChecklistCronJobs } = require('./jobs/checklistCron');
+  startChecklistCronJobs();
 });

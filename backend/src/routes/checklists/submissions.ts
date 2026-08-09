@@ -23,11 +23,21 @@ const upload = multer({ storage });
 // Get submissions for a facility
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { facilityId } = req.query;
+    const { facilityId, year } = req.query;
     
     let whereClause: any = {};
     if (facilityId && typeof facilityId === 'string') {
       whereClause.facilityId = facilityId;
+    }
+
+    if (year && typeof year === 'string') {
+      const yearNum = parseInt(year);
+      if (!isNaN(yearNum)) {
+        whereClause.auditDate = {
+          gte: new Date(yearNum, 0, 1),
+          lt: new Date(yearNum + 1, 0, 1)
+        };
+      }
     }
 
     if (req.user && !req.user.isAdmin && !req.user.isManagement && !req.user.roles?.includes('admin')) {

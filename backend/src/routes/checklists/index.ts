@@ -8,9 +8,13 @@ import scalesRouter from './scales';
 import assignmentsRouter from './assignments';
 import groupsRouter from './groups';
 
+import dashboardRouter from './dashboard';
+
 const router = express.Router();
 
 router.use(authMiddleware);
+
+router.use('/dashboard', dashboardRouter);
 
 router.use('/templates', templateRoutes);
 router.use('/submissions', submissionRouter);

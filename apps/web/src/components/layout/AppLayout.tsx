@@ -171,14 +171,21 @@ const renovationReportNavItems = [
 const checklistNavItems = (hasAdminAccess: boolean, hasSpecialistAccess: boolean) => [
   { label: 'GENEL', type: 'group' },
   { label: 'Dashboard', icon: LayoutDashboard, to: '/checklists', end: true },
-  { label: 'UYGULAMA', type: 'group' },
-  { label: 'Saha Denetimleri', icon: ClipboardList, to: '/checklists/submissions' },
-  { label: 'Raporlar', icon: ClipboardList, to: '/checklists/reports' },
-  ...(hasAdminAccess || hasSpecialistAccess ? [
+  
+  ...(hasAdminAccess ? [
     { label: 'YÖNETİM', type: 'group' },
-    { label: 'Şablonlar', icon: FileText, to: '/checklists/templates' },
-    ...(hasAdminAccess ? [{ label: 'Ayarlar', icon: Settings, to: '/checklists/settings' }] : []),
+    { label: 'Şablonlar ve Gruplar', icon: FileText, to: '/checklists/templates' },
+    { label: 'Denetim Atamaları', icon: ClipboardList, to: '/checklists/submissions' }, // Or a dedicated page later
+    { label: 'Konsolide Raporlar', icon: PieChart, to: '/checklists/reports' },
+    { label: 'Ayarlar', icon: Settings, to: '/checklists/settings' },
   ] : []),
+
+  ...(hasSpecialistAccess && !hasAdminAccess ? [
+    { label: 'UYGULAMA', type: 'group' },
+    { label: 'Bekleyen Denetimlerim', icon: AlertCircle, to: '/checklists/submissions?status=BEKLEYEN' },
+    { label: 'Geçmiş Denetimlerim', icon: ClipboardList, to: '/checklists/submissions?status=TAMAMLANDI' },
+    { label: 'Tesis Raporlarım', icon: PieChart, to: '/checklists/reports' },
+  ] : [])
 ];
 
 const isgKurulNavItems = [

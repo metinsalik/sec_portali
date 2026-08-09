@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, Eye, Edit } from 'lucide-react';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -13,16 +13,32 @@ export default function SubmissionListPage() {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Parse initial status from URL (e.g. ?status=bekleyen)
+  const queryParams = new URLSearchParams(location.search);
+  const initialStatus = queryParams.get('status')?.toLowerCase() || 'all';
+  
+  const [activeTab, setActiveTab] = useState(initialStatus);
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+
+  useEffect(() => {
+    // If URL status changes from sidebar, update active tab
+    const urlStatus = queryParams.get('status')?.toLowerCase();
+    if (urlStatus && urlStatus !== activeTab) {
+      setActiveTab(urlStatus);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     if (user) {
       fetchSubmissions();
     }
-  }, [user]);
+  }, [user, selectedYear]);
 
   const fetchSubmissions = async () => {
     try {
-      const response = await api.get('/checklists/submissions');
+      const response = await api.get(`/checklists/submissions?year=${selectedYear}`);
       const data = await response.json();
       setSubmissions(data);
     } catch (error) {
@@ -124,20 +140,32 @@ export default function SubmissionListPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Saha Denetimleri</h1>
           <p className="text-muted-foreground">Tesisinize ait doldurulmuş kontrol listeleri.</p>
         </div>
-        {(user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management') || user?.roles?.includes('specialist')) && (
-          <Button onClick={() => navigate('/checklists/submissions/new')} className="gap-2 shadow-sm">
-            <Plus className="w-4 h-4" />
-            Yeni Denetim Başlat
-          </Button>
-        )}
+        <div className="flex items-center gap-4">
+          <select 
+            value={selectedYear} 
+            onChange={e => setSelectedYear(e.target.value)}
+            className="p-2 border rounded-md bg-background text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none"
+          >
+            {[2023, 2024, 2025, 2026, 2027, 2028].map(y => (
+              <option key={y} value={y}>{y} Yılı</option>
+            ))}
+          </select>
+
+          {(user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management') || user?.roles?.includes('specialist')) && (
+            <Button onClick={() => navigate('/checklists/submissions/new')} className="gap-2 shadow-sm">
+              <Plus className="w-4 h-4" />
+              Yeni Denetim Başlat
+            </Button>
+          )}
+        </div>
       </div>
 
-      <Tabs defaultValue="all" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="all">Tümü</TabsTrigger>
           <TabsTrigger value="taslak">Başlanmamış</TabsTrigger>
