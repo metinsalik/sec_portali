@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '../../context/AuthContext';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -303,6 +304,11 @@ export default function IsgKurulDecisionDetails() {
                     categoryId: activeViewDecision.categoryId?.toString() || '',
                     subCategoryId: activeViewDecision.subCategoryId?.toString() || '',
                     departmentId: activeViewDecision.departmentId?.toString() || '',
+                    priority: activeViewDecision.priority || 'Önemsiz Risk',
+                    status: activeViewDecision.status || 'Başlamadı',
+                    dueDateType: activeViewDecision.dueDateType || 'DATE',
+                    dueDate: activeViewDecision.dueDate ? new Date(activeViewDecision.dueDate).toISOString().split('T')[0] : '',
+                    periodicity: activeViewDecision.periodicity || '',
                   });
                   setIsEditDecisionOpen(true);
                 }}
@@ -322,13 +328,27 @@ export default function IsgKurulDecisionDetails() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 space-y-2">
+                <Label>Karar Metni *</Label>
+                <Textarea 
+                  placeholder="Alınan karar, yapılacak iş veya gözlem..." 
+                  value={editDecisionData.decisionText}
+                  onChange={(e) => setEditDecisionData({...editDecisionData, decisionText: e.target.value})}
+                  className="min-h-[100px]"
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label>Kategori *</Label>
                 <Select 
                   value={editDecisionData.categoryId} 
                   onValueChange={(val) => setEditDecisionData({...editDecisionData, categoryId: val, subCategoryId: ''})}
                 >
-                  <SelectTrigger><SelectValue placeholder="Kategori Seçin" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Kategori Seçin">
+                      {categories.find((c: any) => c.id.toString() === editDecisionData.categoryId)?.name || "Kategori Seçin"}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
                     {categories.map((c: any) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
                   </SelectContent>
@@ -346,7 +366,11 @@ export default function IsgKurulDecisionDetails() {
                         value={editDecisionData.subCategoryId} 
                         onValueChange={(val) => setEditDecisionData({...editDecisionData, subCategoryId: val})}
                       >
-                        <SelectTrigger><SelectValue placeholder="Alt Kategori Seçin" /></SelectTrigger>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Alt Kategori Seçin">
+                            {subCats.find((sc: any) => sc.id.toString() === editDecisionData.subCategoryId)?.name || "Alt Kategori Seçin"}
+                          </SelectValue>
+                        </SelectTrigger>
                         <SelectContent>
                           {subCats.map((sc: any) => <SelectItem key={sc.id} value={sc.id.toString()}>{sc.name}</SelectItem>)}
                         </SelectContent>
@@ -363,22 +387,67 @@ export default function IsgKurulDecisionDetails() {
                   value={editDecisionData.departmentId} 
                   onValueChange={(val) => setEditDecisionData({...editDecisionData, departmentId: val})}
                 >
-                  <SelectTrigger><SelectValue placeholder="Departman Seçin" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Departman Seçin">
+                      {departments.find((d: any) => d.id.toString() === editDecisionData.departmentId)?.name || "Departman Seçin"}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
                     {departments.map((d: any) => <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label>Karar Metni *</Label>
-              <Textarea 
-                placeholder="Alınan karar, yapılacak iş veya gözlem..." 
-                value={editDecisionData.decisionText}
-                onChange={(e) => setEditDecisionData({...editDecisionData, decisionText: e.target.value})}
-                className="min-h-[100px]"
-              />
+              <div className="space-y-2">
+                <Label>Kritiklik Seviyesi</Label>
+                <Select value={editDecisionData.priority} onValueChange={(val) => setEditDecisionData({...editDecisionData, priority: val})}>
+                  <SelectTrigger><SelectValue placeholder="Seviye" /></SelectTrigger>
+                  <SelectContent>
+                    {['Tolere Gösterilmez Risk', 'Yüksek Risk', 'Önemli Risk', 'Olası Risk', 'Önemsiz Risk'].map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Mevcut Durum</Label>
+                <Select value={editDecisionData.status} onValueChange={(val) => setEditDecisionData({...editDecisionData, status: val})}>
+                  <SelectTrigger><SelectValue placeholder="Durum" /></SelectTrigger>
+                  <SelectContent>
+                    {['Başlamadı', 'Devam Ediyor', 'Tamamlandı', 'İptal Edildi', 'Sürekli Takip', 'Belirsiz'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-4 col-span-1 border rounded-md p-3">
+                <Label>Termin Tipi</Label>
+                <RadioGroup value={editDecisionData.dueDateType} onValueChange={(val) => setEditDecisionData({...editDecisionData, dueDateType: val})} className="flex gap-4">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="DATE" id="e-r1" />
+                    <Label htmlFor="e-r1" className="font-normal cursor-pointer">Belirli Tarih</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="PERIOD" id="e-r2" />
+                    <Label htmlFor="e-r2" className="font-normal cursor-pointer">Periyodik</Label>
+                  </div>
+                </RadioGroup>
+
+                {editDecisionData.dueDateType === 'DATE' ? (
+                  <div className="space-y-2 pt-2">
+                    <Label>Termin Tarihi</Label>
+                    <Input type="date" value={editDecisionData.dueDate} onChange={(e) => setEditDecisionData({...editDecisionData, dueDate: e.target.value})} />
+                  </div>
+                ) : (
+                  <div className="space-y-2 pt-2">
+                    <Label>Periyot</Label>
+                    <Select value={editDecisionData.periodicity} onValueChange={(val) => setEditDecisionData({...editDecisionData, periodicity: val})}>
+                      <SelectTrigger><SelectValue placeholder="Periyot Seçin" /></SelectTrigger>
+                      <SelectContent>
+                        {['Sürekli', 'Aylık', '3 Aylık', '6 Aylık', 'Yıllık'].map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex justify-end gap-2">
