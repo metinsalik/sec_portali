@@ -47,8 +47,20 @@ export default function IsgKurulMeetings() {
       });
       if (!res.ok) throw new Error('Toplantılar yüklenemedi');
       const data = await res.json();
+      const adjustedData = data.map((m: any) => {
+        let mDate = m.meetingDate;
+        if (m.meetingNo) {
+          const match = String(m.meetingNo).match(/^(\d{4})-(\d{2})/);
+          if (match) {
+            const year = parseInt(match[1]);
+            const month = parseInt(match[2]) - 1;
+            mDate = new Date(year, month, 15).toISOString();
+          }
+        }
+        return { ...m, meetingDate: mDate };
+      });
       // Filter by selected year
-      return data.filter((m: any) => new Date(m.meetingDate).getFullYear().toString() === selectedYear);
+      return adjustedData.filter((m: any) => new Date(m.meetingDate).getFullYear().toString() === selectedYear);
     },
     enabled: !!selectedFacilityId
   });

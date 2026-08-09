@@ -153,7 +153,20 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
 
   const meetings = useMemo(() => {
     const facIds = new Set(facilities.map((f: any) => f.id));
-    return rawMeetings.filter((m: any) => facIds.has(m.facilityId));
+    return rawMeetings
+      .filter((m: any) => facIds.has(m.facilityId))
+      .map((m: any) => {
+        let mDate = m.meetingDate;
+        if (m.meetingNo) {
+          const match = String(m.meetingNo).match(/^(\d{4})-(\d{2})/);
+          if (match) {
+            const year = parseInt(match[1]);
+            const month = parseInt(match[2]) - 1;
+            mDate = new Date(year, month, 15).toISOString();
+          }
+        }
+        return { ...m, meetingDate: mDate };
+      });
   }, [rawMeetings, facilities]);
 
   const categories = isPublic ? (publicData?.categories || []) : (authCategories || []);

@@ -85,7 +85,16 @@ export default function IsgKurulMeetingDetails() {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Toplantı detayları yüklenemedi');
-      return res.json();
+      const data = await res.json();
+      if (data.meetingNo) {
+        const match = String(data.meetingNo).match(/^(\d{4})-(\d{2})/);
+        if (match) {
+          const year = parseInt(match[1]);
+          const month = parseInt(match[2]) - 1;
+          data.meetingDate = new Date(year, month, 15).toISOString();
+        }
+      }
+      return data;
     },
     enabled: !!id
   });
