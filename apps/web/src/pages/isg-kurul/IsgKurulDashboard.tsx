@@ -268,7 +268,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
 
   // Helper to calculate termin performance
   const getTerminInfo = (d: any) => {
-    if (!d.dueDate || d.dueDateType !== 'DATE') return { ratio: null, isPeriodic: true, hasError: false };
+    if (!d.dueDate || d.dueDateType !== 'DATE') return { ratio: 50, isPeriodic: true, hasError: false };
     
     const dueDate = new Date(d.dueDate).getTime();
     const meetingDate = new Date(d.meetingDate).getTime();
@@ -349,15 +349,13 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
 
       if (!isClosed) {
         if (info.isPeriodic) openMissingTermin++;
-        else if (info.hasError) openInvalidDate++;
-        else if (info.ratio !== null) {
+        if (info.hasError) openInvalidDate++;
+        if (info.ratio !== null) {
           const b = getBucketInfo(info.ratio, true) as keyof typeof openBuckets;
           if (openBuckets[b]) openBuckets[b].count++;
         }
       } else {
-        if (info.isPeriodic || info.hasError) {
-          // Closed but no proper termin info
-        } else if (info.ratio !== null) {
+        if (info.ratio !== null) {
           if (info.ratio <= 100) closedOnTime++;
           else closedLate++;
           

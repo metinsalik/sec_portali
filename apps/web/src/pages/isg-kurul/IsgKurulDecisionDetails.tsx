@@ -532,7 +532,13 @@ export default function IsgKurulDecisionDetails() {
                     <div>
                       <h4 className="font-semibold text-green-900">Bu Karar Tamamlandı</h4>
                       <p className="text-sm text-green-800 mt-1">
-                        Tamamlanma Tarihi: <strong>{activeViewDecision.dueDate ? new Date(activeViewDecision.dueDate).toLocaleDateString('tr-TR') : 'Belirtilmedi'}</strong>
+                        {(() => {
+                          let closedTime = activeViewDecision.updatedAt ? new Date(activeViewDecision.updatedAt) : new Date();
+                          if (activeViewDecision.actions && activeViewDecision.actions.length > 0) {
+                            closedTime = new Date(activeViewDecision.actions[0].createdAt);
+                          }
+                          return <>Tamamlanma Tarihi: <strong>{closedTime.toLocaleDateString('tr-TR')}</strong></>;
+                        })()}
                       </p>
                     </div>
                   </div>
