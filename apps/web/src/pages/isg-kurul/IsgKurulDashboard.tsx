@@ -390,11 +390,19 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       // Termin Bucket Filters
       if (urlOpenTerminBucket !== 'all' && !isClosed && !isCanceled) {
         const info = getTerminInfo(d);
-        if (info.ratio === null || getBucketInfo(info.ratio, true) !== urlOpenTerminBucket) return false;
+        if (urlOpenTerminBucket === 'periodic') {
+          if (!info.isPeriodic) return false;
+        } else if (urlOpenTerminBucket === 'invalid') {
+          if (!info.hasError) return false;
+        } else if (info.ratio === null || getBucketInfo(info.ratio, true) !== urlOpenTerminBucket) return false;
       }
       if (urlClosedTerminBucket !== 'all' && isClosed) {
         const info = getTerminInfo(d);
-        if (info.ratio === null || getBucketInfo(info.ratio, false) !== urlClosedTerminBucket) return false;
+        if (urlClosedTerminBucket === 'periodic') {
+          if (!info.isPeriodic) return false;
+        } else if (urlClosedTerminBucket === 'invalid') {
+          if (!info.hasError) return false;
+        } else if (info.ratio === null || getBucketInfo(info.ratio, false) !== urlClosedTerminBucket) return false;
       }
       
       // Facility Filter
@@ -414,11 +422,19 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       
       if (urlOpenTerminBucket !== 'all' && !isClosed && !isCanceled) {
         const info = getTerminInfo(d);
-        if (info.ratio === null || getBucketInfo(info.ratio, true) !== urlOpenTerminBucket) return false;
+        if (urlOpenTerminBucket === 'periodic') {
+          if (!info.isPeriodic) return false;
+        } else if (urlOpenTerminBucket === 'invalid') {
+          if (!info.hasError) return false;
+        } else if (info.ratio === null || getBucketInfo(info.ratio, true) !== urlOpenTerminBucket) return false;
       }
       if (urlClosedTerminBucket !== 'all' && isClosed) {
         const info = getTerminInfo(d);
-        if (info.ratio === null || getBucketInfo(info.ratio, false) !== urlClosedTerminBucket) return false;
+        if (urlClosedTerminBucket === 'periodic') {
+          if (!info.isPeriodic) return false;
+        } else if (urlClosedTerminBucket === 'invalid') {
+          if (!info.hasError) return false;
+        } else if (info.ratio === null || getBucketInfo(info.ratio, false) !== urlClosedTerminBucket) return false;
       }
       if (urlFacilityId !== 'all') {
         const meeting = meetings.find((m: any) => m.id === d.meetingId);
@@ -479,12 +495,20 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       if (urlOpenTerminBucket !== 'all') {
         if (isClosed || isCanceled) return false;
         const info = getTerminInfo(d);
-        if (info.ratio === null || getBucketInfo(info.ratio, true) !== urlOpenTerminBucket) return false;
+        if (urlOpenTerminBucket === 'periodic') {
+          if (!info.isPeriodic) return false;
+        } else if (urlOpenTerminBucket === 'invalid') {
+          if (!info.hasError) return false;
+        } else if (info.ratio === null || getBucketInfo(info.ratio, true) !== urlOpenTerminBucket) return false;
       }
       if (urlClosedTerminBucket !== 'all') {
         if (!isClosed) return false;
         const info = getTerminInfo(d);
-        if (info.ratio === null || getBucketInfo(info.ratio, false) !== urlClosedTerminBucket) return false;
+        if (urlClosedTerminBucket === 'periodic') {
+          if (!info.isPeriodic) return false;
+        } else if (urlClosedTerminBucket === 'invalid') {
+          if (!info.hasError) return false;
+        } else if (info.ratio === null || getBucketInfo(info.ratio, false) !== urlClosedTerminBucket) return false;
       }
       return true;
     });
@@ -990,8 +1014,42 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
 
             <div className="border-t border-slate-100 px-6 py-4 flex justify-between items-center text-xs text-slate-500">
               <div className="flex gap-2">
-                {terminStats.openMissingTermin > 0 && <Badge variant="outline" className="font-normal bg-white text-slate-600">Periyodik Takip: <strong className="ml-1 text-slate-900">{terminStats.openMissingTermin}</strong></Badge>}
-                {terminStats.openInvalidDate > 0 && <Badge variant="outline" className="font-normal bg-rose-50 text-rose-700 border-rose-200">Hatalı tarih: <strong className="ml-1 text-rose-900">{terminStats.openInvalidDate}</strong></Badge>}
+                {terminStats.openMissingTermin > 0 && (
+                  <Badge 
+                    variant="outline" 
+                    className={`font-normal cursor-pointer transition-colors ${urlOpenTerminBucket === 'periodic' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                    onClick={() => {
+                      if (urlOpenTerminBucket === 'periodic') {
+                        searchParams.delete('openTermin');
+                      } else {
+                        searchParams.set('openTermin', 'periodic');
+                        searchParams.delete('closedTermin');
+                      }
+                      searchParams.delete('facility');
+                      setSearchParams(searchParams);
+                    }}
+                  >
+                    Periyodik Takip: <strong className={`ml-1 ${urlOpenTerminBucket === 'periodic' ? 'text-indigo-900' : 'text-slate-900'}`}>{terminStats.openMissingTermin}</strong>
+                  </Badge>
+                )}
+                {terminStats.openInvalidDate > 0 && (
+                  <Badge 
+                    variant="outline" 
+                    className={`font-normal cursor-pointer transition-colors ${urlOpenTerminBucket === 'invalid' ? 'bg-rose-100 border-rose-300 text-rose-800' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'}`}
+                    onClick={() => {
+                      if (urlOpenTerminBucket === 'invalid') {
+                        searchParams.delete('openTermin');
+                      } else {
+                        searchParams.set('openTermin', 'invalid');
+                        searchParams.delete('closedTermin');
+                      }
+                      searchParams.delete('facility');
+                      setSearchParams(searchParams);
+                    }}
+                  >
+                    Hatalı tarih: <strong className={`ml-1 ${urlOpenTerminBucket === 'invalid' ? 'text-rose-950' : 'text-rose-900'}`}>{terminStats.openInvalidDate}</strong>
+                  </Badge>
+                )}
               </div>
               <span>Geçen süre ÷ Planlanan süre × 100</span>
             </div>
@@ -1005,7 +1063,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           <CardHeader className="pb-2 border-b border-indigo-50/50 flex flex-row items-center justify-between bg-indigo-50/30">
             <div>
               <CardTitle className="text-base font-bold text-indigo-900">
-                Tesislerin Karar Dağılımı {urlOpenTerminBucket !== 'all' ? `(${terminStats.open.find(b => b.id === urlOpenTerminBucket)?.label} Açık)` : (urlClosedTerminBucket !== 'all' ? `(${terminStats.closed.find(b => b.id === urlClosedTerminBucket)?.label} Kapalı)` : '')}
+                Tesislerin Karar Dağılımı {urlOpenTerminBucket !== 'all' ? `(${terminStats.open.find(b => b.id === urlOpenTerminBucket)?.label ?? (urlOpenTerminBucket === 'periodic' ? 'Periyodik Takip' : urlOpenTerminBucket === 'invalid' ? 'Hatalı Tarih' : '')} Açık)` : (urlClosedTerminBucket !== 'all' ? `(${terminStats.closed.find(b => b.id === urlClosedTerminBucket)?.label ?? (urlClosedTerminBucket === 'periodic' ? 'Periyodik Takip' : urlClosedTerminBucket === 'invalid' ? 'Hatalı Tarih' : '')} Kapalı)` : '')}
               </CardTitle>
               <p className="text-xs text-indigo-700/70">Toplam karar dağılımı (Adet)</p>
             </div>
