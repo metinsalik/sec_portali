@@ -867,6 +867,52 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           </CardHeader>
           <CardContent className="p-0">
             <div className="p-5 px-6 space-y-3 pb-2">
+              {terminStats.closed.map(t => {
+                const max = Math.max(...terminStats.closed.map(o => o.count), 1);
+                const total = terminStats.closed.reduce((s, d) => s + d.count, 0) || 1;
+                const percentBar = (t.count / max) * 100;
+                const percentVal = (t.count / total) * 100;
+                const isActive = urlClosedTerminBucket === t.id;
+                
+                return (
+                  <UITooltip key={t.id}>
+                    <TooltipTrigger className="block w-full p-0 bg-transparent border-none m-0 text-left focus:outline-none">
+                      <div 
+                        className={`grid grid-cols-[110px_1fr_60px_60px] items-center gap-3 cursor-pointer p-1 rounded-xl transition-all min-h-[42px] ${isActive ? 'bg-slate-50 ring-2 ring-slate-200' : 'hover:bg-slate-50'}`}
+                        onClick={() => {
+                          if (isActive) {
+                            searchParams.delete('closedTermin');
+                            searchParams.delete('facility');
+                          } else {
+                            searchParams.set('closedTermin', t.id);
+                            searchParams.delete('openTermin');
+                            searchParams.delete('facility');
+                          }
+                          setSearchParams(searchParams);
+                        }}
+                      >
+                        <div className="text-[13px] font-[750] text-slate-800 px-1">{t.label}</div>
+                        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden w-full">
+                          <div 
+                            className="h-full rounded-full transition-all duration-700" 
+                            style={{ width: `${percentBar}%`, backgroundColor: t.tone }}
+                          />
+                        </div>
+                        <div className="text-right text-[13px] font-[800] text-slate-900">{t.count.toLocaleString('tr-TR')}</div>
+                        <div className="text-right text-[13px] text-slate-500 pr-1">%{(percentVal).toFixed(1).replace('.',',')}</div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="bg-slate-900 text-slate-50 border-slate-800">
+                      <div className="flex flex-col gap-1 w-64 p-1">
+                        <div className="font-bold border-b border-slate-700 pb-2 mb-1">{t.label} • {t.state}</div>
+                        <div className="text-slate-300 mb-1"><strong className="text-white">{t.count.toLocaleString('tr-TR')}</strong> karar • %{(percentVal).toFixed(1).replace('.',',')}</div>
+                        <div className="text-slate-400 text-xs leading-relaxed">{t.note}</div>
+                      </div>
+                    </TooltipContent>
+                  </UITooltip>
+                )
+              })}
+            </div>
 
             <div className="border-t border-slate-100 px-6 py-4 flex justify-between items-center text-xs text-slate-500">
               <div className="flex gap-2">
