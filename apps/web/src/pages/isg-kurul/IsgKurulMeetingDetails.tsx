@@ -457,7 +457,7 @@ export default function IsgKurulMeetingDetails() {
 
               <div className="space-y-4 col-span-1 border rounded-md p-3">
                 <Label>Termin Tipi</Label>
-                <RadioGroup value={formData.dueDateType} onValueChange={(val) => setFormData({...formData, dueDateType: val})} className="flex gap-4">
+                <RadioGroup value={formData.dueDateType} onValueChange={(val) => setFormData({...formData, dueDateType: val, periodicity: val === 'PERIOD' && !formData.periodicity ? 'Aylık' : formData.periodicity})} className="flex gap-4">
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="DATE" id="r1" />
                     <Label htmlFor="r1" className="font-normal cursor-pointer">Belirli Tarih</Label>

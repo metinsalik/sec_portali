@@ -365,7 +365,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
             status: d.status || 'Başlamadı',
             dueDateType: d.dueDateType || 'DATE',
             dueDate: d.dueDate ? new Date(d.dueDate) : null,
-            periodicity: d.periodicity || null,
+            periodicity: d.dueDateType === 'PERIOD' ? (d.periodicity || 'Aylık') : (d.periodicity || null),
             remarks: d.remarks || null
           }))
         }
@@ -447,7 +447,7 @@ router.post('/:id/decisions', async (req: AuthRequest, res: Response) => {
         status: d.status || 'Başlamadı',
         dueDateType: d.dueDateType || 'DATE',
         dueDate: d.dueDate ? new Date(d.dueDate) : null,
-        periodicity: d.periodicity || null,
+        periodicity: d.dueDateType === 'PERIOD' ? (d.periodicity || 'Aylık') : (d.periodicity || null),
         remarks: d.remarks || null
       }
     });
@@ -492,7 +492,7 @@ router.put('/decisions/:decisionId', async (req: AuthRequest, res: Response) => 
         status: d.status,
         dueDateType: d.dueDateType,
         dueDate: d.dueDate ? new Date(d.dueDate) : null,
-        periodicity: d.periodicity,
+        periodicity: d.dueDateType === 'PERIOD' ? (d.periodicity || 'Aylık') : d.periodicity,
         remarks: d.remarks
       }
     });

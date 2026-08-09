@@ -461,7 +461,7 @@ export default function IsgKurulDecisionDetails() {
 
               <div className="space-y-4 col-span-1 border rounded-md p-3">
                 <Label>Termin Tipi</Label>
-                <RadioGroup value={editDecisionData.dueDateType} onValueChange={(val) => setEditDecisionData({...editDecisionData, dueDateType: val})} className="flex gap-4">
+                <RadioGroup value={editDecisionData.dueDateType} onValueChange={(val) => setEditDecisionData({...editDecisionData, dueDateType: val, periodicity: val === 'PERIOD' && !editDecisionData.periodicity ? 'Aylık' : editDecisionData.periodicity})} className="flex gap-4">
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="DATE" id="e-r1" />
                     <Label htmlFor="e-r1" className="font-normal cursor-pointer">Belirli Tarih</Label>
