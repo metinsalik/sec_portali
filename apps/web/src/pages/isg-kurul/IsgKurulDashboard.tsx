@@ -438,7 +438,8 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       const isCanceled = d.status === 'İptal Edildi';
       
       // Termin Bucket Filters
-      if (urlOpenTerminBucket !== 'all' && !isClosed && !isCanceled) {
+      if (urlOpenTerminBucket !== 'all') {
+        if (isClosed || isCanceled) return false; // Hide closed/canceled decisions when an open bucket is selected
         const info = getTerminInfo(d);
         if (urlOpenTerminBucket === 'periodic') {
           if (!info.isPeriodic) return false;
@@ -446,7 +447,8 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           if (!info.hasError) return false;
         } else if (info.ratio === null || getBucketInfo(info.ratio, true) !== urlOpenTerminBucket) return false;
       }
-      if (urlClosedTerminBucket !== 'all' && isClosed) {
+      if (urlClosedTerminBucket !== 'all') {
+        if (!isClosed) return false; // Hide open decisions when a closed bucket is selected
         const info = getTerminInfo(d);
         if (urlClosedTerminBucket === 'periodic') {
           if (!info.isPeriodic) return false;
@@ -470,7 +472,8 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
       const isClosed = d.status === 'Tamamlandı';
       const isCanceled = d.status === 'İptal Edildi';
       
-      if (urlOpenTerminBucket !== 'all' && !isClosed && !isCanceled) {
+      if (urlOpenTerminBucket !== 'all') {
+        if (isClosed || isCanceled) return false;
         const info = getTerminInfo(d);
         if (urlOpenTerminBucket === 'periodic') {
           if (!info.isPeriodic) return false;
@@ -478,7 +481,8 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           if (!info.hasError) return false;
         } else if (info.ratio === null || getBucketInfo(info.ratio, true) !== urlOpenTerminBucket) return false;
       }
-      if (urlClosedTerminBucket !== 'all' && isClosed) {
+      if (urlClosedTerminBucket !== 'all') {
+        if (!isClosed) return false;
         const info = getTerminInfo(d);
         if (urlClosedTerminBucket === 'periodic') {
           if (!info.isPeriodic) return false;
