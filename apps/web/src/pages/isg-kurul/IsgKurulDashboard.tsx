@@ -1145,11 +1145,12 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
                   name="Karar Sayısı"
                   cursor="pointer"
                   onClick={(data: any) => {
-                    if (data && data.id) {
-                      if (urlFacilityId === data.id) {
+                    const id = data?.payload?.id || data?.id;
+                    if (id) {
+                      if (urlFacilityId === id) {
                         searchParams.delete('facility');
                       } else {
-                        searchParams.set('facility', data.id);
+                        searchParams.set('facility', id);
                       }
                       setSearchParams(searchParams);
                     }
