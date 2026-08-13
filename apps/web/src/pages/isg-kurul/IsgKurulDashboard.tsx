@@ -637,7 +637,7 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
           className="h-11 shrink-0 bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 hover:text-emerald-700" 
           onClick={() => {
             const currentToken = localStorage.getItem('token');
-            const url = new URL(`${API}/api/operations/board/export`);
+            const url = new URL(`${API}/api/operations/board/export`, window.location.origin);
             if (currentToken) url.searchParams.append('token', currentToken);
             window.open(url.toString(), '_blank');
           }}
