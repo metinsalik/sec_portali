@@ -50,6 +50,60 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// GET /api/operations/board/export - Export decisions as CSV
+router.get('/export', async (req: AuthRequest, res: Response) => {
+  try {
+    const decisions = await prisma.ohsBoardDecision.findMany({
+      include: {
+        meeting: { include: { facility: true } },
+        category: true,
+        subCategory: true,
+        department: true,
+        actions: true
+      }
+    });
+
+    const csvRows = [];
+    const headers = [
+      "ID (decisionId)", "MeetingID", "FacilityID", "FacilityName", "MeetingDate", "MeetingNo",
+      "DecisionNumber", "DecisionText", "CategoryID", "CategoryName", "SubCategoryID",
+      "SubCategoryName", "DepartmentID", "DepartmentName", "Priority", "Status", "DueDateType",
+      "DueDate", "Periodicity", "Remarks", "ActionsCount", "ActionsText"
+    ];
+    csvRows.push(headers.join(";"));
+
+    for (const d of decisions) {
+      const escapeCsv = (str: string | null | undefined) => {
+        if (!str) return "";
+        return `"${str.replace(/"/g, '""')}"`;
+      };
+
+      const actionsText = d.actions.map(a => `[${a.createdAt.toISOString()}] ${a.createdBy || 'Unknown'}: ${a.actionText}`).join(" | ");
+
+      const row = [
+        d.id, d.meetingId, d.meeting?.facilityId || "", escapeCsv(d.meeting?.facility?.name),
+        d.meeting?.meetingDate ? d.meeting.meetingDate.toISOString() : "", escapeCsv(d.meeting?.meetingNo),
+        escapeCsv(d.decisionNumber), escapeCsv(d.decisionText), d.categoryId, escapeCsv(d.category?.name),
+        d.subCategoryId || "", escapeCsv(d.subCategory?.name), d.departmentId, escapeCsv(d.department?.name),
+        escapeCsv(d.priority), escapeCsv(d.status), escapeCsv(d.dueDateType),
+        d.dueDate ? d.dueDate.toISOString() : "", escapeCsv(d.periodicity), escapeCsv(d.remarks),
+        d.actions?.length || 0, escapeCsv(actionsText)
+      ];
+      csvRows.push(row.join(";"));
+    }
+
+    const bom = "\uFEFF";
+    const csvString = bom + csvRows.join("\n");
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="isg_kurul_kararlari.csv"');
+    res.send(csvString);
+  } catch (error) {
+    console.error('Error exporting decisions:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /api/operations/board/bulk-import - Import decisions
 router.post('/bulk-import', async (req: AuthRequest, res: Response) => {
   try {

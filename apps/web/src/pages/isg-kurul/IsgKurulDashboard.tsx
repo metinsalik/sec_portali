@@ -625,13 +625,25 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
     <div className="space-y-6 max-w-[1600px] mx-auto pb-10">
       
       {/* Top Search Bar */}
-      <div className="bg-white p-4 rounded-lg border shadow-sm mb-4">
+      <div className="bg-white p-4 rounded-lg border shadow-sm mb-4 flex gap-4">
         <Input 
           placeholder="Karar, numarası, sorumlu, toplantı veya kelime ara..." 
           className="w-full bg-slate-50 h-11 text-base"
           value={search}
           onChange={e => updateFilter('q', e.target.value)}
         />
+        <Button 
+          variant="outline" 
+          className="h-11 shrink-0 bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 hover:text-emerald-700" 
+          onClick={() => {
+            const currentToken = localStorage.getItem('token');
+            const url = new URL(`${API}/api/operations/board/export`);
+            if (currentToken) url.searchParams.append('token', currentToken);
+            window.open(url.toString(), '_blank');
+          }}
+        >
+          Dışa Aktar (CSV)
+        </Button>
       </div>
 
 
