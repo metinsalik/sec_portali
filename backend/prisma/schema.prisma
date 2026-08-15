@@ -167,8 +167,9 @@ model Facility {
   btUygunsuzluklar       BTUygunsuzluk[]
   HazmatVehicle          HazmatVehicle[]
   renovationReports      RenovationReport[]
-  ohsBoardMeetings OhsBoardMeeting[]
-  ohsBoardMembers  OhsBoardMember[]
+  ohsBoardMeetings       OhsBoardMeeting[]
+  ohsBoardMembers        OhsBoardMember[]
+  FireDoor               FireDoor[]
 }
 
 model IncidentCategory {
@@ -436,35 +437,35 @@ model MonthlyAccidentData {
 }
 
 model Category {
-  id            Int            @id @default(autoincrement())
-  name          String
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  notebookItems NotebookItem[]
-  subCategories SubCategory[]
+  id                Int                @id @default(autoincrement())
+  name              String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  notebookItems     NotebookItem[]
+  subCategories     SubCategory[]
   ohsBoardDecisions OhsBoardDecision[]
 }
 
 model SubCategory {
-  id            Int            @id @default(autoincrement())
-  name          String
-  categoryId    Int
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  notebookItems NotebookItem[]
-  category      Category       @relation(fields: [categoryId], references: [id])
+  id                Int                @id @default(autoincrement())
+  name              String
+  categoryId        Int
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  notebookItems     NotebookItem[]
+  category          Category           @relation(fields: [categoryId], references: [id])
   ohsBoardDecisions OhsBoardDecision[]
 }
 
 model Department {
-  id            Int                     @id @default(autoincrement())
-  name          String
-  createdAt     DateTime                @default(now())
-  updatedAt     DateTime                @updatedAt
-  incidents     ExtraordinaryIncident[]
-  notebookItems NotebookItem[]
+  id                Int                     @id @default(autoincrement())
+  name              String
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  incidents         ExtraordinaryIncident[]
+  notebookItems     NotebookItem[]
   ohsBoardDecisions OhsBoardDecision[]
-  ohsBoardMembers OhsBoardMember[]
+  ohsBoardMembers   OhsBoardMember[]
 }
 
 model NotebookPage {
@@ -1743,6 +1744,7 @@ model FacilityLocation {
   buildProjects          BuildProject[]
   btSoruBankasi          BTSoruBankasi[]
   btUygunsuzluklar       BTUygunsuzluk[]
+  FireDoor               FireDoor[]
 
   @@unique([facilityId, name])
 }
@@ -2045,11 +2047,11 @@ model ChecklistTemplate {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  scaleSet    ChecklistScaleSet?    @relation(fields: [scaleSetId], references: [id])
+  scaleSet    ChecklistScaleSet?      @relation(fields: [scaleSetId], references: [id])
   sections    ChecklistSection[]
   submissions ChecklistSubmission[]
   assignments ChecklistAssignment[]
-  createdBy   User                  @relation(fields: [createdById], references: [username])
+  createdBy   User                    @relation(fields: [createdById], references: [username])
   group       ChecklistTemplateGroup? @relation(fields: [groupId], references: [id])
 }
 
@@ -2060,7 +2062,7 @@ model ChecklistTemplateGroup {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  templates   ChecklistTemplate[]
+  templates ChecklistTemplate[]
 }
 
 model ChecklistSection {
@@ -2172,71 +2174,168 @@ model OhsBoardMeeting {
   facility    Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
   meetingDate DateTime
   meetingNo   String
-  
-  decisions   OhsBoardDecision[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  decisions OhsBoardDecision[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model OhsBoardDecision {
-  id              String   @id @default(uuid())
-  meetingId       String
-  meeting         OhsBoardMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  
-  decisionNumber  String
-  decisionText    String
-  
-  categoryId      Int
-  category        Category @relation(fields: [categoryId], references: [id])
-  
-  subCategoryId   Int?
-  subCategory     SubCategory? @relation(fields: [subCategoryId], references: [id])
-  
-  departmentId    Int
-  department      Department @relation(fields: [departmentId], references: [id])
-  
-  priority        String   // "Tolere Gösterilmez Risk", "Yüksek Risk", "Önemli Risk", "Olası Risk", "Önemsiz Risk"
-  status          String   // "Başlamadı", "Devam Ediyor", "Tamamlandı", "İptal Edildi", "Sürekli Takip", "Belirsiz"
-  
-  dueDateType     String   // "DATE" veya "PERIOD"
-  dueDate         DateTime?
-  periodicity     String?  // "Sürekli", "Aylık", "3 Aylık", "6 Aylık", "Yıllık"
-  
-  remarks         String?
-  
-  actions         OhsBoardDecisionAction[]
+  id        String          @id @default(uuid())
+  meetingId String
+  meeting   OhsBoardMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  decisionNumber String
+  decisionText   String
+
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  subCategoryId Int?
+  subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id])
+
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  priority String // "Tolere Gösterilmez Risk", "Yüksek Risk", "Önemli Risk", "Olası Risk", "Önemsiz Risk"
+  status   String // "Başlamadı", "Devam Ediyor", "Tamamlandı", "İptal Edildi", "Sürekli Takip", "Belirsiz"
+
+  dueDateType String // "DATE" veya "PERIOD"
+  dueDate     DateTime?
+  periodicity String? // "Sürekli", "Aylık", "3 Aylık", "6 Aylık", "Yıllık"
+
+  remarks String?
+
+  actions OhsBoardDecisionAction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model OhsBoardDecisionAction {
-  id            String   @id @default(uuid())
-  decisionId    String
-  decision      OhsBoardDecision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
-  
-  actionText    String
-  createdBy     String?  // The username who created the action
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id         String           @id @default(uuid())
+  decisionId String
+  decision   OhsBoardDecision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+
+  actionText String
+  createdBy  String? // The username who created the action
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model OhsBoardMember {
-  id           Int      @id @default(autoincrement())
-  facilityId   String
-  year         Int
-  
-  boardRole    String   
-  jobTitle     String   
-  
-  name         String   
-  departmentId Int
-  
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id         Int    @id @default(autoincrement())
+  facilityId String
+  year       Int
 
-  facility     Facility   @relation(fields: [facilityId], references: [id], onDelete: Cascade)
-  department   Department @relation(fields: [departmentId], references: [id])
+  boardRole String
+  jobTitle  String
+
+  name         String
+  departmentId Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  facility   Facility   @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id])
+}
+
+// --- FIRE DOORS MODULE ---
+
+model FireDoorProperty {
+  id        String   @id @default(uuid())
+  name      String // e.g. "Alt Kategori", "Manyetik Tutucu"
+  options   Json // e.g. ["Tek Kapı", "Çift Kapı", "Kayar Kapı"]
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FireDoorQuestionGroup {
+  id        String   @id @default(uuid())
+  order     Int
+  name      String // e.g. "Fiziksel Uygunluk ve Montaj"
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  questions FireDoorQuestion[]
+}
+
+model FireDoorQuestion {
+  id            String   @id @default(uuid())
+  groupId       String
+  order         Int
+  text          String
+  weightPass    Float    @default(1.0)
+  weightPartial Float    @default(0.5)
+  weightFail    Float    @default(-1.0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  group           FireDoorQuestionGroup    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  inspectionItems FireDoorInspectionItem[]
+}
+
+model FireDoor {
+  id         String  @id @default(uuid())
+  facilityId String
+  qrCode     String? @unique
+  doorNo     String? // Optional, just to name it
+  locationId String? // Link to FacilityLocation
+  properties Json? // Key-value pairs for properties {"Alt Kategori": "Tek Kapı"}
+
+  status String @default("AKTIF")
+
+  photoUrl String?
+
+  lastGrade String? // A, B, C, D, E, F
+  lastScore Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  facility Facility          @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  location FacilityLocation? @relation(fields: [locationId], references: [id])
+
+  inspections FireDoorInspection[]
+
+  @@unique([facilityId, doorNo])
+  @@index([facilityId])
+}
+
+model FireDoorInspection {
+  id             String   @id @default(uuid())
+  fireDoorId     String
+  inspectionDate DateTime
+  inspectorId    String
+
+  totalScore       Float
+  maxPossibleScore Float
+  grade            String
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fireDoor FireDoor                 @relation(fields: [fireDoorId], references: [id], onDelete: Cascade)
+  items    FireDoorInspectionItem[]
+}
+
+model FireDoorInspectionItem {
+  id           String  @id @default(uuid())
+  inspectionId String
+  questionId   String
+  answer       String // PASS, PARTIAL, FAIL, NA
+  earnedScore  Float
+  comment      String?
+  photoUrl     String? // Deprecated: keep for backward compatibility
+  photos       String[] // For multiple photos
+
+  inspection FireDoorInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  question   FireDoorQuestion   @relation(fields: [questionId], references: [id])
 }

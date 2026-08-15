@@ -293,6 +293,32 @@ router.put('/professionals/:id', async (req, res) => {
         res.status(500).json({ error: 'Profesyonel güncellenemedi.' });
     }
 });
+router.post('/professionals/bulk-archive-unassigned', async (req, res) => {
+    try {
+        const unassignedProfessionals = await prisma.professional.findMany({
+            where: {
+                isActive: true,
+                assignments: {
+                    none: {
+                        status: 'Aktif'
+                    }
+                }
+            }
+        });
+        const ids = unassignedProfessionals.map((p) => p.id);
+        if (ids.length > 0) {
+            await prisma.professional.updateMany({
+                where: { id: { in: ids } },
+                data: { isActive: false },
+            });
+        }
+        res.json({ count: ids.length });
+    }
+    catch (error) {
+        console.error('Bulk archive error:', error);
+        res.status(500).json({ error: 'Toplu arşivleme işlemi başarısız oldu.' });
+    }
+});
 router.post('/professionals/:id/archive', async (req, res) => {
     const id = parseInt(String(req.params.id));
     try {
@@ -437,6 +463,12 @@ router.get('/employers', async (req, res) => {
     try {
         const employers = await prisma.employerRepresentative.findMany({
             where: { isActive: true },
+            include: {
+                appointments: {
+                    where: { status: 'Aktif' },
+                    include: { facility: true }
+                }
+            },
             orderBy: { fullName: 'asc' },
         });
         res.json(employers);
@@ -445,7 +477,7 @@ router.get('/employers', async (req, res) => {
         res.status(500).json({ error: 'İşveren vekilleri getirilemedi.' });
     }
 });
-router.post('/employer-representatives', async (req, res) => {
+router.post('/employers', async (req, res) => {
     const { fullName, title, phone, email, username } = req.body;
     if (!fullName)
         return res.status(400).json({ error: 'Ad soyad zorunludur.' });
@@ -469,7 +501,7 @@ router.post('/employer-representatives', async (req, res) => {
         res.status(500).json({ error: 'İşveren vekili oluşturulamadı.' });
     }
 });
-router.put('/employer-representatives/:id', async (req, res) => {
+router.put('/employers/:id', async (req, res) => {
     const id = parseInt(String(req.params.id));
     const { fullName, title, phone, email, username } = req.body;
     try {
@@ -914,6 +946,75 @@ router.post('/assignments/:id/terminate', async (req, res) => {
     }
     catch {
         res.status(500).json({ error: 'Atama sonlandırılamadı.' });
+    }
+});
+// ─────────────────────────────────────────────────────────────────────────────
+// ATAMA DOKÜMANLARI
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/assignments/:id/documents', async (req, res) => {
+    const assignmentId = parseInt(String(req.params.id));
+    try {
+        const documents = await prisma.assignmentDocument.findMany({
+            where: { assignmentId },
+            orderBy: { createdAt: 'desc' },
+        });
+        res.json(documents);
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Dokümanlar getirilemedi.' });
+    }
+});
+router.post('/assignments/:id/documents', upload.single('file'), async (req, res) => {
+    const assignmentId = parseInt(String(req.params.id));
+    const { name, date } = req.body;
+    const file = req.file;
+    if (!name || !date || !file) {
+        return res.status(400).json({ error: 'Ad, tarih ve dosya zorunludur.' });
+    }
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const crypto = require('crypto');
+        const ext = path.extname(file.originalname);
+        const fileName = `${crypto.randomUUID()}${ext}`;
+        const uploadDir = path.join(process.cwd(), 'uploads', 'assignments');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        const filePath = path.join(uploadDir, fileName);
+        fs.writeFileSync(filePath, file.buffer);
+        const document = await prisma.assignmentDocument.create({
+            data: {
+                assignmentId,
+                name,
+                date: new Date(date),
+                filePath: `/uploads/assignments/${fileName}`,
+            },
+        });
+        res.status(201).json(document);
+    }
+    catch (error) {
+        console.error('Document Upload Error:', error);
+        res.status(500).json({ error: 'Doküman yüklenemedi.' });
+    }
+});
+router.delete('/assignments/documents/:docId', async (req, res) => {
+    const docId = String(req.params.docId);
+    try {
+        const document = await prisma.assignmentDocument.findUnique({ where: { id: docId } });
+        if (!document)
+            return res.status(404).json({ error: 'Doküman bulunamadı.' });
+        await prisma.assignmentDocument.delete({ where: { id: docId } });
+        const fs = require('fs');
+        const path = require('path');
+        const fullPath = path.join(process.cwd(), document.filePath);
+        if (fs.existsSync(fullPath)) {
+            fs.unlinkSync(fullPath);
+        }
+        res.json(document);
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Doküman silinemedi.' });
     }
 });
 // ─────────────────────────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.io = void 0;
+const cronTasks_1 = require("./jobs/cronTasks");
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
@@ -28,6 +29,9 @@ const hazmat_1 = __importDefault(require("./routes/hazmat"));
 const fire_equipment_1 = __importDefault(require("./routes/fire_equipment"));
 const build_management_1 = __importDefault(require("./routes/build_management"));
 const checklists_1 = __importDefault(require("./routes/checklists"));
+const ohs_boards_1 = __importDefault(require("./routes/ohs_boards"));
+const public_1 = __importDefault(require("./routes/public"));
+const fire_doors_1 = __importDefault(require("./routes/fire_doors"));
 // Middleware
 const errorHandler_1 = require("./middleware/errorHandler");
 dotenv_1.default.config();
@@ -48,12 +52,14 @@ const renovation_report_1 = __importDefault(require("./routes/renovation_report"
 // Servis statik dosyalar (Yüklemeler için)
 app.use('/uploads', express_1.default.static(path_1.default.join(process.cwd(), 'uploads')));
 // Route Entegrasyonu
+app.use('/api/public', public_1.default);
 app.use('/api/auth', auth_1.default);
 app.use('/api/settings/telegram', telegram_1.default);
 app.use('/api/settings', settings_1.default);
 app.use('/api/settings/hazmat-kit-items', hazmat_kit_items_1.default);
 app.use('/api/panel', panel_1.default);
 app.use('/api/operations', operations_1.default);
+app.use('/api/operations/board', ohs_boards_1.default);
 app.use('/api/notifications', notifications_1.default);
 app.use('/api/notebooks', notebooks_1.default);
 app.use('/api/incidents', incidents_1.default);
@@ -68,6 +74,7 @@ app.use('/api/bina-turu', bina_turu_1.default);
 app.use('/api/renovation-reports', renovation_report_1.default);
 app.use('/api/locations', require('./routes/locations').default);
 app.use('/api/checklists', checklists_1.default);
+app.use('/api/safety-management/fire-doors', fire_doors_1.default);
 // Sağlık kontrolü
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -102,4 +109,7 @@ exports.io.on('connection', (socket) => {
 httpServer.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`Backend server running on http://0.0.0.0:${PORT}`);
     (0, telegramService_1.initTelegramBot)(); // Start Telegram bot polling
+    (0, cronTasks_1.startCronJobs)();
+    const { startChecklistCronJobs } = require('./jobs/checklistCron');
+    startChecklistCronJobs();
 });

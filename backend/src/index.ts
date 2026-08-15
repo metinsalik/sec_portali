@@ -26,6 +26,7 @@ import buildManagementRoutes from './routes/build_management';
 import checklistRoutes from './routes/checklists';
 import ohsBoardRoutes from './routes/ohs_boards';
 import publicRoutes from './routes/public';
+import fireDoorsRoutes from './routes/fire_doors';
 
 // Middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
@@ -76,6 +77,7 @@ app.use('/api/bina-turu', binaTuruRoutes);
 app.use('/api/renovation-reports', renovationReportRoutes);
 app.use('/api/locations', require('./routes/locations').default);
 app.use('/api/checklists', checklistRoutes);
+app.use('/api/safety-management/fire-doors', fireDoorsRoutes);
 
 // Sağlık kontrolü
 app.get('/health', (req, res) => {

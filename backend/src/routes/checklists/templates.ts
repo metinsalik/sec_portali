@@ -234,15 +234,24 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Soft delete template
+// Delete template (Hard delete for admins, cascades to submissions)
 router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
+    const isAdmin = req.user?.isAdmin || req.user?.roles?.includes('admin');
+    
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Sadece yöneticiler şablon silebilir.' });
+    }
+
     const { id } = req.params;
-    await prisma.checklistTemplate.update({
-      where: { id },
-      data: { isActive: false }
+    
+    // Perform a hard delete. Due to onDelete: Cascade in Prisma schema, 
+    // all related ChecklistSubmission and their answers will be deleted automatically.
+    await prisma.checklistTemplate.delete({
+      where: { id }
     });
-    res.json({ success: true });
+    
+    res.json({ success: true, message: 'Şablon ve bağlı tüm denetimler başarıyla silindi.' });
   } catch (error) {
     console.error('Error deleting template:', error);
     res.status(500).json({ error: 'Failed to delete template' });

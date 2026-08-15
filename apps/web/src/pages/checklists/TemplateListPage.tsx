@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, ClipboardCheck, CalendarCheck } from 'lucide-react';
+import { Plus, Edit, Trash2, ClipboardCheck, CalendarCheck, Folder, FolderOpen, Eye, LayoutGrid, FileText, Settings, BarChart2 } from 'lucide-react';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Folder, FolderOpen } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 import { AssignmentModal } from './AssignmentModal';
 import { TemplateGroupModal } from './TemplateGroupModal';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { toast } from 'sonner';
 
 export default function TemplateListPage() {
   const [templates, setTemplates] = useState<any[]>([]);
@@ -42,6 +44,7 @@ export default function TemplateListPage() {
       setGroups(groupsData);
     } catch (error) {
       console.error('Error fetching data', error);
+      toast.error('Veriler yüklenirken bir hata oluştu.');
     }
   };
 
@@ -49,9 +52,11 @@ export default function TemplateListPage() {
     if (confirm('Bu şablonu silmek istediğinize emin misiniz?')) {
       try {
         await api.delete(`/checklists/templates/${id}`);
+        toast.success('Şablon başarıyla silindi.');
         fetchData();
       } catch (error) {
         console.error('Error deleting template', error);
+        toast.error('Şablon silinirken bir hata oluştu.');
       }
     }
   };
@@ -61,10 +66,11 @@ export default function TemplateListPage() {
       try {
         await api.delete(`/checklists/groups/${id}`);
         if (selectedGroupId === id) setSelectedGroupId(null);
+        toast.success('Grup silindi.');
         fetchData();
       } catch (error: any) {
         console.error('Error deleting group', error);
-        alert(error.message || 'Grup silinirken hata oluştu');
+        toast.error(error.message || 'Grup silinirken hata oluştu');
       }
     }
   };
@@ -74,96 +80,178 @@ export default function TemplateListPage() {
     : templates;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Kontrol Listesi Şablonları</h1>
-          <p className="text-muted-foreground">Saha denetimleri için şablon oluşturun ve yönetin.</p>
+    <div className="container mx-auto p-6 max-w-[1400px] space-y-8">
+      
+      {/* HEADER SECTION */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pb-6 border-b border-slate-200">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-indigo-100 text-indigo-700 rounded-xl">
+              <ClipboardCheck className="w-6 h-6" />
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Şablon Yönetimi</h1>
+          </div>
+          <p className="text-slate-500 text-lg ml-12">
+            Saha denetimleri için kontrol listesi şablonları oluşturun, gruplayın ve yönetin.
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setGroupModal({ open: true, groupId: null })} className="gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="outline" onClick={() => setGroupModal({ open: true, groupId: null })} className="gap-2 h-11 px-5 border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-xl font-semibold transition-all">
             <Folder className="w-4 h-4" />
-            Yeni Grup Ekle
+            Kategori (Grup) Ekle
           </Button>
-          <Button onClick={() => navigate('/checklists/templates/new')} className="gap-2">
-            <Plus className="w-4 h-4" />
+          <Button onClick={() => navigate('/checklists/templates/new')} className="gap-2 h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm hover:shadow font-semibold transition-all">
+            <Plus className="w-5 h-5" />
             Yeni Şablon Oluştur
           </Button>
         </div>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
-        <Button 
-          variant={selectedGroupId === null ? "default" : "outline"} 
-          onClick={() => setSelectedGroupId(null)}
-          className="whitespace-nowrap"
-        >
-          Tümü
-        </Button>
-        {groups.map(g => (
+      {/* FILTER (GROUPS) SECTION */}
+      <div className="bg-slate-50/50 p-2 rounded-2xl border border-slate-100">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           <Button 
-            key={g.id}
-            variant={selectedGroupId === g.id ? "default" : "outline"} 
-            onClick={() => setSelectedGroupId(g.id)}
-            className="whitespace-nowrap gap-2"
+            variant={selectedGroupId === null ? "default" : "ghost"} 
+            onClick={() => setSelectedGroupId(null)}
+            className={`whitespace-nowrap px-6 rounded-xl font-semibold transition-all ${selectedGroupId === null ? 'bg-white text-indigo-700 shadow-sm border border-slate-200 hover:bg-white' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'}`}
           >
-            {selectedGroupId === g.id ? <FolderOpen className="w-4 h-4" /> : <Folder className="w-4 h-4" />}
-            {g.name}
+            <LayoutGrid className="w-4 h-4 mr-2" />
+            Tüm Şablonlar
+            <Badge variant="secondary" className="ml-2 bg-slate-100 text-slate-600 border-none">{templates.length}</Badge>
           </Button>
-        ))}
+          
+          <Separator orientation="vertical" className="h-8 my-auto mx-1" />
+          
+          {groups.map(g => (
+            <div key={g.id} className="flex items-center group">
+              <Button 
+                variant={selectedGroupId === g.id ? "default" : "ghost"} 
+                onClick={() => setSelectedGroupId(g.id)}
+                className={`whitespace-nowrap px-5 rounded-xl font-medium transition-all gap-2 ${selectedGroupId === g.id ? 'bg-white text-indigo-700 shadow-sm border border-slate-200 hover:bg-white' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'}`}
+              >
+                {selectedGroupId === g.id ? <FolderOpen className="w-4 h-4 text-indigo-500" /> : <Folder className="w-4 h-4" />}
+                {g.name}
+              </Button>
+              {/* Optional: Add a small delete button for the group visible on hover */}
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* TEMPLATES GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredTemplates.map((template) => (
-          <Card key={template.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <ClipboardCheck className="w-5 h-5 text-emerald-500" />
-                {template.title}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription className="line-clamp-2 mb-4">
-                {template.description || 'Açıklama yok.'}
-              </CardDescription>
-              {template.group && (
-                <div className="mb-4">
-                  <Badge variant="outline" className="gap-1 items-center">
-                    <Folder className="w-3 h-3" />
-                    {template.group.name}
-                  </Badge>
+          <Card key={template.id} className="group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-slate-200 flex flex-col rounded-2xl overflow-hidden bg-white">
+            
+            <CardHeader className="pb-4 relative">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-indigo-50 to-transparent opacity-50 rounded-bl-full pointer-events-none" />
+              <div className="flex justify-between items-start gap-4">
+                <div className="space-y-1 z-10">
+                  {template.group && (
+                    <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200 uppercase text-[10px] tracking-wider font-bold mb-2">
+                      {template.group.name}
+                    </Badge>
+                  )}
+                  <CardTitle className="text-xl font-bold leading-tight text-slate-800 group-hover:text-indigo-700 transition-colors">
+                    {template.title}
+                  </CardTitle>
                 </div>
-              )}
-              <div className="flex justify-between items-center text-sm text-muted-foreground">
-                <span>Sürüm: {template.version}</span>
-                <span>Kullanım: {template._count?.submissions || 0}</span>
               </div>
-              <div className="mt-4 flex gap-2 justify-end">
-                <Button variant="secondary" size="sm" onClick={() => setAssignmentModal({ open: true, templateId: template.id, templateTitle: template.title })}>
-                  <CalendarCheck className="w-4 h-4 mr-2" />
-                  Görevlendir
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => navigate(`/checklists/templates/${template.id}`)}>
-                  Detay
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => navigate(`/checklists/templates/${template.id}/edit`)}>
-                  <Edit className="w-4 h-4" />
-                </Button>
-                <Button variant="destructive" size="sm" onClick={() => handleDelete(template.id)}>
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+            </CardHeader>
+            
+            <CardContent className="flex-1 pb-4">
+              <CardDescription className="line-clamp-2 text-sm text-slate-500 leading-relaxed min-h-[40px]">
+                {template.description || 'Bu şablon için herhangi bir açıklama girilmemiş.'}
+              </CardDescription>
+              
+              <div className="mt-6 flex items-center gap-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                <div className="flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5" />
+                  Sürüm: v{template.version}
+                </div>
+                <div className="w-1 h-1 rounded-full bg-slate-300" />
+                <div className="flex items-center gap-1.5">
+                  <BarChart2 className="w-3.5 h-3.5" />
+                  Kullanım: {template._count?.submissions || 0}
+                </div>
               </div>
             </CardContent>
+            
+            <CardFooter className="pt-4 pb-5 px-6 border-t bg-slate-50/50 flex flex-wrap gap-2 justify-between items-center">
+              
+              <Button 
+                onClick={() => setAssignmentModal({ open: true, templateId: template.id, templateTitle: template.title })}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm font-semibold h-9 px-4 gap-2 transition-all"
+              >
+                <CalendarCheck className="w-4 h-4" />
+                Görevlendir
+              </Button>
+
+              <div className="flex items-center gap-1">
+                <TooltipProvider delayDuration={200}>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={() => navigate(`/checklists/templates/${template.id}`)} className="h-9 w-9 text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg">
+                        <BarChart2 className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Analiz ve İstatistikler</TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={() => navigate(`/checklists/templates/${template.id}/preview`)} className="h-9 w-9 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-lg">
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Şablon Önizleme</TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={() => navigate(`/checklists/templates/${template.id}/edit`)} className="h-9 w-9 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg">
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Şablonu Düzenle</TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(template.id)} className="h-9 w-9 text-rose-500 hover:bg-rose-50 hover:text-rose-700 rounded-lg">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="bg-rose-600 text-white border-rose-600">Sil</TooltipContent>
+                  </Tooltip>
+
+                </TooltipProvider>
+              </div>
+            </CardFooter>
           </Card>
         ))}
-        
-        {filteredTemplates.length === 0 && (
-          <div className="col-span-full text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-            {selectedGroupId ? "Bu gruba ait şablon bulunamadı." : "Henüz oluşturulmuş bir şablon bulunmuyor."}
-          </div>
-        )}
       </div>
+        
+      {filteredTemplates.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-24 text-center border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50">
+          <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mb-4 shadow-sm">
+            <ClipboardCheck className="w-8 h-8 text-slate-400" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-700 mb-2">Şablon Bulunamadı</h3>
+          <p className="text-slate-500 max-w-sm mb-6">
+            {selectedGroupId 
+              ? "Seçtiğiniz gruba ait henüz bir kontrol listesi şablonu oluşturulmamış." 
+              : "Sistemde henüz oluşturulmuş bir şablon bulunmuyor. Yeni bir şablon oluşturarak başlayın."}
+          </p>
+          <Button onClick={() => navigate('/checklists/templates/new')} className="bg-indigo-600 hover:bg-indigo-700 rounded-xl px-6 h-11 font-semibold shadow-sm">
+            <Plus className="w-5 h-5 mr-2" />
+            İlk Şablonu Oluştur
+          </Button>
+        </div>
+      )}
 
+      {/* MODALS */}
       <AssignmentModal 
         open={assignmentModal.open} 
         onOpenChange={(open) => setAssignmentModal({ ...assignmentModal, open })} 

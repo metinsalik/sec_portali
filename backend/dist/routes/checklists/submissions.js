@@ -1,29 +1,102 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const client_1 = require("@prisma/client");
+const multer_1 = __importDefault(require("multer"));
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
+const storage = multer_1.default.diskStorage({
+    destination: (_req, _file, cb) => {
+        const dir = path_1.default.join(process.cwd(), 'uploads', 'checklists');
+        fs_1.default.mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    }
+});
+const upload = (0, multer_1.default)({ storage });
 // Get submissions for a facility
 router.get('/', async (req, res) => {
     try {
-        const { facilityId } = req.query;
-        if (!facilityId || typeof facilityId !== 'string') {
-            return res.status(400).json({ error: 'facilityId is required' });
+        const { facilityId, year } = req.query;
+        let whereClause = {};
+        if (facilityId && typeof facilityId === 'string') {
+            whereClause.facilityId = facilityId;
         }
-        const submissions = await prisma.checklistSubmission.findMany({
-            where: { facilityId },
+        if (year && typeof year === 'string') {
+            const yearNum = parseInt(year);
+            if (!isNaN(yearNum)) {
+                whereClause.auditDate = {
+                    gte: new Date(yearNum, 0, 1),
+                    lt: new Date(yearNum + 1, 0, 1)
+                };
+            }
+        }
+        if (req.user && !req.user.isAdmin && !req.user.isManagement && !req.user.roles?.includes('admin')) {
+            if (req.user.facilities && req.user.facilities.length > 0) {
+                if (whereClause.facilityId) {
+                    if (!req.user.facilities.includes(whereClause.facilityId)) {
+                        whereClause.facilityId = 'UNAUTHORIZED';
+                    }
+                }
+                else {
+                    whereClause.facilityId = { in: req.user.facilities };
+                }
+            }
+            else {
+                whereClause.facilityId = 'UNAUTHORIZED';
+            }
+        }
+        let submissions = await prisma.checklistSubmission.findMany({
+            where: whereClause,
             include: {
                 template: {
-                    select: { title: true, version: true }
+                    select: { id: true, title: true, version: true, group: true }
                 },
                 conductedBy: {
                     select: { fullName: true }
+                },
+                facility: {
+                    select: { name: true }
                 }
             },
             orderBy: { auditDate: 'desc' }
         });
-        res.json(submissions);
+        // Atamaları (Assignments) toplu çekelim (N+1 problemini azaltmak ve isPeriodic flag'ini eklemek için)
+        const templateIds = [...new Set(submissions.map(s => s.templateId))];
+        const assignments = await prisma.checklistAssignment.findMany({
+            where: { templateId: { in: templateIds } },
+            orderBy: { createdAt: 'desc' }
+        });
+        const enrichedSubmissions = [];
+        // Auto-close expired ones ve isPeriodic flag ekleme
+        for (let sub of submissions) {
+            const assignment = assignments.find(a => a.templateId === sub.templateId && a.facilityIds.includes(sub.facilityId));
+            let isPeriodic = assignment?.isPeriodic || false;
+            if (sub.status === 'TASLAK' || sub.status === 'BEKLEYEN') {
+                if (assignment &&
+                    assignment.endDate &&
+                    new Date(assignment.endDate) < new Date() &&
+                    new Date(sub.updatedAt) <= new Date(assignment.endDate)) {
+                    const updated = await prisma.checklistSubmission.update({
+                        where: { id: sub.id },
+                        data: { status: 'TAMAMLANDI' }
+                    });
+                    sub.status = updated.status;
+                }
+            }
+            enrichedSubmissions.push({
+                ...sub,
+                isPeriodic
+            });
+        }
+        res.json(enrichedSubmissions);
     }
     catch (error) {
         console.error('Error fetching submissions:', error);
@@ -39,19 +112,48 @@ router.get('/:id', async (req, res) => {
             include: {
                 template: {
                     include: {
-                        scale: true,
+                        scaleSet: {
+                            include: { options: true }
+                        },
                         sections: {
                             include: { items: true }
                         }
                     }
                 },
-                answers: true,
+                answers: {
+                    include: { attachments: true }
+                },
                 attachments: true,
                 conductedBy: { select: { fullName: true } }
             }
         });
         if (!submission) {
             return res.status(404).json({ error: 'Submission not found' });
+        }
+        if (req.user && !req.user.isAdmin && !req.user.isManagement && !req.user.roles?.includes('admin')) {
+            if (!req.user.facilities || !req.user.facilities.includes(submission.facilityId)) {
+                return res.status(403).json({ error: 'Bu denetime erişim yetkiniz yok' });
+            }
+        }
+        // Auto-close if assignment endDate passed
+        if (submission.status === 'TASLAK' || submission.status === 'BEKLEYEN') {
+            const assignment = await prisma.checklistAssignment.findFirst({
+                where: {
+                    templateId: submission.templateId,
+                    facilityIds: { has: submission.facilityId }
+                },
+                orderBy: { createdAt: 'desc' }
+            });
+            if (assignment &&
+                assignment.endDate &&
+                new Date(assignment.endDate) < new Date() &&
+                new Date(submission.updatedAt) <= new Date(assignment.endDate)) {
+                const updated = await prisma.checklistSubmission.update({
+                    where: { id: submission.id },
+                    data: { status: 'TAMAMLANDI' }
+                });
+                submission.status = updated.status;
+            }
         }
         res.json(submission);
     }
@@ -137,7 +239,19 @@ router.put('/:id', async (req, res) => {
     }
     catch (error) {
         console.error('Error updating submission:', error);
-        res.status(500).json({ error: 'Failed to update submission' });
+        res.status(500).json({ error: 'Denetim iptal edilemedi.' });
+    }
+});
+router.post('/upload', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Dosya bulunamadı' });
+        }
+        const fileUrl = `/uploads/checklists/${req.file.filename}`;
+        res.json({ url: fileUrl });
+    }
+    catch (error) {
+        res.status(500).json({ error: error.message || 'Dosya yüklenemedi' });
     }
 });
 exports.default = router;

@@ -297,6 +297,7 @@ async function main() {
       { code: 'BUILD_MANAGEMENT', name: 'İnşaat ve Renovasyon Yönetimi', description: 'İnşaat projelerinin ICRA, risk ve onay süreçleri', icon: 'construction' },
       { code: 'BUILDING_TOUR', name: 'Bina Turu Yönetimi', description: 'Bina turları ve denetimleri', icon: 'apartment' },
       { code: 'CHECKLISTS', name: 'İSG Kontrol Listeleri', description: 'Saha denetimleri ve kontrol şablonları', icon: 'ClipboardList' },
+      { code: 'FIRE_DOORS', name: 'Yangın Kapıları', description: 'Yangın kapıları denetimi ve özellikleri', icon: 'DoorClosed' },
     ],
     skipDuplicates: true,
   });

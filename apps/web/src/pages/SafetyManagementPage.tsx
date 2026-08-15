@@ -338,6 +338,48 @@ export default function SafetyManagementPage() {
           </div>
           )}
 
+          {/* Card: Yangın Kapıları */}
+          {(hasAdminAccess || user?.modules?.includes('FIRE_DOORS')) && (
+          <div
+            onClick={() => navigate('/safety-management/fire-doors')}
+            className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
+          >
+            {/* Mobile Card Layout */}
+            <div className="flex md:hidden items-start gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#ffebee] dark:bg-[#b71c1c]/20 flex items-center justify-center text-[#c62828] dark:text-red-400">
+                <span className="material-symbols-outlined text-[28px]">door_front</span>
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">Yangın Kapıları</h2>
+                <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
+                  Yangın kapılarının envanteri, denetimi ve puanlama tabanlı periyodik kontrolleri.
+                </p>
+                <div className="flex items-center gap-2 text-[#c62828] dark:text-red-400 text-sm font-medium group-hover:underline">
+                  Uygulamaya Git
+                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop Card Layout */}
+            <div className="hidden md:flex flex-col justify-between h-full">
+              <div>
+                <div className="w-14 h-14 rounded-xl bg-red-50 dark:bg-red-950/20 flex items-center justify-center mb-6 text-[#c62828] dark:text-red-400 transition-transform group-hover:scale-110">
+                  <span className="material-symbols-outlined text-[32px]">door_front</span>
+                </div>
+                <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">Yangın Kapıları</h3>
+                <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
+                  Yangın kapılarının envanteri, denetimi ve puanlama tabanlı periyodik kontrolleri.
+                </p>
+              </div>
+              <div className="inline-flex items-center gap-2 text-[#c62828] dark:text-red-400 text-sm font-medium group-hover:gap-4 transition-all">
+                Uygulamaya Git
+                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+              </div>
+            </div>
+          </div>
+          )}
+
         </div>
       </main>
 

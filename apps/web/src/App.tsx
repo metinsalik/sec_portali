@@ -119,6 +119,13 @@ import FireEquipmentMaintenanceDashboardPage from './pages/fire_equipment/FireEq
 import FireEquipmentSettingsPage from './pages/fire_equipment/FireEquipmentSettingsPage';
 import QRScannerPage from './pages/fire_equipment/QRScannerPage';
 
+// Fire Doors
+import FireDoorsList from './pages/FireDoors/List/FireDoorsList';
+import FireDoorDetail from './pages/FireDoors/Detail/FireDoorDetail';
+import FireDoorInspectionForm from './pages/FireDoors/Inspection/FireDoorInspectionForm';
+import FireDoorSettings from './pages/FireDoors/Settings/FireDoorSettings';
+import FireDoorWizard from './pages/FireDoors/Inspection/FireDoorWizard';
+
 // Build Management
 import BuildDashboard from './pages/build_management/BuildDashboard';
 import BuildProjectList from './pages/build_management/BuildProjectList';
@@ -152,6 +159,7 @@ import UygunsuzlukYillikRaporu from './pages/bina-turu/UygunsuzlukYillikRaporu';
 import TemplateListPage from './pages/checklists/TemplateListPage';
 import TemplateBuilderPage from './pages/checklists/TemplateBuilderPage';
 import TemplateViewPage from './pages/checklists/TemplateViewPage';
+import TemplatePreviewPage from './pages/checklists/TemplatePreviewPage';
 import SubmissionListPage from './pages/checklists/SubmissionListPage';
 import SubmissionFormPage from './pages/checklists/SubmissionFormPage';
 import ReportsPage from './pages/checklists/ReportsPage';
@@ -200,12 +208,55 @@ function App() {
                     }
                   />
 
-                  {/* ── SAFETY MANAGEMENT ─────────────────────── */}
                   <Route
                     path="/safety-management"
                     element={
                       <ProtectedRoute>
                         <SafetyManagementPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/safety-management/fire-doors"
+                    element={<Navigate to="/safety-management/fire-doors/list" replace />}
+                  />
+                  <Route
+                    path="/safety-management/fire-doors/list"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><FireDoorsList /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/safety-management/fire-doors/new"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><FireDoorWizard /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/safety-management/fire-doors/settings"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><FireDoorSettings /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/safety-management/fire-doors/:id"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><FireDoorDetail /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/safety-management/fire-doors/:id/inspection"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><FireDoorWizard /></AppLayout>
                       </ProtectedRoute>
                     }
                   />
@@ -1143,6 +1194,7 @@ function App() {
                     <Route path="facilities" element={<FacilitiesPage />} />
                     <Route path="facilities/new" element={<FacilityWizardPage />} />
                     <Route path="facilities/:id/edit" element={<FacilityWizardPage />} />
+
                     <Route path="locations" element={<FacilityLocationsPage />} />
                     <Route path="users" element={<ProtectedRoute requireAdmin><UsersPage /></ProtectedRoute>} />
                     <Route path="definitions" element={<ProtectedRoute requireAdmin><DefinitionsPage /></ProtectedRoute>} />
@@ -1171,6 +1223,7 @@ function App() {
                   <Route path="/checklists/templates" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><TemplateListPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/checklists/templates/new" element={<ProtectedRoute allowedRoles={['admin','specialist']}><AppLayout><TemplateBuilderPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/checklists/templates/:id" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><TemplateViewPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/templates/:id/preview" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><TemplatePreviewPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/checklists/templates/:id/edit" element={<ProtectedRoute allowedRoles={['admin','specialist']}><AppLayout><TemplateBuilderPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/checklists/submissions" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><SubmissionListPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/checklists/submissions/new" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><SubmissionFormPage /></AppLayout></ProtectedRoute>} />

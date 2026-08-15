@@ -66,11 +66,19 @@ router.get('/', async (req: AuthRequest, res: Response) => {
           select: { id: true, name: true }
         }
       },
-      orderBy: { auditDate: 'desc' }
+      orderBy: { auditDate: 'asc' } // Ascending to process chronological history
     });
 
     const completed = submissions.filter(s => s.status === 'TAMAMLANDI');
     const completedIds = completed.map(s => s.id);
+
+    // Dropdowns data (fast execution)
+    const groups = await prisma.checklistTemplateGroup.findMany({ orderBy: { name: 'asc' } });
+    const templates = await prisma.checklistTemplate.findMany({
+      where: groupId && groupId !== 'all' ? { groupId: String(groupId) } : {},
+      select: { id: true, title: true, groupId: true }
+    });
+    const categories = await prisma.checklistCategory.findMany({ orderBy: { name: 'asc' } });
 
     // Filter Answers if Category is selected, otherwise fetch all answers for completed
     let answerWhere: any = { submissionId: { in: completedIds } };
@@ -90,126 +98,141 @@ router.get('/', async (req: AuthRequest, res: Response) => {
           submission: {
             include: { facility: true, template: true }
           }
+        },
+        orderBy: {
+          submission: { auditDate: 'asc' }
         }
       });
     }
 
-    // Helper: Determine if answer is negative (finding/uygunsuzluk)
-    const isNegativeAnswer = (ans: any) => {
-      if (ans.notApplicable) return false;
+    // Helper: Determine status of answer
+    const getAnswerStatus = (ans: any): 'KARŞILIYOR' | 'KISMEN' | 'KARŞILAMIYOR' | 'KAPSAM DIŞI' => {
+      if (ans.notApplicable) return 'KAPSAM DIŞI';
+      
       if (ans.item.questionType === 'YES_NO' || ans.item.questionType === 'YES_NO_NA') {
-        return ans.yesNoValue === false;
+        return ans.yesNoValue === true ? 'KARŞILIYOR' : 'KARŞILAMIYOR';
       } 
+      
       if (ans.item.questionType === 'SCALE' && ans.scaleOption) {
-         const label = ans.scaleOption.label.toLowerCase();
-         if (label.includes('değil') || label.includes('kötü') || label.includes('risk') || label.includes('yok') || (ans.scaleOption.multiplier !== null && ans.scaleOption.multiplier <= 0.5)) {
-           return true;
-         }
+         const m = ans.scaleOption.multiplier;
+         if (m === null) return 'KAPSAM DIŞI';
+         if (m >= 0.8) return 'KARŞILIYOR';
+         if (m >= 0.4 && m < 0.8) return 'KISMEN';
+         return 'KARŞILAMIYOR';
       }
-      return false;
+      
+      return 'KAPSAM DIŞI';
     };
 
-    // Calculate advanced stats
-    let totalFindings = 0;
-    const categoryStats: Record<string, { id: string, name: string, findingCount: number, totalQuestions: number }> = {};
-    const itemStats: Record<string, any> = {};
-    const recentFindingsList: any[] = [];
-
-    answers.forEach(ans => {
-      if (ans.notApplicable) return;
-      
-      const isFinding = isNegativeAnswer(ans);
-      const catId = ans.item.categoryId || 'uncategorized';
-      const catName = ans.item.category?.name || 'Kategorisiz';
-
-      // Category Grouping
-      if (!categoryStats[catId]) {
-        categoryStats[catId] = { id: catId, name: catName, findingCount: 0, totalQuestions: 0 };
+    // Analytics state variables
+    const facilityScoreMap: Record<string, { totalScore: number, count: number, name: string }> = {};
+    const statusCounts = { 'KARŞILIYOR': 0, 'KISMEN': 0, 'KARŞILAMIYOR': 0, 'KAPSAM DIŞI': 0 };
+    
+    // Facility scores mapping
+    completed.forEach(sub => {
+      const facId = sub.facilityId;
+      const facName = sub.facility?.name || 'Bilinmiyor';
+      if (!facilityScoreMap[facId]) {
+         facilityScoreMap[facId] = { totalScore: 0, count: 0, name: facName };
       }
-      categoryStats[catId].totalQuestions += 1;
-      if (isFinding) {
-        categoryStats[catId].findingCount += 1;
-        totalFindings += 1;
+      facilityScoreMap[facId].totalScore += (sub.percentScore || 0);
+      facilityScoreMap[facId].count += 1;
+    });
 
-        // Add to recent findings
-        recentFindingsList.push({
-          id: ans.id,
-          date: ans.submission.auditDate,
-          facilityName: ans.submission.facility?.name,
-          templateName: ans.submission.template?.title,
-          categoryName: catName,
-          questionText: ans.item.questionText,
-          answerLabel: ans.item.questionType === 'SCALE' ? ans.scaleOption?.label : 'Hayır'
+    const facilityScores = Object.values(facilityScoreMap).map(f => ({
+      name: f.name,
+      score: Number((f.totalScore / f.count).toFixed(1))
+    })).sort((a,b) => b.score - a.score);
+
+    const auditedFacilitiesCount = Object.keys(facilityScoreMap).length;
+    const totalScoreAll = completed.reduce((sum, s) => sum + (s.percentScore || 0), 0);
+    const avgGroupScore = completed.length > 0 ? (totalScoreAll / completed.length) : 0;
+
+    // LIFECYCLE TRACKING
+    // Track by "FacilityId_QuestionId"
+    // Since answers are already sorted ascending by date (due to completedIds ordering / answer ordering)
+    const lifecycleMap: Record<string, any[]> = {};
+    
+    answers.forEach(ans => {
+      const status = getAnswerStatus(ans);
+      statusCounts[status]++;
+
+      if (status === 'KAPSAM DIŞI') return;
+
+      const key = `${ans.submission.facilityId}_${ans.itemId}`;
+      if (!lifecycleMap[key]) {
+         lifecycleMap[key] = [];
+      }
+      lifecycleMap[key].push({
+         status,
+         date: ans.submission.auditDate,
+         answerId: ans.id,
+         questionText: ans.item.questionText,
+         facilityName: ans.submission.facility?.name,
+         templateName: ans.submission.template?.title
+      });
+    });
+
+    const lifecycleFindings: any[] = [];
+    let totalFindingsEver = 0;
+    let closedFindings = 0;
+    let ongoingFindings = 0;
+
+    Object.values(lifecycleMap).forEach(history => {
+      // Find the first time it was a finding (KARŞILAMIYOR or KISMEN)
+      const firstFindingIndex = history.findIndex(h => h.status === 'KARŞILAMIYOR' || h.status === 'KISMEN');
+      
+      if (firstFindingIndex !== -1) {
+        totalFindingsEver++;
+        const initial = history[firstFindingIndex];
+        const latest = history[history.length - 1];
+        
+        let finalStatus = 'DEVAM EDİYOR';
+        
+        // If the latest is KARŞILIYOR, and it happened AFTER the initial finding
+        if (latest.status === 'KARŞILIYOR') {
+          finalStatus = 'KAPATILDI';
+          closedFindings++;
+        } else {
+          ongoingFindings++;
+        }
+
+        lifecycleFindings.push({
+          facilityName: initial.facilityName,
+          questionText: initial.questionText,
+          templateName: initial.templateName,
+          initialStatus: initial.status,
+          latestStatus: latest.status,
+          currentStatus: finalStatus,
+          initialDate: initial.date,
+          latestDate: latest.date
         });
       }
-
-      // Item Level Grouping
-      const qId = ans.itemId;
-      if (!itemStats[qId]) {
-        itemStats[qId] = {
-          id: qId,
-          text: ans.item.itemNo ? `${ans.item.itemNo}. ${ans.item.questionText}` : ans.item.questionText,
-          categoryName: catName,
-          total: 0,
-          negative: 0,
-          positive: 0
-        };
-      }
-      itemStats[qId].total += 1;
-      if (isFinding) itemStats[qId].negative += 1;
-      else itemStats[qId].positive += 1;
     });
 
-    // Formatting outputs
-    const categoryAnalysis = Object.values(categoryStats)
-      .filter(c => c.totalQuestions > 0)
-      .map(c => ({
-        name: c.name,
-        findings: c.findingCount,
-        rate: c.findingCount > 0 ? Number(((c.findingCount / c.totalQuestions) * 100).toFixed(1)) : 0
-      }))
-      .sort((a, b) => b.findings - a.findings);
-
-    const itemAnalysis = Object.values(itemStats)
-      .filter(stat => stat.negative > 0)
-      .sort((a, b) => b.negative - a.negative);
-
-    // Sort recent findings by date descending
-    recentFindingsList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    const topRecentFindings = recentFindingsList.slice(0, 50); // Return top 50 recent issues
-
-    // Dropdowns data
-    const groups = await prisma.checklistTemplateGroup.findMany({ orderBy: { name: 'asc' } });
-    const templates = await prisma.checklistTemplate.findMany({
-      where: groupId && groupId !== 'all' ? { groupId: String(groupId) } : {},
-      select: { id: true, title: true, groupId: true }
-    });
-    const categories = await prisma.checklistCategory.findMany({ orderBy: { name: 'asc' } });
-
-    // Status / Trend
-    const draft = submissions.filter(s => s.status === 'TASLAK' || s.status === 'BEKLEYEN');
-    const totalScore = completed.reduce((sum, s) => sum + (s.percentScore || 0), 0);
-    const avgScore = completed.length > 0 ? (totalScore / completed.length) : 0;
-    const trendData = [...completed].sort((a, b) => new Date(a.auditDate).getTime() - new Date(b.auditDate).getTime()).map(s => ({
-      date: format(new Date(s.auditDate), 'dd MMM', { locale: tr }),
-      score: s.percentScore || 0
-    }));
+    const closedImprovementRate = totalFindingsEver > 0 ? (closedFindings / totalFindingsEver) * 100 : 0;
+    
+    // Format status distribution for pie chart
+    const statusDistribution = [
+      { name: 'Karşılıyor', value: statusCounts['KARŞILIYOR'], color: '#10b981' },
+      { name: 'Kısmen', value: statusCounts['KISMEN'], color: '#eab308' },
+      { name: 'Karşılamıyor', value: statusCounts['KARŞILAMIYOR'], color: '#ef4444' },
+      { name: 'Kapsam Dışı', value: statusCounts['KAPSAM DIŞI'], color: '#94a3b8' }
+    ].filter(s => s.value > 0);
 
     res.json({
       groups,
       templates,
       categories,
       stats: {
-        total: submissions.length,
-        completed: completed.length,
-        draft: draft.length,
-        avgScore,
-        totalFindings
+        avgGroupScore,
+        auditedFacilitiesCount,
+        totalPriorityFindings: ongoingFindings,
+        closedImprovementRate
       },
-      categoryAnalysis,
-      itemAnalysis,
-      recentFindings: topRecentFindings,
-      trendData
+      facilityScores,
+      statusDistribution,
+      lifecycleFindings: lifecycleFindings.sort((a,b) => new Date(b.latestDate).getTime() - new Date(a.latestDate).getTime())
     });
 
   } catch (error) {

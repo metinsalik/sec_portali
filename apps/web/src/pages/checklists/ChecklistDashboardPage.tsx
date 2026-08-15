@@ -1,21 +1,17 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, AlertTriangle, FileText, CheckCircle, TrendingUp, Filter, BarChart3, Clock, X, Search, ShieldAlert, BadgeInfo } from 'lucide-react';
+import { Filter, X, TrendingUp, Building2, AlertTriangle, CheckCircle2, ChevronRight, Activity, Search } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
-const COLORS = ['#ef4444', '#f97316', '#eab308', '#3b82f6', '#8b5cf6', '#64748b', '#10b981'];
-
 export default function ChecklistDashboardPage() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
@@ -61,11 +57,13 @@ export default function ChecklistDashboardPage() {
   const groups = dashboardData?.groups || [];
   const templates = dashboardData?.templates || [];
   const categories = dashboardData?.categories || [];
-  const stats = dashboardData?.stats || { total: 0, completed: 0, draft: 0, avgScore: 0, totalFindings: 0 };
-  const trendData = dashboardData?.trendData || [];
-  const categoryAnalysis = dashboardData?.categoryAnalysis || [];
-  const itemAnalysis = dashboardData?.itemAnalysis || [];
-  const recentFindings = dashboardData?.recentFindings || [];
+  
+  const stats = dashboardData?.stats || { 
+    avgGroupScore: 0, auditedFacilitiesCount: 0, totalPriorityFindings: 0, closedImprovementRate: 0 
+  };
+  const facilityScores = dashboardData?.facilityScores || [];
+  const statusDistribution = dashboardData?.statusDistribution || [];
+  const lifecycleFindings = dashboardData?.lifecycleFindings || [];
 
   const years = useMemo(() => {
     const current = new Date().getFullYear();
@@ -78,8 +76,22 @@ export default function ChecklistDashboardPage() {
 
   const hasActiveFilters = urlYear !== 'all' || urlGroupId !== 'all' || urlTemplateId !== 'all' || urlCategoryId !== 'all';
 
+  const renderStatusBadge = (status: string) => {
+    if (status === 'KARŞILIYOR' || status === 'UYGUN') return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border-0">✔ UYGUN</Badge>;
+    if (status === 'KISMEN' || status === 'KISMEN KARŞILIYOR') return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-200 border-0">⚠ KISMEN</Badge>;
+    if (status === 'KARŞILAMIYOR' || status === 'UYGUN DEĞİL') return <Badge className="bg-red-100 text-red-800 hover:bg-red-200 border-0">! UYGUN DEĞİL</Badge>;
+    if (status === 'KAPATILDI') return <Badge className="bg-slate-100 text-slate-800 hover:bg-slate-200 border-0">KAPATILDI</Badge>;
+    if (status === 'DEVAM EDİYOR') return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-0">DEVAM EDİYOR</Badge>;
+    return <Badge variant="outline">{status}</Badge>;
+  };
+
   if (isLoading) {
-    return <div className="flex h-[400px] items-center justify-center">Yükleniyor...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-[500px] text-slate-400">
+        <Activity className="w-10 h-10 animate-spin mb-4 text-indigo-500" />
+        <p>Analitik Veriler Hesaplanıyor...</p>
+      </div>
+    );
   }
 
   return (
@@ -90,9 +102,11 @@ export default function ChecklistDashboardPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-2">
-              <BarChart3 className="w-6 h-6 text-indigo-600" /> Analitik Gösterge Paneli
+               Tesis / Hastane Bazlı Analitik Gösterge Paneli
             </h1>
-            <p className="text-sm text-slate-500 mt-1">Saha denetimlerinden gelen bulguların ve sistem açıklarının detaylı analizi.</p>
+            <p className="text-sm text-slate-500 mt-1">
+              Sistem genelindeki güncel denetim, uyum ve tespit durumları.
+            </p>
           </div>
           
           <div className="flex items-center gap-3">
@@ -182,217 +196,224 @@ export default function ChecklistDashboardPage() {
       </div>
 
       {/* KPI ROW */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-red-50 to-white border-red-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-red-700">Toplam Uygunsuzluk (Bulgu)</CardTitle>
-            <ShieldAlert className="w-5 h-5 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-red-600">{stats.totalFindings}</div>
-            <p className="text-xs text-red-500 mt-1">Giderilmesi gereken açık ihlaller</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-slate-50 to-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Ortalama Denetim Skoru</CardTitle>
-            <TrendingUp className="w-5 h-5 text-indigo-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-slate-800">%{stats.avgScore.toFixed(1)}</div>
-            <p className="text-xs text-slate-500 mt-1">Tamamlanan {stats.completed} denetimde</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-slate-50 to-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Devam Eden / Bekleyen</CardTitle>
-            <Clock className="w-5 h-5 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-slate-800">{stats.draft}</div>
-            <p className="text-xs text-slate-500 mt-1">Taslak veya işlem bekleyen form</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-slate-50 to-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Toplam Form Sayısı</CardTitle>
-            <FileText className="w-5 h-5 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-slate-800">{stats.total}</div>
-            <p className="text-xs text-slate-500 mt-1">Sistemdeki toplam denetim</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ANALYSIS CHARTS ROW */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="shadow-sm border-slate-200">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <PieChart className="w-5 h-5 text-slate-600" /> Kategori Bazlı Hata Dağılımı
-            </CardTitle>
-            <CardDescription>
-              Denetimlerde en çok hangi kategorilerde kural ihlali yapılıyor?
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="h-[320px]">
-            {categoryAnalysis.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={categoryAnalysis} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
-                  <XAxis type="number" tick={{fontSize: 12, fill: '#64748b'}} />
-                  <YAxis dataKey="name" type="category" tick={{fontSize: 11, fill: '#475569'}} width={100} />
-                  <RechartsTooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px', border: '1px solid #e2e8f0'}} />
-                  <Bar dataKey="findings" name="Uygunsuzluk Sayısı" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={20}>
-                    {categoryAnalysis.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-               <div className="flex flex-col h-full items-center justify-center text-slate-400">
-                 <AlertCircle className="w-10 h-10 mb-2 opacity-50" />
-                 <p className="text-sm">Analiz edilecek hata verisi bulunamadı.</p>
-               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm border-slate-200">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-slate-600" /> Genel Başarı Trendi
-            </CardTitle>
-            <CardDescription>
-              Zaman içindeki denetim başarı skorlarının (yüzde) değişimi.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="h-[320px]">
-            {trendData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <XAxis dataKey="date" tick={{fontSize: 12, fill: '#64748b'}} />
-                  <YAxis domain={[0, 100]} tick={{fontSize: 12, fill: '#64748b'}} />
-                  <RechartsTooltip contentStyle={{borderRadius: '8px', border: '1px solid #e2e8f0'}} />
-                  <Line type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={3} name="Skor (%)" dot={{r: 4, fill: '#3b82f6', strokeWidth: 0}} activeDot={{r: 6}} />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-               <div className="flex flex-col h-full items-center justify-center text-slate-400">
-                 <AlertCircle className="w-10 h-10 mb-2 opacity-50" />
-                 <p className="text-sm">Yeterli trend verisi bulunamadı.</p>
-               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* FINDINGS TABLES ROW */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* En Çok İhlal Edilen Kurallar */}
-        <Card className="shadow-sm border-red-200">
-          <CardHeader className="bg-red-50/50 border-b border-red-100">
-            <CardTitle className="text-base flex items-center gap-2 text-red-700">
-              <AlertTriangle className="w-5 h-5 text-red-500" /> Kural Bazlı Hata Analizi (Top İhlaller)
-            </CardTitle>
-            <CardDescription>
-              Sistemde en çok "Uygun Değil / Riskli" cevabı alan spesifik denetim soruları.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="max-h-[400px] overflow-y-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-slate-500 bg-slate-50 sticky top-0 border-b shadow-sm">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Soru / Kural</th>
-                    <th className="px-4 py-3 font-semibold text-center w-24">Kategori</th>
-                    <th className="px-4 py-3 font-semibold text-center w-24">İhlal Sayısı</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {itemAnalysis.length > 0 ? itemAnalysis.map((item: any, idx: number) => (
-                    <tr key={item.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 text-slate-700">
-                        <div className="font-medium">{item.text}</div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <Badge variant="outline" className="text-[10px] whitespace-nowrap bg-white text-slate-600">
-                          {item.categoryName}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex flex-col items-center">
-                          <span className="font-bold text-red-600 text-lg">{item.negative}</span>
-                          <span className="text-[10px] text-slate-400">{item.total} denetimde</span>
-                        </div>
-                      </td>
-                    </tr>
-                  )) : (
-                    <tr>
-                      <td colSpan={3} className="px-4 py-8 text-center text-slate-500">
-                        Seçili filtrelerde ihlal edilen kural bulunamadı.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+        <Card className="shadow-sm border-slate-200">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Grup Başarı Ortalaması</p>
+                <h3 className="text-3xl font-black text-slate-800 mt-2">
+                  %{stats.avgGroupScore.toFixed(1)}
+                </h3>
+                <p className="text-xs text-emerald-600 mt-2 font-medium flex items-center">
+                  Genel Uyum Skoru
+                </p>
+              </div>
+              <div className="p-3 bg-slate-100 rounded-full">
+                <TrendingUp className="w-5 h-5 text-slate-600" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Son Tespit Edilen Uygunsuzluklar */}
-        <Card className="shadow-sm border-amber-200">
-          <CardHeader className="bg-amber-50/50 border-b border-amber-100">
-            <CardTitle className="text-base flex items-center gap-2 text-amber-800">
-              <BadgeInfo className="w-5 h-5 text-amber-500" /> Sahadan Son Uygunsuzluklar
-            </CardTitle>
-            <CardDescription>
-              Tamamlanan son denetimlerde tespit edilen uygunsuz durumların canlı listesi.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="max-h-[400px] overflow-y-auto">
-              <div className="divide-y">
-                {recentFindings.length > 0 ? recentFindings.map((finding: any, idx: number) => (
-                  <div key={idx} className="p-4 hover:bg-slate-50 transition-colors">
-                    <div className="flex justify-between items-start mb-2">
-                      <Badge variant="secondary" className="bg-red-100 text-red-700 hover:bg-red-200 text-[10px]">
-                        {finding.answerLabel}
-                      </Badge>
-                      <span className="text-xs font-medium text-slate-500">
-                        {format(new Date(finding.date), 'dd MMM yyyy', { locale: tr })}
-                      </span>
-                    </div>
-                    <p className="text-sm font-semibold text-slate-800 mb-2 leading-tight">
-                      {finding.questionText}
-                    </p>
-                    <div className="flex items-center gap-3 text-xs text-slate-500">
-                      <span className="flex items-center gap-1 font-medium bg-slate-100 px-2 py-1 rounded">
-                        {finding.facilityName}
-                      </span>
-                      <span className="flex items-center gap-1 truncate max-w-[150px]">
-                        • {finding.templateName}
-                      </span>
-                    </div>
-                  </div>
-                )) : (
-                  <div className="p-8 text-center text-slate-500">
-                    Seçili filtrelerde tespit edilen yeni uygunsuzluk bulunamadı.
-                  </div>
-                )}
+        <Card className="shadow-sm border-slate-200">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Denetlenen Tesis</p>
+                <h3 className="text-3xl font-black text-slate-800 mt-2">
+                  {stats.auditedFacilitiesCount}
+                </h3>
+                <p className="text-xs text-slate-500 mt-2 font-medium">
+                  Aktif Tesisler
+                </p>
+              </div>
+              <div className="p-3 bg-slate-100 rounded-full">
+                <Building2 className="w-5 h-5 text-slate-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border-slate-200">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Öncelikli Tespitler</p>
+                <h3 className="text-3xl font-black text-red-600 mt-2">
+                  {stats.totalPriorityFindings}
+                </h3>
+                <p className="text-xs text-slate-500 mt-2 font-medium">
+                  Aksiyon bekleyen
+                </p>
+              </div>
+              <div className="p-3 bg-red-50 rounded-full">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border-slate-200">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Kapatılan İyileştirmeler</p>
+                <h3 className="text-3xl font-black text-emerald-600 mt-2">
+                  %{stats.closedImprovementRate.toFixed(0)}
+                </h3>
+                <p className="text-xs text-slate-500 mt-2 font-medium">
+                  Tarihsel Yaşam Döngüsü Oranı
+                </p>
+              </div>
+              <div className="p-3 bg-emerald-50 rounded-full">
+                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
       </div>
+
+      {/* ANALYSIS CHARTS ROW */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* BAR CHART: Hastane Bazlı Başarı Oranları */}
+        <Card className="lg:col-span-2 shadow-sm border-slate-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-slate-800">Hastane Bazlı Başarı Oranları</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[350px] pt-4">
+            {facilityScores.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={facilityScores} margin={{ top: 20, right: 30, left: 0, bottom: 25 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis 
+                    dataKey="name" 
+                    tick={{fontSize: 11, fill: '#64748b'}} 
+                    angle={-45} 
+                    textAnchor="end"
+                    interval={0}
+                  />
+                  <YAxis domain={[0, 100]} tick={{fontSize: 12, fill: '#64748b'}} />
+                  <RechartsTooltip 
+                    cursor={{fill: '#f1f5f9'}} 
+                    contentStyle={{borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} 
+                    formatter={(value: number) => [`%${value}`, 'Başarı Oranı']}
+                  />
+                  <Bar dataKey="score" name="Skor" fill="#1e293b" radius={[4, 4, 0, 0]} barSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+               <div className="flex h-full items-center justify-center text-slate-400">Veri bulunamadı.</div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* PIE CHART: Kriter Durum Dağılımı */}
+        <Card className="shadow-sm border-slate-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-slate-800">Kriter Durum Dağılımı</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[350px]">
+            {statusDistribution.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusDistribution}
+                    cx="50%"
+                    cy="45%"
+                    innerRadius={80}
+                    outerRadius={120}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {statusDistribution.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: '12px'}} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+               <div className="flex h-full items-center justify-center text-slate-400">Veri bulunamadı.</div>
+            )}
+          </CardContent>
+        </Card>
+
+      </div>
+
+      {/* FINDINGS LIFECYCLE TABLE */}
+      <Card className="shadow-sm border-slate-200">
+        <CardHeader className="bg-slate-50 border-b border-slate-100 pb-4">
+          <CardTitle className="text-lg font-bold text-slate-800">Öncelikli Tespitler ve İyileştirme Yaşam Döngüsü</CardTitle>
+          <CardDescription>Aynı tesiste, aynı sorulara verilen geçmiş ve güncel yanıtların (iyileştirmelerin) takibi.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-slate-500 bg-white border-b shadow-sm">
+                <tr>
+                  <th className="px-6 py-4 font-semibold w-1/6">Hastane</th>
+                  <th className="px-6 py-4 font-semibold w-2/6">Kriter / Tespit</th>
+                  <th className="px-6 py-4 font-semibold text-center w-32">İlk Durum</th>
+                  <th className="px-6 py-4 font-semibold text-center w-32">İyileştirme Sonrası</th>
+                  <th className="px-6 py-4 font-semibold text-center w-32">Güncel Durum</th>
+                  <th className="px-6 py-4 font-semibold text-center w-24">İşlemler</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {lifecycleFindings.length > 0 ? lifecycleFindings.map((item: any, idx: number) => (
+                  <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="px-6 py-5">
+                      <div className="font-semibold text-slate-800">{item.facilityName}</div>
+                      <div className="text-[10px] text-slate-400 mt-1">{item.templateName}</div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="text-slate-700 font-medium leading-relaxed">{item.questionText}</div>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        {renderStatusBadge(item.initialStatus)}
+                        <span className="text-[10px] text-slate-400">{format(new Date(item.initialDate), 'dd MMM yy', { locale: tr })}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        {item.latestDate !== item.initialDate ? (
+                          <>
+                            {renderStatusBadge(item.latestStatus)}
+                            <span className="text-[10px] text-slate-400">{format(new Date(item.latestDate), 'dd MMM yy', { locale: tr })}</span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-slate-300 italic">- Henüz tekrar denetlenmedi -</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      {renderStatusBadge(item.currentStatus)}
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <Button variant="ghost" size="sm" className="text-slate-500 hover:text-indigo-600">
+                        İncele <ChevronRight className="w-4 h-4 ml-1" />
+                      </Button>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                      Seçili filtrelerde yaşam döngüsü takip edilebilir tespit bulunamadı.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
     </div>
   );
 }

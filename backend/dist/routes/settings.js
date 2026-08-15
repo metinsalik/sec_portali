@@ -63,7 +63,9 @@ async function ensureModulesExist() {
         { code: 'PANEL', name: 'Operasyon Yönetim Sistemi', description: 'İSG Atama Paneli', icon: 'settings_suggest' },
         { code: 'RENOVATION_REPORT', name: 'Renovasyon Raporu', description: 'İnşaat Renovasyon Teslim Raporu', icon: 'receipt_long' },
         { code: 'BUILD_MANAGEMENT', name: 'İnşaat ve Renovasyon Yönetimi', description: 'İnşaat projelerinin ICRA, risk ve onay süreçleri', icon: 'construction' },
-        { code: 'BUILDING_TOUR', name: 'Bina Turu Yönetimi', description: 'Bina turları ve denetimleri', icon: 'apartment' }
+        { code: 'BUILDING_TOUR', name: 'Bina Turu Yönetimi', description: 'Bina turları ve denetimleri', icon: 'apartment' },
+        { code: 'CHECKLISTS', name: 'Kontrol Listeleri', description: 'İSG Kontrol ve Denetim Listeleri', icon: 'ClipboardCheck' },
+        { code: 'ISG_KURUL', name: 'İSG Kurul Yönetimi', description: 'İSG Kurul Üyeleri ve Toplantı Kararları', icon: 'Users' }
     ];
     for (const mod of defaultModules) {
         await prisma.module.upsert({
@@ -117,7 +119,8 @@ router.get('/facilities/:id', async (req, res) => {
                 assignments: {
                     include: {
                         professional: true,
-                        employerRep: true
+                        employerRep: true,
+                        documents: true
                     }
                 },
                 employeeCountHistory: {

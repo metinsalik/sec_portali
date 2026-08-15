@@ -318,6 +318,18 @@ export const OhsBoardDecisionActionScalarFieldEnumSchema = z.enum(['id','decisio
 
 export const OhsBoardMemberScalarFieldEnumSchema = z.enum(['id','facilityId','year','boardRole','jobTitle','name','departmentId','createdAt','updatedAt']);
 
+export const FireDoorPropertyScalarFieldEnumSchema = z.enum(['id','name','options','isActive','createdAt','updatedAt']);
+
+export const FireDoorQuestionGroupScalarFieldEnumSchema = z.enum(['id','order','name','isActive','createdAt','updatedAt']);
+
+export const FireDoorQuestionScalarFieldEnumSchema = z.enum(['id','groupId','order','text','weightPass','weightPartial','weightFail','isActive','createdAt','updatedAt']);
+
+export const FireDoorScalarFieldEnumSchema = z.enum(['id','facilityId','qrCode','doorNo','locationId','properties','status','photoUrl','lastGrade','lastScore','createdAt','updatedAt']);
+
+export const FireDoorInspectionScalarFieldEnumSchema = z.enum(['id','fireDoorId','inspectionDate','inspectorId','totalScore','maxPossibleScore','grade','notes','createdAt','updatedAt']);
+
+export const FireDoorInspectionItemScalarFieldEnumSchema = z.enum(['id','inspectionId','questionId','answer','earnedScore','comment','photoUrl']);
+
 export const SortOrderSchema = z.enum(['asc','desc']);
 
 export const NullableJsonNullValueInputSchema: z.ZodType<Prisma.NullableJsonNullValueInput> = z.enum(['DbNull','JsonNull',]).transform((value) => value === 'JsonNull' ? Prisma.JsonNull : value === 'DbNull' ? Prisma.DbNull : value);
@@ -673,6 +685,7 @@ export type FacilityRelations = {
   renovationReports: RenovationReportWithRelations[];
   ohsBoardMeetings: OhsBoardMeetingWithRelations[];
   ohsBoardMembers: OhsBoardMemberWithRelations[];
+  FireDoor: FireDoorWithRelations[];
 };
 
 export type FacilityWithRelations = z.infer<typeof FacilitySchema> & FacilityRelations
@@ -717,6 +730,7 @@ export const FacilityWithRelationsSchema: z.ZodType<FacilityWithRelations> = Fac
   renovationReports: z.lazy(() => RenovationReportWithRelationsSchema).array(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingWithRelationsSchema).array(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberWithRelationsSchema).array(),
+  FireDoor: z.lazy(() => FireDoorWithRelationsSchema).array(),
 }))
 
 /////////////////////////////////////////
@@ -3818,6 +3832,7 @@ export type FacilityLocationRelations = {
   buildProjects: BuildProjectWithRelations[];
   btSoruBankasi: BTSoruBankasiWithRelations[];
   btUygunsuzluklar: BTUygunsuzlukWithRelations[];
+  FireDoor: FireDoorWithRelations[];
 };
 
 export type FacilityLocationWithRelations = z.infer<typeof FacilityLocationSchema> & FacilityLocationRelations
@@ -3833,6 +3848,7 @@ export const FacilityLocationWithRelationsSchema: z.ZodType<FacilityLocationWith
   buildProjects: z.lazy(() => BuildProjectWithRelationsSchema).array(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiWithRelationsSchema).array(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukWithRelationsSchema).array(),
+  FireDoor: z.lazy(() => FireDoorWithRelationsSchema).array(),
 }))
 
 /////////////////////////////////////////
@@ -4817,6 +4833,188 @@ export const OhsBoardMemberWithRelationsSchema: z.ZodType<OhsBoardMemberWithRela
 }))
 
 /////////////////////////////////////////
+// FIRE DOOR PROPERTY SCHEMA
+/////////////////////////////////////////
+
+export const FireDoorPropertySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  options: JsonValueSchema,
+  isActive: z.boolean(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type FireDoorProperty = z.infer<typeof FireDoorPropertySchema>
+
+/////////////////////////////////////////
+// FIRE DOOR QUESTION GROUP SCHEMA
+/////////////////////////////////////////
+
+export const FireDoorQuestionGroupSchema = z.object({
+  id: z.string(),
+  order: z.number().int(),
+  name: z.string(),
+  isActive: z.boolean(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type FireDoorQuestionGroup = z.infer<typeof FireDoorQuestionGroupSchema>
+
+// FIRE DOOR QUESTION GROUP RELATION SCHEMA
+//------------------------------------------------------
+
+export type FireDoorQuestionGroupRelations = {
+  questions: FireDoorQuestionWithRelations[];
+};
+
+export type FireDoorQuestionGroupWithRelations = z.infer<typeof FireDoorQuestionGroupSchema> & FireDoorQuestionGroupRelations
+
+export const FireDoorQuestionGroupWithRelationsSchema: z.ZodType<FireDoorQuestionGroupWithRelations> = FireDoorQuestionGroupSchema.merge(z.object({
+  questions: z.lazy(() => FireDoorQuestionWithRelationsSchema).array(),
+}))
+
+/////////////////////////////////////////
+// FIRE DOOR QUESTION SCHEMA
+/////////////////////////////////////////
+
+export const FireDoorQuestionSchema = z.object({
+  id: z.string(),
+  groupId: z.string(),
+  order: z.number().int(),
+  text: z.string(),
+  weightPass: z.number(),
+  weightPartial: z.number(),
+  weightFail: z.number(),
+  isActive: z.boolean(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type FireDoorQuestion = z.infer<typeof FireDoorQuestionSchema>
+
+// FIRE DOOR QUESTION RELATION SCHEMA
+//------------------------------------------------------
+
+export type FireDoorQuestionRelations = {
+  group: FireDoorQuestionGroupWithRelations;
+  inspectionItems: FireDoorInspectionItemWithRelations[];
+};
+
+export type FireDoorQuestionWithRelations = z.infer<typeof FireDoorQuestionSchema> & FireDoorQuestionRelations
+
+export const FireDoorQuestionWithRelationsSchema: z.ZodType<FireDoorQuestionWithRelations> = FireDoorQuestionSchema.merge(z.object({
+  group: z.lazy(() => FireDoorQuestionGroupWithRelationsSchema),
+  inspectionItems: z.lazy(() => FireDoorInspectionItemWithRelationsSchema).array(),
+}))
+
+/////////////////////////////////////////
+// FIRE DOOR SCHEMA
+/////////////////////////////////////////
+
+export const FireDoorSchema = z.object({
+  id: z.string(),
+  facilityId: z.string(),
+  qrCode: z.string().nullable(),
+  doorNo: z.string().nullable(),
+  locationId: z.string().nullable(),
+  properties: JsonValueSchema.nullable(),
+  status: z.string(),
+  photoUrl: z.string().nullable(),
+  lastGrade: z.string().nullable(),
+  lastScore: z.number().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type FireDoor = z.infer<typeof FireDoorSchema>
+
+// FIRE DOOR RELATION SCHEMA
+//------------------------------------------------------
+
+export type FireDoorRelations = {
+  facility: FacilityWithRelations;
+  location?: FacilityLocationWithRelations | null;
+  inspections: FireDoorInspectionWithRelations[];
+};
+
+export type FireDoorWithRelations = Omit<z.infer<typeof FireDoorSchema>, "properties"> & {
+  properties?: JsonValueType | null;
+} & FireDoorRelations
+
+export const FireDoorWithRelationsSchema: z.ZodType<FireDoorWithRelations> = FireDoorSchema.merge(z.object({
+  facility: z.lazy(() => FacilityWithRelationsSchema),
+  location: z.lazy(() => FacilityLocationWithRelationsSchema).nullable(),
+  inspections: z.lazy(() => FireDoorInspectionWithRelationsSchema).array(),
+}))
+
+/////////////////////////////////////////
+// FIRE DOOR INSPECTION SCHEMA
+/////////////////////////////////////////
+
+export const FireDoorInspectionSchema = z.object({
+  id: z.string(),
+  fireDoorId: z.string(),
+  inspectionDate: z.coerce.date(),
+  inspectorId: z.string(),
+  totalScore: z.number(),
+  maxPossibleScore: z.number(),
+  grade: z.string(),
+  notes: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type FireDoorInspection = z.infer<typeof FireDoorInspectionSchema>
+
+// FIRE DOOR INSPECTION RELATION SCHEMA
+//------------------------------------------------------
+
+export type FireDoorInspectionRelations = {
+  fireDoor: FireDoorWithRelations;
+  items: FireDoorInspectionItemWithRelations[];
+};
+
+export type FireDoorInspectionWithRelations = z.infer<typeof FireDoorInspectionSchema> & FireDoorInspectionRelations
+
+export const FireDoorInspectionWithRelationsSchema: z.ZodType<FireDoorInspectionWithRelations> = FireDoorInspectionSchema.merge(z.object({
+  fireDoor: z.lazy(() => FireDoorWithRelationsSchema),
+  items: z.lazy(() => FireDoorInspectionItemWithRelationsSchema).array(),
+}))
+
+/////////////////////////////////////////
+// FIRE DOOR INSPECTION ITEM SCHEMA
+/////////////////////////////////////////
+
+export const FireDoorInspectionItemSchema = z.object({
+  id: z.string(),
+  inspectionId: z.string(),
+  questionId: z.string(),
+  answer: z.string(),
+  earnedScore: z.number(),
+  comment: z.string().nullable(),
+  photoUrl: z.string().nullable(),
+})
+
+export type FireDoorInspectionItem = z.infer<typeof FireDoorInspectionItemSchema>
+
+// FIRE DOOR INSPECTION ITEM RELATION SCHEMA
+//------------------------------------------------------
+
+export type FireDoorInspectionItemRelations = {
+  inspection: FireDoorInspectionWithRelations;
+  question: FireDoorQuestionWithRelations;
+};
+
+export type FireDoorInspectionItemWithRelations = z.infer<typeof FireDoorInspectionItemSchema> & FireDoorInspectionItemRelations
+
+export const FireDoorInspectionItemWithRelationsSchema: z.ZodType<FireDoorInspectionItemWithRelations> = FireDoorInspectionItemSchema.merge(z.object({
+  inspection: z.lazy(() => FireDoorInspectionWithRelationsSchema),
+  question: z.lazy(() => FireDoorQuestionWithRelationsSchema),
+}))
+
+/////////////////////////////////////////
 // SELECT & INCLUDE
 /////////////////////////////////////////
 
@@ -5117,6 +5315,7 @@ export const FacilityIncludeSchema: z.ZodType<Prisma.FacilityInclude> = z.object
   renovationReports: z.union([z.boolean(),z.lazy(() => RenovationReportFindManyArgsSchema)]).optional(),
   ohsBoardMeetings: z.union([z.boolean(),z.lazy(() => OhsBoardMeetingFindManyArgsSchema)]).optional(),
   ohsBoardMembers: z.union([z.boolean(),z.lazy(() => OhsBoardMemberFindManyArgsSchema)]).optional(),
+  FireDoor: z.union([z.boolean(),z.lazy(() => FireDoorFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => FacilityCountOutputTypeArgsSchema)]).optional(),
 }).strict();
 
@@ -5169,6 +5368,7 @@ export const FacilityCountOutputTypeSelectSchema: z.ZodType<Prisma.FacilityCount
   renovationReports: z.boolean().optional(),
   ohsBoardMeetings: z.boolean().optional(),
   ohsBoardMembers: z.boolean().optional(),
+  FireDoor: z.boolean().optional(),
 }).strict();
 
 export const FacilitySelectSchema: z.ZodType<Prisma.FacilitySelect> = z.object({
@@ -5232,6 +5432,7 @@ export const FacilitySelectSchema: z.ZodType<Prisma.FacilitySelect> = z.object({
   renovationReports: z.union([z.boolean(),z.lazy(() => RenovationReportFindManyArgsSchema)]).optional(),
   ohsBoardMeetings: z.union([z.boolean(),z.lazy(() => OhsBoardMeetingFindManyArgsSchema)]).optional(),
   ohsBoardMembers: z.union([z.boolean(),z.lazy(() => OhsBoardMemberFindManyArgsSchema)]).optional(),
+  FireDoor: z.union([z.boolean(),z.lazy(() => FireDoorFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => FacilityCountOutputTypeArgsSchema)]).optional(),
 }).strict()
 
@@ -8213,6 +8414,7 @@ export const FacilityLocationIncludeSchema: z.ZodType<Prisma.FacilityLocationInc
   buildProjects: z.union([z.boolean(),z.lazy(() => BuildProjectFindManyArgsSchema)]).optional(),
   btSoruBankasi: z.union([z.boolean(),z.lazy(() => BTSoruBankasiFindManyArgsSchema)]).optional(),
   btUygunsuzluklar: z.union([z.boolean(),z.lazy(() => BTUygunsuzlukFindManyArgsSchema)]).optional(),
+  FireDoor: z.union([z.boolean(),z.lazy(() => FireDoorFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => FacilityLocationCountOutputTypeArgsSchema)]).optional(),
 }).strict();
 
@@ -8234,6 +8436,7 @@ export const FacilityLocationCountOutputTypeSelectSchema: z.ZodType<Prisma.Facil
   buildProjects: z.boolean().optional(),
   btSoruBankasi: z.boolean().optional(),
   btUygunsuzluklar: z.boolean().optional(),
+  FireDoor: z.boolean().optional(),
 }).strict();
 
 export const FacilityLocationSelectSchema: z.ZodType<Prisma.FacilityLocationSelect> = z.object({
@@ -8259,6 +8462,7 @@ export const FacilityLocationSelectSchema: z.ZodType<Prisma.FacilityLocationSele
   buildProjects: z.union([z.boolean(),z.lazy(() => BuildProjectFindManyArgsSchema)]).optional(),
   btSoruBankasi: z.union([z.boolean(),z.lazy(() => BTSoruBankasiFindManyArgsSchema)]).optional(),
   btUygunsuzluklar: z.union([z.boolean(),z.lazy(() => BTUygunsuzlukFindManyArgsSchema)]).optional(),
+  FireDoor: z.union([z.boolean(),z.lazy(() => FireDoorFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => FacilityLocationCountOutputTypeArgsSchema)]).optional(),
 }).strict()
 
@@ -9222,6 +9426,193 @@ export const OhsBoardMemberSelectSchema: z.ZodType<Prisma.OhsBoardMemberSelect> 
   department: z.union([z.boolean(),z.lazy(() => DepartmentArgsSchema)]).optional(),
 }).strict()
 
+// FIRE DOOR PROPERTY
+//------------------------------------------------------
+
+export const FireDoorPropertySelectSchema: z.ZodType<Prisma.FireDoorPropertySelect> = z.object({
+  id: z.boolean().optional(),
+  name: z.boolean().optional(),
+  options: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+}).strict()
+
+// FIRE DOOR QUESTION GROUP
+//------------------------------------------------------
+
+export const FireDoorQuestionGroupIncludeSchema: z.ZodType<Prisma.FireDoorQuestionGroupInclude> = z.object({
+  questions: z.union([z.boolean(),z.lazy(() => FireDoorQuestionFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => FireDoorQuestionGroupCountOutputTypeArgsSchema)]).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupArgsSchema: z.ZodType<Prisma.FireDoorQuestionGroupDefaultArgs> = z.object({
+  select: z.lazy(() => FireDoorQuestionGroupSelectSchema).optional(),
+  include: z.lazy(() => FireDoorQuestionGroupIncludeSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupCountOutputTypeArgsSchema: z.ZodType<Prisma.FireDoorQuestionGroupCountOutputTypeDefaultArgs> = z.object({
+  select: z.lazy(() => FireDoorQuestionGroupCountOutputTypeSelectSchema).nullish(),
+}).strict();
+
+export const FireDoorQuestionGroupCountOutputTypeSelectSchema: z.ZodType<Prisma.FireDoorQuestionGroupCountOutputTypeSelect> = z.object({
+  questions: z.boolean().optional(),
+}).strict();
+
+export const FireDoorQuestionGroupSelectSchema: z.ZodType<Prisma.FireDoorQuestionGroupSelect> = z.object({
+  id: z.boolean().optional(),
+  order: z.boolean().optional(),
+  name: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  questions: z.union([z.boolean(),z.lazy(() => FireDoorQuestionFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => FireDoorQuestionGroupCountOutputTypeArgsSchema)]).optional(),
+}).strict()
+
+// FIRE DOOR QUESTION
+//------------------------------------------------------
+
+export const FireDoorQuestionIncludeSchema: z.ZodType<Prisma.FireDoorQuestionInclude> = z.object({
+  group: z.union([z.boolean(),z.lazy(() => FireDoorQuestionGroupArgsSchema)]).optional(),
+  inspectionItems: z.union([z.boolean(),z.lazy(() => FireDoorInspectionItemFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => FireDoorQuestionCountOutputTypeArgsSchema)]).optional(),
+}).strict();
+
+export const FireDoorQuestionArgsSchema: z.ZodType<Prisma.FireDoorQuestionDefaultArgs> = z.object({
+  select: z.lazy(() => FireDoorQuestionSelectSchema).optional(),
+  include: z.lazy(() => FireDoorQuestionIncludeSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionCountOutputTypeArgsSchema: z.ZodType<Prisma.FireDoorQuestionCountOutputTypeDefaultArgs> = z.object({
+  select: z.lazy(() => FireDoorQuestionCountOutputTypeSelectSchema).nullish(),
+}).strict();
+
+export const FireDoorQuestionCountOutputTypeSelectSchema: z.ZodType<Prisma.FireDoorQuestionCountOutputTypeSelect> = z.object({
+  inspectionItems: z.boolean().optional(),
+}).strict();
+
+export const FireDoorQuestionSelectSchema: z.ZodType<Prisma.FireDoorQuestionSelect> = z.object({
+  id: z.boolean().optional(),
+  groupId: z.boolean().optional(),
+  order: z.boolean().optional(),
+  text: z.boolean().optional(),
+  weightPass: z.boolean().optional(),
+  weightPartial: z.boolean().optional(),
+  weightFail: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  group: z.union([z.boolean(),z.lazy(() => FireDoorQuestionGroupArgsSchema)]).optional(),
+  inspectionItems: z.union([z.boolean(),z.lazy(() => FireDoorInspectionItemFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => FireDoorQuestionCountOutputTypeArgsSchema)]).optional(),
+}).strict()
+
+// FIRE DOOR
+//------------------------------------------------------
+
+export const FireDoorIncludeSchema: z.ZodType<Prisma.FireDoorInclude> = z.object({
+  facility: z.union([z.boolean(),z.lazy(() => FacilityArgsSchema)]).optional(),
+  location: z.union([z.boolean(),z.lazy(() => FacilityLocationArgsSchema)]).optional(),
+  inspections: z.union([z.boolean(),z.lazy(() => FireDoorInspectionFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => FireDoorCountOutputTypeArgsSchema)]).optional(),
+}).strict();
+
+export const FireDoorArgsSchema: z.ZodType<Prisma.FireDoorDefaultArgs> = z.object({
+  select: z.lazy(() => FireDoorSelectSchema).optional(),
+  include: z.lazy(() => FireDoorIncludeSchema).optional(),
+}).strict();
+
+export const FireDoorCountOutputTypeArgsSchema: z.ZodType<Prisma.FireDoorCountOutputTypeDefaultArgs> = z.object({
+  select: z.lazy(() => FireDoorCountOutputTypeSelectSchema).nullish(),
+}).strict();
+
+export const FireDoorCountOutputTypeSelectSchema: z.ZodType<Prisma.FireDoorCountOutputTypeSelect> = z.object({
+  inspections: z.boolean().optional(),
+}).strict();
+
+export const FireDoorSelectSchema: z.ZodType<Prisma.FireDoorSelect> = z.object({
+  id: z.boolean().optional(),
+  facilityId: z.boolean().optional(),
+  qrCode: z.boolean().optional(),
+  doorNo: z.boolean().optional(),
+  locationId: z.boolean().optional(),
+  properties: z.boolean().optional(),
+  status: z.boolean().optional(),
+  photoUrl: z.boolean().optional(),
+  lastGrade: z.boolean().optional(),
+  lastScore: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  facility: z.union([z.boolean(),z.lazy(() => FacilityArgsSchema)]).optional(),
+  location: z.union([z.boolean(),z.lazy(() => FacilityLocationArgsSchema)]).optional(),
+  inspections: z.union([z.boolean(),z.lazy(() => FireDoorInspectionFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => FireDoorCountOutputTypeArgsSchema)]).optional(),
+}).strict()
+
+// FIRE DOOR INSPECTION
+//------------------------------------------------------
+
+export const FireDoorInspectionIncludeSchema: z.ZodType<Prisma.FireDoorInspectionInclude> = z.object({
+  fireDoor: z.union([z.boolean(),z.lazy(() => FireDoorArgsSchema)]).optional(),
+  items: z.union([z.boolean(),z.lazy(() => FireDoorInspectionItemFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => FireDoorInspectionCountOutputTypeArgsSchema)]).optional(),
+}).strict();
+
+export const FireDoorInspectionArgsSchema: z.ZodType<Prisma.FireDoorInspectionDefaultArgs> = z.object({
+  select: z.lazy(() => FireDoorInspectionSelectSchema).optional(),
+  include: z.lazy(() => FireDoorInspectionIncludeSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionCountOutputTypeArgsSchema: z.ZodType<Prisma.FireDoorInspectionCountOutputTypeDefaultArgs> = z.object({
+  select: z.lazy(() => FireDoorInspectionCountOutputTypeSelectSchema).nullish(),
+}).strict();
+
+export const FireDoorInspectionCountOutputTypeSelectSchema: z.ZodType<Prisma.FireDoorInspectionCountOutputTypeSelect> = z.object({
+  items: z.boolean().optional(),
+}).strict();
+
+export const FireDoorInspectionSelectSchema: z.ZodType<Prisma.FireDoorInspectionSelect> = z.object({
+  id: z.boolean().optional(),
+  fireDoorId: z.boolean().optional(),
+  inspectionDate: z.boolean().optional(),
+  inspectorId: z.boolean().optional(),
+  totalScore: z.boolean().optional(),
+  maxPossibleScore: z.boolean().optional(),
+  grade: z.boolean().optional(),
+  notes: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  fireDoor: z.union([z.boolean(),z.lazy(() => FireDoorArgsSchema)]).optional(),
+  items: z.union([z.boolean(),z.lazy(() => FireDoorInspectionItemFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => FireDoorInspectionCountOutputTypeArgsSchema)]).optional(),
+}).strict()
+
+// FIRE DOOR INSPECTION ITEM
+//------------------------------------------------------
+
+export const FireDoorInspectionItemIncludeSchema: z.ZodType<Prisma.FireDoorInspectionItemInclude> = z.object({
+  inspection: z.union([z.boolean(),z.lazy(() => FireDoorInspectionArgsSchema)]).optional(),
+  question: z.union([z.boolean(),z.lazy(() => FireDoorQuestionArgsSchema)]).optional(),
+}).strict();
+
+export const FireDoorInspectionItemArgsSchema: z.ZodType<Prisma.FireDoorInspectionItemDefaultArgs> = z.object({
+  select: z.lazy(() => FireDoorInspectionItemSelectSchema).optional(),
+  include: z.lazy(() => FireDoorInspectionItemIncludeSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionItemSelectSchema: z.ZodType<Prisma.FireDoorInspectionItemSelect> = z.object({
+  id: z.boolean().optional(),
+  inspectionId: z.boolean().optional(),
+  questionId: z.boolean().optional(),
+  answer: z.boolean().optional(),
+  earnedScore: z.boolean().optional(),
+  comment: z.boolean().optional(),
+  photoUrl: z.boolean().optional(),
+  inspection: z.union([z.boolean(),z.lazy(() => FireDoorInspectionArgsSchema)]).optional(),
+  question: z.union([z.boolean(),z.lazy(() => FireDoorQuestionArgsSchema)]).optional(),
+}).strict()
+
 
 /////////////////////////////////////////
 // INPUT TYPES
@@ -9822,6 +10213,7 @@ export const FacilityWhereInputSchema: z.ZodType<Prisma.FacilityWhereInput> = z.
   renovationReports: z.lazy(() => RenovationReportListRelationFilterSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingListRelationFilterSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberListRelationFilterSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorListRelationFilterSchema).optional(),
 }).strict();
 
 export const FacilityOrderByWithRelationInputSchema: z.ZodType<Prisma.FacilityOrderByWithRelationInput> = z.object({
@@ -9885,6 +10277,7 @@ export const FacilityOrderByWithRelationInputSchema: z.ZodType<Prisma.FacilityOr
   renovationReports: z.lazy(() => RenovationReportOrderByRelationAggregateInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingOrderByRelationAggregateInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberOrderByRelationAggregateInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorOrderByRelationAggregateInputSchema).optional(),
 }).strict();
 
 export const FacilityWhereUniqueInputSchema: z.ZodType<Prisma.FacilityWhereUniqueInput> = z.object({
@@ -9954,6 +10347,7 @@ export const FacilityWhereUniqueInputSchema: z.ZodType<Prisma.FacilityWhereUniqu
   renovationReports: z.lazy(() => RenovationReportListRelationFilterSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingListRelationFilterSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberListRelationFilterSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorListRelationFilterSchema).optional(),
 }).strict());
 
 export const FacilityOrderByWithAggregationInputSchema: z.ZodType<Prisma.FacilityOrderByWithAggregationInput> = z.object({
@@ -18295,6 +18689,7 @@ export const FacilityLocationWhereInputSchema: z.ZodType<Prisma.FacilityLocation
   buildProjects: z.lazy(() => BuildProjectListRelationFilterSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiListRelationFilterSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukListRelationFilterSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorListRelationFilterSchema).optional(),
 }).strict();
 
 export const FacilityLocationOrderByWithRelationInputSchema: z.ZodType<Prisma.FacilityLocationOrderByWithRelationInput> = z.object({
@@ -18320,6 +18715,7 @@ export const FacilityLocationOrderByWithRelationInputSchema: z.ZodType<Prisma.Fa
   buildProjects: z.lazy(() => BuildProjectOrderByRelationAggregateInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiOrderByRelationAggregateInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukOrderByRelationAggregateInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorOrderByRelationAggregateInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationWhereUniqueInputSchema: z.ZodType<Prisma.FacilityLocationWhereUniqueInput> = z.union([
@@ -18361,6 +18757,7 @@ export const FacilityLocationWhereUniqueInputSchema: z.ZodType<Prisma.FacilityLo
   buildProjects: z.lazy(() => BuildProjectListRelationFilterSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiListRelationFilterSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukListRelationFilterSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorListRelationFilterSchema).optional(),
 }).strict());
 
 export const FacilityLocationOrderByWithAggregationInputSchema: z.ZodType<Prisma.FacilityLocationOrderByWithAggregationInput> = z.object({
@@ -20892,6 +21289,507 @@ export const OhsBoardMemberScalarWhereWithAggregatesInputSchema: z.ZodType<Prism
   updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
 }).strict();
 
+export const FireDoorPropertyWhereInputSchema: z.ZodType<Prisma.FireDoorPropertyWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => FireDoorPropertyWhereInputSchema), z.lazy(() => FireDoorPropertyWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorPropertyWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorPropertyWhereInputSchema), z.lazy(() => FireDoorPropertyWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  name: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  options: z.lazy(() => JsonFilterSchema).optional(),
+  isActive: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const FireDoorPropertyOrderByWithRelationInputSchema: z.ZodType<Prisma.FireDoorPropertyOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  options: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorPropertyWhereUniqueInputSchema: z.ZodType<Prisma.FireDoorPropertyWhereUniqueInput> = z.object({
+  id: z.string(),
+})
+.and(z.object({
+  id: z.string().optional(),
+  AND: z.union([ z.lazy(() => FireDoorPropertyWhereInputSchema), z.lazy(() => FireDoorPropertyWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorPropertyWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorPropertyWhereInputSchema), z.lazy(() => FireDoorPropertyWhereInputSchema).array() ]).optional(),
+  name: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  options: z.lazy(() => JsonFilterSchema).optional(),
+  isActive: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict());
+
+export const FireDoorPropertyOrderByWithAggregationInputSchema: z.ZodType<Prisma.FireDoorPropertyOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  options: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => FireDoorPropertyCountOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => FireDoorPropertyMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => FireDoorPropertyMinOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const FireDoorPropertyScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.FireDoorPropertyScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => FireDoorPropertyScalarWhereWithAggregatesInputSchema), z.lazy(() => FireDoorPropertyScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorPropertyScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorPropertyScalarWhereWithAggregatesInputSchema), z.lazy(() => FireDoorPropertyScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  name: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  options: z.lazy(() => JsonWithAggregatesFilterSchema).optional(),
+  isActive: z.union([ z.lazy(() => BoolWithAggregatesFilterSchema), z.boolean() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupWhereInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => FireDoorQuestionGroupWhereInputSchema), z.lazy(() => FireDoorQuestionGroupWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorQuestionGroupWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorQuestionGroupWhereInputSchema), z.lazy(() => FireDoorQuestionGroupWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  order: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  name: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  isActive: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  questions: z.lazy(() => FireDoorQuestionListRelationFilterSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupOrderByWithRelationInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  order: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  questions: z.lazy(() => FireDoorQuestionOrderByRelationAggregateInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupWhereUniqueInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupWhereUniqueInput> = z.object({
+  id: z.string(),
+})
+.and(z.object({
+  id: z.string().optional(),
+  AND: z.union([ z.lazy(() => FireDoorQuestionGroupWhereInputSchema), z.lazy(() => FireDoorQuestionGroupWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorQuestionGroupWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorQuestionGroupWhereInputSchema), z.lazy(() => FireDoorQuestionGroupWhereInputSchema).array() ]).optional(),
+  order: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
+  name: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  isActive: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  questions: z.lazy(() => FireDoorQuestionListRelationFilterSchema).optional(),
+}).strict());
+
+export const FireDoorQuestionGroupOrderByWithAggregationInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  order: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => FireDoorQuestionGroupCountOrderByAggregateInputSchema).optional(),
+  _avg: z.lazy(() => FireDoorQuestionGroupAvgOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => FireDoorQuestionGroupMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => FireDoorQuestionGroupMinOrderByAggregateInputSchema).optional(),
+  _sum: z.lazy(() => FireDoorQuestionGroupSumOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => FireDoorQuestionGroupScalarWhereWithAggregatesInputSchema), z.lazy(() => FireDoorQuestionGroupScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorQuestionGroupScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorQuestionGroupScalarWhereWithAggregatesInputSchema), z.lazy(() => FireDoorQuestionGroupScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  order: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  name: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  isActive: z.union([ z.lazy(() => BoolWithAggregatesFilterSchema), z.boolean() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const FireDoorQuestionWhereInputSchema: z.ZodType<Prisma.FireDoorQuestionWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => FireDoorQuestionWhereInputSchema), z.lazy(() => FireDoorQuestionWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorQuestionWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorQuestionWhereInputSchema), z.lazy(() => FireDoorQuestionWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  groupId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  order: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  text: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  weightPass: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  weightPartial: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  weightFail: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  isActive: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  group: z.union([ z.lazy(() => FireDoorQuestionGroupRelationFilterSchema), z.lazy(() => FireDoorQuestionGroupWhereInputSchema) ]).optional(),
+  inspectionItems: z.lazy(() => FireDoorInspectionItemListRelationFilterSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionOrderByWithRelationInputSchema: z.ZodType<Prisma.FireDoorQuestionOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  groupId: z.lazy(() => SortOrderSchema).optional(),
+  order: z.lazy(() => SortOrderSchema).optional(),
+  text: z.lazy(() => SortOrderSchema).optional(),
+  weightPass: z.lazy(() => SortOrderSchema).optional(),
+  weightPartial: z.lazy(() => SortOrderSchema).optional(),
+  weightFail: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  group: z.lazy(() => FireDoorQuestionGroupOrderByWithRelationInputSchema).optional(),
+  inspectionItems: z.lazy(() => FireDoorInspectionItemOrderByRelationAggregateInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionWhereUniqueInputSchema: z.ZodType<Prisma.FireDoorQuestionWhereUniqueInput> = z.object({
+  id: z.string(),
+})
+.and(z.object({
+  id: z.string().optional(),
+  AND: z.union([ z.lazy(() => FireDoorQuestionWhereInputSchema), z.lazy(() => FireDoorQuestionWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorQuestionWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorQuestionWhereInputSchema), z.lazy(() => FireDoorQuestionWhereInputSchema).array() ]).optional(),
+  groupId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  order: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
+  text: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  weightPass: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  weightPartial: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  weightFail: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  isActive: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  group: z.union([ z.lazy(() => FireDoorQuestionGroupRelationFilterSchema), z.lazy(() => FireDoorQuestionGroupWhereInputSchema) ]).optional(),
+  inspectionItems: z.lazy(() => FireDoorInspectionItemListRelationFilterSchema).optional(),
+}).strict());
+
+export const FireDoorQuestionOrderByWithAggregationInputSchema: z.ZodType<Prisma.FireDoorQuestionOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  groupId: z.lazy(() => SortOrderSchema).optional(),
+  order: z.lazy(() => SortOrderSchema).optional(),
+  text: z.lazy(() => SortOrderSchema).optional(),
+  weightPass: z.lazy(() => SortOrderSchema).optional(),
+  weightPartial: z.lazy(() => SortOrderSchema).optional(),
+  weightFail: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => FireDoorQuestionCountOrderByAggregateInputSchema).optional(),
+  _avg: z.lazy(() => FireDoorQuestionAvgOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => FireDoorQuestionMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => FireDoorQuestionMinOrderByAggregateInputSchema).optional(),
+  _sum: z.lazy(() => FireDoorQuestionSumOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.FireDoorQuestionScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => FireDoorQuestionScalarWhereWithAggregatesInputSchema), z.lazy(() => FireDoorQuestionScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorQuestionScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorQuestionScalarWhereWithAggregatesInputSchema), z.lazy(() => FireDoorQuestionScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  groupId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  order: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  text: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  weightPass: z.union([ z.lazy(() => FloatWithAggregatesFilterSchema), z.number() ]).optional(),
+  weightPartial: z.union([ z.lazy(() => FloatWithAggregatesFilterSchema), z.number() ]).optional(),
+  weightFail: z.union([ z.lazy(() => FloatWithAggregatesFilterSchema), z.number() ]).optional(),
+  isActive: z.union([ z.lazy(() => BoolWithAggregatesFilterSchema), z.boolean() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const FireDoorWhereInputSchema: z.ZodType<Prisma.FireDoorWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => FireDoorWhereInputSchema), z.lazy(() => FireDoorWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorWhereInputSchema), z.lazy(() => FireDoorWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  facilityId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  qrCode: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  doorNo: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  locationId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  properties: z.lazy(() => JsonNullableFilterSchema).optional(),
+  status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  photoUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  lastGrade: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  lastScore: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  facility: z.union([ z.lazy(() => FacilityRelationFilterSchema), z.lazy(() => FacilityWhereInputSchema) ]).optional(),
+  location: z.union([ z.lazy(() => FacilityLocationNullableRelationFilterSchema), z.lazy(() => FacilityLocationWhereInputSchema) ]).optional().nullable(),
+  inspections: z.lazy(() => FireDoorInspectionListRelationFilterSchema).optional(),
+}).strict();
+
+export const FireDoorOrderByWithRelationInputSchema: z.ZodType<Prisma.FireDoorOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  qrCode: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  doorNo: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  locationId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  properties: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  photoUrl: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  lastGrade: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  lastScore: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  facility: z.lazy(() => FacilityOrderByWithRelationInputSchema).optional(),
+  location: z.lazy(() => FacilityLocationOrderByWithRelationInputSchema).optional(),
+  inspections: z.lazy(() => FireDoorInspectionOrderByRelationAggregateInputSchema).optional(),
+}).strict();
+
+export const FireDoorWhereUniqueInputSchema: z.ZodType<Prisma.FireDoorWhereUniqueInput> = z.union([
+  z.object({
+    id: z.string(),
+    qrCode: z.string(),
+    facilityId_doorNo: z.lazy(() => FireDoorFacilityIdDoorNoCompoundUniqueInputSchema),
+  }),
+  z.object({
+    id: z.string(),
+    qrCode: z.string(),
+  }),
+  z.object({
+    id: z.string(),
+    facilityId_doorNo: z.lazy(() => FireDoorFacilityIdDoorNoCompoundUniqueInputSchema),
+  }),
+  z.object({
+    id: z.string(),
+  }),
+  z.object({
+    qrCode: z.string(),
+    facilityId_doorNo: z.lazy(() => FireDoorFacilityIdDoorNoCompoundUniqueInputSchema),
+  }),
+  z.object({
+    qrCode: z.string(),
+  }),
+  z.object({
+    facilityId_doorNo: z.lazy(() => FireDoorFacilityIdDoorNoCompoundUniqueInputSchema),
+  }),
+])
+.and(z.object({
+  id: z.string().optional(),
+  qrCode: z.string().optional(),
+  facilityId_doorNo: z.lazy(() => FireDoorFacilityIdDoorNoCompoundUniqueInputSchema).optional(),
+  AND: z.union([ z.lazy(() => FireDoorWhereInputSchema), z.lazy(() => FireDoorWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorWhereInputSchema), z.lazy(() => FireDoorWhereInputSchema).array() ]).optional(),
+  facilityId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  doorNo: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  locationId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  properties: z.lazy(() => JsonNullableFilterSchema).optional(),
+  status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  photoUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  lastGrade: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  lastScore: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  facility: z.union([ z.lazy(() => FacilityRelationFilterSchema), z.lazy(() => FacilityWhereInputSchema) ]).optional(),
+  location: z.union([ z.lazy(() => FacilityLocationNullableRelationFilterSchema), z.lazy(() => FacilityLocationWhereInputSchema) ]).optional().nullable(),
+  inspections: z.lazy(() => FireDoorInspectionListRelationFilterSchema).optional(),
+}).strict());
+
+export const FireDoorOrderByWithAggregationInputSchema: z.ZodType<Prisma.FireDoorOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  qrCode: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  doorNo: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  locationId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  properties: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  photoUrl: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  lastGrade: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  lastScore: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => FireDoorCountOrderByAggregateInputSchema).optional(),
+  _avg: z.lazy(() => FireDoorAvgOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => FireDoorMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => FireDoorMinOrderByAggregateInputSchema).optional(),
+  _sum: z.lazy(() => FireDoorSumOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const FireDoorScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.FireDoorScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => FireDoorScalarWhereWithAggregatesInputSchema), z.lazy(() => FireDoorScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorScalarWhereWithAggregatesInputSchema), z.lazy(() => FireDoorScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  facilityId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  qrCode: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  doorNo: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  locationId: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  properties: z.lazy(() => JsonNullableWithAggregatesFilterSchema).optional(),
+  status: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  photoUrl: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  lastGrade: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  lastScore: z.union([ z.lazy(() => FloatNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const FireDoorInspectionWhereInputSchema: z.ZodType<Prisma.FireDoorInspectionWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => FireDoorInspectionWhereInputSchema), z.lazy(() => FireDoorInspectionWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorInspectionWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorInspectionWhereInputSchema), z.lazy(() => FireDoorInspectionWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  fireDoorId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  inspectionDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  inspectorId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  totalScore: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  maxPossibleScore: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  grade: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  fireDoor: z.union([ z.lazy(() => FireDoorRelationFilterSchema), z.lazy(() => FireDoorWhereInputSchema) ]).optional(),
+  items: z.lazy(() => FireDoorInspectionItemListRelationFilterSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionOrderByWithRelationInputSchema: z.ZodType<Prisma.FireDoorInspectionOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  fireDoorId: z.lazy(() => SortOrderSchema).optional(),
+  inspectionDate: z.lazy(() => SortOrderSchema).optional(),
+  inspectorId: z.lazy(() => SortOrderSchema).optional(),
+  totalScore: z.lazy(() => SortOrderSchema).optional(),
+  maxPossibleScore: z.lazy(() => SortOrderSchema).optional(),
+  grade: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  fireDoor: z.lazy(() => FireDoorOrderByWithRelationInputSchema).optional(),
+  items: z.lazy(() => FireDoorInspectionItemOrderByRelationAggregateInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionWhereUniqueInputSchema: z.ZodType<Prisma.FireDoorInspectionWhereUniqueInput> = z.object({
+  id: z.string(),
+})
+.and(z.object({
+  id: z.string().optional(),
+  AND: z.union([ z.lazy(() => FireDoorInspectionWhereInputSchema), z.lazy(() => FireDoorInspectionWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorInspectionWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorInspectionWhereInputSchema), z.lazy(() => FireDoorInspectionWhereInputSchema).array() ]).optional(),
+  fireDoorId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  inspectionDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  inspectorId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  totalScore: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  maxPossibleScore: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  grade: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  fireDoor: z.union([ z.lazy(() => FireDoorRelationFilterSchema), z.lazy(() => FireDoorWhereInputSchema) ]).optional(),
+  items: z.lazy(() => FireDoorInspectionItemListRelationFilterSchema).optional(),
+}).strict());
+
+export const FireDoorInspectionOrderByWithAggregationInputSchema: z.ZodType<Prisma.FireDoorInspectionOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  fireDoorId: z.lazy(() => SortOrderSchema).optional(),
+  inspectionDate: z.lazy(() => SortOrderSchema).optional(),
+  inspectorId: z.lazy(() => SortOrderSchema).optional(),
+  totalScore: z.lazy(() => SortOrderSchema).optional(),
+  maxPossibleScore: z.lazy(() => SortOrderSchema).optional(),
+  grade: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => FireDoorInspectionCountOrderByAggregateInputSchema).optional(),
+  _avg: z.lazy(() => FireDoorInspectionAvgOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => FireDoorInspectionMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => FireDoorInspectionMinOrderByAggregateInputSchema).optional(),
+  _sum: z.lazy(() => FireDoorInspectionSumOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.FireDoorInspectionScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => FireDoorInspectionScalarWhereWithAggregatesInputSchema), z.lazy(() => FireDoorInspectionScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorInspectionScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorInspectionScalarWhereWithAggregatesInputSchema), z.lazy(() => FireDoorInspectionScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  fireDoorId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  inspectionDate: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  inspectorId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  totalScore: z.union([ z.lazy(() => FloatWithAggregatesFilterSchema), z.number() ]).optional(),
+  maxPossibleScore: z.union([ z.lazy(() => FloatWithAggregatesFilterSchema), z.number() ]).optional(),
+  grade: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  notes: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const FireDoorInspectionItemWhereInputSchema: z.ZodType<Prisma.FireDoorInspectionItemWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => FireDoorInspectionItemWhereInputSchema), z.lazy(() => FireDoorInspectionItemWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorInspectionItemWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorInspectionItemWhereInputSchema), z.lazy(() => FireDoorInspectionItemWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  inspectionId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  questionId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  answer: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  earnedScore: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  comment: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  photoUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  inspection: z.union([ z.lazy(() => FireDoorInspectionRelationFilterSchema), z.lazy(() => FireDoorInspectionWhereInputSchema) ]).optional(),
+  question: z.union([ z.lazy(() => FireDoorQuestionRelationFilterSchema), z.lazy(() => FireDoorQuestionWhereInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorInspectionItemOrderByWithRelationInputSchema: z.ZodType<Prisma.FireDoorInspectionItemOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  inspectionId: z.lazy(() => SortOrderSchema).optional(),
+  questionId: z.lazy(() => SortOrderSchema).optional(),
+  answer: z.lazy(() => SortOrderSchema).optional(),
+  earnedScore: z.lazy(() => SortOrderSchema).optional(),
+  comment: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  photoUrl: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  inspection: z.lazy(() => FireDoorInspectionOrderByWithRelationInputSchema).optional(),
+  question: z.lazy(() => FireDoorQuestionOrderByWithRelationInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionItemWhereUniqueInputSchema: z.ZodType<Prisma.FireDoorInspectionItemWhereUniqueInput> = z.object({
+  id: z.string(),
+})
+.and(z.object({
+  id: z.string().optional(),
+  AND: z.union([ z.lazy(() => FireDoorInspectionItemWhereInputSchema), z.lazy(() => FireDoorInspectionItemWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorInspectionItemWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorInspectionItemWhereInputSchema), z.lazy(() => FireDoorInspectionItemWhereInputSchema).array() ]).optional(),
+  inspectionId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  questionId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  answer: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  earnedScore: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  comment: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  photoUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  inspection: z.union([ z.lazy(() => FireDoorInspectionRelationFilterSchema), z.lazy(() => FireDoorInspectionWhereInputSchema) ]).optional(),
+  question: z.union([ z.lazy(() => FireDoorQuestionRelationFilterSchema), z.lazy(() => FireDoorQuestionWhereInputSchema) ]).optional(),
+}).strict());
+
+export const FireDoorInspectionItemOrderByWithAggregationInputSchema: z.ZodType<Prisma.FireDoorInspectionItemOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  inspectionId: z.lazy(() => SortOrderSchema).optional(),
+  questionId: z.lazy(() => SortOrderSchema).optional(),
+  answer: z.lazy(() => SortOrderSchema).optional(),
+  earnedScore: z.lazy(() => SortOrderSchema).optional(),
+  comment: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  photoUrl: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  _count: z.lazy(() => FireDoorInspectionItemCountOrderByAggregateInputSchema).optional(),
+  _avg: z.lazy(() => FireDoorInspectionItemAvgOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => FireDoorInspectionItemMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => FireDoorInspectionItemMinOrderByAggregateInputSchema).optional(),
+  _sum: z.lazy(() => FireDoorInspectionItemSumOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionItemScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.FireDoorInspectionItemScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => FireDoorInspectionItemScalarWhereWithAggregatesInputSchema), z.lazy(() => FireDoorInspectionItemScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorInspectionItemScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorInspectionItemScalarWhereWithAggregatesInputSchema), z.lazy(() => FireDoorInspectionItemScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  inspectionId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  questionId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  answer: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  earnedScore: z.union([ z.lazy(() => FloatWithAggregatesFilterSchema), z.number() ]).optional(),
+  comment: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  photoUrl: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+}).strict();
+
 export const UserCreateInputSchema: z.ZodType<Prisma.UserCreateInput> = z.object({
   username: z.string(),
   fullName: z.string(),
@@ -21423,6 +22321,7 @@ export const FacilityCreateInputSchema: z.ZodType<Prisma.FacilityCreateInput> = 
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateInput> = z.object({
@@ -21486,6 +22385,7 @@ export const FacilityUncheckedCreateInputSchema: z.ZodType<Prisma.FacilityUnchec
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUpdateInputSchema: z.ZodType<Prisma.FacilityUpdateInput> = z.object({
@@ -21549,6 +22449,7 @@ export const FacilityUpdateInputSchema: z.ZodType<Prisma.FacilityUpdateInput> = 
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateInput> = z.object({
@@ -21612,6 +22513,7 @@ export const FacilityUncheckedUpdateInputSchema: z.ZodType<Prisma.FacilityUnchec
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateManyInputSchema: z.ZodType<Prisma.FacilityCreateManyInput> = z.object({
@@ -29984,6 +30886,7 @@ export const FacilityLocationCreateInputSchema: z.ZodType<Prisma.FacilityLocatio
   buildProjects: z.lazy(() => BuildProjectCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedCreateInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedCreateInput> = z.object({
@@ -30007,6 +30910,7 @@ export const FacilityLocationUncheckedCreateInputSchema: z.ZodType<Prisma.Facili
   buildProjects: z.lazy(() => BuildProjectUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUpdateInputSchema: z.ZodType<Prisma.FacilityLocationUpdateInput> = z.object({
@@ -30030,6 +30934,7 @@ export const FacilityLocationUpdateInputSchema: z.ZodType<Prisma.FacilityLocatio
   buildProjects: z.lazy(() => BuildProjectUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedUpdateInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedUpdateInput> = z.object({
@@ -30053,6 +30958,7 @@ export const FacilityLocationUncheckedUpdateInputSchema: z.ZodType<Prisma.Facili
   buildProjects: z.lazy(() => BuildProjectUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationCreateManyInputSchema: z.ZodType<Prisma.FacilityLocationCreateManyInput> = z.object({
@@ -32592,6 +33498,499 @@ export const OhsBoardMemberUncheckedUpdateManyInputSchema: z.ZodType<Prisma.OhsB
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
+export const FireDoorPropertyCreateInputSchema: z.ZodType<Prisma.FireDoorPropertyCreateInput> = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  options: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const FireDoorPropertyUncheckedCreateInputSchema: z.ZodType<Prisma.FireDoorPropertyUncheckedCreateInput> = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  options: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const FireDoorPropertyUpdateInputSchema: z.ZodType<Prisma.FireDoorPropertyUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  options: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorPropertyUncheckedUpdateInputSchema: z.ZodType<Prisma.FireDoorPropertyUncheckedUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  options: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorPropertyCreateManyInputSchema: z.ZodType<Prisma.FireDoorPropertyCreateManyInput> = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  options: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const FireDoorPropertyUpdateManyMutationInputSchema: z.ZodType<Prisma.FireDoorPropertyUpdateManyMutationInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  options: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorPropertyUncheckedUpdateManyInputSchema: z.ZodType<Prisma.FireDoorPropertyUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  options: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupCreateInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupCreateInput> = z.object({
+  id: z.string().optional(),
+  order: z.number().int(),
+  name: z.string(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  questions: z.lazy(() => FireDoorQuestionCreateNestedManyWithoutGroupInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupUncheckedCreateInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupUncheckedCreateInput> = z.object({
+  id: z.string().optional(),
+  order: z.number().int(),
+  name: z.string(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  questions: z.lazy(() => FireDoorQuestionUncheckedCreateNestedManyWithoutGroupInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupUpdateInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  order: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  questions: z.lazy(() => FireDoorQuestionUpdateManyWithoutGroupNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupUncheckedUpdateInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupUncheckedUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  order: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  questions: z.lazy(() => FireDoorQuestionUncheckedUpdateManyWithoutGroupNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupCreateManyInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupCreateManyInput> = z.object({
+  id: z.string().optional(),
+  order: z.number().int(),
+  name: z.string(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const FireDoorQuestionGroupUpdateManyMutationInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupUpdateManyMutationInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  order: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupUncheckedUpdateManyInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  order: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorQuestionCreateInputSchema: z.ZodType<Prisma.FireDoorQuestionCreateInput> = z.object({
+  id: z.string().optional(),
+  order: z.number().int(),
+  text: z.string(),
+  weightPass: z.number().optional(),
+  weightPartial: z.number().optional(),
+  weightFail: z.number().optional(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  group: z.lazy(() => FireDoorQuestionGroupCreateNestedOneWithoutQuestionsInputSchema),
+  inspectionItems: z.lazy(() => FireDoorInspectionItemCreateNestedManyWithoutQuestionInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionUncheckedCreateInputSchema: z.ZodType<Prisma.FireDoorQuestionUncheckedCreateInput> = z.object({
+  id: z.string().optional(),
+  groupId: z.string(),
+  order: z.number().int(),
+  text: z.string(),
+  weightPass: z.number().optional(),
+  weightPartial: z.number().optional(),
+  weightFail: z.number().optional(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  inspectionItems: z.lazy(() => FireDoorInspectionItemUncheckedCreateNestedManyWithoutQuestionInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionUpdateInputSchema: z.ZodType<Prisma.FireDoorQuestionUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  order: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  text: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  weightPass: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  weightPartial: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  weightFail: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  group: z.lazy(() => FireDoorQuestionGroupUpdateOneRequiredWithoutQuestionsNestedInputSchema).optional(),
+  inspectionItems: z.lazy(() => FireDoorInspectionItemUpdateManyWithoutQuestionNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionUncheckedUpdateInputSchema: z.ZodType<Prisma.FireDoorQuestionUncheckedUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  groupId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  order: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  text: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  weightPass: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  weightPartial: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  weightFail: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionItems: z.lazy(() => FireDoorInspectionItemUncheckedUpdateManyWithoutQuestionNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionCreateManyInputSchema: z.ZodType<Prisma.FireDoorQuestionCreateManyInput> = z.object({
+  id: z.string().optional(),
+  groupId: z.string(),
+  order: z.number().int(),
+  text: z.string(),
+  weightPass: z.number().optional(),
+  weightPartial: z.number().optional(),
+  weightFail: z.number().optional(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const FireDoorQuestionUpdateManyMutationInputSchema: z.ZodType<Prisma.FireDoorQuestionUpdateManyMutationInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  order: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  text: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  weightPass: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  weightPartial: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  weightFail: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorQuestionUncheckedUpdateManyInputSchema: z.ZodType<Prisma.FireDoorQuestionUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  groupId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  order: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  text: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  weightPass: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  weightPartial: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  weightFail: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorCreateInputSchema: z.ZodType<Prisma.FireDoorCreateInput> = z.object({
+  id: z.string().optional(),
+  qrCode: z.string().optional().nullable(),
+  doorNo: z.string().optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.string().optional(),
+  photoUrl: z.string().optional().nullable(),
+  lastGrade: z.string().optional().nullable(),
+  lastScore: z.number().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  facility: z.lazy(() => FacilityCreateNestedOneWithoutFireDoorInputSchema),
+  location: z.lazy(() => FacilityLocationCreateNestedOneWithoutFireDoorInputSchema).optional(),
+  inspections: z.lazy(() => FireDoorInspectionCreateNestedManyWithoutFireDoorInputSchema).optional(),
+}).strict();
+
+export const FireDoorUncheckedCreateInputSchema: z.ZodType<Prisma.FireDoorUncheckedCreateInput> = z.object({
+  id: z.string().optional(),
+  facilityId: z.string(),
+  qrCode: z.string().optional().nullable(),
+  doorNo: z.string().optional().nullable(),
+  locationId: z.string().optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.string().optional(),
+  photoUrl: z.string().optional().nullable(),
+  lastGrade: z.string().optional().nullable(),
+  lastScore: z.number().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  inspections: z.lazy(() => FireDoorInspectionUncheckedCreateNestedManyWithoutFireDoorInputSchema).optional(),
+}).strict();
+
+export const FireDoorUpdateInputSchema: z.ZodType<Prisma.FireDoorUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  qrCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  doorNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastGrade: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastScore: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  facility: z.lazy(() => FacilityUpdateOneRequiredWithoutFireDoorNestedInputSchema).optional(),
+  location: z.lazy(() => FacilityLocationUpdateOneWithoutFireDoorNestedInputSchema).optional(),
+  inspections: z.lazy(() => FireDoorInspectionUpdateManyWithoutFireDoorNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorUncheckedUpdateInputSchema: z.ZodType<Prisma.FireDoorUncheckedUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  qrCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  doorNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  locationId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastGrade: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastScore: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  inspections: z.lazy(() => FireDoorInspectionUncheckedUpdateManyWithoutFireDoorNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorCreateManyInputSchema: z.ZodType<Prisma.FireDoorCreateManyInput> = z.object({
+  id: z.string().optional(),
+  facilityId: z.string(),
+  qrCode: z.string().optional().nullable(),
+  doorNo: z.string().optional().nullable(),
+  locationId: z.string().optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.string().optional(),
+  photoUrl: z.string().optional().nullable(),
+  lastGrade: z.string().optional().nullable(),
+  lastScore: z.number().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const FireDoorUpdateManyMutationInputSchema: z.ZodType<Prisma.FireDoorUpdateManyMutationInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  qrCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  doorNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastGrade: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastScore: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorUncheckedUpdateManyInputSchema: z.ZodType<Prisma.FireDoorUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  qrCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  doorNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  locationId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastGrade: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastScore: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorInspectionCreateInputSchema: z.ZodType<Prisma.FireDoorInspectionCreateInput> = z.object({
+  id: z.string().optional(),
+  inspectionDate: z.coerce.date(),
+  inspectorId: z.string(),
+  totalScore: z.number(),
+  maxPossibleScore: z.number(),
+  grade: z.string(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  fireDoor: z.lazy(() => FireDoorCreateNestedOneWithoutInspectionsInputSchema),
+  items: z.lazy(() => FireDoorInspectionItemCreateNestedManyWithoutInspectionInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionUncheckedCreateInputSchema: z.ZodType<Prisma.FireDoorInspectionUncheckedCreateInput> = z.object({
+  id: z.string().optional(),
+  fireDoorId: z.string(),
+  inspectionDate: z.coerce.date(),
+  inspectorId: z.string(),
+  totalScore: z.number(),
+  maxPossibleScore: z.number(),
+  grade: z.string(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  items: z.lazy(() => FireDoorInspectionItemUncheckedCreateNestedManyWithoutInspectionInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionUpdateInputSchema: z.ZodType<Prisma.FireDoorInspectionUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectorId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  totalScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  maxPossibleScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  grade: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  fireDoor: z.lazy(() => FireDoorUpdateOneRequiredWithoutInspectionsNestedInputSchema).optional(),
+  items: z.lazy(() => FireDoorInspectionItemUpdateManyWithoutInspectionNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionUncheckedUpdateInputSchema: z.ZodType<Prisma.FireDoorInspectionUncheckedUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fireDoorId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectorId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  totalScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  maxPossibleScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  grade: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  items: z.lazy(() => FireDoorInspectionItemUncheckedUpdateManyWithoutInspectionNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionCreateManyInputSchema: z.ZodType<Prisma.FireDoorInspectionCreateManyInput> = z.object({
+  id: z.string().optional(),
+  fireDoorId: z.string(),
+  inspectionDate: z.coerce.date(),
+  inspectorId: z.string(),
+  totalScore: z.number(),
+  maxPossibleScore: z.number(),
+  grade: z.string(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const FireDoorInspectionUpdateManyMutationInputSchema: z.ZodType<Prisma.FireDoorInspectionUpdateManyMutationInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectorId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  totalScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  maxPossibleScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  grade: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorInspectionUncheckedUpdateManyInputSchema: z.ZodType<Prisma.FireDoorInspectionUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fireDoorId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectorId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  totalScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  maxPossibleScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  grade: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorInspectionItemCreateInputSchema: z.ZodType<Prisma.FireDoorInspectionItemCreateInput> = z.object({
+  id: z.string().optional(),
+  answer: z.string(),
+  earnedScore: z.number(),
+  comment: z.string().optional().nullable(),
+  photoUrl: z.string().optional().nullable(),
+  inspection: z.lazy(() => FireDoorInspectionCreateNestedOneWithoutItemsInputSchema),
+  question: z.lazy(() => FireDoorQuestionCreateNestedOneWithoutInspectionItemsInputSchema),
+}).strict();
+
+export const FireDoorInspectionItemUncheckedCreateInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUncheckedCreateInput> = z.object({
+  id: z.string().optional(),
+  inspectionId: z.string(),
+  questionId: z.string(),
+  answer: z.string(),
+  earnedScore: z.number(),
+  comment: z.string().optional().nullable(),
+  photoUrl: z.string().optional().nullable(),
+}).strict();
+
+export const FireDoorInspectionItemUpdateInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  answer: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  earnedScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  comment: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  inspection: z.lazy(() => FireDoorInspectionUpdateOneRequiredWithoutItemsNestedInputSchema).optional(),
+  question: z.lazy(() => FireDoorQuestionUpdateOneRequiredWithoutInspectionItemsNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionItemUncheckedUpdateInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUncheckedUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  questionId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  answer: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  earnedScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  comment: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+}).strict();
+
+export const FireDoorInspectionItemCreateManyInputSchema: z.ZodType<Prisma.FireDoorInspectionItemCreateManyInput> = z.object({
+  id: z.string().optional(),
+  inspectionId: z.string(),
+  questionId: z.string(),
+  answer: z.string(),
+  earnedScore: z.number(),
+  comment: z.string().optional().nullable(),
+  photoUrl: z.string().optional().nullable(),
+}).strict();
+
+export const FireDoorInspectionItemUpdateManyMutationInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUpdateManyMutationInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  answer: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  earnedScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  comment: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+}).strict();
+
+export const FireDoorInspectionItemUncheckedUpdateManyInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  questionId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  answer: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  earnedScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  comment: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+}).strict();
+
 export const StringFilterSchema: z.ZodType<Prisma.StringFilter> = z.object({
   equals: z.string().optional(),
   in: z.string().array().optional(),
@@ -33374,6 +34773,12 @@ export const OhsBoardMemberListRelationFilterSchema: z.ZodType<Prisma.OhsBoardMe
   none: z.lazy(() => OhsBoardMemberWhereInputSchema).optional(),
 }).strict();
 
+export const FireDoorListRelationFilterSchema: z.ZodType<Prisma.FireDoorListRelationFilter> = z.object({
+  every: z.lazy(() => FireDoorWhereInputSchema).optional(),
+  some: z.lazy(() => FireDoorWhereInputSchema).optional(),
+  none: z.lazy(() => FireDoorWhereInputSchema).optional(),
+}).strict();
+
 export const ActivityLogOrderByRelationAggregateInputSchema: z.ZodType<Prisma.ActivityLogOrderByRelationAggregateInput> = z.object({
   _count: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
@@ -33511,6 +34916,10 @@ export const OhsBoardMeetingOrderByRelationAggregateInputSchema: z.ZodType<Prism
 }).strict();
 
 export const OhsBoardMemberOrderByRelationAggregateInputSchema: z.ZodType<Prisma.OhsBoardMemberOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorOrderByRelationAggregateInputSchema: z.ZodType<Prisma.FireDoorOrderByRelationAggregateInput> = z.object({
   _count: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
@@ -39964,6 +41373,312 @@ export const OhsBoardMemberSumOrderByAggregateInputSchema: z.ZodType<Prisma.OhsB
   departmentId: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
+export const FireDoorPropertyCountOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorPropertyCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  options: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorPropertyMaxOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorPropertyMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorPropertyMinOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorPropertyMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionListRelationFilterSchema: z.ZodType<Prisma.FireDoorQuestionListRelationFilter> = z.object({
+  every: z.lazy(() => FireDoorQuestionWhereInputSchema).optional(),
+  some: z.lazy(() => FireDoorQuestionWhereInputSchema).optional(),
+  none: z.lazy(() => FireDoorQuestionWhereInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionOrderByRelationAggregateInputSchema: z.ZodType<Prisma.FireDoorQuestionOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupCountOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  order: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupAvgOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupAvgOrderByAggregateInput> = z.object({
+  order: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupMaxOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  order: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupMinOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  order: z.lazy(() => SortOrderSchema).optional(),
+  name: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupSumOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupSumOrderByAggregateInput> = z.object({
+  order: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupRelationFilterSchema: z.ZodType<Prisma.FireDoorQuestionGroupRelationFilter> = z.object({
+  is: z.lazy(() => FireDoorQuestionGroupWhereInputSchema).optional(),
+  isNot: z.lazy(() => FireDoorQuestionGroupWhereInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionItemListRelationFilterSchema: z.ZodType<Prisma.FireDoorInspectionItemListRelationFilter> = z.object({
+  every: z.lazy(() => FireDoorInspectionItemWhereInputSchema).optional(),
+  some: z.lazy(() => FireDoorInspectionItemWhereInputSchema).optional(),
+  none: z.lazy(() => FireDoorInspectionItemWhereInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionItemOrderByRelationAggregateInputSchema: z.ZodType<Prisma.FireDoorInspectionItemOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionCountOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorQuestionCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  groupId: z.lazy(() => SortOrderSchema).optional(),
+  order: z.lazy(() => SortOrderSchema).optional(),
+  text: z.lazy(() => SortOrderSchema).optional(),
+  weightPass: z.lazy(() => SortOrderSchema).optional(),
+  weightPartial: z.lazy(() => SortOrderSchema).optional(),
+  weightFail: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionAvgOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorQuestionAvgOrderByAggregateInput> = z.object({
+  order: z.lazy(() => SortOrderSchema).optional(),
+  weightPass: z.lazy(() => SortOrderSchema).optional(),
+  weightPartial: z.lazy(() => SortOrderSchema).optional(),
+  weightFail: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionMaxOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorQuestionMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  groupId: z.lazy(() => SortOrderSchema).optional(),
+  order: z.lazy(() => SortOrderSchema).optional(),
+  text: z.lazy(() => SortOrderSchema).optional(),
+  weightPass: z.lazy(() => SortOrderSchema).optional(),
+  weightPartial: z.lazy(() => SortOrderSchema).optional(),
+  weightFail: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionMinOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorQuestionMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  groupId: z.lazy(() => SortOrderSchema).optional(),
+  order: z.lazy(() => SortOrderSchema).optional(),
+  text: z.lazy(() => SortOrderSchema).optional(),
+  weightPass: z.lazy(() => SortOrderSchema).optional(),
+  weightPartial: z.lazy(() => SortOrderSchema).optional(),
+  weightFail: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionSumOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorQuestionSumOrderByAggregateInput> = z.object({
+  order: z.lazy(() => SortOrderSchema).optional(),
+  weightPass: z.lazy(() => SortOrderSchema).optional(),
+  weightPartial: z.lazy(() => SortOrderSchema).optional(),
+  weightFail: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionListRelationFilterSchema: z.ZodType<Prisma.FireDoorInspectionListRelationFilter> = z.object({
+  every: z.lazy(() => FireDoorInspectionWhereInputSchema).optional(),
+  some: z.lazy(() => FireDoorInspectionWhereInputSchema).optional(),
+  none: z.lazy(() => FireDoorInspectionWhereInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionOrderByRelationAggregateInputSchema: z.ZodType<Prisma.FireDoorInspectionOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorFacilityIdDoorNoCompoundUniqueInputSchema: z.ZodType<Prisma.FireDoorFacilityIdDoorNoCompoundUniqueInput> = z.object({
+  facilityId: z.string(),
+  doorNo: z.string(),
+}).strict();
+
+export const FireDoorCountOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  qrCode: z.lazy(() => SortOrderSchema).optional(),
+  doorNo: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  properties: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  photoUrl: z.lazy(() => SortOrderSchema).optional(),
+  lastGrade: z.lazy(() => SortOrderSchema).optional(),
+  lastScore: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorAvgOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorAvgOrderByAggregateInput> = z.object({
+  lastScore: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorMaxOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  qrCode: z.lazy(() => SortOrderSchema).optional(),
+  doorNo: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  photoUrl: z.lazy(() => SortOrderSchema).optional(),
+  lastGrade: z.lazy(() => SortOrderSchema).optional(),
+  lastScore: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorMinOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  qrCode: z.lazy(() => SortOrderSchema).optional(),
+  doorNo: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  photoUrl: z.lazy(() => SortOrderSchema).optional(),
+  lastGrade: z.lazy(() => SortOrderSchema).optional(),
+  lastScore: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorSumOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorSumOrderByAggregateInput> = z.object({
+  lastScore: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorRelationFilterSchema: z.ZodType<Prisma.FireDoorRelationFilter> = z.object({
+  is: z.lazy(() => FireDoorWhereInputSchema).optional(),
+  isNot: z.lazy(() => FireDoorWhereInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionCountOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorInspectionCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  fireDoorId: z.lazy(() => SortOrderSchema).optional(),
+  inspectionDate: z.lazy(() => SortOrderSchema).optional(),
+  inspectorId: z.lazy(() => SortOrderSchema).optional(),
+  totalScore: z.lazy(() => SortOrderSchema).optional(),
+  maxPossibleScore: z.lazy(() => SortOrderSchema).optional(),
+  grade: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionAvgOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorInspectionAvgOrderByAggregateInput> = z.object({
+  totalScore: z.lazy(() => SortOrderSchema).optional(),
+  maxPossibleScore: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionMaxOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorInspectionMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  fireDoorId: z.lazy(() => SortOrderSchema).optional(),
+  inspectionDate: z.lazy(() => SortOrderSchema).optional(),
+  inspectorId: z.lazy(() => SortOrderSchema).optional(),
+  totalScore: z.lazy(() => SortOrderSchema).optional(),
+  maxPossibleScore: z.lazy(() => SortOrderSchema).optional(),
+  grade: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionMinOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorInspectionMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  fireDoorId: z.lazy(() => SortOrderSchema).optional(),
+  inspectionDate: z.lazy(() => SortOrderSchema).optional(),
+  inspectorId: z.lazy(() => SortOrderSchema).optional(),
+  totalScore: z.lazy(() => SortOrderSchema).optional(),
+  maxPossibleScore: z.lazy(() => SortOrderSchema).optional(),
+  grade: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionSumOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorInspectionSumOrderByAggregateInput> = z.object({
+  totalScore: z.lazy(() => SortOrderSchema).optional(),
+  maxPossibleScore: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionRelationFilterSchema: z.ZodType<Prisma.FireDoorInspectionRelationFilter> = z.object({
+  is: z.lazy(() => FireDoorInspectionWhereInputSchema).optional(),
+  isNot: z.lazy(() => FireDoorInspectionWhereInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionRelationFilterSchema: z.ZodType<Prisma.FireDoorQuestionRelationFilter> = z.object({
+  is: z.lazy(() => FireDoorQuestionWhereInputSchema).optional(),
+  isNot: z.lazy(() => FireDoorQuestionWhereInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionItemCountOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorInspectionItemCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  inspectionId: z.lazy(() => SortOrderSchema).optional(),
+  questionId: z.lazy(() => SortOrderSchema).optional(),
+  answer: z.lazy(() => SortOrderSchema).optional(),
+  earnedScore: z.lazy(() => SortOrderSchema).optional(),
+  comment: z.lazy(() => SortOrderSchema).optional(),
+  photoUrl: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionItemAvgOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorInspectionItemAvgOrderByAggregateInput> = z.object({
+  earnedScore: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionItemMaxOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorInspectionItemMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  inspectionId: z.lazy(() => SortOrderSchema).optional(),
+  questionId: z.lazy(() => SortOrderSchema).optional(),
+  answer: z.lazy(() => SortOrderSchema).optional(),
+  earnedScore: z.lazy(() => SortOrderSchema).optional(),
+  comment: z.lazy(() => SortOrderSchema).optional(),
+  photoUrl: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionItemMinOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorInspectionItemMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  inspectionId: z.lazy(() => SortOrderSchema).optional(),
+  questionId: z.lazy(() => SortOrderSchema).optional(),
+  answer: z.lazy(() => SortOrderSchema).optional(),
+  earnedScore: z.lazy(() => SortOrderSchema).optional(),
+  comment: z.lazy(() => SortOrderSchema).optional(),
+  photoUrl: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionItemSumOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorInspectionItemSumOrderByAggregateInput> = z.object({
+  earnedScore: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
 export const UserFacilityCreateNestedManyWithoutUserInputSchema: z.ZodType<Prisma.UserFacilityCreateNestedManyWithoutUserInput> = z.object({
   create: z.union([ z.lazy(() => UserFacilityCreateWithoutUserInputSchema), z.lazy(() => UserFacilityCreateWithoutUserInputSchema).array(), z.lazy(() => UserFacilityUncheckedCreateWithoutUserInputSchema), z.lazy(() => UserFacilityUncheckedCreateWithoutUserInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => UserFacilityCreateOrConnectWithoutUserInputSchema), z.lazy(() => UserFacilityCreateOrConnectWithoutUserInputSchema).array() ]).optional(),
@@ -41525,6 +43240,13 @@ export const OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema: z.ZodType
   connect: z.union([ z.lazy(() => OhsBoardMemberWhereUniqueInputSchema), z.lazy(() => OhsBoardMemberWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
+export const FireDoorCreateNestedManyWithoutFacilityInputSchema: z.ZodType<Prisma.FireDoorCreateNestedManyWithoutFacilityInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorCreateWithoutFacilityInputSchema), z.lazy(() => FireDoorCreateWithoutFacilityInputSchema).array(), z.lazy(() => FireDoorUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => FireDoorUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => FireDoorCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorCreateManyFacilityInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
 export const ActivityLogUncheckedCreateNestedManyWithoutFacilityInputSchema: z.ZodType<Prisma.ActivityLogUncheckedCreateNestedManyWithoutFacilityInput> = z.object({
   create: z.union([ z.lazy(() => ActivityLogCreateWithoutFacilityInputSchema), z.lazy(() => ActivityLogCreateWithoutFacilityInputSchema).array(), z.lazy(() => ActivityLogUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => ActivityLogUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => ActivityLogCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => ActivityLogCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
@@ -41796,6 +43518,13 @@ export const OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema: 
   connectOrCreate: z.union([ z.lazy(() => OhsBoardMemberCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => OhsBoardMemberCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
   createMany: z.lazy(() => OhsBoardMemberCreateManyFacilityInputEnvelopeSchema).optional(),
   connect: z.union([ z.lazy(() => OhsBoardMemberWhereUniqueInputSchema), z.lazy(() => OhsBoardMemberWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema: z.ZodType<Prisma.FireDoorUncheckedCreateNestedManyWithoutFacilityInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorCreateWithoutFacilityInputSchema), z.lazy(() => FireDoorCreateWithoutFacilityInputSchema).array(), z.lazy(() => FireDoorUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => FireDoorUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => FireDoorCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorCreateManyFacilityInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
 export const ActivityLogUpdateManyWithoutFacilityNestedInputSchema: z.ZodType<Prisma.ActivityLogUpdateManyWithoutFacilityNestedInput> = z.object({
@@ -42344,6 +44073,20 @@ export const OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema: z.ZodType
   deleteMany: z.union([ z.lazy(() => OhsBoardMemberScalarWhereInputSchema), z.lazy(() => OhsBoardMemberScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
+export const FireDoorUpdateManyWithoutFacilityNestedInputSchema: z.ZodType<Prisma.FireDoorUpdateManyWithoutFacilityNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorCreateWithoutFacilityInputSchema), z.lazy(() => FireDoorCreateWithoutFacilityInputSchema).array(), z.lazy(() => FireDoorUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => FireDoorUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => FireDoorCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => FireDoorUpsertWithWhereUniqueWithoutFacilityInputSchema), z.lazy(() => FireDoorUpsertWithWhereUniqueWithoutFacilityInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorCreateManyFacilityInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => FireDoorUpdateWithWhereUniqueWithoutFacilityInputSchema), z.lazy(() => FireDoorUpdateWithWhereUniqueWithoutFacilityInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => FireDoorUpdateManyWithWhereWithoutFacilityInputSchema), z.lazy(() => FireDoorUpdateManyWithWhereWithoutFacilityInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => FireDoorScalarWhereInputSchema), z.lazy(() => FireDoorScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
 export const ActivityLogUncheckedUpdateManyWithoutFacilityNestedInputSchema: z.ZodType<Prisma.ActivityLogUncheckedUpdateManyWithoutFacilityNestedInput> = z.object({
   create: z.union([ z.lazy(() => ActivityLogCreateWithoutFacilityInputSchema), z.lazy(() => ActivityLogCreateWithoutFacilityInputSchema).array(), z.lazy(() => ActivityLogUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => ActivityLogUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => ActivityLogCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => ActivityLogCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
@@ -42888,6 +44631,20 @@ export const OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema: 
   update: z.union([ z.lazy(() => OhsBoardMemberUpdateWithWhereUniqueWithoutFacilityInputSchema), z.lazy(() => OhsBoardMemberUpdateWithWhereUniqueWithoutFacilityInputSchema).array() ]).optional(),
   updateMany: z.union([ z.lazy(() => OhsBoardMemberUpdateManyWithWhereWithoutFacilityInputSchema), z.lazy(() => OhsBoardMemberUpdateManyWithWhereWithoutFacilityInputSchema).array() ]).optional(),
   deleteMany: z.union([ z.lazy(() => OhsBoardMemberScalarWhereInputSchema), z.lazy(() => OhsBoardMemberScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema: z.ZodType<Prisma.FireDoorUncheckedUpdateManyWithoutFacilityNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorCreateWithoutFacilityInputSchema), z.lazy(() => FireDoorCreateWithoutFacilityInputSchema).array(), z.lazy(() => FireDoorUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => FireDoorUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => FireDoorCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => FireDoorUpsertWithWhereUniqueWithoutFacilityInputSchema), z.lazy(() => FireDoorUpsertWithWhereUniqueWithoutFacilityInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorCreateManyFacilityInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => FireDoorUpdateWithWhereUniqueWithoutFacilityInputSchema), z.lazy(() => FireDoorUpdateWithWhereUniqueWithoutFacilityInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => FireDoorUpdateManyWithWhereWithoutFacilityInputSchema), z.lazy(() => FireDoorUpdateManyWithWhereWithoutFacilityInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => FireDoorScalarWhereInputSchema), z.lazy(() => FireDoorScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
 export const ExtraordinaryIncidentCreateNestedManyWithoutCategoryInputSchema: z.ZodType<Prisma.ExtraordinaryIncidentCreateNestedManyWithoutCategoryInput> = z.object({
@@ -48213,6 +49970,13 @@ export const BTUygunsuzlukCreateNestedManyWithoutLocationInputSchema: z.ZodType<
   connect: z.union([ z.lazy(() => BTUygunsuzlukWhereUniqueInputSchema), z.lazy(() => BTUygunsuzlukWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
+export const FireDoorCreateNestedManyWithoutLocationInputSchema: z.ZodType<Prisma.FireDoorCreateNestedManyWithoutLocationInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorCreateWithoutLocationInputSchema), z.lazy(() => FireDoorCreateWithoutLocationInputSchema).array(), z.lazy(() => FireDoorUncheckedCreateWithoutLocationInputSchema), z.lazy(() => FireDoorUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorCreateOrConnectWithoutLocationInputSchema), z.lazy(() => FireDoorCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorCreateManyLocationInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
 export const FireEquipmentUncheckedCreateNestedManyWithoutLocationInputSchema: z.ZodType<Prisma.FireEquipmentUncheckedCreateNestedManyWithoutLocationInput> = z.object({
   create: z.union([ z.lazy(() => FireEquipmentCreateWithoutLocationInputSchema), z.lazy(() => FireEquipmentCreateWithoutLocationInputSchema).array(), z.lazy(() => FireEquipmentUncheckedCreateWithoutLocationInputSchema), z.lazy(() => FireEquipmentUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => FireEquipmentCreateOrConnectWithoutLocationInputSchema), z.lazy(() => FireEquipmentCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
@@ -48267,6 +50031,13 @@ export const BTUygunsuzlukUncheckedCreateNestedManyWithoutLocationInputSchema: z
   connectOrCreate: z.union([ z.lazy(() => BTUygunsuzlukCreateOrConnectWithoutLocationInputSchema), z.lazy(() => BTUygunsuzlukCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
   createMany: z.lazy(() => BTUygunsuzlukCreateManyLocationInputEnvelopeSchema).optional(),
   connect: z.union([ z.lazy(() => BTUygunsuzlukWhereUniqueInputSchema), z.lazy(() => BTUygunsuzlukWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const FireDoorUncheckedCreateNestedManyWithoutLocationInputSchema: z.ZodType<Prisma.FireDoorUncheckedCreateNestedManyWithoutLocationInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorCreateWithoutLocationInputSchema), z.lazy(() => FireDoorCreateWithoutLocationInputSchema).array(), z.lazy(() => FireDoorUncheckedCreateWithoutLocationInputSchema), z.lazy(() => FireDoorUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorCreateOrConnectWithoutLocationInputSchema), z.lazy(() => FireDoorCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorCreateManyLocationInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
 export const FacilityUpdateOneRequiredWithoutLocationsNestedInputSchema: z.ZodType<Prisma.FacilityUpdateOneRequiredWithoutLocationsNestedInput> = z.object({
@@ -48399,6 +50170,20 @@ export const BTUygunsuzlukUpdateManyWithoutLocationNestedInputSchema: z.ZodType<
   deleteMany: z.union([ z.lazy(() => BTUygunsuzlukScalarWhereInputSchema), z.lazy(() => BTUygunsuzlukScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
+export const FireDoorUpdateManyWithoutLocationNestedInputSchema: z.ZodType<Prisma.FireDoorUpdateManyWithoutLocationNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorCreateWithoutLocationInputSchema), z.lazy(() => FireDoorCreateWithoutLocationInputSchema).array(), z.lazy(() => FireDoorUncheckedCreateWithoutLocationInputSchema), z.lazy(() => FireDoorUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorCreateOrConnectWithoutLocationInputSchema), z.lazy(() => FireDoorCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => FireDoorUpsertWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => FireDoorUpsertWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorCreateManyLocationInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => FireDoorUpdateWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => FireDoorUpdateWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => FireDoorUpdateManyWithWhereWithoutLocationInputSchema), z.lazy(() => FireDoorUpdateManyWithWhereWithoutLocationInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => FireDoorScalarWhereInputSchema), z.lazy(() => FireDoorScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
 export const FireEquipmentUncheckedUpdateManyWithoutLocationNestedInputSchema: z.ZodType<Prisma.FireEquipmentUncheckedUpdateManyWithoutLocationNestedInput> = z.object({
   create: z.union([ z.lazy(() => FireEquipmentCreateWithoutLocationInputSchema), z.lazy(() => FireEquipmentCreateWithoutLocationInputSchema).array(), z.lazy(() => FireEquipmentUncheckedCreateWithoutLocationInputSchema), z.lazy(() => FireEquipmentUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => FireEquipmentCreateOrConnectWithoutLocationInputSchema), z.lazy(() => FireEquipmentCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
@@ -48509,6 +50294,20 @@ export const BTUygunsuzlukUncheckedUpdateManyWithoutLocationNestedInputSchema: z
   update: z.union([ z.lazy(() => BTUygunsuzlukUpdateWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => BTUygunsuzlukUpdateWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
   updateMany: z.union([ z.lazy(() => BTUygunsuzlukUpdateManyWithWhereWithoutLocationInputSchema), z.lazy(() => BTUygunsuzlukUpdateManyWithWhereWithoutLocationInputSchema).array() ]).optional(),
   deleteMany: z.union([ z.lazy(() => BTUygunsuzlukScalarWhereInputSchema), z.lazy(() => BTUygunsuzlukScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const FireDoorUncheckedUpdateManyWithoutLocationNestedInputSchema: z.ZodType<Prisma.FireDoorUncheckedUpdateManyWithoutLocationNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorCreateWithoutLocationInputSchema), z.lazy(() => FireDoorCreateWithoutLocationInputSchema).array(), z.lazy(() => FireDoorUncheckedCreateWithoutLocationInputSchema), z.lazy(() => FireDoorUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorCreateOrConnectWithoutLocationInputSchema), z.lazy(() => FireDoorCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => FireDoorUpsertWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => FireDoorUpsertWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorCreateManyLocationInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => FireDoorWhereUniqueInputSchema), z.lazy(() => FireDoorWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => FireDoorUpdateWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => FireDoorUpdateWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => FireDoorUpdateManyWithWhereWithoutLocationInputSchema), z.lazy(() => FireDoorUpdateManyWithWhereWithoutLocationInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => FireDoorScalarWhereInputSchema), z.lazy(() => FireDoorScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
 export const FacilityCreateNestedOneWithoutHazmatVehicleInputSchema: z.ZodType<Prisma.FacilityCreateNestedOneWithoutHazmatVehicleInput> = z.object({
@@ -50273,6 +52072,260 @@ export const DepartmentUpdateOneRequiredWithoutOhsBoardMembersNestedInputSchema:
   upsert: z.lazy(() => DepartmentUpsertWithoutOhsBoardMembersInputSchema).optional(),
   connect: z.lazy(() => DepartmentWhereUniqueInputSchema).optional(),
   update: z.union([ z.lazy(() => DepartmentUpdateToOneWithWhereWithoutOhsBoardMembersInputSchema), z.lazy(() => DepartmentUpdateWithoutOhsBoardMembersInputSchema), z.lazy(() => DepartmentUncheckedUpdateWithoutOhsBoardMembersInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorQuestionCreateNestedManyWithoutGroupInputSchema: z.ZodType<Prisma.FireDoorQuestionCreateNestedManyWithoutGroupInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorQuestionCreateWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionCreateWithoutGroupInputSchema).array(), z.lazy(() => FireDoorQuestionUncheckedCreateWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionUncheckedCreateWithoutGroupInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorQuestionCreateOrConnectWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionCreateOrConnectWithoutGroupInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorQuestionCreateManyGroupInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => FireDoorQuestionWhereUniqueInputSchema), z.lazy(() => FireDoorQuestionWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const FireDoorQuestionUncheckedCreateNestedManyWithoutGroupInputSchema: z.ZodType<Prisma.FireDoorQuestionUncheckedCreateNestedManyWithoutGroupInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorQuestionCreateWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionCreateWithoutGroupInputSchema).array(), z.lazy(() => FireDoorQuestionUncheckedCreateWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionUncheckedCreateWithoutGroupInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorQuestionCreateOrConnectWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionCreateOrConnectWithoutGroupInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorQuestionCreateManyGroupInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => FireDoorQuestionWhereUniqueInputSchema), z.lazy(() => FireDoorQuestionWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const FireDoorQuestionUpdateManyWithoutGroupNestedInputSchema: z.ZodType<Prisma.FireDoorQuestionUpdateManyWithoutGroupNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorQuestionCreateWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionCreateWithoutGroupInputSchema).array(), z.lazy(() => FireDoorQuestionUncheckedCreateWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionUncheckedCreateWithoutGroupInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorQuestionCreateOrConnectWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionCreateOrConnectWithoutGroupInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => FireDoorQuestionUpsertWithWhereUniqueWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionUpsertWithWhereUniqueWithoutGroupInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorQuestionCreateManyGroupInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => FireDoorQuestionWhereUniqueInputSchema), z.lazy(() => FireDoorQuestionWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => FireDoorQuestionWhereUniqueInputSchema), z.lazy(() => FireDoorQuestionWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => FireDoorQuestionWhereUniqueInputSchema), z.lazy(() => FireDoorQuestionWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => FireDoorQuestionWhereUniqueInputSchema), z.lazy(() => FireDoorQuestionWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => FireDoorQuestionUpdateWithWhereUniqueWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionUpdateWithWhereUniqueWithoutGroupInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => FireDoorQuestionUpdateManyWithWhereWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionUpdateManyWithWhereWithoutGroupInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => FireDoorQuestionScalarWhereInputSchema), z.lazy(() => FireDoorQuestionScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const FireDoorQuestionUncheckedUpdateManyWithoutGroupNestedInputSchema: z.ZodType<Prisma.FireDoorQuestionUncheckedUpdateManyWithoutGroupNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorQuestionCreateWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionCreateWithoutGroupInputSchema).array(), z.lazy(() => FireDoorQuestionUncheckedCreateWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionUncheckedCreateWithoutGroupInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorQuestionCreateOrConnectWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionCreateOrConnectWithoutGroupInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => FireDoorQuestionUpsertWithWhereUniqueWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionUpsertWithWhereUniqueWithoutGroupInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorQuestionCreateManyGroupInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => FireDoorQuestionWhereUniqueInputSchema), z.lazy(() => FireDoorQuestionWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => FireDoorQuestionWhereUniqueInputSchema), z.lazy(() => FireDoorQuestionWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => FireDoorQuestionWhereUniqueInputSchema), z.lazy(() => FireDoorQuestionWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => FireDoorQuestionWhereUniqueInputSchema), z.lazy(() => FireDoorQuestionWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => FireDoorQuestionUpdateWithWhereUniqueWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionUpdateWithWhereUniqueWithoutGroupInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => FireDoorQuestionUpdateManyWithWhereWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionUpdateManyWithWhereWithoutGroupInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => FireDoorQuestionScalarWhereInputSchema), z.lazy(() => FireDoorQuestionScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupCreateNestedOneWithoutQuestionsInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupCreateNestedOneWithoutQuestionsInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorQuestionGroupCreateWithoutQuestionsInputSchema), z.lazy(() => FireDoorQuestionGroupUncheckedCreateWithoutQuestionsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => FireDoorQuestionGroupCreateOrConnectWithoutQuestionsInputSchema).optional(),
+  connect: z.lazy(() => FireDoorQuestionGroupWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionItemCreateNestedManyWithoutQuestionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemCreateNestedManyWithoutQuestionInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorInspectionItemCreateWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemCreateWithoutQuestionInputSchema).array(), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutQuestionInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorInspectionItemCreateOrConnectWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemCreateOrConnectWithoutQuestionInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorInspectionItemCreateManyQuestionInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const FireDoorInspectionItemUncheckedCreateNestedManyWithoutQuestionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUncheckedCreateNestedManyWithoutQuestionInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorInspectionItemCreateWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemCreateWithoutQuestionInputSchema).array(), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutQuestionInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorInspectionItemCreateOrConnectWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemCreateOrConnectWithoutQuestionInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorInspectionItemCreateManyQuestionInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupUpdateOneRequiredWithoutQuestionsNestedInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupUpdateOneRequiredWithoutQuestionsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorQuestionGroupCreateWithoutQuestionsInputSchema), z.lazy(() => FireDoorQuestionGroupUncheckedCreateWithoutQuestionsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => FireDoorQuestionGroupCreateOrConnectWithoutQuestionsInputSchema).optional(),
+  upsert: z.lazy(() => FireDoorQuestionGroupUpsertWithoutQuestionsInputSchema).optional(),
+  connect: z.lazy(() => FireDoorQuestionGroupWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => FireDoorQuestionGroupUpdateToOneWithWhereWithoutQuestionsInputSchema), z.lazy(() => FireDoorQuestionGroupUpdateWithoutQuestionsInputSchema), z.lazy(() => FireDoorQuestionGroupUncheckedUpdateWithoutQuestionsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorInspectionItemUpdateManyWithoutQuestionNestedInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUpdateManyWithoutQuestionNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorInspectionItemCreateWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemCreateWithoutQuestionInputSchema).array(), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutQuestionInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorInspectionItemCreateOrConnectWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemCreateOrConnectWithoutQuestionInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => FireDoorInspectionItemUpsertWithWhereUniqueWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemUpsertWithWhereUniqueWithoutQuestionInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorInspectionItemCreateManyQuestionInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => FireDoorInspectionItemUpdateWithWhereUniqueWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemUpdateWithWhereUniqueWithoutQuestionInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => FireDoorInspectionItemUpdateManyWithWhereWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemUpdateManyWithWhereWithoutQuestionInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => FireDoorInspectionItemScalarWhereInputSchema), z.lazy(() => FireDoorInspectionItemScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const FireDoorInspectionItemUncheckedUpdateManyWithoutQuestionNestedInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUncheckedUpdateManyWithoutQuestionNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorInspectionItemCreateWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemCreateWithoutQuestionInputSchema).array(), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutQuestionInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorInspectionItemCreateOrConnectWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemCreateOrConnectWithoutQuestionInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => FireDoorInspectionItemUpsertWithWhereUniqueWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemUpsertWithWhereUniqueWithoutQuestionInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorInspectionItemCreateManyQuestionInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => FireDoorInspectionItemUpdateWithWhereUniqueWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemUpdateWithWhereUniqueWithoutQuestionInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => FireDoorInspectionItemUpdateManyWithWhereWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemUpdateManyWithWhereWithoutQuestionInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => FireDoorInspectionItemScalarWhereInputSchema), z.lazy(() => FireDoorInspectionItemScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const FacilityCreateNestedOneWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityCreateNestedOneWithoutFireDoorInput> = z.object({
+  create: z.union([ z.lazy(() => FacilityCreateWithoutFireDoorInputSchema), z.lazy(() => FacilityUncheckedCreateWithoutFireDoorInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => FacilityCreateOrConnectWithoutFireDoorInputSchema).optional(),
+  connect: z.lazy(() => FacilityWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const FacilityLocationCreateNestedOneWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityLocationCreateNestedOneWithoutFireDoorInput> = z.object({
+  create: z.union([ z.lazy(() => FacilityLocationCreateWithoutFireDoorInputSchema), z.lazy(() => FacilityLocationUncheckedCreateWithoutFireDoorInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => FacilityLocationCreateOrConnectWithoutFireDoorInputSchema).optional(),
+  connect: z.lazy(() => FacilityLocationWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionCreateNestedManyWithoutFireDoorInputSchema: z.ZodType<Prisma.FireDoorInspectionCreateNestedManyWithoutFireDoorInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorInspectionCreateWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionCreateWithoutFireDoorInputSchema).array(), z.lazy(() => FireDoorInspectionUncheckedCreateWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionUncheckedCreateWithoutFireDoorInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorInspectionCreateOrConnectWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionCreateOrConnectWithoutFireDoorInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorInspectionCreateManyFireDoorInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => FireDoorInspectionWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const FireDoorInspectionUncheckedCreateNestedManyWithoutFireDoorInputSchema: z.ZodType<Prisma.FireDoorInspectionUncheckedCreateNestedManyWithoutFireDoorInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorInspectionCreateWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionCreateWithoutFireDoorInputSchema).array(), z.lazy(() => FireDoorInspectionUncheckedCreateWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionUncheckedCreateWithoutFireDoorInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorInspectionCreateOrConnectWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionCreateOrConnectWithoutFireDoorInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorInspectionCreateManyFireDoorInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => FireDoorInspectionWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const FacilityUpdateOneRequiredWithoutFireDoorNestedInputSchema: z.ZodType<Prisma.FacilityUpdateOneRequiredWithoutFireDoorNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FacilityCreateWithoutFireDoorInputSchema), z.lazy(() => FacilityUncheckedCreateWithoutFireDoorInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => FacilityCreateOrConnectWithoutFireDoorInputSchema).optional(),
+  upsert: z.lazy(() => FacilityUpsertWithoutFireDoorInputSchema).optional(),
+  connect: z.lazy(() => FacilityWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => FacilityUpdateToOneWithWhereWithoutFireDoorInputSchema), z.lazy(() => FacilityUpdateWithoutFireDoorInputSchema), z.lazy(() => FacilityUncheckedUpdateWithoutFireDoorInputSchema) ]).optional(),
+}).strict();
+
+export const FacilityLocationUpdateOneWithoutFireDoorNestedInputSchema: z.ZodType<Prisma.FacilityLocationUpdateOneWithoutFireDoorNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FacilityLocationCreateWithoutFireDoorInputSchema), z.lazy(() => FacilityLocationUncheckedCreateWithoutFireDoorInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => FacilityLocationCreateOrConnectWithoutFireDoorInputSchema).optional(),
+  upsert: z.lazy(() => FacilityLocationUpsertWithoutFireDoorInputSchema).optional(),
+  disconnect: z.union([ z.boolean(),z.lazy(() => FacilityLocationWhereInputSchema) ]).optional(),
+  delete: z.union([ z.boolean(),z.lazy(() => FacilityLocationWhereInputSchema) ]).optional(),
+  connect: z.lazy(() => FacilityLocationWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => FacilityLocationUpdateToOneWithWhereWithoutFireDoorInputSchema), z.lazy(() => FacilityLocationUpdateWithoutFireDoorInputSchema), z.lazy(() => FacilityLocationUncheckedUpdateWithoutFireDoorInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorInspectionUpdateManyWithoutFireDoorNestedInputSchema: z.ZodType<Prisma.FireDoorInspectionUpdateManyWithoutFireDoorNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorInspectionCreateWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionCreateWithoutFireDoorInputSchema).array(), z.lazy(() => FireDoorInspectionUncheckedCreateWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionUncheckedCreateWithoutFireDoorInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorInspectionCreateOrConnectWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionCreateOrConnectWithoutFireDoorInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => FireDoorInspectionUpsertWithWhereUniqueWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionUpsertWithWhereUniqueWithoutFireDoorInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorInspectionCreateManyFireDoorInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => FireDoorInspectionWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => FireDoorInspectionWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => FireDoorInspectionWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => FireDoorInspectionWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => FireDoorInspectionUpdateWithWhereUniqueWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionUpdateWithWhereUniqueWithoutFireDoorInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => FireDoorInspectionUpdateManyWithWhereWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionUpdateManyWithWhereWithoutFireDoorInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => FireDoorInspectionScalarWhereInputSchema), z.lazy(() => FireDoorInspectionScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const FireDoorInspectionUncheckedUpdateManyWithoutFireDoorNestedInputSchema: z.ZodType<Prisma.FireDoorInspectionUncheckedUpdateManyWithoutFireDoorNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorInspectionCreateWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionCreateWithoutFireDoorInputSchema).array(), z.lazy(() => FireDoorInspectionUncheckedCreateWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionUncheckedCreateWithoutFireDoorInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorInspectionCreateOrConnectWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionCreateOrConnectWithoutFireDoorInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => FireDoorInspectionUpsertWithWhereUniqueWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionUpsertWithWhereUniqueWithoutFireDoorInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorInspectionCreateManyFireDoorInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => FireDoorInspectionWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => FireDoorInspectionWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => FireDoorInspectionWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => FireDoorInspectionWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => FireDoorInspectionUpdateWithWhereUniqueWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionUpdateWithWhereUniqueWithoutFireDoorInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => FireDoorInspectionUpdateManyWithWhereWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionUpdateManyWithWhereWithoutFireDoorInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => FireDoorInspectionScalarWhereInputSchema), z.lazy(() => FireDoorInspectionScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const FireDoorCreateNestedOneWithoutInspectionsInputSchema: z.ZodType<Prisma.FireDoorCreateNestedOneWithoutInspectionsInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorCreateWithoutInspectionsInputSchema), z.lazy(() => FireDoorUncheckedCreateWithoutInspectionsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => FireDoorCreateOrConnectWithoutInspectionsInputSchema).optional(),
+  connect: z.lazy(() => FireDoorWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionItemCreateNestedManyWithoutInspectionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemCreateNestedManyWithoutInspectionInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorInspectionItemCreateWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemCreateWithoutInspectionInputSchema).array(), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutInspectionInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorInspectionItemCreateOrConnectWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemCreateOrConnectWithoutInspectionInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorInspectionItemCreateManyInspectionInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const FireDoorInspectionItemUncheckedCreateNestedManyWithoutInspectionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUncheckedCreateNestedManyWithoutInspectionInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorInspectionItemCreateWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemCreateWithoutInspectionInputSchema).array(), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutInspectionInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorInspectionItemCreateOrConnectWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemCreateOrConnectWithoutInspectionInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorInspectionItemCreateManyInspectionInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const FireDoorUpdateOneRequiredWithoutInspectionsNestedInputSchema: z.ZodType<Prisma.FireDoorUpdateOneRequiredWithoutInspectionsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorCreateWithoutInspectionsInputSchema), z.lazy(() => FireDoorUncheckedCreateWithoutInspectionsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => FireDoorCreateOrConnectWithoutInspectionsInputSchema).optional(),
+  upsert: z.lazy(() => FireDoorUpsertWithoutInspectionsInputSchema).optional(),
+  connect: z.lazy(() => FireDoorWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => FireDoorUpdateToOneWithWhereWithoutInspectionsInputSchema), z.lazy(() => FireDoorUpdateWithoutInspectionsInputSchema), z.lazy(() => FireDoorUncheckedUpdateWithoutInspectionsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorInspectionItemUpdateManyWithoutInspectionNestedInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUpdateManyWithoutInspectionNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorInspectionItemCreateWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemCreateWithoutInspectionInputSchema).array(), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutInspectionInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorInspectionItemCreateOrConnectWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemCreateOrConnectWithoutInspectionInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => FireDoorInspectionItemUpsertWithWhereUniqueWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemUpsertWithWhereUniqueWithoutInspectionInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorInspectionItemCreateManyInspectionInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => FireDoorInspectionItemUpdateWithWhereUniqueWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemUpdateWithWhereUniqueWithoutInspectionInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => FireDoorInspectionItemUpdateManyWithWhereWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemUpdateManyWithWhereWithoutInspectionInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => FireDoorInspectionItemScalarWhereInputSchema), z.lazy(() => FireDoorInspectionItemScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const FireDoorInspectionItemUncheckedUpdateManyWithoutInspectionNestedInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUncheckedUpdateManyWithoutInspectionNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorInspectionItemCreateWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemCreateWithoutInspectionInputSchema).array(), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutInspectionInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => FireDoorInspectionItemCreateOrConnectWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemCreateOrConnectWithoutInspectionInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => FireDoorInspectionItemUpsertWithWhereUniqueWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemUpsertWithWhereUniqueWithoutInspectionInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => FireDoorInspectionItemCreateManyInspectionInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema), z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => FireDoorInspectionItemUpdateWithWhereUniqueWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemUpdateWithWhereUniqueWithoutInspectionInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => FireDoorInspectionItemUpdateManyWithWhereWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemUpdateManyWithWhereWithoutInspectionInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => FireDoorInspectionItemScalarWhereInputSchema), z.lazy(() => FireDoorInspectionItemScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const FireDoorInspectionCreateNestedOneWithoutItemsInputSchema: z.ZodType<Prisma.FireDoorInspectionCreateNestedOneWithoutItemsInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorInspectionCreateWithoutItemsInputSchema), z.lazy(() => FireDoorInspectionUncheckedCreateWithoutItemsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => FireDoorInspectionCreateOrConnectWithoutItemsInputSchema).optional(),
+  connect: z.lazy(() => FireDoorInspectionWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionCreateNestedOneWithoutInspectionItemsInputSchema: z.ZodType<Prisma.FireDoorQuestionCreateNestedOneWithoutInspectionItemsInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorQuestionCreateWithoutInspectionItemsInputSchema), z.lazy(() => FireDoorQuestionUncheckedCreateWithoutInspectionItemsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => FireDoorQuestionCreateOrConnectWithoutInspectionItemsInputSchema).optional(),
+  connect: z.lazy(() => FireDoorQuestionWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionUpdateOneRequiredWithoutItemsNestedInputSchema: z.ZodType<Prisma.FireDoorInspectionUpdateOneRequiredWithoutItemsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorInspectionCreateWithoutItemsInputSchema), z.lazy(() => FireDoorInspectionUncheckedCreateWithoutItemsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => FireDoorInspectionCreateOrConnectWithoutItemsInputSchema).optional(),
+  upsert: z.lazy(() => FireDoorInspectionUpsertWithoutItemsInputSchema).optional(),
+  connect: z.lazy(() => FireDoorInspectionWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => FireDoorInspectionUpdateToOneWithWhereWithoutItemsInputSchema), z.lazy(() => FireDoorInspectionUpdateWithoutItemsInputSchema), z.lazy(() => FireDoorInspectionUncheckedUpdateWithoutItemsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorQuestionUpdateOneRequiredWithoutInspectionItemsNestedInputSchema: z.ZodType<Prisma.FireDoorQuestionUpdateOneRequiredWithoutInspectionItemsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FireDoorQuestionCreateWithoutInspectionItemsInputSchema), z.lazy(() => FireDoorQuestionUncheckedCreateWithoutInspectionItemsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => FireDoorQuestionCreateOrConnectWithoutInspectionItemsInputSchema).optional(),
+  upsert: z.lazy(() => FireDoorQuestionUpsertWithoutInspectionItemsInputSchema).optional(),
+  connect: z.lazy(() => FireDoorQuestionWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => FireDoorQuestionUpdateToOneWithWhereWithoutInspectionItemsInputSchema), z.lazy(() => FireDoorQuestionUpdateWithoutInspectionItemsInputSchema), z.lazy(() => FireDoorQuestionUncheckedUpdateWithoutInspectionItemsInputSchema) ]).optional(),
 }).strict();
 
 export const NestedStringFilterSchema: z.ZodType<Prisma.NestedStringFilter> = z.object({
@@ -53549,6 +55602,7 @@ export const FacilityLocationCreateWithoutFacilityInputSchema: z.ZodType<Prisma.
   buildProjects: z.lazy(() => BuildProjectCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedCreateWithoutFacilityInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedCreateWithoutFacilityInput> = z.object({
@@ -53571,6 +55625,7 @@ export const FacilityLocationUncheckedCreateWithoutFacilityInputSchema: z.ZodTyp
   buildProjects: z.lazy(() => BuildProjectUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationCreateOrConnectWithoutFacilityInputSchema: z.ZodType<Prisma.FacilityLocationCreateOrConnectWithoutFacilityInput> = z.object({
@@ -54610,6 +56665,46 @@ export const OhsBoardMemberCreateOrConnectWithoutFacilityInputSchema: z.ZodType<
 
 export const OhsBoardMemberCreateManyFacilityInputEnvelopeSchema: z.ZodType<Prisma.OhsBoardMemberCreateManyFacilityInputEnvelope> = z.object({
   data: z.union([ z.lazy(() => OhsBoardMemberCreateManyFacilityInputSchema), z.lazy(() => OhsBoardMemberCreateManyFacilityInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FireDoorCreateWithoutFacilityInputSchema: z.ZodType<Prisma.FireDoorCreateWithoutFacilityInput> = z.object({
+  id: z.string().optional(),
+  qrCode: z.string().optional().nullable(),
+  doorNo: z.string().optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.string().optional(),
+  photoUrl: z.string().optional().nullable(),
+  lastGrade: z.string().optional().nullable(),
+  lastScore: z.number().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  location: z.lazy(() => FacilityLocationCreateNestedOneWithoutFireDoorInputSchema).optional(),
+  inspections: z.lazy(() => FireDoorInspectionCreateNestedManyWithoutFireDoorInputSchema).optional(),
+}).strict();
+
+export const FireDoorUncheckedCreateWithoutFacilityInputSchema: z.ZodType<Prisma.FireDoorUncheckedCreateWithoutFacilityInput> = z.object({
+  id: z.string().optional(),
+  qrCode: z.string().optional().nullable(),
+  doorNo: z.string().optional().nullable(),
+  locationId: z.string().optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.string().optional(),
+  photoUrl: z.string().optional().nullable(),
+  lastGrade: z.string().optional().nullable(),
+  lastScore: z.number().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  inspections: z.lazy(() => FireDoorInspectionUncheckedCreateNestedManyWithoutFireDoorInputSchema).optional(),
+}).strict();
+
+export const FireDoorCreateOrConnectWithoutFacilityInputSchema: z.ZodType<Prisma.FireDoorCreateOrConnectWithoutFacilityInput> = z.object({
+  where: z.lazy(() => FireDoorWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => FireDoorCreateWithoutFacilityInputSchema), z.lazy(() => FireDoorUncheckedCreateWithoutFacilityInputSchema) ]),
+}).strict();
+
+export const FireDoorCreateManyFacilityInputEnvelopeSchema: z.ZodType<Prisma.FireDoorCreateManyFacilityInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => FireDoorCreateManyFacilityInputSchema), z.lazy(() => FireDoorCreateManyFacilityInputSchema).array() ]),
   skipDuplicates: z.boolean().optional(),
 }).strict();
 
@@ -55793,6 +57888,40 @@ export const OhsBoardMemberScalarWhereInputSchema: z.ZodType<Prisma.OhsBoardMemb
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
 }).strict();
 
+export const FireDoorUpsertWithWhereUniqueWithoutFacilityInputSchema: z.ZodType<Prisma.FireDoorUpsertWithWhereUniqueWithoutFacilityInput> = z.object({
+  where: z.lazy(() => FireDoorWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => FireDoorUpdateWithoutFacilityInputSchema), z.lazy(() => FireDoorUncheckedUpdateWithoutFacilityInputSchema) ]),
+  create: z.union([ z.lazy(() => FireDoorCreateWithoutFacilityInputSchema), z.lazy(() => FireDoorUncheckedCreateWithoutFacilityInputSchema) ]),
+}).strict();
+
+export const FireDoorUpdateWithWhereUniqueWithoutFacilityInputSchema: z.ZodType<Prisma.FireDoorUpdateWithWhereUniqueWithoutFacilityInput> = z.object({
+  where: z.lazy(() => FireDoorWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => FireDoorUpdateWithoutFacilityInputSchema), z.lazy(() => FireDoorUncheckedUpdateWithoutFacilityInputSchema) ]),
+}).strict();
+
+export const FireDoorUpdateManyWithWhereWithoutFacilityInputSchema: z.ZodType<Prisma.FireDoorUpdateManyWithWhereWithoutFacilityInput> = z.object({
+  where: z.lazy(() => FireDoorScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => FireDoorUpdateManyMutationInputSchema), z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityInputSchema) ]),
+}).strict();
+
+export const FireDoorScalarWhereInputSchema: z.ZodType<Prisma.FireDoorScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => FireDoorScalarWhereInputSchema), z.lazy(() => FireDoorScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorScalarWhereInputSchema), z.lazy(() => FireDoorScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  facilityId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  qrCode: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  doorNo: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  locationId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  properties: z.lazy(() => JsonNullableFilterSchema).optional(),
+  status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  photoUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  lastGrade: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  lastScore: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
 export const ExtraordinaryIncidentCreateWithoutCategoryInputSchema: z.ZodType<Prisma.ExtraordinaryIncidentCreateWithoutCategoryInput> = z.object({
   locationDetail: z.string(),
   incidentDate: z.coerce.date(),
@@ -56407,6 +58536,7 @@ export const FacilityLocationCreateWithoutExtraordinaryIncidentsInputSchema: z.Z
   buildProjects: z.lazy(() => BuildProjectCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedCreateWithoutExtraordinaryIncidentsInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedCreateWithoutExtraordinaryIncidentsInput> = z.object({
@@ -56429,6 +58559,7 @@ export const FacilityLocationUncheckedCreateWithoutExtraordinaryIncidentsInputSc
   buildProjects: z.lazy(() => BuildProjectUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationCreateOrConnectWithoutExtraordinaryIncidentsInputSchema: z.ZodType<Prisma.FacilityLocationCreateOrConnectWithoutExtraordinaryIncidentsInput> = z.object({
@@ -56516,6 +58647,7 @@ export const FacilityCreateWithoutIncidentsInputSchema: z.ZodType<Prisma.Facilit
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutIncidentsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutIncidentsInput> = z.object({
@@ -56578,6 +58710,7 @@ export const FacilityUncheckedCreateWithoutIncidentsInputSchema: z.ZodType<Prism
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutIncidentsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutIncidentsInput> = z.object({
@@ -56708,6 +58841,7 @@ export const FacilityLocationUpdateWithoutExtraordinaryIncidentsInputSchema: z.Z
   buildProjects: z.lazy(() => BuildProjectUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedUpdateWithoutExtraordinaryIncidentsInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedUpdateWithoutExtraordinaryIncidentsInput> = z.object({
@@ -56730,6 +58864,7 @@ export const FacilityLocationUncheckedUpdateWithoutExtraordinaryIncidentsInputSc
   buildProjects: z.lazy(() => BuildProjectUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const EmergencyCodeUpsertWithoutIncidentsInputSchema: z.ZodType<Prisma.EmergencyCodeUpsertWithoutIncidentsInput> = z.object({
@@ -56829,6 +58964,7 @@ export const FacilityUpdateWithoutIncidentsInputSchema: z.ZodType<Prisma.Facilit
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutIncidentsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutIncidentsInput> = z.object({
@@ -56891,6 +59027,7 @@ export const FacilityUncheckedUpdateWithoutIncidentsInputSchema: z.ZodType<Prism
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const IncidentRootCauseUpsertWithoutIncidentsInputSchema: z.ZodType<Prisma.IncidentRootCauseUpsertWithoutIncidentsInput> = z.object({
@@ -57003,6 +59140,7 @@ export const FacilityCreateWithoutActivityLogsInputSchema: z.ZodType<Prisma.Faci
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutActivityLogsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutActivityLogsInput> = z.object({
@@ -57065,6 +59203,7 @@ export const FacilityUncheckedCreateWithoutActivityLogsInputSchema: z.ZodType<Pr
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutActivityLogsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutActivityLogsInput> = z.object({
@@ -57183,6 +59322,7 @@ export const FacilityUpdateWithoutActivityLogsInputSchema: z.ZodType<Prisma.Faci
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutActivityLogsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutActivityLogsInput> = z.object({
@@ -57245,6 +59385,7 @@ export const FacilityUncheckedUpdateWithoutActivityLogsInputSchema: z.ZodType<Pr
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const ProfessionalUpsertWithoutActivityLogsInputSchema: z.ZodType<Prisma.ProfessionalUpsertWithoutActivityLogsInput> = z.object({
@@ -57353,6 +59494,7 @@ export const FacilityCreateWithoutEmployeeCountHistoryInputSchema: z.ZodType<Pri
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutEmployeeCountHistoryInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutEmployeeCountHistoryInput> = z.object({
@@ -57415,6 +59557,7 @@ export const FacilityUncheckedCreateWithoutEmployeeCountHistoryInputSchema: z.Zo
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutEmployeeCountHistoryInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutEmployeeCountHistoryInput> = z.object({
@@ -57493,6 +59636,7 @@ export const FacilityUpdateWithoutEmployeeCountHistoryInputSchema: z.ZodType<Pri
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutEmployeeCountHistoryInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutEmployeeCountHistoryInput> = z.object({
@@ -57555,6 +59699,7 @@ export const FacilityUncheckedUpdateWithoutEmployeeCountHistoryInputSchema: z.Zo
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateWithoutBuildingsInputSchema: z.ZodType<Prisma.FacilityCreateWithoutBuildingsInput> = z.object({
@@ -57617,6 +59762,7 @@ export const FacilityCreateWithoutBuildingsInputSchema: z.ZodType<Prisma.Facilit
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBuildingsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBuildingsInput> = z.object({
@@ -57679,6 +59825,7 @@ export const FacilityUncheckedCreateWithoutBuildingsInputSchema: z.ZodType<Prism
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBuildingsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBuildingsInput> = z.object({
@@ -57706,6 +59853,7 @@ export const FacilityLocationCreateWithoutFacilityBuildingInputSchema: z.ZodType
   buildProjects: z.lazy(() => BuildProjectCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedCreateWithoutFacilityBuildingInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedCreateWithoutFacilityBuildingInput> = z.object({
@@ -57728,6 +59876,7 @@ export const FacilityLocationUncheckedCreateWithoutFacilityBuildingInputSchema: 
   buildProjects: z.lazy(() => BuildProjectUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationCreateOrConnectWithoutFacilityBuildingInputSchema: z.ZodType<Prisma.FacilityLocationCreateOrConnectWithoutFacilityBuildingInput> = z.object({
@@ -57811,6 +59960,7 @@ export const FacilityUpdateWithoutBuildingsInputSchema: z.ZodType<Prisma.Facilit
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBuildingsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBuildingsInput> = z.object({
@@ -57873,6 +60023,7 @@ export const FacilityUncheckedUpdateWithoutBuildingsInputSchema: z.ZodType<Prism
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUpsertWithWhereUniqueWithoutFacilityBuildingInputSchema: z.ZodType<Prisma.FacilityLocationUpsertWithWhereUniqueWithoutFacilityBuildingInput> = z.object({
@@ -57951,6 +60102,7 @@ export const FacilityCreateWithoutUsersInputSchema: z.ZodType<Prisma.FacilityCre
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutUsersInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutUsersInput> = z.object({
@@ -58013,6 +60165,7 @@ export const FacilityUncheckedCreateWithoutUsersInputSchema: z.ZodType<Prisma.Fa
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutUsersInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutUsersInput> = z.object({
@@ -58174,6 +60327,7 @@ export const FacilityUpdateWithoutUsersInputSchema: z.ZodType<Prisma.FacilityUpd
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutUsersInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutUsersInput> = z.object({
@@ -58236,6 +60390,7 @@ export const FacilityUncheckedUpdateWithoutUsersInputSchema: z.ZodType<Prisma.Fa
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const UserUpsertWithoutFacilitiesInputSchema: z.ZodType<Prisma.UserUpsertWithoutFacilitiesInput> = z.object({
@@ -58603,6 +60758,7 @@ export const FacilityCreateWithoutReconciliationsInputSchema: z.ZodType<Prisma.F
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutReconciliationsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutReconciliationsInput> = z.object({
@@ -58665,6 +60821,7 @@ export const FacilityUncheckedCreateWithoutReconciliationsInputSchema: z.ZodType
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutReconciliationsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutReconciliationsInput> = z.object({
@@ -58773,6 +60930,7 @@ export const FacilityUpdateWithoutReconciliationsInputSchema: z.ZodType<Prisma.F
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutReconciliationsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutReconciliationsInput> = z.object({
@@ -58835,6 +60993,7 @@ export const FacilityUncheckedUpdateWithoutReconciliationsInputSchema: z.ZodType
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const OSGBCompanyUpsertWithoutReconciliationsInputSchema: z.ZodType<Prisma.OSGBCompanyUpsertWithoutReconciliationsInput> = z.object({
@@ -58961,6 +61120,7 @@ export const FacilityCreateWithoutAssignmentsInputSchema: z.ZodType<Prisma.Facil
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutAssignmentsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutAssignmentsInput> = z.object({
@@ -59023,6 +61183,7 @@ export const FacilityUncheckedCreateWithoutAssignmentsInputSchema: z.ZodType<Pri
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutAssignmentsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutAssignmentsInput> = z.object({
@@ -59203,6 +61364,7 @@ export const FacilityUpdateWithoutAssignmentsInputSchema: z.ZodType<Prisma.Facil
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutAssignmentsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutAssignmentsInput> = z.object({
@@ -59265,6 +61427,7 @@ export const FacilityUncheckedUpdateWithoutAssignmentsInputSchema: z.ZodType<Pri
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const ProfessionalUpsertWithoutAssignmentsInputSchema: z.ZodType<Prisma.ProfessionalUpsertWithoutAssignmentsInput> = z.object({
@@ -59484,6 +61647,7 @@ export const FacilityCreateWithoutMonthlyHrDataInputSchema: z.ZodType<Prisma.Fac
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutMonthlyHrDataInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutMonthlyHrDataInput> = z.object({
@@ -59546,6 +61710,7 @@ export const FacilityUncheckedCreateWithoutMonthlyHrDataInputSchema: z.ZodType<P
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutMonthlyHrDataInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutMonthlyHrDataInput> = z.object({
@@ -59624,6 +61789,7 @@ export const FacilityUpdateWithoutMonthlyHrDataInputSchema: z.ZodType<Prisma.Fac
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutMonthlyHrDataInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutMonthlyHrDataInput> = z.object({
@@ -59686,6 +61852,7 @@ export const FacilityUncheckedUpdateWithoutMonthlyHrDataInputSchema: z.ZodType<P
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateWithoutMonthlyAccidentInputSchema: z.ZodType<Prisma.FacilityCreateWithoutMonthlyAccidentInput> = z.object({
@@ -59748,6 +61915,7 @@ export const FacilityCreateWithoutMonthlyAccidentInputSchema: z.ZodType<Prisma.F
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutMonthlyAccidentInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutMonthlyAccidentInput> = z.object({
@@ -59810,6 +61978,7 @@ export const FacilityUncheckedCreateWithoutMonthlyAccidentInputSchema: z.ZodType
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutMonthlyAccidentInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutMonthlyAccidentInput> = z.object({
@@ -59888,6 +62057,7 @@ export const FacilityUpdateWithoutMonthlyAccidentInputSchema: z.ZodType<Prisma.F
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutMonthlyAccidentInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutMonthlyAccidentInput> = z.object({
@@ -59950,6 +62120,7 @@ export const FacilityUncheckedUpdateWithoutMonthlyAccidentInputSchema: z.ZodType
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const NotebookItemCreateWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateWithoutCategoryInput> = z.object({
@@ -60657,6 +62828,7 @@ export const FacilityCreateWithoutNotebookPagesInputSchema: z.ZodType<Prisma.Fac
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutNotebookPagesInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutNotebookPagesInput> = z.object({
@@ -60719,6 +62891,7 @@ export const FacilityUncheckedCreateWithoutNotebookPagesInputSchema: z.ZodType<P
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutNotebookPagesInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutNotebookPagesInput> = z.object({
@@ -60813,6 +62986,7 @@ export const FacilityUpdateWithoutNotebookPagesInputSchema: z.ZodType<Prisma.Fac
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutNotebookPagesInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutNotebookPagesInput> = z.object({
@@ -60875,6 +63049,7 @@ export const FacilityUncheckedUpdateWithoutNotebookPagesInputSchema: z.ZodType<P
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const CategoryCreateWithoutNotebookItemsInputSchema: z.ZodType<Prisma.CategoryCreateWithoutNotebookItemsInput> = z.object({
@@ -61165,6 +63340,7 @@ export const FacilityCreateWithoutRiskExpertFacilitiesInputSchema: z.ZodType<Pri
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutRiskExpertFacilitiesInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutRiskExpertFacilitiesInput> = z.object({
@@ -61227,6 +63403,7 @@ export const FacilityUncheckedCreateWithoutRiskExpertFacilitiesInputSchema: z.Zo
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutRiskExpertFacilitiesInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutRiskExpertFacilitiesInput> = z.object({
@@ -61305,6 +63482,7 @@ export const FacilityUpdateWithoutRiskExpertFacilitiesInputSchema: z.ZodType<Pri
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutRiskExpertFacilitiesInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutRiskExpertFacilitiesInput> = z.object({
@@ -61367,6 +63545,7 @@ export const FacilityUncheckedUpdateWithoutRiskExpertFacilitiesInputSchema: z.Zo
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const RiskAuditLogCreateWithoutRiskInputSchema: z.ZodType<Prisma.RiskAuditLogCreateWithoutRiskInput> = z.object({
@@ -61417,6 +63596,7 @@ export const FacilityLocationCreateWithoutRisksInputSchema: z.ZodType<Prisma.Fac
   buildProjects: z.lazy(() => BuildProjectCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedCreateWithoutRisksInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedCreateWithoutRisksInput> = z.object({
@@ -61439,6 +63619,7 @@ export const FacilityLocationUncheckedCreateWithoutRisksInputSchema: z.ZodType<P
   buildProjects: z.lazy(() => BuildProjectUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationCreateOrConnectWithoutRisksInputSchema: z.ZodType<Prisma.FacilityLocationCreateOrConnectWithoutRisksInput> = z.object({
@@ -61506,6 +63687,7 @@ export const FacilityLocationUpdateWithoutRisksInputSchema: z.ZodType<Prisma.Fac
   buildProjects: z.lazy(() => BuildProjectUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedUpdateWithoutRisksInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedUpdateWithoutRisksInput> = z.object({
@@ -61528,6 +63710,7 @@ export const FacilityLocationUncheckedUpdateWithoutRisksInputSchema: z.ZodType<P
   buildProjects: z.lazy(() => BuildProjectUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const RiskLifecycleCreateWithoutAuditLogsInputSchema: z.ZodType<Prisma.RiskLifecycleCreateWithoutAuditLogsInput> = z.object({
@@ -61802,6 +63985,7 @@ export const FacilityCreateWithoutRiskDepartmentSettingsInputSchema: z.ZodType<P
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutRiskDepartmentSettingsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutRiskDepartmentSettingsInput> = z.object({
@@ -61864,6 +64048,7 @@ export const FacilityUncheckedCreateWithoutRiskDepartmentSettingsInputSchema: z.
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutRiskDepartmentSettingsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutRiskDepartmentSettingsInput> = z.object({
@@ -61942,6 +64127,7 @@ export const FacilityUpdateWithoutRiskDepartmentSettingsInputSchema: z.ZodType<P
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutRiskDepartmentSettingsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutRiskDepartmentSettingsInput> = z.object({
@@ -62004,6 +64190,7 @@ export const FacilityUncheckedUpdateWithoutRiskDepartmentSettingsInputSchema: z.
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateWithoutRiskCategorySettingsInputSchema: z.ZodType<Prisma.FacilityCreateWithoutRiskCategorySettingsInput> = z.object({
@@ -62066,6 +64253,7 @@ export const FacilityCreateWithoutRiskCategorySettingsInputSchema: z.ZodType<Pri
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutRiskCategorySettingsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutRiskCategorySettingsInput> = z.object({
@@ -62128,6 +64316,7 @@ export const FacilityUncheckedCreateWithoutRiskCategorySettingsInputSchema: z.Zo
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutRiskCategorySettingsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutRiskCategorySettingsInput> = z.object({
@@ -62229,6 +64418,7 @@ export const FacilityUpdateWithoutRiskCategorySettingsInputSchema: z.ZodType<Pri
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutRiskCategorySettingsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutRiskCategorySettingsInput> = z.object({
@@ -62291,6 +64481,7 @@ export const FacilityUncheckedUpdateWithoutRiskCategorySettingsInputSchema: z.Zo
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const RiskSubCategorySettingUpsertWithWhereUniqueWithoutCategoryInputSchema: z.ZodType<Prisma.RiskSubCategorySettingUpsertWithWhereUniqueWithoutCategoryInput> = z.object({
@@ -63956,6 +66147,7 @@ export const FacilityCreateWithoutFacilityHazmatItemsInputSchema: z.ZodType<Pris
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutFacilityHazmatItemsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutFacilityHazmatItemsInput> = z.object({
@@ -64018,6 +66210,7 @@ export const FacilityUncheckedCreateWithoutFacilityHazmatItemsInputSchema: z.Zod
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutFacilityHazmatItemsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutFacilityHazmatItemsInput> = z.object({
@@ -64192,6 +66385,7 @@ export const FacilityUpdateWithoutFacilityHazmatItemsInputSchema: z.ZodType<Pris
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutFacilityHazmatItemsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutFacilityHazmatItemsInput> = z.object({
@@ -64254,6 +66448,7 @@ export const FacilityUncheckedUpdateWithoutFacilityHazmatItemsInputSchema: z.Zod
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const HazmatMaterialUpsertWithoutFacilityItemsInputSchema: z.ZodType<Prisma.HazmatMaterialUpsertWithoutFacilityItemsInput> = z.object({
@@ -64424,6 +66619,7 @@ export const FacilityCreateWithoutHazmatInventoryItemsInputSchema: z.ZodType<Pri
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutHazmatInventoryItemsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutHazmatInventoryItemsInput> = z.object({
@@ -64486,6 +66682,7 @@ export const FacilityUncheckedCreateWithoutHazmatInventoryItemsInputSchema: z.Zo
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutHazmatInventoryItemsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutHazmatInventoryItemsInput> = z.object({
@@ -64513,6 +66710,7 @@ export const FacilityLocationCreateWithoutHazmatMaterialsInputSchema: z.ZodType<
   buildProjects: z.lazy(() => BuildProjectCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedCreateWithoutHazmatMaterialsInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedCreateWithoutHazmatMaterialsInput> = z.object({
@@ -64535,6 +66733,7 @@ export const FacilityLocationUncheckedCreateWithoutHazmatMaterialsInputSchema: z
   buildProjects: z.lazy(() => BuildProjectUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationCreateOrConnectWithoutHazmatMaterialsInputSchema: z.ZodType<Prisma.FacilityLocationCreateOrConnectWithoutHazmatMaterialsInput> = z.object({
@@ -64711,6 +66910,7 @@ export const FacilityUpdateWithoutHazmatInventoryItemsInputSchema: z.ZodType<Pri
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutHazmatInventoryItemsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutHazmatInventoryItemsInput> = z.object({
@@ -64773,6 +66973,7 @@ export const FacilityUncheckedUpdateWithoutHazmatInventoryItemsInputSchema: z.Zo
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUpsertWithoutHazmatMaterialsInputSchema: z.ZodType<Prisma.FacilityLocationUpsertWithoutHazmatMaterialsInput> = z.object({
@@ -64806,6 +67007,7 @@ export const FacilityLocationUpdateWithoutHazmatMaterialsInputSchema: z.ZodType<
   buildProjects: z.lazy(() => BuildProjectUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedUpdateWithoutHazmatMaterialsInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedUpdateWithoutHazmatMaterialsInput> = z.object({
@@ -64828,6 +67030,7 @@ export const FacilityLocationUncheckedUpdateWithoutHazmatMaterialsInputSchema: z
   buildProjects: z.lazy(() => BuildProjectUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const HazmatVehicleUpsertWithoutHazmatMaterialsInputSchema: z.ZodType<Prisma.HazmatVehicleUpsertWithoutHazmatMaterialsInput> = z.object({
@@ -65234,6 +67437,7 @@ export const FacilityCreateWithoutSpillKitsInputSchema: z.ZodType<Prisma.Facilit
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutSpillKitsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutSpillKitsInput> = z.object({
@@ -65296,6 +67500,7 @@ export const FacilityUncheckedCreateWithoutSpillKitsInputSchema: z.ZodType<Prism
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutSpillKitsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutSpillKitsInput> = z.object({
@@ -65442,6 +67647,7 @@ export const FacilityUpdateWithoutSpillKitsInputSchema: z.ZodType<Prisma.Facilit
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutSpillKitsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutSpillKitsInput> = z.object({
@@ -65504,6 +67710,7 @@ export const FacilityUncheckedUpdateWithoutSpillKitsInputSchema: z.ZodType<Prism
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const HazmatSpillKitCreateWithoutItemsInputSchema: z.ZodType<Prisma.HazmatSpillKitCreateWithoutItemsInput> = z.object({
@@ -66213,6 +68420,7 @@ export const FacilityCreateWithoutSpillKitMasterItemsInputSchema: z.ZodType<Pris
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutSpillKitMasterItemsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutSpillKitMasterItemsInput> = z.object({
@@ -66275,6 +68483,7 @@ export const FacilityUncheckedCreateWithoutSpillKitMasterItemsInputSchema: z.Zod
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutSpillKitMasterItemsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutSpillKitMasterItemsInput> = z.object({
@@ -66353,6 +68562,7 @@ export const FacilityUpdateWithoutSpillKitMasterItemsInputSchema: z.ZodType<Pris
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutSpillKitMasterItemsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutSpillKitMasterItemsInput> = z.object({
@@ -66415,6 +68625,7 @@ export const FacilityUncheckedUpdateWithoutSpillKitMasterItemsInputSchema: z.Zod
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateWithoutHazmatEyewashAnalysesInputSchema: z.ZodType<Prisma.FacilityCreateWithoutHazmatEyewashAnalysesInput> = z.object({
@@ -66477,6 +68688,7 @@ export const FacilityCreateWithoutHazmatEyewashAnalysesInputSchema: z.ZodType<Pr
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutHazmatEyewashAnalysesInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutHazmatEyewashAnalysesInput> = z.object({
@@ -66539,6 +68751,7 @@ export const FacilityUncheckedCreateWithoutHazmatEyewashAnalysesInputSchema: z.Z
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutHazmatEyewashAnalysesInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutHazmatEyewashAnalysesInput> = z.object({
@@ -66617,6 +68830,7 @@ export const FacilityUpdateWithoutHazmatEyewashAnalysesInputSchema: z.ZodType<Pr
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutHazmatEyewashAnalysesInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutHazmatEyewashAnalysesInput> = z.object({
@@ -66679,6 +68893,7 @@ export const FacilityUncheckedUpdateWithoutHazmatEyewashAnalysesInputSchema: z.Z
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const HazmatCategoryCreateWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.HazmatCategoryCreateWithoutHazmatIncidentsInput> = z.object({
@@ -66829,6 +69044,7 @@ export const FacilityCreateWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.F
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutHazmatIncidentsInput> = z.object({
@@ -66891,6 +69107,7 @@ export const FacilityUncheckedCreateWithoutHazmatIncidentsInputSchema: z.ZodType
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutHazmatIncidentsInput> = z.object({
@@ -66918,6 +69135,7 @@ export const FacilityLocationCreateWithoutIncidentsInputSchema: z.ZodType<Prisma
   buildProjects: z.lazy(() => BuildProjectCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedCreateWithoutIncidentsInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedCreateWithoutIncidentsInput> = z.object({
@@ -66940,6 +69158,7 @@ export const FacilityLocationUncheckedCreateWithoutIncidentsInputSchema: z.ZodTy
   buildProjects: z.lazy(() => BuildProjectUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationCreateOrConnectWithoutIncidentsInputSchema: z.ZodType<Prisma.FacilityLocationCreateOrConnectWithoutIncidentsInput> = z.object({
@@ -67286,6 +69505,7 @@ export const FacilityUpdateWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.F
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutHazmatIncidentsInput> = z.object({
@@ -67348,6 +69568,7 @@ export const FacilityUncheckedUpdateWithoutHazmatIncidentsInputSchema: z.ZodType
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUpsertWithoutIncidentsInputSchema: z.ZodType<Prisma.FacilityLocationUpsertWithoutIncidentsInput> = z.object({
@@ -67381,6 +69602,7 @@ export const FacilityLocationUpdateWithoutIncidentsInputSchema: z.ZodType<Prisma
   buildProjects: z.lazy(() => BuildProjectUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedUpdateWithoutIncidentsInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedUpdateWithoutIncidentsInput> = z.object({
@@ -67403,6 +69625,7 @@ export const FacilityLocationUncheckedUpdateWithoutIncidentsInputSchema: z.ZodTy
   buildProjects: z.lazy(() => BuildProjectUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const UserUpsertWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.UserUpsertWithoutHazmatIncidentsInput> = z.object({
@@ -67790,6 +70013,7 @@ export const FacilityCreateWithoutFireResponsiblesInputSchema: z.ZodType<Prisma.
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutFireResponsiblesInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutFireResponsiblesInput> = z.object({
@@ -67852,6 +70076,7 @@ export const FacilityUncheckedCreateWithoutFireResponsiblesInputSchema: z.ZodTyp
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutFireResponsiblesInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutFireResponsiblesInput> = z.object({
@@ -67992,6 +70217,7 @@ export const FacilityUpdateWithoutFireResponsiblesInputSchema: z.ZodType<Prisma.
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutFireResponsiblesInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutFireResponsiblesInput> = z.object({
@@ -68054,6 +70280,7 @@ export const FacilityUncheckedUpdateWithoutFireResponsiblesInputSchema: z.ZodTyp
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FireEquipmentUpsertWithWhereUniqueWithoutResponsibleInputSchema: z.ZodType<Prisma.FireEquipmentUpsertWithWhereUniqueWithoutResponsibleInput> = z.object({
@@ -68132,6 +70359,7 @@ export const FacilityCreateWithoutFireEquipmentCompaniesInputSchema: z.ZodType<P
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutFireEquipmentCompaniesInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutFireEquipmentCompaniesInput> = z.object({
@@ -68194,6 +70422,7 @@ export const FacilityUncheckedCreateWithoutFireEquipmentCompaniesInputSchema: z.
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutFireEquipmentCompaniesInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutFireEquipmentCompaniesInput> = z.object({
@@ -68372,6 +70601,7 @@ export const FacilityUpdateWithoutFireEquipmentCompaniesInputSchema: z.ZodType<P
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutFireEquipmentCompaniesInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutFireEquipmentCompaniesInput> = z.object({
@@ -68434,6 +70664,7 @@ export const FacilityUncheckedUpdateWithoutFireEquipmentCompaniesInputSchema: z.
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FireEquipmentUpsertWithWhereUniqueWithoutCompanyInputSchema: z.ZodType<Prisma.FireEquipmentUpsertWithWhereUniqueWithoutCompanyInput> = z.object({
@@ -68539,6 +70770,7 @@ export const FacilityLocationCreateWithoutFireEquipmentsInputSchema: z.ZodType<P
   buildProjects: z.lazy(() => BuildProjectCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedCreateWithoutFireEquipmentsInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedCreateWithoutFireEquipmentsInput> = z.object({
@@ -68561,6 +70793,7 @@ export const FacilityLocationUncheckedCreateWithoutFireEquipmentsInputSchema: z.
   buildProjects: z.lazy(() => BuildProjectUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationCreateOrConnectWithoutFireEquipmentsInputSchema: z.ZodType<Prisma.FacilityLocationCreateOrConnectWithoutFireEquipmentsInput> = z.object({
@@ -68628,6 +70861,7 @@ export const FacilityCreateWithoutFireEquipmentsInputSchema: z.ZodType<Prisma.Fa
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutFireEquipmentsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutFireEquipmentsInput> = z.object({
@@ -68690,6 +70924,7 @@ export const FacilityUncheckedCreateWithoutFireEquipmentsInputSchema: z.ZodType<
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutFireEquipmentsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutFireEquipmentsInput> = z.object({
@@ -68885,6 +71120,7 @@ export const FacilityLocationUpdateWithoutFireEquipmentsInputSchema: z.ZodType<P
   buildProjects: z.lazy(() => BuildProjectUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedUpdateWithoutFireEquipmentsInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedUpdateWithoutFireEquipmentsInput> = z.object({
@@ -68907,6 +71143,7 @@ export const FacilityLocationUncheckedUpdateWithoutFireEquipmentsInputSchema: z.
   buildProjects: z.lazy(() => BuildProjectUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUpsertWithoutFireEquipmentsInputSchema: z.ZodType<Prisma.FacilityUpsertWithoutFireEquipmentsInput> = z.object({
@@ -68980,6 +71217,7 @@ export const FacilityUpdateWithoutFireEquipmentsInputSchema: z.ZodType<Prisma.Fa
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutFireEquipmentsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutFireEquipmentsInput> = z.object({
@@ -69042,6 +71280,7 @@ export const FacilityUncheckedUpdateWithoutFireEquipmentsInputSchema: z.ZodType<
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FireEquipmentResponsibleUpsertWithoutEquipmentsInputSchema: z.ZodType<Prisma.FireEquipmentResponsibleUpsertWithoutEquipmentsInput> = z.object({
@@ -69508,6 +71747,7 @@ export const FacilityCreateWithoutBuildContractorInputSchema: z.ZodType<Prisma.F
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBuildContractorInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBuildContractorInput> = z.object({
@@ -69570,6 +71810,7 @@ export const FacilityUncheckedCreateWithoutBuildContractorInputSchema: z.ZodType
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBuildContractorInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBuildContractorInput> = z.object({
@@ -69722,6 +71963,7 @@ export const FacilityUpdateWithoutBuildContractorInputSchema: z.ZodType<Prisma.F
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBuildContractorInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBuildContractorInput> = z.object({
@@ -69784,6 +72026,7 @@ export const FacilityUncheckedUpdateWithoutBuildContractorInputSchema: z.ZodType
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const BuildProjectUpsertWithWhereUniqueWithoutContractorInputSchema: z.ZodType<Prisma.BuildProjectUpsertWithWhereUniqueWithoutContractorInput> = z.object({
@@ -69862,6 +72105,7 @@ export const FacilityCreateWithoutBuildWorkTypeInputSchema: z.ZodType<Prisma.Fac
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBuildWorkTypeInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBuildWorkTypeInput> = z.object({
@@ -69924,6 +72168,7 @@ export const FacilityUncheckedCreateWithoutBuildWorkTypeInputSchema: z.ZodType<P
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBuildWorkTypeInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBuildWorkTypeInput> = z.object({
@@ -70076,6 +72321,7 @@ export const FacilityUpdateWithoutBuildWorkTypeInputSchema: z.ZodType<Prisma.Fac
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBuildWorkTypeInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBuildWorkTypeInput> = z.object({
@@ -70138,6 +72384,7 @@ export const FacilityUncheckedUpdateWithoutBuildWorkTypeInputSchema: z.ZodType<P
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const BuildProjectUpsertWithWhereUniqueWithoutWorkTypeInputSchema: z.ZodType<Prisma.BuildProjectUpsertWithWhereUniqueWithoutWorkTypeInput> = z.object({
@@ -70216,6 +72463,7 @@ export const FacilityCreateWithoutBuildProjectInputSchema: z.ZodType<Prisma.Faci
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBuildProjectInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBuildProjectInput> = z.object({
@@ -70278,6 +72526,7 @@ export const FacilityUncheckedCreateWithoutBuildProjectInputSchema: z.ZodType<Pr
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBuildProjectInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBuildProjectInput> = z.object({
@@ -70388,6 +72637,7 @@ export const FacilityLocationCreateWithoutBuildProjectsInputSchema: z.ZodType<Pr
   extraordinaryIncidents: z.lazy(() => ExtraordinaryIncidentCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedCreateWithoutBuildProjectsInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedCreateWithoutBuildProjectsInput> = z.object({
@@ -70410,6 +72660,7 @@ export const FacilityLocationUncheckedCreateWithoutBuildProjectsInputSchema: z.Z
   extraordinaryIncidents: z.lazy(() => ExtraordinaryIncidentUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationCreateOrConnectWithoutBuildProjectsInputSchema: z.ZodType<Prisma.FacilityLocationCreateOrConnectWithoutBuildProjectsInput> = z.object({
@@ -71006,6 +73257,7 @@ export const FacilityUpdateWithoutBuildProjectInputSchema: z.ZodType<Prisma.Faci
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBuildProjectInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBuildProjectInput> = z.object({
@@ -71068,6 +73320,7 @@ export const FacilityUncheckedUpdateWithoutBuildProjectInputSchema: z.ZodType<Pr
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const UserUpsertWithoutBuildProjectInputSchema: z.ZodType<Prisma.UserUpsertWithoutBuildProjectInput> = z.object({
@@ -71190,6 +73443,7 @@ export const FacilityLocationUpdateWithoutBuildProjectsInputSchema: z.ZodType<Pr
   extraordinaryIncidents: z.lazy(() => ExtraordinaryIncidentUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedUpdateWithoutBuildProjectsInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedUpdateWithoutBuildProjectsInput> = z.object({
@@ -71212,6 +73466,7 @@ export const FacilityLocationUncheckedUpdateWithoutBuildProjectsInputSchema: z.Z
   extraordinaryIncidents: z.lazy(() => ExtraordinaryIncidentUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const BuildWorkTypeUpsertWithoutProjectsInputSchema: z.ZodType<Prisma.BuildWorkTypeUpsertWithoutProjectsInput> = z.object({
@@ -74474,6 +76729,7 @@ export const FacilityCreateWithoutBtAnaGruplarInputSchema: z.ZodType<Prisma.Faci
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBtAnaGruplarInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBtAnaGruplarInput> = z.object({
@@ -74536,6 +76792,7 @@ export const FacilityUncheckedCreateWithoutBtAnaGruplarInputSchema: z.ZodType<Pr
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBtAnaGruplarInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBtAnaGruplarInput> = z.object({
@@ -74630,6 +76887,7 @@ export const FacilityUpdateWithoutBtAnaGruplarInputSchema: z.ZodType<Prisma.Faci
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBtAnaGruplarInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBtAnaGruplarInput> = z.object({
@@ -74692,6 +76950,7 @@ export const FacilityUncheckedUpdateWithoutBtAnaGruplarInputSchema: z.ZodType<Pr
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const BTSoruBankasiCreateWithoutDenetlenenAlanInputSchema: z.ZodType<Prisma.BTSoruBankasiCreateWithoutDenetlenenAlanInput> = z.object({
@@ -74785,6 +77044,7 @@ export const FacilityCreateWithoutBtDenetlenenAlanlarInputSchema: z.ZodType<Pris
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBtDenetlenenAlanlarInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBtDenetlenenAlanlarInput> = z.object({
@@ -74847,6 +77107,7 @@ export const FacilityUncheckedCreateWithoutBtDenetlenenAlanlarInputSchema: z.Zod
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBtDenetlenenAlanlarInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBtDenetlenenAlanlarInput> = z.object({
@@ -74941,6 +77202,7 @@ export const FacilityUpdateWithoutBtDenetlenenAlanlarInputSchema: z.ZodType<Pris
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBtDenetlenenAlanlarInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBtDenetlenenAlanlarInput> = z.object({
@@ -75003,6 +77265,7 @@ export const FacilityUncheckedUpdateWithoutBtDenetlenenAlanlarInputSchema: z.Zod
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const BTSoruBankasiCreateWithoutKategoriInputSchema: z.ZodType<Prisma.BTSoruBankasiCreateWithoutKategoriInput> = z.object({
@@ -75096,6 +77359,7 @@ export const FacilityCreateWithoutBtKategorilerInputSchema: z.ZodType<Prisma.Fac
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBtKategorilerInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBtKategorilerInput> = z.object({
@@ -75158,6 +77422,7 @@ export const FacilityUncheckedCreateWithoutBtKategorilerInputSchema: z.ZodType<P
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBtKategorilerInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBtKategorilerInput> = z.object({
@@ -75252,6 +77517,7 @@ export const FacilityUpdateWithoutBtKategorilerInputSchema: z.ZodType<Prisma.Fac
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBtKategorilerInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBtKategorilerInput> = z.object({
@@ -75314,6 +77580,7 @@ export const FacilityUncheckedUpdateWithoutBtKategorilerInputSchema: z.ZodType<P
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const BTAnaGrupCreateWithoutSorularInputSchema: z.ZodType<Prisma.BTAnaGrupCreateWithoutSorularInput> = z.object({
@@ -75372,6 +77639,7 @@ export const FacilityLocationCreateWithoutBtSoruBankasiInputSchema: z.ZodType<Pr
   extraordinaryIncidents: z.lazy(() => ExtraordinaryIncidentCreateNestedManyWithoutLocationInputSchema).optional(),
   buildProjects: z.lazy(() => BuildProjectCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedCreateWithoutBtSoruBankasiInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedCreateWithoutBtSoruBankasiInput> = z.object({
@@ -75394,6 +77662,7 @@ export const FacilityLocationUncheckedCreateWithoutBtSoruBankasiInputSchema: z.Z
   extraordinaryIncidents: z.lazy(() => ExtraordinaryIncidentUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   buildProjects: z.lazy(() => BuildProjectUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationCreateOrConnectWithoutBtSoruBankasiInputSchema: z.ZodType<Prisma.FacilityLocationCreateOrConnectWithoutBtSoruBankasiInput> = z.object({
@@ -75500,6 +77769,7 @@ export const FacilityCreateWithoutBtSoruBankasiInputSchema: z.ZodType<Prisma.Fac
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBtSoruBankasiInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBtSoruBankasiInput> = z.object({
@@ -75562,6 +77832,7 @@ export const FacilityUncheckedCreateWithoutBtSoruBankasiInputSchema: z.ZodType<P
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBtSoruBankasiInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBtSoruBankasiInput> = z.object({
@@ -75648,6 +77919,7 @@ export const FacilityLocationUpdateWithoutBtSoruBankasiInputSchema: z.ZodType<Pr
   extraordinaryIncidents: z.lazy(() => ExtraordinaryIncidentUpdateManyWithoutLocationNestedInputSchema).optional(),
   buildProjects: z.lazy(() => BuildProjectUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedUpdateWithoutBtSoruBankasiInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedUpdateWithoutBtSoruBankasiInput> = z.object({
@@ -75670,6 +77942,7 @@ export const FacilityLocationUncheckedUpdateWithoutBtSoruBankasiInputSchema: z.Z
   extraordinaryIncidents: z.lazy(() => ExtraordinaryIncidentUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   buildProjects: z.lazy(() => BuildProjectUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const BTKategoriUpsertWithoutSorularInputSchema: z.ZodType<Prisma.BTKategoriUpsertWithoutSorularInput> = z.object({
@@ -75792,6 +78065,7 @@ export const FacilityUpdateWithoutBtSoruBankasiInputSchema: z.ZodType<Prisma.Fac
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBtSoruBankasiInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBtSoruBankasiInput> = z.object({
@@ -75854,6 +78128,7 @@ export const FacilityUncheckedUpdateWithoutBtSoruBankasiInputSchema: z.ZodType<P
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const BTTurCreateWithoutSorumluBirimlerInputSchema: z.ZodType<Prisma.BTTurCreateWithoutSorumluBirimlerInput> = z.object({
@@ -76019,6 +78294,7 @@ export const FacilityCreateWithoutBtSorumluBirimlerInputSchema: z.ZodType<Prisma
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBtSorumluBirimlerInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBtSorumluBirimlerInput> = z.object({
@@ -76081,6 +78357,7 @@ export const FacilityUncheckedCreateWithoutBtSorumluBirimlerInputSchema: z.ZodTy
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBtSorumluBirimlerInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBtSorumluBirimlerInput> = z.object({
@@ -76207,6 +78484,7 @@ export const FacilityUpdateWithoutBtSorumluBirimlerInputSchema: z.ZodType<Prisma
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBtSorumluBirimlerInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBtSorumluBirimlerInput> = z.object({
@@ -76269,6 +78547,7 @@ export const FacilityUncheckedUpdateWithoutBtSorumluBirimlerInputSchema: z.ZodTy
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const BTSorumluBirimCreateWithoutKisilerInputSchema: z.ZodType<Prisma.BTSorumluBirimCreateWithoutKisilerInput> = z.object({
@@ -76429,6 +78708,7 @@ export const FacilityCreateWithoutBtSorumluKisilerInputSchema: z.ZodType<Prisma.
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBtSorumluKisilerInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBtSorumluKisilerInput> = z.object({
@@ -76491,6 +78771,7 @@ export const FacilityUncheckedCreateWithoutBtSorumluKisilerInputSchema: z.ZodTyp
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBtSorumluKisilerInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBtSorumluKisilerInput> = z.object({
@@ -76629,6 +78910,7 @@ export const FacilityUpdateWithoutBtSorumluKisilerInputSchema: z.ZodType<Prisma.
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBtSorumluKisilerInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBtSorumluKisilerInput> = z.object({
@@ -76691,6 +78973,7 @@ export const FacilityUncheckedUpdateWithoutBtSorumluKisilerInputSchema: z.ZodTyp
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const BTSorumluBirimCreateWithoutTurlerInputSchema: z.ZodType<Prisma.BTSorumluBirimCreateWithoutTurlerInput> = z.object({
@@ -76884,6 +79167,7 @@ export const FacilityCreateWithoutBtTurlerInputSchema: z.ZodType<Prisma.Facility
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBtTurlerInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBtTurlerInput> = z.object({
@@ -76946,6 +79230,7 @@ export const FacilityUncheckedCreateWithoutBtTurlerInputSchema: z.ZodType<Prisma
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBtTurlerInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBtTurlerInput> = z.object({
@@ -77113,6 +79398,7 @@ export const FacilityUpdateWithoutBtTurlerInputSchema: z.ZodType<Prisma.Facility
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBtTurlerInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBtTurlerInput> = z.object({
@@ -77175,6 +79461,7 @@ export const FacilityUncheckedUpdateWithoutBtTurlerInputSchema: z.ZodType<Prisma
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const BTTurCreateWithoutDenetimEkibiInputSchema: z.ZodType<Prisma.BTTurCreateWithoutDenetimEkibiInput> = z.object({
@@ -77629,6 +79916,7 @@ export const FacilityLocationCreateWithoutBtUygunsuzluklarInputSchema: z.ZodType
   extraordinaryIncidents: z.lazy(() => ExtraordinaryIncidentCreateNestedManyWithoutLocationInputSchema).optional(),
   buildProjects: z.lazy(() => BuildProjectCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedCreateWithoutBtUygunsuzluklarInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedCreateWithoutBtUygunsuzluklarInput> = z.object({
@@ -77651,6 +79939,7 @@ export const FacilityLocationUncheckedCreateWithoutBtUygunsuzluklarInputSchema: 
   extraordinaryIncidents: z.lazy(() => ExtraordinaryIncidentUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   buildProjects: z.lazy(() => BuildProjectUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationCreateOrConnectWithoutBtUygunsuzluklarInputSchema: z.ZodType<Prisma.FacilityLocationCreateOrConnectWithoutBtUygunsuzluklarInput> = z.object({
@@ -77776,6 +80065,7 @@ export const FacilityCreateWithoutBtUygunsuzluklarInputSchema: z.ZodType<Prisma.
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBtUygunsuzluklarInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBtUygunsuzluklarInput> = z.object({
@@ -77838,6 +80128,7 @@ export const FacilityUncheckedCreateWithoutBtUygunsuzluklarInputSchema: z.ZodTyp
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBtUygunsuzluklarInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBtUygunsuzluklarInput> = z.object({
@@ -77908,6 +80199,7 @@ export const FacilityLocationUpdateWithoutBtUygunsuzluklarInputSchema: z.ZodType
   extraordinaryIncidents: z.lazy(() => ExtraordinaryIncidentUpdateManyWithoutLocationNestedInputSchema).optional(),
   buildProjects: z.lazy(() => BuildProjectUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedUpdateWithoutBtUygunsuzluklarInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedUpdateWithoutBtUygunsuzluklarInput> = z.object({
@@ -77930,6 +80222,7 @@ export const FacilityLocationUncheckedUpdateWithoutBtUygunsuzluklarInputSchema: 
   extraordinaryIncidents: z.lazy(() => ExtraordinaryIncidentUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   buildProjects: z.lazy(() => BuildProjectUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const BTTurUpsertWithoutUygunsuzluklarInputSchema: z.ZodType<Prisma.BTTurUpsertWithoutUygunsuzluklarInput> = z.object({
@@ -78073,6 +80366,7 @@ export const FacilityUpdateWithoutBtUygunsuzluklarInputSchema: z.ZodType<Prisma.
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBtUygunsuzluklarInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBtUygunsuzluklarInput> = z.object({
@@ -78135,6 +80429,7 @@ export const FacilityUncheckedUpdateWithoutBtUygunsuzluklarInputSchema: z.ZodTyp
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateWithoutLocationsInputSchema: z.ZodType<Prisma.FacilityCreateWithoutLocationsInput> = z.object({
@@ -78197,6 +80492,7 @@ export const FacilityCreateWithoutLocationsInputSchema: z.ZodType<Prisma.Facilit
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutLocationsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutLocationsInput> = z.object({
@@ -78259,6 +80555,7 @@ export const FacilityUncheckedCreateWithoutLocationsInputSchema: z.ZodType<Prism
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutLocationsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutLocationsInput> = z.object({
@@ -78811,6 +81108,46 @@ export const BTUygunsuzlukCreateManyLocationInputEnvelopeSchema: z.ZodType<Prism
   skipDuplicates: z.boolean().optional(),
 }).strict();
 
+export const FireDoorCreateWithoutLocationInputSchema: z.ZodType<Prisma.FireDoorCreateWithoutLocationInput> = z.object({
+  id: z.string().optional(),
+  qrCode: z.string().optional().nullable(),
+  doorNo: z.string().optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.string().optional(),
+  photoUrl: z.string().optional().nullable(),
+  lastGrade: z.string().optional().nullable(),
+  lastScore: z.number().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  facility: z.lazy(() => FacilityCreateNestedOneWithoutFireDoorInputSchema),
+  inspections: z.lazy(() => FireDoorInspectionCreateNestedManyWithoutFireDoorInputSchema).optional(),
+}).strict();
+
+export const FireDoorUncheckedCreateWithoutLocationInputSchema: z.ZodType<Prisma.FireDoorUncheckedCreateWithoutLocationInput> = z.object({
+  id: z.string().optional(),
+  facilityId: z.string(),
+  qrCode: z.string().optional().nullable(),
+  doorNo: z.string().optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.string().optional(),
+  photoUrl: z.string().optional().nullable(),
+  lastGrade: z.string().optional().nullable(),
+  lastScore: z.number().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  inspections: z.lazy(() => FireDoorInspectionUncheckedCreateNestedManyWithoutFireDoorInputSchema).optional(),
+}).strict();
+
+export const FireDoorCreateOrConnectWithoutLocationInputSchema: z.ZodType<Prisma.FireDoorCreateOrConnectWithoutLocationInput> = z.object({
+  where: z.lazy(() => FireDoorWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => FireDoorCreateWithoutLocationInputSchema), z.lazy(() => FireDoorUncheckedCreateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const FireDoorCreateManyLocationInputEnvelopeSchema: z.ZodType<Prisma.FireDoorCreateManyLocationInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => FireDoorCreateManyLocationInputSchema), z.lazy(() => FireDoorCreateManyLocationInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
 export const FacilityUpsertWithoutLocationsInputSchema: z.ZodType<Prisma.FacilityUpsertWithoutLocationsInput> = z.object({
   update: z.union([ z.lazy(() => FacilityUpdateWithoutLocationsInputSchema), z.lazy(() => FacilityUncheckedUpdateWithoutLocationsInputSchema) ]),
   create: z.union([ z.lazy(() => FacilityCreateWithoutLocationsInputSchema), z.lazy(() => FacilityUncheckedCreateWithoutLocationsInputSchema) ]),
@@ -78882,6 +81219,7 @@ export const FacilityUpdateWithoutLocationsInputSchema: z.ZodType<Prisma.Facilit
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutLocationsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutLocationsInput> = z.object({
@@ -78944,6 +81282,7 @@ export const FacilityUncheckedUpdateWithoutLocationsInputSchema: z.ZodType<Prism
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityBuildingUpsertWithoutLocationsInputSchema: z.ZodType<Prisma.FacilityBuildingUpsertWithoutLocationsInput> = z.object({
@@ -79170,6 +81509,22 @@ export const BTUygunsuzlukUpdateManyWithWhereWithoutLocationInputSchema: z.ZodTy
   data: z.union([ z.lazy(() => BTUygunsuzlukUpdateManyMutationInputSchema), z.lazy(() => BTUygunsuzlukUncheckedUpdateManyWithoutLocationInputSchema) ]),
 }).strict();
 
+export const FireDoorUpsertWithWhereUniqueWithoutLocationInputSchema: z.ZodType<Prisma.FireDoorUpsertWithWhereUniqueWithoutLocationInput> = z.object({
+  where: z.lazy(() => FireDoorWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => FireDoorUpdateWithoutLocationInputSchema), z.lazy(() => FireDoorUncheckedUpdateWithoutLocationInputSchema) ]),
+  create: z.union([ z.lazy(() => FireDoorCreateWithoutLocationInputSchema), z.lazy(() => FireDoorUncheckedCreateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const FireDoorUpdateWithWhereUniqueWithoutLocationInputSchema: z.ZodType<Prisma.FireDoorUpdateWithWhereUniqueWithoutLocationInput> = z.object({
+  where: z.lazy(() => FireDoorWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => FireDoorUpdateWithoutLocationInputSchema), z.lazy(() => FireDoorUncheckedUpdateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const FireDoorUpdateManyWithWhereWithoutLocationInputSchema: z.ZodType<Prisma.FireDoorUpdateManyWithWhereWithoutLocationInput> = z.object({
+  where: z.lazy(() => FireDoorScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => FireDoorUpdateManyMutationInputSchema), z.lazy(() => FireDoorUncheckedUpdateManyWithoutLocationInputSchema) ]),
+}).strict();
+
 export const FacilityCreateWithoutHazmatVehicleInputSchema: z.ZodType<Prisma.FacilityCreateWithoutHazmatVehicleInput> = z.object({
   id: z.string(),
   name: z.string(),
@@ -79230,6 +81585,7 @@ export const FacilityCreateWithoutHazmatVehicleInputSchema: z.ZodType<Prisma.Fac
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutHazmatVehicleInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutHazmatVehicleInput> = z.object({
@@ -79292,6 +81648,7 @@ export const FacilityUncheckedCreateWithoutHazmatVehicleInputSchema: z.ZodType<P
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutHazmatVehicleInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutHazmatVehicleInput> = z.object({
@@ -79402,6 +81759,7 @@ export const FacilityUpdateWithoutHazmatVehicleInputSchema: z.ZodType<Prisma.Fac
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutHazmatVehicleInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutHazmatVehicleInput> = z.object({
@@ -79464,6 +81822,7 @@ export const FacilityUncheckedUpdateWithoutHazmatVehicleInputSchema: z.ZodType<P
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const HazmatInventoryItemUpsertWithWhereUniqueWithoutVehicleInputSchema: z.ZodType<Prisma.HazmatInventoryItemUpsertWithWhereUniqueWithoutVehicleInput> = z.object({
@@ -83222,6 +85581,7 @@ export const FacilityCreateWithoutRenovationReportsInputSchema: z.ZodType<Prisma
   HazmatVehicle: z.lazy(() => HazmatVehicleCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutRenovationReportsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutRenovationReportsInput> = z.object({
@@ -83284,6 +85644,7 @@ export const FacilityUncheckedCreateWithoutRenovationReportsInputSchema: z.ZodTy
   HazmatVehicle: z.lazy(() => HazmatVehicleUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutRenovationReportsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutRenovationReportsInput> = z.object({
@@ -83362,6 +85723,7 @@ export const FacilityUpdateWithoutRenovationReportsInputSchema: z.ZodType<Prisma
   HazmatVehicle: z.lazy(() => HazmatVehicleUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutRenovationReportsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutRenovationReportsInput> = z.object({
@@ -83424,6 +85786,7 @@ export const FacilityUncheckedUpdateWithoutRenovationReportsInputSchema: z.ZodTy
   HazmatVehicle: z.lazy(() => HazmatVehicleUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const ChecklistItemCreateWithoutCategoryInputSchema: z.ZodType<Prisma.ChecklistItemCreateWithoutCategoryInput> = z.object({
@@ -84694,6 +87057,7 @@ export const FacilityCreateWithoutChecklistSubmissionsInputSchema: z.ZodType<Pri
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutChecklistSubmissionsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutChecklistSubmissionsInput> = z.object({
@@ -84756,6 +87120,7 @@ export const FacilityUncheckedCreateWithoutChecklistSubmissionsInputSchema: z.Zo
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutChecklistSubmissionsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutChecklistSubmissionsInput> = z.object({
@@ -85026,6 +87391,7 @@ export const FacilityUpdateWithoutChecklistSubmissionsInputSchema: z.ZodType<Pri
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutChecklistSubmissionsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutChecklistSubmissionsInput> = z.object({
@@ -85088,6 +87454,7 @@ export const FacilityUncheckedUpdateWithoutChecklistSubmissionsInputSchema: z.Zo
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const ChecklistAnswerUpsertWithWhereUniqueWithoutSubmissionInputSchema: z.ZodType<Prisma.ChecklistAnswerUpsertWithWhereUniqueWithoutSubmissionInput> = z.object({
@@ -85717,6 +88084,7 @@ export const FacilityCreateWithoutOhsBoardMeetingsInputSchema: z.ZodType<Prisma.
   HazmatVehicle: z.lazy(() => HazmatVehicleCreateNestedManyWithoutFacilityInputSchema).optional(),
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutOhsBoardMeetingsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutOhsBoardMeetingsInput> = z.object({
@@ -85779,6 +88147,7 @@ export const FacilityUncheckedCreateWithoutOhsBoardMeetingsInputSchema: z.ZodTyp
   HazmatVehicle: z.lazy(() => HazmatVehicleUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutOhsBoardMeetingsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutOhsBoardMeetingsInput> = z.object({
@@ -85903,6 +88272,7 @@ export const FacilityUpdateWithoutOhsBoardMeetingsInputSchema: z.ZodType<Prisma.
   HazmatVehicle: z.lazy(() => HazmatVehicleUpdateManyWithoutFacilityNestedInputSchema).optional(),
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutOhsBoardMeetingsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutOhsBoardMeetingsInput> = z.object({
@@ -85965,6 +88335,7 @@ export const FacilityUncheckedUpdateWithoutOhsBoardMeetingsInputSchema: z.ZodTyp
   HazmatVehicle: z.lazy(() => HazmatVehicleUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const OhsBoardDecisionUpsertWithWhereUniqueWithoutMeetingInputSchema: z.ZodType<Prisma.OhsBoardDecisionUpsertWithWhereUniqueWithoutMeetingInput> = z.object({
@@ -86391,6 +88762,7 @@ export const FacilityCreateWithoutOhsBoardMembersInputSchema: z.ZodType<Prisma.F
   HazmatVehicle: z.lazy(() => HazmatVehicleCreateNestedManyWithoutFacilityInputSchema).optional(),
   renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutOhsBoardMembersInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutOhsBoardMembersInput> = z.object({
@@ -86453,6 +88825,7 @@ export const FacilityUncheckedCreateWithoutOhsBoardMembersInputSchema: z.ZodType
   HazmatVehicle: z.lazy(() => HazmatVehicleUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutOhsBoardMembersInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutOhsBoardMembersInput> = z.object({
@@ -86555,6 +88928,7 @@ export const FacilityUpdateWithoutOhsBoardMembersInputSchema: z.ZodType<Prisma.F
   HazmatVehicle: z.lazy(() => HazmatVehicleUpdateManyWithoutFacilityNestedInputSchema).optional(),
   renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutOhsBoardMembersInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutOhsBoardMembersInput> = z.object({
@@ -86617,6 +88991,7 @@ export const FacilityUncheckedUpdateWithoutOhsBoardMembersInputSchema: z.ZodType
   HazmatVehicle: z.lazy(() => HazmatVehicleUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const DepartmentUpsertWithoutOhsBoardMembersInputSchema: z.ZodType<Prisma.DepartmentUpsertWithoutOhsBoardMembersInput> = z.object({
@@ -86647,6 +89022,883 @@ export const DepartmentUncheckedUpdateWithoutOhsBoardMembersInputSchema: z.ZodTy
   incidents: z.lazy(() => ExtraordinaryIncidentUncheckedUpdateManyWithoutDepartmentNestedInputSchema).optional(),
   notebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutDepartmentNestedInputSchema).optional(),
   ohsBoardDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutDepartmentNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionCreateWithoutGroupInputSchema: z.ZodType<Prisma.FireDoorQuestionCreateWithoutGroupInput> = z.object({
+  id: z.string().optional(),
+  order: z.number().int(),
+  text: z.string(),
+  weightPass: z.number().optional(),
+  weightPartial: z.number().optional(),
+  weightFail: z.number().optional(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  inspectionItems: z.lazy(() => FireDoorInspectionItemCreateNestedManyWithoutQuestionInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionUncheckedCreateWithoutGroupInputSchema: z.ZodType<Prisma.FireDoorQuestionUncheckedCreateWithoutGroupInput> = z.object({
+  id: z.string().optional(),
+  order: z.number().int(),
+  text: z.string(),
+  weightPass: z.number().optional(),
+  weightPartial: z.number().optional(),
+  weightFail: z.number().optional(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  inspectionItems: z.lazy(() => FireDoorInspectionItemUncheckedCreateNestedManyWithoutQuestionInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionCreateOrConnectWithoutGroupInputSchema: z.ZodType<Prisma.FireDoorQuestionCreateOrConnectWithoutGroupInput> = z.object({
+  where: z.lazy(() => FireDoorQuestionWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => FireDoorQuestionCreateWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionUncheckedCreateWithoutGroupInputSchema) ]),
+}).strict();
+
+export const FireDoorQuestionCreateManyGroupInputEnvelopeSchema: z.ZodType<Prisma.FireDoorQuestionCreateManyGroupInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => FireDoorQuestionCreateManyGroupInputSchema), z.lazy(() => FireDoorQuestionCreateManyGroupInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FireDoorQuestionUpsertWithWhereUniqueWithoutGroupInputSchema: z.ZodType<Prisma.FireDoorQuestionUpsertWithWhereUniqueWithoutGroupInput> = z.object({
+  where: z.lazy(() => FireDoorQuestionWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => FireDoorQuestionUpdateWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionUncheckedUpdateWithoutGroupInputSchema) ]),
+  create: z.union([ z.lazy(() => FireDoorQuestionCreateWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionUncheckedCreateWithoutGroupInputSchema) ]),
+}).strict();
+
+export const FireDoorQuestionUpdateWithWhereUniqueWithoutGroupInputSchema: z.ZodType<Prisma.FireDoorQuestionUpdateWithWhereUniqueWithoutGroupInput> = z.object({
+  where: z.lazy(() => FireDoorQuestionWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => FireDoorQuestionUpdateWithoutGroupInputSchema), z.lazy(() => FireDoorQuestionUncheckedUpdateWithoutGroupInputSchema) ]),
+}).strict();
+
+export const FireDoorQuestionUpdateManyWithWhereWithoutGroupInputSchema: z.ZodType<Prisma.FireDoorQuestionUpdateManyWithWhereWithoutGroupInput> = z.object({
+  where: z.lazy(() => FireDoorQuestionScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => FireDoorQuestionUpdateManyMutationInputSchema), z.lazy(() => FireDoorQuestionUncheckedUpdateManyWithoutGroupInputSchema) ]),
+}).strict();
+
+export const FireDoorQuestionScalarWhereInputSchema: z.ZodType<Prisma.FireDoorQuestionScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => FireDoorQuestionScalarWhereInputSchema), z.lazy(() => FireDoorQuestionScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorQuestionScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorQuestionScalarWhereInputSchema), z.lazy(() => FireDoorQuestionScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  groupId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  order: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  text: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  weightPass: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  weightPartial: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  weightFail: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  isActive: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupCreateWithoutQuestionsInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupCreateWithoutQuestionsInput> = z.object({
+  id: z.string().optional(),
+  order: z.number().int(),
+  name: z.string(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const FireDoorQuestionGroupUncheckedCreateWithoutQuestionsInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupUncheckedCreateWithoutQuestionsInput> = z.object({
+  id: z.string().optional(),
+  order: z.number().int(),
+  name: z.string(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const FireDoorQuestionGroupCreateOrConnectWithoutQuestionsInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupCreateOrConnectWithoutQuestionsInput> = z.object({
+  where: z.lazy(() => FireDoorQuestionGroupWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => FireDoorQuestionGroupCreateWithoutQuestionsInputSchema), z.lazy(() => FireDoorQuestionGroupUncheckedCreateWithoutQuestionsInputSchema) ]),
+}).strict();
+
+export const FireDoorInspectionItemCreateWithoutQuestionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemCreateWithoutQuestionInput> = z.object({
+  id: z.string().optional(),
+  answer: z.string(),
+  earnedScore: z.number(),
+  comment: z.string().optional().nullable(),
+  photoUrl: z.string().optional().nullable(),
+  inspection: z.lazy(() => FireDoorInspectionCreateNestedOneWithoutItemsInputSchema),
+}).strict();
+
+export const FireDoorInspectionItemUncheckedCreateWithoutQuestionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUncheckedCreateWithoutQuestionInput> = z.object({
+  id: z.string().optional(),
+  inspectionId: z.string(),
+  answer: z.string(),
+  earnedScore: z.number(),
+  comment: z.string().optional().nullable(),
+  photoUrl: z.string().optional().nullable(),
+}).strict();
+
+export const FireDoorInspectionItemCreateOrConnectWithoutQuestionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemCreateOrConnectWithoutQuestionInput> = z.object({
+  where: z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => FireDoorInspectionItemCreateWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutQuestionInputSchema) ]),
+}).strict();
+
+export const FireDoorInspectionItemCreateManyQuestionInputEnvelopeSchema: z.ZodType<Prisma.FireDoorInspectionItemCreateManyQuestionInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => FireDoorInspectionItemCreateManyQuestionInputSchema), z.lazy(() => FireDoorInspectionItemCreateManyQuestionInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FireDoorQuestionGroupUpsertWithoutQuestionsInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupUpsertWithoutQuestionsInput> = z.object({
+  update: z.union([ z.lazy(() => FireDoorQuestionGroupUpdateWithoutQuestionsInputSchema), z.lazy(() => FireDoorQuestionGroupUncheckedUpdateWithoutQuestionsInputSchema) ]),
+  create: z.union([ z.lazy(() => FireDoorQuestionGroupCreateWithoutQuestionsInputSchema), z.lazy(() => FireDoorQuestionGroupUncheckedCreateWithoutQuestionsInputSchema) ]),
+  where: z.lazy(() => FireDoorQuestionGroupWhereInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupUpdateToOneWithWhereWithoutQuestionsInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupUpdateToOneWithWhereWithoutQuestionsInput> = z.object({
+  where: z.lazy(() => FireDoorQuestionGroupWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => FireDoorQuestionGroupUpdateWithoutQuestionsInputSchema), z.lazy(() => FireDoorQuestionGroupUncheckedUpdateWithoutQuestionsInputSchema) ]),
+}).strict();
+
+export const FireDoorQuestionGroupUpdateWithoutQuestionsInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupUpdateWithoutQuestionsInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  order: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupUncheckedUpdateWithoutQuestionsInputSchema: z.ZodType<Prisma.FireDoorQuestionGroupUncheckedUpdateWithoutQuestionsInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  order: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorInspectionItemUpsertWithWhereUniqueWithoutQuestionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUpsertWithWhereUniqueWithoutQuestionInput> = z.object({
+  where: z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => FireDoorInspectionItemUpdateWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemUncheckedUpdateWithoutQuestionInputSchema) ]),
+  create: z.union([ z.lazy(() => FireDoorInspectionItemCreateWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutQuestionInputSchema) ]),
+}).strict();
+
+export const FireDoorInspectionItemUpdateWithWhereUniqueWithoutQuestionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUpdateWithWhereUniqueWithoutQuestionInput> = z.object({
+  where: z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => FireDoorInspectionItemUpdateWithoutQuestionInputSchema), z.lazy(() => FireDoorInspectionItemUncheckedUpdateWithoutQuestionInputSchema) ]),
+}).strict();
+
+export const FireDoorInspectionItemUpdateManyWithWhereWithoutQuestionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUpdateManyWithWhereWithoutQuestionInput> = z.object({
+  where: z.lazy(() => FireDoorInspectionItemScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => FireDoorInspectionItemUpdateManyMutationInputSchema), z.lazy(() => FireDoorInspectionItemUncheckedUpdateManyWithoutQuestionInputSchema) ]),
+}).strict();
+
+export const FireDoorInspectionItemScalarWhereInputSchema: z.ZodType<Prisma.FireDoorInspectionItemScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => FireDoorInspectionItemScalarWhereInputSchema), z.lazy(() => FireDoorInspectionItemScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorInspectionItemScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorInspectionItemScalarWhereInputSchema), z.lazy(() => FireDoorInspectionItemScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  inspectionId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  questionId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  answer: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  earnedScore: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  comment: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  photoUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+}).strict();
+
+export const FacilityCreateWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityCreateWithoutFireDoorInput> = z.object({
+  id: z.string(),
+  name: z.string(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  city: z.string().optional().nullable(),
+  commercialTitle: z.string().optional().nullable(),
+  dangerClass: z.string().optional(),
+  district: z.string().optional().nullable(),
+  email: z.string().optional().nullable(),
+  employeeCount: z.number().int().optional(),
+  fullAddress: z.string().optional().nullable(),
+  naceCode: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  sgkNumber: z.string().optional().nullable(),
+  shortName: z.string().optional().nullable(),
+  taxNumber: z.string().optional().nullable(),
+  taxOffice: z.string().optional().nullable(),
+  type: z.string().optional().nullable(),
+  website: z.string().optional().nullable(),
+  logoUrl: z.string().optional().nullable(),
+  activityLogs: z.lazy(() => ActivityLogCreateNestedManyWithoutFacilityInputSchema).optional(),
+  assignments: z.lazy(() => AssignmentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  employeeCountHistory: z.lazy(() => EmployeeCountHistoryCreateNestedManyWithoutFacilityInputSchema).optional(),
+  incidents: z.lazy(() => ExtraordinaryIncidentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  buildings: z.lazy(() => FacilityBuildingCreateNestedManyWithoutFacilityInputSchema).optional(),
+  monthlyAccident: z.lazy(() => MonthlyAccidentDataCreateNestedManyWithoutFacilityInputSchema).optional(),
+  monthlyHrData: z.lazy(() => MonthlyHRDataCreateNestedManyWithoutFacilityInputSchema).optional(),
+  notebookPages: z.lazy(() => NotebookPageCreateNestedManyWithoutFacilityInputSchema).optional(),
+  reconciliations: z.lazy(() => ReconciliationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskCategorySettings: z.lazy(() => RiskCategorySettingCreateNestedManyWithoutFacilityInputSchema).optional(),
+  locations: z.lazy(() => FacilityLocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskDepartmentSettings: z.lazy(() => RiskDepartmentSettingCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskExpertFacilities: z.lazy(() => RiskExpertFacilityCreateNestedManyWithoutFacilityInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutFacilityInputSchema).optional(),
+  users: z.lazy(() => UserFacilityCreateNestedManyWithoutFacilityInputSchema).optional(),
+  facilityHazmatItems: z.lazy(() => FacilityHazmatItemCreateNestedManyWithoutFacilityInputSchema).optional(),
+  spillKits: z.lazy(() => HazmatSpillKitCreateNestedManyWithoutFacilityInputSchema).optional(),
+  spillKitMasterItems: z.lazy(() => HazmatSpillKitMasterItemCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatInventoryItems: z.lazy(() => HazmatInventoryItemCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatEyewashAnalyses: z.lazy(() => HazmatEyewashRiskAnalysisCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireResponsibles: z.lazy(() => FireEquipmentResponsibleCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireEquipmentCompanies: z.lazy(() => FireEquipmentCompanyCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildContractor: z.lazy(() => BuildContractorCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildWorkType: z.lazy(() => BuildWorkTypeCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btAnaGruplar: z.lazy(() => BTAnaGrupCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btDenetlenenAlanlar: z.lazy(() => BTDenetlenenAlanCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btKategoriler: z.lazy(() => BTKategoriCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSorumluBirimler: z.lazy(() => BTSorumluBirimCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSorumluKisiler: z.lazy(() => BTSorumluKisiCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btTurler: z.lazy(() => BTTurCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukCreateNestedManyWithoutFacilityInputSchema).optional(),
+  HazmatVehicle: z.lazy(() => HazmatVehicleCreateNestedManyWithoutFacilityInputSchema).optional(),
+  renovationReports: z.lazy(() => RenovationReportCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+}).strict();
+
+export const FacilityUncheckedCreateWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutFireDoorInput> = z.object({
+  id: z.string(),
+  name: z.string(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  city: z.string().optional().nullable(),
+  commercialTitle: z.string().optional().nullable(),
+  dangerClass: z.string().optional(),
+  district: z.string().optional().nullable(),
+  email: z.string().optional().nullable(),
+  employeeCount: z.number().int().optional(),
+  fullAddress: z.string().optional().nullable(),
+  naceCode: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  sgkNumber: z.string().optional().nullable(),
+  shortName: z.string().optional().nullable(),
+  taxNumber: z.string().optional().nullable(),
+  taxOffice: z.string().optional().nullable(),
+  type: z.string().optional().nullable(),
+  website: z.string().optional().nullable(),
+  logoUrl: z.string().optional().nullable(),
+  activityLogs: z.lazy(() => ActivityLogUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  assignments: z.lazy(() => AssignmentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  employeeCountHistory: z.lazy(() => EmployeeCountHistoryUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  incidents: z.lazy(() => ExtraordinaryIncidentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  buildings: z.lazy(() => FacilityBuildingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  monthlyAccident: z.lazy(() => MonthlyAccidentDataUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  monthlyHrData: z.lazy(() => MonthlyHRDataUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  notebookPages: z.lazy(() => NotebookPageUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  reconciliations: z.lazy(() => ReconciliationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskCategorySettings: z.lazy(() => RiskCategorySettingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  locations: z.lazy(() => FacilityLocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskDepartmentSettings: z.lazy(() => RiskDepartmentSettingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskExpertFacilities: z.lazy(() => RiskExpertFacilityUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  users: z.lazy(() => UserFacilityUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  facilityHazmatItems: z.lazy(() => FacilityHazmatItemUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  spillKits: z.lazy(() => HazmatSpillKitUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  spillKitMasterItems: z.lazy(() => HazmatSpillKitMasterItemUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatInventoryItems: z.lazy(() => HazmatInventoryItemUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatEyewashAnalyses: z.lazy(() => HazmatEyewashRiskAnalysisUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireResponsibles: z.lazy(() => FireEquipmentResponsibleUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireEquipmentCompanies: z.lazy(() => FireEquipmentCompanyUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildContractor: z.lazy(() => BuildContractorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildWorkType: z.lazy(() => BuildWorkTypeUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btAnaGruplar: z.lazy(() => BTAnaGrupUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btDenetlenenAlanlar: z.lazy(() => BTDenetlenenAlanUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btKategoriler: z.lazy(() => BTKategoriUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSorumluBirimler: z.lazy(() => BTSorumluBirimUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSorumluKisiler: z.lazy(() => BTSorumluKisiUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btTurler: z.lazy(() => BTTurUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  HazmatVehicle: z.lazy(() => HazmatVehicleUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  renovationReports: z.lazy(() => RenovationReportUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+}).strict();
+
+export const FacilityCreateOrConnectWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutFireDoorInput> = z.object({
+  where: z.lazy(() => FacilityWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => FacilityCreateWithoutFireDoorInputSchema), z.lazy(() => FacilityUncheckedCreateWithoutFireDoorInputSchema) ]),
+}).strict();
+
+export const FacilityLocationCreateWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityLocationCreateWithoutFireDoorInput> = z.object({
+  id: z.string().optional(),
+  name: z.string().optional().nullable(),
+  building: z.string().optional().nullable(),
+  floor: z.string().optional().nullable(),
+  department: z.string().optional().nullable(),
+  type: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  facility: z.lazy(() => FacilityCreateNestedOneWithoutLocationsInputSchema),
+  facilityBuilding: z.lazy(() => FacilityBuildingCreateNestedOneWithoutLocationsInputSchema).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentCreateNestedManyWithoutLocationInputSchema).optional(),
+  hazmatMaterials: z.lazy(() => HazmatInventoryItemCreateNestedManyWithoutLocationInputSchema).optional(),
+  risks: z.lazy(() => RiskLifecycleCreateNestedManyWithoutLocationInputSchema).optional(),
+  incidents: z.lazy(() => HazmatIncidentCreateNestedManyWithoutLocationInputSchema).optional(),
+  extraordinaryIncidents: z.lazy(() => ExtraordinaryIncidentCreateNestedManyWithoutLocationInputSchema).optional(),
+  buildProjects: z.lazy(() => BuildProjectCreateNestedManyWithoutLocationInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiCreateNestedManyWithoutLocationInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukCreateNestedManyWithoutLocationInputSchema).optional(),
+}).strict();
+
+export const FacilityLocationUncheckedCreateWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedCreateWithoutFireDoorInput> = z.object({
+  id: z.string().optional(),
+  facilityId: z.string(),
+  buildingId: z.number().int().optional().nullable(),
+  name: z.string().optional().nullable(),
+  building: z.string().optional().nullable(),
+  floor: z.string().optional().nullable(),
+  department: z.string().optional().nullable(),
+  type: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  fireEquipments: z.lazy(() => FireEquipmentUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  hazmatMaterials: z.lazy(() => HazmatInventoryItemUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  risks: z.lazy(() => RiskLifecycleUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  incidents: z.lazy(() => HazmatIncidentUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  extraordinaryIncidents: z.lazy(() => ExtraordinaryIncidentUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  buildProjects: z.lazy(() => BuildProjectUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+}).strict();
+
+export const FacilityLocationCreateOrConnectWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityLocationCreateOrConnectWithoutFireDoorInput> = z.object({
+  where: z.lazy(() => FacilityLocationWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => FacilityLocationCreateWithoutFireDoorInputSchema), z.lazy(() => FacilityLocationUncheckedCreateWithoutFireDoorInputSchema) ]),
+}).strict();
+
+export const FireDoorInspectionCreateWithoutFireDoorInputSchema: z.ZodType<Prisma.FireDoorInspectionCreateWithoutFireDoorInput> = z.object({
+  id: z.string().optional(),
+  inspectionDate: z.coerce.date(),
+  inspectorId: z.string(),
+  totalScore: z.number(),
+  maxPossibleScore: z.number(),
+  grade: z.string(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  items: z.lazy(() => FireDoorInspectionItemCreateNestedManyWithoutInspectionInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionUncheckedCreateWithoutFireDoorInputSchema: z.ZodType<Prisma.FireDoorInspectionUncheckedCreateWithoutFireDoorInput> = z.object({
+  id: z.string().optional(),
+  inspectionDate: z.coerce.date(),
+  inspectorId: z.string(),
+  totalScore: z.number(),
+  maxPossibleScore: z.number(),
+  grade: z.string(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  items: z.lazy(() => FireDoorInspectionItemUncheckedCreateNestedManyWithoutInspectionInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionCreateOrConnectWithoutFireDoorInputSchema: z.ZodType<Prisma.FireDoorInspectionCreateOrConnectWithoutFireDoorInput> = z.object({
+  where: z.lazy(() => FireDoorInspectionWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => FireDoorInspectionCreateWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionUncheckedCreateWithoutFireDoorInputSchema) ]),
+}).strict();
+
+export const FireDoorInspectionCreateManyFireDoorInputEnvelopeSchema: z.ZodType<Prisma.FireDoorInspectionCreateManyFireDoorInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => FireDoorInspectionCreateManyFireDoorInputSchema), z.lazy(() => FireDoorInspectionCreateManyFireDoorInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FacilityUpsertWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityUpsertWithoutFireDoorInput> = z.object({
+  update: z.union([ z.lazy(() => FacilityUpdateWithoutFireDoorInputSchema), z.lazy(() => FacilityUncheckedUpdateWithoutFireDoorInputSchema) ]),
+  create: z.union([ z.lazy(() => FacilityCreateWithoutFireDoorInputSchema), z.lazy(() => FacilityUncheckedCreateWithoutFireDoorInputSchema) ]),
+  where: z.lazy(() => FacilityWhereInputSchema).optional(),
+}).strict();
+
+export const FacilityUpdateToOneWithWhereWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityUpdateToOneWithWhereWithoutFireDoorInput> = z.object({
+  where: z.lazy(() => FacilityWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => FacilityUpdateWithoutFireDoorInputSchema), z.lazy(() => FacilityUncheckedUpdateWithoutFireDoorInputSchema) ]),
+}).strict();
+
+export const FacilityUpdateWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityUpdateWithoutFireDoorInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  city: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  commercialTitle: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  dangerClass: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  district: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  email: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  employeeCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  fullAddress: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  naceCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  phone: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sgkNumber: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  shortName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  taxNumber: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  taxOffice: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  type: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  website: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  logoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  activityLogs: z.lazy(() => ActivityLogUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  assignments: z.lazy(() => AssignmentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  employeeCountHistory: z.lazy(() => EmployeeCountHistoryUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  incidents: z.lazy(() => ExtraordinaryIncidentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  buildings: z.lazy(() => FacilityBuildingUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  monthlyAccident: z.lazy(() => MonthlyAccidentDataUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  monthlyHrData: z.lazy(() => MonthlyHRDataUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  notebookPages: z.lazy(() => NotebookPageUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  reconciliations: z.lazy(() => ReconciliationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskCategorySettings: z.lazy(() => RiskCategorySettingUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  locations: z.lazy(() => FacilityLocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskDepartmentSettings: z.lazy(() => RiskDepartmentSettingUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskExpertFacilities: z.lazy(() => RiskExpertFacilityUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  users: z.lazy(() => UserFacilityUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  facilityHazmatItems: z.lazy(() => FacilityHazmatItemUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  spillKits: z.lazy(() => HazmatSpillKitUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  spillKitMasterItems: z.lazy(() => HazmatSpillKitMasterItemUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatInventoryItems: z.lazy(() => HazmatInventoryItemUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatEyewashAnalyses: z.lazy(() => HazmatEyewashRiskAnalysisUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireResponsibles: z.lazy(() => FireEquipmentResponsibleUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireEquipmentCompanies: z.lazy(() => FireEquipmentCompanyUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildContractor: z.lazy(() => BuildContractorUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildWorkType: z.lazy(() => BuildWorkTypeUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btAnaGruplar: z.lazy(() => BTAnaGrupUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btDenetlenenAlanlar: z.lazy(() => BTDenetlenenAlanUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btKategoriler: z.lazy(() => BTKategoriUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSorumluBirimler: z.lazy(() => BTSorumluBirimUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSorumluKisiler: z.lazy(() => BTSorumluKisiUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btTurler: z.lazy(() => BTTurUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  HazmatVehicle: z.lazy(() => HazmatVehicleUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  renovationReports: z.lazy(() => RenovationReportUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+}).strict();
+
+export const FacilityUncheckedUpdateWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutFireDoorInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  city: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  commercialTitle: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  dangerClass: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  district: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  email: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  employeeCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  fullAddress: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  naceCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  phone: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sgkNumber: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  shortName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  taxNumber: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  taxOffice: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  type: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  website: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  logoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  activityLogs: z.lazy(() => ActivityLogUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  assignments: z.lazy(() => AssignmentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  employeeCountHistory: z.lazy(() => EmployeeCountHistoryUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  incidents: z.lazy(() => ExtraordinaryIncidentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  buildings: z.lazy(() => FacilityBuildingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  monthlyAccident: z.lazy(() => MonthlyAccidentDataUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  monthlyHrData: z.lazy(() => MonthlyHRDataUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  notebookPages: z.lazy(() => NotebookPageUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  reconciliations: z.lazy(() => ReconciliationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskCategorySettings: z.lazy(() => RiskCategorySettingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  locations: z.lazy(() => FacilityLocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskDepartmentSettings: z.lazy(() => RiskDepartmentSettingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskExpertFacilities: z.lazy(() => RiskExpertFacilityUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  users: z.lazy(() => UserFacilityUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  facilityHazmatItems: z.lazy(() => FacilityHazmatItemUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  spillKits: z.lazy(() => HazmatSpillKitUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  spillKitMasterItems: z.lazy(() => HazmatSpillKitMasterItemUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatInventoryItems: z.lazy(() => HazmatInventoryItemUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatEyewashAnalyses: z.lazy(() => HazmatEyewashRiskAnalysisUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireResponsibles: z.lazy(() => FireEquipmentResponsibleUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireEquipmentCompanies: z.lazy(() => FireEquipmentCompanyUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildContractor: z.lazy(() => BuildContractorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildWorkType: z.lazy(() => BuildWorkTypeUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btAnaGruplar: z.lazy(() => BTAnaGrupUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btDenetlenenAlanlar: z.lazy(() => BTDenetlenenAlanUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btKategoriler: z.lazy(() => BTKategoriUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSorumluBirimler: z.lazy(() => BTSorumluBirimUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSorumluKisiler: z.lazy(() => BTSorumluKisiUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btTurler: z.lazy(() => BTTurUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  HazmatVehicle: z.lazy(() => HazmatVehicleUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  renovationReports: z.lazy(() => RenovationReportUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+}).strict();
+
+export const FacilityLocationUpsertWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityLocationUpsertWithoutFireDoorInput> = z.object({
+  update: z.union([ z.lazy(() => FacilityLocationUpdateWithoutFireDoorInputSchema), z.lazy(() => FacilityLocationUncheckedUpdateWithoutFireDoorInputSchema) ]),
+  create: z.union([ z.lazy(() => FacilityLocationCreateWithoutFireDoorInputSchema), z.lazy(() => FacilityLocationUncheckedCreateWithoutFireDoorInputSchema) ]),
+  where: z.lazy(() => FacilityLocationWhereInputSchema).optional(),
+}).strict();
+
+export const FacilityLocationUpdateToOneWithWhereWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityLocationUpdateToOneWithWhereWithoutFireDoorInput> = z.object({
+  where: z.lazy(() => FacilityLocationWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => FacilityLocationUpdateWithoutFireDoorInputSchema), z.lazy(() => FacilityLocationUncheckedUpdateWithoutFireDoorInputSchema) ]),
+}).strict();
+
+export const FacilityLocationUpdateWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityLocationUpdateWithoutFireDoorInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  building: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  department: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  type: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  facility: z.lazy(() => FacilityUpdateOneRequiredWithoutLocationsNestedInputSchema).optional(),
+  facilityBuilding: z.lazy(() => FacilityBuildingUpdateOneWithoutLocationsNestedInputSchema).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentUpdateManyWithoutLocationNestedInputSchema).optional(),
+  hazmatMaterials: z.lazy(() => HazmatInventoryItemUpdateManyWithoutLocationNestedInputSchema).optional(),
+  risks: z.lazy(() => RiskLifecycleUpdateManyWithoutLocationNestedInputSchema).optional(),
+  incidents: z.lazy(() => HazmatIncidentUpdateManyWithoutLocationNestedInputSchema).optional(),
+  extraordinaryIncidents: z.lazy(() => ExtraordinaryIncidentUpdateManyWithoutLocationNestedInputSchema).optional(),
+  buildProjects: z.lazy(() => BuildProjectUpdateManyWithoutLocationNestedInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiUpdateManyWithoutLocationNestedInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUpdateManyWithoutLocationNestedInputSchema).optional(),
+}).strict();
+
+export const FacilityLocationUncheckedUpdateWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedUpdateWithoutFireDoorInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  buildingId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  name: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  building: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  department: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  type: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  description: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  hazmatMaterials: z.lazy(() => HazmatInventoryItemUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  risks: z.lazy(() => RiskLifecycleUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  incidents: z.lazy(() => HazmatIncidentUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  extraordinaryIncidents: z.lazy(() => ExtraordinaryIncidentUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  buildProjects: z.lazy(() => BuildProjectUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionUpsertWithWhereUniqueWithoutFireDoorInputSchema: z.ZodType<Prisma.FireDoorInspectionUpsertWithWhereUniqueWithoutFireDoorInput> = z.object({
+  where: z.lazy(() => FireDoorInspectionWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => FireDoorInspectionUpdateWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionUncheckedUpdateWithoutFireDoorInputSchema) ]),
+  create: z.union([ z.lazy(() => FireDoorInspectionCreateWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionUncheckedCreateWithoutFireDoorInputSchema) ]),
+}).strict();
+
+export const FireDoorInspectionUpdateWithWhereUniqueWithoutFireDoorInputSchema: z.ZodType<Prisma.FireDoorInspectionUpdateWithWhereUniqueWithoutFireDoorInput> = z.object({
+  where: z.lazy(() => FireDoorInspectionWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => FireDoorInspectionUpdateWithoutFireDoorInputSchema), z.lazy(() => FireDoorInspectionUncheckedUpdateWithoutFireDoorInputSchema) ]),
+}).strict();
+
+export const FireDoorInspectionUpdateManyWithWhereWithoutFireDoorInputSchema: z.ZodType<Prisma.FireDoorInspectionUpdateManyWithWhereWithoutFireDoorInput> = z.object({
+  where: z.lazy(() => FireDoorInspectionScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => FireDoorInspectionUpdateManyMutationInputSchema), z.lazy(() => FireDoorInspectionUncheckedUpdateManyWithoutFireDoorInputSchema) ]),
+}).strict();
+
+export const FireDoorInspectionScalarWhereInputSchema: z.ZodType<Prisma.FireDoorInspectionScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => FireDoorInspectionScalarWhereInputSchema), z.lazy(() => FireDoorInspectionScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => FireDoorInspectionScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => FireDoorInspectionScalarWhereInputSchema), z.lazy(() => FireDoorInspectionScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  fireDoorId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  inspectionDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  inspectorId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  totalScore: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  maxPossibleScore: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  grade: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const FireDoorCreateWithoutInspectionsInputSchema: z.ZodType<Prisma.FireDoorCreateWithoutInspectionsInput> = z.object({
+  id: z.string().optional(),
+  qrCode: z.string().optional().nullable(),
+  doorNo: z.string().optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.string().optional(),
+  photoUrl: z.string().optional().nullable(),
+  lastGrade: z.string().optional().nullable(),
+  lastScore: z.number().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  facility: z.lazy(() => FacilityCreateNestedOneWithoutFireDoorInputSchema),
+  location: z.lazy(() => FacilityLocationCreateNestedOneWithoutFireDoorInputSchema).optional(),
+}).strict();
+
+export const FireDoorUncheckedCreateWithoutInspectionsInputSchema: z.ZodType<Prisma.FireDoorUncheckedCreateWithoutInspectionsInput> = z.object({
+  id: z.string().optional(),
+  facilityId: z.string(),
+  qrCode: z.string().optional().nullable(),
+  doorNo: z.string().optional().nullable(),
+  locationId: z.string().optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.string().optional(),
+  photoUrl: z.string().optional().nullable(),
+  lastGrade: z.string().optional().nullable(),
+  lastScore: z.number().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const FireDoorCreateOrConnectWithoutInspectionsInputSchema: z.ZodType<Prisma.FireDoorCreateOrConnectWithoutInspectionsInput> = z.object({
+  where: z.lazy(() => FireDoorWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => FireDoorCreateWithoutInspectionsInputSchema), z.lazy(() => FireDoorUncheckedCreateWithoutInspectionsInputSchema) ]),
+}).strict();
+
+export const FireDoorInspectionItemCreateWithoutInspectionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemCreateWithoutInspectionInput> = z.object({
+  id: z.string().optional(),
+  answer: z.string(),
+  earnedScore: z.number(),
+  comment: z.string().optional().nullable(),
+  photoUrl: z.string().optional().nullable(),
+  question: z.lazy(() => FireDoorQuestionCreateNestedOneWithoutInspectionItemsInputSchema),
+}).strict();
+
+export const FireDoorInspectionItemUncheckedCreateWithoutInspectionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUncheckedCreateWithoutInspectionInput> = z.object({
+  id: z.string().optional(),
+  questionId: z.string(),
+  answer: z.string(),
+  earnedScore: z.number(),
+  comment: z.string().optional().nullable(),
+  photoUrl: z.string().optional().nullable(),
+}).strict();
+
+export const FireDoorInspectionItemCreateOrConnectWithoutInspectionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemCreateOrConnectWithoutInspectionInput> = z.object({
+  where: z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => FireDoorInspectionItemCreateWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutInspectionInputSchema) ]),
+}).strict();
+
+export const FireDoorInspectionItemCreateManyInspectionInputEnvelopeSchema: z.ZodType<Prisma.FireDoorInspectionItemCreateManyInspectionInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => FireDoorInspectionItemCreateManyInspectionInputSchema), z.lazy(() => FireDoorInspectionItemCreateManyInspectionInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FireDoorUpsertWithoutInspectionsInputSchema: z.ZodType<Prisma.FireDoorUpsertWithoutInspectionsInput> = z.object({
+  update: z.union([ z.lazy(() => FireDoorUpdateWithoutInspectionsInputSchema), z.lazy(() => FireDoorUncheckedUpdateWithoutInspectionsInputSchema) ]),
+  create: z.union([ z.lazy(() => FireDoorCreateWithoutInspectionsInputSchema), z.lazy(() => FireDoorUncheckedCreateWithoutInspectionsInputSchema) ]),
+  where: z.lazy(() => FireDoorWhereInputSchema).optional(),
+}).strict();
+
+export const FireDoorUpdateToOneWithWhereWithoutInspectionsInputSchema: z.ZodType<Prisma.FireDoorUpdateToOneWithWhereWithoutInspectionsInput> = z.object({
+  where: z.lazy(() => FireDoorWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => FireDoorUpdateWithoutInspectionsInputSchema), z.lazy(() => FireDoorUncheckedUpdateWithoutInspectionsInputSchema) ]),
+}).strict();
+
+export const FireDoorUpdateWithoutInspectionsInputSchema: z.ZodType<Prisma.FireDoorUpdateWithoutInspectionsInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  qrCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  doorNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastGrade: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastScore: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  facility: z.lazy(() => FacilityUpdateOneRequiredWithoutFireDoorNestedInputSchema).optional(),
+  location: z.lazy(() => FacilityLocationUpdateOneWithoutFireDoorNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorUncheckedUpdateWithoutInspectionsInputSchema: z.ZodType<Prisma.FireDoorUncheckedUpdateWithoutInspectionsInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  qrCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  doorNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  locationId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastGrade: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastScore: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorInspectionItemUpsertWithWhereUniqueWithoutInspectionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUpsertWithWhereUniqueWithoutInspectionInput> = z.object({
+  where: z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => FireDoorInspectionItemUpdateWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemUncheckedUpdateWithoutInspectionInputSchema) ]),
+  create: z.union([ z.lazy(() => FireDoorInspectionItemCreateWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemUncheckedCreateWithoutInspectionInputSchema) ]),
+}).strict();
+
+export const FireDoorInspectionItemUpdateWithWhereUniqueWithoutInspectionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUpdateWithWhereUniqueWithoutInspectionInput> = z.object({
+  where: z.lazy(() => FireDoorInspectionItemWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => FireDoorInspectionItemUpdateWithoutInspectionInputSchema), z.lazy(() => FireDoorInspectionItemUncheckedUpdateWithoutInspectionInputSchema) ]),
+}).strict();
+
+export const FireDoorInspectionItemUpdateManyWithWhereWithoutInspectionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUpdateManyWithWhereWithoutInspectionInput> = z.object({
+  where: z.lazy(() => FireDoorInspectionItemScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => FireDoorInspectionItemUpdateManyMutationInputSchema), z.lazy(() => FireDoorInspectionItemUncheckedUpdateManyWithoutInspectionInputSchema) ]),
+}).strict();
+
+export const FireDoorInspectionCreateWithoutItemsInputSchema: z.ZodType<Prisma.FireDoorInspectionCreateWithoutItemsInput> = z.object({
+  id: z.string().optional(),
+  inspectionDate: z.coerce.date(),
+  inspectorId: z.string(),
+  totalScore: z.number(),
+  maxPossibleScore: z.number(),
+  grade: z.string(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  fireDoor: z.lazy(() => FireDoorCreateNestedOneWithoutInspectionsInputSchema),
+}).strict();
+
+export const FireDoorInspectionUncheckedCreateWithoutItemsInputSchema: z.ZodType<Prisma.FireDoorInspectionUncheckedCreateWithoutItemsInput> = z.object({
+  id: z.string().optional(),
+  fireDoorId: z.string(),
+  inspectionDate: z.coerce.date(),
+  inspectorId: z.string(),
+  totalScore: z.number(),
+  maxPossibleScore: z.number(),
+  grade: z.string(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const FireDoorInspectionCreateOrConnectWithoutItemsInputSchema: z.ZodType<Prisma.FireDoorInspectionCreateOrConnectWithoutItemsInput> = z.object({
+  where: z.lazy(() => FireDoorInspectionWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => FireDoorInspectionCreateWithoutItemsInputSchema), z.lazy(() => FireDoorInspectionUncheckedCreateWithoutItemsInputSchema) ]),
+}).strict();
+
+export const FireDoorQuestionCreateWithoutInspectionItemsInputSchema: z.ZodType<Prisma.FireDoorQuestionCreateWithoutInspectionItemsInput> = z.object({
+  id: z.string().optional(),
+  order: z.number().int(),
+  text: z.string(),
+  weightPass: z.number().optional(),
+  weightPartial: z.number().optional(),
+  weightFail: z.number().optional(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  group: z.lazy(() => FireDoorQuestionGroupCreateNestedOneWithoutQuestionsInputSchema),
+}).strict();
+
+export const FireDoorQuestionUncheckedCreateWithoutInspectionItemsInputSchema: z.ZodType<Prisma.FireDoorQuestionUncheckedCreateWithoutInspectionItemsInput> = z.object({
+  id: z.string().optional(),
+  groupId: z.string(),
+  order: z.number().int(),
+  text: z.string(),
+  weightPass: z.number().optional(),
+  weightPartial: z.number().optional(),
+  weightFail: z.number().optional(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const FireDoorQuestionCreateOrConnectWithoutInspectionItemsInputSchema: z.ZodType<Prisma.FireDoorQuestionCreateOrConnectWithoutInspectionItemsInput> = z.object({
+  where: z.lazy(() => FireDoorQuestionWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => FireDoorQuestionCreateWithoutInspectionItemsInputSchema), z.lazy(() => FireDoorQuestionUncheckedCreateWithoutInspectionItemsInputSchema) ]),
+}).strict();
+
+export const FireDoorInspectionUpsertWithoutItemsInputSchema: z.ZodType<Prisma.FireDoorInspectionUpsertWithoutItemsInput> = z.object({
+  update: z.union([ z.lazy(() => FireDoorInspectionUpdateWithoutItemsInputSchema), z.lazy(() => FireDoorInspectionUncheckedUpdateWithoutItemsInputSchema) ]),
+  create: z.union([ z.lazy(() => FireDoorInspectionCreateWithoutItemsInputSchema), z.lazy(() => FireDoorInspectionUncheckedCreateWithoutItemsInputSchema) ]),
+  where: z.lazy(() => FireDoorInspectionWhereInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionUpdateToOneWithWhereWithoutItemsInputSchema: z.ZodType<Prisma.FireDoorInspectionUpdateToOneWithWhereWithoutItemsInput> = z.object({
+  where: z.lazy(() => FireDoorInspectionWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => FireDoorInspectionUpdateWithoutItemsInputSchema), z.lazy(() => FireDoorInspectionUncheckedUpdateWithoutItemsInputSchema) ]),
+}).strict();
+
+export const FireDoorInspectionUpdateWithoutItemsInputSchema: z.ZodType<Prisma.FireDoorInspectionUpdateWithoutItemsInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectorId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  totalScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  maxPossibleScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  grade: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  fireDoor: z.lazy(() => FireDoorUpdateOneRequiredWithoutInspectionsNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionUncheckedUpdateWithoutItemsInputSchema: z.ZodType<Prisma.FireDoorInspectionUncheckedUpdateWithoutItemsInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fireDoorId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectorId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  totalScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  maxPossibleScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  grade: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorQuestionUpsertWithoutInspectionItemsInputSchema: z.ZodType<Prisma.FireDoorQuestionUpsertWithoutInspectionItemsInput> = z.object({
+  update: z.union([ z.lazy(() => FireDoorQuestionUpdateWithoutInspectionItemsInputSchema), z.lazy(() => FireDoorQuestionUncheckedUpdateWithoutInspectionItemsInputSchema) ]),
+  create: z.union([ z.lazy(() => FireDoorQuestionCreateWithoutInspectionItemsInputSchema), z.lazy(() => FireDoorQuestionUncheckedCreateWithoutInspectionItemsInputSchema) ]),
+  where: z.lazy(() => FireDoorQuestionWhereInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionUpdateToOneWithWhereWithoutInspectionItemsInputSchema: z.ZodType<Prisma.FireDoorQuestionUpdateToOneWithWhereWithoutInspectionItemsInput> = z.object({
+  where: z.lazy(() => FireDoorQuestionWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => FireDoorQuestionUpdateWithoutInspectionItemsInputSchema), z.lazy(() => FireDoorQuestionUncheckedUpdateWithoutInspectionItemsInputSchema) ]),
+}).strict();
+
+export const FireDoorQuestionUpdateWithoutInspectionItemsInputSchema: z.ZodType<Prisma.FireDoorQuestionUpdateWithoutInspectionItemsInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  order: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  text: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  weightPass: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  weightPartial: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  weightFail: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  group: z.lazy(() => FireDoorQuestionGroupUpdateOneRequiredWithoutQuestionsNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionUncheckedUpdateWithoutInspectionItemsInputSchema: z.ZodType<Prisma.FireDoorQuestionUncheckedUpdateWithoutInspectionItemsInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  groupId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  order: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  text: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  weightPass: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  weightPartial: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  weightFail: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
 export const UserFacilityCreateManyUserInputSchema: z.ZodType<Prisma.UserFacilityCreateManyUserInput> = z.object({
@@ -88504,6 +91756,20 @@ export const OhsBoardMemberCreateManyFacilityInputSchema: z.ZodType<Prisma.OhsBo
   updatedAt: z.coerce.date().optional(),
 }).strict();
 
+export const FireDoorCreateManyFacilityInputSchema: z.ZodType<Prisma.FireDoorCreateManyFacilityInput> = z.object({
+  id: z.string().optional(),
+  qrCode: z.string().optional().nullable(),
+  doorNo: z.string().optional().nullable(),
+  locationId: z.string().optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.string().optional(),
+  photoUrl: z.string().optional().nullable(),
+  lastGrade: z.string().optional().nullable(),
+  lastScore: z.number().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
 export const ActivityLogUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.ActivityLogUpdateWithoutFacilityInput> = z.object({
   action: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -88936,6 +92202,7 @@ export const FacilityLocationUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.
   buildProjects: z.lazy(() => BuildProjectUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedUpdateWithoutFacilityInput> = z.object({
@@ -88958,6 +92225,7 @@ export const FacilityLocationUncheckedUpdateWithoutFacilityInputSchema: z.ZodTyp
   buildProjects: z.lazy(() => BuildProjectUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedUpdateManyWithoutFacilityInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedUpdateManyWithoutFacilityInput> = z.object({
@@ -90061,6 +93329,50 @@ export const OhsBoardMemberUncheckedUpdateManyWithoutFacilityInputSchema: z.ZodT
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
+export const FireDoorUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.FireDoorUpdateWithoutFacilityInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  qrCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  doorNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastGrade: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastScore: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  location: z.lazy(() => FacilityLocationUpdateOneWithoutFireDoorNestedInputSchema).optional(),
+  inspections: z.lazy(() => FireDoorInspectionUpdateManyWithoutFireDoorNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorUncheckedUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.FireDoorUncheckedUpdateWithoutFacilityInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  qrCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  doorNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  locationId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastGrade: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastScore: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  inspections: z.lazy(() => FireDoorInspectionUncheckedUpdateManyWithoutFireDoorNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorUncheckedUpdateManyWithoutFacilityInputSchema: z.ZodType<Prisma.FireDoorUncheckedUpdateManyWithoutFacilityInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  qrCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  doorNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  locationId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastGrade: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastScore: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
 export const ExtraordinaryIncidentCreateManyCategoryInputSchema: z.ZodType<Prisma.ExtraordinaryIncidentCreateManyCategoryInput> = z.object({
   id: z.number().int().optional(),
   facilityId: z.string(),
@@ -90887,6 +94199,7 @@ export const FacilityLocationUpdateWithoutFacilityBuildingInputSchema: z.ZodType
   buildProjects: z.lazy(() => BuildProjectUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedUpdateWithoutFacilityBuildingInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedUpdateWithoutFacilityBuildingInput> = z.object({
@@ -90909,6 +94222,7 @@ export const FacilityLocationUncheckedUpdateWithoutFacilityBuildingInputSchema: 
   buildProjects: z.lazy(() => BuildProjectUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
   btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUncheckedUpdateManyWithoutFacilityBuildingInputSchema: z.ZodType<Prisma.FacilityLocationUncheckedUpdateManyWithoutFacilityBuildingInput> = z.object({
@@ -94932,6 +98246,20 @@ export const BTUygunsuzlukCreateManyLocationInputSchema: z.ZodType<Prisma.BTUygu
   notes: z.string().optional().nullable(),
 }).strict();
 
+export const FireDoorCreateManyLocationInputSchema: z.ZodType<Prisma.FireDoorCreateManyLocationInput> = z.object({
+  id: z.string().optional(),
+  facilityId: z.string(),
+  qrCode: z.string().optional().nullable(),
+  doorNo: z.string().optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.string().optional(),
+  photoUrl: z.string().optional().nullable(),
+  lastGrade: z.string().optional().nullable(),
+  lastScore: z.number().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
 export const FireEquipmentUpdateWithoutLocationInputSchema: z.ZodType<Prisma.FireEquipmentUpdateWithoutLocationInput> = z.object({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   equipmentNo: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -95552,6 +98880,50 @@ export const BTUygunsuzlukUncheckedUpdateManyWithoutLocationInputSchema: z.ZodTy
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+}).strict();
+
+export const FireDoorUpdateWithoutLocationInputSchema: z.ZodType<Prisma.FireDoorUpdateWithoutLocationInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  qrCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  doorNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastGrade: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastScore: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  facility: z.lazy(() => FacilityUpdateOneRequiredWithoutFireDoorNestedInputSchema).optional(),
+  inspections: z.lazy(() => FireDoorInspectionUpdateManyWithoutFireDoorNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorUncheckedUpdateWithoutLocationInputSchema: z.ZodType<Prisma.FireDoorUncheckedUpdateWithoutLocationInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  qrCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  doorNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastGrade: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastScore: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  inspections: z.lazy(() => FireDoorInspectionUncheckedUpdateManyWithoutFireDoorNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorUncheckedUpdateManyWithoutLocationInputSchema: z.ZodType<Prisma.FireDoorUncheckedUpdateManyWithoutLocationInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  qrCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  doorNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  properties: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastGrade: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastScore: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
 export const HazmatInventoryItemCreateManyVehicleInputSchema: z.ZodType<Prisma.HazmatInventoryItemCreateManyVehicleInput> = z.object({
@@ -96788,6 +100160,178 @@ export const OhsBoardDecisionActionUncheckedUpdateManyWithoutDecisionInputSchema
   createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorQuestionCreateManyGroupInputSchema: z.ZodType<Prisma.FireDoorQuestionCreateManyGroupInput> = z.object({
+  id: z.string().optional(),
+  order: z.number().int(),
+  text: z.string(),
+  weightPass: z.number().optional(),
+  weightPartial: z.number().optional(),
+  weightFail: z.number().optional(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const FireDoorQuestionUpdateWithoutGroupInputSchema: z.ZodType<Prisma.FireDoorQuestionUpdateWithoutGroupInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  order: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  text: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  weightPass: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  weightPartial: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  weightFail: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionItems: z.lazy(() => FireDoorInspectionItemUpdateManyWithoutQuestionNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionUncheckedUpdateWithoutGroupInputSchema: z.ZodType<Prisma.FireDoorQuestionUncheckedUpdateWithoutGroupInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  order: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  text: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  weightPass: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  weightPartial: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  weightFail: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionItems: z.lazy(() => FireDoorInspectionItemUncheckedUpdateManyWithoutQuestionNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorQuestionUncheckedUpdateManyWithoutGroupInputSchema: z.ZodType<Prisma.FireDoorQuestionUncheckedUpdateManyWithoutGroupInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  order: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  text: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  weightPass: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  weightPartial: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  weightFail: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorInspectionItemCreateManyQuestionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemCreateManyQuestionInput> = z.object({
+  id: z.string().optional(),
+  inspectionId: z.string(),
+  answer: z.string(),
+  earnedScore: z.number(),
+  comment: z.string().optional().nullable(),
+  photoUrl: z.string().optional().nullable(),
+}).strict();
+
+export const FireDoorInspectionItemUpdateWithoutQuestionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUpdateWithoutQuestionInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  answer: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  earnedScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  comment: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  inspection: z.lazy(() => FireDoorInspectionUpdateOneRequiredWithoutItemsNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionItemUncheckedUpdateWithoutQuestionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUncheckedUpdateWithoutQuestionInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  answer: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  earnedScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  comment: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+}).strict();
+
+export const FireDoorInspectionItemUncheckedUpdateManyWithoutQuestionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUncheckedUpdateManyWithoutQuestionInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  answer: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  earnedScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  comment: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+}).strict();
+
+export const FireDoorInspectionCreateManyFireDoorInputSchema: z.ZodType<Prisma.FireDoorInspectionCreateManyFireDoorInput> = z.object({
+  id: z.string().optional(),
+  inspectionDate: z.coerce.date(),
+  inspectorId: z.string(),
+  totalScore: z.number(),
+  maxPossibleScore: z.number(),
+  grade: z.string(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const FireDoorInspectionUpdateWithoutFireDoorInputSchema: z.ZodType<Prisma.FireDoorInspectionUpdateWithoutFireDoorInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectorId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  totalScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  maxPossibleScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  grade: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  items: z.lazy(() => FireDoorInspectionItemUpdateManyWithoutInspectionNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionUncheckedUpdateWithoutFireDoorInputSchema: z.ZodType<Prisma.FireDoorInspectionUncheckedUpdateWithoutFireDoorInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectorId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  totalScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  maxPossibleScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  grade: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  items: z.lazy(() => FireDoorInspectionItemUncheckedUpdateManyWithoutInspectionNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionUncheckedUpdateManyWithoutFireDoorInputSchema: z.ZodType<Prisma.FireDoorInspectionUncheckedUpdateManyWithoutFireDoorInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectorId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  totalScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  maxPossibleScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  grade: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FireDoorInspectionItemCreateManyInspectionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemCreateManyInspectionInput> = z.object({
+  id: z.string().optional(),
+  questionId: z.string(),
+  answer: z.string(),
+  earnedScore: z.number(),
+  comment: z.string().optional().nullable(),
+  photoUrl: z.string().optional().nullable(),
+}).strict();
+
+export const FireDoorInspectionItemUpdateWithoutInspectionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUpdateWithoutInspectionInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  answer: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  earnedScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  comment: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  question: z.lazy(() => FireDoorQuestionUpdateOneRequiredWithoutInspectionItemsNestedInputSchema).optional(),
+}).strict();
+
+export const FireDoorInspectionItemUncheckedUpdateWithoutInspectionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUncheckedUpdateWithoutInspectionInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  questionId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  answer: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  earnedScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  comment: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+}).strict();
+
+export const FireDoorInspectionItemUncheckedUpdateManyWithoutInspectionInputSchema: z.ZodType<Prisma.FireDoorInspectionItemUncheckedUpdateManyWithoutInspectionInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  questionId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  answer: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  earnedScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  comment: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
 }).strict();
 
 /////////////////////////////////////////
@@ -104856,6 +108400,373 @@ export const OhsBoardMemberFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.OhsBoar
   where: OhsBoardMemberWhereUniqueInputSchema, 
 }).strict();
 
+export const FireDoorPropertyFindFirstArgsSchema: z.ZodType<Prisma.FireDoorPropertyFindFirstArgs> = z.object({
+  select: FireDoorPropertySelectSchema.optional(),
+  where: FireDoorPropertyWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorPropertyOrderByWithRelationInputSchema.array(), FireDoorPropertyOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorPropertyWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ FireDoorPropertyScalarFieldEnumSchema, FireDoorPropertyScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const FireDoorPropertyFindFirstOrThrowArgsSchema: z.ZodType<Prisma.FireDoorPropertyFindFirstOrThrowArgs> = z.object({
+  select: FireDoorPropertySelectSchema.optional(),
+  where: FireDoorPropertyWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorPropertyOrderByWithRelationInputSchema.array(), FireDoorPropertyOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorPropertyWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ FireDoorPropertyScalarFieldEnumSchema, FireDoorPropertyScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const FireDoorPropertyFindManyArgsSchema: z.ZodType<Prisma.FireDoorPropertyFindManyArgs> = z.object({
+  select: FireDoorPropertySelectSchema.optional(),
+  where: FireDoorPropertyWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorPropertyOrderByWithRelationInputSchema.array(), FireDoorPropertyOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorPropertyWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ FireDoorPropertyScalarFieldEnumSchema, FireDoorPropertyScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const FireDoorPropertyAggregateArgsSchema: z.ZodType<Prisma.FireDoorPropertyAggregateArgs> = z.object({
+  where: FireDoorPropertyWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorPropertyOrderByWithRelationInputSchema.array(), FireDoorPropertyOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorPropertyWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const FireDoorPropertyGroupByArgsSchema: z.ZodType<Prisma.FireDoorPropertyGroupByArgs> = z.object({
+  where: FireDoorPropertyWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorPropertyOrderByWithAggregationInputSchema.array(), FireDoorPropertyOrderByWithAggregationInputSchema ]).optional(),
+  by: FireDoorPropertyScalarFieldEnumSchema.array(), 
+  having: FireDoorPropertyScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const FireDoorPropertyFindUniqueArgsSchema: z.ZodType<Prisma.FireDoorPropertyFindUniqueArgs> = z.object({
+  select: FireDoorPropertySelectSchema.optional(),
+  where: FireDoorPropertyWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorPropertyFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.FireDoorPropertyFindUniqueOrThrowArgs> = z.object({
+  select: FireDoorPropertySelectSchema.optional(),
+  where: FireDoorPropertyWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorQuestionGroupFindFirstArgsSchema: z.ZodType<Prisma.FireDoorQuestionGroupFindFirstArgs> = z.object({
+  select: FireDoorQuestionGroupSelectSchema.optional(),
+  include: FireDoorQuestionGroupIncludeSchema.optional(),
+  where: FireDoorQuestionGroupWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorQuestionGroupOrderByWithRelationInputSchema.array(), FireDoorQuestionGroupOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorQuestionGroupWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ FireDoorQuestionGroupScalarFieldEnumSchema, FireDoorQuestionGroupScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupFindFirstOrThrowArgsSchema: z.ZodType<Prisma.FireDoorQuestionGroupFindFirstOrThrowArgs> = z.object({
+  select: FireDoorQuestionGroupSelectSchema.optional(),
+  include: FireDoorQuestionGroupIncludeSchema.optional(),
+  where: FireDoorQuestionGroupWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorQuestionGroupOrderByWithRelationInputSchema.array(), FireDoorQuestionGroupOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorQuestionGroupWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ FireDoorQuestionGroupScalarFieldEnumSchema, FireDoorQuestionGroupScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupFindManyArgsSchema: z.ZodType<Prisma.FireDoorQuestionGroupFindManyArgs> = z.object({
+  select: FireDoorQuestionGroupSelectSchema.optional(),
+  include: FireDoorQuestionGroupIncludeSchema.optional(),
+  where: FireDoorQuestionGroupWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorQuestionGroupOrderByWithRelationInputSchema.array(), FireDoorQuestionGroupOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorQuestionGroupWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ FireDoorQuestionGroupScalarFieldEnumSchema, FireDoorQuestionGroupScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const FireDoorQuestionGroupAggregateArgsSchema: z.ZodType<Prisma.FireDoorQuestionGroupAggregateArgs> = z.object({
+  where: FireDoorQuestionGroupWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorQuestionGroupOrderByWithRelationInputSchema.array(), FireDoorQuestionGroupOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorQuestionGroupWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const FireDoorQuestionGroupGroupByArgsSchema: z.ZodType<Prisma.FireDoorQuestionGroupGroupByArgs> = z.object({
+  where: FireDoorQuestionGroupWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorQuestionGroupOrderByWithAggregationInputSchema.array(), FireDoorQuestionGroupOrderByWithAggregationInputSchema ]).optional(),
+  by: FireDoorQuestionGroupScalarFieldEnumSchema.array(), 
+  having: FireDoorQuestionGroupScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const FireDoorQuestionGroupFindUniqueArgsSchema: z.ZodType<Prisma.FireDoorQuestionGroupFindUniqueArgs> = z.object({
+  select: FireDoorQuestionGroupSelectSchema.optional(),
+  include: FireDoorQuestionGroupIncludeSchema.optional(),
+  where: FireDoorQuestionGroupWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorQuestionGroupFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.FireDoorQuestionGroupFindUniqueOrThrowArgs> = z.object({
+  select: FireDoorQuestionGroupSelectSchema.optional(),
+  include: FireDoorQuestionGroupIncludeSchema.optional(),
+  where: FireDoorQuestionGroupWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorQuestionFindFirstArgsSchema: z.ZodType<Prisma.FireDoorQuestionFindFirstArgs> = z.object({
+  select: FireDoorQuestionSelectSchema.optional(),
+  include: FireDoorQuestionIncludeSchema.optional(),
+  where: FireDoorQuestionWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorQuestionOrderByWithRelationInputSchema.array(), FireDoorQuestionOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorQuestionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ FireDoorQuestionScalarFieldEnumSchema, FireDoorQuestionScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const FireDoorQuestionFindFirstOrThrowArgsSchema: z.ZodType<Prisma.FireDoorQuestionFindFirstOrThrowArgs> = z.object({
+  select: FireDoorQuestionSelectSchema.optional(),
+  include: FireDoorQuestionIncludeSchema.optional(),
+  where: FireDoorQuestionWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorQuestionOrderByWithRelationInputSchema.array(), FireDoorQuestionOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorQuestionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ FireDoorQuestionScalarFieldEnumSchema, FireDoorQuestionScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const FireDoorQuestionFindManyArgsSchema: z.ZodType<Prisma.FireDoorQuestionFindManyArgs> = z.object({
+  select: FireDoorQuestionSelectSchema.optional(),
+  include: FireDoorQuestionIncludeSchema.optional(),
+  where: FireDoorQuestionWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorQuestionOrderByWithRelationInputSchema.array(), FireDoorQuestionOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorQuestionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ FireDoorQuestionScalarFieldEnumSchema, FireDoorQuestionScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const FireDoorQuestionAggregateArgsSchema: z.ZodType<Prisma.FireDoorQuestionAggregateArgs> = z.object({
+  where: FireDoorQuestionWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorQuestionOrderByWithRelationInputSchema.array(), FireDoorQuestionOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorQuestionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const FireDoorQuestionGroupByArgsSchema: z.ZodType<Prisma.FireDoorQuestionGroupByArgs> = z.object({
+  where: FireDoorQuestionWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorQuestionOrderByWithAggregationInputSchema.array(), FireDoorQuestionOrderByWithAggregationInputSchema ]).optional(),
+  by: FireDoorQuestionScalarFieldEnumSchema.array(), 
+  having: FireDoorQuestionScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const FireDoorQuestionFindUniqueArgsSchema: z.ZodType<Prisma.FireDoorQuestionFindUniqueArgs> = z.object({
+  select: FireDoorQuestionSelectSchema.optional(),
+  include: FireDoorQuestionIncludeSchema.optional(),
+  where: FireDoorQuestionWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorQuestionFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.FireDoorQuestionFindUniqueOrThrowArgs> = z.object({
+  select: FireDoorQuestionSelectSchema.optional(),
+  include: FireDoorQuestionIncludeSchema.optional(),
+  where: FireDoorQuestionWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorFindFirstArgsSchema: z.ZodType<Prisma.FireDoorFindFirstArgs> = z.object({
+  select: FireDoorSelectSchema.optional(),
+  include: FireDoorIncludeSchema.optional(),
+  where: FireDoorWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorOrderByWithRelationInputSchema.array(), FireDoorOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ FireDoorScalarFieldEnumSchema, FireDoorScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const FireDoorFindFirstOrThrowArgsSchema: z.ZodType<Prisma.FireDoorFindFirstOrThrowArgs> = z.object({
+  select: FireDoorSelectSchema.optional(),
+  include: FireDoorIncludeSchema.optional(),
+  where: FireDoorWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorOrderByWithRelationInputSchema.array(), FireDoorOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ FireDoorScalarFieldEnumSchema, FireDoorScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const FireDoorFindManyArgsSchema: z.ZodType<Prisma.FireDoorFindManyArgs> = z.object({
+  select: FireDoorSelectSchema.optional(),
+  include: FireDoorIncludeSchema.optional(),
+  where: FireDoorWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorOrderByWithRelationInputSchema.array(), FireDoorOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ FireDoorScalarFieldEnumSchema, FireDoorScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const FireDoorAggregateArgsSchema: z.ZodType<Prisma.FireDoorAggregateArgs> = z.object({
+  where: FireDoorWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorOrderByWithRelationInputSchema.array(), FireDoorOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const FireDoorGroupByArgsSchema: z.ZodType<Prisma.FireDoorGroupByArgs> = z.object({
+  where: FireDoorWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorOrderByWithAggregationInputSchema.array(), FireDoorOrderByWithAggregationInputSchema ]).optional(),
+  by: FireDoorScalarFieldEnumSchema.array(), 
+  having: FireDoorScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const FireDoorFindUniqueArgsSchema: z.ZodType<Prisma.FireDoorFindUniqueArgs> = z.object({
+  select: FireDoorSelectSchema.optional(),
+  include: FireDoorIncludeSchema.optional(),
+  where: FireDoorWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.FireDoorFindUniqueOrThrowArgs> = z.object({
+  select: FireDoorSelectSchema.optional(),
+  include: FireDoorIncludeSchema.optional(),
+  where: FireDoorWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorInspectionFindFirstArgsSchema: z.ZodType<Prisma.FireDoorInspectionFindFirstArgs> = z.object({
+  select: FireDoorInspectionSelectSchema.optional(),
+  include: FireDoorInspectionIncludeSchema.optional(),
+  where: FireDoorInspectionWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorInspectionOrderByWithRelationInputSchema.array(), FireDoorInspectionOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorInspectionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ FireDoorInspectionScalarFieldEnumSchema, FireDoorInspectionScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const FireDoorInspectionFindFirstOrThrowArgsSchema: z.ZodType<Prisma.FireDoorInspectionFindFirstOrThrowArgs> = z.object({
+  select: FireDoorInspectionSelectSchema.optional(),
+  include: FireDoorInspectionIncludeSchema.optional(),
+  where: FireDoorInspectionWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorInspectionOrderByWithRelationInputSchema.array(), FireDoorInspectionOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorInspectionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ FireDoorInspectionScalarFieldEnumSchema, FireDoorInspectionScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const FireDoorInspectionFindManyArgsSchema: z.ZodType<Prisma.FireDoorInspectionFindManyArgs> = z.object({
+  select: FireDoorInspectionSelectSchema.optional(),
+  include: FireDoorInspectionIncludeSchema.optional(),
+  where: FireDoorInspectionWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorInspectionOrderByWithRelationInputSchema.array(), FireDoorInspectionOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorInspectionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ FireDoorInspectionScalarFieldEnumSchema, FireDoorInspectionScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const FireDoorInspectionAggregateArgsSchema: z.ZodType<Prisma.FireDoorInspectionAggregateArgs> = z.object({
+  where: FireDoorInspectionWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorInspectionOrderByWithRelationInputSchema.array(), FireDoorInspectionOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorInspectionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const FireDoorInspectionGroupByArgsSchema: z.ZodType<Prisma.FireDoorInspectionGroupByArgs> = z.object({
+  where: FireDoorInspectionWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorInspectionOrderByWithAggregationInputSchema.array(), FireDoorInspectionOrderByWithAggregationInputSchema ]).optional(),
+  by: FireDoorInspectionScalarFieldEnumSchema.array(), 
+  having: FireDoorInspectionScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const FireDoorInspectionFindUniqueArgsSchema: z.ZodType<Prisma.FireDoorInspectionFindUniqueArgs> = z.object({
+  select: FireDoorInspectionSelectSchema.optional(),
+  include: FireDoorInspectionIncludeSchema.optional(),
+  where: FireDoorInspectionWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorInspectionFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.FireDoorInspectionFindUniqueOrThrowArgs> = z.object({
+  select: FireDoorInspectionSelectSchema.optional(),
+  include: FireDoorInspectionIncludeSchema.optional(),
+  where: FireDoorInspectionWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorInspectionItemFindFirstArgsSchema: z.ZodType<Prisma.FireDoorInspectionItemFindFirstArgs> = z.object({
+  select: FireDoorInspectionItemSelectSchema.optional(),
+  include: FireDoorInspectionItemIncludeSchema.optional(),
+  where: FireDoorInspectionItemWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorInspectionItemOrderByWithRelationInputSchema.array(), FireDoorInspectionItemOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorInspectionItemWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ FireDoorInspectionItemScalarFieldEnumSchema, FireDoorInspectionItemScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const FireDoorInspectionItemFindFirstOrThrowArgsSchema: z.ZodType<Prisma.FireDoorInspectionItemFindFirstOrThrowArgs> = z.object({
+  select: FireDoorInspectionItemSelectSchema.optional(),
+  include: FireDoorInspectionItemIncludeSchema.optional(),
+  where: FireDoorInspectionItemWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorInspectionItemOrderByWithRelationInputSchema.array(), FireDoorInspectionItemOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorInspectionItemWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ FireDoorInspectionItemScalarFieldEnumSchema, FireDoorInspectionItemScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const FireDoorInspectionItemFindManyArgsSchema: z.ZodType<Prisma.FireDoorInspectionItemFindManyArgs> = z.object({
+  select: FireDoorInspectionItemSelectSchema.optional(),
+  include: FireDoorInspectionItemIncludeSchema.optional(),
+  where: FireDoorInspectionItemWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorInspectionItemOrderByWithRelationInputSchema.array(), FireDoorInspectionItemOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorInspectionItemWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ FireDoorInspectionItemScalarFieldEnumSchema, FireDoorInspectionItemScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const FireDoorInspectionItemAggregateArgsSchema: z.ZodType<Prisma.FireDoorInspectionItemAggregateArgs> = z.object({
+  where: FireDoorInspectionItemWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorInspectionItemOrderByWithRelationInputSchema.array(), FireDoorInspectionItemOrderByWithRelationInputSchema ]).optional(),
+  cursor: FireDoorInspectionItemWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const FireDoorInspectionItemGroupByArgsSchema: z.ZodType<Prisma.FireDoorInspectionItemGroupByArgs> = z.object({
+  where: FireDoorInspectionItemWhereInputSchema.optional(), 
+  orderBy: z.union([ FireDoorInspectionItemOrderByWithAggregationInputSchema.array(), FireDoorInspectionItemOrderByWithAggregationInputSchema ]).optional(),
+  by: FireDoorInspectionItemScalarFieldEnumSchema.array(), 
+  having: FireDoorInspectionItemScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const FireDoorInspectionItemFindUniqueArgsSchema: z.ZodType<Prisma.FireDoorInspectionItemFindUniqueArgs> = z.object({
+  select: FireDoorInspectionItemSelectSchema.optional(),
+  include: FireDoorInspectionItemIncludeSchema.optional(),
+  where: FireDoorInspectionItemWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorInspectionItemFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.FireDoorInspectionItemFindUniqueOrThrowArgs> = z.object({
+  select: FireDoorInspectionItemSelectSchema.optional(),
+  include: FireDoorInspectionItemIncludeSchema.optional(),
+  where: FireDoorInspectionItemWhereUniqueInputSchema, 
+}).strict();
+
 export const UserCreateArgsSchema: z.ZodType<Prisma.UserCreateArgs> = z.object({
   select: UserSelectSchema.optional(),
   include: UserIncludeSchema.optional(),
@@ -110832,4 +114743,276 @@ export const OhsBoardMemberUpdateManyArgsSchema: z.ZodType<Prisma.OhsBoardMember
 
 export const OhsBoardMemberDeleteManyArgsSchema: z.ZodType<Prisma.OhsBoardMemberDeleteManyArgs> = z.object({
   where: OhsBoardMemberWhereInputSchema.optional(), 
+}).strict();
+
+export const FireDoorPropertyCreateArgsSchema: z.ZodType<Prisma.FireDoorPropertyCreateArgs> = z.object({
+  select: FireDoorPropertySelectSchema.optional(),
+  data: z.union([ FireDoorPropertyCreateInputSchema, FireDoorPropertyUncheckedCreateInputSchema ]),
+}).strict();
+
+export const FireDoorPropertyUpsertArgsSchema: z.ZodType<Prisma.FireDoorPropertyUpsertArgs> = z.object({
+  select: FireDoorPropertySelectSchema.optional(),
+  where: FireDoorPropertyWhereUniqueInputSchema, 
+  create: z.union([ FireDoorPropertyCreateInputSchema, FireDoorPropertyUncheckedCreateInputSchema ]),
+  update: z.union([ FireDoorPropertyUpdateInputSchema, FireDoorPropertyUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const FireDoorPropertyCreateManyArgsSchema: z.ZodType<Prisma.FireDoorPropertyCreateManyArgs> = z.object({
+  data: z.union([ FireDoorPropertyCreateManyInputSchema, FireDoorPropertyCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FireDoorPropertyCreateManyAndReturnArgsSchema: z.ZodType<Prisma.FireDoorPropertyCreateManyAndReturnArgs> = z.object({
+  data: z.union([ FireDoorPropertyCreateManyInputSchema, FireDoorPropertyCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FireDoorPropertyDeleteArgsSchema: z.ZodType<Prisma.FireDoorPropertyDeleteArgs> = z.object({
+  select: FireDoorPropertySelectSchema.optional(),
+  where: FireDoorPropertyWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorPropertyUpdateArgsSchema: z.ZodType<Prisma.FireDoorPropertyUpdateArgs> = z.object({
+  select: FireDoorPropertySelectSchema.optional(),
+  data: z.union([ FireDoorPropertyUpdateInputSchema, FireDoorPropertyUncheckedUpdateInputSchema ]),
+  where: FireDoorPropertyWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorPropertyUpdateManyArgsSchema: z.ZodType<Prisma.FireDoorPropertyUpdateManyArgs> = z.object({
+  data: z.union([ FireDoorPropertyUpdateManyMutationInputSchema, FireDoorPropertyUncheckedUpdateManyInputSchema ]),
+  where: FireDoorPropertyWhereInputSchema.optional(), 
+}).strict();
+
+export const FireDoorPropertyDeleteManyArgsSchema: z.ZodType<Prisma.FireDoorPropertyDeleteManyArgs> = z.object({
+  where: FireDoorPropertyWhereInputSchema.optional(), 
+}).strict();
+
+export const FireDoorQuestionGroupCreateArgsSchema: z.ZodType<Prisma.FireDoorQuestionGroupCreateArgs> = z.object({
+  select: FireDoorQuestionGroupSelectSchema.optional(),
+  include: FireDoorQuestionGroupIncludeSchema.optional(),
+  data: z.union([ FireDoorQuestionGroupCreateInputSchema, FireDoorQuestionGroupUncheckedCreateInputSchema ]),
+}).strict();
+
+export const FireDoorQuestionGroupUpsertArgsSchema: z.ZodType<Prisma.FireDoorQuestionGroupUpsertArgs> = z.object({
+  select: FireDoorQuestionGroupSelectSchema.optional(),
+  include: FireDoorQuestionGroupIncludeSchema.optional(),
+  where: FireDoorQuestionGroupWhereUniqueInputSchema, 
+  create: z.union([ FireDoorQuestionGroupCreateInputSchema, FireDoorQuestionGroupUncheckedCreateInputSchema ]),
+  update: z.union([ FireDoorQuestionGroupUpdateInputSchema, FireDoorQuestionGroupUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const FireDoorQuestionGroupCreateManyArgsSchema: z.ZodType<Prisma.FireDoorQuestionGroupCreateManyArgs> = z.object({
+  data: z.union([ FireDoorQuestionGroupCreateManyInputSchema, FireDoorQuestionGroupCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FireDoorQuestionGroupCreateManyAndReturnArgsSchema: z.ZodType<Prisma.FireDoorQuestionGroupCreateManyAndReturnArgs> = z.object({
+  data: z.union([ FireDoorQuestionGroupCreateManyInputSchema, FireDoorQuestionGroupCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FireDoorQuestionGroupDeleteArgsSchema: z.ZodType<Prisma.FireDoorQuestionGroupDeleteArgs> = z.object({
+  select: FireDoorQuestionGroupSelectSchema.optional(),
+  include: FireDoorQuestionGroupIncludeSchema.optional(),
+  where: FireDoorQuestionGroupWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorQuestionGroupUpdateArgsSchema: z.ZodType<Prisma.FireDoorQuestionGroupUpdateArgs> = z.object({
+  select: FireDoorQuestionGroupSelectSchema.optional(),
+  include: FireDoorQuestionGroupIncludeSchema.optional(),
+  data: z.union([ FireDoorQuestionGroupUpdateInputSchema, FireDoorQuestionGroupUncheckedUpdateInputSchema ]),
+  where: FireDoorQuestionGroupWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorQuestionGroupUpdateManyArgsSchema: z.ZodType<Prisma.FireDoorQuestionGroupUpdateManyArgs> = z.object({
+  data: z.union([ FireDoorQuestionGroupUpdateManyMutationInputSchema, FireDoorQuestionGroupUncheckedUpdateManyInputSchema ]),
+  where: FireDoorQuestionGroupWhereInputSchema.optional(), 
+}).strict();
+
+export const FireDoorQuestionGroupDeleteManyArgsSchema: z.ZodType<Prisma.FireDoorQuestionGroupDeleteManyArgs> = z.object({
+  where: FireDoorQuestionGroupWhereInputSchema.optional(), 
+}).strict();
+
+export const FireDoorQuestionCreateArgsSchema: z.ZodType<Prisma.FireDoorQuestionCreateArgs> = z.object({
+  select: FireDoorQuestionSelectSchema.optional(),
+  include: FireDoorQuestionIncludeSchema.optional(),
+  data: z.union([ FireDoorQuestionCreateInputSchema, FireDoorQuestionUncheckedCreateInputSchema ]),
+}).strict();
+
+export const FireDoorQuestionUpsertArgsSchema: z.ZodType<Prisma.FireDoorQuestionUpsertArgs> = z.object({
+  select: FireDoorQuestionSelectSchema.optional(),
+  include: FireDoorQuestionIncludeSchema.optional(),
+  where: FireDoorQuestionWhereUniqueInputSchema, 
+  create: z.union([ FireDoorQuestionCreateInputSchema, FireDoorQuestionUncheckedCreateInputSchema ]),
+  update: z.union([ FireDoorQuestionUpdateInputSchema, FireDoorQuestionUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const FireDoorQuestionCreateManyArgsSchema: z.ZodType<Prisma.FireDoorQuestionCreateManyArgs> = z.object({
+  data: z.union([ FireDoorQuestionCreateManyInputSchema, FireDoorQuestionCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FireDoorQuestionCreateManyAndReturnArgsSchema: z.ZodType<Prisma.FireDoorQuestionCreateManyAndReturnArgs> = z.object({
+  data: z.union([ FireDoorQuestionCreateManyInputSchema, FireDoorQuestionCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FireDoorQuestionDeleteArgsSchema: z.ZodType<Prisma.FireDoorQuestionDeleteArgs> = z.object({
+  select: FireDoorQuestionSelectSchema.optional(),
+  include: FireDoorQuestionIncludeSchema.optional(),
+  where: FireDoorQuestionWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorQuestionUpdateArgsSchema: z.ZodType<Prisma.FireDoorQuestionUpdateArgs> = z.object({
+  select: FireDoorQuestionSelectSchema.optional(),
+  include: FireDoorQuestionIncludeSchema.optional(),
+  data: z.union([ FireDoorQuestionUpdateInputSchema, FireDoorQuestionUncheckedUpdateInputSchema ]),
+  where: FireDoorQuestionWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorQuestionUpdateManyArgsSchema: z.ZodType<Prisma.FireDoorQuestionUpdateManyArgs> = z.object({
+  data: z.union([ FireDoorQuestionUpdateManyMutationInputSchema, FireDoorQuestionUncheckedUpdateManyInputSchema ]),
+  where: FireDoorQuestionWhereInputSchema.optional(), 
+}).strict();
+
+export const FireDoorQuestionDeleteManyArgsSchema: z.ZodType<Prisma.FireDoorQuestionDeleteManyArgs> = z.object({
+  where: FireDoorQuestionWhereInputSchema.optional(), 
+}).strict();
+
+export const FireDoorCreateArgsSchema: z.ZodType<Prisma.FireDoorCreateArgs> = z.object({
+  select: FireDoorSelectSchema.optional(),
+  include: FireDoorIncludeSchema.optional(),
+  data: z.union([ FireDoorCreateInputSchema, FireDoorUncheckedCreateInputSchema ]),
+}).strict();
+
+export const FireDoorUpsertArgsSchema: z.ZodType<Prisma.FireDoorUpsertArgs> = z.object({
+  select: FireDoorSelectSchema.optional(),
+  include: FireDoorIncludeSchema.optional(),
+  where: FireDoorWhereUniqueInputSchema, 
+  create: z.union([ FireDoorCreateInputSchema, FireDoorUncheckedCreateInputSchema ]),
+  update: z.union([ FireDoorUpdateInputSchema, FireDoorUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const FireDoorCreateManyArgsSchema: z.ZodType<Prisma.FireDoorCreateManyArgs> = z.object({
+  data: z.union([ FireDoorCreateManyInputSchema, FireDoorCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FireDoorCreateManyAndReturnArgsSchema: z.ZodType<Prisma.FireDoorCreateManyAndReturnArgs> = z.object({
+  data: z.union([ FireDoorCreateManyInputSchema, FireDoorCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FireDoorDeleteArgsSchema: z.ZodType<Prisma.FireDoorDeleteArgs> = z.object({
+  select: FireDoorSelectSchema.optional(),
+  include: FireDoorIncludeSchema.optional(),
+  where: FireDoorWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorUpdateArgsSchema: z.ZodType<Prisma.FireDoorUpdateArgs> = z.object({
+  select: FireDoorSelectSchema.optional(),
+  include: FireDoorIncludeSchema.optional(),
+  data: z.union([ FireDoorUpdateInputSchema, FireDoorUncheckedUpdateInputSchema ]),
+  where: FireDoorWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorUpdateManyArgsSchema: z.ZodType<Prisma.FireDoorUpdateManyArgs> = z.object({
+  data: z.union([ FireDoorUpdateManyMutationInputSchema, FireDoorUncheckedUpdateManyInputSchema ]),
+  where: FireDoorWhereInputSchema.optional(), 
+}).strict();
+
+export const FireDoorDeleteManyArgsSchema: z.ZodType<Prisma.FireDoorDeleteManyArgs> = z.object({
+  where: FireDoorWhereInputSchema.optional(), 
+}).strict();
+
+export const FireDoorInspectionCreateArgsSchema: z.ZodType<Prisma.FireDoorInspectionCreateArgs> = z.object({
+  select: FireDoorInspectionSelectSchema.optional(),
+  include: FireDoorInspectionIncludeSchema.optional(),
+  data: z.union([ FireDoorInspectionCreateInputSchema, FireDoorInspectionUncheckedCreateInputSchema ]),
+}).strict();
+
+export const FireDoorInspectionUpsertArgsSchema: z.ZodType<Prisma.FireDoorInspectionUpsertArgs> = z.object({
+  select: FireDoorInspectionSelectSchema.optional(),
+  include: FireDoorInspectionIncludeSchema.optional(),
+  where: FireDoorInspectionWhereUniqueInputSchema, 
+  create: z.union([ FireDoorInspectionCreateInputSchema, FireDoorInspectionUncheckedCreateInputSchema ]),
+  update: z.union([ FireDoorInspectionUpdateInputSchema, FireDoorInspectionUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const FireDoorInspectionCreateManyArgsSchema: z.ZodType<Prisma.FireDoorInspectionCreateManyArgs> = z.object({
+  data: z.union([ FireDoorInspectionCreateManyInputSchema, FireDoorInspectionCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FireDoorInspectionCreateManyAndReturnArgsSchema: z.ZodType<Prisma.FireDoorInspectionCreateManyAndReturnArgs> = z.object({
+  data: z.union([ FireDoorInspectionCreateManyInputSchema, FireDoorInspectionCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FireDoorInspectionDeleteArgsSchema: z.ZodType<Prisma.FireDoorInspectionDeleteArgs> = z.object({
+  select: FireDoorInspectionSelectSchema.optional(),
+  include: FireDoorInspectionIncludeSchema.optional(),
+  where: FireDoorInspectionWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorInspectionUpdateArgsSchema: z.ZodType<Prisma.FireDoorInspectionUpdateArgs> = z.object({
+  select: FireDoorInspectionSelectSchema.optional(),
+  include: FireDoorInspectionIncludeSchema.optional(),
+  data: z.union([ FireDoorInspectionUpdateInputSchema, FireDoorInspectionUncheckedUpdateInputSchema ]),
+  where: FireDoorInspectionWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorInspectionUpdateManyArgsSchema: z.ZodType<Prisma.FireDoorInspectionUpdateManyArgs> = z.object({
+  data: z.union([ FireDoorInspectionUpdateManyMutationInputSchema, FireDoorInspectionUncheckedUpdateManyInputSchema ]),
+  where: FireDoorInspectionWhereInputSchema.optional(), 
+}).strict();
+
+export const FireDoorInspectionDeleteManyArgsSchema: z.ZodType<Prisma.FireDoorInspectionDeleteManyArgs> = z.object({
+  where: FireDoorInspectionWhereInputSchema.optional(), 
+}).strict();
+
+export const FireDoorInspectionItemCreateArgsSchema: z.ZodType<Prisma.FireDoorInspectionItemCreateArgs> = z.object({
+  select: FireDoorInspectionItemSelectSchema.optional(),
+  include: FireDoorInspectionItemIncludeSchema.optional(),
+  data: z.union([ FireDoorInspectionItemCreateInputSchema, FireDoorInspectionItemUncheckedCreateInputSchema ]),
+}).strict();
+
+export const FireDoorInspectionItemUpsertArgsSchema: z.ZodType<Prisma.FireDoorInspectionItemUpsertArgs> = z.object({
+  select: FireDoorInspectionItemSelectSchema.optional(),
+  include: FireDoorInspectionItemIncludeSchema.optional(),
+  where: FireDoorInspectionItemWhereUniqueInputSchema, 
+  create: z.union([ FireDoorInspectionItemCreateInputSchema, FireDoorInspectionItemUncheckedCreateInputSchema ]),
+  update: z.union([ FireDoorInspectionItemUpdateInputSchema, FireDoorInspectionItemUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const FireDoorInspectionItemCreateManyArgsSchema: z.ZodType<Prisma.FireDoorInspectionItemCreateManyArgs> = z.object({
+  data: z.union([ FireDoorInspectionItemCreateManyInputSchema, FireDoorInspectionItemCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FireDoorInspectionItemCreateManyAndReturnArgsSchema: z.ZodType<Prisma.FireDoorInspectionItemCreateManyAndReturnArgs> = z.object({
+  data: z.union([ FireDoorInspectionItemCreateManyInputSchema, FireDoorInspectionItemCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FireDoorInspectionItemDeleteArgsSchema: z.ZodType<Prisma.FireDoorInspectionItemDeleteArgs> = z.object({
+  select: FireDoorInspectionItemSelectSchema.optional(),
+  include: FireDoorInspectionItemIncludeSchema.optional(),
+  where: FireDoorInspectionItemWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorInspectionItemUpdateArgsSchema: z.ZodType<Prisma.FireDoorInspectionItemUpdateArgs> = z.object({
+  select: FireDoorInspectionItemSelectSchema.optional(),
+  include: FireDoorInspectionItemIncludeSchema.optional(),
+  data: z.union([ FireDoorInspectionItemUpdateInputSchema, FireDoorInspectionItemUncheckedUpdateInputSchema ]),
+  where: FireDoorInspectionItemWhereUniqueInputSchema, 
+}).strict();
+
+export const FireDoorInspectionItemUpdateManyArgsSchema: z.ZodType<Prisma.FireDoorInspectionItemUpdateManyArgs> = z.object({
+  data: z.union([ FireDoorInspectionItemUpdateManyMutationInputSchema, FireDoorInspectionItemUncheckedUpdateManyInputSchema ]),
+  where: FireDoorInspectionItemWhereInputSchema.optional(), 
+}).strict();
+
+export const FireDoorInspectionItemDeleteManyArgsSchema: z.ZodType<Prisma.FireDoorInspectionItemDeleteManyArgs> = z.object({
+  where: FireDoorInspectionItemWhereInputSchema.optional(), 
 }).strict();

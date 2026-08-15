@@ -6,7 +6,7 @@ import {
   Shield, LayoutDashboard, Building2, Users, Briefcase, UserCheck,
   ClipboardList, FileText, Settings, Bell, ChevronDown, LogOut,
   User, BarChart3, ChevronRight, LayoutGrid, Database, Users2, Mail,
-  BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame, PenTool, Menu, X, ShoppingCart, PieChart, Calendar, AlertCircle, MessageSquare, BookOpen
+  BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame, PenTool, Menu, X, ShoppingCart, PieChart, Calendar, AlertCircle, MessageSquare, BookOpen, DoorClosed
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -135,6 +135,15 @@ const fireEquipmentNavItems = [
   { label: 'Modül Ayarları', icon: Settings, to: '/fire-equipment/settings' },
 ];
 
+const fireDoorsNavItems = (hasAdminAccess: boolean) => [
+  { label: 'GENEL', type: 'group' },
+  { label: 'Tesis Kapıları', icon: DoorClosed, to: '/safety-management/fire-doors/list' },
+  ...(hasAdminAccess ? [
+    { label: 'AYARLAR', type: 'group' },
+    { label: 'Modül Ayarları', icon: Settings, to: '/safety-management/fire-doors/settings' },
+  ] : []),
+];
+
 const binaTuruNavItems = [
   { label: 'GENEL', type: 'group' },
   { label: 'Dashboard', icon: LayoutDashboard, to: '/bina-turu', end: true },
@@ -172,19 +181,13 @@ const checklistNavItems = (hasAdminAccess: boolean, hasSpecialistAccess: boolean
   { label: 'GENEL', type: 'group' },
   { label: 'Dashboard', icon: LayoutDashboard, to: '/checklists', end: true },
   
+  { label: 'SAHA DENETİMLERİ', type: 'group' },
+  { label: 'Denetimlerim', icon: ClipboardList, to: '/checklists/submissions' },
+
   ...(hasAdminAccess ? [
     { label: 'YÖNETİM', type: 'group' },
     { label: 'Şablonlar ve Gruplar', icon: FileText, to: '/checklists/templates' },
-    { label: 'Denetim Atamaları', icon: ClipboardList, to: '/checklists/submissions' }, // Or a dedicated page later
-    { label: 'Konsolide Raporlar', icon: PieChart, to: '/checklists/reports' },
     { label: 'Ayarlar', icon: Settings, to: '/checklists/settings' },
-  ] : []),
-
-  ...(hasSpecialistAccess && !hasAdminAccess ? [
-    { label: 'UYGULAMA', type: 'group' },
-    { label: 'Bekleyen Denetimlerim', icon: AlertCircle, to: '/checklists/submissions?status=BEKLEYEN' },
-    { label: 'Geçmiş Denetimlerim', icon: ClipboardList, to: '/checklists/submissions?status=TAMAMLANDI' },
-    { label: 'Tesis Raporlarım', icon: PieChart, to: '/checklists/reports' },
   ] : [])
 ];
 
@@ -235,6 +238,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   } else if (path.startsWith('/fire-equipment')) {
     navItems = fireEquipmentNavItems;
     moduleName = 'Yangın Envanter Yönetimi';
+  } else if (path.startsWith('/safety-management/fire-doors')) {
+    navItems = fireDoorsNavItems(hasAdminAccess);
+    moduleName = 'Yangın Kapıları';
   } else if (path.startsWith('/bina-turu')) {
     navItems = binaTuruNavItems;
     moduleName = 'Bina Turu Yönetimi';
@@ -269,7 +275,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
       path.startsWith('/risks') ||
       path.startsWith('/hazmat') ||
       path.startsWith('/checklists') ||
-      path.startsWith('/isg-kurul')
+      path.startsWith('/isg-kurul') ||
+      path.startsWith('/safety-management/fire-doors')
     ) {
       return '/safety-management';
     }
@@ -313,7 +320,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* Facility Switcher (Show for modules that need it) */}
-        {(path.startsWith('/isg-kurul') || path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management') || path.startsWith('/renovation-report') || path.startsWith('/checklists')) && (
+        {(path.startsWith('/isg-kurul') || path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management') || path.startsWith('/renovation-report') || path.startsWith('/checklists') || path.startsWith('/safety-management/fire-doors')) && (
           <FacilitySwitcher />
         )}
 
