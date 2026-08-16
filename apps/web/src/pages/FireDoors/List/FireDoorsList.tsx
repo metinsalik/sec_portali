@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { Plus, Eye, DoorClosed, AlertTriangle, PieChart as PieChartIcon, Activity, Filter, ShieldAlert } from 'lucide-react';
+import { Plus, Eye, DoorClosed, AlertTriangle, PieChart as PieChartIcon, Activity, Filter, ShieldAlert, Download } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import {
   Table,
@@ -31,6 +31,7 @@ export default function FireDoorsList() {
   const currentFacilityId = localStorage.getItem('activeFacilityId') || '';
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [isExporting, setIsExporting] = React.useState(false);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = Object.fromEntries(searchParams.entries());
@@ -61,6 +62,30 @@ export default function FireDoorsList() {
 
   // Convert filters to JSON string for the query params
   const filtersJson = JSON.stringify(filters);
+
+  const handleExport = async () => {
+    try {
+        setIsExporting(true);
+        const res = await api.get(`/safety-management/fire-doors/export?facilityId=${activeFacilityId}&filters=${encodeURIComponent(filtersJson)}`);
+        
+        if (!res.ok) {
+            throw new Error('Export request failed');
+        }
+
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'Yangin_Kapilari_Envanteri.xlsx');
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode?.removeChild(link);
+    } catch (error) {
+        console.error('Export failed:', error);
+    } finally {
+        setIsExporting(false);
+    }
+  };
 
   const { data: doors, isLoading: doorsLoading } = useQuery({
     queryKey: ['fireDoors', activeFacilityId, filtersJson],
@@ -121,6 +146,23 @@ export default function FireDoorsList() {
             </p>
           </div>
           <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                onClick={handleExport}
+                disabled={isExporting}
+                className="h-10 px-5 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 hover:text-emerald-800 border-emerald-200 hover:border-emerald-300 dark:bg-emerald-950/20 dark:border-emerald-800/50 dark:text-emerald-400 transition-all shadow-sm"
+              >
+                  {isExporting ? (
+                      <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></div>
+                          İndiriliyor...
+                      </div>
+                  ) : (
+                      <>
+                          <Download className="mr-2 h-4 w-4" /> Excel İndir
+                      </>
+                  )}
+              </Button>
               {user?.isAdmin && (
                   <Button 
                     variant="outline" 

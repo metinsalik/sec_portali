@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api, { BASE_URL } from '@/lib/api';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
@@ -17,6 +17,8 @@ export default function FireDoorWizard() {
   const navigate = useNavigate();
   const { id } = useParams();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const inspectionId = searchParams.get('inspectionId');
 
   const [step, setStep] = useState(id ? 2 : 0); // 0 = Start, 1 = Location, 2 = Questions, 3 = Success
   const [doorId, setDoorId] = useState<string | null>(id || null);
@@ -102,6 +104,34 @@ export default function FireDoorWizard() {
     enabled: step === 2,
   });
 
+  const { data: existingInspection } = useQuery({
+      queryKey: ['fireDoorInspection', inspectionId],
+      queryFn: async () => {
+          if (!id || !inspectionId) return null;
+          // We can just fetch all inspections and find it, or we already have it in the list.
+          // Let's fetch the list of inspections for the door and pick the one
+          const res = await api.get(`/safety-management/fire-doors/doors/${id}/inspections`);
+          const all = await res.json();
+          return all.find((i: any) => i.id === inspectionId);
+      },
+      enabled: !!id && !!inspectionId,
+  });
+
+  React.useEffect(() => {
+      if (existingInspection && existingInspection.items) {
+          const newAnswers: Record<string, any> = {};
+          existingInspection.items.forEach((item: any) => {
+              newAnswers[item.questionId] = {
+                  value: item.answer,
+                  note: item.comment || '',
+                  photoUrl: item.photoUrl,
+                  photos: item.photos || []
+              };
+          });
+          setAnswers(newAnswers);
+      }
+  }, [existingInspection]);
+
   // Mutations
   const createDoor = useMutation({
     mutationFn: async () => {
@@ -151,7 +181,12 @@ export default function FireDoorWizard() {
         notes: "Mobil saha denetimi ile tamamlandı."
       };
       
-      const res = await api.post(`/safety-management/fire-doors/doors/${doorId}/inspections`, payload);
+      let res;
+      if (inspectionId) {
+          res = await api.put(`/safety-management/fire-doors/doors/${doorId}/inspections/${inspectionId}`, payload);
+      } else {
+          res = await api.post(`/safety-management/fire-doors/doors/${doorId}/inspections`, payload);
+      }
       return res.json();
     },
     onSuccess: (data) => {

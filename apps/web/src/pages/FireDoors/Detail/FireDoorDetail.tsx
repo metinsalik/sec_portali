@@ -85,13 +85,23 @@ export default function FireDoorDetail() {
                   {door.properties?.Bina ? `${door.properties.Bina || ''} > ${door.properties.Kat || ''} > ${door.properties.Departman || ''} > ${door.properties.Mahal || ''}` : 'Lokasyon Belirtilmemiş'}
                 </p>
 
-                <div className="flex gap-3 pt-2">
+                <div className="flex flex-wrap gap-3 pt-2">
                   <Button 
                     onClick={() => navigate(`/safety-management/fire-doors/${door.id}/inspection`)}
                     className="h-10 px-5 text-sm rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5"
                   >
-                    <ClipboardCheck className="mr-2 h-4 w-4" /> Denetimi Düzenle / Yeni Denetim
+                    <ClipboardCheck className="mr-2 h-4 w-4" /> Yeni Denetim Başlat
                   </Button>
+                  
+                  {inspections && inspections.length > 0 && (
+                    <Button 
+                      onClick={() => navigate(`/safety-management/fire-doors/${door.id}/inspection?inspectionId=${inspections[0].id}`)}
+                      variant="outline"
+                      className="h-10 px-5 text-sm rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 shadow-sm transition-all hover:-translate-y-0.5"
+                    >
+                      <ClipboardCheck className="mr-2 h-4 w-4 text-slate-500" /> Son Denetimi Düzenle
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
