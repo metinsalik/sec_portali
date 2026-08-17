@@ -1,0 +1,1565 @@
+<!doctype html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>İSG Teknik İnceleme ve Bilirkişilik Simülasyonu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+
+        body {
+            font-family: "Inter", sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .slide-down {
+            animation: slideDown 0.4s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                height: 0;
+                overflow: hidden;
+            }
+
+            to {
+                opacity: 1;
+                height: auto;
+                overflow: visible;
+            }
+        }
+
+        .eval-perfect {
+            background-color: #f0fdf4 !important;
+            border-color: #22c55e !important;
+            color: #166534 !important;
+        }
+
+        .eval-good {
+            background-color: #fefce8 !important;
+            border-color: #eab308 !important;
+            color: #854d0e !important;
+        }
+
+        .eval-partial {
+            background-color: #fff7ed !important;
+            border-color: #f97316 !important;
+            color: #9a3412 !important;
+        }
+
+        .eval-weak {
+            background-color: #fef2f2 !important;
+            border-color: #ef4444 !important;
+            color: #991b1b !important;
+        }
+
+        .eval-zero {
+            background-color: #f1f5f9 !important;
+            border-color: #94a3b8 !important;
+            color: #334155 !important;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        textarea {
+            resize: vertical;
+        }
+    </style>
+</head>
+
+<body class="text-slate-800 h-screen flex flex-col overflow-hidden">
+    <header class="bg-slate-900 text-white p-4 shadow-md z-10 shrink-0 border-b-4 border-amber-500">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-lg md:text-xl font-black tracking-tight">
+                    DİJİTAL VAKA ANALİZİ SİMÜLASYONU
+                </h1>
+                <p class="text-xs md:text-sm text-slate-400 font-medium">
+                    “HASTANE YANGINI — İSG TEKNİK İNCELEME VE BİLİRKİŞİLİK
+                    OYUNU”
+                </p>
+            </div>
+            <div id="scoreDisplay"
+                class="hidden font-bold bg-slate-800 border border-slate-700 px-5 py-2 rounded-lg shadow-inner flex items-center gap-2">
+                <span class="text-slate-300 text-xs uppercase tracking-wider">TOPLAM PUAN</span>
+                <span id="currentScore" class="text-amber-400 text-2xl leading-none">0</span>
+                <span class="text-slate-500 text-sm leading-none">/ 120</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow overflow-y-auto p-2 md:p-6 custom-scrollbar bg-slate-100">
+        <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-lg border border-slate-200 p-4 md:p-10 fade-in min-h-full"
+            id="appContainer">
+            <!-- BAŞLANGIÇ EKRANI -->
+            <div id="startScreen">
+                <div class="text-center mb-10">
+                    <h2 class="text-3xl font-black text-slate-900 mb-3 tracking-tight">
+                        SİMÜLASYONA GİRİŞ
+                    </h2>
+                    <p class="text-slate-600 font-medium text-lg max-w-2xl mx-auto">
+                        Merkez tarafından görevlendirilen İSG teknik
+                        inceleme uzmanı rolündesiniz.
+                    </p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-8 mb-10">
+                    <div class="space-y-6">
+                        <div class="bg-blue-50 p-6 rounded-xl border border-blue-100">
+                            <h3 class="font-bold text-blue-900 mb-3 text-sm uppercase tracking-wider flex items-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                SİMÜLASYONUN AMACI
+                            </h3>
+                            <p class="text-sm text-slate-700 font-bold mb-3">
+                                Bu çalışma klasik bir eğitim değildir.
+                            </p>
+                            <ul class="list-disc pl-5 space-y-1 text-sm text-slate-700 mb-4 font-medium">
+                                <li>
+                                    Gerçek olay inceleme refleksini ölçmek
+                                </li>
+                                <li>
+                                    Teknik ve organizasyonel riskleri
+                                    birlikte okuyabilmek
+                                </li>
+                                <li>
+                                    Delil–yorum–kanaat ayrımı yapabilmek
+                                </li>
+                                <li>
+                                    Kök neden analizi derinliğini ölçmek
+                                </li>
+                                <li>
+                                    Bilirkişilik yaklaşımına ne kadar yakın
+                                    olduğunu analiz etmek
+                                </li>
+                            </ul>
+                            <div class="bg-white p-4 rounded border border-blue-200 text-sm shadow-sm">
+                                <p class="font-black text-blue-900 mb-1">
+                                    Stratejik Hedef:
+                                </p>
+                                <p class="text-slate-700">
+                                    "Doğru şıkkı" değil,
+                                    <strong>"en savunulabilir teknik
+                                        yaklaşımı"</strong>
+                                    aramalısınız. Bazı seçenekler teknik
+                                    olarak doğru görünse de sistemsel körlük
+                                    içerebilir.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-inner">
+                            <h3 class="font-bold text-slate-800 mb-3 text-sm uppercase tracking-wider">
+                                Senaryo Parametreleri
+                            </h3>
+                            <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+                                <div>
+                                    <span class="text-slate-500 block text-xs">Tarih</span><strong
+                                        class="text-slate-800">18.03.2026</strong>
+                                </div>
+                                <div>
+                                    <span class="text-slate-500 block text-xs">Saat</span><strong
+                                        class="text-slate-800">02:17</strong>
+                                </div>
+                                <div class="col-span-2">
+                                    <span class="text-slate-500 block text-xs">Lokasyon</span><strong
+                                        class="text-slate-800">Özel MedicalPark Hastanesi, B Blok
+                                        Bodrum Kat (Elektrik Pano
+                                        Odası)</strong>
+                                </div>
+                            </div>
+                            <p class="text-xs text-slate-500 mb-1 uppercase font-bold">
+                                Olay Sonucu
+                            </p>
+                            <p class="text-sm text-slate-700 font-medium">
+                                Yoğun bakım koridoru dumandan etkilenmiş,
+                                kısmi tahliye yapılmış, can kaybı
+                                oluşmamıştır.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="bg-amber-50 p-6 rounded-xl border border-amber-200">
+                            <h3
+                                class="font-bold text-amber-900 mb-3 text-sm uppercase tracking-wider flex items-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+                                    </path>
+                                </svg>
+                                Puanlama Mekanizması (120 Puan)
+                            </h3>
+                            <div class="space-y-3">
+                                <div class="flex flex-col gap-2 text-sm bg-white p-3 rounded border border-amber-100">
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-medium text-slate-700">9 Adım x Şıklı Soru</span>
+                                        <span class="font-bold text-amber-600 bg-amber-100 px-2 py-1 rounded text-xs">90
+                                            Puan</span>
+                                    </div>
+                                    <div class="flex justify-between items-center border-t border-amber-50 pt-2">
+                                        <span class="font-medium text-slate-700">1 Adım x Kanaat Raporu</span>
+                                        <span class="font-bold text-amber-600 bg-amber-100 px-2 py-1 rounded text-xs">30
+                                            Puan</span>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white p-3 rounded border border-slate-200 text-xs">
+                                    <strong class="block text-slate-800 mb-2">Serbest Değerlendirme Bonus
+                                        Yaklaşımları:</strong>
+                                    <div class="flex flex-wrap gap-2">
+                                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded">✅ Çelişkili veri
+                                            tespiti</span>
+                                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded">✅ Alternatif
+                                            senaryo</span>
+                                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded">✅ Belirsizlik
+                                            belirtme</span>
+                                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded">✅ Organizasyonel
+                                            bağlantı</span>
+                                    </div>
+                                    <strong class="block text-slate-800 mt-3 mb-2">Puan Düşüren Yaklaşımlar:</strong>
+                                    <div class="flex flex-wrap gap-2">
+                                        <span class="bg-red-100 text-red-800 px-2 py-1 rounded">❌ Kesin hüküm
+                                            verme</span>
+                                        <span class="bg-red-100 text-red-800 px-2 py-1 rounded">❌ Tek sebebe
+                                            indirgeme</span>
+                                        <span class="bg-red-100 text-red-800 px-2 py-1 rounded">❌ Suçlu arama</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- KAYIT VE GİRİŞ BÖLÜMÜ -->
+                        <div class="bg-white p-6 rounded-xl border-2 border-slate-800 shadow-md">
+                            <h3 class="font-black text-slate-900 mb-3 text-lg uppercase tracking-wider text-center">
+                                Giriş Yap
+                            </h3>
+                            <div class="mb-4">
+                                <label class="block text-sm font-bold text-slate-700 mb-2">Adınız Soyadınız:</label>
+                                <input type="text" id="userName"
+                                    class="w-full p-4 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold text-lg text-center"
+                                    placeholder="Örn: Ahmet Yılmaz" />
+                            </div>
+                            <button onclick="startGame()"
+                                class="w-full bg-slate-900 hover:bg-slate-800 text-white font-black text-lg py-4 px-6 rounded-xl transition duration-200 shadow-xl border-b-4 border-slate-950 active:border-b-0 active:translate-y-1">
+                                SİMÜLASYONU BAŞLAT
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LİDERLİK TABLOSU (START SCREEN) -->
+                <div class="mt-8 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                    <div
+                        class="bg-slate-900 text-white p-4 font-black uppercase text-sm flex items-center justify-between">
+                        <span>🏆 SONUÇ TABLOSU (LİDERLİK)</span>
+                    </div>
+                    <div id="leaderboard-data-start" class="max-h-60 overflow-y-auto">
+                        <div class="p-8 text-center text-slate-500 text-sm font-bold">
+                            Yükleniyor...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OYUN EKRANI -->
+            <div id="gameScreen" class="hidden">
+                <div
+                    class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 pb-4 border-b border-slate-200 gap-4">
+                    <h2 id="stepTitle" class="text-2xl font-black text-slate-900 tracking-tight">
+                        ADIM X
+                    </h2>
+                    <div class="flex flex-col w-full md:w-64">
+                        <div class="flex justify-between text-xs font-bold text-slate-500 mb-1">
+                            <span>İlerleme</span>
+                            <span id="stepIndicator">1 / 10</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-2">
+                            <div id="progressBar" class="bg-amber-500 h-2 rounded-full transition-all duration-500"
+                                style="width: 10%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid md:grid-cols-5 gap-8">
+                    <!-- Sol Panel: Veri -->
+                    <div class="md:col-span-2 space-y-4">
+                        <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 shadow-sm sticky top-4">
+                            <h3
+                                class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                    </path>
+                                </svg>
+                                SAHA VERİSİ
+                            </h3>
+                            <div id="stepContext" class="text-sm space-y-3 text-slate-700 font-medium leading-relaxed">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sağ Panel: Sorular -->
+                    <div class="md:col-span-3">
+                        <!-- AŞAMA 1: Şıklı Soru -->
+                        <div id="mcqContainer" class="mb-8">
+                            <div class="flex items-center gap-3 mb-4">
+                                <span class="bg-slate-800 text-white text-xs font-bold px-2 py-1 rounded">AŞAMA 1</span>
+                                <h3 id="stepQuestion" class="font-bold text-slate-800 text-lg leading-snug"></h3>
+                            </div>
+                            <div id="optionsContainer" class="space-y-3">
+                                <!-- Dinamik Şıklar -->
+                            </div>
+
+                            <!-- Şıklı Soru Geri Bildirimi -->
+                            <div id="mcqFeedbackContainer" class="hidden mt-4 p-4 rounded-lg border slide-down">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500"
+                                        id="feedbackTitle">Teknik Analiz</span>
+                                    <span id="mcqPoints"
+                                        class="font-black text-lg px-2 py-1 rounded bg-white bg-opacity-60"></span>
+                                </div>
+                                <div id="mcqFeedbackText" class="text-sm font-medium"></div>
+                            </div>
+                        </div>
+
+                        <!-- AŞAMA 2: Serbest Değerlendirme (Gizli başlar) -->
+                        <div id="openEndedContainer" class="hidden mb-8 border-t-2 border-slate-100 pt-8 slide-down">
+                            <div class="flex items-center gap-3 mb-4">
+                                <span class="bg-amber-600 text-white text-xs font-bold px-2 py-1 rounded">AŞAMA 2</span>
+                                <h3 class="font-bold text-slate-800 text-lg">
+                                    Serbest Değerlendirme
+                                </h3>
+                            </div>
+
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                                <p id="openQuestionText" class="text-sm font-semibold text-blue-900"></p>
+                            </div>
+
+                            <div id="openInputArea">
+                                <textarea id="openAnswerInput" rows="4"
+                                    class="w-full p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm text-slate-700 shadow-inner mb-4"
+                                    placeholder="Bilirkişi notlarınızı buraya yazın..."></textarea>
+                                <button onclick="evaluateOpenAnswer()"
+                                    class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-6 rounded-xl transition duration-200 shadow-md">
+                                    Cevabımı Kaydet ve Kriterleri Gör
+                                </button>
+                            </div>
+
+                            <!-- Öz Değerlendirme Paneli (Gizli başlar) -->
+                            <div id="selfEvalPanel" class="hidden slide-down">
+                                <div class="bg-white border-2 border-slate-200 rounded-xl p-5 mb-6 shadow-sm">
+                                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">
+                                        Yüksek Puan Getiren Detaylar /
+                                        Kriterler
+                                    </h4>
+                                    <ul id="expectedDetailsList"
+                                        class="space-y-2 mb-4 text-sm font-medium text-slate-700">
+                                        <!-- Dinamik Kriterler -->
+                                    </ul>
+                                    <p class="text-xs text-slate-500 italic border-t pt-3 mt-3">
+                                        Yukarıdaki kriterleri (Teknik detay,
+                                        Delil/Yorum ayrımı, Sistemsel
+                                        ilişki) cevabınızda ne ölçüde
+                                        karşıladınız?
+                                    </p>
+                                </div>
+
+                                <div class="bg-slate-100 p-5 rounded-xl border border-slate-200 text-center">
+                                    <p class="text-sm font-bold text-slate-800">
+                                        Cevabınızı yukarıdaki kriterlere
+                                        göre kendiniz
+                                        değerlendirebilirsiniz. Bu bölüm
+                                        puanlamaya dahil değildir, yalnızca
+                                        bilirkişilik refleksinizi
+                                        geliştirmeniz içindir.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 flex justify-end">
+                            <button id="nextBtn" onclick="nextStep()"
+                                class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 px-10 rounded-xl transition duration-200 hidden shadow-lg flex items-center gap-2">
+                                Sonraki Adıma Geç
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADIM 10: RAPOR EKRANI -->
+            <div id="reportScreen" class="hidden">
+                <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-200">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-900">
+                            ADIM 10 — NİHAİ TEKNİK KANAAT RAPORU
+                        </h2>
+                        <p class="text-slate-500 text-sm font-medium mt-1">
+                            30 Puanlık Son Aşama
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-blue-50 p-5 rounded-xl mb-8 border border-blue-200">
+                    <p class="font-bold text-blue-900 mb-2">GÖREV:</p>
+                    <p class="text-sm text-blue-800">
+                        Önceki 9 adımdaki bulgular ışığında, savcılığa
+                        sunulacak bilirkişi benzeri kısa teknik
+                        değerlendirme raporunu yazınız.
+                    </p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-4 mb-8">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Olay Gelişim
+                            Akışı</label><textarea
+                            class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm h-20 bg-slate-50"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Muhtemel
+                            Başlangıç Bölgesi</label><textarea
+                            class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm h-20 bg-slate-50"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Teknik
+                            İnceleme Bulguları</label><textarea
+                            class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm h-20 bg-slate-50"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Yangın
+                            Gelişim Mekanizması</label><textarea
+                            class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm h-20 bg-slate-50"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Kritik
+                            Eksiklikler</label><textarea
+                            class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm h-20 bg-slate-50"></textarea>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Organizasyonel
+                            Değerlendirme</label><textarea
+                            class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm h-20 bg-slate-50"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Kök Neden
+                            Analizi</label><textarea
+                            class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm h-20 bg-slate-50"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Nihai Teknik
+                            Kanaat</label><textarea
+                            class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm h-20 bg-slate-50"></textarea>
+                    </div>
+                </div>
+
+                <div id="reportActionArea">
+                    <button onclick="showReportEval()"
+                        class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 px-6 rounded-xl transition duration-200 shadow-md text-lg">
+                        Raporu Tamamla ve Değerlendirmeye Geç
+                    </button>
+                </div>
+
+                <!-- Rapor Öz Değerlendirme Paneli -->
+                <div id="reportEvalPanel" class="hidden slide-down border-t-2 border-slate-200 pt-8 mt-8">
+                    <h3 class="font-black text-xl text-slate-800 mb-6">
+                        RAPOR DEĞERLENDİRMESİ
+                    </h3>
+
+                    <div class="grid md:grid-cols-2 gap-8 mb-8">
+                        <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm">
+                            <h4 class="font-bold text-slate-700 mb-3 text-sm uppercase tracking-wider">
+                                Değerlendirme Kriterleri (6x5=30 Puan)
+                            </h4>
+                            <ul class="space-y-3 text-sm text-slate-600">
+                                <li class="flex items-start">
+                                    <span class="text-amber-500 font-black mr-2">1.</span>
+                                    Teknik bulguları doğru kullanma (0-6
+                                    Puan)
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-amber-500 font-black mr-2">2.</span>
+                                    Delil–kanaat ayrımı (0-6 Puan)
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-amber-500 font-black mr-2">3.</span>
+                                    Sistemsel yaklaşım (0-6 Puan)
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-amber-500 font-black mr-2">4.</span>
+                                    Teknik/bilirkişi dili (0-6 Puan)
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-amber-500 font-black mr-2">5.</span>
+                                    Kök neden derinliği (0-6 Puan)
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div
+                            class="bg-slate-100 border border-slate-300 p-6 rounded-xl flex flex-col justify-center items-center">
+                            <label class="block text-base font-bold text-slate-800 mb-4 text-center">Toplam Rapor
+                                Puanınız Nedir?<br /><span class="text-xs text-slate-500 font-normal">Bu 5 kritere göre
+                                    kendinize 0 ile 30
+                                    arası bir puan verin.</span></label>
+                            <div class="flex items-center gap-4 w-full max-w-xs">
+                                <input type="number" id="finalReportScore" min="0" max="30"
+                                    class="w-full text-center text-2xl font-black p-4 border-2 border-slate-300 rounded-xl focus:border-amber-500 focus:ring-0"
+                                    placeholder="0-30" />
+                            </div>
+                            <button onclick="finishGame()"
+                                class="mt-6 bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-8 rounded-xl transition duration-200 shadow-md w-full max-w-xs">
+                                Simülasyonu Bitir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SONUÇ EKRANI -->
+            <div id="resultScreen" class="hidden text-center fade-in">
+                <div class="mb-10">
+                    <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">
+                        SİMÜLASYON TAMAMLANDI
+                    </h2>
+
+                    <div class="relative w-48 h-48 mx-auto mb-6">
+                        <svg class="w-full h-full" viewBox="0 0 36 36">
+                            <path class="text-slate-100"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none" stroke="currentColor" stroke-width="2.5" />
+                            <path id="scoreCirclePath"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none" stroke="currentColor" stroke-width="2.5" stroke-dasharray="0, 100"
+                                class="text-amber-500 transition-all duration-1000 ease-out" />
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span id="finalScoreText" class="text-5xl font-black text-slate-900">0</span>
+                            <span class="text-sm font-bold text-slate-400">/ 120</span>
+                        </div>
+                    </div>
+
+                    <h3 id="resultTitle" class="text-3xl font-black mb-3">
+                        Değerlendiriliyor...
+                    </h3>
+                    <p id="resultDesc" class="text-slate-600 font-medium max-w-xl mx-auto mb-8 leading-relaxed"></p>
+                </div>
+
+                <!-- Oyunun Ana Mesajı -->
+                <div
+                    class="bg-slate-900 text-white p-8 md:p-10 rounded-2xl shadow-2xl text-left max-w-3xl mx-auto border-l-4 border-amber-500 relative overflow-hidden mb-12">
+                    <div class="absolute top-0 right-0 p-8 opacity-10">
+                        <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2L2 22h20L12 2zm0 4.5l7.5 13.5h-15L12 6.5zm-1 3.5v5h2v-5h-2zm0 7v2h2v-2h-2z" />
+                        </svg>
+                    </div>
+
+                    <h3
+                        class="font-black text-amber-500 text-xs uppercase tracking-widest mb-6 flex items-center relative z-10">
+                        SİSTEMSEL ÇIKARIM
+                    </h3>
+                    <p class="text-xl md:text-2xl font-black mb-6 leading-tight relative z-10">
+                        Büyük olaylar çoğu zaman teknik arızayla başlamaz.
+                    </p>
+                    <p class="text-slate-400 mb-4 font-medium relative z-10">
+                        Teknik arızaların;
+                    </p>
+                    <div class="flex flex-wrap gap-4 mb-8 relative z-10">
+                        <span
+                            class="bg-slate-800 px-5 py-2.5 rounded-lg font-mono text-amber-300 font-bold border border-slate-700">görülmemesi</span>
+                        <span
+                            class="bg-slate-800 px-5 py-2.5 rounded-lg font-mono text-amber-300 font-bold border border-slate-700">ertelenmesi</span>
+                        <span
+                            class="bg-slate-800 px-5 py-2.5 rounded-lg font-mono text-amber-300 font-bold border border-slate-700">normalleşmesi</span>
+                    </div>
+                    <p class="text-lg mb-8 font-black text-red-400 relative z-10">
+                        felaketi oluşturur.
+                    </p>
+
+                    <div
+                        class="bg-black bg-opacity-30 p-6 rounded-xl border border-slate-700 text-sm md:text-base italic relative z-10 text-slate-300">
+                        İSG uzmanının görevi yalnızca "neyin yandığını"
+                        değil,<br />
+                        <span class="text-white font-black block mt-3 not-italic text-lg tracking-wide">"bu olayın
+                            oluşmasına hangi sistemin izin
+                            verdiğini"</span>
+                        ortaya koymaktır.
+                    </div>
+                </div>
+
+                <!-- LİDERLİK TABLOSU (RESULT SCREEN) -->
+                <div
+                    class="mt-8 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm max-w-3xl mx-auto text-left">
+                    <div
+                        class="bg-slate-900 text-white p-4 font-black uppercase text-sm flex items-center justify-between">
+                        <span>🏆 SONUÇ TABLOSU (LİDERLİK)</span>
+                    </div>
+                    <div id="leaderboard-data-result" class="max-h-80 overflow-y-auto">
+                        <div class="p-8 text-center text-slate-500 text-sm font-bold">
+                            Yükleniyor...
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="location.reload()"
+                    class="mt-12 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 font-bold py-3 px-10 rounded-xl transition duration-200 shadow text-sm uppercase tracking-wider">
+                    Simülasyonu Yeniden Başlat
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // FIREBASE AYARLARI
+        const firebaseConfig = {
+            apiKey: "AIzaSyCX-84lc7ooo7A5xlH_vDztCviSxaOEflk",
+            authDomain: "tabu-fc111.firebaseapp.com",
+            databaseURL:
+                "https://tabu-fc111-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "tabu-fc111",
+            storageBucket: "tabu-fc111.firebasestorage.app",
+            messagingSenderId: "913645231224",
+            appId: "1:913645231224:web:7cb68d7d2d10c91511e18d",
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let currentUser = "";
+
+        // LİDERLİK TABLOSUNU DİNLE
+        db.ref("vaka_scores").on("value", (snap) => {
+            const data = snap.val();
+            let finished = [];
+            let playing = [];
+
+            for (let t in data) {
+                if (data[t].status === "finished") {
+                    finished.push({
+                        n: t,
+                        s: data[t].score || 0,
+                        ts: data[t].timestamp || 0,
+                    });
+                } else {
+                    playing.push({ n: t, ts: data[t].timestamp || 0 });
+                }
+            }
+
+            // Sort finished by score desc, then by timestamp asc
+            finished.sort((a, b) =>
+                b.s !== a.s ? b.s - a.s : a.ts - b.ts,
+            );
+
+            // Sort playing by timestamp desc
+            playing.sort((a, b) => b.ts - a.ts);
+
+            let html = "";
+            if (finished.length === 0 && playing.length === 0) {
+                html =
+                    '<div class="p-8 text-center text-slate-500 text-sm font-bold">Henüz kimse başlamadı. İlk oynayan siz olun!</div>';
+            } else {
+                html += `<div class="p-0">`;
+
+                // Şampiyonlar (İlk 3)
+                if (finished.length > 0) {
+                    html += `<div class="bg-slate-50 p-6 border-b border-slate-200 text-center">
+                                <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">ŞAMPİYONLAR KÜRSÜSÜ</h4>
+                                <div class="flex justify-center gap-4 flex-wrap">`;
+
+                    const top3 = finished.slice(0, 3);
+                    const medals = ["🥇", "🥈", "🥉"];
+                    const colors = [
+                        "bg-amber-100 text-amber-800 border-amber-300",
+                        "bg-slate-200 text-slate-700 border-slate-300",
+                        "bg-orange-100 text-orange-800 border-orange-300",
+                    ];
+
+                    top3.forEach((t, i) => {
+                        html += `
+                            <div class="flex flex-col items-center p-4 rounded-xl border-2 ${colors[i]} w-28 md:w-32 shadow-sm relative transition-transform hover:scale-105">
+                                <span class="text-3xl mb-2 drop-shadow-md">${medals[i]}</span>
+                                <span class="font-black text-sm truncate w-full text-center leading-tight mb-1" title="${t.n}">${t.n}</span>
+                                <span class="text-xs font-bold opacity-80">${t.s} PUAN</span>
+                            </div>
+                        `;
+                    });
+                    html += `</div></div>`;
+                }
+
+                // Diğer bitirenler (4. ve sonrası)
+                if (finished.length > 3) {
+                    finished.slice(3).forEach((t, i) => {
+                        html += `
+                            <div class="flex justify-between items-center p-4 border-b border-slate-100 font-bold text-slate-700 hover:bg-slate-50 transition">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-slate-400 w-6 inline-block text-center text-sm">${i + 4}.</span>
+                                    <span>${t.n}</span>
+                                </div>
+                                <span class="bg-slate-200 text-slate-800 px-3 py-1 rounded text-xs tracking-widest">${t.s} PUAN</span>
+                            </div>
+                        `;
+                    });
+                }
+
+                // Devam edenler
+                if (playing.length > 0) {
+                    html += `<div class="bg-slate-100 p-3 text-center border-b border-slate-200 border-t border-slate-200"><span class="text-xs font-black text-slate-500 uppercase tracking-wider">⏳ VAKAYI İNCELEYENLER (DEVAM EDİYOR)</span></div>`;
+
+                    playing.forEach((t) => {
+                        html += `
+                            <div class="flex justify-between items-center p-4 border-b border-slate-100 font-medium text-slate-500 hover:bg-slate-50 transition opacity-80">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-blue-500 w-6 inline-block text-center animate-pulse">⏳</span>
+                                    <span>${t.n}</span>
+                                </div>
+                                <span class="text-xs font-bold italic bg-slate-200 px-3 py-1 rounded text-slate-500">İnceliyor...</span>
+                            </div>
+                        `;
+                    });
+                }
+
+                html += `</div>`;
+            }
+
+            const lbStart = document.getElementById(
+                "leaderboard-data-start",
+            );
+            const lbResult = document.getElementById(
+                "leaderboard-data-result",
+            );
+
+            if (lbStart) lbStart.innerHTML = html;
+            if (lbResult) lbResult.innerHTML = html;
+        });
+
+        const gameSteps = [
+            {
+                title: "ADIM 1 — İLK GÖREVLENDİRME",
+                context: `<p class="mb-2"><strong>02:17’de:</strong></p>
+                <ul class="list-disc pl-5 space-y-1 mb-2">
+                    <li>bodrum katta yanık kokusu,</li>
+                    <li>yoğun bakım koridorunda hafif duman,</li>
+                    <li>kısa süreli ışık dalgalanması bildirilmiştir.</li>
+                </ul>
+                <p>Yangın alarm sistemi genel alarm vermemiştir.</p>`,
+                question:
+                    "Aşağıdaki yaklaşımlardan hangisi mevcut aşamada EN SAVUNULABİLİR ilk inceleme yaklaşımıdır?",
+                options: [
+                    {
+                        text: "Alarm devreye girmediği için olay küçük ölçekli değerlendirilebilir.",
+                        pts: 2,
+                        feedback:
+                            "Riskli / Eksik Yaklaşım: Alarm çalışmaması olayın şiddetini değil, sistemin körlüğünü gösterebilir.",
+                    },
+                    {
+                        text: "Alarm kayıtları, CCTV görüntüleri, bakım kayıtları, teknik çizimler ve personel ifadeleri birlikte incelenmelidir.",
+                        pts: 10,
+                        feedback:
+                            "Teknik olarak güçlü + Sistemsel: Olay ağacını kurmak için gerekli tüm girdiler belirlenmiştir.",
+                    },
+                    {
+                        text: "Öncelikle teknik müdür ifadesi alınmalı, diğer kayıtlar sonradan değerlendirilmelidir.",
+                        pts: 5,
+                        feedback:
+                            "Savunulabilir ama Yüzeysel: İfadeler objektif verilerle (log, kamera) çaprazlanmadan anlam ifade etmez.",
+                    },
+                    {
+                        text: "Yangın yoğun bakım kaynaklı olabilir.",
+                        pts: 0,
+                        feedback:
+                            "Zayıf Yaklaşım: Delilsiz ve tamamen tahmine dayalı odak sapması.",
+                    },
+                ],
+                openQuestion:
+                    "İlk aşamada özellikle hangi kritik verilerin kaybolmaması gerektiğini ve nedenini açıklayın.",
+                openExpected: [
+                    "Alarm log kayıtları",
+                    "Kamera zaman senkronizasyonu",
+                    "Teknik ekip ilk müdahale bilgisi",
+                    "Panel hata geçmişi",
+                    "Jeneratör/UPS geçiş kayıtları",
+                    "İlk duman/koku lokasyonu",
+                ],
+            },
+            {
+                title: "ADIM 2 — OLAY YERİ BULGULARI",
+                context: `<ul class="list-disc pl-5 space-y-1">
+                    <li>Tali pano ağır hasarlı</li>
+                    <li>Dedektör üzeri poşetli</li>
+                    <li>Yangın kapısı açık sabitlenmiş</li>
+                    <li>Şaft kapağı açık</li>
+                    <li>UPS odasında hafif is tabakası</li>
+                </ul>`,
+                question: "En savunulabilir teknik yaklaşım hangisidir?",
+                options: [
+                    {
+                        text: "UPS odasındaki is, yangının UPS kaynaklı başladığını göstermektedir.",
+                        pts: 5,
+                        feedback:
+                            "Savunulabilir ama Yüzeysel: Erken teşhis hatası. İs fiziksel olarak oraya taşınmış olabilir.",
+                    },
+                    {
+                        text: "Dedektörün devre dışı bırakılmış olması yangının geç algılanmasına katkı sağlamış olabilir ancak mevcut bulgular başlangıç noktasını tek başına doğrulamaz.",
+                        pts: 10,
+                        feedback:
+                            "Güçlü: Delil ve yorum (kanaat) arasındaki kırmızı çizgiyi doğru çeken analitik yaklaşım.",
+                    },
+                    {
+                        text: "Yangın kapısının açık olması yalnızca tahliyeyi etkiler.",
+                        pts: 2,
+                        feedback:
+                            "Riskli / Eksik: Kompartımantasyonun kırılması duman ve ısı taşınımının temel nedenidir.",
+                    },
+                    {
+                        text: "Şaft etkisinin olay gelişimine katkısı yoktur.",
+                        pts: 0,
+                        feedback:
+                            "Zayıf: Dumanın dikey taşınım dinamiğini tamamen reddeden fizik dışı yaklaşım.",
+                    },
+                ],
+                openQuestion:
+                    "Bu aşamada sizi yanlış yönlendirebilecek bulgular nelerdir? Açıklayın.",
+                openExpected: [
+                    "İs taşınımı",
+                    "Sekonder yanık izleri",
+                    "Yangın sonrası müdahale etkileri (itfaiye vb.)",
+                    "Erimiş malzemenin başlangıç noktası olmayabileceği",
+                    "Duman yönünün yanıltıcı olabileceği",
+                ],
+            },
+            {
+                title: "ADIM 3 — PERSONEL İFADELERİ",
+                context: `<ul class="space-y-3">
+                    <li>"2 haftadır yanık kokusu vardı."</li>
+                    <li>"Işıklar gidip geliyordu."</li>
+                    <li>"Alarm hiç çalışmadı."</li>
+                    <li>"Dedektör geçici kapatılmıştı."</li>
+                </ul>`,
+                question: "En güçlü teknik yaklaşım hangisidir?",
+                options: [
+                    {
+                        text: "Yangın tamamen ani gelişmiştir.",
+                        pts: 5,
+                        feedback:
+                            "Yüzeysel: İfadeler olayın kuluçka evresi olduğunu bariz şekilde kanıtlıyor.",
+                    },
+                    {
+                        text: "Elektriksel kararsızlık belirtileri olay öncesinde mevcut olmasına rağmen sistematik risk yönetimine dönüştürülmemiştir.",
+                        pts: 10,
+                        feedback:
+                            "Güçlü + Sistemsel: Erken sinyallerin tespit edilmesine rağmen yönetimsel körlüğe kurban gittiği tespiti.",
+                    },
+                    {
+                        text: "Personel ifadeleri teknik inceleme açısından sınırlı önemdedir.",
+                        pts: 2,
+                        feedback:
+                            "Eksik: Sahadaki normalleşmiş riskleri (devre dışı bırakma vb.) en iyi personel anlatır.",
+                    },
+                    {
+                        text: "Dedektör bypassı uygun mühendislik çözümüdür.",
+                        pts: 0,
+                        feedback:
+                            "Zayıf: Korumayı iptal etmek arızayı çözmez, sadece görünmez kılar.",
+                    },
+                ],
+                openQuestion:
+                    "Bu ifadelerden hangileri “erken uyarı sinyali” olarak değerlendirilmelidir? Neden?",
+                openExpected: [
+                    "Elektriksel instabilite (ışık dalgalanması)",
+                    "İzolasyon problemi ihtimali (yanık kokusu)",
+                    "Ön alarm davranışı",
+                    "Arıza normalleşmesi",
+                    "Kronikleşmiş uygunsuzluk (sürekli kapatılan dedektör)",
+                ],
+            },
+            {
+                title: "ADIM 4 — TEKNİK KAYITLAR",
+                context: `<ul class="list-disc pl-5 space-y-1">
+                    <li>Son termal ölçüm: 14 ay önce</li>
+                    <li>İlave yük eklenmiş</li>
+                    <li>Koruma koordinasyonu revize edilmemiş</li>
+                    <li>UPS yükü %92</li>
+                    <li>Kaçak akım koruması yok</li>
+                </ul>`,
+                question: "En güçlü teknik kök neden yaklaşımı hangisidir?",
+                options: [
+                    {
+                        text: "Yangın yalnızca bakım eksikliğinden kaynaklanmıştır.",
+                        pts: 5,
+                        feedback:
+                            "Yüzeysel: Sadece bakımsızlıktan değil, değişen koşullara adaptasyon eksikliğinden kaynaklı.",
+                    },
+                    {
+                        text: "İlave yük sonrası koruma koordinasyonu değerlendirilmediğinden elektriksel risk artmıştır.",
+                        pts: 10,
+                        feedback:
+                            "Güçlü: Sistem değişikliği (MoC) yapılmamasının doğurduğu teknik arızanın mekanizmasını çözdünüz.",
+                    },
+                    {
+                        text: "Kaçak akım rölesi olsaydı yangın kesin önlenirdi.",
+                        pts: 2,
+                        feedback:
+                            "Eksik / Riskli: Kesin hüküm. Yangının tipi (faz-faz/aşırı yük) belli olmadan %100 önler denilemez.",
+                    },
+                    {
+                        text: "UPS yükü yangının UPS kaynaklı olduğunu göstermektedir.",
+                        pts: 0,
+                        feedback:
+                            "Zayıf: %92 kritik seviyedir ancak tek başına çıkış noktası ilanı için yeterli veri değildir.",
+                    },
+                ],
+                openQuestion:
+                    "Buradaki teknik eksikliklerden hangileri “sistemsel risk artışı” oluşturur? Açıklayın.",
+                openExpected: [
+                    "Yük artışı sonrası revizyon yapılmaması (MoC eksikliği)",
+                    "Koruma koordinasyon eksikliği",
+                    "Önleyici bakım eksikliği",
+                    "UPS kapasite sınırında çalışması",
+                    "Kümülatif risk yaklaşımının olmaması",
+                ],
+            },
+            {
+                title: "ADIM 5 — ZAMAN AKIŞI ANALİZİ",
+                context: `<table class="w-full text-sm text-left">
+                    <tr class="border-b border-slate-300"><th class="pb-1 text-slate-500">Saat</th><th class="pb-1 text-slate-500">Olay</th></tr>
+                    <tr class="border-b border-slate-200"><td class="py-1 font-mono text-slate-500">02:14</td><td>İlk duman</td></tr>
+                    <tr class="border-b border-slate-200"><td class="py-1 font-mono text-slate-500">02:18</td><td>Pano açıldı</td></tr>
+                    <tr class="border-b border-slate-200"><td class="py-1 font-mono text-slate-500">02:19</td><td>Yoğun duman</td></tr>
+                    <tr class="border-b border-slate-200"><td class="py-1 font-mono text-slate-500">02:21</td><td>Şaft yayılımı</td></tr>
+                    <tr><td class="py-1 font-mono text-slate-500">02:24</td><td>Yoğun bakım etkilendi</td></tr>
+                </table>`,
+                question:
+                    "Kritik kırılma anını en iyi açıklayan yaklaşım hangisidir?",
+                options: [
+                    {
+                        text: "İlk duman oluşumu",
+                        pts: 7,
+                        feedback:
+                            "Güçlü ama Eksik: Başlangıç anıdır, olayın şiddetlenip kontrolden çıktığı kırılma anı değildir.",
+                    },
+                    {
+                        text: "Pano kapağının açılması sonrası yoğun duman çıkışı",
+                        pts: 10,
+                        feedback:
+                            "Güçlü: Sınırlı oksijenle için için yanan sisteme taze hava girişiyle (backdraft benzeri) gelişimin hızlanması tespit edildi.",
+                    },
+                    {
+                        text: "Yoğun bakım koridorunun etkilenmesi",
+                        pts: 2,
+                        feedback:
+                            "Riskli: Bu olayın kırılma noktası değil, artık kriz evresine geçmiş bir sonucudur.",
+                    },
+                    {
+                        text: "Şaft etkisi yalnızca mimari problemdir",
+                        pts: 0,
+                        feedback: "Zayıf.",
+                    },
+                ],
+                openQuestion:
+                    "Olayın büyümesini hızlandıran ilk 3 kritik zaman kırılmasını yazın.",
+                openExpected: [
+                    "Geç algılama (02:14 öncesi zafiyet)",
+                    "Enerjili pano müdahalesi / kapak açılması (oksijen girişi)",
+                    "Şaft yayılımı (dikey kompartıman ihlali)",
+                    "Alarm gecikmesi",
+                    "Yangın kapısı zafiyeti",
+                ],
+            },
+            {
+                title: "ADIM 6 — OPERASYONEL ÇATIŞMA",
+                context: `<ul class="space-y-3">
+                    <li><strong>Teknik ekip:</strong> "Enerji kesilmeli."</li>
+                    <li><strong>Yoğun bakım:</strong> "3 ventilatör bağlı."</li>
+                    <li><strong>Yönetim:</strong> "Panik oluşmasın."</li>
+                </ul>`,
+                question:
+                    "En savunulabilir operasyonel yaklaşım hangisidir?",
+                options: [
+                    {
+                        text: "Elektrik tamamen kesilmelidir.",
+                        pts: 2,
+                        feedback:
+                            "Riskli: Yaşamsal destek ünitelerine (ventilatör) bağlı hastaların riskini hiçe sayan kör mühendislik yaklaşımı.",
+                    },
+                    {
+                        text: "Enerji kesme kararı klinik etkiler ve lokal izolasyon imkanı ile birlikte değerlendirilmelidir.",
+                        pts: 10,
+                        feedback:
+                            "Güçlü: Teknik risk ile operasyonel/klinik hayati risk arasındaki hassas teraziyi yöneten bütüncül bakış.",
+                    },
+                    {
+                        text: "Bilgi paylaşımı sınırlandırılmalıdır.",
+                        pts: 0,
+                        feedback:
+                            "Zayıf: Kriz anında iletişimsizlik tahliyeyi ölümcül hale getirir.",
+                    },
+                    {
+                        text: "Tahliye hemen başlatılmalıdır.",
+                        pts: 5,
+                        feedback:
+                            "Yüzeysel: Tahliyenin kendisi yoğun bakım hastaları için yüksek risk barındırır, lokal izolasyon öncelikli düşünülmelidir.",
+                    },
+                ],
+                openQuestion:
+                    "Bu aşamada teknik kararların hasta güvenliği üzerindeki olası etkilerini açıklayın.",
+                openExpected: [
+                    "Ventilatör bağımlılığı (ani yaşam destek kaybı)",
+                    "Jeneratör/UPS güvenilirliği",
+                    "Transfer/Tahliye riski (sekonder travmalar)",
+                    "Duman maruziyeti riski",
+                    "Elektrik kesintisinin ikincil cihaz etkileri",
+                ],
+            },
+            {
+                title: "ADIM 7 — YANGIN GELİŞİMİ",
+                context: `<ul class="list-disc pl-5 space-y-1">
+                    <li>Alarm çalışmadı</li>
+                    <li>Yangın kapısı açık kaldı</li>
+                    <li>Şaft yayılımı oluştu</li>
+                </ul>`,
+                question: "En güçlü teknik gelişim analizi hangisidir?",
+                options: [
+                    {
+                        text: "Yangın kapısı yalnızca tahliyeyi etkiler.",
+                        pts: 2,
+                        feedback:
+                            "Eksik: Pasif yangın korumasını (kompartımantasyon) anlamayan bir yaklaşım.",
+                    },
+                    {
+                        text: "Alarm sisteminin çalışmaması tek başına felaketi oluşturmuştur.",
+                        pts: 5,
+                        feedback:
+                            "Yüzeysel: Sadece geç algılama oldu, kapılar kapalı olsaydı yayılım durabilirdi.",
+                    },
+                    {
+                        text: "Erken algılama eksikliği, yangın kapısı zafiyeti ve şaft etkisi birlikte olayın lokal kalmasını engellemiştir.",
+                        pts: 10,
+                        feedback:
+                            "Güçlü + Sistemsel: İsviçre Peyniri modelinin deliklerinin tam hizalandığı birleşik sistem zafiyeti tespiti.",
+                    },
+                    {
+                        text: "Duman yayılımı yalnızca şaft kaynaklıdır.",
+                        pts: 2,
+                        feedback:
+                            "Eksik: Açık bırakılan yangın kapısı yatay yayılımı da maksimize etmiştir.",
+                    },
+                ],
+                openQuestion:
+                    "Yangının büyümesini sağlayan “birleşik sistem zafiyetlerini” açıklayın.",
+                openExpected: [
+                    "Erken algılama bariyerinin düşmesi (Bypass)",
+                    "Yatay kompartımantasyonun kırılması (Kapı)",
+                    "Dikey kompartımantasyonun kırılması (Şaft)",
+                    "Aktif söndürme müdahalesinin gecikmesi",
+                    "Tekil hata yerine çoklu bariyer çöküşü",
+                ],
+            },
+            {
+                title: "ADIM 8 — ORGANİZASYONEL İNCELEME",
+                context: `<ul class="list-disc pl-5 space-y-1">
+                    <li>HSE uygunsuzlukları açık kalmış</li>
+                    <li>Gece tatbikatı yapılmamış</li>
+                    <li>Risk değerlendirmesi güncellenmemiş</li>
+                    <li>Geçici çözümler uygulanmış</li>
+                </ul>`,
+                question:
+                    "En güçlü organizasyonel kök neden yaklaşımı hangisidir?",
+                options: [
+                    {
+                        text: "Teknik ekip hatalı davranmıştır.",
+                        pts: 5,
+                        feedback:
+                            "Yüzeysel: Operatör hatasında durmak sistemi sorgulamaktan kaçmaktır.",
+                    },
+                    {
+                        text: "Çalışan dikkatsizliği temel nedendir.",
+                        pts: 2,
+                        feedback:
+                            "Riskli: Kök neden analizi için yetersiz ve sığ bir sonuç.",
+                    },
+                    {
+                        text: "Kritik uygunsuzlukların operasyonel baskılar nedeniyle sürdürülebilir şekilde giderilmemesi riskin kurumsal normalleşmesine neden olmuştur.",
+                        pts: 10,
+                        feedback:
+                            "Güçlü + Sistemsel: Şirket kültüründeki 'operasyon > güvenlik' paradigmasının tespiti.",
+                    },
+                    {
+                        text: "HSE sorumluluğu yoktur.",
+                        pts: 0,
+                        feedback:
+                            "Zayıf: HSE izleme, takip ve eskalasyon görevini yerine getirmemiştir.",
+                    },
+                ],
+                openQuestion:
+                    "Bu olayda “normalleşmiş risk” örneklerini yazın.",
+                openExpected: [
+                    "Sürekli yanık kokusuna tepkisizlik",
+                    "Geçici bypassın kalıcı hale gelmesi",
+                    "Açık bırakılan HSE uygunsuzlukları",
+                    "Ertelenen periyodik/önleyici bakım",
+                    "Operasyonel kesinti baskısına boyun eğme",
+                ],
+            },
+            {
+                title: "ADIM 9 — DELİL VE KANAAT AYRIMI",
+                context: `<p class="text-sm italic text-slate-600 mb-2">Bu adımda bilirkişi sıfatıyla hazırlayacağınız nihai metnin diline ve epistemolojik duruşuna odaklanılmaktadır.</p>`,
+                question:
+                    "Bilirkişi yaklaşımına en uygun teknik dil hangisidir?",
+                options: [
+                    {
+                        text: "Yangın kesin olarak elektrik panosundan çıkmıştır.",
+                        pts: 2,
+                        feedback:
+                            "Riskli: 'Kesin' ibaresi, aksini ispatlayabilecek en ufak bir delilde tüm raporu çökertebilir.",
+                    },
+                    {
+                        text: "Mevcut bulgular yangının elektrik pano bölgesinde başladığını düşündürmektedir.",
+                        pts: 10,
+                        feedback:
+                            "Güçlü: Verilere dayanan, ihtiyatlı, profesyonel, ancak net kanaat bildiren hukuk terminolojisi.",
+                    },
+                    {
+                        text: "Yangının nedeni tamamen çalışan hatasıdır.",
+                        pts: 0,
+                        feedback:
+                            "Zayıf: Yargı dağıtan, sistemsel analizi göz ardı eden sorunlu dil.",
+                    },
+                    {
+                        text: "Değerlendirme yapılamaz.",
+                        pts: 5,
+                        feedback:
+                            "Yüzeysel: Eldeki onca veriyi reddetmek, sorumluluktan kaçmaktır.",
+                    },
+                ],
+                openQuestion:
+                    "Bilirkişilik yaklaşımında neden “kesin” dil risklidir? Açıklayın.",
+                openExpected: [
+                    "Delil yeterliliği sınırları",
+                    "Alternatif senaryo ihtimalleri (Sabotaj vs.)",
+                    "Teknik belirsizliklerin her zaman var oluşu",
+                    "Hukuki sorumluluk ve bağlayıcılık",
+                    "İlliyet bağı kurmadaki yanılma payı",
+                ],
+            },
+        ];
+
+        let currentStep = 0;
+        let totalScore = 0;
+        let mcqAnswered = false;
+        let userAnswers = {};
+
+        function startGame() {
+            const nameInput = document
+                .getElementById("userName")
+                .value.trim();
+            if (!nameInput) {
+                alert("Lütfen adınızı ve soyadınızı giriniz.");
+                return;
+            }
+            currentUser = nameInput;
+
+            // Save to localStorage
+            localStorage.setItem(
+                "isg_vaka_state",
+                JSON.stringify({
+                    currentUser: currentUser,
+                    currentStep: 0,
+                    totalScoreAtStartOfStep: 0,
+                    userAnswers: {},
+                    isFinished: false,
+                }),
+            );
+
+            // Set user to playing status immediately
+            db.ref("vaka_scores/" + currentUser).update({
+                status: "playing",
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+            });
+
+            document.getElementById("startScreen").classList.add("hidden");
+            document
+                .getElementById("gameScreen")
+                .classList.remove("hidden");
+            document
+                .getElementById("scoreDisplay")
+                .classList.remove("hidden");
+            loadStep(0);
+        }
+
+        function loadStep(index) {
+            mcqAnswered = false;
+
+            // UI Reset
+            document
+                .getElementById("mcqFeedbackContainer")
+                .classList.add("hidden");
+            document
+                .getElementById("openEndedContainer")
+                .classList.add("hidden");
+            document
+                .getElementById("selfEvalPanel")
+                .classList.add("hidden");
+            document.getElementById("nextBtn").classList.add("hidden");
+            document.getElementById("openAnswerInput").value = "";
+            document
+                .getElementById("openInputArea")
+                .classList.remove("hidden");
+
+            const data = gameSteps[index];
+
+            // Content
+            document.getElementById("stepTitle").innerText = data.title;
+            document.getElementById("stepContext").innerHTML = data.context;
+            document.getElementById("stepQuestion").innerText =
+                data.question;
+            document.getElementById("openQuestionText").innerText =
+                data.openQuestion;
+            document.getElementById("stepIndicator").innerText =
+                `${index + 1} / 10`;
+
+            // Progress Bar (10 steps total, 10% each)
+            const progress = (index / 10) * 100;
+            document.getElementById("progressBar").style.width =
+                `${progress}%`;
+
+            // Options Render
+            const optsContainer =
+                document.getElementById("optionsContainer");
+            optsContainer.innerHTML = "";
+
+            const labels = ["A", "B", "C", "D"];
+            data.options.forEach((opt, i) => {
+                const btn = document.createElement("button");
+                btn.className =
+                    "w-full text-left p-4 border-2 border-slate-200 rounded-xl hover:border-amber-500 hover:bg-amber-50 transition duration-200 text-sm md:text-base font-semibold text-slate-700 option-btn flex items-start";
+                btn.innerHTML = `<span class="font-black mr-3 w-7 h-7 flex items-center justify-center bg-slate-200 rounded text-slate-600 shrink-0 mt-0.5">${labels[i]}</span> <span>${opt.text}</span>`;
+                btn.onclick = () => selectOption(btn, opt);
+                optsContainer.appendChild(btn);
+            });
+
+            // Re-trigger animation
+            const container = document.getElementById("appContainer");
+            container.classList.remove("fade-in");
+            void container.offsetWidth;
+            container.classList.add("fade-in");
+        }
+
+        function selectOption(btnElement, optionData) {
+            if (mcqAnswered) return;
+            mcqAnswered = true;
+
+            const pts = optionData.pts;
+            updateScore(pts);
+
+            // SAVE MCQ ANSWER
+            if (!userAnswers[currentStep]) userAnswers[currentStep] = {};
+            userAnswers[currentStep].mcq = optionData.text;
+            userAnswers[currentStep].mcqPts = pts;
+
+            // Style buttons
+            const allBtns = document.querySelectorAll(".option-btn");
+            allBtns.forEach((btn) => {
+                btn.onclick = null;
+                btn.classList.add("opacity-40", "cursor-not-allowed");
+                btn.classList.remove(
+                    "hover:border-amber-500",
+                    "hover:bg-amber-50",
+                );
+            });
+
+            btnElement.classList.remove("opacity-40", "border-slate-200");
+            btnElement.classList.add("opacity-100", "shadow-md");
+
+            let evalClass = "eval-zero";
+            if (pts === 10) evalClass = "eval-perfect";
+            else if (pts === 7) evalClass = "eval-good";
+            else if (pts === 5) evalClass = "eval-partial";
+            else if (pts === 2) evalClass = "eval-weak";
+
+            btnElement.classList.add(evalClass);
+
+            // MCQ Feedback
+            const fc = document.getElementById("mcqFeedbackContainer");
+            fc.className = `mt-4 p-4 rounded-xl border slide-down ${evalClass}`;
+            document.getElementById("mcqFeedbackText").innerHTML =
+                optionData.feedback;
+            document.getElementById("mcqPoints").innerText = `+${pts} Puan`;
+            fc.classList.remove("hidden");
+
+            // Show Open Ended Section
+            document
+                .getElementById("openEndedContainer")
+                .classList.remove("hidden");
+        }
+
+        function evaluateOpenAnswer() {
+            const answer = document
+                .getElementById("openAnswerInput")
+                .value.trim();
+            if (!answer) {
+                alert("Lütfen önce değerlendirmenizi yazın.");
+                return;
+            }
+
+            document
+                .getElementById("openInputArea")
+                .classList.add("hidden");
+
+            // SAVE OPEN ANSWER
+            if (!userAnswers[currentStep]) userAnswers[currentStep] = {};
+            userAnswers[currentStep].open = answer;
+
+            // Populate Expected Details
+            const data = gameSteps[currentStep];
+            const ul = document.getElementById("expectedDetailsList");
+            ul.innerHTML = "";
+            data.openExpected.forEach((item) => {
+                ul.innerHTML += `<li class="flex items-center"><span class="text-green-500 mr-2">✅</span> ${item}</li>`;
+            });
+
+            document
+                .getElementById("selfEvalPanel")
+                .classList.remove("hidden");
+            document.getElementById("nextBtn").classList.remove("hidden");
+        }
+
+        // Removed submitOpenScore
+
+        function updateScore(pts) {
+            totalScore += pts;
+            const scoreEl = document.getElementById("currentScore");
+            scoreEl.innerText = totalScore;
+            scoreEl.classList.add("scale-125", "text-amber-300");
+            setTimeout(() => {
+                scoreEl.classList.remove("scale-125", "text-amber-300");
+            }, 300);
+        }
+
+        function nextStep() {
+            // FIREBASE'E ANLIK KAYDET
+            if (currentUser) {
+                db.ref(
+                    "vaka_scores/" +
+                    currentUser +
+                    "/answers/step_" +
+                    currentStep,
+                ).set(userAnswers[currentStep] || {});
+            }
+
+            currentStep++;
+
+            // Update localStorage
+            let state = JSON.parse(
+                localStorage.getItem("isg_vaka_state") || "{}",
+            );
+            state.currentStep = currentStep;
+            state.totalScoreAtStartOfStep = totalScore;
+            state.userAnswers = userAnswers;
+            localStorage.setItem("isg_vaka_state", JSON.stringify(state));
+
+            if (currentStep < 9) {
+                // 0 to 8 = 9 steps.
+                loadStep(currentStep);
+            } else {
+                showReportScreen();
+            }
+        }
+
+        function showReportScreen() {
+            document.getElementById("gameScreen").classList.add("hidden");
+            document
+                .getElementById("reportScreen")
+                .classList.remove("hidden");
+            document.getElementById("progressBar").style.width = `90%`;
+            window.scrollTo(0, 0);
+        }
+
+        function showReportEval() {
+            document
+                .getElementById("reportActionArea")
+                .classList.add("hidden");
+            document
+                .getElementById("reportEvalPanel")
+                .classList.remove("hidden");
+        }
+
+        function finishGame() {
+            const inputVal =
+                document.getElementById("finalReportScore").value;
+            if (inputVal === "" || inputVal < 0 || inputVal > 30) {
+                alert("Lütfen 0 ile 30 arasında bir rapor puanı girin.");
+                return;
+            }
+
+            updateScore(parseInt(inputVal));
+
+            // FIREBASE'E KAYDET
+            if (currentUser) {
+                const reportInputs = document.querySelectorAll(
+                    "#reportScreen textarea",
+                );
+                userAnswers["report"] = {
+                    flow: reportInputs[0].value,
+                    origin: reportInputs[1].value,
+                    findings: reportInputs[2].value,
+                    mechanism: reportInputs[3].value,
+                    gaps: reportInputs[4].value,
+                    org: reportInputs[5].value,
+                    rca: reportInputs[6].value,
+                    conclusion: reportInputs[7].value,
+                    selfScore: inputVal,
+                };
+
+                db.ref("vaka_scores/" + currentUser).update({
+                    score: totalScore,
+                    status: "finished",
+                    timestamp: firebase.database.ServerValue.TIMESTAMP,
+                });
+                db.ref(
+                    "vaka_scores/" + currentUser + "/answers/report",
+                ).set(userAnswers["report"]);
+            }
+
+            // Temizle / Bitir
+            let state = JSON.parse(
+                localStorage.getItem("isg_vaka_state") || "{}",
+            );
+            state.isFinished = true;
+            localStorage.setItem("isg_vaka_state", JSON.stringify(state));
+
+            document.getElementById("reportScreen").classList.add("hidden");
+            document.getElementById("scoreDisplay").classList.add("hidden");
+            document
+                .getElementById("resultScreen")
+                .classList.remove("hidden");
+
+            const title = document.getElementById("resultTitle");
+            const desc = document.getElementById("resultDesc");
+            const finalScoreText =
+                document.getElementById("finalScoreText");
+            const circlePath = document.getElementById("scoreCirclePath");
+
+            // Animate final score circle (Based on 120)
+            setTimeout(() => {
+                const percentage = (totalScore / 120) * 100;
+                circlePath.style.strokeDasharray = `${percentage}, 100`;
+                let current = 0;
+                let interval = setInterval(() => {
+                    if (current >= totalScore) {
+                        clearInterval(interval);
+                        finalScoreText.innerText = totalScore;
+                    } else {
+                        current += 2; // Increment faster
+                        if (current > totalScore) current = totalScore;
+                        finalScoreText.innerText = current;
+                    }
+                }, 20);
+            }, 500);
+
+            // Determine final evaluation text
+            if (totalScore >= 100) {
+                circlePath.classList.add("text-green-500");
+                circlePath.classList.remove("text-amber-500");
+                title.innerText = "Üst Düzey Teknik İnceleme Yetkinliği";
+                title.classList.add("text-green-600");
+                desc.innerText =
+                    "Mükemmel bir analitik zeka. Teknik kök nedenleri ve organizasyonel körlükleri kusursuz bir bilirkişi objektifliği ile ortaya koydunuz.";
+            } else if (totalScore >= 80) {
+                circlePath.classList.add("text-blue-500");
+                circlePath.classList.remove("text-amber-500");
+                title.innerText = "Yetkin Teknik İnceleme Uzmanı";
+                title.classList.add("text-blue-600");
+                desc.innerText =
+                    "Teknik ve organizasyonel faktörleri başarılı şekilde birlikte değerlendirebildiniz. Bilirkişi mantalitesi oturmuş durumda.";
+            } else if (totalScore >= 60) {
+                // Default amber
+                title.innerText = "Gelişime Açık Teknik Analiz";
+                title.classList.add("text-amber-600");
+                desc.innerText =
+                    "Temel riskleri tespit ettiniz ancak illiyet bağı kurma ve sistemsel körlükleri tespit etme derinliğiniz sınırlı kaldı.";
+            } else {
+                circlePath.classList.add("text-red-500");
+                circlePath.classList.remove("text-amber-500");
+                title.innerText = "Yetersiz Teknik İnceleme Yaklaşımı";
+                title.classList.add("text-red-600");
+                desc.innerText =
+                    "Odak noktanız hatalı. Olayların arkasındaki sistemsel nedenlere inemiyor, semptomlarla vakit kaybediyorsunuz.";
+            }
+            window.scrollTo(0, 0);
+        }
+
+        // SAYFA YÜKLENDİĞİNDE KALDIĞI YERDEN DEVAM ETME
+        window.addEventListener("DOMContentLoaded", () => {
+            const saved = localStorage.getItem("isg_vaka_state");
+            if (saved) {
+                const state = JSON.parse(saved);
+                if (state.currentUser && !state.isFinished) {
+                    currentUser = state.currentUser;
+                    currentStep = state.currentStep || 0;
+                    totalScore = state.totalScoreAtStartOfStep || 0;
+                    userAnswers = state.userAnswers || {};
+
+                    // Arayüzü güncelle
+                    document
+                        .getElementById("startScreen")
+                        .classList.add("hidden");
+                    document
+                        .getElementById("scoreDisplay")
+                        .classList.remove("hidden");
+                    document.getElementById("currentScore").innerText =
+                        totalScore;
+
+                    if (currentStep < 9) {
+                        document
+                            .getElementById("gameScreen")
+                            .classList.remove("hidden");
+                        loadStep(currentStep);
+                    } else {
+                        // Eğer rapor ekranındaysa
+                        showReportScreen();
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

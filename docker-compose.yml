@@ -52,6 +52,7 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - ./ssl:/etc/letsencrypt
+      - ./vaka-analizi.html:/usr/share/nginx/html/vaka-analizi.html:ro
     ports:
       - "80:80"
       - "443:443"
