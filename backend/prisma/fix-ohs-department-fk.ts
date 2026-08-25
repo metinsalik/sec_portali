@@ -17,11 +17,10 @@ async function main() {
   let updatedDecisions = 0;
   for (const d of badDecisions) {
     if (!validIds.has(d.departmentId!)) {
-      await prisma.ohsBoardDecision.update({
+      await prisma.ohsBoardDecision.delete({
         where: { id: d.id },
-        data: { departmentId: null },
       });
-      console.log(`- Nullified departmentId for decision ${d.id}`);
+      console.log(`- Deleted invalid decision ${d.id}`);
       updatedDecisions++;
     }
   }
@@ -35,11 +34,10 @@ async function main() {
   let updatedMembers = 0;
   for (const m of badMembers) {
     if (!validIds.has(m.departmentId!)) {
-      await prisma.ohsBoardMember.update({
+      await prisma.ohsBoardMember.delete({
         where: { id: m.id },
-        data: { departmentId: null },
       });
-      console.log(`- Nullified departmentId for member ${m.id}`);
+      console.log(`- Deleted invalid member ${m.id}`);
       updatedMembers++;
     }
   }
