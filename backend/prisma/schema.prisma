@@ -166,10 +166,12 @@ model Facility {
   btTurler               BTTur[]
   btUygunsuzluklar       BTUygunsuzluk[]
   HazmatVehicle          HazmatVehicle[]
-  renovationReports      RenovationReport[]
+  integratedAudits       IntegratedAudit[]
   ohsBoardMeetings       OhsBoardMeeting[]
   ohsBoardMembers        OhsBoardMember[]
   FireDoor               FireDoor[]
+  OhsBoardPeriod         OhsBoardPeriod[]
+  ohsBoardDepartments    OhsBoardDepartment[]
 }
 
 model IncidentCategory {
@@ -364,6 +366,20 @@ model Reconciliation {
   @@unique([facilityId, osgbCompanyId, month])
 }
 
+model OhsBoardDepartment {
+  id         String   @id @default(uuid())
+  facilityId String
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  name       String
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  
+  decisions  OhsBoardDecision[]
+  members    OhsBoardMember[]
+
+  @@unique([facilityId, name])
+}
+
 model Assignment {
   id              Int                     @id @default(autoincrement())
   facilityId      String
@@ -437,35 +453,35 @@ model MonthlyAccidentData {
 }
 
 model Category {
-  id                Int                @id @default(autoincrement())
-  name              String
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  notebookItems     NotebookItem[]
-  subCategories     SubCategory[]
-  ohsBoardDecisions OhsBoardDecision[]
+  id               Int                @id @default(autoincrement())
+  name             String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  notebookItems    NotebookItem[]
+  subCategories    SubCategory[]
+  OhsBoardTopic    OhsBoardTopic[]
+  OhsBoardDecision OhsBoardDecision[]
 }
 
 model SubCategory {
-  id                Int                @id @default(autoincrement())
-  name              String
-  categoryId        Int
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  notebookItems     NotebookItem[]
-  category          Category           @relation(fields: [categoryId], references: [id])
-  ohsBoardDecisions OhsBoardDecision[]
+  id               Int                @id @default(autoincrement())
+  name             String
+  categoryId       Int
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  notebookItems    NotebookItem[]
+  category         Category           @relation(fields: [categoryId], references: [id])
+  OhsBoardTopic    OhsBoardTopic[]
+  OhsBoardDecision OhsBoardDecision[]
 }
 
 model Department {
-  id                Int                     @id @default(autoincrement())
-  name              String
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime                @updatedAt
-  incidents         ExtraordinaryIncident[]
-  notebookItems     NotebookItem[]
-  ohsBoardDecisions OhsBoardDecision[]
-  ohsBoardMembers   OhsBoardMember[]
+  id              Int                     @id @default(autoincrement())
+  name            String
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  incidents       ExtraordinaryIncident[]
+  notebookItems   NotebookItem[]
 }
 
 model NotebookPage {
@@ -1957,29 +1973,86 @@ model TelegramSettings {
   updatedAt   DateTime @updatedAt
 }
 
-model RenovationReport {
-  id             String    @id @default(cuid())
-  facilityId     String
-  facility       Facility  @relation(fields: [facilityId], references: [id])
-  projectName    String
-  location       String
-  startDate      DateTime?
-  endDate        DateTime?
-  controlledBy   String?
-  assessmentDate DateTime?
-  reportDate     DateTime?
-  status         String    @default("DRAFT") // DRAFT, COMPLETED
+model IntegratedAudit {
+  id           String   @id @default(cuid())
+  facilityId   String
+  facility     Facility @relation(fields: [facilityId], references: [id])
+  status       String   @default("DRAFT") // DRAFT, PUBLISHED
+  saved        Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Meta fields
+  round        Int      @default(1)
+  startDate    DateTime
+  endDate      DateTime
+  reportDate   DateTime
+  reportNo     String
+  reporter     String
+  auditStatus  String   @default("Devam Ediyor")
+  purpose      String?
+  executive    String?
+  conclusion   String?
 
-  // JSON data for the report sections
-  checks       Json?
-  tests        Json?
-  certificates Json?
-  findings     Json?
-  evaluation   Json?
+  team         String[]
+  participants String[]
+  criteria     String[]
+  findings     IntegratedFinding[]
+}
 
-  createdBy String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+
+model IntegratedFinding {
+  id             String   @id @default(cuid())
+  auditId        String
+  audit          IntegratedAudit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  
+  no             String
+  area           String
+  subarea        String?
+  category       String
+  subcategory    String?
+  risk           String
+  targetDate     DateTime?
+  isStarted      Boolean  @default(false)
+  residualRisk   String?
+  riskReasoning  String?
+  findingDesc    String
+  riskDesc       String
+  recommendation String
+  status         String
+  history        String?
+
+  actions        IntegratedAction[]
+  files          IntegratedFile[]
+}
+
+model IntegratedAction {
+  id          String   @id @default(cuid())
+  findingId   String
+  finding     IntegratedFinding @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  department  String
+  order       Int
+  status      String
+  actionDate  DateTime?
+  title       String?
+  explanation String?
+  completedAt DateTime?
+
+  files       IntegratedFile[]
+}
+
+model IntegratedFile {
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  type        String
+  
+  findingId   String?
+  finding     IntegratedFinding? @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  
+  actionId    String?
+  action      IntegratedAction? @relation(fields: [actionId], references: [id], onDelete: Cascade)
 }
 
 model OperationsCategory {
@@ -2168,14 +2241,72 @@ model SubmissionAttachment {
   answer     ChecklistAnswer?    @relation(fields: [answerId], references: [id], onDelete: Cascade)
 }
 
-model OhsBoardMeeting {
-  id          String   @id @default(uuid())
-  facilityId  String
-  facility    Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
-  meetingDate DateTime
-  meetingNo   String
+model OhsBoardPeriod {
+  id         String   @id @default(uuid())
+  facilityId String
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
 
-  decisions OhsBoardDecision[]
+  name        String // e.g. "2026 Dönemi"
+  startDate   DateTime
+  endDate     DateTime
+  dangerClass String   @default("Az Tehlikeli") // Az Tehlikeli, Tehlikeli, Çok Tehlikeli
+
+  meetings OhsBoardMeeting[]
+  members  OhsBoardMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OhsBoardMeeting {
+  id         String          @id @default(uuid())
+  facilityId String
+  facility   Facility        @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  periodId   String?
+  period     OhsBoardPeriod? @relation(fields: [periodId], references: [id])
+
+  meetingDate     DateTime
+  meetingNo       String
+  status          String   @default("Taslak") // Taslak, Planlandı, Çağrı Gönderildi, Onaya Gönderildi, Gerçekleşti, Tamamlandı, İptal
+  isExtraordinary Boolean  @default(false)
+  meetingPlace    String?
+
+  decisions   OhsBoardDecision[]
+  attendances OhsBoardMeetingAttendance[]
+  topics      OhsBoardTopic[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OhsBoardMeetingAttendance {
+  id        String          @id @default(uuid())
+  meetingId String
+  meeting   OhsBoardMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  memberId  Int
+  member    OhsBoardMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  status          String // Katıldı, Katılmadı, Vekâleten Katıldı
+  proxyMemberName String? // Eğer vekaleten ise katılan kişinin adı
+  signatureUrl    String?
+  remarks         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OhsBoardTopic {
+  id        String          @id @default(uuid())
+  meetingId String
+  meeting   OhsBoardMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  topicText     String
+  categoryId    Int?
+  category      Category?    @relation(fields: [categoryId], references: [id])
+  subCategoryId Int?
+  subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id])
+  riskScore     String?
+  remarks       String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2195,8 +2326,8 @@ model OhsBoardDecision {
   subCategoryId Int?
   subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id])
 
-  departmentId Int
-  department   Department @relation(fields: [departmentId], references: [id])
+  departmentId String
+  department   OhsBoardDepartment @relation(fields: [departmentId], references: [id])
 
   priority String // "Tolere Gösterilmez Risk", "Yüksek Risk", "Önemli Risk", "Olası Risk", "Önemsiz Risk"
   status   String // "Başlamadı", "Devam Ediyor", "Tamamlandı", "İptal Edildi", "Sürekli Takip", "Belirsiz"
@@ -2207,7 +2338,13 @@ model OhsBoardDecision {
 
   remarks String?
 
-  actions OhsBoardDecisionAction[]
+  approvalStatus     String    @default("Bekliyor") // Bekliyor, Onaylandı, Düzeltme İstendi
+  lockedAt           DateTime? // 48 saat kuralı veya 72 saat kuralı için zaman damgası
+  sentForApprovalAt  DateTime? // Sekreter "Onaya Gönder" dediğinde
+  centralBoardStatus String? // SEÇ kuruluna taşıma için
+
+  actions   OhsBoardDecisionAction[]
+  auditLogs OhsBoardAuditLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2225,22 +2362,43 @@ model OhsBoardDecisionAction {
   updatedAt DateTime @updatedAt
 }
 
+model OhsBoardAuditLog {
+  id         String            @id @default(uuid())
+  decisionId String?
+  decision   OhsBoardDecision? @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+
+  action        String // Örn: APPROVED, REJECTED, STATUS_CHANGED, SENT_FOR_APPROVAL
+  changedBy     String? // username
+  remarks       String?
+  previousValue String?
+  newValue      String?
+
+  createdAt DateTime @default(now())
+}
+
 model OhsBoardMember {
-  id         Int    @id @default(autoincrement())
+  id         Int             @id @default(autoincrement())
   facilityId String
-  year       Int
+  year       Int // Belki periodId eklenince bu deprecated olabilir ama geriye dönük kalsın.
+  periodId   String?
+  period     OhsBoardPeriod? @relation(fields: [periodId], references: [id])
 
   boardRole String
   jobTitle  String
 
   name         String
-  departmentId Int
+  departmentId String
+  department   OhsBoardDepartment @relation(fields: [departmentId], references: [id])
+
+  isDocumentUploaded Boolean @default(false)
+  documentUrl        String?
+
+  attendances OhsBoardMeetingAttendance[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   facility   Facility   @relation(fields: [facilityId], references: [id], onDelete: Cascade)
-  department Department @relation(fields: [departmentId], references: [id])
 }
 
 // --- FIRE DOORS MODULE ---
@@ -2327,7 +2485,7 @@ model FireDoorInspection {
 }
 
 model FireDoorInspectionItem {
-  id           String  @id @default(uuid())
+  id           String   @id @default(uuid())
   inspectionId String
   questionId   String
   answer       String // PASS, PARTIAL, FAIL, NA

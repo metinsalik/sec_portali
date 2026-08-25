@@ -56,6 +56,9 @@ export default function IsgKurulDecisionDetails() {
   const queryClient = useQueryClient();
   const token = localStorage.getItem('token');
   const { user } = useAuth();
+  const hasAdminAccess = user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management');
+  const hasSpecialistAccess = user?.roles?.includes('specialist');
+  const userDepartment = user?.department || '';
   const isManager = user?.isManagement || user?.isAdmin || user?.roles?.some(r => ['management', 'admin', 'manager', 'yönetici'].includes(r.toLowerCase()));
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -156,12 +159,16 @@ export default function IsgKurulDecisionDetails() {
 
   // Fetch Departments
   const { data: departments = [] } = useQuery({
-    queryKey: ['settings-departments'],
+    queryKey: ['settings-departments', meeting?.facilityId],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/settings/definitions/departments`, { headers: { Authorization: `Bearer ${token}` } });
+      const facilityId = meeting?.facilityId;
+      if (!facilityId) return [];
+      const url = `${API}/api/operations/board/departments?facilityId=${facilityId}`;
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) throw new Error('Departmanlar alınamadı');
       return res.json();
-    }
+    },
+    enabled: !!meeting?.facilityId
   });
 
   // Create Action Mutation
@@ -541,7 +548,7 @@ export default function IsgKurulDecisionDetails() {
                 <h3 className="font-semibold text-slate-800">Aksiyon Geçmişi ve Yorumlar</h3>
                 <Badge variant="secondary" className="rounded-full bg-slate-200 text-slate-700 font-bold ml-1">{activeViewDecision.actions?.length || 0}</Badge>
               </div>
-              {!['Tamamlandı', 'İptal Edildi'].includes(activeViewDecision.status) && (
+              {!['Tamamlandı', 'İptal Edildi'].includes(activeViewDecision.status) && meeting?.status !== 'Onaya Gönderildi' && (hasAdminAccess || hasSpecialistAccess || userDepartment === activeViewDecision.department?.name) && (
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 shadow-sm rounded-full px-4">
@@ -725,8 +732,9 @@ export default function IsgKurulDecisionDetails() {
                                 {new Date(action.createdAt).toLocaleString('tr-TR')}
                               </span>
                               
+                              
                               {/* Edit / Delete Buttons */}
-                              {(action.createdBy === user?.fullName || action.createdBy === user?.username || isManager) && (
+                              {(action.createdBy === user?.fullName || action.createdBy === user?.username || isManager) && (Date.now() - new Date(action.createdAt).getTime() <= 60 * 60 * 1000) && (
                                 <div className="flex items-center gap-2 border-l pl-3 ml-1">
                                   <button onClick={() => {
                                       setEditingActionId(action.id);

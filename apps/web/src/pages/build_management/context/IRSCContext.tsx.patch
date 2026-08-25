@@ -1,0 +1,43 @@
+--- apps/web/src/pages/build_management/context/IRSCContext.tsx
++++ apps/web/src/pages/build_management/context/IRSCContext.tsx
+@@ -1,6 +1,7 @@
+ import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+ import type { Audit, IRSCFacility, IRSCCategory, IRSCDepartment, IRSCArea } from '../types';
++import { fetchAudits } from '../services/auditApi';
+ 
+ export type ViewState = 'TRACKING' | 'LIBRARY' | 'CONSOLE' | 'WORKSPACE' | 'SETTINGS';
+ 
+@@ -35,14 +36,7 @@
+   const [activeAuditId, setActiveAuditId] = useState<string | null>(null);
+ 
+   // Initialize from localStorage or use defaults
+-  const [audits, setAudits] = useState<Audit[]>(() => {
+-    try {
+-      const saved = localStorage.getItem('irsc_audits');
+-      return saved ? JSON.parse(saved) : [];
+-    } catch {
+-      return [];
+-    }
+-  });
++  const [audits, setAudits] = useState<Audit[]>([]);
+ 
+   const [facilities, setFacilities] = useState<IRSCFacility[]>(() => {
+     try {
+@@ -90,6 +84,17 @@
+ 
+-  // Save to localStorage whenever audits or facilities change
+-  useEffect(() => {
+-    localStorage.setItem('irsc_audits', JSON.stringify(audits));
+-  }, [audits]);
++  useEffect(() => {
++    if (selectedLocationId) {
++      fetchAudits(selectedLocationId).then(data => {
++        // Transform data if needed, or set directly if it matches
++        setAudits(data);
++      }).catch(err => console.error("Error fetching audits", err));
++    } else {
++      setAudits([]);
++    }
++  }, [selectedLocationId]);
+ 
+   useEffect(() => {

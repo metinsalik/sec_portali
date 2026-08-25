@@ -65,7 +65,7 @@ async function ensureModulesExist() {
       { code: 'WORKFLOW', name: 'İş Takibi', description: 'Görev ve iş akış yönetimi', icon: 'KanbanSquare' },
       { code: 'OPERATIONS', name: 'Aylık Veri Sistemi', description: 'Aylık çalışma saatleri ve kaza kayıtları', icon: 'description' },
       { code: 'PANEL', name: 'Operasyon Yönetim Sistemi', description: 'İSG Atama Paneli', icon: 'settings_suggest' },
-      { code: 'RENOVATION_REPORT', name: 'Renovasyon Raporu', description: 'İnşaat Renovasyon Teslim Raporu', icon: 'receipt_long' },
+      { code: 'RENOVATION_REPORT', name: 'Entegre Risk ve Güvenlik Denetimi', description: 'Entegre Risk ve Güvenlik Denetimi Raporları', icon: 'assignment_turned_in' },
       { code: 'BUILD_MANAGEMENT', name: 'İnşaat ve Renovasyon Yönetimi', description: 'İnşaat projelerinin ICRA, risk ve onay süreçleri', icon: 'construction' },
       { code: 'BUILDING_TOUR', name: 'Bina Turu Yönetimi', description: 'Bina turları ve denetimleri', icon: 'apartment' },
       { code: 'CHECKLISTS', name: 'Kontrol Listeleri', description: 'İSG Kontrol ve Denetim Listeleri', icon: 'ClipboardCheck' },

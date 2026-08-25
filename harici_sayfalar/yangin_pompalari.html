@@ -1,0 +1,331 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Yangın Pompası – Yönetici ve Detay Raporu</title><script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script><style>
+:root{--n:#102a43;--b:#146caa;--g:#137a4b;--a:#9a5a00;--r:#b42318;--bg:#f3f6fa;--line:#d7e2ed}*{box-sizing:border-box}body{margin:0;background:var(--bg);font:14px Arial,sans-serif;color:#172b4d}.head{background:var(--n);color:#fff;padding:22px max(18px,calc((100% - 1450px)/2));display:flex;justify-content:space-between;gap:15px;align-items:center}.head h1{font-size:23px;margin:0 0 6px}.sub{color:#c9d9e8;font-size:13px}.wrap{max-width:1450px;margin:20px auto;padding:0 17px}.upload{background:#fff;border:2px dashed #92abc0;border-radius:12px;padding:27px;text-align:center;cursor:pointer}.upload input{display:none}.upload b{color:var(--b);font-size:16px}.hint{font-size:12px;color:#61758a;margin-top:8px}.hidden{display:none!important}.filters,.kpis{display:grid;gap:12px}.filters{grid-template-columns:repeat(auto-fit,minmax(175px,1fr));margin:16px 0}.filter{background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px}.filter label{display:block;font-weight:bold;font-size:11px;color:#587088;margin-bottom:5px}select,input{width:100%;padding:7px;border:1px solid #b8cadb;border-radius:5px;background:#fff}.kpis{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:16px}.kpi{background:#fff;border-radius:9px;border-left:5px solid var(--b);padding:13px;box-shadow:0 1px 3px #00000012}.kpi.g{border-color:var(--g)}.kpi.a{border-color:var(--a)}.kpi.r{border-color:var(--r)}.kpi.p{border-color:#7c3aed}.kpi .l{font-size:11px;color:#61758a;font-weight:bold}.kpi .v{font-weight:bold;font-size:28px;margin-top:7px}.kpi .sub2{font-size:11px;color:#61758a;margin-top:3px}.progress-bar{height:8px;background:#e2e8f0;border-radius:4px;margin-top:8px;overflow:hidden}.progress-fill{height:100%;border-radius:4px;transition:width .4s}.panel{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:17px}.panel h2{font-size:16px;margin:0;padding:14px 16px;border-bottom:1px solid #e5edf4}.tools{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.btn{border:0;border-radius:6px;padding:9px 12px;color:#fff;background:var(--b);font-weight:bold;cursor:pointer}.btn.gray{background:#60758b}.tablebox{overflow:auto}table{border-collapse:collapse;width:100%;min-width:1100px}th,td{text-align:left;padding:10px 11px;border-bottom:1px solid #e6edf4;vertical-align:top;font-size:13px}th{background:#f7fafc;color:#506b83;white-space:nowrap}.row{cursor:pointer}.row:hover{background:#f2f8fd}.pill,.tag{display:inline-block;border-radius:999px;padding:4px 7px;font-size:11px;font-weight:bold;line-height:1.1}.ok{background:#dff8e8;color:#12623d}.warn{background:#fff0ca;color:#805000}.bad{background:#ffe2df;color:#9f2019}.muted{background:#e8eef5;color:#506273}.tag{border-radius:5px;margin:1px;background:#e4f1fc;color:#125d98}.tag.d{background:#fff0d6;color:#885100}.empty{padding:20px;color:#61758a}.modal{position:fixed;inset:0;background:#102a4388;z-index:5;padding:18px;overflow:auto}.modalbox{max-width:1250px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden}.modalhead{background:var(--n);color:#fff;padding:17px 20px;display:flex;justify-content:space-between;gap:15px;align-items:flex-start}.modalhead h2{margin:0;font-size:19px}.close{border:1px solid #c8d8e6;background:transparent;color:#fff;border-radius:5px;padding:5px 9px;cursor:pointer}.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;padding:15px 20px;background:#f6f9fc}.meta div{font-size:12px;color:#60758b}.meta b{display:block;font-size:14px;color:#172b4d;margin-top:3px}.compliance-bar{padding:14px 20px;background:#fff;border-bottom:1px solid var(--line)}.compliance-bar .cb-label{font-size:12px;color:#60758b;font-weight:bold;margin-bottom:6px}.compliance-bar .cb-track{height:14px;background:#e2e8f0;border-radius:7px;overflow:hidden}.compliance-bar .cb-fill{height:100%;border-radius:7px;transition:width .5s}.compliance-bar .cb-nums{display:flex;justify-content:space-between;font-size:12px;margin-top:5px;color:#506273}.sections{padding:18px 20px}.section{border:1px solid var(--line);border-radius:9px;margin:0 0 14px;overflow:hidden}.section h3{margin:0;padding:11px 13px;background:#f6f9fc;font-size:14px;display:flex;justify-content:space-between;align-items:center}.section-badge{font-size:11px;font-weight:bold;padding:3px 8px;border-radius:999px}.check{padding:12px 13px;border-top:1px solid #e6edf4}.q{font-weight:bold;font-size:13px}.answer{margin-top:6px}.comment{margin-top:6px;color:#506273;font-size:13px}.photos{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}.photo{display:block;width:116px;height:84px;border:1px solid #c9d9e6;border-radius:5px;overflow:hidden;background:#edf3f8;text-decoration:none;color:#1769aa;font-size:11px}.photo img{width:100%;height:100%;object-fit:cover}.photo span{display:flex;height:100%;align-items:center;justify-content:center;text-align:center;padding:5px}.error{color:var(--r);font-weight:bold;padding:10px 0}@media print{.head,.upload,.filters,.tools,.modalhead button{display:none}.modal{position:static;background:#fff;padding:0}.modalbox{margin:0;max-width:none}.wrap{max-width:none}}
+</style></head><body>
+<header class="head"><div><h1>Yangın Pompası Yönetici ve Detay Raporu</h1><div class="sub">Binaların Yangından Korunması Hakkında Yönetmelik • Madde 93 kontrol yapısına göre</div></div><div id="info"></div></header>
+<main class="wrap">
+<label id="up" class="upload"><input id="file" type="file" accept=".xlsx,.xls,.csv"><b>Excel dosyasını buraya bırakın veya seçmek için tıklayın</b><div class="hint">Microsoft Forms Excel dışa aktarımıyla çalışır. Dosyanız tarayıcınızdan dışarı gönderilmez.</div></label>
+<div id="err" class="error hidden"></div>
+<section id="app" class="hidden">
+<div class="tools"><button class="btn gray" id="change">Dosyayı değiştir</button><button class="btn" id="csv">Filtrelenmiş özeti indir</button><button class="btn gray" onclick="window.print()">Yazdır / PDF</button></div>
+<div class="filters">
+  <div class="filter"><label>Tesis</label><select id="fac"><option value="">Tüm tesisler</option></select></div>
+  <div class="filter"><label>Genel değerlendirme</label><select id="stat"><option value="">Tümü</option><option value="kritik">Kritik eksiklik</option><option value="eksiklik">Eksiklik</option><option value="teknik">Teknik inceleme</option><option value="uygun">Uygun</option></select></div>
+  <div class="filter"><label>Pompa kombinasyonu</label><select id="combo"><option value="">Tümü</option><option value="both">Elektrik + dizel birlikte</option><option value="electricOnly">Yalnızca elektrik motorlu</option><option value="dieselOnly">Yalnızca dizel motorlu</option><option value="backup">Yedek dizel bulunan</option><option value="twoPlus">2 veya daha fazla ana pompa</option><option value="one">Tek ana pompa</option><option value="unknown">Tahrik tipi belirtilmeyen</option></select></div>
+  <div class="filter"><label>Tesis / konum / kontrol eden ara</label><input id="search" placeholder="Arama yapın"></div>
+</div>
+<div class="kpis" id="kpirow"></div>
+<section class="panel"><h2>Tesis Özeti <span class="hint">Bir tesise tıklayarak Madde 93 soru grupları, yanıtlar, açıklamalar ve fotoğraf bağlantılarını açın.</span></h2>
+<div class="tablebox"><table><thead><tr><th>Tesis / kontrol eden</th><th>Tarih</th><th>Konum</th><th>Ana pompa</th><th>Pompa kombinasyonu</th><th>Yedek dizel</th><th>Uyum oranı</th><th>Değerlendirme</th><th>Kritik</th></tr></thead><tbody id="rows"></tbody></table></div>
+</section></section></main>
+<div id="modal" class="modal hidden"></div>
+<script>
+let data=[];
+const $=x=>document.getElementById(x);
+const clean=x=>{x=String(x??'').trim();return(!x||/^(nan|nat|undefined|null)$/i.test(x))?'':x};
+const norm=x=>clean(x).replace(/\u00a0/g,' ').replace(/\s+/g,' ').toLocaleLowerCase('tr-TR');
+const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function find(r,terms){
+  let ks=Object.keys(r);
+  for(let t of terms){
+    let k=ks.find(k=>norm(k).includes(norm(t)));
+    if(k!==undefined&&clean(r[k]))return clean(r[k]);
+  }
+  return '';
+}
+
+function isYes(v){
+  let x=norm(v);
+  return (x.startsWith('evet')||x.includes(' var'))&&!x.includes('hayır')&&!x.includes('yok')&&!x.includes('kontrol edilemedi');
+}
+
+// Uyum değerlendirme: gerçek cevap formatlarına göre
+// 'uygun_evet'  → "Uygun" veya "Evet" veya "Evet, kayıt var ve uygun" = uyumlu
+// 'hayir_iyi'   → "Hayır, su yok (Uygun)" veya "Hayır, erişilemiyor (Uygun)" = uyumlu
+// 'evet_giderildi' → "Evet" (önceki eksiklikler giderildi) veya "Önceki kayıt yok" = uyumlu
+function checkCompliance(v, type){
+  if(!v) return null; // yanıtsız → hesaba katma
+  let x = norm(v);
+  if(x.includes('kontrol edilemedi')) return null; // belirsiz → hesaba katma
+  if(type==='uygun_evet'){
+    if(x.startsWith('uygun')&&!x.includes('değil')) return true;
+    if(x.startsWith('evet')) return true;
+    if(x.includes('uygun değil')||x.startsWith('hayır')||x.startsWith('uygunsuz')) return false;
+    return null;
+  }
+  if(type==='hayir_iyi'){
+    // "Hayır, su yok (Uygun)" veya "Hayır, erişilemiyor (Uygun)" → uyumlu
+    if(x.includes('uygun)')) return true;
+    if(x.includes('uygun değil)')||x.includes('uygun değil')) return false;
+    if(x.startsWith('hayır')) return true;
+    if(x.startsWith('evet')) return false;
+    return null;
+  }
+  if(type==='evet_giderildi'){
+    if(x.startsWith('evet')) return true;
+    if(x.includes('önceki kayıt yok')) return true; // kayıt yoksa sorun yok
+    if(x.startsWith('hayır')) return false;
+    return null;
+  }
+  return null;
+}
+
+// [soru anahtar kelimesi, tip, ağırlık]
+// Ağırlık: kritik maddeler 2, standart 1
+const CQ=[
+  ['Bu alanda yangın pompası mevcut mu','uygun_evet',2],
+  ['Tek pompa varsa aynı kapasitede yedek pompa var mı','uygun_evet',2],
+  ["Birden fazla pompa varsa toplam kapasitenin en az %50",'uygun_evet',2],
+  ['Pompa üzerinde teknik etiket/plaka okunabilir mi','uygun_evet',1],
+  ['Pompanın test/bakım kaydında performans uygunluğu','uygun_evet',2],
+  ['Dizel yedek pompa yoksa enerji beslemesi bağımsız','uygun_evet',2],
+  ['Otomatik hava boşaltma valfi mevcut mu','uygun_evet',1],
+  ['Sirkülasyon rahatlama valfi mevcut mu','uygun_evet',1],
+  ['Her pompa için ayrı kumanda panosu var mı','uygun_evet',1],
+  ['Kumanda panosu kilitli mi','uygun_evet',1],
+  ['Panoda faz hatası / faz sırası hatası','uygun_evet',1],
+  ['Pano ana giriş devre kesicisine kilit açılmadan','hayir_iyi',1],
+  ['Her pompa için ayrı basınç anahtarı var mı','uygun_evet',1],
+  ['Basınç anahtarının ayarları kilitlenebilir','uygun_evet',1],
+  ['Pompa kontrolü otomatik veya yarı otomatik','uygun_evet',1],
+  ['Pompa odasında acil aydınlatma var mı','uygun_evet',1],
+  ['Acil aydınlatma test edildiğinde çalışıyor mu','uygun_evet',1],
+  ['Zeminde su birikmesi var mı','hayir_iyi',1],
+  ['Drenaj gideri açık ve çalışır','uygun_evet',1],
+  ['Pompa odası düzenli ve erişilebilir mi','uygun_evet',1],
+  ['Son bakım kaydı mevcut mu','uygun_evet',1],
+  ['Son test kaydı mevcut mu','uygun_evet',1],
+  ['Önceki kontrollerde tespit edilen kritik eksiklikler giderilmiş mi','evet_giderildi',2]
+];
+
+function calcCompliance(r){
+  let totalW=0, okW=0;
+  for(let [term,type,w] of CQ){
+    let v=find(r.raw,[term]);
+    let result=checkCompliance(v,type);
+    if(result===null) continue; // yanıtsız veya belirsiz → atla
+    totalW+=w;
+    if(result) okW+=w;
+  }
+  return totalW>0?Math.round(okW/totalW*100):null;
+}
+
+function complianceColor(p){return p>=80?'#137a4b':p>=60?'#9a5a00':'#b42318'}
+
+function state(v){
+  let x=norm(v);
+  if(x.includes('kritik')||x.includes('uygun değil')||x.startsWith('hayır, kayıt yok')||x.startsWith('hayır, eksiklik')) return'bad';
+  if(x.includes('eksiklik')||x.includes('teknik')||x.includes('kontrol edilemedi')) return'warn';
+  if(x.startsWith('uygun')&&!x.includes('değil')) return'ok';
+  if(x.startsWith('evet')) return'ok';
+  if(x.includes('uygun)')) return'ok'; // "Hayır, su yok (Uygun)"
+  if(x.includes('uygun değil)')) return'bad';
+  return'muted';
+}
+function pill(v){return `<span class="pill ${state(v)}">${esc(v||'Belirtilmemiş')}</span>`}
+
+function photoLinks(v){
+  return clean(v).split(/\s*;\s*/).filter(x=>/^https?:/i.test(x))
+    .map(u=>`<a class="photo" href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" onerror="this.remove();this.nextElementSibling.style.display='flex'"/><span style="display:none">Fotoğraf / ek aç</span></a>`).join('');
+}
+
+const groups=[
+  ['1. Varlık, kapasite ve yedekleme',[
+    ['Yangın pompası mevcut mu?',['Bu alanda yangın pompası mevcut mu'],['Pompa yoksa veya kontrol edilemediyse açıklama'],['Pompa alanının fotoğrafını']],
+    ['Ana pompa adedi',['Sistemde kaç ana pompa var'],['Pompa sayısı neden belirlenemedi'],[]],
+    ['Tek pompa yedeği',['Tek pompa varsa aynı kapasitede yedek pompa var mı'],['Yedek pompa eksikliği'],['Yedek pompa / pompa etiket fotoğrafı']],
+    ['%50 yedekleme',["Birden fazla pompa varsa toplam kapasitenin en az %50"],['%50 yedekleme açıklaması'],['Pompa kapasite etiketi fotoğrafı']]
+  ]],
+  ['2. Performans, tahrik ve enerji',[
+    ['Teknik etiket / plaka',['Pompa üzerinde teknik etiket/plaka okunabilir mi'],['Etiket/plaka açıklaması'],['Etiket / plaka fotoğrafı']],
+    ['Test / bakım performansı',['Pompanın test/bakım kaydında performans uygunluğu'],['Test kaydı açıklaması'],[]],
+    ['Yedek dizel motorlu pompa',['Yedek dizel motor tahrikli pompa var mı'],['Dizel pompa durumu açıklaması'],[]],
+    ['Dizel yoksa bağımsız enerji',['Dizel yedek pompa yoksa enerji beslemesi bağımsız'],['Enerji beslemesi açıklaması'],[]]
+  ]],
+  ['3. Yardımcı elemanlar',[
+    ['Otomatik hava boşaltma valfi',['Otomatik hava boşaltma valfi mevcut mu'],['Hava boşaltma valfi açıklaması'],['Hava boşaltma valfi fotoğ']],
+    ['Sirkülasyon rahatlama valfi',['Sirkülasyon rahatlama valfi mevcut mu'],['Sirkülasyon valfi açıklaması'],['Sirkülasyon valfi fotoğrafı']]
+  ]],
+  ['4. Kumanda panosu ve basınç anahtarı',[
+    ['Her pompa için ayrı kumanda panosu',['Her pompa için ayrı kumanda panosu var mı'],['Kumanda panosu açıklaması'],[]],
+    ['Pano kilidi',['Kumanda panosu kilitli mi'],['Pano kilit açıklaması'],['Pano fotoğrafı']],
+    ['Faz hata göstergeleri',['Panoda faz hatası / faz sırası hatası'],['Uyarı göstergesi açıklaması'],[]],
+    ['Ana giriş devre kesicisi erişimi',['Pano ana giriş devre kesicisine kilit açılmadan'],['Devre kesici erişim açıklaması'],[]],
+    ['Ayrı basınç anahtarı',['Her pompa için ayrı basınç anahtarı var mı'],['Basınç anahtarı açıklaması'],[]],
+    ['Basınç anahtarı ayar kilidi',['Basınç anahtarının ayarları kilitlenebilir'],['Basınç anahtarı kilit açıklaması'],[]],
+    ['Otomatik / yarı otomatik kontrol',['Pompa kontrolü otomatik veya yarı otomatik'],['Çalışma modu açıklaması'],[]]
+  ]],
+  ['5. Pompa odası ve çevresel koşullar',[
+    ['Elektrik motorlu pompa',['Pompa odasında elektrik motorlu pompa var mı'],[],[]],
+    ['Elektrikli pompa odası sıcaklığı',['Elektrik motorlu pompa bulunan odada sıcaklık'],['Sıcaklık (elektrik motorlu) açıklaması'],[]],
+    ['Dizel motorlu pompa',['Pompa odasında dizel motorlu pompa var mı'],[],[]],
+    ['Dizel pompa odası sıcaklığı',['Dizel motorlu pompa bulunan odada sıcaklık'],['Sıcaklık (dizel motorlu) açıklaması'],[]],
+    ['Acil aydınlatma',['Pompa odasında acil aydınlatma var mı'],['Acil aydınlatma açıklaması'],[]],
+    ['Acil aydınlatma testi',['Acil aydınlatma test edildiğinde çalışıyor mu'],['Acil aydınlatma test açıklaması'],[]],
+    ['Zeminde su birikmesi',['Zeminde su birikmesi var mı'],['Su birikmesi açıklaması'],['Su birikmesi fotoğrafı']],
+    ['Drenaj gideri',['Drenaj gideri açık ve çalışır'],['Drenaj açıklaması'],[]],
+    ['Oda erişimi ve düzeni',['Pompa odası düzenli ve erişilebilir mi'],['Erişim/düzen açıklaması'],['Pompa odası genel fotoğrafı']]
+  ]],
+  ['6. Kayıtlar ve sonuç',[
+    ['Son bakım kaydı',['Son bakım kaydı mevcut mu'],['Son bakım tarihi'],[]],
+    ['Son test kaydı',['Son test kaydı mevcut mu'],['Son test tarihi'],[]],
+    ['Önceki kritik eksiklikler giderildi mi',['Önceki kontrollerde tespit edilen kritik eksiklikler giderilmiş mi'],['Giderilmeyen eksiklik açıklaması'],[]],
+    ['Genel değerlendirme',['Genel değerlendirme'],[],[]],
+    ['Kritik eksiklik',['Kritik eksiklik var mı'],['Kritik eksikliği açıklayınız'],[]]
+  ]]
+];
+
+function make(raw,i){
+  let r={raw,i,
+    facility:find(raw,['Soru ']),
+    date:find(raw,['Kontrol Tarihi']),
+    inspector:find(raw,['Kontrolü yapanlar']),
+    location:find(raw,['Yangın Pompalarının bina içerisinde bulunduğu konumları']),
+    count:find(raw,['Sistemde kaç ana pompa var']),
+    electric:find(raw,['Pompa odasında elektrik motorlu pompa var mı']),
+    diesel:find(raw,['Pompa odasında dizel motorlu pompa var mı']),
+    backup:find(raw,['Yedek dizel motor tahrikli pompa var mı']),
+    overall:find(raw,['Genel değerlendirme']),
+    critical:find(raw,['Kritik eksiklik var mı'])
+  };
+  r.e=isYes(r.electric);r.d=isYes(r.diesel);r.b=isYes(r.backup);
+  r.two=/2|daha fazla/i.test(r.count);
+  r.compliance=calcCompliance(r);
+  return r;
+}
+
+function combo(r){
+  if(r.e&&r.d)return '<span class="tag">⚡ Elektrik</span><span class="tag d">🛢 Dizel</span>';
+  if(r.e)return '<span class="tag">⚡ Elektrik</span>';
+  if(r.d)return '<span class="tag d">🛢 Dizel</span>';
+  return '<span class="tag">Belirtilmemiş</span>';
+}
+
+function filtered(){
+  let f=norm($('fac').value),s=norm($('stat').value),c=$('combo').value,q=norm($('search').value);
+  return data.filter(r=>{
+    if(f&&norm(r.facility)!==f)return false;
+    if(s&&!norm(r.overall).includes(s))return false;
+    if(c==='both'&&!(r.e&&r.d))return false;
+    if(c==='electricOnly'&&(!r.e||r.d))return false;
+    if(c==='dieselOnly'&&(!r.d||r.e))return false;
+    if(c==='backup'&&!r.b)return false;
+    if(c==='twoPlus'&&!r.two)return false;
+    if(c==='one'&&!/^1$/.test(norm(r.count)))return false;
+    if(c==='unknown'&&(r.e||r.d))return false;
+    return !q||norm([r.facility,r.location,r.inspector].join(' ')).includes(q);
+  });
+}
+
+function avgCompliance(rows){
+  let vals=rows.map(r=>r.compliance).filter(x=>x!==null);
+  return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):null;
+}
+
+function render(){
+  let a=filtered(),n=pred=>a.filter(pred).length;
+  let avgC=avgCompliance(a);
+  let avgCStr=avgC!==null?'%'+avgC:'—';
+  let avgCColor=avgC!==null?complianceColor(avgC):'#61758a';
+  $('kpirow').innerHTML=`
+    <div class="kpi"><div class="l">Filtrelenen tesis</div><div class="v">${a.length}</div></div>
+    <div class="kpi g"><div class="l">Genel olarak uygun</div><div class="v">${n(r=>norm(r.overall).includes('uygun')&&!norm(r.overall).includes('uygun değil'))}</div></div>
+    <div class="kpi a"><div class="l">Eksiklik / teknik inceleme</div><div class="v">${n(r=>/eksiklik|teknik/.test(norm(r.overall)))}</div></div>
+    <div class="kpi r"><div class="l">Kritik eksiklik</div><div class="v">${n(r=>norm(r.overall).includes('kritik')||isYes(r.critical))}</div></div>
+    <div class="kpi"><div class="l">Elektrik + dizel birlikte</div><div class="v">${n(r=>r.e&&r.d)}</div></div>
+    <div class="kpi a"><div class="l">2+ ana pompalı tesis</div><div class="v">${n(r=>r.two)}</div></div>
+    <div class="kpi p" style="grid-column:span 2">
+      <div class="l">Ortalama Madde 93 Uyum Oranı (ağırlıklı)</div>
+      <div class="v" style="color:${avgCColor}">${avgCStr}</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${avgC||0}%;background:${avgCColor}"></div></div>
+      <div class="sub2">Yanıtlanan maddeler üzerinden; kritik maddeler 2× ağırlıklı</div>
+    </div>`;
+  $('rows').innerHTML=a.map(r=>{
+    let cp=r.compliance;
+    let cpCell=cp!==null?`<span class="pill ${cp>=80?'ok':cp>=60?'warn':'bad'}">%${cp}</span>`:'<span class="pill muted">—</span>';
+    return `<tr class="row" data-i="${r.i}"><td><b>${esc(r.facility||'Belirtilmemiş')}</b><br><span class="hint">${esc(r.inspector)}</span></td><td>${esc(r.date)}</td><td>${esc(r.location)}</td><td>${esc(r.count||'Belirlenemedi')}</td><td>${combo(r)}</td><td>${pill(r.backup)}</td><td>${cpCell}</td><td>${pill(r.overall)}</td><td>${pill(r.critical)}</td></tr>`;
+  }).join('')||'<tr><td colspan="9" class="empty">Bu filtrelerde kayıt bulunamadı.</td></tr>';
+  document.querySelectorAll('.row').forEach(x=>x.onclick=()=>openDetail(data.find(r=>r.i==x.dataset.i)));
+}
+
+function sectionCompliance(r,checks){
+  let totalW=0,okW=0;
+  for(let [,ans,,] of checks){
+    let v=find(r.raw,ans);
+    let cq=CQ.find(([t])=>ans.some(a=>norm(a).includes(norm(t))));
+    if(!cq)continue;
+    let result=checkCompliance(v,cq[1]);
+    if(result===null)continue;
+    totalW+=cq[2];
+    if(result)okW+=cq[2];
+  }
+  return totalW>0?{ok:okW,total:totalW,pct:Math.round(okW/totalW*100)}:null;
+}
+
+function openDetail(r){
+  let content=groups.map(([title,checks])=>{
+    let cs=checks.map(([q,ans,notes,photos])=>{
+      let a=find(r.raw,ans),n=find(r.raw,notes),p=photos.map(x=>photoLinks(find(r.raw,[x]))).join('');
+      if(!a&&!n&&!p)return'';
+      return `<div class="check"><div class="q">${esc(q)}</div><div class="answer">${pill(a)}</div>${n?`<div class="comment">${esc(n)}</div>`:''}${p?`<div class="photos">${p}</div>`:''}</div>`;
+    }).join('');
+    if(!cs)return'';
+    let sc=sectionCompliance(r,checks);
+    let sbadge=sc?`<span class="section-badge ${sc.pct>=80?'ok':sc.pct>=60?'warn':'bad'}">%${sc.pct} uyum (${sc.ok}/${sc.total})</span>`:'';
+    return `<section class="section"><h3>${esc(title)}${sbadge}</h3>${cs}</section>`;
+  }).join('');
+  let cp=r.compliance;
+  let cpColor=cp!==null?complianceColor(cp):'#61758a';
+  $('modal').innerHTML=`<div class="modalbox">
+    <div class="modalhead"><div><h2>${esc(r.facility||'Tesis detay raporu')}</h2><div class="sub">Madde 93 soru grupları, yanıtlar, açıklamalar ve ekler</div></div><button class="close" onclick="closeDetail()">Kapat ×</button></div>
+    <div class="meta">
+      <div>Kontrol tarihi<b>${esc(r.date||'—')}</b></div>
+      <div>Kontrolü yapan<b>${esc(r.inspector||'—')}</b></div>
+      <div>Pompaların konumu<b>${esc(r.location||'—')}</b></div>
+      <div>Genel değerlendirme<b>${pill(r.overall)}</b></div>
+    </div>
+    ${cp!==null?`<div class="compliance-bar">
+      <div class="cb-label">Madde 93 Uyum Oranı (ağırlıklı)</div>
+      <div class="cb-track"><div class="cb-fill" style="width:${cp}%;background:${cpColor}"></div></div>
+      <div class="cb-nums">
+        <span>${cp>=80?'✅ Yüksek uyum':cp>=60?'⚠️ Orta uyum':'❌ Düşük uyum'} — %${cp}</span>
+        <span>${cp>=80?'Genel olarak yönetmeliğe uygun':cp>=60?'Bazı eksiklikler mevcut':'Kritik eksiklikler giderilmeli'}</span>
+      </div>
+    </div>`:''}
+    <div class="sections">${content||'<div class="empty">Bu tesis için eşleşen detay yanıtı bulunamadı.</div>'}</div>
+  </div>`;
+  $('modal').classList.remove('hidden');
+}
+function closeDetail(){$('modal').classList.add('hidden')}
+
+function load(file){
+  let rd=new FileReader();
+  rd.onload=e=>{
+    try{
+      let wb=XLSX.read(e.target.result,{type:'array',raw:false});
+      let raw=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:false});
+      data=raw.filter(x=>clean(find(x,['Soru ']))).map(make);
+      if(!data.length)throw Error('Tesis kayıtları bulunamadı. "Soru" sütununun olduğu çalışma sayfasını kullanın.');
+      $('fac').innerHTML='<option value="">Tüm tesisler</option>'+[...new Set(data.map(x=>x.facility))].filter(Boolean).sort((a,b)=>a.localeCompare(b,'tr')).map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
+      $('up').classList.add('hidden');$('app').classList.remove('hidden');
+      $('info').textContent=data.length+' tesis kaydı yüklendi';
+      $('err').classList.add('hidden');render();
+    }catch(x){$('err').textContent='Excel okunamadı: '+x.message;$('err').classList.remove('hidden')}
+  };
+  rd.readAsArrayBuffer(file);
+}
+$('file').onchange=e=>e.target.files[0]&&load(e.target.files[0]);
+let up=$('up');
+['dragover','dragenter'].forEach(x=>up.addEventListener(x,e=>{e.preventDefault();up.style.background='#e7f2fc'}));
+['dragleave','drop'].forEach(x=>up.addEventListener(x,e=>{e.preventDefault();up.style.background='#fff'}));
+up.addEventListener('drop',e=>{e.preventDefault();e.dataTransfer.files[0]&&load(e.dataTransfer.files[0])});
+['fac','stat','combo'].forEach(x=>$(x).onchange=render);
+$('search').oninput=render;
+$('change').onclick=()=>{$('app').classList.add('hidden');$('up').classList.remove('hidden');$('file').value='';$('info').textContent=''};
+$('csv').onclick=()=>{
+  let out=[['Tesis','Kontrol tarihi','Konum','Ana pompa','Elektrik motorlu','Dizel motorlu','Yedek dizel','Uyum oranı','Genel değerlendirme','Kritik eksiklik'],
+    ...filtered().map(r=>[r.facility,r.date,r.location,r.count,r.electric,r.diesel,r.backup,r.compliance!==null?'%'+r.compliance:'—',r.overall,r.critical])];
+  let b=new Blob(['\ufeff'+out.map(x=>x.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(';')).join('\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');
+  a.href=URL.createObjectURL(b);a.download='yangin_pompasi_yonetici_ozeti.csv';a.click();
+};
+</script></body></html>

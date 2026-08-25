@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -47,8 +47,17 @@ const normalizePriority = (p: string) => {
   return p || 'Belirtilmedi';
 };
 
-export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boolean }) {
+export default function IsgKurulAnalytics({ isPublic = false }: { isPublic?: boolean }) {
+  const [ticker, setTicker] = useState(0);
+  
+  useEffect(() => {
+    const handleFacilityChange = () => setTicker(t => t + 1);
+    window.addEventListener('facilityChanged', handleFacilityChange);
+    return () => window.removeEventListener('facilityChanged', handleFacilityChange);
+  }, []);
+
   const activeFacilityId = localStorage.getItem('activeFacilityId') || '';
+
   const [searchParams, setSearchParams] = useSearchParams();
   const urlOpenTerminBucket = searchParams.get('openTermin') || 'all';
   const urlClosedTerminBucket = searchParams.get('closedTermin') || 'all';
@@ -183,7 +192,8 @@ export default function IsgKurulDashboard({ isPublic = false }: { isPublic?: boo
             meetingId: m.id,
             meetingDate: new Date(m.meetingDate),
             meetingNo: m.meetingNo,
-            year: new Date(m.meetingDate).getFullYear().toString()
+            year: new Date(m.meetingDate).getFullYear().toString(),
+            facilityId: m.facilityId
           });
         });
       }

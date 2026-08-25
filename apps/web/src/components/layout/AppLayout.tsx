@@ -249,7 +249,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     moduleName = 'İnşaat ve Renovasyon Yönetimi';
   } else if (path.startsWith('/renovation-report')) {
     navItems = renovationReportNavItems;
-    moduleName = 'İnşaat Renovasyon Teslim Raporu';
+    moduleName = 'Entegre Risk ve Güvenlik Denetimi';
   } else if (path.startsWith('/checklists')) {
     navItems = checklistNavItems(!!hasAdminAccess, !!hasSpecialistAccess);
     moduleName = 'İSG Kontrol Listeleri';

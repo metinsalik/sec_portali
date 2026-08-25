@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,6 +21,11 @@ const normalizePriority = (p: string) => {
 const API = import.meta.env.VITE_API_URL || '';
 
 export default function IsgKurulDecisions() {
+  const { user } = useAuth();
+  const hasAdminAccess = user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management');
+  const hasSpecialistAccess = user?.roles?.includes('specialist');
+  const userDepartment = user?.department || '';
+
   const selectedFacilityId = localStorage.getItem('activeFacilityId') || '';
   const token = localStorage.getItem('token');
   const navigate = useNavigate();
@@ -41,11 +47,13 @@ export default function IsgKurulDecisions() {
   });
 
   const { data: departments = [] } = useQuery<any[]>({
-    queryKey: ['departments'],
+    queryKey: ['ohs-board-departments', selectedFacilityId],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/settings/definitions/departments`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!selectedFacilityId) return [];
+      const res = await fetch(`${API}/api/operations/board/departments?facilityId=${selectedFacilityId}`, { headers: { Authorization: `Bearer ${token}` } });
       return res.json();
-    }
+    },
+    enabled: !!selectedFacilityId
   });
 
   const { data: facilities = [] } = useQuery<any[]>({

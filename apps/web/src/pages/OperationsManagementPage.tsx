@@ -169,7 +169,7 @@ export default function OperationsManagementPage() {
             </div>
           )}
 
-          {/* Card 2: İnşaat Renovasyon Teslim Raporu */}
+          {/* Card 2: Entegre Risk ve Güvenlik Denetimi */}
           {(hasAdminAccess || user?.modules?.includes('RENOVATION_REPORT')) && (
             <div
               onClick={() => navigate('/renovation-report')}
@@ -180,7 +180,7 @@ export default function OperationsManagementPage() {
                   <span className="material-symbols-outlined text-[28px]">assignment_turned_in</span>
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">İnşaat Renovasyon Teslim Raporu</h2>
+                  <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">Entegre Risk ve Güvenlik Denetimi</h2>
                   <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
                     İnşaat ve renovasyon alanlarının operasyonel teslim raporları ve takibi.
                   </p>
@@ -196,7 +196,7 @@ export default function OperationsManagementPage() {
                   <div className="w-14 h-14 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center mb-6 text-[#2e7d32] dark:text-emerald-400 transition-transform group-hover:scale-110">
                     <span className="material-symbols-outlined text-[32px]">assignment_turned_in</span>
                   </div>
-                  <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">İnşaat Renovasyon Teslim Raporu</h3>
+                  <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">Entegre Risk ve Güvenlik Denetimi</h3>
                   <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
                     İnşaat ve renovasyon alanlarının operasyonel teslim raporları ve takibi.
                   </p>

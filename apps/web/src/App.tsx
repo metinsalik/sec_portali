@@ -13,8 +13,11 @@ import LoginPage from './pages/Login';
 import PortalPage from './pages/PortalPage';
 import OperationsManagementPage from './pages/OperationsManagementPage';
 import SafetyManagementPage from './pages/SafetyManagementPage';
-import IsgKurulDashboard from './pages/isg-kurul/IsgKurulDashboard';
-import IsgKurulDashboardWrapper from './components/IsgKurulDashboardWrapper';
+import IsgKurulHome from './pages/isg-kurul/IsgKurulHome';
+import IsgKurulAnalytics from './pages/isg-kurul/IsgKurulAnalytics';
+
+import IsgKurulHomeWrapper from './components/IsgKurulHomeWrapper';
+import IsgKurulAnalyticsWrapper from './components/IsgKurulAnalyticsWrapper';
 import IsgKurulSettings from './pages/isg-kurul/IsgKurulSettings';
 import IsgKurulMeetings from './pages/isg-kurul/IsgKurulMeetings';
 import IsgKurulDecisions from './pages/isg-kurul/IsgKurulDecisions';
@@ -22,7 +25,7 @@ import IsgKurulMeetingDetails from './pages/isg-kurul/IsgKurulMeetingDetails';
 import IsgKurulDecisionDetails from './pages/isg-kurul/IsgKurulDecisionDetails';
 import ProfilePage from './pages/ProfilePage';
 import RenovationReportPage from './pages/build_management/RenovationReportPage';
-import RenovationReportSettings from './pages/build_management/RenovationReportSettings';
+import FacilityActionsPage from './pages/build_management/FacilityActionsPage';
 import NotificationPage from './pages/notifications/NotificationPage';
 
 // Settings
@@ -266,10 +269,9 @@ function App() {
                     path="/isg-kurul"
                     element={<Navigate to="/isg-kurul/dashboard" replace />}
                   />
-                  <Route
-                    path="/isg-kurul/dashboard"
-                    element={<IsgKurulDashboardWrapper />}
-                  />
+                  <Route path="/isg-kurul/dashboard" element={<Navigate to="/isg-kurul/home" replace />} />
+                  <Route path="/isg-kurul/home" element={<IsgKurulHomeWrapper />} />
+                  <Route path="/isg-kurul/analytics" element={<IsgKurulAnalyticsWrapper />} />
                   <Route
                     path="/isg-kurul/meetings"
                     element={
@@ -311,7 +313,7 @@ function App() {
                     }
                   />
 
-                  {/* ── İNŞAAT RENOVASYON TESLİM RAPORU ──────────── */}
+                  {/* ── ENTEGRE RİSK VE GÜVENLİK DENETİMİ ──────────── */}
                   <Route
                     path="/renovation-report"
                     element={
@@ -324,7 +326,15 @@ function App() {
                     path="/renovation-report/settings"
                     element={
                       <ProtectedRoute>
-                        <AppLayout><RenovationReportSettings /></AppLayout>
+                        <AppLayout><RenovationReportPage /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/facility-actions"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><FacilityActionsPage /></AppLayout>
                       </ProtectedRoute>
                     }
                   />

@@ -28,6 +28,8 @@ interface BoardMember {
   name: string;
   departmentId: number;
   department?: Department;
+  isDocumentUploaded?: boolean;
+  documentUrl?: string;
 }
 
 const BOARD_ROLES = ["Kurul Başkanı", "Kurul Sekreteri", "Kurul Üyesi", "Destek Elemanı"];
@@ -99,13 +101,14 @@ export default function IsgKurulSettings() {
     enabled: hasAdminAccess,
   });
 
-  const { data: departments = [], isLoading: deptLoading } = useQuery<Department[]>({
-    queryKey: ['settings-departments'],
+  const { data: departments = [], isLoading: deptLoading } = useQuery({
+    queryKey: ['settings-departments', selectedFacilityId],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/settings/definitions/departments`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API}/api/operations/board/departments?facilityId=${selectedFacilityId}`, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) throw new Error('Departmanlar alınamadı');
       return res.json();
     },
+    enabled: !!selectedFacilityId
   });
 
   const { data: facilities = [] } = useQuery<any[]>({
@@ -189,28 +192,28 @@ export default function IsgKurulSettings() {
   // Department Mutations
   const saveDepartment = useMutation({
     mutationFn: async () => {
-      const url = deptModal.edit ? `${API}/api/settings/definitions/departments/${deptModal.edit.id}` : `${API}/api/settings/definitions/departments`;
+      const url = deptModal.edit ? `${API}/api/operations/board/departments/${deptModal.edit.id}` : `${API}/api/operations/board/departments`;
       const res = await fetch(url, {
         method: deptModal.edit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: deptName })
+        body: JSON.stringify({ name: deptName, facilityId: selectedFacilityId })
       });
       if (!res.ok) throw new Error();
       return res.json();
     },
-    onSuccess: () => { toast.success('Departman kaydedildi'); queryClient.invalidateQueries({ queryKey: ['settings-departments'] }); setDeptModal({ open: false }); setDeptName(''); },
+    onSuccess: () => { toast.success('Sorumlu Birim kaydedildi'); queryClient.invalidateQueries({ queryKey: ['settings-departments', selectedFacilityId] }); setDeptModal({ open: false }); setDeptName(''); },
     onError: () => toast.error('İşlem başarısız')
   });
 
   const deleteDepartment = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await fetch(`${API}/api/settings/definitions/departments/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API}/api/operations/board/departments/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) throw new Error();
     },
     onSuccess: () => {
-      toast.success('Bölüm/Departman silindi');
+      toast.success('Sorumlu Birim silindi');
       setDeleteConfirm({ open: false, type: 'department', id: null });
-      queryClient.invalidateQueries({ queryKey: ['settings-departments'] });
+      queryClient.invalidateQueries({ queryKey: ['settings-departments', selectedFacilityId] });
     },
     onError: () => toast.error('Hata oluştu')
   });
@@ -340,6 +343,22 @@ export default function IsgKurulSettings() {
     onError: () => toast.error('Silme başarısız')
   });
 
+  const uploadMemberDocument = useMutation({
+    mutationFn: async ({ memberId, file }: { memberId: number, file: File }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${API}/api/operations/board/members/${memberId}/document`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      if (!res.ok) throw new Error();
+      return res.json();
+    },
+    onSuccess: () => { toast.success('Atama belgesi yüklendi'); queryClient.invalidateQueries({ queryKey: ['board-members'] }); },
+    onError: () => toast.error('Belge yükleme başarısız')
+  });
+
   const handleEditMember = (member: BoardMember) => {
     setMemberForm({
       name: member.name,
@@ -372,7 +391,7 @@ export default function IsgKurulSettings() {
             İSG Kurul Üyeleri
           </TabsTrigger>
           {hasAdminAccess && <TabsTrigger value="categories" className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">Kategoriler</TabsTrigger>}
-          {hasAdminAccess && <TabsTrigger value="departments" className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">Sorumlu Birimler</TabsTrigger>}
+          <TabsTrigger value="departments" className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">Sorumlu Birimler</TabsTrigger>
           {hasAdminAccess && <TabsTrigger value="import" className="data-[state=active]:bg-green-50 data-[state=active]:text-green-700">Excel'den Aktar</TabsTrigger>}
         </TabsList>
 
@@ -427,6 +446,18 @@ export default function IsgKurulSettings() {
                               </div>
                             </div>
                             <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20" title="Belge Yükle" onClick={() => {
+                                const input = document.createElement('input');
+                                input.type = 'file';
+                                input.accept = 'application/pdf,image/*';
+                                input.onchange = (e) => {
+                                  const file = (e.target as HTMLInputElement).files?.[0];
+                                  if (file) uploadMemberDocument.mutate({ memberId: member.id, file });
+                                };
+                                input.click();
+                              }}>
+                                {member.isDocumentUploaded ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Upload className="w-4 h-4" />}
+                              </Button>
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20" onClick={() => handleEditMember(member)}>
                                 <Edit className="w-4 h-4" />
                               </Button>
@@ -531,7 +562,6 @@ export default function IsgKurulSettings() {
           </TabsContent>
         )}
 
-        {hasAdminAccess && (
           <TabsContent value="departments" className="space-y-6 outline-none">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-[#2c3135] p-4 rounded-xl border border-slate-200/80 dark:border-[#73787c]/30 gap-4 shadow-sm">
               <div>
@@ -586,7 +616,6 @@ export default function IsgKurulSettings() {
               )}
             </div>
           </TabsContent>
-        )}
 
         {hasAdminAccess && (
           <TabsContent value="import" className="space-y-6 outline-none">

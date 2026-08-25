@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -55,6 +57,8 @@ export default function IsgKurulMeetingDetails() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const token = localStorage.getItem('token');
+  const { user } = useAuth();
+  const hasAdminAccess = user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management');
 
   const [isAddDecisionOpen, setIsAddDecisionOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -78,6 +82,39 @@ export default function IsgKurulMeetingDetails() {
   });
 
   // Fetch Meeting Details
+
+  const { data: rolloverDecisions, isLoading: isLoadingRollover } = useQuery({
+    queryKey: ['ohs-board-rollover-decisions', id],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/operations/board/meetings/${id}/rollover-decisions`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Devreden kararlar yüklenemedi');
+      return res.json();
+    }
+  });
+
+
+  const markAsCompletedMutation = useMutation({
+    mutationFn: async (decisionId: string) => {
+      const res = await fetch(`${API}/api/operations/board/decisions/${decisionId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: 'Tamamlandı' })
+      });
+      if (!res.ok) throw new Error('Karar güncellenemedi');
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success('Karar tamamlandı olarak işaretlendi');
+      queryClient.invalidateQueries({ queryKey: ['ohs-board-rollover-decisions', id] });
+    },
+    onError: (error) => toast.error(error.message)
+  });
+
   const { data: meeting, isLoading } = useQuery({
     queryKey: ['ohs-board-meeting-details', id],
     queryFn: async () => {
@@ -111,12 +148,13 @@ export default function IsgKurulMeetingDetails() {
 
   // Fetch Departments
   const { data: departments = [] } = useQuery({
-    queryKey: ['settings-departments'],
+    queryKey: ['settings-departments', meeting?.facilityId],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/settings/definitions/departments`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API}/api/operations/board/departments?facilityId=${meeting?.facilityId}`, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) throw new Error('Departmanlar alınamadı');
       return res.json();
-    }
+    },
+    enabled: !!meeting?.facilityId
   });
 
   const selectedCategory = categories.find((c: any) => c.id.toString() === formData.categoryId);
@@ -141,6 +179,40 @@ export default function IsgKurulMeetingDetails() {
         decisionText: '', categoryId: '', subCategoryId: '', departmentId: '',
         priority: 'Orta', status: 'Başlamadı', dueDateType: 'DATE', dueDate: '', periodicity: '', remarks: ''
       });
+    },
+    onError: (error) => toast.error(error.message)
+  });
+
+  // Send for Approval Mutation
+  const sendApprovalMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`${API}/api/operations/board/meetings/${id}/send-approval`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Onaya gönderilemedi');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ohs-board-meeting-details', id] });
+      toast.success('Kararlar onaya gönderildi');
+    },
+    onError: (error) => toast.error(error.message)
+  });
+
+  // Approve Meeting Mutation
+  const approveMeetingMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`${API}/api/operations/board/meetings/${id}/approve`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Toplantı onaylanamadı');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ohs-board-meeting-details', id] });
+      toast.success('Toplantı kararları onaylandı');
     },
     onError: (error) => toast.error(error.message)
   });
@@ -282,20 +354,106 @@ export default function IsgKurulMeetingDetails() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => {
-            setEditingIndex(null);
-            setFormData({
-              decisionText: '', categoryId: '', subCategoryId: '', departmentId: '',
-              priority: 'Orta', status: 'Başlamadı', dueDateType: 'DATE', dueDate: '', periodicity: '', remarks: ''
-            });
-            setIsAddDecisionOpen(true);
-          }} className="gap-2">
-            <Plus className="w-4 h-4" /> Yeni Karar Ekle
-          </Button>
+          {(meeting.status === 'Taslak' || meeting.status === 'Gerçekleşti') && (
+             <Button variant="outline" className="border-amber-500 text-amber-600 hover:bg-amber-50" onClick={() => sendApprovalMutation.mutate()} disabled={sendApprovalMutation.isPending || decisions.length === 0}>
+               Onaya Gönder
+             </Button>
+          )}
+
+          {meeting.status === 'Onaya Gönderildi' && hasAdminAccess && (
+             <Button variant="outline" className="border-green-500 text-green-600 hover:bg-green-50" onClick={() => approveMeetingMutation.mutate()} disabled={approveMeetingMutation.isPending}>
+               Kararları Onayla
+             </Button>
+          )}
+
+          {(meeting.status === 'Taslak' || meeting.status === 'Gerçekleşti') && (
+            <Button onClick={() => {
+              setEditingIndex(null);
+              setFormData({
+                decisionText: '', categoryId: '', subCategoryId: '', departmentId: '',
+                priority: 'Orta', status: 'Başlamadı', dueDateType: 'DATE', dueDate: '', periodicity: '', remarks: ''
+              });
+              setIsAddDecisionOpen(true);
+            }} className="gap-2">
+              <Plus className="w-4 h-4" /> Yeni Karar Ekle
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Decisions List */}
+      
+      <Tabs defaultValue="new" className="space-y-6">
+        <TabsList className="bg-white dark:bg-slate-900 border p-1 rounded-xl">
+          <TabsTrigger value="attendance" className="gap-2 rounded-lg data-[state=active]:bg-blue-50 dark:data-[state=active]:bg-blue-900 data-[state=active]:text-blue-700">Yoklama ve Gündem</TabsTrigger>
+          <TabsTrigger value="rollover" className="gap-2 rounded-lg data-[state=active]:bg-amber-50 dark:data-[state=active]:bg-amber-900 data-[state=active]:text-amber-700">Devreden Kararlar</TabsTrigger>
+          <TabsTrigger value="new" className="gap-2 rounded-lg data-[state=active]:bg-green-50 dark:data-[state=active]:bg-green-900 data-[state=active]:text-green-700">Toplantı Kararları</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="attendance" className="outline-none">
+          <Card className="bg-muted/30 border-dashed">
+            <CardContent className="p-12 text-center text-muted-foreground">
+              Yoklama formu eklenecek
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="rollover" className="outline-none">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">Devam Eden Kararlar</h2>
+            <p className="text-sm text-muted-foreground">Önceki toplantılardan aktarılan ve henüz kapanmamış kararlar.</p>
+          </div>
+          {isLoadingRollover ? (
+            <div className="flex justify-center py-10"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+          ) : !rolloverDecisions || rolloverDecisions.length === 0 ? (
+            <Card className="bg-muted/30 border-dashed">
+              <CardContent className="p-12 text-center text-muted-foreground">
+                <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Önceki toplantılardan devreden (kapanmamış) karar bulunmuyor.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {rolloverDecisions.map((decision: any, index: number) => (
+                <Card key={decision.id} className="overflow-hidden border-l-4" style={{ borderLeftColor: '#fbbf24' }}>
+                  <div className="border-b bg-muted/10 px-4 py-3 flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-sm bg-primary/10 text-primary px-2 py-1 rounded">
+                        Eski Karar: {decision.decisionNumber}
+                      </span>
+                      <Badge className="border bg-amber-100 text-amber-800 border-amber-200" variant="outline">
+                        {decision.status}
+                      </Badge>
+                      <Badge className="border bg-slate-100" variant="outline">
+                        {decision.meeting?.meetingNo} Tarihli
+                      </Badge>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                        onClick={() => markAsCompletedMutation.mutate(decision.id)}
+                        disabled={markAsCompletedMutation.isPending}
+                      >
+                        Tamamlandı İşaretle
+                      </Button>
+                    </div>
+                  </div>
+                  <CardContent className="p-4">
+                    <p className="text-sm font-medium whitespace-pre-wrap">{decision.decisionText}</p>
+                    <div className="mt-3 text-xs text-muted-foreground flex gap-4">
+                      <span><strong>Sorumlu:</strong> {decision.department?.name}</span>
+                      <span><strong>Kategori:</strong> {decision.category?.name}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="new" className="outline-none">
+{/* Decisions List */}
       <div className="space-y-4">
         {decisions.length === 0 ? (
           <Card className="bg-muted/30 border-dashed">
@@ -329,18 +487,22 @@ export default function IsgKurulMeetingDetails() {
                   }}>
                     <Maximize2 className="w-4 h-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600" onClick={(e) => {
-                    e.stopPropagation();
-                    openEdit(decision, index);
-                  }}>
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteIndex(index);
-                  }}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  {(meeting.status === 'Taslak' || meeting.status === 'Gerçekleşti') && !decision.sentForApprovalAt && decision.approvalStatus !== 'Onaylandı' && (
+                    <>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600" onClick={(e) => {
+                        e.stopPropagation();
+                        openEdit(decision, index);
+                      }}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteIndex(index);
+                      }}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
               <CardContent 
@@ -371,7 +533,11 @@ export default function IsgKurulMeetingDetails() {
         )}
       </div>
 
-      {/* Add/Edit Decision Dialog */}
+      
+        </TabsContent>
+      </Tabs>
+
+{/* Add/Edit Decision Dialog */}
       <Dialog open={isAddDecisionOpen} onOpenChange={setIsAddDecisionOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>

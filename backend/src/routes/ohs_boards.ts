@@ -1,6 +1,24 @@
 import { Router, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { authMiddleware, managementMiddleware, AuthRequest } from '../middleware/auth';
+import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(process.cwd(), 'uploads/isg_kurul');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname);
+  }
+});
+const upload = multer({ storage });
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -180,12 +198,14 @@ router.post('/bulk-import', async (req: AuthRequest, res: Response) => {
 
       // 4. Find or Create Department
       const deptName = item.departmentName || 'Belirtilmedi';
-      let department = await prisma.department.findFirst({
-        where: { name: { equals: deptName, mode: 'insensitive' } }
+      let department = await prisma.ohsBoardDepartment.findFirst({
+        where: { name: { equals: deptName, mode: 'insensitive' }, facilityId: facility?.id || '' }
       });
 
-      if (!department) {
-        department = await prisma.department.create({ data: { name: deptName } });
+      if (!department && facility?.id) {
+        department = await prisma.ohsBoardDepartment.create({ data: { name: deptName, facilityId: facility.id } });
+      } else if (!department && !facility?.id) {
+        continue; // Cannot create department without facility
       }
 
       // 5. Check if decision already exists
@@ -226,7 +246,7 @@ router.post('/bulk-import', async (req: AuthRequest, res: Response) => {
             decisionNumber,
             decisionText: item.decisionText,
             categoryId: category.id,
-            departmentId: department.id,
+            departmentId: String(department!.id),
             status,
             priority,
             dueDateType,
@@ -278,6 +298,64 @@ router.delete('/bulk-delete', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// GET /api/operations/board/departments
+router.get('/departments', async (req: AuthRequest, res: Response) => {
+  try {
+    const facilityId = req.query.facilityId;
+    if (!facilityId) {
+      return res.status(400).json({ error: 'facilityId is required' });
+    }
+    const departments = await prisma.ohsBoardDepartment.findMany({
+      where: { facilityId: String(facilityId) },
+      orderBy: { name: 'asc' }
+    });
+    res.json(departments);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/operations/board/departments
+router.post('/departments', managementMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { facilityId, name } = req.body;
+    if (!facilityId || !name) {
+      return res.status(400).json({ error: 'facilityId and name are required' });
+    }
+    const newDept = await prisma.ohsBoardDepartment.create({
+      data: { facilityId, name }
+    });
+    res.json(newDept);
+  } catch (error: any) {
+    if (error.code === 'P2002') return res.status(400).json({ error: 'Bu departman zaten ekli.' });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT /api/operations/board/departments/:id
+router.put('/departments/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { name } = req.body;
+    const updated = await prisma.ohsBoardDepartment.update({
+      where: { id: req.params.id },
+      data: { name }
+    });
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/operations/board/departments/:id
+router.delete('/departments/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    await prisma.ohsBoardDepartment.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET /api/operations/board/members - List members
 router.get('/members', async (req: AuthRequest, res: Response) => {
   try {
@@ -319,7 +397,7 @@ router.post('/members', async (req: AuthRequest, res: Response) => {
         boardRole,
         jobTitle,
         name,
-        departmentId: parseInt(String(departmentId))
+        departmentId: String(departmentId)
       },
       include: { department: true }
     });
@@ -338,19 +416,43 @@ router.put('/members/:id', async (req: AuthRequest, res: Response) => {
     const { boardRole, jobTitle, name, departmentId } = req.body;
 
     const member = await prisma.ohsBoardMember.update({
-      where: { id },
+      where: { id: Number(id) },
       data: {
-        boardRole,
-        jobTitle,
-        name,
-        departmentId: departmentId ? parseInt(String(departmentId)) : undefined
-      },
-      include: { department: true }
+        boardRole: boardRole,
+        jobTitle: jobTitle,
+        name: name,
+        departmentId: String(departmentId)
+      }
     });
-
     res.json(member);
   } catch (error) {
     console.error('Error updating member:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/operations/board/members/:memberId/document - Upload member appointment document
+router.post('/members/:memberId/document', upload.single('file'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { memberId } = req.params;
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'Dosya yüklenmedi.' });
+    }
+
+    const documentUrl = `/uploads/isg_kurul/${req.file.filename}`;
+    
+    const updatedMember = await prisma.ohsBoardMember.update({
+      where: { id: Number(memberId) },
+      data: {
+        isDocumentUploaded: true,
+        documentUrl
+      }
+    });
+
+    res.json(updatedMember);
+  } catch (error) {
+    console.error('Error uploading member document:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -367,7 +469,109 @@ router.delete('/members/:id', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// GET /api/operations/board/:id - Get Single Meeting
+// POST /api/operations/board/meetings/generate-plan
+router.post('/meetings/generate-plan', managementMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { facilityId, year } = req.body;
+    if (!facilityId || !year) {
+      return res.status(400).json({ error: 'facilityId and year are required' });
+    }
+
+    const facility = await prisma.facility.findUnique({ where: { id: facilityId } });
+    if (!facility) return res.status(404).json({ error: 'Facility not found' });
+
+    const dangerClass = facility.dangerClass || 'Az Tehlikeli';
+    let monthsToSchedule: number[] = [];
+    
+    if (dangerClass === 'Çok Tehlikeli') {
+      monthsToSchedule = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    } else if (dangerClass === 'Tehlikeli') {
+      monthsToSchedule = [2, 4, 6, 8, 10, 12]; // Every 2 months
+    } else {
+      monthsToSchedule = [3, 6, 9, 12]; // Every 3 months
+    }
+
+    // Check existing meetings for this year
+    const existing = await prisma.ohsBoardMeeting.findMany({
+      where: { facilityId }
+    });
+    
+    const existingMonths = new Set(existing.map(m => {
+       const d = new Date(m.meetingDate);
+       if (d.getFullYear() === Number(year)) return d.getMonth() + 1;
+       return -1;
+    }).filter(m => m !== -1));
+
+    let createdCount = 0;
+    for (const month of monthsToSchedule) {
+      if (!existingMonths.has(month)) {
+        const meetingDate = new Date(Number(year), month - 1, 15, 10, 0, 0);
+        await prisma.ohsBoardMeeting.create({
+          data: {
+            facilityId,
+            meetingDate,
+            meetingNo: `${year}-${month.toString().padStart(2, '0')}`,
+            status: 'Taslak'
+          }
+        });
+        createdCount++;
+      }
+    }
+
+    res.json({ message: `${createdCount} adet toplantı başarıyla planlandı.`, createdCount });
+  } catch (error) {
+    console.error('Error generating plan:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/operations/board/:id - Get specific meeting with decisions
+
+// GET /api/operations/board/meetings/:id/rollover-decisions - Get rollover decisions for a meeting's facility
+router.get('/meetings/:id/rollover-decisions', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // First find the meeting to get its facilityId
+    const meeting = await prisma.ohsBoardMeeting.findUnique({
+      where: { id }
+    });
+
+    if (!meeting) {
+      return res.status(404).json({ error: 'Meeting not found' });
+    }
+
+    // Now find all decisions from OTHER meetings in the same facility 
+    // that are NOT completed/cancelled (i.e., 'Başlamadı', 'Devam Ediyor', 'Sürekli Takip', 'Belirsiz')
+    const rolloverDecisions = await prisma.ohsBoardDecision.findMany({
+      where: {
+        meeting: {
+          facilityId: meeting.facilityId,
+          id: { not: id } // Exclude current meeting
+        },
+        status: {
+          in: ['Başlamadı', 'Devam Ediyor', 'Sürekli Takip', 'Belirsiz']
+        }
+      },
+      include: {
+        meeting: true,
+        category: true,
+        subCategory: true,
+        department: true,
+        actions: {
+          orderBy: { createdAt: 'desc' }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(rolloverDecisions);
+  } catch (error) {
+    console.error('Error fetching rollover decisions:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -414,7 +618,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
             decisionText: d.decisionText,
             categoryId: Number(d.categoryId),
             subCategoryId: d.subCategoryId ? Number(d.subCategoryId) : null,
-            departmentId: Number(d.departmentId),
+            departmentId: String(d.departmentId),
             priority: d.priority || 'Orta',
             status: d.status || 'Başlamadı',
             dueDateType: d.dueDateType || 'DATE',
@@ -496,7 +700,7 @@ router.post('/:id/decisions', async (req: AuthRequest, res: Response) => {
         decisionText: d.decisionText,
         categoryId: Number(d.categoryId),
         subCategoryId: d.subCategoryId ? Number(d.subCategoryId) : null,
-        departmentId: Number(d.departmentId),
+        departmentId: String(d.departmentId),
         priority: d.priority || 'Orta',
         status: d.status || 'Başlamadı',
         dueDateType: d.dueDateType || 'DATE',
@@ -518,13 +722,28 @@ router.put('/decisions/:decisionId', async (req: AuthRequest, res: Response) => 
     const { decisionId } = req.params;
     const d = req.body;
     
+    const existingDecision = await prisma.ohsBoardDecision.findUnique({
+      where: { id: decisionId },
+      include: { meeting: true }
+    });
+    
+    if (!existingDecision) {
+      return res.status(404).json({ error: 'Karar bulunamadı.' });
+    }
+
+    if (existingDecision.sentForApprovalAt || existingDecision.approvalStatus === 'Onaylandı') {
+      return res.status(403).json({ error: 'Bu karar onaya gönderildiği veya onaylandığı için düzenlenemez.' });
+    }
+    
+    if (existingDecision.meeting?.status === 'Gerçekleşti') {
+      const fortyEightHours = 48 * 60 * 60 * 1000;
+      if (Date.now() - new Date(existingDecision.meeting.updatedAt).getTime() > fortyEightHours) {
+        return res.status(403).json({ error: 'Toplantı gerçekleşeli 48 saatten fazla olduğu için karar düzenlenemez.' });
+      }
+    }
+
     // Validate due date
-    if (d.dueDate) {
-      const existingDecision = await prisma.ohsBoardDecision.findUnique({
-        where: { id: decisionId },
-        include: { meeting: true }
-      });
-      if (existingDecision?.meeting) {
+    if (d.dueDate && existingDecision.meeting) {
         const dueDate = new Date(d.dueDate);
         const meetingDate = new Date(existingDecision.meeting.meetingDate);
         dueDate.setHours(0,0,0,0);
@@ -532,7 +751,6 @@ router.put('/decisions/:decisionId', async (req: AuthRequest, res: Response) => 
         if (dueDate < meetingDate) {
           return res.status(400).json({ error: 'Termin tarihi toplantı tarihinden önce olamaz.' });
         }
-      }
     }
     
     const decision = await prisma.ohsBoardDecision.update({
@@ -541,7 +759,7 @@ router.put('/decisions/:decisionId', async (req: AuthRequest, res: Response) => 
         decisionText: d.decisionText,
         categoryId: Number(d.categoryId),
         subCategoryId: d.subCategoryId ? Number(d.subCategoryId) : null,
-        departmentId: Number(d.departmentId),
+        departmentId: String(d.departmentId),
         priority: d.priority,
         status: d.status,
         dueDateType: d.dueDateType,
@@ -702,6 +920,11 @@ router.put('/actions/:actionId', async (req: AuthRequest, res: Response) => {
       if (!action) {
         throw new Error('Action not found');
       }
+      
+      const oneHour = 60 * 60 * 1000;
+      if (Date.now() - new Date(action.createdAt).getTime() > oneHour) {
+         throw new Error('Aksiyon ekleneli 1 saatten fazla olduğu için düzenlenemez.');
+      }
 
       // Validate due date
       if (newDueDate && action.decision?.meeting) {
@@ -740,7 +963,7 @@ router.put('/actions/:actionId', async (req: AuthRequest, res: Response) => {
     res.json(updatedAction);
   } catch (error: any) {
     console.error('Error updating action:', error);
-    if (error.message === 'Termin tarihi toplantı tarihinden önce olamaz.') {
+    if (error.message === 'Termin tarihi toplantı tarihinden önce olamaz.' || error.message.includes('1 saat')) {
       return res.status(400).json({ error: error.message });
     }
     res.status(500).json({ error: 'Internal server error' });
@@ -751,6 +974,20 @@ router.put('/actions/:actionId', async (req: AuthRequest, res: Response) => {
 router.delete('/actions/:actionId', async (req: AuthRequest, res: Response) => {
   try {
     const { actionId } = req.params;
+    
+    const action = await prisma.ohsBoardDecisionAction.findUnique({
+      where: { id: actionId }
+    });
+    
+    if (!action) {
+      return res.status(404).json({ error: 'Action not found' });
+    }
+    
+    const oneHour = 60 * 60 * 1000;
+    if (Date.now() - new Date(action.createdAt).getTime() > oneHour) {
+       return res.status(403).json({ error: 'Aksiyon ekleneli 1 saatten fazla olduğu için silinemez.' });
+    }
+
     await prisma.ohsBoardDecisionAction.delete({
       where: { id: actionId }
     });
@@ -790,4 +1027,71 @@ router.get('/facility/:facilityId/previous-uncompleted', async (req: AuthRequest
   }
 });
 
+// POST /api/operations/board/meetings/:meetingId/send-approval
+router.post('/meetings/:meetingId/send-approval', async (req: AuthRequest, res: Response) => {
+  try {
+    const { meetingId } = req.params;
+    
+    const meeting = await prisma.ohsBoardMeeting.update({
+      where: { id: meetingId },
+      data: { status: 'Onaya Gönderildi' }
+    });
+    
+    await prisma.ohsBoardDecision.updateMany({
+      where: { meetingId },
+      data: { 
+        sentForApprovalAt: new Date(),
+        approvalStatus: 'Bekliyor'
+      }
+    });
+    
+    res.json({ message: 'Kurul kararları onaya gönderildi.', meeting });
+  } catch (error) {
+    console.error('Error sending meeting for approval:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/operations/board/meetings/:meetingId/approve
+router.post('/meetings/:meetingId/approve', async (req: AuthRequest, res: Response) => {
+  try {
+    const { meetingId } = req.params;
+    
+    const decisions = await prisma.ohsBoardDecision.findMany({
+      where: { meetingId, approvalStatus: 'Bekliyor' }
+    });
+    
+    if (decisions.length === 0) {
+      return res.status(400).json({ error: 'Onay bekleyen karar bulunmuyor.' });
+    }
+    
+    await prisma.ohsBoardDecision.updateMany({
+      where: { meetingId, approvalStatus: 'Bekliyor' },
+      data: { approvalStatus: 'Onaylandı' }
+    });
+    
+    const meeting = await prisma.ohsBoardMeeting.update({
+      where: { id: meetingId },
+      data: { status: 'Tamamlandı' }
+    });
+    
+    const auditLogs = decisions.map(d => ({
+      decisionId: d.id,
+      action: 'APPROVED',
+      changedBy: req.user?.username || 'SYSTEM',
+      remarks: 'Toplantı kararları onaylandı'
+    }));
+    
+    if (auditLogs.length > 0) {
+      await prisma.ohsBoardAuditLog.createMany({ data: auditLogs });
+    }
+    
+    res.json({ message: 'Kurul kararları onaylandı.', meeting });
+  } catch (error) {
+    console.error('Error approving meeting decisions:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;
+

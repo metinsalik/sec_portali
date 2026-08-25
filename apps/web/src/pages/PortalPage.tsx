@@ -164,7 +164,7 @@ export default function PortalPage() {
                 <div className="flex-1">
                   <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">Operasyon Yönetim Sistemi</h2>
                   <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
-                    İSG Atama Paneli ve İnşaat Renovasyon Teslim Raporu modüllerine buradan erişebilirsiniz.
+                    İSG Atama Paneli ve Entegre Risk ve Güvenlik Denetimi modüllerine buradan erişebilirsiniz.
                   </p>
                   <div className="flex items-center gap-2 text-[#0051d5] dark:text-[#b4c5ff] text-sm font-medium group-hover:underline">
                     Uygulamaya Git
@@ -181,7 +181,7 @@ export default function PortalPage() {
                   </div>
                   <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">Operasyon Yönetim Sistemi</h3>
                   <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
-                    İSG Atama Paneli ve İnşaat Renovasyon Teslim Raporu modüllerine buradan erişebilirsiniz.
+                    İSG Atama Paneli ve Entegre Risk ve Güvenlik Denetimi modüllerine buradan erişebilirsiniz.
                   </p>
                 </div>
                 <div className="inline-flex items-center gap-2 text-[#0051d5] dark:text-[#b4c5ff] text-sm font-medium group-hover:gap-4 transition-all">
