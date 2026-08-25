@@ -2326,8 +2326,8 @@ model OhsBoardDecision {
   subCategoryId Int?
   subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id])
 
-  departmentId String
-  department   OhsBoardDepartment @relation(fields: [departmentId], references: [id])
+  departmentId String?
+  department   OhsBoardDepartment? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
 
   priority String // "Tolere Gösterilmez Risk", "Yüksek Risk", "Önemli Risk", "Olası Risk", "Önemsiz Risk"
   status   String // "Başlamadı", "Devam Ediyor", "Tamamlandı", "İptal Edildi", "Sürekli Takip", "Belirsiz"
