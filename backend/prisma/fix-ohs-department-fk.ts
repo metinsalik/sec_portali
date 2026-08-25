@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Cleaning invalid OhsBoardDecision.departmentId values...');
+  console.log('Cleaning invalid departmentId values for OhsBoardDecision and OhsBoardMember...');
   // Get all existing department IDs
   const existing = await prisma.ohsBoardDepartment.findMany({ select: { id: true } });
   const validIds = new Set(existing.map(d => d.id));
@@ -14,7 +14,7 @@ async function main() {
     select: { id: true, departmentId: true },
   });
 
-  let updated = 0;
+  let updatedDecisions = 0;
   for (const d of badDecisions) {
     if (!validIds.has(d.departmentId!)) {
       await prisma.ohsBoardDecision.update({
@@ -22,10 +22,28 @@ async function main() {
         data: { departmentId: null },
       });
       console.log(`- Nullified departmentId for decision ${d.id}`);
-      updated++;
+      updatedDecisions++;
     }
   }
-  console.log(`Finished cleaning. ${updated} records updated.`);
+  console.log(`Finished cleaning OhsBoardDecision. ${updatedDecisions} records updated.`);
+
+  const badMembers = await prisma.ohsBoardMember.findMany({
+    where: { departmentId: { not: null } },
+    select: { id: true, departmentId: true },
+  });
+
+  let updatedMembers = 0;
+  for (const m of badMembers) {
+    if (!validIds.has(m.departmentId!)) {
+      await prisma.ohsBoardMember.update({
+        where: { id: m.id },
+        data: { departmentId: null },
+      });
+      console.log(`- Nullified departmentId for member ${m.id}`);
+      updatedMembers++;
+    }
+  }
+  console.log(`Finished cleaning OhsBoardMember. ${updatedMembers} records updated.`);
 }
 
 main()

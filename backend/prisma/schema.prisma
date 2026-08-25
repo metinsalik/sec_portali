@@ -2387,8 +2387,8 @@ model OhsBoardMember {
   jobTitle  String
 
   name         String
-  departmentId String
-  department   OhsBoardDepartment @relation(fields: [departmentId], references: [id])
+  departmentId String?
+  department   OhsBoardDepartment? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
 
   isDocumentUploaded Boolean @default(false)
   documentUrl        String?
