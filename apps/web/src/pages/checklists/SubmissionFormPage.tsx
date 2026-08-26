@@ -101,7 +101,8 @@ export default function SubmissionFormPage() {
         if (!currentAnswer.scaleOptionId) { errors.push(`Seçenek seçilmedi: ${item.itemNo}`); return; }
         
         const selectedOption = template.scaleSet?.options?.find((o: any) => o.id === currentAnswer.scaleOptionId);
-        const isKarsiliyor = selectedOption?.label?.toLowerCase().includes('karşılıyor') || selectedOption?.label?.toLowerCase() === 'uygun';
+        const labelLower = selectedOption?.label?.toLowerCase().trim() || '';
+        const isKarsiliyor = labelLower === 'karşılıyor' || labelLower === 'uygun' || labelLower === 'tamamen karşılıyor';
         if (selectedOption?.requiresExplanation && !isKarsiliyor && (!currentAnswer.note || currentAnswer.note.trim() === '')) {
           errors.push(`Açıklama zorunlu: ${item.itemNo}`);
         }
@@ -204,7 +205,8 @@ export default function SubmissionFormPage() {
               {[...section.items].sort((a, b) => a.itemNo - b.itemNo).map((item: any) => {
                 const currentAnswer = answers.find(a => a.itemId === item.id) || {};
                 const selectedOption = template.scaleSet?.options?.find((o: any) => o.id === currentAnswer.scaleOptionId);
-                const isKarsiliyorUI = selectedOption?.label?.toLowerCase().includes('karşılıyor') || selectedOption?.label?.toLowerCase() === 'uygun';
+                const labelLowerUI = selectedOption?.label?.toLowerCase().trim() || '';
+                const isKarsiliyorUI = labelLowerUI === 'karşılıyor' || labelLowerUI === 'uygun' || labelLowerUI === 'tamamen karşılıyor';
                 const requiresExplanation = selectedOption?.requiresExplanation && !isKarsiliyorUI;
                 const requiresAttachment = selectedOption?.requiresAttachment && !isKarsiliyorUI;
                 
