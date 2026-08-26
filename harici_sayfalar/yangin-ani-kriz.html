@@ -1,0 +1,2187 @@
+<!doctype html>
+<html lang="tr">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Yangın Anı Kriz Yönetimi Simülasyonu</title>
+    <style>
+        :root {
+            --bg: #f4f7fb;
+            --card: #fff;
+            --ink: #182235;
+            --muted: #6a7486;
+            --line: #e2e8f0;
+            --navy: #16223b;
+            --navy2: #26395e;
+            --teal: #0f766e;
+            --cyan: #0ea5a3;
+            --amber: #b7791f;
+            --red: #b42318;
+            --green: #08765f;
+            --blue: #175cd3;
+            --shadow: 0 18px 50px rgba(22, 34, 59, .09)
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--ink)
+        }
+
+        button,
+        input,
+        textarea {
+            font: inherit
+        }
+
+        .hidden {
+            display: none !important
+        }
+
+        .top {
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            background: rgba(22, 34, 59, .98);
+            color: white;
+            border-bottom: 1px solid rgba(255, 255, 255, .08);
+            box-shadow: 0 4px 18px rgba(0, 0, 0, .09)
+        }
+
+        .topin {
+            max-width: 1420px;
+            margin: auto;
+            padding: 13px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 18px
+        }
+
+        .brand {
+            display: flex;
+            gap: 11px;
+            align-items: center
+        }
+
+        .mark {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #2dd4bf, #0f766e);
+            display: grid;
+            place-items: center;
+            font-weight: 950
+        }
+
+        .brand h1 {
+            font-size: 14px;
+            margin: 0;
+            letter-spacing: .035em
+        }
+
+        .brand p {
+            font-size: 10px;
+            margin: 3px 0 0;
+            color: #b8c3d5
+        }
+
+        .topstats {
+            display: flex;
+            gap: 8px
+        }
+
+        .pill {
+            padding: 8px 11px;
+            border: 1px solid rgba(255, 255, 255, .11);
+            background: rgba(255, 255, 255, .07);
+            border-radius: 11px;
+            min-width: 105px
+        }
+
+        .pill span {
+            display: block;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: .09em;
+            color: #b8c3d5
+        }
+
+        .pill b {
+            display: block;
+            font-size: 14px;
+            margin-top: 2px
+        }
+
+        .phasebar {
+            background: white;
+            border-bottom: 1px solid var(--line)
+        }
+
+        .phasein {
+            max-width: 1420px;
+            margin: auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 4fr 1fr
+        }
+
+        .phase {
+            font-size: 11px;
+            font-weight: 850;
+            text-align: center;
+            color: #8690a0;
+            padding: 11px;
+            border-bottom: 3px solid transparent
+        }
+
+        .phase.active {
+            color: var(--navy);
+            border-bottom-color: #14b8a6
+        }
+
+        .phase.done {
+            color: var(--teal)
+        }
+
+        .wrap {
+            max-width: 1420px;
+            margin: auto;
+            padding: 24px 20px 48px
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 310px;
+            gap: 22px;
+            align-items: start
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            box-shadow: var(--shadow)
+        }
+
+        .start {
+            max-width: 1030px;
+            margin: 30px auto;
+            overflow: hidden
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #16223b, #23375e 62%, #0f6b68 120%);
+            color: #fff;
+            padding: 45px 46px;
+            position: relative;
+            overflow: hidden
+        }
+
+        .hero:after {
+            content: "";
+            position: absolute;
+            width: 420px;
+            height: 420px;
+            border-radius: 50%;
+            background: rgba(45, 212, 191, .11);
+            right: -130px;
+            top: -180px
+        }
+
+        .kicker {
+            display: inline-block;
+            font-size: 10px;
+            letter-spacing: .12em;
+            font-weight: 900;
+            text-transform: uppercase;
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: rgba(45, 212, 191, .12);
+            border: 1px solid rgba(94, 234, 212, .2);
+            color: #8ce9d7
+        }
+
+        .hero h2 {
+            font-size: 37px;
+            line-height: 1.08;
+            margin: 16px 0 12px;
+            max-width: 760px
+        }
+
+        .hero p {
+            font-size: 15px;
+            line-height: 1.65;
+            color: #d3ddeb;
+            max-width: 780px
+        }
+
+        .startbody {
+            padding: 28px 38px 38px
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px
+        }
+
+        .metric {
+            background: #f8fafc;
+            border: 1px solid #e7ebf1;
+            border-radius: 13px;
+            padding: 14px
+        }
+
+        .metric strong {
+            font-size: 19px
+        }
+
+        .metric span {
+            display: block;
+            font-size: 10px;
+            color: var(--muted);
+            margin-top: 3px
+        }
+
+        .introbox {
+            margin: 18px 0;
+            background: #eff8ff;
+            border: 1px solid #d9eaff;
+            color: #315270;
+            padding: 14px 16px;
+            border-radius: 13px;
+            font-size: 12px;
+            line-height: 1.55
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-weight: 850;
+            cursor: pointer;
+            transition: .15s
+        }
+
+        .btn:hover {
+            transform: translateY(-1px)
+        }
+
+        .btn-primary {
+            background: var(--navy);
+            color: white
+        }
+
+        .btn-teal {
+            background: var(--teal);
+            color: white
+        }
+
+        .btn-light {
+            background: #eef2f6;
+            color: #344054
+        }
+
+        .btn-danger {
+            background: #fff1f0;
+            color: #b42318;
+            border: 1px solid #ffd1cd
+        }
+
+        .decision {
+            overflow: hidden
+        }
+
+        .head {
+            padding: 20px 23px 16px;
+            background: linear-gradient(180deg, #fff, #fbfcfe);
+            border-bottom: 1px solid var(--line)
+        }
+
+        .meta {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap
+        }
+
+        .chip {
+            font-size: 9px;
+            letter-spacing: .09em;
+            font-weight: 900;
+            text-transform: uppercase;
+            padding: 6px 8px;
+            border-radius: 999px
+        }
+
+        .time {
+            background: #eef2f6;
+            color: #475467
+        }
+
+        .phasechip {
+            background: #e8fbf6;
+            color: #087b6b
+        }
+
+        .postchip {
+            background: #fff7e8;
+            color: #8a5b10
+        }
+
+        .head h2 {
+            font-size: 24px;
+            margin: 12px 0 0;
+            line-height: 1.25
+        }
+
+        .body {
+            padding: 21px 23px 27px
+        }
+
+        .label {
+            font-size: 9px;
+            font-weight: 900;
+            letter-spacing: .11em;
+            text-transform: uppercase;
+            color: #7a8495;
+            margin: 0 0 9px;
+            display: flex;
+            align-items: center;
+            gap: 7px
+        }
+
+        .label:before {
+            content: "";
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #14b8a6
+        }
+
+        .facts {
+            display: grid;
+            gap: 7px;
+            margin-bottom: 19px
+        }
+
+        .fact {
+            font-size: 12px;
+            line-height: 1.5;
+            padding: 9px 11px;
+            border: 1px solid #edf0f4;
+            background: #f8fafc;
+            border-radius: 10px;
+            display: flex;
+            gap: 9px
+        }
+
+        .fact i {
+            font-style: normal;
+            color: #0d9488;
+            font-weight: 950
+        }
+
+        .inj {
+            margin: 0 0 17px;
+            padding: 12px 13px;
+            background: #fff8e8;
+            border: 1px solid #f2dda9;
+            border-left: 4px solid #d6a03e;
+            border-radius: 11px;
+            color: #73521a;
+            font-size: 11px;
+            line-height: 1.5
+        }
+
+        .inj b {
+            display: block;
+            margin-bottom: 3px
+        }
+
+        .task {
+            background: var(--navy);
+            color: white;
+            border-radius: 13px;
+            padding: 15px 17px;
+            margin-bottom: 16px
+        }
+
+        .task small {
+            display: block;
+            font-size: 9px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: #8ce9d7;
+            font-weight: 900;
+            margin-bottom: 6px
+        }
+
+        .task p {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 650;
+            line-height: 1.5
+        }
+
+        .opts {
+            display: grid;
+            gap: 9px
+        }
+
+        .option {
+            display: grid;
+            grid-template-columns: 32px 1fr;
+            gap: 11px;
+            padding: 13px 14px;
+            border: 1.5px solid #dfe5ed;
+            border-radius: 13px;
+            background: white;
+            cursor: pointer;
+            transition: .15s
+        }
+
+        .option:hover {
+            border-color: #8acfc4
+        }
+
+        .option.selected {
+            border-color: #0f8f7f;
+            background: #f0fbf8;
+            box-shadow: 0 0 0 3px rgba(15, 143, 127, .06)
+        }
+
+        .letter {
+            width: 29px;
+            height: 29px;
+            border-radius: 9px;
+            background: #eef2f6;
+            display: grid;
+            place-items: center;
+            font-size: 12px;
+            font-weight: 950;
+            color: #475467
+        }
+
+        .option.selected .letter {
+            background: #0f766e;
+            color: white
+        }
+
+        .otxt {
+            font-size: 12px;
+            font-weight: 650;
+            line-height: 1.5;
+            color: #344054
+        }
+
+        .reason {
+            margin-top: 15px
+        }
+
+        .reason textarea,
+        .freeitem textarea,
+        .k15 textarea {
+            width: 100%;
+            border: 1px solid #d2d9e3;
+            border-radius: 10px;
+            padding: 10px 11px;
+            min-height: 64px;
+            resize: vertical;
+            font-size: 12px;
+            outline: none
+        }
+
+        .reason textarea:focus,
+        .freeitem textarea:focus,
+        .k15 textarea:focus {
+            border-color: #69c6ba;
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, .1)
+        }
+
+        .hint {
+            font-size: 10px;
+            color: #7a8494;
+            line-height: 1.45;
+            margin-top: 5px
+        }
+
+        .freebox {
+            border: 1px solid #cde9e4;
+            background: #f6fffd;
+            border-radius: 14px;
+            padding: 14px
+        }
+
+        .freehead {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 9px
+        }
+
+        .freehead strong {
+            font-size: 12px;
+            color: #0f6a60
+        }
+
+        .freehead span {
+            font-size: 9px;
+            font-weight: 900;
+            background: #daf7f0;
+            color: #0f766e;
+            padding: 5px 7px;
+            border-radius: 999px
+        }
+
+        .freegrid {
+            display: grid;
+            gap: 7px
+        }
+
+        .freeitem {
+            display: grid;
+            grid-template-columns: 25px 1fr;
+            gap: 7px;
+            align-items: start
+        }
+
+        .freeitem em {
+            width: 23px;
+            height: 23px;
+            border-radius: 7px;
+            background: #dff6f1;
+            color: #0d796d;
+            font-style: normal;
+            font-size: 10px;
+            font-weight: 950;
+            display: grid;
+            place-items: center;
+            margin-top: 5px
+        }
+
+        .freeitem textarea {
+            min-height: 52px
+        }
+
+        .ranklist {
+            display: grid;
+            gap: 8px
+        }
+
+        .rank {
+            border: 1.5px solid #dfe5ed;
+            border-radius: 12px;
+            padding: 11px 12px;
+            display: grid;
+            grid-template-columns: 33px 1fr;
+            gap: 10px;
+            align-items: start;
+            cursor: pointer
+        }
+
+        .rank.selected {
+            border-color: #0f8f7f;
+            background: #f0fbf8
+        }
+
+        .ranknum {
+            width: 29px;
+            height: 29px;
+            border-radius: 9px;
+            background: #eef2f6;
+            display: grid;
+            place-items: center;
+            font-weight: 950;
+            color: #667085
+        }
+
+        .rank.selected .ranknum {
+            background: #0f766e;
+            color: #fff
+        }
+
+        .ranktext {
+            font-size: 12px;
+            line-height: 1.45;
+            font-weight: 650
+        }
+
+        .k15grid {
+            display: grid;
+            gap: 14px
+        }
+
+        .k15sec {
+            border: 1px solid #e4e8ee;
+            border-radius: 13px;
+            padding: 13px
+        }
+
+        .k15sec h4 {
+            margin: 0 0 7px;
+            font-size: 12px
+        }
+
+        .k15sec p {
+            font-size: 10px;
+            color: #7a8494;
+            margin: 0 0 8px;
+            line-height: 1.45
+        }
+
+        .k15 .smallrow {
+            display: grid;
+            gap: 7px
+        }
+
+        .actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 17px;
+            border-top: 1px solid var(--line)
+        }
+
+        .err {
+            font-size: 10px;
+            color: #b42318;
+            font-weight: 750
+        }
+
+        .side {
+            display: grid;
+            gap: 14px;
+            position: sticky;
+            top: 86px
+        }
+
+        .sidecard {
+            padding: 16px
+        }
+
+        .sidecard h3 {
+            font-size: 10px;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+            color: #788296;
+            margin: 0 0 11px
+        }
+
+        .bigtime {
+            font-size: 28px;
+            font-weight: 950;
+            color: #16334d
+        }
+
+        .sub {
+            font-size: 10px;
+            color: #7a8493;
+            margin-top: 4px
+        }
+
+        .prog {
+            height: 8px;
+            background: #edf0f4;
+            border-radius: 99px;
+            overflow: hidden;
+            margin-top: 11px
+        }
+
+        .prog i {
+            display: block;
+            height: 100%;
+            background: linear-gradient(90deg, #0f766e, #23bfae)
+        }
+
+        .minilist {
+            display: grid;
+            gap: 8px
+        }
+
+        .mini {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 10px;
+            padding-bottom: 7px;
+            border-bottom: 1px solid #eef1f5
+        }
+
+        .mini:last-child {
+            border-bottom: 0
+        }
+
+        .mini span {
+            color: #717b8d
+        }
+
+        .mini b {
+            text-align: right
+        }
+
+        .timeline {
+            display: grid;
+            gap: 6px;
+            max-height: 245px;
+            overflow: auto
+        }
+
+        .tl {
+            display: grid;
+            grid-template-columns: 40px 1fr;
+            gap: 8px;
+            font-size: 9px;
+            padding: 7px;
+            background: #f8fafc;
+            border-radius: 8px
+        }
+
+        .tl b {
+            font-size: 9px
+        }
+
+        .tl span {
+            color: #7a8494
+        }
+
+        .stage {
+            max-width: 950px;
+            margin: 38px auto;
+            padding: 35px
+        }
+
+        .stage .eyebrow {
+            font-size: 10px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            font-weight: 900;
+            color: #0f766e
+        }
+
+        .stage h2 {
+            font-size: 33px;
+            margin: 8px 0
+        }
+
+        .stage p {
+            color: #667085;
+            line-height: 1.6
+        }
+
+        .stagegrid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 19px 0
+        }
+
+        .stile {
+            padding: 13px;
+            background: #f8fafc;
+            border: 1px solid #e7ebf0;
+            border-radius: 12px
+        }
+
+        .stile span {
+            font-size: 9px;
+            color: #7a8495;
+            text-transform: uppercase
+        }
+
+        .stile b {
+            display: block;
+            font-size: 16px;
+            margin-top: 4px
+        }
+
+        .result {
+            max-width: 1180px;
+            margin: 28px auto;
+            overflow: hidden
+        }
+
+        .reshero {
+            padding: 34px;
+            background: linear-gradient(135deg, #16223b, #273e69);
+            color: white
+        }
+
+        .resgrid {
+            display: grid;
+            grid-template-columns: 170px 1fr;
+            gap: 26px;
+            align-items: center
+        }
+
+        .orb {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: conic-gradient(#2dd4bf var(--p), rgba(255, 255, 255, .12) 0);
+            position: relative
+        }
+
+        .orb:before {
+            content: "";
+            position: absolute;
+            width: 132px;
+            height: 132px;
+            border-radius: 50%;
+            background: #1c2d4e
+        }
+
+        .orb div {
+            z-index: 1;
+            text-align: center
+        }
+
+        .orb strong {
+            font-size: 43px;
+            display: block;
+            line-height: 1
+        }
+
+        .orb span {
+            font-size: 11px;
+            color: #c2cbdb
+        }
+
+        .reshero .eyebrow {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: .12em;
+            color: #8ce9d7;
+            font-weight: 900
+        }
+
+        .reshero h2 {
+            font-size: 30px;
+            margin: 7px 0 8px
+        }
+
+        .reshero p {
+            color: #d6dfec;
+            margin: 0;
+            line-height: 1.55
+        }
+
+        .severity {
+            margin-top: 14px;
+            padding: 15px;
+            background: rgba(255, 255, 255, .09);
+            border: 1px solid rgba(255, 255, 255, .12);
+            border-radius: 13px
+        }
+
+        .severity b {
+            font-size: 17px
+        }
+
+        .severity p {
+            font-size: 12px;
+            margin-top: 4px
+        }
+
+        .resbody {
+            padding: 23px
+        }
+
+        .scorecards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px
+        }
+
+        .scorecard {
+            border: 1px solid #e4e8ef;
+            border-radius: 12px;
+            padding: 13px
+        }
+
+        .scorecard span {
+            font-size: 9px;
+            color: #7b8495;
+            text-transform: uppercase;
+            letter-spacing: .06em
+        }
+
+        .scorecard strong {
+            font-size: 24px;
+            display: block;
+            margin-top: 3px
+        }
+
+        .profiles {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 9px;
+            margin-top: 13px
+        }
+
+        .profile {
+            padding: 12px;
+            border: 1px solid #e4e8ef;
+            border-radius: 11px
+        }
+
+        .ptop {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 11px;
+            font-weight: 750
+        }
+
+        .pbar {
+            height: 7px;
+            background: #edf0f3;
+            border-radius: 99px;
+            margin-top: 8px;
+            overflow: hidden
+        }
+
+        .pbar i {
+            display: block;
+            height: 100%;
+            background: #0f8e7e
+        }
+
+        .twocol {
+            display: grid;
+            grid-template-columns: 1.1fr .9fr;
+            gap: 16px;
+            margin-top: 17px
+        }
+
+        .history {
+            display: grid;
+            gap: 6px;
+            max-height: 445px;
+            overflow: auto
+        }
+
+        .hrow {
+            display: grid;
+            grid-template-columns: 42px 1fr auto;
+            gap: 8px;
+            align-items: center;
+            padding: 8px 9px;
+            border: 1px solid #e8ecf2;
+            border-radius: 9px;
+            font-size: 10px
+        }
+
+        .hno {
+            width: 36px;
+            height: 28px;
+            border-radius: 7px;
+            background: #eef2f6;
+            display: grid;
+            place-items: center;
+            font-weight: 950
+        }
+
+        .hrow b {
+            font-size: 10px
+        }
+
+        .hrow span {
+            color: #6f788a
+        }
+
+        .badge {
+            font-weight: 950;
+            background: #e9faf5;
+            color: #0f766e;
+            padding: 4px 6px;
+            border-radius: 7px
+        }
+
+        .note {
+            background: #eff8ff;
+            border: 1px solid #d7e9ff;
+            padding: 13px;
+            border-radius: 11px;
+            font-size: 11px;
+            line-height: 1.5;
+            color: #315270
+        }
+
+        .blind {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 9px
+        }
+
+        .tag {
+            font-size: 9px;
+            padding: 5px 7px;
+            border-radius: 999px;
+            background: #fff5f2;
+            border: 1px solid #f0d2c8;
+            color: #9b3a24
+        }
+
+        .tag.good {
+            background: #f1fbf8;
+            border-color: #c8e8df;
+            color: #16715f
+        }
+
+        .eval {
+            margin-top: 17px;
+            border: 1px dashed #c8d1dc;
+            border-radius: 13px;
+            padding: 14px
+        }
+
+        .eval summary {
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 900
+        }
+
+        .evalwarn {
+            font-size: 9px;
+            line-height: 1.5;
+            background: #fff8e7;
+            border: 1px solid #f4dfa6;
+            color: #755113;
+            padding: 9px;
+            border-radius: 8px;
+            margin: 10px 0
+        }
+
+        .states {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px
+        }
+
+        .state {
+            font-size: 8px;
+            background: #f8fafc;
+            border-radius: 7px;
+            padding: 6px
+        }
+
+        .state b {
+            display: block;
+            font-size: 10px;
+            margin-top: 2px
+        }
+
+        .evalrows {
+            display: grid;
+            gap: 5px;
+            margin-top: 9px
+        }
+
+        .erow {
+            display: grid;
+            grid-template-columns: 48px 1fr 75px;
+            gap: 7px;
+            align-items: center;
+            font-size: 9px;
+            padding: 6px;
+            border-bottom: 1px solid #eef1f4
+        }
+
+        .erow input {
+            width: 70px;
+            border: 1px solid #d3dbe5;
+            border-radius: 7px;
+            padding: 5px
+        }
+
+        .resultactions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 17px
+        }
+
+        @media(max-width:980px) {
+            .layout {
+                grid-template-columns: 1fr
+            }
+
+            .side {
+                position: static;
+                grid-template-columns: repeat(2, 1fr)
+            }
+
+            .scorecards {
+                grid-template-columns: 1fr 1fr
+            }
+
+            .twocol {
+                grid-template-columns: 1fr
+            }
+        }
+
+        @media(max-width:680px) {
+            .topin {
+                padding: 10px 11px
+            }
+
+            .brand p {
+                display: none
+            }
+
+            .pill:nth-child(2) {
+                display: none
+            }
+
+            .wrap {
+                padding: 14px 10px 35px
+            }
+
+            .metrics {
+                grid-template-columns: 1fr 1fr
+            }
+
+            .hero {
+                padding: 31px 24px
+            }
+
+            .hero h2 {
+                font-size: 30px
+            }
+
+            .startbody {
+                padding: 23px
+            }
+
+            .head,
+            .body {
+                padding-left: 14px;
+                padding-right: 14px
+            }
+
+            .head h2 {
+                font-size: 20px
+            }
+
+            .side {
+                grid-template-columns: 1fr
+            }
+
+            .resgrid {
+                grid-template-columns: 1fr;
+                text-align: center
+            }
+
+            .orb {
+                margin: auto
+            }
+
+            .scorecards,
+            .profiles {
+                grid-template-columns: 1fr
+            }
+
+            .states {
+                grid-template-columns: repeat(2, 1fr)
+            }
+
+            .stagegrid {
+                grid-template-columns: 1fr
+            }
+        }
+
+        @media print {
+
+            .top,
+            .phasebar,
+            .side,
+            .resultactions,
+            .eval {
+                display: none !important
+            }
+
+            .wrap {
+                padding: 0
+            }
+
+            .card {
+                box-shadow: none
+            }
+
+            .result {
+                margin: 0
+            }
+        }
+    </style>
+    <!-- Firebase ++ -->
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <!-- /Firebase -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <header class="top">
+        <div class="topin">
+            <div class="brand">
+                <div class="mark">YK</div>
+                <div>
+                    <h1>YANGIN ANI KRİZ YÖNETİMİ SİMÜLASYONU</h1>
+                    <p>Teknik Hizmetler Müdürü · Kriz yönetimi + sınırlı teknik sistem incelemesi</p>
+                </div>
+            </div>
+            <div class="topstats">
+                <div class="pill"><span>Karar</span><b id="topDecision">—</b></div>
+                <div class="pill"><span>Olay Saati</span><b id="topTime">—</b></div>
+                <div class="pill"><span>Durum</span><b id="topStatus">Hazır</b></div><button class="btn btn-danger"
+                    style="padding:6px 12px; font-size:11px; align-self:center;"
+                    onclick="localStorage.clear(); location.reload();">Çıkış Yap</button>
+            </div>
+        </div>
+    </header>
+    <div id="phasebar" class="phasebar hidden">
+        <div class="phasein">
+            <div class="phase" id="phCrisis">Yangın Anı · K1–K12</div>
+            <div class="phase" id="phReview">Teknik İnceleme · K13–K15</div>
+        </div>
+    </div>
+    <div id="app"></div>
+    <script>
+        const DECISIONS = [{ "id": "1", "time": "13:42", "title": "Panelde İlk Yangın Sinyali", "phase": "KRİZ BAŞLANGICI", "data": ["B Blok -1 katta UPS/elektrik teknik odası için tek bir duman dedektörü yangın alarmı üretmiştir.", "Aynı bölgede sabah kısa süreli bakım çalışması yapılmış, yanlış alarm ihtimali tamamen dışlanamamaktadır.", "Güvenlik henüz sahadan duman teyidi vermemiştir.", "Hastane normal mesai yoğunluğundadır."], "task": "İlk 60 saniyedeki yaklaşımınız hangisidir?", "type": "choice", "options": [{ "key": "A", "text": "Yanlış alarm olasılığı bulunduğu için ikinci dedektör veya saha teyidi gelene kadar yalnız paneli izlerim.", "tech": 4, "hg": 5, "hd": 8, "flags": ["VERIFY_DELAY"] }, { "key": "B", "text": "Lokal acil müdahale organizasyonunu başlatır; güvenliği oda kapısına güvenli saha doğrulaması için yönlendirir, panel olay kaydını korur ve teknik ekibi olası enerji/söndürme senaryosuna hazırlarım. Genel tahliye için henüz saha verisini beklerim.", "tech": 10, "hg": 10, "hd": 9, "flags": ["COMMAND_READY"] }, { "key": "C", "text": "Hastane genelinde doğrudan tahliye anonsu başlatırım; alarmın gerçek olup olmadığını daha sonra doğrularım.", "tech": 4, "hg": 6, "hd": 3, "flags": ["COMM_STRAIN"] }, { "key": "D", "text": "Elektrik teknisyenini odanın içine göndererek alarmın kaynağını kontrol ettiririm.", "tech": 1, "hg": 2, "hd": 7, "flags": ["PERSONNEL_EXPOSURE"] }, { "key": "E", "text": "Panik oluşmaması için panel sesini susturur, bakım firmasından telefonla teyit isterim.", "tech": 2, "hg": 4, "hd": 9, "flags": ["VERIFY_DELAY", "ALARM_DEPENDENCE"] }], "concepts": [], "category": "KRİZ BAŞLANGICI" }, { "id": "1B", "time": "13:42:35", "title": "Çoklu Alarmda Kaynak Lokalizasyonu", "phase": "KRİZ BAŞLANGICI — KAYNAK LOKALİZASYONU", "data": ["İlk UPS/elektrik teknik odası alarmından yaklaşık 30 saniye sonra panel farklı noktalardan hızla yeni alarm almaya başlar.", "13:42:00 — B Blok -1 UPS/elektrik teknik odası — 1 dedektör", "13:42:28 — B Blok -1 servis koridoru — 2 dedektör", "13:42:32 — Dikey teknik şaft önü — 1 dedektör", "13:42:35 — B Blok zemin servis holü — 2 dedektör", "13:42:38 — B Blok 1. kat koridoru — 3 dedektör", "13:42:41 — B Blok 2. kat personel koridoru — 1 dedektör", "Toplam 10 dedektör yaklaşık 13 saniye içinde alarm üretmiştir. Aynı anda B Blok yoğun bakım sorumlu hemşiresi “burada da duman kokusu var” diye arar; görünür duman yoktur.", "Ortak HVAC/şaft güzergâhları olasıdır, damperlerin gerçek pozisyonu henüz doğrulanmamıştır."], "task": "Yangının muhtemel gerçek kaynağını ve ilk saha doğrulama dağılımını nasıl belirlersiniz?", "type": "choice", "options": [{ "key": "A", "text": "Alarm sayısının en fazla kümelendiği 1. katı kaynak kabul edip ana ekibi oraya yönlendirmek; ilk teknik oda alarmını olası bakım kaynaklı yanlış alarm olarak ikinci plana almak.", "tech": 5, "hg": 6, "hd": 6, "flags": ["ALARM_COUNT_BIAS", "SOURCE_DELAY"] }, { "key": "B", "text": "İlk alarmı doğrudan kesin başlangıç noktası kabul etmek; diğer alarmları yayılım sayıp uzak alanları paralel doğrulamamak.", "tech": 7, "hg": 7, "hd": 8, "flags": ["SOURCE_ANCHORING", "REMOTE_ALARM_UNDERREAD"] }, { "key": "C", "text": "Yoğun bakımın kırılgan hasta alanı olması nedeniyle ana teknik ekibi önce yoğun bakıma yönlendirmek; kaynak teyidini ikinci ekibe bırakmak.", "tech": 5, "hg": 9, "hd": 7, "flags": ["CLINICAL_ORIGIN_BIAS", "SOURCE_DELAY", "CLINICAL_CHECK_STRONG"] }, { "key": "D", "text": "Alarm kronolojisi + zon/dedektör haritası + ilk alarm + saha/CCTV/ısı-duman bulguları + HVAC/şaft yayılım yolunu birlikte kullanarak öncelikli kaynak hipotezi kurmak; ana ekibi bu noktaya, ikinci doğrulamayı klinik/yayılım alanlarına paralel yönlendirmek.", "tech": 10, "hg": 10, "hd": 9, "flags": ["SOURCE_PRIORITY", "SMOKE_PATH_RECOGNIZED", "CLINICAL_CHECK_PARALLEL"] }, { "key": "E", "text": "Çoklu alarmı çoklu bağımsız yangın kabul ederek ekipleri 10 alarma paylaştırmak ve geniş tahliye sürecini hemen başlatmak.", "tech": 3, "hg": 5, "hd": 2, "flags": ["MULTI_FIRE_ASSUMPTION", "RESOURCE_FRAGMENTATION", "COMM_STRAIN"] }], "concepts": [], "category": "KRİZ BAŞLANGICI — KAYNAK LOKALİZASYONU" }, { "id": "2", "time": "13:43", "title": "İkinci Alarm ve Söndürme Öncesi Gecikme", "phase": "KRİZ BAŞLANGICI", "data": ["Yaklaşık 40 saniye sonra korunan teknik oda içindeki ikinci (çapraz-zon) dedektör de alarm verir.", "Gazlı otomatik söndürme sistemi “ön boşaltım / gecikme” durumuna geçmiştir.", "Teknik odada normalde personel bulunmaz; ancak sabah çalışan dış yüklenicinin ekipman çantası kapı yakınında görülmektedir ve içeride kimse olup olmadığı henüz kesin değildir.", "Kapı kapalıdır."], "task": "Söndürme sistemi devreye girmeden önce en kritik yönetim yaklaşımı hangisidir?", "type": "choice", "options": [{ "key": "A", "text": "İki dedektör alarm verdiğine göre söndürme sistemi doğrudan çalışmalıdır; personel durumu sonradan kontrol edilir.", "tech": 4, "hg": 3, "hd": 7, "flags": ["OCCUPANCY_RISK"] }, { "key": "B", "text": "Oda içerisine bir teknisyen gönderip kimse olup olmadığını fiziksel olarak kontrol ettiririm.", "tech": 1, "hg": 1, "hd": 6, "flags": ["PERSONNEL_EXPOSURE"] }, { "key": "C", "text": "Odaya personel sokmadan erişim/radyo/güvenlik bilgileriyle içeride insan olup olmadığını hızla doğrulatır, çevreyi boşaltır ve oda boşsa otomatik söndürme senaryosunun prosedüre uygun işlemesine izin veririm.", "tech": 10, "hg": 10, "hd": 9, "flags": ["OCCUPANCY_CONFIRMED"] }, { "key": "D", "text": "Sistemi kesinlikle durdurur, itfaiye gelene kadar hiçbir otomatik söndürme işlemi yapılmamasını isterim.", "tech": 5, "hg": 7, "hd": 8, "flags": ["SUPPRESSION_DELAY"] }, { "key": "E", "text": "Kapıyı açıp içeriyi gözle kontrol ettikten sonra sisteme karar veririm.", "tech": 2, "hg": 2, "hd": 7, "flags": ["DOOR_OPEN_EARLY", "PERSONNEL_EXPOSURE"] }], "concepts": [], "category": "KRİZ BAŞLANGICI" }, { "id": "3", "time": "13:44", "title": "İlk İki Dakikanın Kritik Bilgileri", "phase": "KRİZ BAŞLANGICI", "data": ["Güvenlik kapı altından hafif duman çıktığını bildiriyor.", "Söndürme sistemi geri sayımı devam ediyor.", "B Blokta yoğun bakım, endoskopi ve laboratuvar yüklerinin bir bölümü aynı elektrik altyapısından etkilenebilir."], "task": "İlk iki dakika içinde karar kalitenizi belirleyecek en fazla 5 ayrı bilgi/kontrol unsurunu yazın. Aynı kavramı farklı kelimelerle tekrar etmek tek unsur sayılır.", "type": "free5", "options": [], "concepts": [["alarm kronolojisi", "zon", "dedektör haritası", "kaynak lokalizasyon", "ilk alarm", "çoklu alarm", "yayılım"], ["personel", "işgali", "içeride kimse", "erişim", "oda boş"], ["gazlı söndürme", "geri sayım", "boşaltım", "pressure", "gecikme"], ["enerji besleme", "kritik yük", "ups", "jeneratör", "yedek besleme"], ["duman", "şaft", "kompartıman", "kapı yayılım"], ["yangın kapısı", "hvac", "damper", "cause effect", "senaryo"], ["itfaiye", "acil müdahale", "erişim rotası", "dış acil"]], "category": "KRİZ BAŞLANGICI" }, { "id": "4", "time": "13:45", "title": "Söndürme Sistemi Çalıştı, Duman Sürüyor", "phase": "SÖNDÜRME ETKİNLİĞİ", "data": ["Sistem boşaltım yaptığını bildiriyor; basınç anahtarı boşaltımı doğruluyor.", "Yaklaşık 45 saniye sonra kapı çevresindeki duman tamamen kesilmiyor.", "BMS, teknik oda kapısının “açık” durum sinyalinde kaldığını gösteriyor.", "Sahadaki güvenlik görevlisi, kapının kablo taşıma işi nedeniyle tam kapanmıyor olabileceğini söylüyor."], "task": "Bu bilgiyle söndürmenin etkinliğini nasıl değerlendirirsiniz?", "type": "choice", "options": [{ "key": "A", "text": "Basınç anahtarı boşaltımı doğruladığı için yangının söndüğü kabul edilir; kapı daha sonra kontrol edilir.", "tech": 3, "hg": 4, "hd": 8, "flags": ["SUPPRESSION_FALSE_ASSURANCE"] }, { "key": "B", "text": "Duman devam ettiği için gazlı sistem kesinlikle arızalıdır; ikinci boşaltım talep ederim.", "tech": 5, "hg": 6, "hd": 7, "flags": ["UNPLANNED_SUPPRESSION_ACTION"] }, { "key": "C", "text": "“Gaz boşaldı” ile “söndürme fonksiyonu etkili oldu” ayrımını yaparım; oda bütünlüğü/kapı durumu ve enerji kaynağı nedeniyle etkinliği doğrulanmamış kabul eder, personeli içeri sokmadan izolasyon ve itfaiye koordinasyonunu hızlandırırım.", "tech": 10, "hg": 10, "hd": 9, "flags": ["SUPPRESSION_UNVERIFIED", "ISOLATION_PRIORITY"] }, { "key": "D", "text": "Kapıyı açtırıp dumanın kaynağını ve yangının söndüğünü kontrol ettiririm.", "tech": 1, "hg": 2, "hd": 7, "flags": ["DOOR_OPEN_EARLY", "PERSONNEL_EXPOSURE"] }, { "key": "E", "text": "Havalandırmayı açarak dumanı uzaklaştırır, ardından yeniden değerlendiririm.", "tech": 1, "hg": 2, "hd": 6, "flags": ["SMOKE_SPREAD_RISK"] }], "concepts": [], "category": "SÖNDÜRME ETKİNLİĞİ" }, { "id": "5", "time": "13:46", "title": "Enerji Kesme ve Kritik Klinik Yükler", "phase": "ENERJİ VE HASTA GÜVENLİĞİ", "data": ["Elektrik ekibi yangın odasındaki beslemenin enerjisiz bırakılmasını öneriyor.", "İlgili dağıtım, yoğun bakım yardımcı sistemlerinin bir bölümünü ve laboratuvar cihazlarını etkileyebilir.", "Bazı yüklerin UPS/jeneratör üzerinde olduğu biliniyor ancak o anki gerçek aktarım durumu tam teyit edilmemiştir.", "Yangın kaynağı enerjili kalırsa söndürme etkinliği azalabilir."], "task": "Enerji stratejiniz hangisidir?", "type": "choice", "options": [{ "key": "A", "text": "Yangın varsa tüm B Blok enerjisini doğrudan keserim; klinik etkiler sonradan yönetilir.", "tech": 4, "hg": 5, "hd": 3, "flags": ["CLINICAL_POWER_STRAIN"] }, { "key": "B", "text": "Yoğun bakım etkilenebileceği için hiçbir enerji kesintisine izin vermem.", "tech": 2, "hg": 4, "hd": 9, "flags": ["ENERGY_DELAY"] }, { "key": "C", "text": "Kritik yükleri klinikle eşzamanlı doğrular, mevcut yedek beslemenin gerçekten devrede/uygun olduğunu kontrol eder ve mümkün olan en dar güvenli izolasyonu başlatırım; gerekirse daha geniş kesintiyi kontrollü biçimde genişletirim.", "tech": 10, "hg": 10, "hd": 8, "flags": ["ENERGY_CONTROLLED"] }, { "key": "D", "text": "Jeneratör bulunduğu için ek teyit almadan tüm bloğu keserim.", "tech": 3, "hg": 5, "hd": 4, "flags": ["CLINICAL_POWER_STRAIN"] }, { "key": "E", "text": "İtfaiye gelene kadar enerji durumunu değiştirmem; söndürme sistemi zaten boşaltım yaptı.", "tech": 2, "hg": 4, "hd": 8, "flags": ["ENERGY_DELAY"] }], "concepts": [], "category": "ENERJİ VE HASTA GÜVENLİĞİ" }, { "id": "6", "time": "13:47", "title": "Anons ve Bilgilendirme Stratejisi", "phase": "İLETİŞİM VE HASTA DENEYİMİ", "data": ["Yangın B Blok teknik hacimdedir; henüz hasta alanında görünür duman yoktur.", "Otomatik genel tahliye anonsu devreye girmemiştir.", "Personel telefon gruplarında “B Blokta yangın var” mesajları yayılmaya başlamıştır.", "Yönetim gereksiz paniği önlemek istiyor; klinikler ise ne yapacaklarını bilmek istiyor."], "task": "İlk anons/iletişim yaklaşımınız?", "type": "choice", "options": [{ "key": "A", "text": "Hastane genelinde doğrudan “binayı boşaltın” anonsu yaparım.", "tech": 4, "hg": 7, "hd": 2, "flags": ["COMM_STRAIN"] }, { "key": "B", "text": "Hiç anons yapmam; yalnız yöneticilere bilgi veririm.", "tech": 2, "hg": 4, "hd": 4, "flags": ["COMM_GAP"] }, { "key": "C", "text": "Etkilenen blok ve sorumlu ekipler için kodlu/acil durum iletişimini aktive eder; kliniklere hazırlanma/rotaları açık tutma talimatı verir, hasta ve refakatçilere yalnız ihtiyaç duydukları sakin ve yönlendirici bilgiyi verir, tahliye emrini doğrulanmış bölgesel riske göre kademeli uygularım.", "tech": 10, "hg": 10, "hd": 10, "flags": ["COMM_CONTROLLED"] }, { "key": "D", "text": "Personel mesajlaşma gruplarındaki bilgiyi yeterli kabul ederim; resmi anons gecikmeli yapılabilir.", "tech": 2, "hg": 4, "hd": 3, "flags": ["COMM_GAP"] }, { "key": "E", "text": "Tüm hastalara yangının teknik odada olduğunu ve risk bulunmadığını duyururum.", "tech": 3, "hg": 5, "hd": 6, "flags": ["FALSE_REASSURANCE"] }], "concepts": [], "category": "İLETİŞİM VE HASTA DENEYİMİ" }, { "id": "7", "time": "13:48", "title": "Yangın Senaryosu Gerçekten Çalışıyor mu?", "phase": "YANGIN SENARYOSU VE BİNA SİSTEMLERİ", "data": ["BMS ekranında: ilgili AHU “STOP”, yangın asansör geri çağırma “TAMAM”, A merdiveni basınçlandırma fanı “RUN”, iki yangın damperinden biri “KAPALI”, diğeri “DURUM BİLİNMİYOR”.", "Yangın kapılarının serbest bırakıldığı komutu görülüyor; bir güvenlik görevlisi servis koridorunda bir kapının açık kaldığını bildiriyor.", "Şaft üzerinden henüz duman teyidi yoktur."], "task": "İlk 3 doğrulama/aksiyonu seçin ve sıralayın.", "type": "rank3", "options": [{ "key": "A", "text": "BMS komutlarının saha sonucu ile aynı olduğunu varsayıp başka doğrulama yapmamak." }, { "key": "B", "text": "Açık kaldığı bildirilen yangın kapısının güvenli biçimde kapatılmasını ve kapanma fonksiyonunun doğrulanmasını sağlamak." }, { "key": "C", "text": "“Durum bilinmiyor” damperin kritik yayılım yoluna etkisini değerlendirip BMS + saha/teknik doğrulama yapmak." }, { "key": "D", "text": "Basınçlandırma fanı RUN olduğu için A merdivenini güvenli tahliye rotası ilan etmek." }, { "key": "E", "text": "AHU STOP komutunun sahada gerçekleşip gerçekleşmediğini ve duman taşıma potansiyelini doğrulamak." }, { "key": "F", "text": "Asansör geri çağırma tamamlandığı için asansörleri hasta tahliyesinde kullanıma açmak." }, { "key": "G", "text": "Yangın senaryosunun diğer bloklarla ilgisi olmadığını varsayarak yalnız teknik odaya odaklanmak." }], "concepts": [], "category": "YANGIN SENARYOSU VE BİNA SİSTEMLERİ" }, { "id": "8", "time": "13:50", "title": "Duman İlk Hasta Katına Ulaşıyor", "phase": "TAHLİYE VE ROTA GÜVENİLİRLİĞİ", "data": ["B Blok 1. kat servis holünde hafif duman kokusu bildiriliyor.", "A merdiveni basınçlandırma fanı RUN görünmesine rağmen A merdiveni kapısı çevresinde duman kokusu var.", "B merdiveninde duman bildirimi yok; sedye geçişi uygundur.", "Yoğun bakım aynı blokta üst kattadır; klinik lider “hastaları şimdi mi taşıyalım?” diye soruyor.", "Komşu yangın kompartımanı şimdilik dumansızdır."], "task": "Tahliye hazırlığına ilişkin en savunulabilir yaklaşım?", "type": "choice", "options": [{ "key": "A", "text": "Fan RUN olduğuna göre A merdiveni kullanılabilir; tüm hastaları oradan indirmeye başlarız.", "tech": 2, "hg": 3, "hd": 6, "flags": ["EVAC_ROUTE_GAP"] }, { "key": "B", "text": "Duman hasta katına ulaştığı için bütün hastaneyi aynı anda tahliye ederim.", "tech": 4, "hg": 7, "hd": 2, "flags": ["EVAC_OVERREACT"] }, { "key": "C", "text": "A merdivenini RUN sinyaline dayanarak güvenli kabul etmem; komşu kompartımanı ve B merdivenini hızla doğrular, klinik liderle kademeli yatay tahliye/yer değiştirme hazırlığını başlatır ve dikey tahliyeyi koşullara göre ikinci aşama olarak hazır tutarım.", "tech": 10, "hg": 10, "hd": 8, "flags": ["EVAC_PREPARED"] }, { "key": "D", "text": "Yoğun bakım hastaları transfer açısından riskli olduğu için yangın tamamen sönene kadar yerinde kalırlar.", "tech": 3, "hg": 4, "hd": 8, "flags": ["EVAC_DELAY"] }, { "key": "E", "text": "Tahliye kararı klinik birimin sorumluluğudur; Teknik Hizmetler yalnız sistemleri izler.", "tech": 2, "hg": 4, "hd": 7, "flags": ["COMMAND_FRAGMENT"] }], "concepts": [], "category": "TAHLİYE VE ROTA GÜVENİLİRLİĞİ" }, { "id": "9", "time": "13:52", "title": "İtfaiyeye İlk Teknik Devir", "phase": "MÜDAHALE KOORDİNASYONU", "data": ["İtfaiye ekibi hastaneye ulaşmıştır.", "Yangın odasına giriş öncesi teknik bilgi talep edilmektedir.", "Gazlı söndürme boşaltım yapmış, odanın enerjisi ise karar yolunuza göre tamamen/kısmen/henüz kesilmemiş olabilir."], "task": "İtfaiye ekip liderine ilk teknik devirde en fazla 5 ayrı bilgi unsurunu yazın.", "type": "free5", "options": [], "concepts": [["konum", "erişim", "komşu alan", "yangın odası"], ["personel", "işgali", "son erişim", "oda boş"], ["gazlı söndürme", "boşaltım", "ajan", "pressure"], ["enerji izolasyon", "enerjisiz", "yeniden enerji", "kesici"], ["ups", "batarya", "elektriksel tehlike", "kritik yük"], ["duman", "şaft", "hvac", "kapı yayılım"], ["merdiven", "basınçlandırma", "güvenli rota", "kaçış"], ["yangın planı", "tek hat", "cause effect", "çizim"]], "category": "MÜDAHALE KOORDİNASYONU" }, { "id": "10", "time": "13:54", "title": "Çelişen Talepler ve Komuta", "phase": "MÜDAHALE KOORDİNASYONU", "data": ["İtfaiye ekip lideri teknik odada aktif sıcaklık bulunduğunu, ancak yayılımın henüz sınırlı göründüğünü bildiriyor.", "Yoğun bakım ekibi hastaları taşımaya hazır olmak istiyor.", "Hastane yönetimi “gereksiz tahliye olmasın” diyor.", "Güvenlik ayrı bir kanaldan personele merdiven kullanım talimatı vermeye başlamıştır."], "task": "Bu aşamada yönetim yaklaşımınız?", "type": "choice", "options": [{ "key": "A", "text": "Tahliye kararını tamamen itfaiyeye bırakır, teknik ekip olarak yalnız enerji ve mekanik sistemleri yönetirim.", "tech": 6, "hg": 7, "hd": 7, "flags": ["COMMAND_PARTIAL"] }, { "key": "B", "text": "Yönetimin paniği önleme talebine uyar, kliniklere hazırlık mesajını geri çekerim.", "tech": 2, "hg": 4, "hd": 7, "flags": ["EVAC_DELAY"] }, { "key": "C", "text": "Tek bir kriz komuta/iletişim zinciri kurar; itfaiyenin saha güvenlik kararı, klinik liderin hasta önceliği ve Teknik Hizmetlerin sistem/rota bilgilerini aynı karar noktasında birleştiririm. Güvenlikten bağımsız talimatları durdurur, tahliye eşiklerini açıkça tanımlarım.", "tech": 10, "hg": 10, "hd": 9, "flags": ["COMMAND_UNIFIED"] }, { "key": "D", "text": "Tüm hastaları derhal tahliye ederek farklı görüşleri ortadan kaldırırım.", "tech": 4, "hg": 7, "hd": 2, "flags": ["EVAC_OVERREACT"] }, { "key": "E", "text": "Her birimin kendi sorumluluk alanında karar vermesi daha hızlıdır; merkezi koordinasyona gerek yoktur.", "tech": 1, "hg": 3, "hd": 4, "flags": ["COMMAND_FRAGMENT"] }], "concepts": [], "category": "MÜDAHALE KOORDİNASYONU" }, { "id": "11", "time": "13:57", "title": "Söndürme Sonrası Sıcak Nokta Devam Ediyor", "phase": "MÜDAHALE KOORDİNASYONU", "data": ["Gazlı söndürme boşaltımından sonra alev görülmemiştir; ancak itfaiye termal kontrolünde dağıtım ekipmanı çevresinde yükselen sıcaklık görülmektedir.", "Kapı/oda bütünlüğünün tam olmadığı anlaşılmıştır.", "İtfaiye odaya kontrollü müdahale hazırlığındadır.", "Bazı çalışanlar “gaz boşaldı, yangın bitmiş olmalı” diyerek alanı normale döndürmek istemektedir."], "task": "Teknik Hizmetler açısından yaklaşımınız?", "type": "choice", "options": [{ "key": "A", "text": "Gaz boşaldığı için sistemi başarılı kabul eder, BMS ve alarm sistemini resetlerim.", "tech": 2, "hg": 3, "hd": 9, "flags": ["PREMATURE_RESET"] }, { "key": "B", "text": "Sıcak nokta elektriksel olduğu için teknik personeli itfaiyeyle birlikte içeri gönderirim.", "tech": 1, "hg": 2, "hd": 7, "flags": ["PERSONNEL_EXPOSURE"] }, { "key": "C", "text": "Söndürme sisteminin boşaltımını tek başına başarı kabul etmem; alanı yeniden işletmeye açmaz, reset/ventilasyon/yeniden enerjilendirmeyi itfaiye ve güvenli teknik doğrulama tamamlanana kadar engeller, enerji ve sistem bilgisiyle müdahaleyi desteklerim.", "tech": 10, "hg": 10, "hd": 8, "flags": ["REENTRY_CONTROLLED"] }, { "key": "D", "text": "Dumanın hızla çıkması için HVAC’yi manuel çalıştırırım.", "tech": 1, "hg": 2, "hd": 8, "flags": ["SMOKE_SPREAD_RISK"] }, { "key": "E", "text": "Yangın görünmüyorsa tahliye hazırlığını iptal ederim; yalnız teknik odanın soğumasını beklerim.", "tech": 4, "hg": 5, "hd": 9, "flags": ["FALSE_REASSURANCE"] }], "concepts": [], "category": "MÜDAHALE KOORDİNASYONU" }, { "id": "12", "time": "14:08", "title": "Yangın Kontrol Altında", "phase": "KRİZDEN KONTROLLÜ ÇIKIŞ", "data": ["İtfaiye yangının kontrol altına alındığını bildiriyor.", "Teknik oda hâlâ sıcak; yeniden tutuşma kontrolü devam ediyor.", "Hasta katındaki duman belirgin şekilde azalmıştır.", "Yönetim B Blok hizmetlerinin mümkün olduğunca hızlı normale dönmesini istiyor."], "task": "Kriz modundan çıkış yaklaşımınız?", "type": "choice", "options": [{ "key": "A", "text": "Yangın kontrol altında olduğuna göre alarmı resetler ve enerjiyi kademeli olarak hemen geri veririm.", "tech": 3, "hg": 5, "hd": 8, "flags": ["PREMATURE_REENERGIZE", "EVIDENCE_LOSS"] }, { "key": "B", "text": "B Bloku bütün gün kapalı tutarım; teknik doğrulama tamamlanmadan hiçbir hizmet açılmaz.", "tech": 6, "hg": 9, "hd": 3, "flags": ["SERVICE_STRAIN"] }, { "key": "C", "text": "İtfaiyenin saha emniyeti, teknik sıcaklık/enerji doğrulaması ve klinik ihtiyaçları birlikte değerlendirerek yalnız güvenli bölümleri kontrollü normale döndürürüm; yangın odası ve ilişkili sistemler kilitli/izole kalır, kayıtlar resetlenmeden korunur.", "tech": 10, "hg": 10, "hd": 9, "flags": ["CONTROLLED_STANDDOWN"] }, { "key": "D", "text": "Hasta memnuniyeti için görünür duman biter bitmez normal hizmete dönerim.", "tech": 2, "hg": 4, "hd": 10, "flags": ["PREMATURE_REENTRY"] }, { "key": "E", "text": "Teknik alanı kapalı tutar ancak alarm ve BMS kayıtlarını operasyonu kolaylaştırmak için sıfırlarım.", "tech": 2, "hg": 6, "hd": 8, "flags": ["EVIDENCE_LOSS"] }], "concepts": [], "category": "KRİZDEN KONTROLLÜ ÇIKIŞ" }, { "id": "13", "time": "14:20", "title": "Kayıtları ve Teknik Delilleri Koruma", "phase": "KONTROL SONRASI TEKNİK İNCELEME", "data": ["Yangın söndürülmüştür; artık amaç yangının nedenini ve sistemlerin neden beklenen şekilde çalışıp çalışmadığını teknik olarak incelemektir.", "Panel ve BMS sistemleri hâlâ olay kayıtlarını tutmaktadır.", "Bakım firmaları uzaktan bağlantı kurup sistemi resetlemeyi teklif etmektedir."], "task": "İlk teknik inceleme için korunması gereken en fazla 5 ayrı kayıt/delil ailesini yazın.", "type": "free5", "options": [], "concepts": [["alarm paneli", "fault", "bypass", "alarm kronolojisi", "dedektör", "zon haritası"], ["gazlı söndürme", "boşaltım", "gecikme", "abort", "pressure"], ["bms", "cause effect", "komut", "geri bildirim", "trend"], ["koruma rölesi", "kesici", "ups olay", "yük kaydı", "elektrik"], ["cctv", "erişim kartı", "zaman senkron"], ["fiziksel durum", "kapı", "penetrasyon", "oda bütünlüğü", "fotoğraf"], ["bakım", "test", "servis", "son değişiklik"], ["itfaiye", "ilk müdahale", "zaman çizelgesi"]], "category": "KONTROL SONRASI TEKNİK İNCELEME" }, { "id": "14", "time": "14:35", "title": "Yangın Senaryosu Sistemsel İnceleme", "phase": "KONTROL SONRASI TEKNİK İNCELEME", "data": ["İlk kayıtlar; ilk teknik oda alarmından sonra farklı zonlarda yaklaşık 10 dedektörün kısa aralıkla alarm verdiğini, gazlı söndürmenin boşaltım yaptığını, bir damper durumunun belirsiz kaldığını ve bir yangın kapısının saha koşulunda açık kaldığını göstermektedir.", "A merdiveni fanı RUN kayıtlıdır; ancak merdiven holünde duman kokusu bildirilmiştir."], "task": "Sistemsel incelemede hangi yaklaşım en güçlüdür?", "type": "choice", "options": [{ "key": "A", "text": "Dedektörler ve gazlı söndürme çalıştığı için yangın güvenlik sistemleri başarılı kabul edilir; sorun yalnız elektrik ekipmanındadır.", "tech": 4, "hg": null, "hd": null, "flags": ["SYSTEM_CAUSE_BLIND"] }, { "key": "B", "text": "Her ekipmanı ayrı ayrı çalıştı/çalışmadı şeklinde değerlendiririm; birbirleriyle ilişkileri ikincil önemdedir.", "tech": 5, "hg": null, "hd": null, "flags": ["INTEGRATION_BLIND"] }, { "key": "C", "text": "Algılama → alarm/iletişim → söndürme → enerji izolasyonu → kapı/damper/HVAC → basınçlandırma → tahliye zincirini uçtan uca inceler; komut verildi mi değil, sahada beklenen fonksiyon gerçekten oluştu mu sorusunu her bariyer için ayrı değerlendiririm.", "tech": 10, "hg": null, "hd": null, "flags": ["SYSTEM_REVIEW_STRONG"] }, { "key": "D", "text": "Yangın söndürüldüğü için yalnız söndürme sisteminin kapasitesini incelerim.", "tech": 3, "hg": null, "hd": null, "flags": ["SYSTEM_CAUSE_BLIND"] }, { "key": "E", "text": "İtfaiye müdahalesi başarılı olduğundan bina sistemlerinin ayrıca incelenmesine gerek yoktur.", "tech": 1, "hg": null, "hd": null, "flags": ["SYSTEM_CAUSE_BLIND"] }], "concepts": [], "category": "KONTROL SONRASI TEKNİK İNCELEME" }, { "id": "15", "time": "15:00", "title": "Yangın Nedenini Araştırma Planı", "phase": "KONTROL SONRASI TEKNİK İNCELEME", "data": ["İlk görsel inceleme, UPS/elektrik odasında dağıtım bağlantısı çevresinde daha yoğun termal/yanık hasarı olduğunu düşündürmektedir; bu bilgi tek başına başlangıç nedenini kanıtlamaz.", "Gazlı söndürmenin boşaltım yapmasına rağmen oda bütünlüğü ve enerjinin kesilme zamanı hakkında soru işaretleri vardır.", "Amaç bu aşamada nihai rapor yazmak değil, doğru inceleme planını kurmaktır."], "task": "Dört başlığı kısa ve teknik şekilde doldurun: başlangıç bölgesi/hipotezi, en az 3 alternatif teknik hipotez, en kritik 5 veri/kanıt ve “başlatan neden” ile “büyümeyi/etkiyi artıran sistem zafiyetleri” ayrımı.", "type": "k15", "options": [], "concepts": [], "category": "KONTROL SONRASI TEKNİK İNCELEME" }];
+        const FLAG_INFO = { VERIFY_DELAY: 'İlk saha doğrulaması gecikti', COMMAND_READY: 'İlk komuta hazırlığı kuruldu', COMM_STRAIN: 'İletişim yükü/panik baskısı', PERSONNEL_EXPOSURE: 'Personel maruziyet riski', ALARM_DEPENDENCE: 'Alarm/bakım firmasına bağımlı doğrulama', ALARM_COUNT_BIAS: 'Alarm sayısı yanlılığı', SOURCE_DELAY: 'Kaynak lokalizasyonu gecikmesi', SOURCE_ANCHORING: 'İlk alarma aşırı bağlanma', REMOTE_ALARM_UNDERREAD: 'Uzak alarmı küçümseme', CLINICAL_ORIGIN_BIAS: 'Klinik alanı kaynak sanma', CLINICAL_CHECK_STRONG: 'Klinik doğrulaması güçlü', SOURCE_PRIORITY: 'Kaynak hipotezi doğru önceliklendirildi', SMOKE_PATH_RECOGNIZED: 'Duman taşıma yolu erken tanındı', CLINICAL_CHECK_PARALLEL: 'Klinik kontrol paralel yürütüldü', MULTI_FIRE_ASSUMPTION: 'Çoklu bağımsız yangın varsayımı', RESOURCE_FRAGMENTATION: 'Kaynak parçalanması', OCCUPANCY_RISK: 'Oda işgal belirsizliği', OCCUPANCY_CONFIRMED: 'Oda/personel durumu güvenli doğrulandı', SUPPRESSION_DELAY: 'Otomatik söndürme geciktirildi', DOOR_OPEN_EARLY: 'Kapı erken açıldı / bütünlük bozuldu', SUPPRESSION_FALSE_ASSURANCE: 'Gaz boşalımını başarı kabul etme', UNPLANNED_SUPPRESSION_ACTION: 'Plansız ikinci söndürme eylemi', SUPPRESSION_UNVERIFIED: 'Söndürme etkinliği doğrulanmadı kabul edildi', ISOLATION_PRIORITY: 'Enerji izolasyonu önceliklendirildi', SMOKE_SPREAD_RISK: 'Duman yayılım riski artırıldı', CLINICAL_POWER_STRAIN: 'Klinik enerji/hizmet baskısı', ENERGY_DELAY: 'Enerji izolasyonu gecikmesi', ENERGY_CONTROLLED: 'Kontrollü enerji izolasyonu', COMM_GAP: 'Resmi iletişim boşluğu', COMM_CONTROLLED: 'İletişim kontrollü', FALSE_REASSURANCE: 'Yanlış güvence', DOOR_GAP: 'Yangın kapısı bariyeri belirsiz/zayıf', DAMPER_GAP: 'Damper fonksiyonu doğrulanmadı', HVAC_GAP: 'HVAC saha fonksiyonu doğrulanmadı', EVAC_ROUTE_GAP: 'Tahliye rotası güvenilirliği açığı', ELEVATOR_EVAC_RISK: 'Asansör tahliyede uygunsuz kullanıma açıldı', EVAC_OVERREACT: 'Aşırı tahliye tepkisi', EVAC_PREPARED: 'Kademeli tahliye hazırlığı güçlü', EVAC_DELAY: 'Tahliye hazırlığı gecikti', COMMAND_FRAGMENT: 'Komuta parçalandı', COMMAND_PARTIAL: 'Komuta kısmi', COMMAND_UNIFIED: 'Birleşik kriz komutası', PREMATURE_RESET: 'Erken reset/normalleşme', REENTRY_CONTROLLED: 'Kontrollü yeniden giriş', PREMATURE_REENERGIZE: 'Erken yeniden enerjilendirme', EVIDENCE_LOSS: 'Teknik kayıt/delil kaybı', SERVICE_STRAIN: 'Gereğinden uzun hizmet kesintisi', CONTROLLED_STANDDOWN: 'Kontrollü krizden çıkış', PREMATURE_REENTRY: 'Erken hizmete dönüş', SYSTEM_CAUSE_BLIND: 'Sistemsel neden körlüğü', INTEGRATION_BLIND: 'Entegrasyon körlüğü', SYSTEM_REVIEW_STRONG: 'Uçtan uca sistem incelemesi güçlü', FIRE_BRIEF_GAP: 'İtfaiye teknik devir boşluğu' };
+
+        // ==================== FIREBASE VE ADMIN EKLENTILERI ====================
+        let APP_CONFIG = null;
+        let db = null;
+        let DB_ROOT = "yangin_simulasyon_verileri";
+        let sessionUserEmail = localStorage.getItem('sessionUserEmail');
+        let sessionUserDocId = localStorage.getItem('sessionUserDocId');
+
+        // Inject all custom CSS globally so it is always available
+        function injectCSS() {
+            if (!document.getElementById('custom-sim-styles')) {
+                const style = document.createElement('style');
+                style.id = 'custom-sim-styles';
+                style.innerHTML = `
+            /* Split Layout */
+            .split-container { display: flex; gap: 30px; margin-top: 25px; align-items: stretch; }
+            .split-box { flex: 1; padding: 25px; border: 1px solid #e4e9f1; border-radius: 12px; background: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+            .split-box h3 { margin-top: 0; color: #17233d; font-size: 16px; margin-bottom: 15px; border-bottom: 2px solid #f4f7fb; padding-bottom: 10px; }
+            .split-divider { width: 1px; background: #e4e9f1; }
+            @media(max-width: 768px) { .split-container { flex-direction: column; gap: 20px; } .split-divider { display: none; } }
+            
+            /* Admin Dashboard Premium CSS */
+            .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 0 10px; }
+            .dash-header h2 { margin:0; font-size: 24px; color: #17233d; }
+            .dash-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+            .dash-stat-card { background: #fff; border: 1px solid #e4e9f1; border-radius: 12px; padding: 16px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: center; }
+            .dash-stat-card span { font-size: 13px; font-weight: 700; color: #667085; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+            .dash-stat-card strong { font-size: 32px; color: #0f766e; line-height: 1; }
+            
+            .dash-widgets-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+            @media(max-width: 1024px) { .dash-widgets-grid { grid-template-columns: 1fr; } }
+            .dash-widget { background: #fff; border: 1px solid #e4e9f1; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+            .dash-widget h3 { margin-top: 0; font-size: 16px; color: #17233d; border-bottom: 1px solid #f4f7fb; padding-bottom: 12px; margin-bottom: 16px; }
+            
+            .prog-bar-bg { width: 100%; background: #e4e9f1; border-radius: 8px; height: 12px; overflow: hidden; margin-top: 10px; }
+            .prog-bar-fill { height: 100%; background: linear-gradient(90deg, #14b8a6, #0f766e); transition: width 0.5s ease; }
+            
+            .podium-list { list-style: none; padding: 0; margin: 0; }
+            .podium-list li { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f4f7fb; font-size: 14px; }
+            .podium-list li:last-child { border-bottom: none; }
+            .podium-list li b { color: #17233d; }
+            
+            .dash-table-wrap { background: #fff; border: 1px solid #e4e9f1; border-radius: 12px; padding: 20px; overflow-x: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+            .dash-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+            .dash-table th { padding: 12px 10px; color: #667085; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; border-bottom: 2px solid #e4e9f1; }
+            .dash-table td { padding: 14px 10px; border-bottom: 1px solid #f4f7fb; color: #17233d; }
+            .dash-table tr:hover td { background: #fbfcfe; }
+            
+            @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+            
+            /* User Logout Button Style */
+            .user-logout-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: background 0.2s; margin-left: 10px; font-weight: 600; display: flex; align-items: center;}
+            .user-logout-btn:hover { background: rgba(255,255,255,0.2); }
+            
+            /* Live Ticker & Flash Animations */
+            .ticker-wrap { background: #17233d; color: #fff; border-radius: 8px; padding: 10px 15px; margin-bottom: 24px; font-size: 13px; max-height: 120px; overflow-y: auto; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); }
+            .ticker-item { padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.1); animation: slideDown 0.3s ease-out; line-height: 1.4;}
+            .ticker-item:last-child { border-bottom: none; }
+            .ticker-item b { color: #fff; font-weight: 600; }
+            @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+            
+            @keyframes flashGreen { 0% { background-color: rgba(20, 184, 166, 0.3); } 100% { background-color: transparent; } }
+            @keyframes flashRed { 0% { background-color: rgba(180, 35, 24, 0.3); } 100% { background-color: transparent; } }
+            @keyframes flashOrange { 0% { background-color: rgba(245, 158, 11, 0.3); } 100% { background-color: transparent; } }
+            
+            .flash-row-green { animation: flashGreen 2s ease-out; }
+            .flash-row-red { animation: flashRed 2s ease-out; }
+            .flash-row-orange { animation: flashOrange 2s ease-out; }
+            
+            .trend-up { color: #14b8a6; font-size: 11px; margin-left: 5px; font-weight: bold; }
+            .trend-down { color: #b42318; font-size: 11px; margin-left: 5px; font-weight: bold; }
+            
+            /* Outcome Dynamic Colors */
+            .bg-R0, .bg-R1 { background: #067647 !important; }
+            .bg-R2 { background: #b7791f !important; }
+            .bg-R3, .bg-R4 { background: #b45309 !important; }
+            
+            /* Outcome Dynamic Colors */
+            .bg-R0, .bg-R1 { background: #067647 !important; }
+            .bg-R2 { background: #b7791f !important; }
+            .bg-R3, .bg-R4 { background: #b45309 !important; }
+            .bg-R5 { background: #b42318 !important; }
+            
+            /* PRINT OPTIMIZATIONS (NATIVE PDF) */
+            @media print {
+                body, html, .main, .result-wrap, .history, .ticker-wrap, .dash-table-wrap, .eval-table, .evalrows, .eval, .timeline, .wrap, .layout, .card, .resbody, .scorecards, .profiles, .twocol { 
+                    height: auto !important;
+                    max-height: none !important;
+                    overflow: visible !important;
+                    display: block !important;
+                }
+                .hrow {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                }
+                
+                body { 
+                    -webkit-print-color-adjust: exact !important; 
+                    print-color-adjust: exact !important; 
+                    background: #fff !important; 
+                }
+                
+                /* Hide UI elements that shouldn't be printed */
+                .topbar, .daybar, .result-actions, .dash-header, #liveTicker, .btn { 
+                    display: none !important; 
+                }
+                
+                /* Print Evaluator Panel ONLY if it is explicitly opened by Admin */
+                .evaluator:not([open]) {
+                    display: none !important;
+                }
+                .evaluator[open] {
+                    display: block !important;
+                }
+                .evaluator summary {
+                    display: none !important;
+                }
+                
+                /* Ensure main container takes full width */
+                .main { 
+                    max-width: 100% !important; 
+                    width: 100% !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                }
+                
+                /* Result screen specific print fixes */
+                .result-wrap {
+                    box-shadow: none !important;
+                    border: none !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                }
+                
+                /* Grid and Layout overrides for print to prevent breaking */
+                .two-col {
+                    display: grid !important;
+                    grid-template-columns: 1fr 1fr !important;
+                    gap: 20px !important;
+                    align-items: start !important;
+                }
+                
+                .impact-grid {
+                    display: grid !important;
+                    grid-template-columns: 1fr 1fr !important;
+                    gap: 20px !important;
+                }
+                
+                /* Prevent page breaks inside important blocks */
+                .hist-row, .impact-card, .profile, .info-box, .principle-box, .dash-widget, .card, .outcome-card, .result-hero {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                }
+                
+                /* Enforce background colors for print */
+                .result-hero {
+                    color: white !important;
+                }
+            }
+    
+            
+        `;
+                document.head.appendChild(style);
+            }
+        }
+
+        // Helper to fix Firebase stripping empty objects
+        function hydrateState(st) {
+            if (!st) return fresh();
+            st.answers = st.answers || {};
+            st.flags = st.flags || fresh().flags;
+            st.history = st.history || fresh().history;
+            st.overrides = st.overrides || fresh().overrides;
+            return st;
+        }
+
+        // Format duration
+        function formatDuration(ms) {
+            if (!ms || ms < 0) return "—";
+            const totalSec = Math.floor(ms / 1000);
+            const min = Math.floor(totalSec / 60);
+            const sec = totalSec % 60;
+            return min + " dk " + sec + " sn";
+        }
+
+        async function loadConfigAndInit() {
+            try {
+                injectCSS(); // Inject global CSS
+                const res = await fetch('config.json?v=' + new Date().getTime());
+                APP_CONFIG = await res.json();
+                firebase.initializeApp(APP_CONFIG.firebaseConfig);
+                db = firebase.database();
+
+                // Resume session logic
+                if (sessionUserEmail) {
+                    if (APP_CONFIG.admins.includes(sessionUserEmail)) {
+                        renderAdminDashboard();
+                        return;
+                    } else {
+                        const x = load(); // load local state
+                        if (x) {
+                            S = hydrateState(x);
+                            render();
+                            return;
+                        }
+                    }
+                }
+
+                renderStart(); // Show login instead of auto-starting
+            } catch (e) {
+                console.error("Yapılandırma yüklenemedi:", e);
+                renderStart(); // Fallback
+            }
+        }
+
+        // Override renderStart to show the login screen (Split Layout)
+        renderStart = function () {
+            S.started = false;
+            S.completed = false;
+            document.getElementById('phasebar').classList.add('hidden');
+            updateTop();
+
+            document.getElementById('app').innerHTML = `
+    <main class="main" style="display:block; max-width:900px; margin:auto;">
+        <section class="card start-card">
+            <div class="start-hero" style="text-align:center;">
+                <span class="kicker">Dijital Yetkinlik Simülasyonu</span>
+                <h2>Yangın Anı Kriz Yönetimi Simülasyonu</h2>
+                <p>Teknik Hizmetler Müdürü olarak ilk alarmdan yangının kontrol altına alınmasına kadar müdahaleyi yönetecek; ardından yalnız sınırlı teknik sistem incelemesine geçeceksiniz.</p>
+            </div>
+            
+            <div class="split-container" style="padding: 20px 40px;">
+                <!-- Sol Taraf: Yeni Kayıt -->
+                <div class="split-box">
+                    <h3>Yeni Katılımcı Kaydı</h3>
+                    <p style="font-size:12px; color:#667085; margin-bottom:15px;">Simülasyona ilk defa katılıyorsanız bilgilerinizi giriniz.</p>
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <input id="regName" class="input" placeholder="Ad Soyad" />
+                        <input id="regFacility" class="input" placeholder="Tesis / Kurum Adı" />
+                        <input id="regEmail" class="input" type="email" placeholder="E-posta adresiniz" />
+                        <button class="btn btn-primary" onclick="registerNew()" style="background:#0f766e;">Kayıt Ol ve Başla</button>
+                        <div id="regError" style="color:#b42318; font-size:12px; font-weight:bold; text-align:center;"></div>
+                    </div>
+                </div>
+                
+                <div class="split-divider"></div>
+                
+                <!-- Sağ Taraf: Devam Et / Admin -->
+                <div class="split-box">
+                    <h3>Oturuma Devam Et / Admin</h3>
+                    <p style="font-size:12px; color:#667085; margin-bottom:15px;">Kaldığınız yerden devam etmek veya yönetici paneline ulaşmak için e-postanızı girin.</p>
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <input id="resEmail" class="input" type="email" placeholder="Kayıtlı e-posta adresiniz" />
+                        <button class="btn btn-primary" onclick="resumeExisting()" style="background:#175cd3;">Kaldığım Yerden Devam Et</button>
+                        <div id="resError" style="color:#b42318; font-size:12px; font-weight:bold; text-align:center;"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>`;
+        };
+
+        window.registerNew = function () {
+            if (!db) { document.getElementById('regError').textContent = "Veritabanı bağlantısı yok."; return; }
+            let nameFull = document.getElementById('regName').value.trim();
+            let parts = nameFull.split(' ');
+            let name = parts.length > 1 ? parts.slice(0, -1).join(' ') : nameFull;
+            let surname = parts.length > 1 ? parts[parts.length - 1] : '';
+            const facility = document.getElementById('regFacility').value.trim();
+            const email = document.getElementById('regEmail').value.trim().toLowerCase();
+
+            if (!nameFull || !facility || !email) {
+                document.getElementById('regError').textContent = "Lütfen tüm alanları doldurun."; return;
+            }
+
+            document.getElementById('regError').textContent = "Kontrol ediliyor...";
+            document.getElementById('resError').textContent = "";
+
+            const rootRef = db.ref(DB_ROOT);
+            rootRef.orderByChild("email").equalTo(email).once("value", snapshot => {
+                if (snapshot.exists()) {
+                    document.getElementById('regError').textContent = "Bu e-posta kayıtlı. Sağ taraftan devam ediniz.";
+                } else {
+                    const newUserRef = rootRef.push();
+                    sessionUserDocId = newUserRef.key;
+                    sessionUserEmail = email;
+
+                    localStorage.setItem('sessionUserDocId', sessionUserDocId);
+                    localStorage.setItem('sessionUserEmail', sessionUserEmail);
+
+                    S = fresh();
+                    S.started = true;
+                    S.participant = nameFull;
+                    S.facility = facility;
+                    S.email = email;
+                    S.startTime = Date.now(); // Start time tracker
+
+                    newUserRef.set({
+                        name: name,
+                        surname: surname,
+                        facility: facility,
+                        email: email,
+                        state: S,
+                        timestamp: firebase.database.ServerValue.TIMESTAMP
+                    }).then(() => {
+                        save(); // local save
+                        render();
+                    }).catch(err => {
+                        document.getElementById('regError').textContent = "Kayıt hatası: " + err.message;
+                    });
+                }
+            }, error => {
+                document.getElementById('regError').textContent = "Bağlantı hatası: " + error.message;
+            });
+        };
+
+        window.resumeExisting = function () {
+            if (!db) { document.getElementById('resError').textContent = "Veritabanı bağlantısı yok."; return; }
+            const email = document.getElementById('resEmail').value.trim().toLowerCase();
+
+            if (!email) {
+                document.getElementById('resError').textContent = "Lütfen e-posta adresinizi girin."; return;
+            }
+
+            if (APP_CONFIG && APP_CONFIG.admins && APP_CONFIG.admins.includes(email)) {
+                sessionUserEmail = email;
+                localStorage.setItem('sessionUserEmail', email);
+                renderAdminDashboard();
+                return;
+            }
+
+            document.getElementById('resError').textContent = "Hesap aranıyor...";
+            document.getElementById('regError').textContent = "";
+
+            const rootRef = db.ref(DB_ROOT);
+            rootRef.orderByChild("email").equalTo(email).once("value", snapshot => {
+                if (snapshot.exists()) {
+                    let existingDocId;
+                    let existingData;
+                    snapshot.forEach(child => {
+                        existingDocId = child.key;
+                        existingData = child.val();
+                    });
+
+                    sessionUserDocId = existingDocId;
+                    sessionUserEmail = email;
+                    localStorage.setItem('sessionUserDocId', sessionUserDocId);
+                    localStorage.setItem('sessionUserEmail', sessionUserEmail);
+
+                    if (existingData.state) {
+                        S = hydrateState(existingData.state);
+                        save();
+                        render();
+                    } else {
+                        document.getElementById('resError').textContent = "Kayıtlı veriniz eksik veya bozuk.";
+                    }
+                } else {
+                    document.getElementById('resError').textContent = "Bu e-posta adresi ile kayıt bulunamadı.";
+                }
+            }, error => {
+                document.getElementById('resError').textContent = "Bağlantı hatası: " + error.message;
+            });
+        };
+
+
+        function save() { try { localStorage.setItem('ygs', JSON.stringify(S)) } catch (e) { } }
+        function load() { try { const v = localStorage.getItem('ygs'); return v ? JSON.parse(v) : null } catch (e) { return null } }
+        function clearSave() { try { localStorage.removeItem('ygs') } catch (e) { } }
+
+        // Override save to push to Firebase and log endTime
+        const originalSave = save;
+        save = function () {
+            if (S.completed && !S.endTime) {
+                S.endTime = Date.now();
+            }
+
+            originalSave(); // save locally
+            if (db) {
+                // If Admin is inspecting, update the inspected user's doc
+                let targetDoc = window.isAdminInspecting ? window.inspectingDocId : sessionUserDocId;
+                if (targetDoc) {
+                    db.ref(DB_ROOT + '/' + targetDoc + '/state').set(S).catch(e => console.error("Firebase kayıt hatası:", e));
+                }
+            }
+        };
+
+        let adminChartInstance = null;
+        let adminTimerInterval = null;
+        window.adminPrevUsersMap = window.adminPrevUsersMap || {};
+        window.adminTickerMsgs = window.adminTickerMsgs || [];
+        window.adminUsersData = window.adminUsersData || [];
+        window.isAdminInspecting = false;
+
+        window.viewUserResult = function (email) {
+            if (!window.adminUsersData) return;
+            const u = window.adminUsersData.find(x => x.email === email);
+            if (u && u.state) {
+                window.isAdminInspecting = true;
+                window.inspectingDocId = u.docId; // Store their docId so if we edit evaluator panel it saves correctly
+                window.adminBackupS = JSON.parse(JSON.stringify(S)); // backup admin state
+
+                S = hydrateState(u.state); // Load their state
+                renderResult(); // render the result page directly
+            }
+        }
+        window.closeUserResult = function () {
+            window.isAdminInspecting = false;
+            window.inspectingDocId = null;
+            if (window.adminBackupS) {
+                S = window.adminBackupS;
+            }
+            renderAdminDashboard(); // return to dashboard
+        }
+
+        // Admin Dashboard Logic
+        window.logoutAdmin = function () {
+            localStorage.clear();
+            location.reload();
+        };
+        window.renderAdminDashboard = function () {
+            document.getElementById('phasebar').classList.add('hidden');
+            const screen = document.getElementById('app');
+
+            screen.innerHTML = `
+    <main class="main" style="display:block; max-width: 1400px; margin: auto; padding: 20px;">
+        <style>
+        @keyframes slideDown { from { transform: translateY(-15px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.6); opacity: 0.3; } 100% { transform: scale(1); opacity: 1; } }
+        .flash-row-green { animation: flashGreen 2.5s ease-out; }
+        .flash-row-red { animation: flashRed 2.5s ease-out; }
+        .flash-row-orange { animation: flashOrange 2.5s ease-out; }
+        @keyframes flashGreen { 0% { background-color: rgba(18,183,106,0.35); } 100% { background-color: rgba(255,255,255,0.06); } }
+        @keyframes flashRed { 0% { background-color: rgba(240,68,56,0.35); } 100% { background-color: rgba(255,255,255,0.06); } }
+        @keyframes flashOrange { 0% { background-color: rgba(247,144,9,0.35); } 100% { background-color: rgba(255,255,255,0.06); } }
+        .ticker-wrap { background: #101828 !important; padding: 15px !important; border: 1px solid #1d2939; }
+        </style>
+        <div class="dash-header">
+            <h2>Komuta Merkezi</h2>
+            <div style="display:flex; align-items:center; gap: 15px;">
+                <div style="font-size:12px; color:#667085; font-weight:600; display:flex; align-items:center; gap:6px;">
+                    Canlı Akış <span style="display:inline-block; width:8px; height:8px; background:red; border-radius:50%; animation: pulse 2s infinite;"></span>
+                </div>
+                <button class="btn btn-light" style="font-size:12px; padding: 6px 12px;" onclick="localStorage.clear(); location.reload();">Çıkış Yap</button>
+            </div>
+        </div>
+        
+        <div class="ticker-wrap" id="liveTicker">
+            <div class="ticker-item" style="color:#98a2b3;">📡 Sistem dinleniyor... Aksiyon akışı burada görünecek.</div>
+        </div>
+        
+        <div class="dash-stats-grid">
+            <div class="dash-stat-card">
+                <span>Toplam Katılımcı</span>
+                <strong id="kpiTotal">0</strong>
+            </div>
+            <div class="dash-stat-card">
+                <span>Tamamlayanlar</span>
+                <strong id="kpiCompleted">0</strong>
+            </div>
+            <div class="dash-stat-card">
+                <span>Genel Tamamlama Yüzdesi</span>
+                <strong id="kpiProgress">%0</strong>
+                <div class="prog-bar-bg"><div class="prog-bar-fill" id="kpiProgressBar" style="width: 0%"></div></div>
+            </div>
+            <div class="dash-stat-card">
+                <span>Ortalama Puan</span>
+                <strong id="kpiAvgScore">0</strong>
+            </div>
+        </div>
+        
+        <div class="dash-widgets-grid">
+            <div class="dash-widget">
+                <h3>Sonuç Senaryoları (Outcomes)</h3>
+                <div style="position: relative; height: 200px; width: 100%;">
+                    <canvas id="outcomeChart"></canvas>
+                </div>
+            </div>
+            <div class="dash-widget">
+                <h3>🏆 Puan Liderleri (Top 5)</h3>
+                <ul class="podium-list" id="topScoresList">
+                    <li>Veriler bekleniyor...</li>
+                </ul>
+            </div>
+            <div class="dash-widget">
+                <h3>⚡ Hız Rekortmenleri</h3>
+                <ul class="podium-list" id="fastestList">
+                    <li>Veriler bekleniyor...</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="dash-table-wrap">
+            <table class="dash-table">
+                <thead>
+                    <tr>
+                        <th>Tesis</th>
+                        <th>İsim Soyisim</th>
+                        <th>İlerleme</th>
+                        
+                        <th>Puan</th>
+                        <th>Süre</th>
+                        <th>Canlı Değerlendirme</th>
+                        <th>Projeksiyon Sonuç</th>
+                        <th>Aksiyon</th>
+                    </tr>
+                </thead>
+                <tbody id="adminTableBody">
+                    <tr><td colspan="9" style="text-align:center;">Veriler yükleniyor...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>`;
+
+            const ctx = document.getElementById('outcomeChart').getContext('2d');
+            adminChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: ['#067647', '#175cd3', '#b7791f', '#b42318', '#7a271a', '#4a154b'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } }
+                    },
+                    cutout: '65%'
+                }
+            });
+
+            db.ref(DB_ROOT).on("value", snapshot => {
+                // If an admin is currently inspecting a specific user's result page, do NOT redraw the dashboard layout, just update the data array silently in the background
+                if (window.isAdminInspecting && !document.getElementById('adminTableBody')) {
+                    let users = [];
+                    snapshot.forEach(child => {
+                        let d = child.val();
+                        d.docId = child.key;
+                        users.push(d);
+                    });
+                    window.adminUsersData = users;
+                    return;
+                }
+
+                const tbody = document.getElementById('adminTableBody');
+                if (!snapshot.exists()) {
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Henüz katılımcı yok.</td></tr>';
+                    return;
+                }
+
+                let users = [];
+                snapshot.forEach(child => {
+                    let d = child.val();
+                    d.docId = child.key;
+                    users.push(d);
+                });
+
+                const savedS = JSON.parse(JSON.stringify(S));
+
+                let totalCompleted = 0;
+                let totalDecisionsMade = 0;
+                let totalScoreSum = 0;
+                let outcomeCounts = {};
+
+                users = users.map(u => {
+                    let st = hydrateState(u.state);
+                    S = st;
+
+                    let currentScore = typeof totalTech === 'function' ? totalTech() : 0;
+                    let rText = "<strong>Puan: " + currentScore + "</strong>";
+
+                    let out = { level: 1, title: 'Bilinmiyor' };
+                    if (typeof severity === 'function') {
+                        out = severity();
+                    }
+                    let outcomeCode = "Seviye " + out.level;
+                    let oText = "<strong>" + outcomeCode + "</strong>: " + out.title;
+
+                    outcomeCounts[outcomeCode] = (outcomeCounts[outcomeCode] || 0) + 1;
+                    if (st.completed) totalCompleted++;
+
+                    let progress = Object.keys(st.answers || {}).length;
+                    totalDecisionsMade += progress;
+                    totalScoreSum += currentScore;
+
+                    let duration = 0;
+                    if (st.startTime && st.endTime) {
+                        duration = st.endTime - st.startTime;
+                    } else if (st.startTime) {
+                        duration = Date.now() - st.startTime;
+                    }
+
+                    return { ...u, computedScore: currentScore, progress: progress, budget: st.budget, rText: rText, oText: oText, outcomeCode: outcomeCode, duration: duration };
+                });
+
+                S = savedS;
+
+                users.sort((a, b) => b.computedScore - a.computedScore);
+                users.forEach((u, i) => { u.rank = i + 1; });
+
+                window.adminUsersData = users; // Update global array
+
+                let prevMap = window.adminPrevUsersMap;
+                let newMap = {};
+                let tickerMessages = window.adminTickerMsgs;
+
+                users.forEach(u => {
+                    let prev = prevMap[u.email];
+                    u.trend = 0;
+                    u.flashClass = '';
+
+                    if (prev) {
+                        if (prev.rank > u.rank) u.trend = 1;
+                        else if (prev.rank < u.rank) u.trend = -1;
+
+                        if (u.progress > prev.progress) {
+                            let diff = u.computedScore - prev.computedScore;
+                            let t = new Date().toLocaleTimeString();
+
+                            let latestAns = null;
+                            if (u.state && u.state.answers) {
+                                let answersArr = Object.values(u.state.answers);
+                                latestAns = answersArr[answersArr.length - 1];
+                            }
+
+                            let icon = '🟢';
+                            let flashClass = 'flash-row-green';
+                            let qualMsg = ' <span style="color:#12b76a">(İyi Karar)</span>';
+                            let bColor = '#12b76a';
+
+                            if (latestAns) {
+                                let scoreSum = (latestAns.score || 0);
+                                if (scoreSum <= 3) {
+                                    icon = '🔻';
+                                    flashClass = 'flash-row-red';
+                                    qualMsg = ' <span style="color:#f04438">(Zayıf)</span>';
+                                    bColor = '#f04438';
+                                } else if (scoreSum >= 4 && scoreSum <= 6) {
+                                    icon = '🟡';
+                                    flashClass = 'flash-row-orange';
+                                    qualMsg = ' <span style="color:#f79009">(Ortalama)</span>';
+                                    bColor = '#f79009';
+                                }
+                            }
+
+                            let sign = diff > 0 ? '+' : '';
+                            let msg = `<div class="borsa-row ${flashClass}" style="border-left:4px solid ${bColor}; padding:10px 14px; margin-bottom:8px; background:rgba(255,255,255,0.06); border-radius:6px; display:flex; justify-content:space-between; align-items:center; animation: slideDown 0.4s ease-out forwards; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                                <div><span style="color:#98a2b3; font-size:11px; margin-right:8px;">[${t}]</span> ${icon} <b style="font-size:14px;">${esc(u.facility || 'Bilinmiyor')}</b> <span style="color:#d0d5dd; font-size:12px; margin-left:6px;">(${esc(u.name)})</span></div>
+                                <div style="text-align:right;">
+                                    <div style="font-size:12px; font-weight:700;">Karar ${u.progress}</div>
+                                    <div style="font-size:11px; color:#98a2b3; margin-top:3px;">Puan: <b>${u.computedScore}</b> (${sign}${diff})${qualMsg}</div>
+                                </div>
+                            </div>`;
+                            tickerMessages.unshift(msg);
+                            u.flashClass = flashClass;
+                        } else if (u.computedScore !== prev.computedScore) {
+                            let diff = u.computedScore - prev.computedScore;
+                            u.flashClass = diff > 0 ? 'flash-row-green' : 'flash-row-red';
+                        }
+                    }
+                    newMap[u.email] = { rank: u.rank, progress: u.progress, computedScore: u.computedScore };
+                });
+
+                window.adminPrevUsersMap = newMap;
+                if (tickerMessages.length > 50) tickerMessages = tickerMessages.slice(0, 50);
+                window.adminTickerMsgs = tickerMessages;
+
+                const tickerDiv = document.getElementById('liveTicker');
+                if (tickerDiv && tickerMessages.length > 0) {
+                    tickerDiv.innerHTML = tickerMessages.map(m => m).join('');
+                }
+
+                document.getElementById('kpiTotal').textContent = users.length;
+                document.getElementById('kpiCompleted').textContent = totalCompleted;
+                document.getElementById('kpiAvgScore').textContent = Math.round(totalScoreSum / users.length) || 0;
+
+                const totalPossibleDecisions = users.length * 15;
+                const progressPct = totalPossibleDecisions > 0 ? Math.round((totalDecisionsMade / totalPossibleDecisions) * 100) : 0;
+                document.getElementById('kpiProgress').textContent = "%" + progressPct;
+                document.getElementById('kpiProgressBar').style.width = progressPct + "%";
+
+                adminChartInstance.data.labels = Object.keys(outcomeCounts);
+                adminChartInstance.data.datasets[0].data = Object.values(outcomeCounts);
+                adminChartInstance.update();
+
+                let topScores = users.slice(0, 5);
+                document.getElementById('topScoresList').innerHTML = topScores.map((u, i) => {
+                    let tHtml = '';
+                    if (u.trend === 1) tHtml = '<span class="trend-up">▲</span>';
+                    else if (u.trend === -1) tHtml = '<span class="trend-down">▼</span>';
+                    return `<li>
+                <span>${i + 1}. <b>${esc(u.name)} ${esc(u.surname)}</b> (${esc(u.facility || 'Bilinmiyor')}) ${tHtml}</span>
+                <strong>${u.computedScore} Puan</strong>
+            </li>`;
+                }).join('');
+                if (topScores.length === 0) document.getElementById('topScoresList').innerHTML = "<li>Veri yok.</li>";
+
+                let fastest = [...users].filter(u => u.state && u.state.completed && u.duration > 0).sort((a, b) => a.duration - b.duration).slice(0, 5);
+                document.getElementById('fastestList').innerHTML = fastest.map((u, i) =>
+                    `<li>
+                <span>${i + 1}. <b>${esc(u.name)} ${esc(u.surname)}</b> (${esc(u.facility || 'Bilinmiyor')})</span>
+                <strong style="color:#b7791f">${formatDuration(u.duration)}</strong>
+            </li>`
+                ).join('');
+                if (fastest.length === 0) document.getElementById('fastestList').innerHTML = "<li>Henüz tamamlayan yok.</li>";
+
+                if (tbody) {
+                    tbody.innerHTML = users.map(u => {
+                        let tHtml = '';
+                        if (u.trend === 1) tHtml = '<span class="trend-up">▲</span>';
+                        else if (u.trend === -1) tHtml = '<span class="trend-down">▼</span>';
+                        return `
+                <tr class="${u.flashClass}">
+                    <td><strong>${esc(u.facility || 'Bilinmiyor')}</strong></td>
+                    <td>${esc(u.name)} ${esc(u.surname)} ${tHtml}</td>
+                    <td>${u.progress} / 15</td>
+                    <td>${u.computedScore}</td>
+                    <td class="admin-timer" data-start="${u.state && u.state.startTime ? u.state.startTime : ''}" data-end="${u.state && u.state.endTime ? u.state.endTime : ''}" style="color:#667085; font-size:11px;">
+                        ${u.state && u.state.completed ? formatDuration(u.duration) : (u.duration ? formatDuration(u.duration) : 'Sürüyor')}
+                    </td>
+                    <td style="font-size:11px;">${u.rText}</td>
+                    <td style="font-size:11px;">${u.oText}</td>
+                    <td>${u.state && u.state.completed ? `<button class="btn btn-primary" style="font-size:11px; padding:4px 8px; background:#17233d;" onclick="viewUserResult('${u.email}')">Karnesini Gör</button>` : '-'}</td>
+                </tr>
+            `}).join('');
+                }
+            });
+
+            if (adminTimerInterval) clearInterval(adminTimerInterval);
+            adminTimerInterval = setInterval(() => {
+                document.querySelectorAll('.admin-timer').forEach(td => {
+                    const start = td.getAttribute('data-start');
+                    const end = td.getAttribute('data-end');
+                    if (start && !end) {
+                        td.textContent = formatDuration(Date.now() - parseInt(start));
+                    }
+                });
+            }, 1000);
+        };
+
+
+
+        resetAll = function () {
+            if (confirm('Yeni simülasyon başlatılsın mı? Mevcut kararlar silinecek ve oturum sıfırlanacaktır.')) {
+                localStorage.clear();
+                location.reload();
+            }
+        };
+        restart = resetAll;
+
+        // Open Profile Edit Modal for Users
+        window.openProfileEdit = function () {
+            const root = document.getElementById('modalRoot');
+            root.innerHTML = `
+    <div class="modal-back">
+        <div class="modal" style="text-align:left; width:400px; max-width:90%;">
+            <h3 style="margin-top:0; font-size:18px;">Profili Düzenle</h3>
+            <p style="font-size:12px; color:#667085;">Kimlik, Tesis veya E-posta bilginizi aşağıdan güncelleyebilirsiniz.</p>
+            <div style="display:flex; flex-direction:column; gap:12px; margin-top:15px; margin-bottom:20px;">
+                <label style="font-size:12px; font-weight:bold;">Ad Soyad</label>
+                <input id="editName" class="input" value="${esc(S.participant || '')}" />
+                
+                <label style="font-size:12px; font-weight:bold; margin-top:5px;">Tesis / Kurum</label>
+                <input id="editFacility" class="input" value="${esc(S.facility || '')}" />
+                
+                <label style="font-size:12px; font-weight:bold; margin-top:5px; color:#b42318;">E-Posta (Giriş Adresi)</label>
+                <input id="editEmail" class="input" type="email" value="${esc(S.email || sessionUserEmail || '')}" />
+                
+                <div id="editError" style="color:#b42318; font-size:12px; font-weight:bold; text-align:center;"></div>
+            </div>
+            <div class="modal-actions" style="justify-content: flex-end; gap:10px; display:flex;">
+                <button class="btn btn-light" onclick="closeModal()">İptal</button>
+                <button class="btn btn-primary" onclick="saveProfileEdit()">Güncelle</button>
+            </div>
+        </div>
+    </div>`;
+        };
+
+        window.saveProfileEdit = function () {
+            const root = document.getElementById('modalRoot');
+            const nameFull = document.getElementById('editName').value.trim();
+            const facility = document.getElementById('editFacility').value.trim();
+            const email = document.getElementById('editEmail').value.trim().toLowerCase();
+            const err = document.getElementById('editError');
+
+            if (!nameFull || !facility || !email) {
+                err.textContent = "Lütfen tüm alanları doldurun."; return;
+            }
+
+            err.textContent = "Güncelleniyor...";
+
+            let parts = nameFull.split(' ');
+            let name = parts.length > 1 ? parts.slice(0, -1).join(' ') : nameFull;
+            let surname = parts.length > 1 ? parts[parts.length - 1] : '';
+
+            // Check if new email is already taken by someone ELSE
+            if (email !== sessionUserEmail) {
+                db.ref(DB_ROOT).orderByChild("email").equalTo(email).once("value", snapshot => {
+                    if (snapshot.exists()) {
+                        err.textContent = "Bu e-posta adresi başka bir hesaba kayıtlı!";
+                    } else {
+                        updateUserDoc(name, surname, nameFull, facility, email);
+                    }
+                });
+            } else {
+                updateUserDoc(name, surname, nameFull, facility, email);
+            }
+        };
+
+        function updateUserDoc(name, surname, nameFull, facility, email) {
+            if (!sessionUserDocId) return;
+            db.ref(DB_ROOT + '/' + sessionUserDocId).update({
+                name: name,
+                surname: surname,
+                facility: facility,
+                email: email
+            }).then(() => {
+                sessionUserEmail = email;
+                localStorage.setItem('sessionUserEmail', email);
+                S.participant = nameFull;
+                S.facility = facility;
+                S.email = email;
+                save(); // push updated S to firebase just in case
+                closeModal();
+            }).catch(e => {
+                document.getElementById('editError').textContent = "Hata: " + e.message;
+            });
+        }
+
+        // Inject Buttons for Users
+        const origUpdateTop = updateTop;
+        updateTop = function () {
+            origUpdateTop();
+            if (S.started && !document.getElementById('userLogoutBtn')) {
+                const topInner = document.querySelector('.topbar-inner');
+                if (topInner) {
+                    let btnContainer = document.querySelector('.topbar-actions');
+                    if (!btnContainer) {
+                        btnContainer = document.createElement('div');
+                        btnContainer.className = 'topbar-actions';
+                        btnContainer.style.marginLeft = 'auto';
+                        btnContainer.style.display = 'flex';
+                        btnContainer.style.alignItems = 'center';
+                        topInner.appendChild(btnContainer);
+                    }
+
+                    const btnEdit = document.createElement('button');
+                    btnEdit.className = 'user-logout-btn';
+                    btnEdit.style.marginRight = '10px';
+                    btnEdit.innerHTML = 'Profil';
+                    btnEdit.onclick = openProfileEdit;
+                    btnContainer.appendChild(btnEdit);
+
+                    const btn = document.createElement('button');
+                    btn.id = 'userLogoutBtn';
+                    btn.className = 'user-logout-btn';
+                    btn.innerHTML = 'Çıkış Yap';
+                    btn.onclick = function () {
+                        localStorage.clear();
+                        location.reload();
+                    };
+                    btnContainer.appendChild(btn);
+                }
+            }
+        };
+
+        window.addEventListener('beforeunload', save);
+        loadConfigAndInit();
+
+
+        function fresh() { return { started: false, index: 0, answers: {}, flags: {}, history: [], rank: [], completed: false, overrides: {} } }
+        let S = fresh(), selected = null, rankOrder = [];
+        const norm = s => (s || '').toLocaleLowerCase('tr-TR').replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9%\s-]/g, ' ');
+        const esc = s => (s ?? '').toString().replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+        function d() { return DECISIONS[S.index] }
+        function updateTop() { document.getElementById('topDecision').textContent = S.started ? (S.completed ? '15 / 15' : displayProgress()) : '—'; document.getElementById('topTime').textContent = S.started ? (S.completed ? '15:00' : d()?.time || '—') : '—'; document.getElementById('topStatus').textContent = S.completed ? 'Tamamlandı' : S.started ? (S.index >= 12 ? 'Teknik İnceleme' : 'Kriz Yönetimi') : 'Hazır' }
+        function displayProgress() { const id = d()?.id; const n = id === '1B' ? '1-B' : id; return `${n} / 15` }
+        function phase() { const bar = document.getElementById('phasebar'); bar.classList.toggle('hidden', !S.started || S.completed); if (!S.started) return; const review = S.index >= 12; document.getElementById('phCrisis').className = 'phase ' + (review ? 'done' : 'active'); document.getElementById('phReview').className = 'phase ' + (review ? 'active' : '') }
+        function renderStart() {
+            S.started = false;
+            S.completed = false;
+            document.getElementById('phasebar').classList.add('hidden');
+            updateTop();
+            const prev = load();
+            document.getElementById('app').innerHTML = `<div class="wrap"><section class="card start"><div class="hero"><span class="kicker">Dijital Yetkinlik Simülasyonu</span><h2>Yangın Anı Kriz Yönetimi Simülasyonu</h2><p>Teknik Hizmetler Müdürü olarak; ilk yangın alarmından itfaiyenin krizden kontrollü çıkış kararına kadar geçen yoğun süreci (ve sonrasındaki teknik incelemeyi) anlık kararlarla yöneteceksiniz.</p></div><div class="startbody"><div class="metrics"><div class="metric"><strong>15</strong><span>Karar Noktası</span></div><div class="metric"><strong>12 + 3</strong><span>Kriz Yönetimi + Teknik İnceleme</span></div><div class="metric"><strong>6 × Kritik 5</strong><span>Serbest Girişli Puanlama</span></div><div class="metric"><strong>150</strong><span>Teknik / Yönetsel Puan</span></div></div><div class="introbox"><b>Simülasyon Kuralı:</b> Süreç içinde hiçbir kararın doğrudan puanı veya "doğru" cevabı gösterilmez. Tüm senaryo bittiğinde, yangının vardığı Seviye (Olay Şiddeti) ve Teknik Yetkinlik, Hasta Güvenliği (HG) ve Hasta Deneyimi (HD) endeksleri hesaplanarak kapsamlı performans karneniz üretilir.</div><div class="name-row" style="display:flex; gap:10px; margin-bottom:15px; align-items:center;"><input id="participantName" class="input" placeholder="Katılımcı adı (isteğe bağlı)" style="padding:10px; border:1px solid #ccc; border-radius:8px; width:200px;"/><button class="btn btn-primary" onclick="startNew()">Simülasyonu Başlat</button>${prev && prev.started && !prev.completed ? '<button class="btn btn-light" onclick="resume()">Kaydedilmiş Oturuma Devam</button>' : ''}</div>${prev ? '<div style="margin-top:10px"><button class="btn btn-danger" style="padding:8px 10px;font-size:11px" onclick="resetAll()">Kaydı Sil / Baştan Başla</button></div>' : ''}</div></section></div>`;
+        }
+        function startNew() { S = fresh(); S.started = true; let p = document.getElementById('participantName'); if (p) S.participant = p.value.trim(); save(); render() }
+        function resume() { const x = load(); if (x) { S = x; render() } }
+        function resetAll() { clearSave(); S = fresh(); renderStart() }
+        function render() { updateTop(); phase(); if (S.completed) { renderResult(); return } renderDecision() }
+        function injection(id) { const F = S.flags; let a = []; if (id === '2') { if (F.VERIFY_DELAY) a.push('İlk kararınızdaki gecikme nedeniyle güvenlik saha teyidi henüz ulaşmamış olabilir; müdahale hazırlığı yaklaşık 30–60 saniye geriden geliyor.'); if (F.SOURCE_DELAY || F.RESOURCE_FRAGMENTATION) a.push('Çoklu alarm lokalizasyonundaki tercih nedeniyle oda/personel teyidi ve ana teknik ekip hazırlığı gecikiyor.'); if (F.SOURCE_PRIORITY) a.push('Alarm kronolojisi ve yayılım yolu analizi sayesinde teknik oda öncelikli kaynak hipotezi olarak ele alınıyor; klinik alan paralel doğrulanıyor.') } if (id === '4') { if (F.OCCUPANCY_RISK || F.PERSONNEL_EXPOSURE) a.push('Söndürme öncesi personel güvenliği teyidi gecikti; oda çevresinde boşaltım baskısı arttı.'); if (F.OCCUPANCY_CONFIRMED) a.push('Oda işgal durumu güvenli yöntemle doğrulandı; personel belirsizliği artık taşınmıyor.'); if (F.SMOKE_PATH_RECOGNIZED) a.push('Uzak dedektörlerin muhtemel duman taşıma yolu olabileceği daha önce fark edildi.') } if (id === '8') { if (F.DOOR_OPEN_EARLY || F.SUPPRESSION_FALSE_ASSURANCE) a.push('Oda bütünlüğü/söndürme etkinliği problemi nedeniyle duman hasta katına beklenenden daha erken ulaşmıştır.'); if (F.ENERGY_DELAY) a.push('Aktif enerji katkısı sürdüğü için yangın kontrol süresi uzamış ve duman üretimi artmıştır.'); if (F.DOOR_GAP || F.DAMPER_GAP || F.HVAC_GAP) a.push('Cause–effect zincirinde doğrulanmamış bariyerler bulunduğundan duman yayılımı daha belirsizdir.'); if (F.ENERGY_CONTROLLED) a.push('Kontrollü izolasyon aktif enerji katkısını azaltmıştır.') } if (id === '10') { if (F.COMM_GAP || F.COMM_STRAIN) a.push('Resmi iletişim boşluğu nedeniyle güvenlik, klinik ve yönetim farklı kanallardan çelişkili talimat vermeye başlamıştır.'); if (F.COMM_CONTROLLED) a.push('Güvenlik ve klinik ekip aynı bilgi zincirinde tutulmuştur.') } if (id === '11') { if (F.ENERGY_DELAY) a.push('Enerji izolasyonu geciktiği için sıcak nokta daha belirgin ve yangın kontrol süresi daha uzundur.'); if (F.COMMAND_UNIFIED) a.push('Müdahale kararları tek komuta zinciri üzerinden güncellenmektedir.') } if (id === '13' || id === '14' || id === '15') { if (F.EVIDENCE_LOSS) a.push('Önceki normalleşme/reset kararı nedeniyle bazı dijital kayıtların bütünlüğü artık tartışmalıdır; teknik incelemede veri boşluğu vardır.'); if (F.CONTROLLED_STANDDOWN) a.push('Krizden kontrollü çıkış sayesinde panel/BMS kayıtları ve yangın odasının fiziksel durumu korunmuştur.') } return a.join(' ') }
+        function renderDecision() { selected = null; rankOrder = []; const x = d(), inj = injection(x.id); document.getElementById('app').innerHTML = `<div class="wrap"><div class="layout"><section class="card decision"><div class="head"><div class="meta"><span class="chip time">${x.time}</span><span class="chip ${S.index >= 12 ? 'postchip' : 'phasechip'}">${esc(x.phase)}</span></div><h2>KARAR ${x.id === '1B' ? '01-B' : String(x.id).padStart(2, '0')} · ${esc(x.title)}</h2></div><div class="body">${inj ? `<div class="inj"><b>Önceki kararların sahaya yansıması</b>${esc(inj)}</div>` : ''}<div class="label">Katılımcıya verilen veri</div><div class="facts">${x.data.map(t => `<div class="fact"><i>•</i><span>${esc(t)}</span></div>`).join('')}</div><div class="task"><small>Görev</small><p>${esc(x.task)}</p></div>${answerUI(x)}<div class="actions"><div class="err" id="err"></div><button class="btn btn-teal" onclick="submit()">Kararı Kaydet ve İlerle</button></div></div></section>${sideUI()}</div></div>` }
+        function answerUI(x) { if (x.type === 'choice') return `<div class="opts">${x.options.map(o => `<div class="option" data-key="${o.key}" onclick="choose('${o.key}')"><div class="letter">${o.key}</div><div class="otxt">${esc(o.text)}</div></div>`).join('')}</div><div class="reason"><div class="label" style="margin-top:15px">Kısa karar gerekçesi</div><textarea id="reason" placeholder="Kararınızı hangi teknik/operasyonel varsayımlarla verdiğinizi kısaca yazın (isteğe bağlı)."></textarea></div>`; if (x.type === 'free5') return `<div class="freebox"><div class="freehead"><strong>Serbest teknik giriş</strong><span>En fazla 5 ayrı kavram</span></div><div class="freegrid">${[1, 2, 3, 4, 5].map(i => `<div class="freeitem"><em>${i}</em><textarea id="free${i}" placeholder="${i}. bilgi / kontrol / delil ailesi"></textarea></div>`).join('')}</div></div>`; if (x.type === 'rank3') return `<div class="hint" style="margin-bottom:9px">Kartlara tıklama sıranız 1–3 öncelik sırasıdır. Tam üç seçim yapın.</div><div class="ranklist">${x.options.map(o => `<div class="rank" data-key="${o.key}" onclick="toggleRank('${o.key}')"><div class="ranknum">+</div><div class="ranktext"><b>${o.key}</b> — ${esc(o.text)}</div></div>`).join('')}</div>`; if (x.type === 'k15') return `<div class="k15 k15grid"><div class="k15sec"><h4>1 · Muhtemel başlangıç bölgesi / hipotezi</h4><p>Delil düzeyine uygun belirsizlik dili kullanın; gözlenen hasarı tek başına kesin başlangıç nedeni ilan etmeyin.</p><textarea id="k15start" placeholder="Muhtemel başlangıç bölgesi ve neden böyle düşündüğünüz..."></textarea></div><div class="k15sec"><h4>2 · En az 3 alternatif teknik hipotez</h4><div class="smallrow">${[1, 2, 3].map(i => `<textarea id="k15alt${i}" placeholder="Alternatif hipotez ${i}"></textarea>`).join('')}</div></div><div class="k15sec"><h4>3 · En kritik 5 veri / kanıt</h4><div class="smallrow">${[1, 2, 3, 4, 5].map(i => `<textarea id="k15ev${i}" placeholder="Kanıt / veri ailesi ${i}"></textarea>`).join('')}</div></div><div class="k15sec"><h4>4 · Başlatan neden ile büyümeyi artıran zafiyetleri ayırın</h4><textarea id="k15ign" placeholder="Yangını başlatmış olabilecek teknik neden / mekanizma..."></textarea><textarea id="k15bar" style="margin-top:7px" placeholder="Yangının büyümesini / etkisini artıran savunma bariyeri zafiyetleri..."></textarea></div></div>`; return '' }
+        function choose(k) { selected = k; document.querySelectorAll('.option').forEach(e => e.classList.toggle('selected', e.dataset.key === k)) }
+        function toggleRank(k) { const i = rankOrder.indexOf(k); if (i >= 0) rankOrder.splice(i, 1); else { if (rankOrder.length >= 3) return; rankOrder.push(k) } document.querySelectorAll('.rank').forEach(e => { const p = rankOrder.indexOf(e.dataset.key); e.classList.toggle('selected', p >= 0); e.querySelector('.ranknum').textContent = p >= 0 ? p + 1 : '+' }) }
+        function sideUI() { const completed = Object.keys(S.answers).length; const pct = Math.round(completed / 16 * 100); return `<aside class="side"><div class="card sidecard"><h3>Olay Zamanı</h3><div class="bigtime">${d().time}</div><div class="sub">Başlangıç 13:42 · mevcut karar düğümü</div><div class="prog"><i style="width:${pct}%"></i></div></div><div class="card sidecard"><h3>Simülasyon İlerlemesi</h3><div class="minilist"><div class="mini"><span>Karar düğümü</span><b>${d().id === '1B' ? 'K1-B' : 'K' + String(d().id).padStart(2, '0')}</b></div><div class="mini"><span>Aşama</span><b>${S.index >= 12 ? 'Teknik inceleme' : 'Yangın anı'}</b></div><div class="mini"><span>Tamamlanan düğüm</span><b>${completed} / 16</b></div></div></div><div class="card sidecard"><h3>Olay Akışı</h3><div class="timeline">${S.history.length ? S.history.slice(-8).reverse().map(h => `<div class="tl"><b>${h.time}</b><span>${esc(h.title)}</span></div>`).join('') : '<div class="hint">Henüz kayıt yok.</div>'}</div></div></aside>` }
+        function fail(m) { const e = document.getElementById('err'); e.textContent = m; setTimeout(() => { if (e) e.textContent = '' }, 2600) }
+        function scoreFree(x, vals) { const joined = norm(vals.join(' | ')); let hit = 0, used = []; x.concepts.forEach((fam, idx) => { if (fam.some(k => joined.includes(norm(k)))) { hit++; used.push(idx) } }); return { score: Math.min(10, hit * 2), hits: used } }
+        function scoreRank(keys) { const critical = ['B', 'C', 'E']; const c = critical.filter(k => keys.includes(k)).length; const dangerous = keys.filter(k => ['A', 'D', 'F'].includes(k)).length; if (c === 3) return 10; if (c === 2 && dangerous === 0) return 7; if (c === 2) return 6; if (c === 1 && dangerous === 0) return 4; if (c === 1) return 2; return dangerous ? 1 : 2 }
+        function scoreK15(a) { let s = 0; const st = norm(a.start); const uncertain = ['muhtemel', 'olasi', 'hipotez', 'dusundur', 'kanitlamaz', 'kesin degil'].some(k => st.includes(norm(k))); const startzone = ['dagitim', 'baglanti', 'terminal', 'ups', 'elektrik odasi', 'pano'].some(k => st.includes(norm(k))); s += uncertain && startzone ? 2 : (uncertain || startzone ? 1 : 0); const alts = a.alts.filter(v => v.trim()).length; s += alts >= 3 ? 2 : alts >= 1 ? 1 : 0; const evjoined = norm(a.evidence.join(' | ')); const ef = [['alarm', 'dedektor', 'zon', 'kronoloji'], ['role', 'kesici', 'enerji', 'ups'], ['termal', 'yanik', 'desen'], ['bakim', 'tork', 'servis'], ['gazli', 'oda butunlugu', 'kapı', 'damper', 'hvac', 'basinclandirma'], ['cctv', 'zaman', 'erisim']]; let eh = ef.filter(f => f.some(k => evjoined.includes(norm(k)))).length; s += eh >= 5 ? 3 : eh >= 3 ? 2 : eh >= 1 ? 1 : 0; const ign = norm(a.ignition), bar = norm(a.barriers); const ignok = ['ark', 'gevsek', 'baglanti', 'asiri isin', 'kablo', 'izolasyon', 'yuk', 'koruma'].some(k => ign.includes(norm(k))); const barok = ['kapi', 'damper', 'hvac', 'basinclandirma', 'gazli', 'oda butunlugu', 'enerji kes', 'alarm', 'tahliye'].some(k => bar.includes(norm(k))); s += (ign && bar && ignok && barok) ? 3 : (ign && bar ? 2 : (ign || bar ? 1 : 0)); return Math.min(10, s) }
+        function submit() { const x = d(); let a = { id: x.id, title: x.title, time: x.time, type: x.type, score: 0 }; if (x.type === 'choice') { if (!selected) return fail('Bir yaklaşım seçmelisiniz.'); const o = x.options.find(z => z.key === selected); a.choice = selected; a.score = o.tech; a.hg = o.hg; a.hd = o.hd; a.reason = (document.getElementById('reason')?.value || '').trim(); o.flags.forEach(f => S.flags[f] = true) } else if (x.type === 'free5') { const vals = [1, 2, 3, 4, 5].map(i => document.getElementById('free' + i).value.trim()).filter(Boolean); if (!vals.length) return fail('En az bir teknik unsur yazmalısınız.'); const r = scoreFree(x, vals); a.values = vals; a.score = r.score; a.hits = r.hits; if (x.id === '9' && a.score < 6) S.flags.FIRE_BRIEF_GAP = true } else if (x.type === 'rank3') { if (rankOrder.length !== 3) return fail('Tam olarak üç aksiyon seçip sıralamalısınız.'); a.rank = [...rankOrder]; a.score = scoreRank(rankOrder); if (!rankOrder.includes('B')) S.flags.DOOR_GAP = true; if (!rankOrder.includes('C')) S.flags.DAMPER_GAP = true; if (!rankOrder.includes('E')) S.flags.HVAC_GAP = true; if (rankOrder.includes('D')) S.flags.EVAC_ROUTE_GAP = true; if (rankOrder.includes('F')) S.flags.ELEVATOR_EVAC_RISK = true; if (rankOrder.includes('A')) S.flags.SYSTEM_ASSUMPTION = true } else if (x.type === 'k15') { const start = document.getElementById('k15start').value.trim(), alts = [1, 2, 3].map(i => document.getElementById('k15alt' + i).value.trim()), evidence = [1, 2, 3, 4, 5].map(i => document.getElementById('k15ev' + i).value.trim()), ignition = document.getElementById('k15ign').value.trim(), barriers = document.getElementById('k15bar').value.trim(); if (!start || alts.filter(Boolean).length < 3 || evidence.filter(Boolean).length < 3 || !ignition || !barriers) return fail('Dört başlığı doldurun; en az 3 alternatif hipotez ve en az 3 kanıt ailesi yazın.'); a.start = start; a.alts = alts; a.evidence = evidence; a.ignition = ignition; a.barriers = barriers; a.score = scoreK15(a) } S.answers[x.id] = a; S.history.push({ time: x.time, title: x.title }); save(); advance() }
+        function advance() { if (S.index === 12) { S.index++; save(); renderStage(); return } if (S.index >= 15) { S.completed = true; save(); render(); return } S.index++; save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+        function renderStage() { updateTop(); phase(); document.getElementById('app').innerHTML = `<div class="wrap"><section class="card stage"><div class="eyebrow">Yangın kontrol altında · 14:08</div><h2>Kriz yönetiminden teknik incelemeye geçiş</h2><p>İlk 12 karar tamamlandı. Bundan sonraki üç karar olay sonrası idari soruşturma veya ayrıntılı kök neden raporu değildir. Amaç yalnızca kayıt/delil koruma, yangın senaryosunun sistemsel incelemesi ve doğru teknik inceleme planının kurulmasıdır.</p><div class="stagegrid"><div class="stile"><span>Tamamlanan kriz düğümü</span><b>12 + K1-B</b></div><div class="stile"><span>Kalan teknik inceleme</span><b>3 karar</b></div><div class="stile"><span>İlk teknik inceleme saati</span><b>14:20</b></div></div><button class="btn btn-primary" onclick="continueReview()">Teknik İncelemeye Geç</button></section></div>` }
+        function continueReview() { render(); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+        function techScore(id) { const a = S.answers[id]; if (!a) return 0; return S.overrides[id] !== undefined ? +S.overrides[id] : a.score }
+        function totalTech() { const k1 = (techScore('1') + techScore('1B')) / 2; let total = k1; for (let i = 2; i <= 15; i++)total += techScore(String(i)); return Math.round(total * 10) / 10 }
+        function patientIndex(field) { const ids = ['1', '1B', '2', '4', '5', '6', '8', '10', '11', '12']; return ids.reduce((n, id) => n + (S.answers[id]?.[field] || 0), 0) }
+        function pct(ids) { const vals = ids.map(id => techScore(id)); const max = ids.reduce((n, id) => n + (id === '1M' ? 10 : 10), 0); return Math.round(vals.reduce((a, b) => a + b, 0) / max * 100) }
+        function profiles() { return { 'Alarm ve İlk Müdahale': Math.round((((techScore('1') + techScore('1B')) / 2) + techScore('2') + techScore('3')) / 30 * 100), 'Yangın Senaryosu / Savunma Bariyerleri': Math.round((techScore('4') + techScore('5') + techScore('7') + techScore('11') + techScore('12')) / 50 * 100), 'Tahliye ve Kriz Koordinasyonu': Math.round((techScore('6') + techScore('8') + techScore('9') + techScore('10') + techScore('11') + techScore('12')) / 60 * 100), 'Teknik İnceleme Kalitesi': Math.round((techScore('13') + techScore('14') + techScore('15')) / 30 * 100) } }
+        function severity() { const F = S.flags; let debt = 0; if (F.VERIFY_DELAY) debt += 1; if (F.SOURCE_DELAY) debt += 1; if (F.RESOURCE_FRAGMENTATION) debt += 1; if (F.OCCUPANCY_RISK || F.PERSONNEL_EXPOSURE) debt += 1; if (F.SUPPRESSION_FALSE_ASSURANCE) debt += 2; if (F.DOOR_OPEN_EARLY) debt += 1; if (F.SMOKE_SPREAD_RISK) debt += 1; if (F.ENERGY_DELAY) debt += 2; if (F.COMM_GAP || F.COMM_STRAIN) debt += 1; if (F.DOOR_GAP) debt += 1; if (F.DAMPER_GAP) debt += 1; if (F.HVAC_GAP) debt += 1; if (F.EVAC_DELAY || F.EVAC_ROUTE_GAP) debt += 1; if (F.COMMAND_FRAGMENT) debt += 2; else if (F.COMMAND_PARTIAL) debt += 1; if (F.PREMATURE_RESET || F.PREMATURE_REENTRY || F.PREMATURE_REENERGIZE) debt += 1; if (F.FIRE_BRIEF_GAP) debt += 1; if (F.ENERGY_CONTROLLED) debt = Math.max(0, debt - 1); if (F.COMMAND_UNIFIED) debt = Math.max(0, debt - 1); if (F.SOURCE_PRIORITY) debt = Math.max(0, debt - 1); if (F.EVAC_PREPARED) debt = Math.max(0, debt - 1); const critical = (F.ENERGY_DELAY && (F.SUPPRESSION_FALSE_ASSURANCE || F.DOOR_OPEN_EARLY) && (F.COMMAND_FRAGMENT || F.EVAC_DELAY)); let lvl = debt <= 2 ? 1 : debt <= 5 ? 2 : debt <= 8 ? 3 : 4; if (critical) lvl = Math.max(lvl, 3); const map = { 1: ['Lokal olay', 'Yangın teknik oda içinde sınırlı kalır; yatay tahliye hazırlığı yapılır ancak hasta transferi gerekmeyebilir.'], 2: ['Kontrollü yangın ve sınırlı duman yayılımı', 'Bir veya iki savunma bariyeri gecikmiştir; hasta katında koku/duman oluşur ve kısa süreli yatay yer değiştirme gerekebilir.'], 3: ['Gelişmiş yangın / kısmi tahliye', 'Enerji, söndürme etkinliği veya bina/komuta bariyerlerindeki birleşik gecikmeler duman yayılımını artırmış; B Blokta kısmi tahliye ve daha uzun hizmet kesintisi gerekmiştir.'], 4: ['Büyük olay', 'Çoklu kritik zafiyet aynı anda aktif kalmış; aktif elektriksel yangın, dikey duman yayılımı ve yüksek tahliye baskısı geniş müdahale ve klinik operasyon kaybına yol açmıştır.'] }; return { level: lvl, debt, title: map[lvl][0], text: map[lvl][1] } }
+        function blindspots() { const F = S.flags, b = []; if (F.SOURCE_ANCHORING) b.push('İlk alarma aşırı bağlanma'); if (F.ALARM_COUNT_BIAS) b.push('Alarm sayısı yanlılığı'); if (F.CLINICAL_ORIGIN_BIAS) b.push('Klinik alanı kaynak sanma'); if (F.SUPPRESSION_FALSE_ASSURANCE) b.push('“Sistem çalıştı = fonksiyon başarılı” varsayımı'); if (F.FALSE_REASSURANCE) b.push('Yanlış güvence'); if (F.COMMAND_FRAGMENT) b.push('Parçalı komuta'); if (F.PREMATURE_RESET || F.PREMATURE_REENTRY) b.push('Erken normalleşme'); if (F.EVIDENCE_LOSS) b.push('Delil/kayıt kaybı'); if (F.ELEVATOR_EVAC_RISK) b.push('Asansör tahliye varsayımı'); return b }
+        function renderResult() { document.getElementById('phasebar').classList.add('hidden'); const tech = totalTech(), hg = patientIndex('hg'), hd = patientIndex('hd'); const hmEmoji = hd >= 80 ? '😊' : (hd >= 50 ? '😐' : '😞'); const hgEmoji = hg >= 80 ? '✅' : (hg >= 50 ? '⚠️' : '❌'); const sev = severity(), pr = profiles(), bs = blindspots(); document.getElementById('app').innerHTML = `<div class="wrap"><section class="card result"><div class="reshero"><div class="resgrid"><div class="orb" style="--p:${Math.round(tech / 150 * 100)}%"><div><strong>${tech}</strong><span>/ 150</span></div></div><div><div class="eyebrow">Simülasyon tamamlandı · Teknik Hizmetler Müdürü<br><span style="color:#2dd4bf">Katılımcı:</span> ${window.inspectingUser ? esc(window.inspectingUser.adSoyad) : (esc(S.participant) || 'Bilinmiyor')} · <span style="color:#2dd4bf">Tesis:</span> ${window.inspectingUser ? esc(window.inspectingUser.tesisAdi) : 'Bilinmiyor'}</div><h2>Yangın Kriz Yönetimi Sonuç Profili</h2><p>Teknik/yönetsel skor, hasta güvenliği ve hasta deneyimi birbirinden bağımsız gösterilir. Olay şiddeti ise tek bir yanlış karardan değil, kriz boyunca biriken zafiyet kombinasyonundan üretilir.</p><div class="severity"><b>Seviye ${sev.level} · ${esc(sev.title)}</b><p>${esc(sev.text)}</p></div></div></div></div><div class="resbody"><div class="scorecards"><div class="scorecard"><span>Teknik/Yönetsel Yetkinlik</span><strong>${tech} / 150</strong></div><div class="scorecard"><span>Hasta Güvenliği</span><strong>${hg} ${hgEmoji} / 100</strong></div><div class="scorecard"><span>Hasta Deneyimi / İletişim</span><strong>${hd} ${hmEmoji} / 100</strong></div></div><h3 style="font-size:12px;margin:18px 0 10px">Yetkinlik profili</h3><div class="profiles">${Object.entries(pr).map(([n, v]) => `<div class="profile"><div class="ptop"><span>${esc(n)}</span><b>${v}%</b></div><div class="pbar"><i style="width:${v}%"></i></div></div>`).join('')}</div><h3 style="font-size:12px;margin:18px 0 8px">Davranışsal göstergeler</h3><div class="blind">${bs.length ? bs.map(x => `<span class="tag">${esc(x)}</span>`).join('') : '<span class="tag good">Belirgin kritik kör nokta örüntüsü oluşmadı</span>'}</div><div class="twocol"><div><h3 style="font-size:12px;margin:0 0 9px">Karar geçmişi</h3><div class="history">${Object.values(S.answers).map(a => `<div class="hrow"><div class="hno">K${a.id}</div><div><b>${esc(a.title)}</b><br><span>${a.type === 'choice' ? `Seçim ${a.choice}` : a.type === 'rank3' ? `Sıra: ${a.rank.join(' > ')}` : 'Serbest teknik giriş'}</span></div><div class="badge">${techScore(a.id)}/10</div></div>`).join('')}</div></div><div><h3 style="font-size:12px;margin:0 0 9px">Ana değerlendirme ilkesi</h3><div class="note">Güçlü performans; alarmı ciddiye alırken gereksiz tahliye üretmemek, otomatik söndürmeyi gerçek fonksiyonuyla değerlendirmek, enerji izolasyonunu hasta güvenliğiyle birlikte planlamak, cause–effect zincirini saha doğrulamasıyla izlemek, tahliyeyi dinamik rota güvenilirliğine göre yönetmek ve yangın kontrol altına alındıktan sonra delilleri kaybetmeden sistemsel incelemeye geçmektir.</div><div class="note" style="margin-top:10px"><b>Olay şiddeti borcu:</b> ${sev.debt}. Bu sayı eğitim amaçlı simülasyon motorunun iç göstergesidir; tek başına gerçek olay nedenini veya hukuki sorumluluğu ifade etmez.</div></div></div>${evalUI()}<div class="resultactions"><button class="btn btn-primary" onclick="window.print()">Sonucu Yazdır</button><button class="btn btn-light" onclick="restart()">Yeni Simülasyon</button></div></div></section></div>`; updateTop() }
+        function evalUI() { const states = Object.keys(S.flags).filter(k => S.flags[k]); return `<details class="eval"><summary>Değerlendirici Paneli · Katılımcıya göstermeyin</summary><div class="evalwarn">Serbest girişlerde otomatik kavram eşleştirmesi yardımcı değerlendirmedir. Teknik eşdeğer ifadeler gerektiğinde aşağıdaki puan alanından manuel düzeltilmelidir. K1 toplam skora K1 ve K1-B aritmetik ortalaması olarak girer; HG/HD ise iki alt düğümü ayrı kullanır.</div><div class="evalrows">${Object.values(S.answers).map(a => `<div class="erow"><b>K${a.id}</b><div>${esc(a.title)}</div><input type="number" min="0" max="10" value="${techScore(a.id)}" onchange="setOverride('${a.id}',this.value)"></div>`).join('')}</div><div class="label" style="margin-top:14px">Aktif gizli durumlar</div><div class="states">${states.length ? states.map(k => `<div class="state">${esc(k)}<b>${esc(FLAG_INFO[k] || 'Aktif')}</b></div>`).join('') : '<div class="state">Gizli durum<b>Aktif kritik bayrak yok</b></div>'}</div></details>` }
+        function setOverride(id, v) { S.overrides[id] = Math.max(0, Math.min(10, +v)); save(); renderResult() }
+        function restart() { clearSave(); S = fresh(); renderStart() }
+        window.addEventListener('beforeunload', save); renderStart();
+    </script>
+</body>
+
+</html>

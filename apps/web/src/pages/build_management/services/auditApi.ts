@@ -44,6 +44,7 @@ const transformAudit = (backendAudit: any): Audit => {
       recommendation: f.recommendation,
       status: f.status,
       history: f.history,
+      departments: f.departments || [],
       files: f.files || [],
       steps: (f.actions || []).map((a: any) => ({
         id: a.id,

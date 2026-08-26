@@ -2022,6 +2022,7 @@ model IntegratedFinding {
   recommendation String
   status         String
   history        String?
+  departments    String[]
 
   actions        IntegratedAction[]
   files          IntegratedFile[]

@@ -101,10 +101,11 @@ export default function SubmissionFormPage() {
         if (!currentAnswer.scaleOptionId) { errors.push(`Seçenek seçilmedi: ${item.itemNo}`); return; }
         
         const selectedOption = template.scaleSet?.options?.find((o: any) => o.id === currentAnswer.scaleOptionId);
-        if (selectedOption?.requiresExplanation && (!currentAnswer.note || currentAnswer.note.trim() === '')) {
+        const isKarsiliyor = selectedOption?.label?.toLowerCase().includes('karşılıyor') || selectedOption?.label?.toLowerCase() === 'uygun';
+        if (selectedOption?.requiresExplanation && !isKarsiliyor && (!currentAnswer.note || currentAnswer.note.trim() === '')) {
           errors.push(`Açıklama zorunlu: ${item.itemNo}`);
         }
-        if (selectedOption?.requiresAttachment && (!currentAnswer.attachments || currentAnswer.attachments.length === 0)) {
+        if (selectedOption?.requiresAttachment && !isKarsiliyor && (!currentAnswer.attachments || currentAnswer.attachments.length === 0)) {
           errors.push(`Görsel zorunlu: ${item.itemNo}`);
         }
       });
@@ -203,8 +204,9 @@ export default function SubmissionFormPage() {
               {[...section.items].sort((a, b) => a.itemNo - b.itemNo).map((item: any) => {
                 const currentAnswer = answers.find(a => a.itemId === item.id) || {};
                 const selectedOption = template.scaleSet?.options?.find((o: any) => o.id === currentAnswer.scaleOptionId);
-                const requiresExplanation = selectedOption?.requiresExplanation;
-                const requiresAttachment = selectedOption?.requiresAttachment;
+                const isKarsiliyorUI = selectedOption?.label?.toLowerCase().includes('karşılıyor') || selectedOption?.label?.toLowerCase() === 'uygun';
+                const requiresExplanation = selectedOption?.requiresExplanation && !isKarsiliyorUI;
+                const requiresAttachment = selectedOption?.requiresAttachment && !isKarsiliyorUI;
                 
                 // Has note or attachment currently?
                 const hasNote = !!currentAnswer.note;

@@ -308,7 +308,7 @@ const ReportTemplate = forwardRef<HTMLDivElement, ReportTemplateProps>(
                           <td className="p-2 font-bold bg-slate-100 border-r border-slate-700 text-center" colSpan={2}>İlgili Süreç:</td>
                           <td className="p-2 border-r border-slate-700 text-center" colSpan={2}>{finding.category}</td>
                           <td className="p-2 font-bold bg-slate-100 border-r border-slate-700 text-center">İlgili Birim:</td>
-                          <td className="p-2 text-center">{finding.steps && finding.steps.length > 0 ? Array.from(new Set(finding.steps.map(s => s.department))).join(', ') : 'Atanmadı'}</td>
+                          <td className="p-2 text-center">{Array.from(new Set([...(finding.departments || []), ...(finding.steps?.map(s => s.department) || [])])).join(', ') || 'Atanmadı'}</td>
                         </tr>
                         
                         {/* Tespit Detayları Header */}
@@ -375,7 +375,16 @@ const ReportTemplate = forwardRef<HTMLDivElement, ReportTemplateProps>(
                                     <td className="p-1.5 text-center font-bold text-[10px]">{s.status}</td>
                                   </tr>
                                 )) : (
-                                  <tr><td colSpan={4} className="p-4 text-center text-slate-400">Henüz aksiyon girilmemiş.</td></tr>
+                                  finding.departments && finding.departments.length > 0 ? (
+                                    <tr>
+                                      <td className="p-1.5 border-r border-slate-700 text-center font-medium">-</td>
+                                      <td className="p-1.5 border-r border-slate-700 text-center font-bold text-slate-800">{finding.departments.join(', ')}</td>
+                                      <td className="p-1.5 border-r border-slate-700 text-left text-slate-500 italic">Atandı, henüz aksiyon girilmedi.</td>
+                                      <td className="p-1.5 text-center font-bold text-[10px] text-slate-500">Beklemede</td>
+                                    </tr>
+                                  ) : (
+                                    <tr><td colSpan={4} className="p-4 text-center text-slate-400">Henüz aksiyon girilmemiş.</td></tr>
+                                  )
                                 )}
                               </tbody>
                             </table>

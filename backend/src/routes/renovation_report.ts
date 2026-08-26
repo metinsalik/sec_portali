@@ -96,9 +96,9 @@ router.post('/save', authMiddleware, async (req: AuthRequest, res: Response) => 
         status: status || 'DRAFT',
         saved: saved === undefined ? true : saved,
         round: meta.round || 1,
-        startDate: new Date(meta.start),
-        endDate: new Date(meta.end),
-        reportDate: new Date(meta.reportDate),
+        startDate: meta.start ? new Date(meta.start) : new Date(),
+        endDate: meta.end ? new Date(meta.end) : new Date(),
+        reportDate: meta.reportDate ? new Date(meta.reportDate) : new Date(),
         reportNo: meta.reportNo || '',
         reporter: meta.reporter || '',
         auditStatus: meta.auditStatus || 'Devam Ediyor',
@@ -154,6 +154,7 @@ router.post('/save', authMiddleware, async (req: AuthRequest, res: Response) => 
               recommendation: finding.recommendation || '',
               status: finding.status,
               history: finding.history || null,
+              departments: finding.departments || [],
             }
           });
 

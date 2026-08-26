@@ -43,6 +43,7 @@ export interface Finding {
   recommendation: string;
   status: ImprovementStatus;
   steps: ActionStep[]; // Çoklu departman iş akışı
+  departments?: string[]; // Sadece atanan departmanlar
   history: string;
 }
 

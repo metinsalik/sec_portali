@@ -7,6 +7,7 @@ import type { RiskLevel, ActionStep, Finding } from '../types';
 import AnalysisTab from './AnalysisTab';
 import ReportTemplate from './ReportTemplate';
 import { saveAudit, uploadAuditFiles } from '../services/auditApi';
+import toast from 'react-hot-toast';
 
 export default function AuditWorkspace() {
   const { setCurrentView, facilities, categories, departments, audits, setAudits, activeAuditId, setActiveAuditId, globalAreas, setGlobalAreas, globalCriteria, setGlobalCriteria } = useIRSC();
@@ -189,20 +190,10 @@ export default function AuditWorkspace() {
   const [promptVal, setPromptVal] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  const handleSaveFinding = () => {
+  const handleSaveFinding = (keepFormOpen = false) => {
     if (activeFindingId && activeFindingForm === 'EDIT') {
       setFindings(findings.map(f => {
         if (f.id === activeFindingId) {
-          const currentDepts = f.steps?.map(s => s.department) || [];
-          const newDepts = selectedDepartments.filter(d => !currentDepts.includes(d));
-          const newSteps = newDepts.map((dep, idx) => ({
-            id: 'step_' + Date.now().toString() + '_' + idx,
-            department: dep,
-            order: (f.steps?.length || 0) + idx + 1,
-            status: 'Başlamadı' as const,
-            actionDate: '',
-            files: []
-          }));
           return {
             ...f,
             risk: newFinding.risk as RiskLevel,
@@ -214,7 +205,7 @@ export default function AuditWorkspace() {
             subarea: newFinding.subarea || '',
             targetDate: newFinding.targetDate || '',
             files: newFinding.files || [],
-            steps: [...(f.steps || []), ...newSteps]
+            departments: selectedDepartments
           };
         }
         return f;
@@ -238,27 +229,33 @@ export default function AuditWorkspace() {
         riskDesc: newFinding.riskDesc || '',
         recommendation: newFinding.recommendation || '',
         status: 'Yeni Tespit Edilen',
-        steps: [], // Initially empty, added later
+        steps: [],
+        departments: selectedDepartments,
         history: 'Yeni kayıt oluşturuldu.'
       };
       setFindings([...findings, completeFinding]);
     }
     
-    setActiveFindingForm(null);
-    setActiveFindingId(null);
-    setNewFinding({
+    if (!keepFormOpen) {
+      setActiveFindingForm(null);
+      setActiveFindingId(null);
+    } else {
+      toast.success('Bulgu eklendi, aynı mahal için yeni bulgu girebilirsiniz.');
+    }
+    
+    setNewFinding(prev => ({
       category: '',
       subcategory: '',
       findingDesc: '',
       riskDesc: '',
       recommendation: '',
-      area: '',
-      subarea: '',
+      area: keepFormOpen ? prev.area : '',
+      subarea: keepFormOpen ? prev.subarea : '',
       risk: undefined,
       targetDate: '',
       files: [],
       steps: []
-    });
+    }));
     setSelectedDepartments([]);
   };
 
@@ -314,6 +311,11 @@ export default function AuditWorkspace() {
   };
 
   const handleSave = async (publish = false) => {
+    if (activeFindingForm) {
+      toast.error('Lütfen önce açık olan bulgu formunu kaydedin veya iptal edin.');
+      return;
+    }
+
     if (!auditMeta.locationId) {
       setAlertMsg("Lütfen önce tesis seçin.");
       return;
@@ -659,8 +661,8 @@ export default function AuditWorkspace() {
                       findingDesc: '',
                       riskDesc: '',
                       recommendation: '',
-                      area: '',
-                      subarea: '',
+                      area: activeAreaView || '',
+                      subarea: activeSubareaView || '',
                       files: []
                     });
                     setActiveFindingId(null);
@@ -693,7 +695,7 @@ export default function AuditWorkspace() {
                       }, {} as Record<string, Finding[]>)
                     ).map(([areaName, areaFindings], idx) => {
                       const total = areaFindings.length;
-                      const totalDepts = new Set(areaFindings.flatMap(f => f.steps.map(s => s.department))).size;
+                      const totalDepts = new Set([...areaFindings.flatMap(f => f.steps?.map(s => s.department) || []), ...areaFindings.flatMap(f => f.departments || [])]).size;
                       const completed = areaFindings.filter(f => f.status === 'Tamamlanan').length;
                       const openCritical = areaFindings.filter(f => f.status !== 'Tamamlanan' && ['Tolere Edilemez Risk', 'Yüksek Risk'].includes(f.risk)).length;
                       const openAll = areaFindings.filter(f => f.status !== 'Tamamlanan').length;
@@ -891,9 +893,11 @@ export default function AuditWorkspace() {
                                 </div>
                                 
                                 <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-500 dark:text-slate-400 pt-2">
-                                  <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-md border border-slate-100 dark:bg-slate-900/50 dark:border-slate-800">
-                                    <span className="w-2 h-2 rounded-full bg-blue-500"></span> 
-                                    {f.steps.map(s => s.department).join(', ') || 'Atanmadı'}
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-1.5"></div>
+                                    <span className="text-slate-600 dark:text-slate-300">
+                                      {Array.from(new Set([...(f.departments || []), ...(f.steps?.map(s => s.department) || [])])).join(', ') || 'Atanmadı'}
+                                    </span>
                                   </div>
                                   
                                   <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border ${f.status !== 'Tamamlanan' && new Date(f.targetDate || '') < new Date() ? 'bg-red-50 border-red-100 text-red-600 dark:bg-red-900/20 dark:border-red-900/50' : 'bg-slate-50 border-slate-100 dark:bg-slate-900/50 dark:border-slate-800'}`}>
@@ -921,9 +925,38 @@ export default function AuditWorkspace() {
                                 </span>
                                 
                                 <div className="flex lg:flex-col w-full gap-2">
-                                  <button onClick={() => { setActiveFindingId(f.id); setActiveFindingForm('VIEW'); }} className="flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-bold py-2 px-3 rounded-lg text-xs hover:bg-slate-50 hover:border-slate-300 shadow-sm dark:bg-slate-800 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 transition-all">
-                                    <Eye size={14}/> İncele
-                                  </button>
+                                  <div className="flex gap-2">
+                                    <button onClick={() => { setActiveFindingId(f.id); setActiveFindingForm('VIEW'); }} className="flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 font-bold py-2 px-3 rounded-lg text-xs hover:bg-slate-50 hover:border-slate-300 shadow-sm dark:bg-slate-800 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 transition-all">
+                                      <Eye size={14}/> İncele
+                                    </button>
+                                    {(!isPublished) && (
+                                      <button 
+                                        onClick={() => {
+                                          toast(
+                                            (t) => (
+                                              <div className="flex flex-col gap-3 p-2">
+                                                <div className="font-semibold text-slate-800 dark:text-white">Bulguyu tamamen silmek istediğinize emin misiniz?</div>
+                                                <div className="text-sm text-slate-500">Bu işlem geri alınamaz.</div>
+                                                <div className="flex gap-2 justify-end mt-2">
+                                                  <button onClick={() => toast.dismiss(t.id)} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-sm font-medium transition-colors">İptal</button>
+                                                  <button onClick={() => {
+                                                    setFindings(findings.filter(fi => fi.id !== f.id));
+                                                    toast.dismiss(t.id);
+                                                    toast.success('Bulgu silindi');
+                                                  }} className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors">Sil</button>
+                                                </div>
+                                              </div>
+                                            ),
+                                            { duration: 5000 }
+                                          );
+                                        }}
+                                        className="flex items-center justify-center bg-white border border-red-200 text-red-500 py-2 px-3 rounded-lg hover:bg-red-50 hover:border-red-300 shadow-sm dark:bg-slate-800 dark:border-red-900/50 dark:hover:bg-red-900/20 transition-all"
+                                        title="Bulguyu Sil"
+                                      >
+                                        <Trash2 size={16}/>
+                                      </button>
+                                    )}
+                                  </div>
                                   {(!isPublished) && (
                                     <button 
                                       onClick={() => {
@@ -985,6 +1018,12 @@ export default function AuditWorkspace() {
                               <div className="text-xs font-semibold text-slate-500 mb-1 uppercase">Değerlendirilen Mahal</div>
                               <div className="font-medium text-slate-800 dark:text-slate-200">
                                 {f.area} {f.subarea && `> ${f.subarea}`}
+                              </div>
+                            </div>
+                            <div className="md:col-span-2 border-t border-slate-200 pt-4 mt-2 dark:border-slate-700">
+                              <div className="text-xs font-semibold text-slate-500 mb-1 uppercase">Sorumlu Departman(lar)</div>
+                              <div className="font-medium text-blue-700 dark:text-blue-400">
+                                {Array.from(new Set([...(f.departments || []), ...(f.steps?.map(s => s.department) || [])])).join(', ') || 'Atanmadı'}
                               </div>
                             </div>
                           </div>
@@ -1436,15 +1475,23 @@ export default function AuditWorkspace() {
                       </div>
                       <div className="pt-4 border-t border-slate-200 flex justify-end gap-3 dark:border-slate-700 shrink-0 mt-8">
                         <button onClick={() => { setActiveFindingForm(null); setActiveFindingId(null); }} className="px-5 py-2.5 text-slate-700 font-medium hover:bg-slate-200 rounded-lg dark:text-slate-300 dark:hover:bg-slate-700">İptal</button>
+                        
+                        {!activeFindingId && (
+                          <button 
+                            onClick={() => handleSaveFinding(true)}
+                            disabled={!newFinding.findingDesc || !newFinding.risk || !newFinding.area}
+                            className="px-5 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+                          >
+                            Kaydet ve Aynı Mahal İçin Yeni Ekle
+                          </button>
+                        )}
+                        
                         <button 
-                          onClick={() => {
-                            handleSaveFinding();
-                            setActiveFindingForm(null);
-                          }}
-                          disabled={!newFinding.findingDesc || !newFinding.risk}
+                          onClick={() => handleSaveFinding(false)}
+                          disabled={!newFinding.findingDesc || !newFinding.risk || !newFinding.area}
                           className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
                         >
-                          {activeFindingId ? 'Değişiklikleri Kaydet' : 'Bulguyu Kaydet'}
+                          {activeFindingId ? 'Değişiklikleri Kaydet' : 'Bulguyu Kaydet (Bitir)'}
                         </button>
                       </div>
                     </>
