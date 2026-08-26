@@ -95,6 +95,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
             include: { category: true }
           },
           scaleOption: { select: { label: true, multiplier: true } },
+          attachments: true,
           submission: {
             include: { facility: true, template: true }
           }
@@ -169,7 +170,10 @@ router.get('/', async (req: AuthRequest, res: Response) => {
          answerId: ans.id,
          questionText: ans.item.questionText,
          facilityName: ans.submission.facility?.name,
-         templateName: ans.submission.template?.title
+         templateName: ans.submission.template?.title,
+         note: ans.note,
+         photoPath: ans.photoPath,
+         attachments: ans.attachments
       });
     });
 
@@ -205,7 +209,13 @@ router.get('/', async (req: AuthRequest, res: Response) => {
           latestStatus: latest.status,
           currentStatus: finalStatus,
           initialDate: initial.date,
-          latestDate: latest.date
+          latestDate: latest.date,
+          initialNote: initial.note,
+          latestNote: latest.note,
+          initialPhoto: initial.photoPath,
+          latestPhoto: latest.photoPath,
+          initialAttachments: initial.attachments,
+          latestAttachments: latest.attachments
         });
       }
     });

@@ -12,11 +12,13 @@ import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 export default function ChecklistDashboardPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedFinding, setSelectedFinding] = useState<any>(null);
   const { user } = useAuth();
   const hasAdminAccess = user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management');
 
@@ -433,7 +435,7 @@ export default function ChecklistDashboardPage() {
                       {renderStatusBadge(item.currentStatus)}
                     </td>
                     <td className="px-6 py-5 text-center">
-                      <Button variant="ghost" size="sm" className="text-slate-500 hover:text-indigo-600">
+                      <Button variant="ghost" size="sm" className="text-slate-500 hover:text-indigo-600" onClick={() => setSelectedFinding(item)}>
                         İncele <ChevronRight className="w-4 h-4 ml-1" />
                       </Button>
                     </td>
@@ -534,6 +536,111 @@ export default function ChecklistDashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* DETAY MODALI */}
+      <Dialog open={!!selectedFinding} onOpenChange={(open) => !open && setSelectedFinding(null)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Tespit & İyileştirme Detayı</DialogTitle>
+            <DialogDescription>
+              {selectedFinding?.facilityName} - {selectedFinding?.templateName}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedFinding && (
+            <div className="space-y-6 mt-4">
+              <div className="bg-slate-50 p-4 rounded-lg border">
+                <p className="font-medium text-slate-800 text-sm leading-relaxed">{selectedFinding.questionText}</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* İlk Durum */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b">
+                     <h4 className="font-semibold text-slate-700">İlk Tespit</h4>
+                     <div className="flex items-center gap-2">
+                       {renderStatusBadge(selectedFinding.initialStatus)}
+                       <span className="text-xs text-slate-500">{format(new Date(selectedFinding.initialDate), 'dd MMM yyyy', { locale: tr })}</span>
+                     </div>
+                  </div>
+                  
+                  {selectedFinding.initialNote ? (
+                     <div className="text-sm text-slate-600 bg-red-50/50 p-3 rounded-md border border-red-100">
+                        <span className="font-semibold text-red-800 block mb-1">Açıklama/Not:</span>
+                        {selectedFinding.initialNote}
+                     </div>
+                  ) : (
+                     <p className="text-xs text-slate-400 italic">Not girilmemiş.</p>
+                  )}
+
+                  {selectedFinding.initialPhoto && (
+                     <div className="mt-2">
+                        <span className="text-xs font-semibold text-slate-500 mb-1 block">Tespit Fotoğrafı:</span>
+                        <img src={`/api/uploads/${selectedFinding.initialPhoto.split('/').pop()}`} alt="İlk Tespit" className="rounded-md max-h-48 object-cover border" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                     </div>
+                  )}
+                  {selectedFinding.initialAttachments && selectedFinding.initialAttachments.length > 0 && (
+                     <div className="mt-2 flex flex-wrap gap-2">
+                        {selectedFinding.initialAttachments.map((att: any, i: number) => (
+                           <a key={i} href={`/api/uploads/${att.filePath.split('/').pop()}`} target="_blank" rel="noreferrer" className="text-xs bg-slate-100 px-2 py-1 rounded-md text-blue-600 hover:underline border">
+                             Ek Dosya {i + 1}
+                           </a>
+                        ))}
+                     </div>
+                  )}
+                </div>
+
+                {/* Güncel Durum */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b">
+                     <h4 className="font-semibold text-slate-700">Güncel / Son Durum</h4>
+                     <div className="flex items-center gap-2">
+                       {renderStatusBadge(selectedFinding.latestStatus)}
+                       <span className="text-xs text-slate-500">{format(new Date(selectedFinding.latestDate), 'dd MMM yyyy', { locale: tr })}</span>
+                     </div>
+                  </div>
+
+                  {selectedFinding.latestDate !== selectedFinding.initialDate ? (
+                     <>
+                        {selectedFinding.latestNote ? (
+                           <div className="text-sm text-slate-600 bg-emerald-50/50 p-3 rounded-md border border-emerald-100">
+                              <span className="font-semibold text-emerald-800 block mb-1">İyileştirme/Not:</span>
+                              {selectedFinding.latestNote}
+                           </div>
+                        ) : (
+                           <p className="text-xs text-slate-400 italic">Not girilmemiş.</p>
+                        )}
+
+                        {selectedFinding.latestPhoto && (
+                           <div className="mt-2">
+                              <span className="text-xs font-semibold text-slate-500 mb-1 block">Güncel Fotoğraf:</span>
+                              <img src={`/api/uploads/${selectedFinding.latestPhoto.split('/').pop()}`} alt="Güncel Tespit" className="rounded-md max-h-48 object-cover border" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                           </div>
+                        )}
+                        {selectedFinding.latestAttachments && selectedFinding.latestAttachments.length > 0 && (
+                           <div className="mt-2 flex flex-wrap gap-2">
+                              {selectedFinding.latestAttachments.map((att: any, i: number) => (
+                                 <a key={i} href={`/api/uploads/${att.filePath.split('/').pop()}`} target="_blank" rel="noreferrer" className="text-xs bg-slate-100 px-2 py-1 rounded-md text-blue-600 hover:underline border">
+                                   Ek Dosya {i + 1}
+                                 </a>
+                              ))}
+                           </div>
+                        )}
+                     </>
+                  ) : (
+                     <div className="h-full flex items-center justify-center text-slate-400 text-sm italic bg-slate-50 rounded-lg border-dashed border-2 border-slate-200">
+                        Henüz tekrar denetlenmedi (İyileştirme kaydı yok)
+                     </div>
+                  )}
+
+                </div>
+
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
