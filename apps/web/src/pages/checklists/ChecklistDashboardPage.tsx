@@ -10,14 +10,26 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import { useAuth } from '@/context/AuthContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ChecklistDashboardPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
+  const { user } = useAuth();
+  const hasAdminAccess = user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management');
+
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string>(localStorage.getItem('activeFacilityId') || 'all');
+
+  React.useEffect(() => {
+    const handleFacilityChange = () => setSelectedFacilityId(localStorage.getItem('activeFacilityId') || 'all');
+    window.addEventListener('facilityChanged', handleFacilityChange);
+    return () => window.removeEventListener('facilityChanged', handleFacilityChange);
+  }, []);
   
   // URL params mapping
-  const urlFacilityId = searchParams.get('facilityId') || localStorage.getItem('activeFacilityId') || 'all';
+  const urlFacilityId = searchParams.get('facilityId') || selectedFacilityId;
   const urlYear = searchParams.get('year') || new Date().getFullYear().toString();
   const urlGroupId = searchParams.get('groupId') || 'all';
   const urlTemplateId = searchParams.get('templateId') || 'all';
@@ -51,7 +63,20 @@ export default function ChecklistDashboardPage() {
       const res = await api.get(`/checklists/dashboard?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to fetch dashboard data');
       return res.json();
-    }
+    },
+    enabled: hasAdminAccess || (!!urlFacilityId && urlFacilityId !== 'all')
+  });
+
+  const { data: recentSubmissions = [], isLoading: submissionsLoading } = useQuery({
+    queryKey: ['checklist-recent-submissions', urlFacilityId],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (urlFacilityId !== 'all') params.append('facilityId', urlFacilityId);
+      const res = await api.get(`/checklists/submissions?${params.toString()}`);
+      if (!res.ok) throw new Error('Failed to fetch recent submissions');
+      return res.json();
+    },
+    enabled: hasAdminAccess || (!!urlFacilityId && urlFacilityId !== 'all')
   });
 
   const groups = dashboardData?.groups || [];
@@ -84,6 +109,18 @@ export default function ChecklistDashboardPage() {
     if (status === 'DEVAM EDİYOR') return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-0">DEVAM EDİYOR</Badge>;
     return <Badge variant="outline">{status}</Badge>;
   };
+
+  if (!hasAdminAccess && (!selectedFacilityId || selectedFacilityId === 'all')) {
+    return (
+      <div className="p-6 h-[80vh] flex flex-col items-center justify-center">
+        <div className="bg-indigo-50 text-indigo-800 p-8 rounded-2xl max-w-md text-center shadow-sm border border-indigo-100">
+          <Activity className="w-16 h-16 mx-auto mb-4 text-indigo-400" />
+          <h2 className="text-xl font-bold mb-2">Tesis Seçiniz</h2>
+          <p className="text-indigo-700">Kontrol Listeleri ve analizleri görüntülemek için lütfen sol üst menüden bir tesis seçin.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -410,6 +447,90 @@ export default function ChecklistDashboardPage() {
                 )}
               </tbody>
             </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* SON DENETIMLER TABLOSU */}
+      <Card className="shadow-sm border-slate-200 mt-8">
+        <CardHeader className="pb-2 border-b border-slate-100 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base font-bold text-slate-800">Tesisin Tüm Kontrol Listeleri</CardTitle>
+            <p className="text-xs text-muted-foreground">Son yapılan denetimden geriye doğru sıralama</p>
+          </div>
+          <Button variant="ghost" size="sm" className="text-indigo-600 text-xs font-semibold gap-1 hover:bg-indigo-50" onClick={() => navigate('/checklists/submissions')}>
+            Tüm Denetimler <ChevronRight className="w-3 h-3" />
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+            {submissionsLoading ? (
+              <div className="p-4 space-y-3"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
+            ) : recentSubmissions.length > 0 ? (
+              <table className="w-full text-sm text-left">
+                <thead className="text-[11px] text-slate-500 bg-slate-50 uppercase font-semibold sticky top-0 z-10 shadow-sm">
+                  <tr>
+                    <th className="px-5 py-3">Tarih</th>
+                    <th className="px-5 py-3">Şablon & Tesis</th>
+                    <th className="px-5 py-3">Denetçi</th>
+                    <th className="px-5 py-3 text-center">Skor</th>
+                    <th className="px-5 py-3 text-right">Durum</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {recentSubmissions.map((s: any) => (
+                    <tr key={s.id} className="hover:bg-slate-50/70 transition-colors cursor-pointer group" onClick={() => navigate(`/checklists/submissions/${s.id}`)}>
+                      <td className="px-5 py-4 whitespace-nowrap align-middle">
+                        <div className="flex items-center gap-1.5 text-slate-600">
+                           <Calendar className="w-3.5 h-3.5" />
+                           <span className="font-medium text-[13px]">{format(new Date(s.auditDate), 'dd MMM yyyy', { locale: tr })}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 align-middle">
+                        <div className="font-bold text-slate-800 group-hover:text-indigo-700 transition-colors">{s.template?.title}</div>
+                        <div className="text-xs text-slate-500">{s.facility?.name}</div>
+                      </td>
+                      <td className="px-5 py-4 align-middle whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                           <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold">
+                              {s.conductedBy?.fullName?.charAt(0) || 'U'}
+                           </div>
+                           <span className="text-slate-700 text-[13px]">{s.conductedBy?.fullName || 'Bilinmiyor'}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-center align-middle whitespace-nowrap">
+                         <div className="flex flex-col items-center">
+                            <span className="font-bold text-slate-800">
+                               {s.totalScore !== null && s.totalScore !== undefined ? s.totalScore : '-'}<span className="text-[10px] text-slate-400 font-normal"> / {s.maxScore || '-'}</span>
+                            </span>
+                            <span className={`text-[10px] font-bold ${
+                               (s.percentScore || 0) >= 80 ? 'text-emerald-600' :
+                               (s.percentScore || 0) >= 60 ? 'text-amber-600' : 'text-red-600'
+                            }`}>
+                               %{Math.round(s.percentScore || 0)}
+                            </span>
+                         </div>
+                      </td>
+                      <td className="px-5 py-4 text-right align-middle whitespace-nowrap">
+                         <Badge variant="outline" className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium border ${
+                            s.status === 'TAMAMLANDI' || s.status === 'ONAYLANDI' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            s.status === 'ONAY_BEKLIYOR' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                            'bg-slate-50 text-slate-700 border-slate-200'
+                         }`}>
+                           {s.status === 'TAMAMLANDI' || s.status === 'ONAYLANDI' ? 'Onaylandı' :
+                            s.status === 'ONAY_BEKLIYOR' ? 'Onay Bekliyor' : 'Taslak'}
+                         </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="p-10 text-center text-muted-foreground flex flex-col items-center justify-center">
+                <CheckCircle2 className="w-12 h-12 mb-4 text-slate-300" />
+                <p>Bu tesise ait hiçbir kontrol listesi (denetim) bulunmuyor.</p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
