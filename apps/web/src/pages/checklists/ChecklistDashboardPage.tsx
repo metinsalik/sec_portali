@@ -9,10 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { tr } from 'date-fns/locale';
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+
+const API = import.meta.env.VITE_API_URL || '';
 
 export default function ChecklistDashboardPage() {
   const navigate = useNavigate();
@@ -539,97 +540,119 @@ export default function ChecklistDashboardPage() {
 
       {/* DETAY MODALI */}
       <Dialog open={!!selectedFinding} onOpenChange={(open) => !open && setSelectedFinding(null)}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Tespit & İyileştirme Detayı</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-xl">Tespit & İyileştirme Detayı</DialogTitle>
+            <DialogDescription className="text-sm font-medium text-slate-500">
               {selectedFinding?.facilityName} - {selectedFinding?.templateName}
             </DialogDescription>
           </DialogHeader>
           
           {selectedFinding && (
             <div className="space-y-6 mt-4">
-              <div className="bg-slate-50 p-4 rounded-lg border">
-                <p className="font-medium text-slate-800 text-sm leading-relaxed">{selectedFinding.questionText}</p>
+              <div className="bg-slate-50 p-5 rounded-lg border shadow-sm">
+                <p className="font-medium text-slate-800 text-base leading-relaxed">{selectedFinding.questionText}</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 
                 {/* İlk Durum */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between pb-2 border-b">
-                     <h4 className="font-semibold text-slate-700">İlk Tespit</h4>
-                     <div className="flex items-center gap-2">
+                <div className="space-y-5 bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
+                  <div className="flex items-center justify-between pb-3 border-b">
+                     <h4 className="font-bold text-slate-800 text-lg">İlk Tespit</h4>
+                     <div className="flex items-center gap-3">
                        {renderStatusBadge(selectedFinding.initialStatus)}
-                       <span className="text-xs text-slate-500">{format(new Date(selectedFinding.initialDate), 'dd MMM yyyy', { locale: tr })}</span>
+                       <span className="text-sm font-medium text-slate-500 bg-slate-50 px-2 py-1 rounded-md">{format(new Date(selectedFinding.initialDate), 'dd MMM yyyy', { locale: tr })}</span>
                      </div>
                   </div>
                   
                   {selectedFinding.initialNote ? (
-                     <div className="text-sm text-slate-600 bg-red-50/50 p-3 rounded-md border border-red-100">
-                        <span className="font-semibold text-red-800 block mb-1">Açıklama/Not:</span>
+                     <div className="text-sm text-slate-700 bg-red-50/50 p-4 rounded-lg border border-red-100">
+                        <span className="font-bold text-red-800 flex items-center gap-2 mb-2">
+                           <AlertTriangle className="w-4 h-4" /> Açıklama/Not:
+                        </span>
                         {selectedFinding.initialNote}
                      </div>
                   ) : (
-                     <p className="text-xs text-slate-400 italic">Not girilmemiş.</p>
+                     <p className="text-sm text-slate-400 italic bg-slate-50 p-3 rounded-lg border border-slate-100">Not girilmemiş.</p>
                   )}
 
                   {selectedFinding.initialPhoto && (
-                     <div className="mt-2">
-                        <span className="text-xs font-semibold text-slate-500 mb-1 block">Tespit Fotoğrafı:</span>
-                        <img src={`/api/uploads/${selectedFinding.initialPhoto.split('/').pop()}`} alt="İlk Tespit" className="rounded-md max-h-48 object-cover border" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                     <div className="mt-4">
+                        <span className="text-sm font-bold text-slate-700 mb-2 block">Tespit Fotoğrafı:</span>
+                        <img src={`${API}/uploads/${selectedFinding.initialPhoto.split('/').pop()}`} alt="İlk Tespit" className="rounded-lg max-h-64 object-cover border w-full shadow-sm" onError={(e) => (e.currentTarget.style.display = 'none')} />
                      </div>
                   )}
                   {selectedFinding.initialAttachments && selectedFinding.initialAttachments.length > 0 && (
-                     <div className="mt-2 flex flex-wrap gap-2">
-                        {selectedFinding.initialAttachments.map((att: any, i: number) => (
-                           <a key={i} href={`/api/uploads/${att.filePath.split('/').pop()}`} target="_blank" rel="noreferrer" className="text-xs bg-slate-100 px-2 py-1 rounded-md text-blue-600 hover:underline border">
-                             Ek Dosya {i + 1}
-                           </a>
-                        ))}
+                     <div className="mt-4">
+                        <span className="text-sm font-bold text-slate-700 mb-2 block">Ek Dosyalar:</span>
+                        <div className="flex flex-col gap-3">
+                           {selectedFinding.initialAttachments.map((att: any, i: number) => {
+                              const filename = att.filePath.split('/').pop();
+                              const isImage = filename.match(/\.(jpeg|jpg|gif|png|webp)$/i);
+                              return isImage ? (
+                                 <img key={i} src={`${API}/uploads/${filename}`} alt={`Ek ${i+1}`} className="rounded-lg max-h-64 object-cover border w-full shadow-sm" />
+                              ) : (
+                                 <a key={i} href={`${API}/uploads/${filename}`} target="_blank" rel="noreferrer" className="text-sm bg-slate-50 p-3 rounded-lg text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 font-medium border transition-colors flex items-center gap-2">
+                                   Ek Dosya {i + 1} ({filename})
+                                 </a>
+                              )
+                           })}
+                        </div>
                      </div>
                   )}
                 </div>
 
                 {/* Güncel Durum */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between pb-2 border-b">
-                     <h4 className="font-semibold text-slate-700">Güncel / Son Durum</h4>
-                     <div className="flex items-center gap-2">
+                <div className="space-y-5 bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
+                  <div className="flex items-center justify-between pb-3 border-b">
+                     <h4 className="font-bold text-slate-800 text-lg">Güncel / Son Durum</h4>
+                     <div className="flex items-center gap-3">
                        {renderStatusBadge(selectedFinding.latestStatus)}
-                       <span className="text-xs text-slate-500">{format(new Date(selectedFinding.latestDate), 'dd MMM yyyy', { locale: tr })}</span>
+                       <span className="text-sm font-medium text-slate-500 bg-slate-50 px-2 py-1 rounded-md">{format(new Date(selectedFinding.latestDate), 'dd MMM yyyy', { locale: tr })}</span>
                      </div>
                   </div>
 
                   {selectedFinding.latestDate !== selectedFinding.initialDate ? (
                      <>
                         {selectedFinding.latestNote ? (
-                           <div className="text-sm text-slate-600 bg-emerald-50/50 p-3 rounded-md border border-emerald-100">
-                              <span className="font-semibold text-emerald-800 block mb-1">İyileştirme/Not:</span>
+                           <div className="text-sm text-slate-700 bg-emerald-50/50 p-4 rounded-lg border border-emerald-100">
+                              <span className="font-bold text-emerald-800 flex items-center gap-2 mb-2">
+                                 <CheckCircle2 className="w-4 h-4" /> İyileştirme/Not:
+                              </span>
                               {selectedFinding.latestNote}
                            </div>
                         ) : (
-                           <p className="text-xs text-slate-400 italic">Not girilmemiş.</p>
+                           <p className="text-sm text-slate-400 italic bg-slate-50 p-3 rounded-lg border border-slate-100">Not girilmemiş.</p>
                         )}
 
                         {selectedFinding.latestPhoto && (
-                           <div className="mt-2">
-                              <span className="text-xs font-semibold text-slate-500 mb-1 block">Güncel Fotoğraf:</span>
-                              <img src={`/api/uploads/${selectedFinding.latestPhoto.split('/').pop()}`} alt="Güncel Tespit" className="rounded-md max-h-48 object-cover border" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                           <div className="mt-4">
+                              <span className="text-sm font-bold text-slate-700 mb-2 block">Güncel Fotoğraf:</span>
+                              <img src={`${API}/uploads/${selectedFinding.latestPhoto.split('/').pop()}`} alt="Güncel Tespit" className="rounded-lg max-h-64 object-cover border w-full shadow-sm" onError={(e) => (e.currentTarget.style.display = 'none')} />
                            </div>
                         )}
                         {selectedFinding.latestAttachments && selectedFinding.latestAttachments.length > 0 && (
-                           <div className="mt-2 flex flex-wrap gap-2">
-                              {selectedFinding.latestAttachments.map((att: any, i: number) => (
-                                 <a key={i} href={`/api/uploads/${att.filePath.split('/').pop()}`} target="_blank" rel="noreferrer" className="text-xs bg-slate-100 px-2 py-1 rounded-md text-blue-600 hover:underline border">
-                                   Ek Dosya {i + 1}
-                                 </a>
-                              ))}
+                           <div className="mt-4">
+                              <span className="text-sm font-bold text-slate-700 mb-2 block">Ek Dosyalar:</span>
+                              <div className="flex flex-col gap-3">
+                                 {selectedFinding.latestAttachments.map((att: any, i: number) => {
+                                    const filename = att.filePath.split('/').pop();
+                                    const isImage = filename.match(/\.(jpeg|jpg|gif|png|webp)$/i);
+                                    return isImage ? (
+                                       <img key={i} src={`${API}/uploads/${filename}`} alt={`Ek ${i+1}`} className="rounded-lg max-h-64 object-cover border w-full shadow-sm" />
+                                    ) : (
+                                       <a key={i} href={`${API}/uploads/${filename}`} target="_blank" rel="noreferrer" className="text-sm bg-slate-50 p-3 rounded-lg text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 font-medium border transition-colors flex items-center gap-2">
+                                         Ek Dosya {i + 1} ({filename})
+                                       </a>
+                                    )
+                                 })}
+                              </div>
                            </div>
                         )}
                      </>
                   ) : (
-                     <div className="h-full flex items-center justify-center text-slate-400 text-sm italic bg-slate-50 rounded-lg border-dashed border-2 border-slate-200">
+                     <div className="h-full min-h-[200px] flex items-center justify-center text-slate-500 font-medium text-sm italic bg-slate-50 rounded-xl border-dashed border-2 border-slate-200">
                         Henüz tekrar denetlenmedi (İyileştirme kaydı yok)
                      </div>
                   )}
