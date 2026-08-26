@@ -16,6 +16,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 
 const API = import.meta.env.VITE_API_URL || '';
 
+const getFullUrl = (path: string) => {
+  if (!path) return '';
+  if (path.startsWith('http')) return path;
+  const base = API.replace('/api', '');
+  return path.startsWith('/') ? `${base}${path}` : `${base}/${path}`;
+};
+
 export default function ChecklistDashboardPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -581,7 +588,7 @@ export default function ChecklistDashboardPage() {
                   {selectedFinding.initialPhoto && (
                      <div className="mt-4">
                         <span className="text-sm font-bold text-slate-700 mb-2 block">Tespit Fotoğrafı:</span>
-                        <img src={`${API}/uploads/${selectedFinding.initialPhoto.split('/').pop()}`} alt="İlk Tespit" className="rounded-lg max-h-64 object-cover border w-full shadow-sm" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                        <img src={getFullUrl(selectedFinding.initialPhoto)} alt="İlk Tespit" className="rounded-lg max-h-64 object-cover border w-full shadow-sm" onError={(e) => (e.currentTarget.style.display = 'none')} />
                      </div>
                   )}
                   {selectedFinding.initialAttachments && selectedFinding.initialAttachments.length > 0 && (
@@ -589,12 +596,13 @@ export default function ChecklistDashboardPage() {
                         <span className="text-sm font-bold text-slate-700 mb-2 block">Ek Dosyalar:</span>
                         <div className="flex flex-col gap-3">
                            {selectedFinding.initialAttachments.map((att: any, i: number) => {
-                              const filename = att.filePath.split('/').pop();
+                              const filename = att.filePath.split('/').pop() || '';
                               const isImage = filename.match(/\.(jpeg|jpg|gif|png|webp)$/i);
+                              const fileUrl = getFullUrl(att.filePath);
                               return isImage ? (
-                                 <img key={i} src={`${API}/uploads/${filename}`} alt={`Ek ${i+1}`} className="rounded-lg max-h-64 object-cover border w-full shadow-sm" />
+                                 <img key={i} src={fileUrl} alt={`Ek ${i+1}`} className="rounded-lg max-h-64 object-cover border w-full shadow-sm" />
                               ) : (
-                                 <a key={i} href={`${API}/uploads/${filename}`} target="_blank" rel="noreferrer" className="text-sm bg-slate-50 p-3 rounded-lg text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 font-medium border transition-colors flex items-center gap-2">
+                                 <a key={i} href={fileUrl} target="_blank" rel="noreferrer" className="text-sm bg-slate-50 p-3 rounded-lg text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 font-medium border transition-colors flex items-center gap-2">
                                    Ek Dosya {i + 1} ({filename})
                                  </a>
                               )
@@ -630,7 +638,7 @@ export default function ChecklistDashboardPage() {
                         {selectedFinding.latestPhoto && (
                            <div className="mt-4">
                               <span className="text-sm font-bold text-slate-700 mb-2 block">Güncel Fotoğraf:</span>
-                              <img src={`${API}/uploads/${selectedFinding.latestPhoto.split('/').pop()}`} alt="Güncel Tespit" className="rounded-lg max-h-64 object-cover border w-full shadow-sm" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                              <img src={getFullUrl(selectedFinding.latestPhoto)} alt="Güncel Tespit" className="rounded-lg max-h-64 object-cover border w-full shadow-sm" onError={(e) => (e.currentTarget.style.display = 'none')} />
                            </div>
                         )}
                         {selectedFinding.latestAttachments && selectedFinding.latestAttachments.length > 0 && (
@@ -638,12 +646,13 @@ export default function ChecklistDashboardPage() {
                               <span className="text-sm font-bold text-slate-700 mb-2 block">Ek Dosyalar:</span>
                               <div className="flex flex-col gap-3">
                                  {selectedFinding.latestAttachments.map((att: any, i: number) => {
-                                    const filename = att.filePath.split('/').pop();
+                                    const filename = att.filePath.split('/').pop() || '';
                                     const isImage = filename.match(/\.(jpeg|jpg|gif|png|webp)$/i);
+                                    const fileUrl = getFullUrl(att.filePath);
                                     return isImage ? (
-                                       <img key={i} src={`${API}/uploads/${filename}`} alt={`Ek ${i+1}`} className="rounded-lg max-h-64 object-cover border w-full shadow-sm" />
+                                       <img key={i} src={fileUrl} alt={`Ek ${i+1}`} className="rounded-lg max-h-64 object-cover border w-full shadow-sm" />
                                     ) : (
-                                       <a key={i} href={`${API}/uploads/${filename}`} target="_blank" rel="noreferrer" className="text-sm bg-slate-50 p-3 rounded-lg text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 font-medium border transition-colors flex items-center gap-2">
+                                       <a key={i} href={fileUrl} target="_blank" rel="noreferrer" className="text-sm bg-slate-50 p-3 rounded-lg text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 font-medium border transition-colors flex items-center gap-2">
                                          Ek Dosya {i + 1} ({filename})
                                        </a>
                                     )
