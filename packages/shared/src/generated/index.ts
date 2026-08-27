@@ -346,6 +346,8 @@ export const FireDoorInspectionScalarFieldEnumSchema = z.enum(['id','fireDoorId'
 
 export const FireDoorInspectionItemScalarFieldEnumSchema = z.enum(['id','inspectionId','questionId','answer','earnedScore','comment','photoUrl','photos']);
 
+export const RenovationReportSettingScalarFieldEnumSchema = z.enum(['id','categories','departments','areas','criteria','createdAt','updatedAt']);
+
 export const SortOrderSchema = z.enum(['asc','desc']);
 
 export const NullableJsonNullValueInputSchema: z.ZodType<Prisma.NullableJsonNullValueInput> = z.enum(['DbNull','JsonNull',]).transform((value) => value === 'JsonNull' ? Prisma.JsonNull : value === 'DbNull' ? Prisma.DbNull : value);
@@ -5326,6 +5328,22 @@ export const FireDoorInspectionItemWithRelationsSchema: z.ZodType<FireDoorInspec
 }))
 
 /////////////////////////////////////////
+// RENOVATION REPORT SETTING SCHEMA
+/////////////////////////////////////////
+
+export const RenovationReportSettingSchema = z.object({
+  id: z.string(),
+  categories: JsonValueSchema,
+  departments: JsonValueSchema,
+  areas: JsonValueSchema,
+  criteria: JsonValueSchema,
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type RenovationReportSetting = z.infer<typeof RenovationReportSettingSchema>
+
+/////////////////////////////////////////
 // SELECT & INCLUDE
 /////////////////////////////////////////
 
@@ -10243,6 +10261,19 @@ export const FireDoorInspectionItemSelectSchema: z.ZodType<Prisma.FireDoorInspec
   photos: z.boolean().optional(),
   inspection: z.union([z.boolean(),z.lazy(() => FireDoorInspectionArgsSchema)]).optional(),
   question: z.union([z.boolean(),z.lazy(() => FireDoorQuestionArgsSchema)]).optional(),
+}).strict()
+
+// RENOVATION REPORT SETTING
+//------------------------------------------------------
+
+export const RenovationReportSettingSelectSchema: z.ZodType<Prisma.RenovationReportSettingSelect> = z.object({
+  id: z.boolean().optional(),
+  categories: z.boolean().optional(),
+  departments: z.boolean().optional(),
+  areas: z.boolean().optional(),
+  criteria: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
 }).strict()
 
 
@@ -23187,6 +23218,71 @@ export const FireDoorInspectionItemScalarWhereWithAggregatesInputSchema: z.ZodTy
   comment: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   photoUrl: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   photos: z.lazy(() => StringNullableListFilterSchema).optional(),
+}).strict();
+
+export const RenovationReportSettingWhereInputSchema: z.ZodType<Prisma.RenovationReportSettingWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => RenovationReportSettingWhereInputSchema), z.lazy(() => RenovationReportSettingWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => RenovationReportSettingWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => RenovationReportSettingWhereInputSchema), z.lazy(() => RenovationReportSettingWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  categories: z.lazy(() => JsonFilterSchema).optional(),
+  departments: z.lazy(() => JsonFilterSchema).optional(),
+  areas: z.lazy(() => JsonFilterSchema).optional(),
+  criteria: z.lazy(() => JsonFilterSchema).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const RenovationReportSettingOrderByWithRelationInputSchema: z.ZodType<Prisma.RenovationReportSettingOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  categories: z.lazy(() => SortOrderSchema).optional(),
+  departments: z.lazy(() => SortOrderSchema).optional(),
+  areas: z.lazy(() => SortOrderSchema).optional(),
+  criteria: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const RenovationReportSettingWhereUniqueInputSchema: z.ZodType<Prisma.RenovationReportSettingWhereUniqueInput> = z.object({
+  id: z.string(),
+})
+.and(z.object({
+  id: z.string().optional(),
+  AND: z.union([ z.lazy(() => RenovationReportSettingWhereInputSchema), z.lazy(() => RenovationReportSettingWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => RenovationReportSettingWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => RenovationReportSettingWhereInputSchema), z.lazy(() => RenovationReportSettingWhereInputSchema).array() ]).optional(),
+  categories: z.lazy(() => JsonFilterSchema).optional(),
+  departments: z.lazy(() => JsonFilterSchema).optional(),
+  areas: z.lazy(() => JsonFilterSchema).optional(),
+  criteria: z.lazy(() => JsonFilterSchema).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict());
+
+export const RenovationReportSettingOrderByWithAggregationInputSchema: z.ZodType<Prisma.RenovationReportSettingOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  categories: z.lazy(() => SortOrderSchema).optional(),
+  departments: z.lazy(() => SortOrderSchema).optional(),
+  areas: z.lazy(() => SortOrderSchema).optional(),
+  criteria: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => RenovationReportSettingCountOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => RenovationReportSettingMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => RenovationReportSettingMinOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const RenovationReportSettingScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.RenovationReportSettingScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => RenovationReportSettingScalarWhereWithAggregatesInputSchema), z.lazy(() => RenovationReportSettingScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => RenovationReportSettingScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => RenovationReportSettingScalarWhereWithAggregatesInputSchema), z.lazy(() => RenovationReportSettingScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  categories: z.lazy(() => JsonWithAggregatesFilterSchema).optional(),
+  departments: z.lazy(() => JsonWithAggregatesFilterSchema).optional(),
+  areas: z.lazy(() => JsonWithAggregatesFilterSchema).optional(),
+  criteria: z.lazy(() => JsonWithAggregatesFilterSchema).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
 }).strict();
 
 export const UserCreateInputSchema: z.ZodType<Prisma.UserCreateInput> = z.object({
@@ -36195,6 +36291,76 @@ export const FireDoorInspectionItemUncheckedUpdateManyInputSchema: z.ZodType<Pri
   photos: z.union([ z.lazy(() => FireDoorInspectionItemUpdatephotosInputSchema), z.string().array() ]).optional(),
 }).strict();
 
+export const RenovationReportSettingCreateInputSchema: z.ZodType<Prisma.RenovationReportSettingCreateInput> = z.object({
+  id: z.string().optional(),
+  categories: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  departments: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  areas: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  criteria: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const RenovationReportSettingUncheckedCreateInputSchema: z.ZodType<Prisma.RenovationReportSettingUncheckedCreateInput> = z.object({
+  id: z.string().optional(),
+  categories: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  departments: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  areas: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  criteria: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const RenovationReportSettingUpdateInputSchema: z.ZodType<Prisma.RenovationReportSettingUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  categories: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  departments: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  areas: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  criteria: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const RenovationReportSettingUncheckedUpdateInputSchema: z.ZodType<Prisma.RenovationReportSettingUncheckedUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  categories: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  departments: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  areas: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  criteria: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const RenovationReportSettingCreateManyInputSchema: z.ZodType<Prisma.RenovationReportSettingCreateManyInput> = z.object({
+  id: z.string().optional(),
+  categories: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  departments: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  areas: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  criteria: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const RenovationReportSettingUpdateManyMutationInputSchema: z.ZodType<Prisma.RenovationReportSettingUpdateManyMutationInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  categories: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  departments: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  areas: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  criteria: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const RenovationReportSettingUncheckedUpdateManyInputSchema: z.ZodType<Prisma.RenovationReportSettingUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  categories: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  departments: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  areas: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  criteria: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
 export const StringFilterSchema: z.ZodType<Prisma.StringFilter> = z.object({
   equals: z.string().optional(),
   in: z.string().array().optional(),
@@ -44368,6 +44534,28 @@ export const FireDoorInspectionItemMinOrderByAggregateInputSchema: z.ZodType<Pri
 
 export const FireDoorInspectionItemSumOrderByAggregateInputSchema: z.ZodType<Prisma.FireDoorInspectionItemSumOrderByAggregateInput> = z.object({
   earnedScore: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const RenovationReportSettingCountOrderByAggregateInputSchema: z.ZodType<Prisma.RenovationReportSettingCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  categories: z.lazy(() => SortOrderSchema).optional(),
+  departments: z.lazy(() => SortOrderSchema).optional(),
+  areas: z.lazy(() => SortOrderSchema).optional(),
+  criteria: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const RenovationReportSettingMaxOrderByAggregateInputSchema: z.ZodType<Prisma.RenovationReportSettingMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const RenovationReportSettingMinOrderByAggregateInputSchema: z.ZodType<Prisma.RenovationReportSettingMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const UserFacilityCreateNestedManyWithoutUserInputSchema: z.ZodType<Prisma.UserFacilityCreateNestedManyWithoutUserInput> = z.object({
@@ -116346,6 +116534,63 @@ export const FireDoorInspectionItemFindUniqueOrThrowArgsSchema: z.ZodType<Prisma
   where: FireDoorInspectionItemWhereUniqueInputSchema, 
 }).strict();
 
+export const RenovationReportSettingFindFirstArgsSchema: z.ZodType<Prisma.RenovationReportSettingFindFirstArgs> = z.object({
+  select: RenovationReportSettingSelectSchema.optional(),
+  where: RenovationReportSettingWhereInputSchema.optional(), 
+  orderBy: z.union([ RenovationReportSettingOrderByWithRelationInputSchema.array(), RenovationReportSettingOrderByWithRelationInputSchema ]).optional(),
+  cursor: RenovationReportSettingWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ RenovationReportSettingScalarFieldEnumSchema, RenovationReportSettingScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const RenovationReportSettingFindFirstOrThrowArgsSchema: z.ZodType<Prisma.RenovationReportSettingFindFirstOrThrowArgs> = z.object({
+  select: RenovationReportSettingSelectSchema.optional(),
+  where: RenovationReportSettingWhereInputSchema.optional(), 
+  orderBy: z.union([ RenovationReportSettingOrderByWithRelationInputSchema.array(), RenovationReportSettingOrderByWithRelationInputSchema ]).optional(),
+  cursor: RenovationReportSettingWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ RenovationReportSettingScalarFieldEnumSchema, RenovationReportSettingScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const RenovationReportSettingFindManyArgsSchema: z.ZodType<Prisma.RenovationReportSettingFindManyArgs> = z.object({
+  select: RenovationReportSettingSelectSchema.optional(),
+  where: RenovationReportSettingWhereInputSchema.optional(), 
+  orderBy: z.union([ RenovationReportSettingOrderByWithRelationInputSchema.array(), RenovationReportSettingOrderByWithRelationInputSchema ]).optional(),
+  cursor: RenovationReportSettingWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ RenovationReportSettingScalarFieldEnumSchema, RenovationReportSettingScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const RenovationReportSettingAggregateArgsSchema: z.ZodType<Prisma.RenovationReportSettingAggregateArgs> = z.object({
+  where: RenovationReportSettingWhereInputSchema.optional(), 
+  orderBy: z.union([ RenovationReportSettingOrderByWithRelationInputSchema.array(), RenovationReportSettingOrderByWithRelationInputSchema ]).optional(),
+  cursor: RenovationReportSettingWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const RenovationReportSettingGroupByArgsSchema: z.ZodType<Prisma.RenovationReportSettingGroupByArgs> = z.object({
+  where: RenovationReportSettingWhereInputSchema.optional(), 
+  orderBy: z.union([ RenovationReportSettingOrderByWithAggregationInputSchema.array(), RenovationReportSettingOrderByWithAggregationInputSchema ]).optional(),
+  by: RenovationReportSettingScalarFieldEnumSchema.array(), 
+  having: RenovationReportSettingScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const RenovationReportSettingFindUniqueArgsSchema: z.ZodType<Prisma.RenovationReportSettingFindUniqueArgs> = z.object({
+  select: RenovationReportSettingSelectSchema.optional(),
+  where: RenovationReportSettingWhereUniqueInputSchema, 
+}).strict();
+
+export const RenovationReportSettingFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.RenovationReportSettingFindUniqueOrThrowArgs> = z.object({
+  select: RenovationReportSettingSelectSchema.optional(),
+  where: RenovationReportSettingWhereUniqueInputSchema, 
+}).strict();
+
 export const UserCreateArgsSchema: z.ZodType<Prisma.UserCreateArgs> = z.object({
   select: UserSelectSchema.optional(),
   include: UserIncludeSchema.optional(),
@@ -122962,4 +123207,46 @@ export const FireDoorInspectionItemUpdateManyArgsSchema: z.ZodType<Prisma.FireDo
 
 export const FireDoorInspectionItemDeleteManyArgsSchema: z.ZodType<Prisma.FireDoorInspectionItemDeleteManyArgs> = z.object({
   where: FireDoorInspectionItemWhereInputSchema.optional(), 
+}).strict();
+
+export const RenovationReportSettingCreateArgsSchema: z.ZodType<Prisma.RenovationReportSettingCreateArgs> = z.object({
+  select: RenovationReportSettingSelectSchema.optional(),
+  data: z.union([ RenovationReportSettingCreateInputSchema, RenovationReportSettingUncheckedCreateInputSchema ]),
+}).strict();
+
+export const RenovationReportSettingUpsertArgsSchema: z.ZodType<Prisma.RenovationReportSettingUpsertArgs> = z.object({
+  select: RenovationReportSettingSelectSchema.optional(),
+  where: RenovationReportSettingWhereUniqueInputSchema, 
+  create: z.union([ RenovationReportSettingCreateInputSchema, RenovationReportSettingUncheckedCreateInputSchema ]),
+  update: z.union([ RenovationReportSettingUpdateInputSchema, RenovationReportSettingUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const RenovationReportSettingCreateManyArgsSchema: z.ZodType<Prisma.RenovationReportSettingCreateManyArgs> = z.object({
+  data: z.union([ RenovationReportSettingCreateManyInputSchema, RenovationReportSettingCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const RenovationReportSettingCreateManyAndReturnArgsSchema: z.ZodType<Prisma.RenovationReportSettingCreateManyAndReturnArgs> = z.object({
+  data: z.union([ RenovationReportSettingCreateManyInputSchema, RenovationReportSettingCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const RenovationReportSettingDeleteArgsSchema: z.ZodType<Prisma.RenovationReportSettingDeleteArgs> = z.object({
+  select: RenovationReportSettingSelectSchema.optional(),
+  where: RenovationReportSettingWhereUniqueInputSchema, 
+}).strict();
+
+export const RenovationReportSettingUpdateArgsSchema: z.ZodType<Prisma.RenovationReportSettingUpdateArgs> = z.object({
+  select: RenovationReportSettingSelectSchema.optional(),
+  data: z.union([ RenovationReportSettingUpdateInputSchema, RenovationReportSettingUncheckedUpdateInputSchema ]),
+  where: RenovationReportSettingWhereUniqueInputSchema, 
+}).strict();
+
+export const RenovationReportSettingUpdateManyArgsSchema: z.ZodType<Prisma.RenovationReportSettingUpdateManyArgs> = z.object({
+  data: z.union([ RenovationReportSettingUpdateManyMutationInputSchema, RenovationReportSettingUncheckedUpdateManyInputSchema ]),
+  where: RenovationReportSettingWhereInputSchema.optional(), 
+}).strict();
+
+export const RenovationReportSettingDeleteManyArgsSchema: z.ZodType<Prisma.RenovationReportSettingDeleteManyArgs> = z.object({
+  where: RenovationReportSettingWhereInputSchema.optional(), 
 }).strict();

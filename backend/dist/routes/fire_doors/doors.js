@@ -9,13 +9,59 @@ router.use(auth_1.authMiddleware);
 // GET /api/safety-management/fire-doors/doors
 router.get('/', async (req, res) => {
     try {
-        const { facilityId } = req.query;
+        const { facilityId, grade, doorType, filters } = req.query;
         if (!facilityId) {
             return res.status(400).json({ error: 'facilityId is required' });
         }
+        const facilityIdStr = String(facilityId);
+        // Build where clause for door filtering
+        const doorWhere = {};
+        if (facilityIdStr !== 'all') {
+            doorWhere.facilityId = facilityIdStr;
+        }
+        const andConditions = [];
+        // Legacy support for simple filters if used
+        if (grade && grade !== 'all' && grade !== 'Tümü') {
+            doorWhere.lastGrade = String(grade);
+        }
+        if (doorType && doorType !== 'all' && doorType !== 'Tümü') {
+            andConditions.push({
+                properties: { path: ['Kapı Çeşidi'], equals: String(doorType) }
+            });
+        }
+        // Dynamic JSON filters support
+        if (filters) {
+            try {
+                const parsedFilters = JSON.parse(String(filters));
+                for (const [key, value] of Object.entries(parsedFilters)) {
+                    if (!value || value === 'Tümü')
+                        continue;
+                    if (key === 'grade') {
+                        doorWhere.lastGrade = String(value);
+                    }
+                    else {
+                        andConditions.push({
+                            properties: { path: [key], equals: String(value) }
+                        });
+                    }
+                }
+            }
+            catch (e) {
+                console.error("Error parsing filters JSON:", e);
+            }
+        }
+        if (andConditions.length > 0) {
+            doorWhere.AND = andConditions;
+        }
         const doors = await prisma.fireDoor.findMany({
-            where: { facilityId: String(facilityId) },
+            where: doorWhere,
             include: {
+                facility: {
+                    select: {
+                        shortName: true,
+                        name: true
+                    }
+                },
                 location: {
                     include: {
                         facilityBuilding: true
@@ -54,7 +100,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/safety-management/fire-doors/doors
 router.post('/', async (req, res) => {
     try {
-        const { facilityId, qrCode, doorNo, locationId, properties, status } = req.body;
+        const { facilityId, qrCode, doorNo, locationId, properties, status, photoUrl } = req.body;
         if (!facilityId) {
             return res.status(400).json({ error: 'facilityId is required' });
         }
@@ -66,6 +112,7 @@ router.post('/', async (req, res) => {
                 locationId,
                 properties: properties ?? {},
                 status: status ?? 'AKTIF',
+                photoUrl,
             },
         });
         res.status(201).json(door);
@@ -79,7 +126,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { qrCode, doorNo, locationId, properties, status } = req.body;
+        const { qrCode, doorNo, locationId, properties, status, photoUrl } = req.body;
         const door = await prisma.fireDoor.update({
             where: { id },
             data: {
@@ -88,6 +135,7 @@ router.put('/:id', async (req, res) => {
                 locationId,
                 properties,
                 status,
+                photoUrl,
             },
         });
         res.json(door);

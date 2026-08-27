@@ -100,3 +100,14 @@ export const deleteAudit = async (auditId: string) => {
   if (!response.ok) throw new Error('Failed to delete audit');
   return response.json();
 };
+export const fetchRenovationSettings = async () => {
+  const response = await api.get('/renovation-reports/settings');
+  if (!response.ok) throw new Error('Failed to fetch renovation settings');
+  return response.json();
+};
+
+export const saveRenovationSettings = async (settings: any) => {
+  const response = await api.post('/renovation-reports/settings', settings);
+  if (!response.ok) throw new Error('Failed to save renovation settings');
+  return response.json();
+};

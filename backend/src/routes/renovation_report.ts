@@ -237,4 +237,59 @@ router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) =>
   }
 });
 
+// Get Renovation Report Settings
+router.get('/settings', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    let settings = await prisma.renovationReportSetting.findUnique({
+      where: { id: 'default' }
+    });
+
+    if (!settings) {
+      settings = await prisma.renovationReportSetting.create({
+        data: {
+          id: 'default',
+          categories: [],
+          departments: [],
+          areas: [],
+          criteria: []
+        }
+      });
+    }
+
+    res.json(settings);
+  } catch (err) {
+    console.error('Get Settings Error:', err);
+    res.status(500).json({ error: 'Ayarlar alınamadı.' });
+  }
+});
+
+// Update Renovation Report Settings
+router.post('/settings', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { categories, departments, areas, criteria } = req.body;
+    
+    const settings = await prisma.renovationReportSetting.upsert({
+      where: { id: 'default' },
+      update: {
+        categories: categories || [],
+        departments: departments || [],
+        areas: areas || [],
+        criteria: criteria || []
+      },
+      create: {
+        id: 'default',
+        categories: categories || [],
+        departments: departments || [],
+        areas: areas || [],
+        criteria: criteria || []
+      }
+    });
+
+    res.json(settings);
+  } catch (err) {
+    console.error('Update Settings Error:', err);
+    res.status(500).json({ error: 'Ayarlar kaydedilemedi.' });
+  }
+});
+
 export default router;

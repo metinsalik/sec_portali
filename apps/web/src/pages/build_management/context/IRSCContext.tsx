@@ -52,34 +52,11 @@ export function IRSCProvider({ children }: { children: ReactNode }) {
     ];
   });
 
-  const [globalAreas, setGlobalAreas] = useState<IRSCArea[]>(() => {
-    try {
-      const saved = localStorage.getItem('irsc_global_areas');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Ensure it's the new object structure, not the old array of strings
-        if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object' && parsed[0] !== null && 'subareas' in parsed[0]) {
-          return parsed;
-        } else if (Array.isArray(parsed) && parsed.length === 0) {
-          return [];
-        }
-      }
-    } catch {}
-    return [
-      { id: 'a1', name: 'Acil Servis', subareas: ['Sarı Alan', 'Kırmızı Alan', 'Yeşil Alan', 'Triyaj'] },
-      { id: 'a2', name: 'Ortak Alanlar', subareas: ['Kafeterya', 'Bekleme Salonu', 'WC'] },
-      { id: 'a3', name: 'Teknik Mahaller', subareas: ['Kazan Dairesi', 'Jeneratör Odası', 'Medikal Gaz Santrali'] },
-      { id: 'a4', name: 'Poliklinikler', subareas: ['Dahiliye', 'KBB', 'Göz'] }
-    ];
-  });
-
-  const [globalCriteria, setGlobalCriteria] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('irsc_global_criteria');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return ['6331 sayılı İSG Kanunu', 'SKS', 'JCI', 'Yangın Yönetmeliği'];
-  });
+  const [globalAreas, setGlobalAreas] = useState<IRSCArea[]>([]);
+  const [globalCriteria, setGlobalCriteria] = useState<string[]>([]);
+  const [categories, setCategories] = useState<IRSCCategory[]>([]);
+  const [departments, setDepartments] = useState<IRSCDepartment[]>([]);
+  const [isSettingsLoaded, setIsSettingsLoaded] = useState(false);
 
   // Always fetch all audits initially (no facility filter)
   useEffect(() => {
@@ -92,59 +69,41 @@ export function IRSCProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('irsc_facilities', JSON.stringify(facilities));
   }, [facilities]);
 
+  // Fetch settings on mount
   useEffect(() => {
-    localStorage.setItem('irsc_global_areas', JSON.stringify(globalAreas));
-  }, [globalAreas]);
+    import('../services/auditApi').then(({ fetchRenovationSettings }) => {
+      fetchRenovationSettings().then(settings => {
+        if (settings) {
+          if (settings.categories?.length > 0) setCategories(settings.categories);
+          if (settings.departments?.length > 0) setDepartments(settings.departments);
+          if (settings.areas?.length > 0) setGlobalAreas(settings.areas);
+          if (settings.criteria?.length > 0) setGlobalCriteria(settings.criteria);
+        }
+        setIsSettingsLoaded(true);
+      }).catch(err => {
+        console.error("Error fetching renovation settings", err);
+        setIsSettingsLoaded(true); // Proceed even on error
+      });
+    });
+  }, []);
 
+  // Save settings when they change (only after initial load)
   useEffect(() => {
-    localStorage.setItem('irsc_global_criteria', JSON.stringify(globalCriteria));
-  }, [globalCriteria]);
-  
-  // Default mock data for categories and departments based on user requirements
-  const [categories, setCategories] = useState<IRSCCategory[]>([
-    {
-      id: 'c1',
-      name: 'Tesis Güvenliği',
-      subcategories: [
-        'Acil Durum ve Afet Yönetimi',
-        'Altyapı Sistemleri',
-        'Atık yönetimi süreci',
-        'Diğer cihaz ve malzemelerin yönetimi',
-        'Emniyet',
-        'Tıbbi cihaz ve malzeme yönetimi',
-        'Yangın Güvenliği',
-        'İnşaat ve Renovasyon'
-      ]
-    },
-    {
-      id: 'c2',
-      name: 'Çevre Güvenliği',
-      subcategories: [
-        'Atıkların çevreye zarar vermesi',
-        'Hava kirliliği oluşturabilecek unsurlar',
-        'Tehlikeli atıklardan oluşabilecek zararlar',
-        'Çevreden hastaneye gelecek zararlar'
-      ]
-    },
-    {
-      id: 'c3',
-      name: 'İş Sağlığı ve Güvenliği',
-      subcategories: [
-        'Güvenlik - Biyolojik Risk Etmenleri',
-        'Güvenlik - Fiziksel Risk Etmenleri',
-        'Güvenlik - Psikososyal Risk Etmenleri',
-        'Güvenlik - Ergonomik Risk Etmenleri',
-        'Tehlikeli Madde Yönetimi / Kimyasal Riskler'
-      ]
-    }
-  ]);
+    if (!isSettingsLoaded) return;
+    
+    const timeoutId = setTimeout(() => {
+      import('../services/auditApi').then(({ saveRenovationSettings }) => {
+        saveRenovationSettings({
+          categories,
+          departments,
+          areas: globalAreas,
+          criteria: globalCriteria
+        }).catch(err => console.error("Error saving renovation settings", err));
+      });
+    }, 1000); // 1s debounce
 
-  const [departments, setDepartments] = useState<IRSCDepartment[]>([
-    { id: 'd1', name: 'Teknik Hizmetler' },
-    { id: 'd2', name: 'İdari İşler' },
-    { id: 'd3', name: 'İş Sağlığı ve Güvenliği Birimi' },
-    { id: 'd4', name: 'Kalite Yönetimi' }
-  ]);
+    return () => clearTimeout(timeoutId);
+  }, [categories, departments, globalAreas, globalCriteria, isSettingsLoaded]);
 
   return (
     <IRSCContext.Provider
