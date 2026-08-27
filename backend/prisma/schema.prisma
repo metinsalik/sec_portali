@@ -1993,6 +1993,8 @@ model IntegratedAudit {
   purpose      String?
   executive    String?
   conclusion   String?
+  createdBy    String?
+
 
   team         String[]
   participants String[]

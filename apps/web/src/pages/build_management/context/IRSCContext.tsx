@@ -6,6 +6,7 @@ export type ViewState = 'TRACKING' | 'LIBRARY' | 'CONSOLE' | 'WORKSPACE' | 'SETT
 
 interface IRSCState {
   currentView: ViewState;
+  activeFacilityId: string | null;
   selectedLocationId: string | null;
   activeAuditId: string | null;
   audits: Audit[];
@@ -18,6 +19,7 @@ interface IRSCState {
 
 interface IRSCContextType extends IRSCState {
   setCurrentView: (view: ViewState) => void;
+  setActiveFacilityId: (id: string | null) => void;
   setSelectedLocationId: (id: string | null) => void;
   setActiveAuditId: (id: string | null) => void;
   setAudits: (audits: Audit[]) => void;
@@ -32,31 +34,31 @@ const IRSCContext = createContext<IRSCContextType | undefined>(undefined);
 
 export function IRSCProvider({ children }: { children: ReactNode }) {
   const [currentView, setCurrentView] = useState<ViewState>('TRACKING');
+  const [activeFacilityId, setActiveFacilityId] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [activeAuditId, setActiveAuditId] = useState<string | null>(null);
 
-  // Initialize from localStorage or use defaults
   const [audits, setAudits] = useState<Audit[]>([]);
-
-  const [facilities, setFacilities] = useState<IRSCFacility[]>(() => {
-    try {
-      const saved = localStorage.getItem('irsc_facilities');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    
-    return [
-      { id: 'f1', name: 'ISU Liv Hospital Bahçeşehir', audits: [] },
-      { id: 'f2', name: 'VM Medical Park Pendik', audits: [] },
-      { id: 'f3', name: 'Medical Park Antalya', audits: [] },
-      { id: 'f4', name: 'Liv Hospital Vadi İstanbul', audits: [] }
-    ];
-  });
-
+  const [facilities, setFacilities] = useState<IRSCFacility[]>([]);
   const [globalAreas, setGlobalAreas] = useState<IRSCArea[]>([]);
   const [globalCriteria, setGlobalCriteria] = useState<string[]>([]);
   const [categories, setCategories] = useState<IRSCCategory[]>([]);
   const [departments, setDepartments] = useState<IRSCDepartment[]>([]);
   const [isSettingsLoaded, setIsSettingsLoaded] = useState(false);
+
+  // Fetch facilities on mount
+  useEffect(() => {
+    import('../../../lib/api').then(({ default: api }) => {
+      api.get('/settings/facilities')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setFacilities(data.map(f => ({ id: f.id, name: f.name, audits: [] })));
+          }
+        })
+        .catch(err => console.error("Error fetching facilities", err));
+    });
+  }, []);
 
   // Always fetch all audits initially (no facility filter)
   useEffect(() => {
@@ -64,10 +66,6 @@ export function IRSCProvider({ children }: { children: ReactNode }) {
       setAudits(data);
     }).catch(err => console.error("Error fetching audits", err));
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('irsc_facilities', JSON.stringify(facilities));
-  }, [facilities]);
 
   // Fetch settings on mount
   useEffect(() => {
@@ -109,6 +107,7 @@ export function IRSCProvider({ children }: { children: ReactNode }) {
     <IRSCContext.Provider
       value={{
         currentView,
+        activeFacilityId,
         selectedLocationId,
         activeAuditId,
         audits,
@@ -116,6 +115,7 @@ export function IRSCProvider({ children }: { children: ReactNode }) {
         categories,
         departments,
         setCurrentView,
+        setActiveFacilityId,
         setSelectedLocationId,
         setActiveAuditId,
         setAudits,

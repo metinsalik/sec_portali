@@ -62,8 +62,7 @@ export function PCRAModal({ open, onOpenChange, onSave, defaultValues, mode }: P
   const { data: departments = [] } = useQuery<any[]>({ 
     queryKey: ['build-departments', facilityId], 
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/build-management/settings/departments?facilityId=${facilityId}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.get(`/build-management/settings/departments?facilityId=${facilityId}`);
       if (!res.ok) return [];
       return res.json();
     },
@@ -73,8 +72,7 @@ export function PCRAModal({ open, onOpenChange, onSave, defaultValues, mode }: P
   const { data: persons = [] } = useQuery<any[]>({ 
     queryKey: ['build-persons', facilityId], 
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/build-management/settings/persons?facilityId=${facilityId}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.get(`/build-management/settings/persons?facilityId=${facilityId}`);
       if (!res.ok) return [];
       return res.json();
     },

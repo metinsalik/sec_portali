@@ -7,12 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Trash2, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
-
-const API = import.meta.env.VITE_API_URL || '';
+import api from '@/lib/api';
 
 export default function BuildSettings() {
   const { user } = useAuth();
-  const token = localStorage.getItem('token');
   const queryClient = useQueryClient();
   // ── Facility Selection ───────────────────────────────────────
   const [facilityId, setFacilityId] = useState<string>(localStorage.getItem('activeFacilityId') || '');
@@ -37,7 +35,7 @@ export default function BuildSettings() {
   const { data: locations, isLoading: locLoading } = useQuery({
     queryKey: ['build-locations', facilityId],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/build-management/settings/locations?facilityId=${facilityId}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.get(`/build-management/settings/locations?facilityId=${facilityId}`);
       if (!res.ok) throw new Error();
       return res.json();
     },
@@ -47,7 +45,7 @@ export default function BuildSettings() {
   const { data: contractors, isLoading: conLoading } = useQuery({
     queryKey: ['build-contractors', facilityId],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/build-management/settings/contractors?facilityId=${facilityId}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.get(`/build-management/settings/contractors?facilityId=${facilityId}`);
       if (!res.ok) throw new Error();
       return res.json();
     },
@@ -57,7 +55,7 @@ export default function BuildSettings() {
   const { data: workTypes, isLoading: wtLoading } = useQuery({
     queryKey: ['build-work-types', facilityId],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/build-management/settings/work-types?facilityId=${facilityId}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.get(`/build-management/settings/work-types?facilityId=${facilityId}`);
       if (!res.ok) throw new Error();
       return res.json();
     },
@@ -67,7 +65,7 @@ export default function BuildSettings() {
   const { data: departments, isLoading: deptLoading } = useQuery({
     queryKey: ['build-departments', facilityId],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/build-management/settings/departments?facilityId=${facilityId}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.get(`/build-management/settings/departments?facilityId=${facilityId}`);
       if (!res.ok) throw new Error();
       return res.json();
     },
@@ -77,7 +75,7 @@ export default function BuildSettings() {
   const { data: persons, isLoading: personLoading } = useQuery({
     queryKey: ['build-persons', facilityId],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/build-management/settings/persons?facilityId=${facilityId}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.get(`/build-management/settings/persons?facilityId=${facilityId}`);
       if (!res.ok) throw new Error();
       return res.json();
     },
@@ -88,11 +86,7 @@ export default function BuildSettings() {
 
   const addLocation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${API}/api/build-management/settings/locations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ facilityId, ...newLocation })
-      });
+      const res = await api.post(`/build-management/settings/locations`, { facilityId, ...newLocation });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
       return res.json();
     },
@@ -106,7 +100,7 @@ export default function BuildSettings() {
 
   const deleteLocation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`${API}/api/build-management/settings/locations/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.delete(`/build-management/settings/locations/${id}`);
       if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
     },
     onSuccess: () => {
@@ -118,11 +112,7 @@ export default function BuildSettings() {
 
   const addContractor = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${API}/api/build-management/settings/contractors`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ facilityId, ...newContractor })
-      });
+      const res = await api.post(`/build-management/settings/contractors`, { facilityId, ...newContractor });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
       return res.json();
     },
@@ -136,7 +126,7 @@ export default function BuildSettings() {
 
   const deleteContractor = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`${API}/api/build-management/settings/contractors/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.delete(`/build-management/settings/contractors/${id}`);
       if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
     },
     onSuccess: () => {
@@ -148,11 +138,7 @@ export default function BuildSettings() {
 
   const addWorkType = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${API}/api/build-management/settings/work-types`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ facilityId, ...newWorkType })
-      });
+      const res = await api.post(`/build-management/settings/work-types`, { facilityId, ...newWorkType });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
       return res.json();
     },
@@ -166,7 +152,7 @@ export default function BuildSettings() {
 
   const deleteWorkType = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`${API}/api/build-management/settings/work-types/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.delete(`/build-management/settings/work-types/${id}`);
       if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
     },
     onSuccess: () => {
@@ -178,11 +164,7 @@ export default function BuildSettings() {
 
   const addDepartment = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${API}/api/build-management/settings/departments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ facilityId, ...newDepartment })
-      });
+      const res = await api.post(`/build-management/settings/departments`, { facilityId, ...newDepartment });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
       return res.json();
     },
@@ -196,7 +178,7 @@ export default function BuildSettings() {
 
   const deleteDepartment = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`${API}/api/build-management/settings/departments/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.delete(`/build-management/settings/departments/${id}`);
       if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
     },
     onSuccess: () => {
@@ -208,11 +190,7 @@ export default function BuildSettings() {
 
   const addPerson = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${API}/api/build-management/settings/persons`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ facilityId, ...newPerson })
-      });
+      const res = await api.post(`/build-management/settings/persons`, { facilityId, ...newPerson });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
       return res.json();
     },
@@ -226,7 +204,7 @@ export default function BuildSettings() {
 
   const deletePerson = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`${API}/api/build-management/settings/persons/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.delete(`/build-management/settings/persons/${id}`);
       if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
     },
     onSuccess: () => {

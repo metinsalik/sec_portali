@@ -52,13 +52,12 @@ export default function BuildInspectionInfectionFormPage() {
   const { id, inspectionId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const { user: currentUser } = useAuth();
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState('');
-  const [inspectorName, setInspectorName] = useState(`${currentUser.firstName || ''} ${currentUser.lastName || ''}`);
+  const [inspectorName, setInspectorName] = useState(`${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`);
   const [overallResult, setOverallResult] = useState('UYGUNDUR');
   
   const [questions, setQuestions] = useState<{className: string, text: string}[]>([]);
