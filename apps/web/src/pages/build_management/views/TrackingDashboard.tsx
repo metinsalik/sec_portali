@@ -17,7 +17,7 @@ export default function TrackingDashboard() {
   const { setCurrentView, facilities, audits = [] } = useIRSC();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const isManager = user?.isAdmin || user?.roles.includes('admin') || user?.roles.includes('management');
+  const isManager = user?.isAdmin || user?.roles.includes('admin') || user?.roles.includes('management') || user?.roles.includes('safety');
 
   // Calculate Analytics Data
   const { totalAudits, totalFindings, riskDistribution, facilityStats, latestAudits, fStats } = useMemo(() => {

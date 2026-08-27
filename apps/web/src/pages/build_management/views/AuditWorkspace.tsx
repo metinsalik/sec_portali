@@ -12,7 +12,7 @@ import toast from 'react-hot-toast';
 export default function AuditWorkspace() {
   const { setCurrentView, facilities, categories, departments, audits, setAudits, activeAuditId, setActiveAuditId, globalAreas, setGlobalAreas, globalCriteria, setGlobalCriteria } = useIRSC();
   const { user } = useAuth();
-  const isManager = user?.isAdmin || user?.roles.includes('admin') || user?.roles.includes('management');
+  const isManager = user?.isAdmin || user?.roles.includes('admin') || user?.roles.includes('management') || user?.roles.includes('safety');
 
   const [activeTab, setActiveTab] = useState<'INFO' | 'FINDINGS' | 'ANALYSIS' | 'REPORT'>('INFO');
   const [activeAreaView, setActiveAreaView] = useState<string | null>(null);

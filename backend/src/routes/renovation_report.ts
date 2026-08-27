@@ -54,7 +54,7 @@ router.post('/upload', authMiddleware, upload.array('files', 20), async (req: Au
 // Get all audits (optionally filtered by facility)
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { facilityId } = req.query as Record<string, string>;
-  const isManager = req.user?.isAdmin || req.user?.isManagement || req.user?.roles?.includes('admin') || req.user?.roles?.includes('management');
+  const isManager = req.user?.isAdmin || req.user?.isManagement || req.user?.roles?.includes('admin') || req.user?.roles?.includes('management') || req.user?.roles?.includes('safety');
 
   try {
     const whereClause: any = {};
