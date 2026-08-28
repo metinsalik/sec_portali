@@ -360,7 +360,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   cn(
                     'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors group',
                     customIsActive
-                      ? 'bg-blue-600 text-white shadow-sm'
+                      ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   )
                 }
@@ -377,8 +377,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted transition-colors text-left">
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shrink-0">
-                  <User className="w-4 h-4 text-white" />
+                <div className="w-8 h-8 bg-slate-900 dark:bg-slate-50 rounded-full flex items-center justify-center shrink-0">
+                  <User className="w-4 h-4 text-white dark:text-slate-900" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{user?.fullName}</p>

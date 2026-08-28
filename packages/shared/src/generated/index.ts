@@ -110,15 +110,19 @@ export const MonthlyHRDataScalarFieldEnumSchema = z.enum(['id','facilityId','mon
 
 export const MonthlyAccidentDataScalarFieldEnumSchema = z.enum(['id','facilityId','month','mainEmployerData','subContractorData','internData','createdBy','createdAt','updatedAt']);
 
-export const CategoryScalarFieldEnumSchema = z.enum(['id','name','createdAt','updatedAt']);
-
-export const SubCategoryScalarFieldEnumSchema = z.enum(['id','name','categoryId','createdAt','updatedAt']);
+export const CategoryScalarFieldEnumSchema = z.enum(['id','name','parentId','createdAt','updatedAt']);
 
 export const DepartmentScalarFieldEnumSchema = z.enum(['id','name','createdAt','updatedAt']);
 
-export const NotebookPageScalarFieldEnumSchema = z.enum(['id','facilityId','year','date','documentUrl','status','createdBy','createdAt','updatedAt','documentUploadedAt','isArchived','isLocked']);
+export const NotebookPageScalarFieldEnumSchema = z.enum(['id','facilityId','year','date','documentUrl','status','createdBy','createdAt','updatedAt','documentUploadedAt','isArchived','isLocked','ciltNo','pageNo']);
 
-export const NotebookItemScalarFieldEnumSchema = z.enum(['id','pageId','authorType','authorName','content','categoryId','subCategoryId','departmentId','createdAt','updatedAt']);
+export const NotebookItemScalarFieldEnumSchema = z.enum(['id','pageId','authorType','authorName','content','mainCategoryId','categoryId','subCategoryId','departmentId','riskLevel','status','createdAt','updatedAt']);
+
+export const NotebookItemActionScalarFieldEnumSchema = z.enum(['id','notebookItemId','content','proofUrl','status','createdBy','createdAt','updatedAt']);
+
+export const NotebookItemCommentScalarFieldEnumSchema = z.enum(['id','notebookItemId','content','authorId','authorName','attachments','createdAt','updatedAt']);
+
+export const IsgDefterSettingScalarFieldEnumSchema = z.enum(['id','facilityId','currentCilt','maxPagesPerCilt','riskLevels','createdAt','updatedAt']);
 
 export const SmtpSettingsScalarFieldEnumSchema = z.enum(['id','host','port','user','pass','secure','fromEmail','fromName','createdAt','updatedAt']);
 
@@ -284,7 +288,7 @@ export const WfTransferRequestScalarFieldEnumSchema = z.enum(['id','taskId','req
 
 export const TelegramSettingsScalarFieldEnumSchema = z.enum(['id','botToken','botUsername','isActive','createdAt','updatedAt']);
 
-export const IntegratedAuditScalarFieldEnumSchema = z.enum(['id','facilityId','status','saved','createdAt','updatedAt','round','startDate','endDate','reportDate','reportNo','reporter','auditStatus','purpose','executive','conclusion','team','participants','criteria']);
+export const IntegratedAuditScalarFieldEnumSchema = z.enum(['id','facilityId','status','saved','createdAt','updatedAt','round','startDate','endDate','reportDate','reportNo','reporter','auditStatus','purpose','executive','conclusion','createdBy','team','participants','criteria']);
 
 export const IntegratedFindingScalarFieldEnumSchema = z.enum(['id','auditId','no','area','subarea','category','subcategory','risk','targetDate','isStarted','residualRisk','riskReasoning','findingDesc','riskDesc','recommendation','status','history','departments']);
 
@@ -324,9 +328,9 @@ export const OhsBoardMeetingScalarFieldEnumSchema = z.enum(['id','facilityId','p
 
 export const OhsBoardMeetingAttendanceScalarFieldEnumSchema = z.enum(['id','meetingId','memberId','status','proxyMemberName','signatureUrl','remarks','createdAt','updatedAt']);
 
-export const OhsBoardTopicScalarFieldEnumSchema = z.enum(['id','meetingId','topicText','categoryId','subCategoryId','riskScore','remarks','createdAt','updatedAt']);
+export const OhsBoardTopicScalarFieldEnumSchema = z.enum(['id','meetingId','topicText','mainCategoryId','categoryId','subCategoryId','riskScore','remarks','createdAt','updatedAt']);
 
-export const OhsBoardDecisionScalarFieldEnumSchema = z.enum(['id','meetingId','decisionNumber','decisionText','categoryId','subCategoryId','departmentId','priority','status','dueDateType','dueDate','periodicity','remarks','approvalStatus','lockedAt','sentForApprovalAt','centralBoardStatus','createdAt','updatedAt']);
+export const OhsBoardDecisionScalarFieldEnumSchema = z.enum(['id','meetingId','decisionNumber','decisionText','mainCategoryId','categoryId','subCategoryId','departmentId','priority','status','dueDateType','dueDate','periodicity','remarks','approvalStatus','lockedAt','sentForApprovalAt','centralBoardStatus','createdAt','updatedAt']);
 
 export const OhsBoardDecisionActionScalarFieldEnumSchema = z.enum(['id','decisionId','actionText','createdBy','createdAt','updatedAt']);
 
@@ -1379,6 +1383,7 @@ export const MonthlyAccidentDataWithRelationsSchema: z.ZodType<MonthlyAccidentDa
 export const CategorySchema = z.object({
   id: z.number().int(),
   name: z.string(),
+  parentId: z.number().int().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 })
@@ -1389,52 +1394,33 @@ export type Category = z.infer<typeof CategorySchema>
 //------------------------------------------------------
 
 export type CategoryRelations = {
+  parent?: CategoryWithRelations | null;
+  children: CategoryWithRelations[];
+  mainTopics: OhsBoardTopicWithRelations[];
+  topics: OhsBoardTopicWithRelations[];
+  subTopics: OhsBoardTopicWithRelations[];
+  mainDecisions: OhsBoardDecisionWithRelations[];
+  decisions: OhsBoardDecisionWithRelations[];
+  subDecisions: OhsBoardDecisionWithRelations[];
+  mainNotebookItems: NotebookItemWithRelations[];
   notebookItems: NotebookItemWithRelations[];
-  subCategories: SubCategoryWithRelations[];
-  OhsBoardTopic: OhsBoardTopicWithRelations[];
-  OhsBoardDecision: OhsBoardDecisionWithRelations[];
+  subNotebookItems: NotebookItemWithRelations[];
 };
 
 export type CategoryWithRelations = z.infer<typeof CategorySchema> & CategoryRelations
 
 export const CategoryWithRelationsSchema: z.ZodType<CategoryWithRelations> = CategorySchema.merge(z.object({
+  parent: z.lazy(() => CategoryWithRelationsSchema).nullable(),
+  children: z.lazy(() => CategoryWithRelationsSchema).array(),
+  mainTopics: z.lazy(() => OhsBoardTopicWithRelationsSchema).array(),
+  topics: z.lazy(() => OhsBoardTopicWithRelationsSchema).array(),
+  subTopics: z.lazy(() => OhsBoardTopicWithRelationsSchema).array(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionWithRelationsSchema).array(),
+  decisions: z.lazy(() => OhsBoardDecisionWithRelationsSchema).array(),
+  subDecisions: z.lazy(() => OhsBoardDecisionWithRelationsSchema).array(),
+  mainNotebookItems: z.lazy(() => NotebookItemWithRelationsSchema).array(),
   notebookItems: z.lazy(() => NotebookItemWithRelationsSchema).array(),
-  subCategories: z.lazy(() => SubCategoryWithRelationsSchema).array(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicWithRelationsSchema).array(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionWithRelationsSchema).array(),
-}))
-
-/////////////////////////////////////////
-// SUB CATEGORY SCHEMA
-/////////////////////////////////////////
-
-export const SubCategorySchema = z.object({
-  id: z.number().int(),
-  name: z.string(),
-  categoryId: z.number().int(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-})
-
-export type SubCategory = z.infer<typeof SubCategorySchema>
-
-// SUB CATEGORY RELATION SCHEMA
-//------------------------------------------------------
-
-export type SubCategoryRelations = {
-  notebookItems: NotebookItemWithRelations[];
-  category: CategoryWithRelations;
-  OhsBoardTopic: OhsBoardTopicWithRelations[];
-  OhsBoardDecision: OhsBoardDecisionWithRelations[];
-};
-
-export type SubCategoryWithRelations = z.infer<typeof SubCategorySchema> & SubCategoryRelations
-
-export const SubCategoryWithRelationsSchema: z.ZodType<SubCategoryWithRelations> = SubCategorySchema.merge(z.object({
-  notebookItems: z.lazy(() => NotebookItemWithRelationsSchema).array(),
-  category: z.lazy(() => CategoryWithRelationsSchema),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicWithRelationsSchema).array(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionWithRelationsSchema).array(),
+  subNotebookItems: z.lazy(() => NotebookItemWithRelationsSchema).array(),
 }))
 
 /////////////////////////////////////////
@@ -1482,6 +1468,8 @@ export const NotebookPageSchema = z.object({
   documentUploadedAt: z.coerce.date().nullable(),
   isArchived: z.boolean(),
   isLocked: z.boolean(),
+  ciltNo: z.number().int().nullable(),
+  pageNo: z.string().nullable(),
 })
 
 export type NotebookPage = z.infer<typeof NotebookPageSchema>
@@ -1511,9 +1499,12 @@ export const NotebookItemSchema = z.object({
   authorType: z.string(),
   authorName: z.string(),
   content: z.string(),
-  categoryId: z.number().int(),
+  mainCategoryId: z.number().int().nullable(),
+  categoryId: z.number().int().nullable(),
   subCategoryId: z.number().int().nullable(),
-  departmentId: z.number().int(),
+  departmentId: z.number().int().nullable(),
+  riskLevel: z.string(),
+  status: z.string(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 })
@@ -1524,20 +1515,102 @@ export type NotebookItem = z.infer<typeof NotebookItemSchema>
 //------------------------------------------------------
 
 export type NotebookItemRelations = {
-  category: CategoryWithRelations;
-  department: DepartmentWithRelations;
+  mainCategory?: CategoryWithRelations | null;
+  category?: CategoryWithRelations | null;
+  subCategory?: CategoryWithRelations | null;
+  department?: DepartmentWithRelations | null;
   page: NotebookPageWithRelations;
-  subCategory?: SubCategoryWithRelations | null;
+  actions: NotebookItemActionWithRelations[];
+  comments: NotebookItemCommentWithRelations[];
 };
 
 export type NotebookItemWithRelations = z.infer<typeof NotebookItemSchema> & NotebookItemRelations
 
 export const NotebookItemWithRelationsSchema: z.ZodType<NotebookItemWithRelations> = NotebookItemSchema.merge(z.object({
-  category: z.lazy(() => CategoryWithRelationsSchema),
-  department: z.lazy(() => DepartmentWithRelationsSchema),
+  mainCategory: z.lazy(() => CategoryWithRelationsSchema).nullable(),
+  category: z.lazy(() => CategoryWithRelationsSchema).nullable(),
+  subCategory: z.lazy(() => CategoryWithRelationsSchema).nullable(),
+  department: z.lazy(() => DepartmentWithRelationsSchema).nullable(),
   page: z.lazy(() => NotebookPageWithRelationsSchema),
-  subCategory: z.lazy(() => SubCategoryWithRelationsSchema).nullable(),
+  actions: z.lazy(() => NotebookItemActionWithRelationsSchema).array(),
+  comments: z.lazy(() => NotebookItemCommentWithRelationsSchema).array(),
 }))
+
+/////////////////////////////////////////
+// NOTEBOOK ITEM ACTION SCHEMA
+/////////////////////////////////////////
+
+export const NotebookItemActionSchema = z.object({
+  id: z.number().int(),
+  notebookItemId: z.number().int(),
+  content: z.string(),
+  proofUrl: z.string().nullable(),
+  status: z.string(),
+  createdBy: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type NotebookItemAction = z.infer<typeof NotebookItemActionSchema>
+
+// NOTEBOOK ITEM ACTION RELATION SCHEMA
+//------------------------------------------------------
+
+export type NotebookItemActionRelations = {
+  notebookItem: NotebookItemWithRelations;
+};
+
+export type NotebookItemActionWithRelations = z.infer<typeof NotebookItemActionSchema> & NotebookItemActionRelations
+
+export const NotebookItemActionWithRelationsSchema: z.ZodType<NotebookItemActionWithRelations> = NotebookItemActionSchema.merge(z.object({
+  notebookItem: z.lazy(() => NotebookItemWithRelationsSchema),
+}))
+
+/////////////////////////////////////////
+// NOTEBOOK ITEM COMMENT SCHEMA
+/////////////////////////////////////////
+
+export const NotebookItemCommentSchema = z.object({
+  id: z.number().int(),
+  notebookItemId: z.number().int(),
+  content: z.string(),
+  authorId: z.string().nullable(),
+  authorName: z.string(),
+  attachments: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type NotebookItemComment = z.infer<typeof NotebookItemCommentSchema>
+
+// NOTEBOOK ITEM COMMENT RELATION SCHEMA
+//------------------------------------------------------
+
+export type NotebookItemCommentRelations = {
+  notebookItem: NotebookItemWithRelations;
+};
+
+export type NotebookItemCommentWithRelations = z.infer<typeof NotebookItemCommentSchema> & NotebookItemCommentRelations
+
+export const NotebookItemCommentWithRelationsSchema: z.ZodType<NotebookItemCommentWithRelations> = NotebookItemCommentSchema.merge(z.object({
+  notebookItem: z.lazy(() => NotebookItemWithRelationsSchema),
+}))
+
+/////////////////////////////////////////
+// ISG DEFTER SETTING SCHEMA
+/////////////////////////////////////////
+
+export const IsgDefterSettingSchema = z.object({
+  id: z.number().int(),
+  facilityId: z.string(),
+  currentCilt: z.number().int(),
+  maxPagesPerCilt: z.number().int(),
+  riskLevels: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type IsgDefterSetting = z.infer<typeof IsgDefterSettingSchema>
 
 /////////////////////////////////////////
 // SMTP SETTINGS SCHEMA
@@ -4326,6 +4399,7 @@ export const IntegratedAuditSchema = z.object({
   purpose: z.string().nullable(),
   executive: z.string().nullable(),
   conclusion: z.string().nullable(),
+  createdBy: z.string().nullable(),
   team: z.string().array(),
   participants: z.string().array(),
   criteria: z.string().array(),
@@ -4968,6 +5042,7 @@ export const OhsBoardTopicSchema = z.object({
   id: z.string(),
   meetingId: z.string(),
   topicText: z.string(),
+  mainCategoryId: z.number().int().nullable(),
   categoryId: z.number().int().nullable(),
   subCategoryId: z.number().int().nullable(),
   riskScore: z.string().nullable(),
@@ -4983,16 +5058,18 @@ export type OhsBoardTopic = z.infer<typeof OhsBoardTopicSchema>
 
 export type OhsBoardTopicRelations = {
   meeting: OhsBoardMeetingWithRelations;
+  mainCategory?: CategoryWithRelations | null;
   category?: CategoryWithRelations | null;
-  subCategory?: SubCategoryWithRelations | null;
+  subCategory?: CategoryWithRelations | null;
 };
 
 export type OhsBoardTopicWithRelations = z.infer<typeof OhsBoardTopicSchema> & OhsBoardTopicRelations
 
 export const OhsBoardTopicWithRelationsSchema: z.ZodType<OhsBoardTopicWithRelations> = OhsBoardTopicSchema.merge(z.object({
   meeting: z.lazy(() => OhsBoardMeetingWithRelationsSchema),
+  mainCategory: z.lazy(() => CategoryWithRelationsSchema).nullable(),
   category: z.lazy(() => CategoryWithRelationsSchema).nullable(),
-  subCategory: z.lazy(() => SubCategoryWithRelationsSchema).nullable(),
+  subCategory: z.lazy(() => CategoryWithRelationsSchema).nullable(),
 }))
 
 /////////////////////////////////////////
@@ -5004,7 +5081,8 @@ export const OhsBoardDecisionSchema = z.object({
   meetingId: z.string(),
   decisionNumber: z.string(),
   decisionText: z.string(),
-  categoryId: z.number().int(),
+  mainCategoryId: z.number().int().nullable(),
+  categoryId: z.number().int().nullable(),
   subCategoryId: z.number().int().nullable(),
   departmentId: z.string().nullable(),
   priority: z.string(),
@@ -5028,8 +5106,9 @@ export type OhsBoardDecision = z.infer<typeof OhsBoardDecisionSchema>
 
 export type OhsBoardDecisionRelations = {
   meeting: OhsBoardMeetingWithRelations;
-  category: CategoryWithRelations;
-  subCategory?: SubCategoryWithRelations | null;
+  mainCategory?: CategoryWithRelations | null;
+  category?: CategoryWithRelations | null;
+  subCategory?: CategoryWithRelations | null;
   department?: OhsBoardDepartmentWithRelations | null;
   actions: OhsBoardDecisionActionWithRelations[];
   auditLogs: OhsBoardAuditLogWithRelations[];
@@ -5039,8 +5118,9 @@ export type OhsBoardDecisionWithRelations = z.infer<typeof OhsBoardDecisionSchem
 
 export const OhsBoardDecisionWithRelationsSchema: z.ZodType<OhsBoardDecisionWithRelations> = OhsBoardDecisionSchema.merge(z.object({
   meeting: z.lazy(() => OhsBoardMeetingWithRelationsSchema),
-  category: z.lazy(() => CategoryWithRelationsSchema),
-  subCategory: z.lazy(() => SubCategoryWithRelationsSchema).nullable(),
+  mainCategory: z.lazy(() => CategoryWithRelationsSchema).nullable(),
+  category: z.lazy(() => CategoryWithRelationsSchema).nullable(),
+  subCategory: z.lazy(() => CategoryWithRelationsSchema).nullable(),
   department: z.lazy(() => OhsBoardDepartmentWithRelationsSchema).nullable(),
   actions: z.lazy(() => OhsBoardDecisionActionWithRelationsSchema).array(),
   auditLogs: z.lazy(() => OhsBoardAuditLogWithRelationsSchema).array(),
@@ -6381,10 +6461,17 @@ export const MonthlyAccidentDataSelectSchema: z.ZodType<Prisma.MonthlyAccidentDa
 //------------------------------------------------------
 
 export const CategoryIncludeSchema: z.ZodType<Prisma.CategoryInclude> = z.object({
+  parent: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
+  children: z.union([z.boolean(),z.lazy(() => CategoryFindManyArgsSchema)]).optional(),
+  mainTopics: z.union([z.boolean(),z.lazy(() => OhsBoardTopicFindManyArgsSchema)]).optional(),
+  topics: z.union([z.boolean(),z.lazy(() => OhsBoardTopicFindManyArgsSchema)]).optional(),
+  subTopics: z.union([z.boolean(),z.lazy(() => OhsBoardTopicFindManyArgsSchema)]).optional(),
+  mainDecisions: z.union([z.boolean(),z.lazy(() => OhsBoardDecisionFindManyArgsSchema)]).optional(),
+  decisions: z.union([z.boolean(),z.lazy(() => OhsBoardDecisionFindManyArgsSchema)]).optional(),
+  subDecisions: z.union([z.boolean(),z.lazy(() => OhsBoardDecisionFindManyArgsSchema)]).optional(),
+  mainNotebookItems: z.union([z.boolean(),z.lazy(() => NotebookItemFindManyArgsSchema)]).optional(),
   notebookItems: z.union([z.boolean(),z.lazy(() => NotebookItemFindManyArgsSchema)]).optional(),
-  subCategories: z.union([z.boolean(),z.lazy(() => SubCategoryFindManyArgsSchema)]).optional(),
-  OhsBoardTopic: z.union([z.boolean(),z.lazy(() => OhsBoardTopicFindManyArgsSchema)]).optional(),
-  OhsBoardDecision: z.union([z.boolean(),z.lazy(() => OhsBoardDecisionFindManyArgsSchema)]).optional(),
+  subNotebookItems: z.union([z.boolean(),z.lazy(() => NotebookItemFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => CategoryCountOutputTypeArgsSchema)]).optional(),
 }).strict();
 
@@ -6398,61 +6485,36 @@ export const CategoryCountOutputTypeArgsSchema: z.ZodType<Prisma.CategoryCountOu
 }).strict();
 
 export const CategoryCountOutputTypeSelectSchema: z.ZodType<Prisma.CategoryCountOutputTypeSelect> = z.object({
+  children: z.boolean().optional(),
+  mainTopics: z.boolean().optional(),
+  topics: z.boolean().optional(),
+  subTopics: z.boolean().optional(),
+  mainDecisions: z.boolean().optional(),
+  decisions: z.boolean().optional(),
+  subDecisions: z.boolean().optional(),
+  mainNotebookItems: z.boolean().optional(),
   notebookItems: z.boolean().optional(),
-  subCategories: z.boolean().optional(),
-  OhsBoardTopic: z.boolean().optional(),
-  OhsBoardDecision: z.boolean().optional(),
+  subNotebookItems: z.boolean().optional(),
 }).strict();
 
 export const CategorySelectSchema: z.ZodType<Prisma.CategorySelect> = z.object({
   id: z.boolean().optional(),
   name: z.boolean().optional(),
+  parentId: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
+  parent: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
+  children: z.union([z.boolean(),z.lazy(() => CategoryFindManyArgsSchema)]).optional(),
+  mainTopics: z.union([z.boolean(),z.lazy(() => OhsBoardTopicFindManyArgsSchema)]).optional(),
+  topics: z.union([z.boolean(),z.lazy(() => OhsBoardTopicFindManyArgsSchema)]).optional(),
+  subTopics: z.union([z.boolean(),z.lazy(() => OhsBoardTopicFindManyArgsSchema)]).optional(),
+  mainDecisions: z.union([z.boolean(),z.lazy(() => OhsBoardDecisionFindManyArgsSchema)]).optional(),
+  decisions: z.union([z.boolean(),z.lazy(() => OhsBoardDecisionFindManyArgsSchema)]).optional(),
+  subDecisions: z.union([z.boolean(),z.lazy(() => OhsBoardDecisionFindManyArgsSchema)]).optional(),
+  mainNotebookItems: z.union([z.boolean(),z.lazy(() => NotebookItemFindManyArgsSchema)]).optional(),
   notebookItems: z.union([z.boolean(),z.lazy(() => NotebookItemFindManyArgsSchema)]).optional(),
-  subCategories: z.union([z.boolean(),z.lazy(() => SubCategoryFindManyArgsSchema)]).optional(),
-  OhsBoardTopic: z.union([z.boolean(),z.lazy(() => OhsBoardTopicFindManyArgsSchema)]).optional(),
-  OhsBoardDecision: z.union([z.boolean(),z.lazy(() => OhsBoardDecisionFindManyArgsSchema)]).optional(),
+  subNotebookItems: z.union([z.boolean(),z.lazy(() => NotebookItemFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => CategoryCountOutputTypeArgsSchema)]).optional(),
-}).strict()
-
-// SUB CATEGORY
-//------------------------------------------------------
-
-export const SubCategoryIncludeSchema: z.ZodType<Prisma.SubCategoryInclude> = z.object({
-  notebookItems: z.union([z.boolean(),z.lazy(() => NotebookItemFindManyArgsSchema)]).optional(),
-  category: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
-  OhsBoardTopic: z.union([z.boolean(),z.lazy(() => OhsBoardTopicFindManyArgsSchema)]).optional(),
-  OhsBoardDecision: z.union([z.boolean(),z.lazy(() => OhsBoardDecisionFindManyArgsSchema)]).optional(),
-  _count: z.union([z.boolean(),z.lazy(() => SubCategoryCountOutputTypeArgsSchema)]).optional(),
-}).strict();
-
-export const SubCategoryArgsSchema: z.ZodType<Prisma.SubCategoryDefaultArgs> = z.object({
-  select: z.lazy(() => SubCategorySelectSchema).optional(),
-  include: z.lazy(() => SubCategoryIncludeSchema).optional(),
-}).strict();
-
-export const SubCategoryCountOutputTypeArgsSchema: z.ZodType<Prisma.SubCategoryCountOutputTypeDefaultArgs> = z.object({
-  select: z.lazy(() => SubCategoryCountOutputTypeSelectSchema).nullish(),
-}).strict();
-
-export const SubCategoryCountOutputTypeSelectSchema: z.ZodType<Prisma.SubCategoryCountOutputTypeSelect> = z.object({
-  notebookItems: z.boolean().optional(),
-  OhsBoardTopic: z.boolean().optional(),
-  OhsBoardDecision: z.boolean().optional(),
-}).strict();
-
-export const SubCategorySelectSchema: z.ZodType<Prisma.SubCategorySelect> = z.object({
-  id: z.boolean().optional(),
-  name: z.boolean().optional(),
-  categoryId: z.boolean().optional(),
-  createdAt: z.boolean().optional(),
-  updatedAt: z.boolean().optional(),
-  notebookItems: z.union([z.boolean(),z.lazy(() => NotebookItemFindManyArgsSchema)]).optional(),
-  category: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
-  OhsBoardTopic: z.union([z.boolean(),z.lazy(() => OhsBoardTopicFindManyArgsSchema)]).optional(),
-  OhsBoardDecision: z.union([z.boolean(),z.lazy(() => OhsBoardDecisionFindManyArgsSchema)]).optional(),
-  _count: z.union([z.boolean(),z.lazy(() => SubCategoryCountOutputTypeArgsSchema)]).optional(),
 }).strict()
 
 // DEPARTMENT
@@ -6523,6 +6585,8 @@ export const NotebookPageSelectSchema: z.ZodType<Prisma.NotebookPageSelect> = z.
   documentUploadedAt: z.boolean().optional(),
   isArchived: z.boolean().optional(),
   isLocked: z.boolean().optional(),
+  ciltNo: z.boolean().optional(),
+  pageNo: z.boolean().optional(),
   items: z.union([z.boolean(),z.lazy(() => NotebookItemFindManyArgsSchema)]).optional(),
   facility: z.union([z.boolean(),z.lazy(() => FacilityArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => NotebookPageCountOutputTypeArgsSchema)]).optional(),
@@ -6532,15 +6596,28 @@ export const NotebookPageSelectSchema: z.ZodType<Prisma.NotebookPageSelect> = z.
 //------------------------------------------------------
 
 export const NotebookItemIncludeSchema: z.ZodType<Prisma.NotebookItemInclude> = z.object({
+  mainCategory: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
   category: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
+  subCategory: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
   department: z.union([z.boolean(),z.lazy(() => DepartmentArgsSchema)]).optional(),
   page: z.union([z.boolean(),z.lazy(() => NotebookPageArgsSchema)]).optional(),
-  subCategory: z.union([z.boolean(),z.lazy(() => SubCategoryArgsSchema)]).optional(),
+  actions: z.union([z.boolean(),z.lazy(() => NotebookItemActionFindManyArgsSchema)]).optional(),
+  comments: z.union([z.boolean(),z.lazy(() => NotebookItemCommentFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => NotebookItemCountOutputTypeArgsSchema)]).optional(),
 }).strict();
 
 export const NotebookItemArgsSchema: z.ZodType<Prisma.NotebookItemDefaultArgs> = z.object({
   select: z.lazy(() => NotebookItemSelectSchema).optional(),
   include: z.lazy(() => NotebookItemIncludeSchema).optional(),
+}).strict();
+
+export const NotebookItemCountOutputTypeArgsSchema: z.ZodType<Prisma.NotebookItemCountOutputTypeDefaultArgs> = z.object({
+  select: z.lazy(() => NotebookItemCountOutputTypeSelectSchema).nullish(),
+}).strict();
+
+export const NotebookItemCountOutputTypeSelectSchema: z.ZodType<Prisma.NotebookItemCountOutputTypeSelect> = z.object({
+  actions: z.boolean().optional(),
+  comments: z.boolean().optional(),
 }).strict();
 
 export const NotebookItemSelectSchema: z.ZodType<Prisma.NotebookItemSelect> = z.object({
@@ -6549,15 +6626,83 @@ export const NotebookItemSelectSchema: z.ZodType<Prisma.NotebookItemSelect> = z.
   authorType: z.boolean().optional(),
   authorName: z.boolean().optional(),
   content: z.boolean().optional(),
+  mainCategoryId: z.boolean().optional(),
   categoryId: z.boolean().optional(),
   subCategoryId: z.boolean().optional(),
   departmentId: z.boolean().optional(),
+  riskLevel: z.boolean().optional(),
+  status: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
+  mainCategory: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
   category: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
+  subCategory: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
   department: z.union([z.boolean(),z.lazy(() => DepartmentArgsSchema)]).optional(),
   page: z.union([z.boolean(),z.lazy(() => NotebookPageArgsSchema)]).optional(),
-  subCategory: z.union([z.boolean(),z.lazy(() => SubCategoryArgsSchema)]).optional(),
+  actions: z.union([z.boolean(),z.lazy(() => NotebookItemActionFindManyArgsSchema)]).optional(),
+  comments: z.union([z.boolean(),z.lazy(() => NotebookItemCommentFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => NotebookItemCountOutputTypeArgsSchema)]).optional(),
+}).strict()
+
+// NOTEBOOK ITEM ACTION
+//------------------------------------------------------
+
+export const NotebookItemActionIncludeSchema: z.ZodType<Prisma.NotebookItemActionInclude> = z.object({
+  notebookItem: z.union([z.boolean(),z.lazy(() => NotebookItemArgsSchema)]).optional(),
+}).strict();
+
+export const NotebookItemActionArgsSchema: z.ZodType<Prisma.NotebookItemActionDefaultArgs> = z.object({
+  select: z.lazy(() => NotebookItemActionSelectSchema).optional(),
+  include: z.lazy(() => NotebookItemActionIncludeSchema).optional(),
+}).strict();
+
+export const NotebookItemActionSelectSchema: z.ZodType<Prisma.NotebookItemActionSelect> = z.object({
+  id: z.boolean().optional(),
+  notebookItemId: z.boolean().optional(),
+  content: z.boolean().optional(),
+  proofUrl: z.boolean().optional(),
+  status: z.boolean().optional(),
+  createdBy: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  notebookItem: z.union([z.boolean(),z.lazy(() => NotebookItemArgsSchema)]).optional(),
+}).strict()
+
+// NOTEBOOK ITEM COMMENT
+//------------------------------------------------------
+
+export const NotebookItemCommentIncludeSchema: z.ZodType<Prisma.NotebookItemCommentInclude> = z.object({
+  notebookItem: z.union([z.boolean(),z.lazy(() => NotebookItemArgsSchema)]).optional(),
+}).strict();
+
+export const NotebookItemCommentArgsSchema: z.ZodType<Prisma.NotebookItemCommentDefaultArgs> = z.object({
+  select: z.lazy(() => NotebookItemCommentSelectSchema).optional(),
+  include: z.lazy(() => NotebookItemCommentIncludeSchema).optional(),
+}).strict();
+
+export const NotebookItemCommentSelectSchema: z.ZodType<Prisma.NotebookItemCommentSelect> = z.object({
+  id: z.boolean().optional(),
+  notebookItemId: z.boolean().optional(),
+  content: z.boolean().optional(),
+  authorId: z.boolean().optional(),
+  authorName: z.boolean().optional(),
+  attachments: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  notebookItem: z.union([z.boolean(),z.lazy(() => NotebookItemArgsSchema)]).optional(),
+}).strict()
+
+// ISG DEFTER SETTING
+//------------------------------------------------------
+
+export const IsgDefterSettingSelectSchema: z.ZodType<Prisma.IsgDefterSettingSelect> = z.object({
+  id: z.boolean().optional(),
+  facilityId: z.boolean().optional(),
+  currentCilt: z.boolean().optional(),
+  maxPagesPerCilt: z.boolean().optional(),
+  riskLevels: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
 }).strict()
 
 // SMTP SETTINGS
@@ -9254,6 +9399,7 @@ export const IntegratedAuditSelectSchema: z.ZodType<Prisma.IntegratedAuditSelect
   purpose: z.boolean().optional(),
   executive: z.boolean().optional(),
   conclusion: z.boolean().optional(),
+  createdBy: z.boolean().optional(),
   team: z.boolean().optional(),
   participants: z.boolean().optional(),
   criteria: z.boolean().optional(),
@@ -9905,8 +10051,9 @@ export const OhsBoardMeetingAttendanceSelectSchema: z.ZodType<Prisma.OhsBoardMee
 
 export const OhsBoardTopicIncludeSchema: z.ZodType<Prisma.OhsBoardTopicInclude> = z.object({
   meeting: z.union([z.boolean(),z.lazy(() => OhsBoardMeetingArgsSchema)]).optional(),
+  mainCategory: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
   category: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
-  subCategory: z.union([z.boolean(),z.lazy(() => SubCategoryArgsSchema)]).optional(),
+  subCategory: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
 }).strict();
 
 export const OhsBoardTopicArgsSchema: z.ZodType<Prisma.OhsBoardTopicDefaultArgs> = z.object({
@@ -9918,6 +10065,7 @@ export const OhsBoardTopicSelectSchema: z.ZodType<Prisma.OhsBoardTopicSelect> = 
   id: z.boolean().optional(),
   meetingId: z.boolean().optional(),
   topicText: z.boolean().optional(),
+  mainCategoryId: z.boolean().optional(),
   categoryId: z.boolean().optional(),
   subCategoryId: z.boolean().optional(),
   riskScore: z.boolean().optional(),
@@ -9925,8 +10073,9 @@ export const OhsBoardTopicSelectSchema: z.ZodType<Prisma.OhsBoardTopicSelect> = 
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
   meeting: z.union([z.boolean(),z.lazy(() => OhsBoardMeetingArgsSchema)]).optional(),
+  mainCategory: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
   category: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
-  subCategory: z.union([z.boolean(),z.lazy(() => SubCategoryArgsSchema)]).optional(),
+  subCategory: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
 }).strict()
 
 // OHS BOARD DECISION
@@ -9934,8 +10083,9 @@ export const OhsBoardTopicSelectSchema: z.ZodType<Prisma.OhsBoardTopicSelect> = 
 
 export const OhsBoardDecisionIncludeSchema: z.ZodType<Prisma.OhsBoardDecisionInclude> = z.object({
   meeting: z.union([z.boolean(),z.lazy(() => OhsBoardMeetingArgsSchema)]).optional(),
+  mainCategory: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
   category: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
-  subCategory: z.union([z.boolean(),z.lazy(() => SubCategoryArgsSchema)]).optional(),
+  subCategory: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
   department: z.union([z.boolean(),z.lazy(() => OhsBoardDepartmentArgsSchema)]).optional(),
   actions: z.union([z.boolean(),z.lazy(() => OhsBoardDecisionActionFindManyArgsSchema)]).optional(),
   auditLogs: z.union([z.boolean(),z.lazy(() => OhsBoardAuditLogFindManyArgsSchema)]).optional(),
@@ -9961,6 +10111,7 @@ export const OhsBoardDecisionSelectSchema: z.ZodType<Prisma.OhsBoardDecisionSele
   meetingId: z.boolean().optional(),
   decisionNumber: z.boolean().optional(),
   decisionText: z.boolean().optional(),
+  mainCategoryId: z.boolean().optional(),
   categoryId: z.boolean().optional(),
   subCategoryId: z.boolean().optional(),
   departmentId: z.boolean().optional(),
@@ -9977,8 +10128,9 @@ export const OhsBoardDecisionSelectSchema: z.ZodType<Prisma.OhsBoardDecisionSele
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
   meeting: z.union([z.boolean(),z.lazy(() => OhsBoardMeetingArgsSchema)]).optional(),
+  mainCategory: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
   category: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
-  subCategory: z.union([z.boolean(),z.lazy(() => SubCategoryArgsSchema)]).optional(),
+  subCategory: z.union([z.boolean(),z.lazy(() => CategoryArgsSchema)]).optional(),
   department: z.union([z.boolean(),z.lazy(() => OhsBoardDepartmentArgsSchema)]).optional(),
   actions: z.union([z.boolean(),z.lazy(() => OhsBoardDecisionActionFindManyArgsSchema)]).optional(),
   auditLogs: z.union([z.boolean(),z.lazy(() => OhsBoardAuditLogFindManyArgsSchema)]).optional(),
@@ -12739,23 +12891,39 @@ export const CategoryWhereInputSchema: z.ZodType<Prisma.CategoryWhereInput> = z.
   NOT: z.union([ z.lazy(() => CategoryWhereInputSchema), z.lazy(() => CategoryWhereInputSchema).array() ]).optional(),
   id: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
   name: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  parentId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  parent: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
+  children: z.lazy(() => CategoryListRelationFilterSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicListRelationFilterSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicListRelationFilterSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicListRelationFilterSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionListRelationFilterSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionListRelationFilterSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionListRelationFilterSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemListRelationFilterSchema).optional(),
   notebookItems: z.lazy(() => NotebookItemListRelationFilterSchema).optional(),
-  subCategories: z.lazy(() => SubCategoryListRelationFilterSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicListRelationFilterSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionListRelationFilterSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemListRelationFilterSchema).optional(),
 }).strict();
 
 export const CategoryOrderByWithRelationInputSchema: z.ZodType<Prisma.CategoryOrderByWithRelationInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   name: z.lazy(() => SortOrderSchema).optional(),
+  parentId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  parent: z.lazy(() => CategoryOrderByWithRelationInputSchema).optional(),
+  children: z.lazy(() => CategoryOrderByRelationAggregateInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicOrderByRelationAggregateInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicOrderByRelationAggregateInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicOrderByRelationAggregateInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionOrderByRelationAggregateInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionOrderByRelationAggregateInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionOrderByRelationAggregateInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemOrderByRelationAggregateInputSchema).optional(),
   notebookItems: z.lazy(() => NotebookItemOrderByRelationAggregateInputSchema).optional(),
-  subCategories: z.lazy(() => SubCategoryOrderByRelationAggregateInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicOrderByRelationAggregateInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionOrderByRelationAggregateInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemOrderByRelationAggregateInputSchema).optional(),
 }).strict();
 
 export const CategoryWhereUniqueInputSchema: z.ZodType<Prisma.CategoryWhereUniqueInput> = z.object({
@@ -12767,17 +12935,26 @@ export const CategoryWhereUniqueInputSchema: z.ZodType<Prisma.CategoryWhereUniqu
   OR: z.lazy(() => CategoryWhereInputSchema).array().optional(),
   NOT: z.union([ z.lazy(() => CategoryWhereInputSchema), z.lazy(() => CategoryWhereInputSchema).array() ]).optional(),
   name: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  parentId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number().int() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  parent: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
+  children: z.lazy(() => CategoryListRelationFilterSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicListRelationFilterSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicListRelationFilterSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicListRelationFilterSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionListRelationFilterSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionListRelationFilterSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionListRelationFilterSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemListRelationFilterSchema).optional(),
   notebookItems: z.lazy(() => NotebookItemListRelationFilterSchema).optional(),
-  subCategories: z.lazy(() => SubCategoryListRelationFilterSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicListRelationFilterSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionListRelationFilterSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemListRelationFilterSchema).optional(),
 }).strict());
 
 export const CategoryOrderByWithAggregationInputSchema: z.ZodType<Prisma.CategoryOrderByWithAggregationInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   name: z.lazy(() => SortOrderSchema).optional(),
+  parentId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
   _count: z.lazy(() => CategoryCountOrderByAggregateInputSchema).optional(),
@@ -12793,75 +12970,7 @@ export const CategoryScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Cate
   NOT: z.union([ z.lazy(() => CategoryScalarWhereWithAggregatesInputSchema), z.lazy(() => CategoryScalarWhereWithAggregatesInputSchema).array() ]).optional(),
   id: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
   name: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
-  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
-  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
-}).strict();
-
-export const SubCategoryWhereInputSchema: z.ZodType<Prisma.SubCategoryWhereInput> = z.object({
-  AND: z.union([ z.lazy(() => SubCategoryWhereInputSchema), z.lazy(() => SubCategoryWhereInputSchema).array() ]).optional(),
-  OR: z.lazy(() => SubCategoryWhereInputSchema).array().optional(),
-  NOT: z.union([ z.lazy(() => SubCategoryWhereInputSchema), z.lazy(() => SubCategoryWhereInputSchema).array() ]).optional(),
-  id: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
-  name: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  categoryId: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
-  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
-  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
-  notebookItems: z.lazy(() => NotebookItemListRelationFilterSchema).optional(),
-  category: z.union([ z.lazy(() => CategoryRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicListRelationFilterSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionListRelationFilterSchema).optional(),
-}).strict();
-
-export const SubCategoryOrderByWithRelationInputSchema: z.ZodType<Prisma.SubCategoryOrderByWithRelationInput> = z.object({
-  id: z.lazy(() => SortOrderSchema).optional(),
-  name: z.lazy(() => SortOrderSchema).optional(),
-  categoryId: z.lazy(() => SortOrderSchema).optional(),
-  createdAt: z.lazy(() => SortOrderSchema).optional(),
-  updatedAt: z.lazy(() => SortOrderSchema).optional(),
-  notebookItems: z.lazy(() => NotebookItemOrderByRelationAggregateInputSchema).optional(),
-  category: z.lazy(() => CategoryOrderByWithRelationInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicOrderByRelationAggregateInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionOrderByRelationAggregateInputSchema).optional(),
-}).strict();
-
-export const SubCategoryWhereUniqueInputSchema: z.ZodType<Prisma.SubCategoryWhereUniqueInput> = z.object({
-  id: z.number().int(),
-})
-.and(z.object({
-  id: z.number().int().optional(),
-  AND: z.union([ z.lazy(() => SubCategoryWhereInputSchema), z.lazy(() => SubCategoryWhereInputSchema).array() ]).optional(),
-  OR: z.lazy(() => SubCategoryWhereInputSchema).array().optional(),
-  NOT: z.union([ z.lazy(() => SubCategoryWhereInputSchema), z.lazy(() => SubCategoryWhereInputSchema).array() ]).optional(),
-  name: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  categoryId: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
-  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
-  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
-  notebookItems: z.lazy(() => NotebookItemListRelationFilterSchema).optional(),
-  category: z.union([ z.lazy(() => CategoryRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicListRelationFilterSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionListRelationFilterSchema).optional(),
-}).strict());
-
-export const SubCategoryOrderByWithAggregationInputSchema: z.ZodType<Prisma.SubCategoryOrderByWithAggregationInput> = z.object({
-  id: z.lazy(() => SortOrderSchema).optional(),
-  name: z.lazy(() => SortOrderSchema).optional(),
-  categoryId: z.lazy(() => SortOrderSchema).optional(),
-  createdAt: z.lazy(() => SortOrderSchema).optional(),
-  updatedAt: z.lazy(() => SortOrderSchema).optional(),
-  _count: z.lazy(() => SubCategoryCountOrderByAggregateInputSchema).optional(),
-  _avg: z.lazy(() => SubCategoryAvgOrderByAggregateInputSchema).optional(),
-  _max: z.lazy(() => SubCategoryMaxOrderByAggregateInputSchema).optional(),
-  _min: z.lazy(() => SubCategoryMinOrderByAggregateInputSchema).optional(),
-  _sum: z.lazy(() => SubCategorySumOrderByAggregateInputSchema).optional(),
-}).strict();
-
-export const SubCategoryScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.SubCategoryScalarWhereWithAggregatesInput> = z.object({
-  AND: z.union([ z.lazy(() => SubCategoryScalarWhereWithAggregatesInputSchema), z.lazy(() => SubCategoryScalarWhereWithAggregatesInputSchema).array() ]).optional(),
-  OR: z.lazy(() => SubCategoryScalarWhereWithAggregatesInputSchema).array().optional(),
-  NOT: z.union([ z.lazy(() => SubCategoryScalarWhereWithAggregatesInputSchema), z.lazy(() => SubCategoryScalarWhereWithAggregatesInputSchema).array() ]).optional(),
-  id: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
-  name: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
-  categoryId: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  parentId: z.union([ z.lazy(() => IntNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
 }).strict();
@@ -12940,6 +13049,8 @@ export const NotebookPageWhereInputSchema: z.ZodType<Prisma.NotebookPageWhereInp
   documentUploadedAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
   isArchived: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
   isLocked: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  ciltNo: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
+  pageNo: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   items: z.lazy(() => NotebookItemListRelationFilterSchema).optional(),
   facility: z.union([ z.lazy(() => FacilityRelationFilterSchema), z.lazy(() => FacilityWhereInputSchema) ]).optional(),
 }).strict();
@@ -12957,6 +13068,8 @@ export const NotebookPageOrderByWithRelationInputSchema: z.ZodType<Prisma.Notebo
   documentUploadedAt: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   isArchived: z.lazy(() => SortOrderSchema).optional(),
   isLocked: z.lazy(() => SortOrderSchema).optional(),
+  ciltNo: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  pageNo: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   items: z.lazy(() => NotebookItemOrderByRelationAggregateInputSchema).optional(),
   facility: z.lazy(() => FacilityOrderByWithRelationInputSchema).optional(),
 }).strict();
@@ -12980,6 +13093,8 @@ export const NotebookPageWhereUniqueInputSchema: z.ZodType<Prisma.NotebookPageWh
   documentUploadedAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
   isArchived: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
   isLocked: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  ciltNo: z.union([ z.lazy(() => IntNullableFilterSchema), z.number().int() ]).optional().nullable(),
+  pageNo: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   items: z.lazy(() => NotebookItemListRelationFilterSchema).optional(),
   facility: z.union([ z.lazy(() => FacilityRelationFilterSchema), z.lazy(() => FacilityWhereInputSchema) ]).optional(),
 }).strict());
@@ -12997,6 +13112,8 @@ export const NotebookPageOrderByWithAggregationInputSchema: z.ZodType<Prisma.Not
   documentUploadedAt: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   isArchived: z.lazy(() => SortOrderSchema).optional(),
   isLocked: z.lazy(() => SortOrderSchema).optional(),
+  ciltNo: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  pageNo: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   _count: z.lazy(() => NotebookPageCountOrderByAggregateInputSchema).optional(),
   _avg: z.lazy(() => NotebookPageAvgOrderByAggregateInputSchema).optional(),
   _max: z.lazy(() => NotebookPageMaxOrderByAggregateInputSchema).optional(),
@@ -13020,6 +13137,8 @@ export const NotebookPageScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.
   documentUploadedAt: z.union([ z.lazy(() => DateTimeNullableWithAggregatesFilterSchema), z.coerce.date() ]).optional().nullable(),
   isArchived: z.union([ z.lazy(() => BoolWithAggregatesFilterSchema), z.boolean() ]).optional(),
   isLocked: z.union([ z.lazy(() => BoolWithAggregatesFilterSchema), z.boolean() ]).optional(),
+  ciltNo: z.union([ z.lazy(() => IntNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
+  pageNo: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
 }).strict();
 
 export const NotebookItemWhereInputSchema: z.ZodType<Prisma.NotebookItemWhereInput> = z.object({
@@ -13031,15 +13150,21 @@ export const NotebookItemWhereInputSchema: z.ZodType<Prisma.NotebookItemWhereInp
   authorType: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   authorName: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   content: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  categoryId: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  mainCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
+  categoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
   subCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
-  departmentId: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  departmentId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
+  riskLevel: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
-  category: z.union([ z.lazy(() => CategoryRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional(),
-  department: z.union([ z.lazy(() => DepartmentRelationFilterSchema), z.lazy(() => DepartmentWhereInputSchema) ]).optional(),
+  mainCategory: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
+  category: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
+  subCategory: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
+  department: z.union([ z.lazy(() => DepartmentNullableRelationFilterSchema), z.lazy(() => DepartmentWhereInputSchema) ]).optional().nullable(),
   page: z.union([ z.lazy(() => NotebookPageRelationFilterSchema), z.lazy(() => NotebookPageWhereInputSchema) ]).optional(),
-  subCategory: z.union([ z.lazy(() => SubCategoryNullableRelationFilterSchema), z.lazy(() => SubCategoryWhereInputSchema) ]).optional().nullable(),
+  actions: z.lazy(() => NotebookItemActionListRelationFilterSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentListRelationFilterSchema).optional(),
 }).strict();
 
 export const NotebookItemOrderByWithRelationInputSchema: z.ZodType<Prisma.NotebookItemOrderByWithRelationInput> = z.object({
@@ -13048,15 +13173,21 @@ export const NotebookItemOrderByWithRelationInputSchema: z.ZodType<Prisma.Notebo
   authorType: z.lazy(() => SortOrderSchema).optional(),
   authorName: z.lazy(() => SortOrderSchema).optional(),
   content: z.lazy(() => SortOrderSchema).optional(),
-  categoryId: z.lazy(() => SortOrderSchema).optional(),
+  mainCategoryId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  categoryId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   subCategoryId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
-  departmentId: z.lazy(() => SortOrderSchema).optional(),
+  departmentId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  riskLevel: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  mainCategory: z.lazy(() => CategoryOrderByWithRelationInputSchema).optional(),
   category: z.lazy(() => CategoryOrderByWithRelationInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryOrderByWithRelationInputSchema).optional(),
   department: z.lazy(() => DepartmentOrderByWithRelationInputSchema).optional(),
   page: z.lazy(() => NotebookPageOrderByWithRelationInputSchema).optional(),
-  subCategory: z.lazy(() => SubCategoryOrderByWithRelationInputSchema).optional(),
+  actions: z.lazy(() => NotebookItemActionOrderByRelationAggregateInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentOrderByRelationAggregateInputSchema).optional(),
 }).strict();
 
 export const NotebookItemWhereUniqueInputSchema: z.ZodType<Prisma.NotebookItemWhereUniqueInput> = z.object({
@@ -13071,15 +13202,21 @@ export const NotebookItemWhereUniqueInputSchema: z.ZodType<Prisma.NotebookItemWh
   authorType: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   authorName: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   content: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  categoryId: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
+  mainCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number().int() ]).optional().nullable(),
+  categoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number().int() ]).optional().nullable(),
   subCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number().int() ]).optional().nullable(),
-  departmentId: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
+  departmentId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number().int() ]).optional().nullable(),
+  riskLevel: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
-  category: z.union([ z.lazy(() => CategoryRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional(),
-  department: z.union([ z.lazy(() => DepartmentRelationFilterSchema), z.lazy(() => DepartmentWhereInputSchema) ]).optional(),
+  mainCategory: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
+  category: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
+  subCategory: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
+  department: z.union([ z.lazy(() => DepartmentNullableRelationFilterSchema), z.lazy(() => DepartmentWhereInputSchema) ]).optional().nullable(),
   page: z.union([ z.lazy(() => NotebookPageRelationFilterSchema), z.lazy(() => NotebookPageWhereInputSchema) ]).optional(),
-  subCategory: z.union([ z.lazy(() => SubCategoryNullableRelationFilterSchema), z.lazy(() => SubCategoryWhereInputSchema) ]).optional().nullable(),
+  actions: z.lazy(() => NotebookItemActionListRelationFilterSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentListRelationFilterSchema).optional(),
 }).strict());
 
 export const NotebookItemOrderByWithAggregationInputSchema: z.ZodType<Prisma.NotebookItemOrderByWithAggregationInput> = z.object({
@@ -13088,9 +13225,12 @@ export const NotebookItemOrderByWithAggregationInputSchema: z.ZodType<Prisma.Not
   authorType: z.lazy(() => SortOrderSchema).optional(),
   authorName: z.lazy(() => SortOrderSchema).optional(),
   content: z.lazy(() => SortOrderSchema).optional(),
-  categoryId: z.lazy(() => SortOrderSchema).optional(),
+  mainCategoryId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  categoryId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   subCategoryId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
-  departmentId: z.lazy(() => SortOrderSchema).optional(),
+  departmentId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  riskLevel: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
   _count: z.lazy(() => NotebookItemCountOrderByAggregateInputSchema).optional(),
@@ -13109,9 +13249,238 @@ export const NotebookItemScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.
   authorType: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
   authorName: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
   content: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
-  categoryId: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  mainCategoryId: z.union([ z.lazy(() => IntNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
+  categoryId: z.union([ z.lazy(() => IntNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
   subCategoryId: z.union([ z.lazy(() => IntNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
-  departmentId: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  departmentId: z.union([ z.lazy(() => IntNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
+  riskLevel: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  status: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const NotebookItemActionWhereInputSchema: z.ZodType<Prisma.NotebookItemActionWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => NotebookItemActionWhereInputSchema), z.lazy(() => NotebookItemActionWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => NotebookItemActionWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => NotebookItemActionWhereInputSchema), z.lazy(() => NotebookItemActionWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  notebookItemId: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  content: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  proofUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  createdBy: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  notebookItem: z.union([ z.lazy(() => NotebookItemRelationFilterSchema), z.lazy(() => NotebookItemWhereInputSchema) ]).optional(),
+}).strict();
+
+export const NotebookItemActionOrderByWithRelationInputSchema: z.ZodType<Prisma.NotebookItemActionOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  notebookItemId: z.lazy(() => SortOrderSchema).optional(),
+  content: z.lazy(() => SortOrderSchema).optional(),
+  proofUrl: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  createdBy: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  notebookItem: z.lazy(() => NotebookItemOrderByWithRelationInputSchema).optional(),
+}).strict();
+
+export const NotebookItemActionWhereUniqueInputSchema: z.ZodType<Prisma.NotebookItemActionWhereUniqueInput> = z.object({
+  id: z.number().int(),
+})
+.and(z.object({
+  id: z.number().int().optional(),
+  AND: z.union([ z.lazy(() => NotebookItemActionWhereInputSchema), z.lazy(() => NotebookItemActionWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => NotebookItemActionWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => NotebookItemActionWhereInputSchema), z.lazy(() => NotebookItemActionWhereInputSchema).array() ]).optional(),
+  notebookItemId: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
+  content: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  proofUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  createdBy: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  notebookItem: z.union([ z.lazy(() => NotebookItemRelationFilterSchema), z.lazy(() => NotebookItemWhereInputSchema) ]).optional(),
+}).strict());
+
+export const NotebookItemActionOrderByWithAggregationInputSchema: z.ZodType<Prisma.NotebookItemActionOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  notebookItemId: z.lazy(() => SortOrderSchema).optional(),
+  content: z.lazy(() => SortOrderSchema).optional(),
+  proofUrl: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  createdBy: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => NotebookItemActionCountOrderByAggregateInputSchema).optional(),
+  _avg: z.lazy(() => NotebookItemActionAvgOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => NotebookItemActionMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => NotebookItemActionMinOrderByAggregateInputSchema).optional(),
+  _sum: z.lazy(() => NotebookItemActionSumOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const NotebookItemActionScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.NotebookItemActionScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => NotebookItemActionScalarWhereWithAggregatesInputSchema), z.lazy(() => NotebookItemActionScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => NotebookItemActionScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => NotebookItemActionScalarWhereWithAggregatesInputSchema), z.lazy(() => NotebookItemActionScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  notebookItemId: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  content: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  proofUrl: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  status: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  createdBy: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const NotebookItemCommentWhereInputSchema: z.ZodType<Prisma.NotebookItemCommentWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => NotebookItemCommentWhereInputSchema), z.lazy(() => NotebookItemCommentWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => NotebookItemCommentWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => NotebookItemCommentWhereInputSchema), z.lazy(() => NotebookItemCommentWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  notebookItemId: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  content: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  authorId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  authorName: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  attachments: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  notebookItem: z.union([ z.lazy(() => NotebookItemRelationFilterSchema), z.lazy(() => NotebookItemWhereInputSchema) ]).optional(),
+}).strict();
+
+export const NotebookItemCommentOrderByWithRelationInputSchema: z.ZodType<Prisma.NotebookItemCommentOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  notebookItemId: z.lazy(() => SortOrderSchema).optional(),
+  content: z.lazy(() => SortOrderSchema).optional(),
+  authorId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  authorName: z.lazy(() => SortOrderSchema).optional(),
+  attachments: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  notebookItem: z.lazy(() => NotebookItemOrderByWithRelationInputSchema).optional(),
+}).strict();
+
+export const NotebookItemCommentWhereUniqueInputSchema: z.ZodType<Prisma.NotebookItemCommentWhereUniqueInput> = z.object({
+  id: z.number().int(),
+})
+.and(z.object({
+  id: z.number().int().optional(),
+  AND: z.union([ z.lazy(() => NotebookItemCommentWhereInputSchema), z.lazy(() => NotebookItemCommentWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => NotebookItemCommentWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => NotebookItemCommentWhereInputSchema), z.lazy(() => NotebookItemCommentWhereInputSchema).array() ]).optional(),
+  notebookItemId: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
+  content: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  authorId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  authorName: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  attachments: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  notebookItem: z.union([ z.lazy(() => NotebookItemRelationFilterSchema), z.lazy(() => NotebookItemWhereInputSchema) ]).optional(),
+}).strict());
+
+export const NotebookItemCommentOrderByWithAggregationInputSchema: z.ZodType<Prisma.NotebookItemCommentOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  notebookItemId: z.lazy(() => SortOrderSchema).optional(),
+  content: z.lazy(() => SortOrderSchema).optional(),
+  authorId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  authorName: z.lazy(() => SortOrderSchema).optional(),
+  attachments: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => NotebookItemCommentCountOrderByAggregateInputSchema).optional(),
+  _avg: z.lazy(() => NotebookItemCommentAvgOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => NotebookItemCommentMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => NotebookItemCommentMinOrderByAggregateInputSchema).optional(),
+  _sum: z.lazy(() => NotebookItemCommentSumOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const NotebookItemCommentScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.NotebookItemCommentScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => NotebookItemCommentScalarWhereWithAggregatesInputSchema), z.lazy(() => NotebookItemCommentScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => NotebookItemCommentScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => NotebookItemCommentScalarWhereWithAggregatesInputSchema), z.lazy(() => NotebookItemCommentScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  notebookItemId: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  content: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  authorId: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  authorName: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  attachments: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const IsgDefterSettingWhereInputSchema: z.ZodType<Prisma.IsgDefterSettingWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => IsgDefterSettingWhereInputSchema), z.lazy(() => IsgDefterSettingWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => IsgDefterSettingWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => IsgDefterSettingWhereInputSchema), z.lazy(() => IsgDefterSettingWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  facilityId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  currentCilt: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  maxPagesPerCilt: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  riskLevels: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const IsgDefterSettingOrderByWithRelationInputSchema: z.ZodType<Prisma.IsgDefterSettingOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  currentCilt: z.lazy(() => SortOrderSchema).optional(),
+  maxPagesPerCilt: z.lazy(() => SortOrderSchema).optional(),
+  riskLevels: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const IsgDefterSettingWhereUniqueInputSchema: z.ZodType<Prisma.IsgDefterSettingWhereUniqueInput> = z.union([
+  z.object({
+    id: z.number().int(),
+    facilityId: z.string(),
+  }),
+  z.object({
+    id: z.number().int(),
+  }),
+  z.object({
+    facilityId: z.string(),
+  }),
+])
+.and(z.object({
+  id: z.number().int().optional(),
+  facilityId: z.string().optional(),
+  AND: z.union([ z.lazy(() => IsgDefterSettingWhereInputSchema), z.lazy(() => IsgDefterSettingWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => IsgDefterSettingWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => IsgDefterSettingWhereInputSchema), z.lazy(() => IsgDefterSettingWhereInputSchema).array() ]).optional(),
+  currentCilt: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
+  maxPagesPerCilt: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
+  riskLevels: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict());
+
+export const IsgDefterSettingOrderByWithAggregationInputSchema: z.ZodType<Prisma.IsgDefterSettingOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  currentCilt: z.lazy(() => SortOrderSchema).optional(),
+  maxPagesPerCilt: z.lazy(() => SortOrderSchema).optional(),
+  riskLevels: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => IsgDefterSettingCountOrderByAggregateInputSchema).optional(),
+  _avg: z.lazy(() => IsgDefterSettingAvgOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => IsgDefterSettingMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => IsgDefterSettingMinOrderByAggregateInputSchema).optional(),
+  _sum: z.lazy(() => IsgDefterSettingSumOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const IsgDefterSettingScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.IsgDefterSettingScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => IsgDefterSettingScalarWhereWithAggregatesInputSchema), z.lazy(() => IsgDefterSettingScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => IsgDefterSettingScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => IsgDefterSettingScalarWhereWithAggregatesInputSchema), z.lazy(() => IsgDefterSettingScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  facilityId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  currentCilt: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  maxPagesPerCilt: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  riskLevels: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
 }).strict();
@@ -20572,6 +20941,7 @@ export const IntegratedAuditWhereInputSchema: z.ZodType<Prisma.IntegratedAuditWh
   purpose: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   executive: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   conclusion: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdBy: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   team: z.lazy(() => StringNullableListFilterSchema).optional(),
   participants: z.lazy(() => StringNullableListFilterSchema).optional(),
   criteria: z.lazy(() => StringNullableListFilterSchema).optional(),
@@ -20596,6 +20966,7 @@ export const IntegratedAuditOrderByWithRelationInputSchema: z.ZodType<Prisma.Int
   purpose: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   executive: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   conclusion: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdBy: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   team: z.lazy(() => SortOrderSchema).optional(),
   participants: z.lazy(() => SortOrderSchema).optional(),
   criteria: z.lazy(() => SortOrderSchema).optional(),
@@ -20626,6 +20997,7 @@ export const IntegratedAuditWhereUniqueInputSchema: z.ZodType<Prisma.IntegratedA
   purpose: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   executive: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   conclusion: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdBy: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   team: z.lazy(() => StringNullableListFilterSchema).optional(),
   participants: z.lazy(() => StringNullableListFilterSchema).optional(),
   criteria: z.lazy(() => StringNullableListFilterSchema).optional(),
@@ -20650,6 +21022,7 @@ export const IntegratedAuditOrderByWithAggregationInputSchema: z.ZodType<Prisma.
   purpose: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   executive: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   conclusion: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdBy: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   team: z.lazy(() => SortOrderSchema).optional(),
   participants: z.lazy(() => SortOrderSchema).optional(),
   criteria: z.lazy(() => SortOrderSchema).optional(),
@@ -20680,6 +21053,7 @@ export const IntegratedAuditScalarWhereWithAggregatesInputSchema: z.ZodType<Pris
   purpose: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   executive: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   conclusion: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  createdBy: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   team: z.lazy(() => StringNullableListFilterSchema).optional(),
   participants: z.lazy(() => StringNullableListFilterSchema).optional(),
   criteria: z.lazy(() => StringNullableListFilterSchema).optional(),
@@ -22250,6 +22624,7 @@ export const OhsBoardTopicWhereInputSchema: z.ZodType<Prisma.OhsBoardTopicWhereI
   id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   meetingId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   topicText: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  mainCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
   categoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
   subCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
   riskScore: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
@@ -22257,14 +22632,16 @@ export const OhsBoardTopicWhereInputSchema: z.ZodType<Prisma.OhsBoardTopicWhereI
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   meeting: z.union([ z.lazy(() => OhsBoardMeetingRelationFilterSchema), z.lazy(() => OhsBoardMeetingWhereInputSchema) ]).optional(),
+  mainCategory: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
   category: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
-  subCategory: z.union([ z.lazy(() => SubCategoryNullableRelationFilterSchema), z.lazy(() => SubCategoryWhereInputSchema) ]).optional().nullable(),
+  subCategory: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
 }).strict();
 
 export const OhsBoardTopicOrderByWithRelationInputSchema: z.ZodType<Prisma.OhsBoardTopicOrderByWithRelationInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   meetingId: z.lazy(() => SortOrderSchema).optional(),
   topicText: z.lazy(() => SortOrderSchema).optional(),
+  mainCategoryId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   categoryId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   subCategoryId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   riskScore: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
@@ -22272,8 +22649,9 @@ export const OhsBoardTopicOrderByWithRelationInputSchema: z.ZodType<Prisma.OhsBo
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
   meeting: z.lazy(() => OhsBoardMeetingOrderByWithRelationInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryOrderByWithRelationInputSchema).optional(),
   category: z.lazy(() => CategoryOrderByWithRelationInputSchema).optional(),
-  subCategory: z.lazy(() => SubCategoryOrderByWithRelationInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryOrderByWithRelationInputSchema).optional(),
 }).strict();
 
 export const OhsBoardTopicWhereUniqueInputSchema: z.ZodType<Prisma.OhsBoardTopicWhereUniqueInput> = z.object({
@@ -22286,6 +22664,7 @@ export const OhsBoardTopicWhereUniqueInputSchema: z.ZodType<Prisma.OhsBoardTopic
   NOT: z.union([ z.lazy(() => OhsBoardTopicWhereInputSchema), z.lazy(() => OhsBoardTopicWhereInputSchema).array() ]).optional(),
   meetingId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   topicText: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  mainCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number().int() ]).optional().nullable(),
   categoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number().int() ]).optional().nullable(),
   subCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number().int() ]).optional().nullable(),
   riskScore: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
@@ -22293,14 +22672,16 @@ export const OhsBoardTopicWhereUniqueInputSchema: z.ZodType<Prisma.OhsBoardTopic
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   meeting: z.union([ z.lazy(() => OhsBoardMeetingRelationFilterSchema), z.lazy(() => OhsBoardMeetingWhereInputSchema) ]).optional(),
+  mainCategory: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
   category: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
-  subCategory: z.union([ z.lazy(() => SubCategoryNullableRelationFilterSchema), z.lazy(() => SubCategoryWhereInputSchema) ]).optional().nullable(),
+  subCategory: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
 }).strict());
 
 export const OhsBoardTopicOrderByWithAggregationInputSchema: z.ZodType<Prisma.OhsBoardTopicOrderByWithAggregationInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   meetingId: z.lazy(() => SortOrderSchema).optional(),
   topicText: z.lazy(() => SortOrderSchema).optional(),
+  mainCategoryId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   categoryId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   subCategoryId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   riskScore: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
@@ -22321,6 +22702,7 @@ export const OhsBoardTopicScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma
   id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
   meetingId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
   topicText: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  mainCategoryId: z.union([ z.lazy(() => IntNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
   categoryId: z.union([ z.lazy(() => IntNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
   subCategoryId: z.union([ z.lazy(() => IntNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
   riskScore: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
@@ -22337,7 +22719,8 @@ export const OhsBoardDecisionWhereInputSchema: z.ZodType<Prisma.OhsBoardDecision
   meetingId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   decisionNumber: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   decisionText: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  categoryId: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  mainCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
+  categoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
   subCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
   departmentId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   priority: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
@@ -22353,8 +22736,9 @@ export const OhsBoardDecisionWhereInputSchema: z.ZodType<Prisma.OhsBoardDecision
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   meeting: z.union([ z.lazy(() => OhsBoardMeetingRelationFilterSchema), z.lazy(() => OhsBoardMeetingWhereInputSchema) ]).optional(),
-  category: z.union([ z.lazy(() => CategoryRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional(),
-  subCategory: z.union([ z.lazy(() => SubCategoryNullableRelationFilterSchema), z.lazy(() => SubCategoryWhereInputSchema) ]).optional().nullable(),
+  mainCategory: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
+  category: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
+  subCategory: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
   department: z.union([ z.lazy(() => OhsBoardDepartmentNullableRelationFilterSchema), z.lazy(() => OhsBoardDepartmentWhereInputSchema) ]).optional().nullable(),
   actions: z.lazy(() => OhsBoardDecisionActionListRelationFilterSchema).optional(),
   auditLogs: z.lazy(() => OhsBoardAuditLogListRelationFilterSchema).optional(),
@@ -22365,7 +22749,8 @@ export const OhsBoardDecisionOrderByWithRelationInputSchema: z.ZodType<Prisma.Oh
   meetingId: z.lazy(() => SortOrderSchema).optional(),
   decisionNumber: z.lazy(() => SortOrderSchema).optional(),
   decisionText: z.lazy(() => SortOrderSchema).optional(),
-  categoryId: z.lazy(() => SortOrderSchema).optional(),
+  mainCategoryId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  categoryId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   subCategoryId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   departmentId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   priority: z.lazy(() => SortOrderSchema).optional(),
@@ -22381,8 +22766,9 @@ export const OhsBoardDecisionOrderByWithRelationInputSchema: z.ZodType<Prisma.Oh
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
   meeting: z.lazy(() => OhsBoardMeetingOrderByWithRelationInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryOrderByWithRelationInputSchema).optional(),
   category: z.lazy(() => CategoryOrderByWithRelationInputSchema).optional(),
-  subCategory: z.lazy(() => SubCategoryOrderByWithRelationInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryOrderByWithRelationInputSchema).optional(),
   department: z.lazy(() => OhsBoardDepartmentOrderByWithRelationInputSchema).optional(),
   actions: z.lazy(() => OhsBoardDecisionActionOrderByRelationAggregateInputSchema).optional(),
   auditLogs: z.lazy(() => OhsBoardAuditLogOrderByRelationAggregateInputSchema).optional(),
@@ -22399,7 +22785,8 @@ export const OhsBoardDecisionWhereUniqueInputSchema: z.ZodType<Prisma.OhsBoardDe
   meetingId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   decisionNumber: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   decisionText: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  categoryId: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
+  mainCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number().int() ]).optional().nullable(),
+  categoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number().int() ]).optional().nullable(),
   subCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number().int() ]).optional().nullable(),
   departmentId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   priority: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
@@ -22415,8 +22802,9 @@ export const OhsBoardDecisionWhereUniqueInputSchema: z.ZodType<Prisma.OhsBoardDe
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   meeting: z.union([ z.lazy(() => OhsBoardMeetingRelationFilterSchema), z.lazy(() => OhsBoardMeetingWhereInputSchema) ]).optional(),
-  category: z.union([ z.lazy(() => CategoryRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional(),
-  subCategory: z.union([ z.lazy(() => SubCategoryNullableRelationFilterSchema), z.lazy(() => SubCategoryWhereInputSchema) ]).optional().nullable(),
+  mainCategory: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
+  category: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
+  subCategory: z.union([ z.lazy(() => CategoryNullableRelationFilterSchema), z.lazy(() => CategoryWhereInputSchema) ]).optional().nullable(),
   department: z.union([ z.lazy(() => OhsBoardDepartmentNullableRelationFilterSchema), z.lazy(() => OhsBoardDepartmentWhereInputSchema) ]).optional().nullable(),
   actions: z.lazy(() => OhsBoardDecisionActionListRelationFilterSchema).optional(),
   auditLogs: z.lazy(() => OhsBoardAuditLogListRelationFilterSchema).optional(),
@@ -22427,7 +22815,8 @@ export const OhsBoardDecisionOrderByWithAggregationInputSchema: z.ZodType<Prisma
   meetingId: z.lazy(() => SortOrderSchema).optional(),
   decisionNumber: z.lazy(() => SortOrderSchema).optional(),
   decisionText: z.lazy(() => SortOrderSchema).optional(),
-  categoryId: z.lazy(() => SortOrderSchema).optional(),
+  mainCategoryId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  categoryId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   subCategoryId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   departmentId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   priority: z.lazy(() => SortOrderSchema).optional(),
@@ -22457,7 +22846,8 @@ export const OhsBoardDecisionScalarWhereWithAggregatesInputSchema: z.ZodType<Pri
   meetingId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
   decisionNumber: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
   decisionText: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
-  categoryId: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  mainCategoryId: z.union([ z.lazy(() => IntNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
+  categoryId: z.union([ z.lazy(() => IntNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
   subCategoryId: z.union([ z.lazy(() => IntNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
   departmentId: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   priority: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
@@ -25684,47 +26074,76 @@ export const CategoryCreateInputSchema: z.ZodType<Prisma.CategoryCreateInput> = 
   name: z.string(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  parent: z.lazy(() => CategoryCreateNestedOneWithoutChildrenInputSchema).optional(),
+  children: z.lazy(() => CategoryCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutMainCategoryInputSchema).optional(),
   notebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutCategoryInputSchema).optional(),
-  subCategories: z.lazy(() => SubCategoryCreateNestedManyWithoutCategoryInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutCategoryInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutSubCategoryInputSchema).optional(),
 }).strict();
 
 export const CategoryUncheckedCreateInputSchema: z.ZodType<Prisma.CategoryUncheckedCreateInput> = z.object({
   id: z.number().int().optional(),
   name: z.string(),
+  parentId: z.number().int().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  children: z.lazy(() => CategoryUncheckedCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
   notebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
-  subCategories: z.lazy(() => SubCategoryUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
 }).strict();
 
 export const CategoryUpdateInputSchema: z.ZodType<Prisma.CategoryUpdateInput> = z.object({
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  parent: z.lazy(() => CategoryUpdateOneWithoutChildrenNestedInputSchema).optional(),
+  children: z.lazy(() => CategoryUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
   notebookItems: z.lazy(() => NotebookItemUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  subCategories: z.lazy(() => SubCategoryUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
 }).strict();
 
 export const CategoryUncheckedUpdateInputSchema: z.ZodType<Prisma.CategoryUncheckedUpdateInput> = z.object({
   id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  parentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  children: z.lazy(() => CategoryUncheckedUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
   notebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  subCategories: z.lazy(() => SubCategoryUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
 }).strict();
 
 export const CategoryCreateManyInputSchema: z.ZodType<Prisma.CategoryCreateManyInput> = z.object({
   id: z.number().int().optional(),
   name: z.string(),
+  parentId: z.number().int().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
 }).strict();
@@ -25738,70 +26157,7 @@ export const CategoryUpdateManyMutationInputSchema: z.ZodType<Prisma.CategoryUpd
 export const CategoryUncheckedUpdateManyInputSchema: z.ZodType<Prisma.CategoryUncheckedUpdateManyInput> = z.object({
   id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-}).strict();
-
-export const SubCategoryCreateInputSchema: z.ZodType<Prisma.SubCategoryCreateInput> = z.object({
-  name: z.string(),
-  createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
-  notebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutSubCategoryInputSchema).optional(),
-  category: z.lazy(() => CategoryCreateNestedOneWithoutSubCategoriesInputSchema),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutSubCategoryInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutSubCategoryInputSchema).optional(),
-}).strict();
-
-export const SubCategoryUncheckedCreateInputSchema: z.ZodType<Prisma.SubCategoryUncheckedCreateInput> = z.object({
-  id: z.number().int().optional(),
-  name: z.string(),
-  categoryId: z.number().int(),
-  createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
-  notebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
-}).strict();
-
-export const SubCategoryUpdateInputSchema: z.ZodType<Prisma.SubCategoryUpdateInput> = z.object({
-  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  notebookItems: z.lazy(() => NotebookItemUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
-  category: z.lazy(() => CategoryUpdateOneRequiredWithoutSubCategoriesNestedInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
-}).strict();
-
-export const SubCategoryUncheckedUpdateInputSchema: z.ZodType<Prisma.SubCategoryUncheckedUpdateInput> = z.object({
-  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  notebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
-}).strict();
-
-export const SubCategoryCreateManyInputSchema: z.ZodType<Prisma.SubCategoryCreateManyInput> = z.object({
-  id: z.number().int().optional(),
-  name: z.string(),
-  categoryId: z.number().int(),
-  createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
-}).strict();
-
-export const SubCategoryUpdateManyMutationInputSchema: z.ZodType<Prisma.SubCategoryUpdateManyMutationInput> = z.object({
-  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-}).strict();
-
-export const SubCategoryUncheckedUpdateManyInputSchema: z.ZodType<Prisma.SubCategoryUncheckedUpdateManyInput> = z.object({
-  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  parentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
@@ -25871,6 +26227,8 @@ export const NotebookPageCreateInputSchema: z.ZodType<Prisma.NotebookPageCreateI
   documentUploadedAt: z.coerce.date().optional().nullable(),
   isArchived: z.boolean().optional(),
   isLocked: z.boolean().optional(),
+  ciltNo: z.number().int().optional().nullable(),
+  pageNo: z.string().optional().nullable(),
   items: z.lazy(() => NotebookItemCreateNestedManyWithoutPageInputSchema).optional(),
   facility: z.lazy(() => FacilityCreateNestedOneWithoutNotebookPagesInputSchema),
 }).strict();
@@ -25888,6 +26246,8 @@ export const NotebookPageUncheckedCreateInputSchema: z.ZodType<Prisma.NotebookPa
   documentUploadedAt: z.coerce.date().optional().nullable(),
   isArchived: z.boolean().optional(),
   isLocked: z.boolean().optional(),
+  ciltNo: z.number().int().optional().nullable(),
+  pageNo: z.string().optional().nullable(),
   items: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutPageInputSchema).optional(),
 }).strict();
 
@@ -25902,6 +26262,8 @@ export const NotebookPageUpdateInputSchema: z.ZodType<Prisma.NotebookPageUpdateI
   documentUploadedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   isArchived: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
   isLocked: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  ciltNo: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  pageNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   items: z.lazy(() => NotebookItemUpdateManyWithoutPageNestedInputSchema).optional(),
   facility: z.lazy(() => FacilityUpdateOneRequiredWithoutNotebookPagesNestedInputSchema).optional(),
 }).strict();
@@ -25919,6 +26281,8 @@ export const NotebookPageUncheckedUpdateInputSchema: z.ZodType<Prisma.NotebookPa
   documentUploadedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   isArchived: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
   isLocked: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  ciltNo: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  pageNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   items: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutPageNestedInputSchema).optional(),
 }).strict();
 
@@ -25935,6 +26299,8 @@ export const NotebookPageCreateManyInputSchema: z.ZodType<Prisma.NotebookPageCre
   documentUploadedAt: z.coerce.date().optional().nullable(),
   isArchived: z.boolean().optional(),
   isLocked: z.boolean().optional(),
+  ciltNo: z.number().int().optional().nullable(),
+  pageNo: z.string().optional().nullable(),
 }).strict();
 
 export const NotebookPageUpdateManyMutationInputSchema: z.ZodType<Prisma.NotebookPageUpdateManyMutationInput> = z.object({
@@ -25948,6 +26314,8 @@ export const NotebookPageUpdateManyMutationInputSchema: z.ZodType<Prisma.Noteboo
   documentUploadedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   isArchived: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
   isLocked: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  ciltNo: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  pageNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
 }).strict();
 
 export const NotebookPageUncheckedUpdateManyInputSchema: z.ZodType<Prisma.NotebookPageUncheckedUpdateManyInput> = z.object({
@@ -25963,18 +26331,25 @@ export const NotebookPageUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Notebo
   documentUploadedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   isArchived: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
   isLocked: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  ciltNo: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  pageNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
 }).strict();
 
 export const NotebookItemCreateInputSchema: z.ZodType<Prisma.NotebookItemCreateInput> = z.object({
   authorType: z.string(),
   authorName: z.string(),
   content: z.string(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  category: z.lazy(() => CategoryCreateNestedOneWithoutNotebookItemsInputSchema),
-  department: z.lazy(() => DepartmentCreateNestedOneWithoutNotebookItemsInputSchema),
+  mainCategory: z.lazy(() => CategoryCreateNestedOneWithoutMainNotebookItemsInputSchema).optional(),
+  category: z.lazy(() => CategoryCreateNestedOneWithoutNotebookItemsInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryCreateNestedOneWithoutSubNotebookItemsInputSchema).optional(),
+  department: z.lazy(() => DepartmentCreateNestedOneWithoutNotebookItemsInputSchema).optional(),
   page: z.lazy(() => NotebookPageCreateNestedOneWithoutItemsInputSchema),
-  subCategory: z.lazy(() => SubCategoryCreateNestedOneWithoutNotebookItemsInputSchema).optional(),
+  actions: z.lazy(() => NotebookItemActionCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentCreateNestedManyWithoutNotebookItemInputSchema).optional(),
 }).strict();
 
 export const NotebookItemUncheckedCreateInputSchema: z.ZodType<Prisma.NotebookItemUncheckedCreateInput> = z.object({
@@ -25983,23 +26358,33 @@ export const NotebookItemUncheckedCreateInputSchema: z.ZodType<Prisma.NotebookIt
   authorType: z.string(),
   authorName: z.string(),
   content: z.string(),
-  categoryId: z.number().int(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
-  departmentId: z.number().int(),
+  departmentId: z.number().int().optional().nullable(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  actions: z.lazy(() => NotebookItemActionUncheckedCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUncheckedCreateNestedManyWithoutNotebookItemInputSchema).optional(),
 }).strict();
 
 export const NotebookItemUpdateInputSchema: z.ZodType<Prisma.NotebookItemUpdateInput> = z.object({
   authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  category: z.lazy(() => CategoryUpdateOneRequiredWithoutNotebookItemsNestedInputSchema).optional(),
-  department: z.lazy(() => DepartmentUpdateOneRequiredWithoutNotebookItemsNestedInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryUpdateOneWithoutMainNotebookItemsNestedInputSchema).optional(),
+  category: z.lazy(() => CategoryUpdateOneWithoutNotebookItemsNestedInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryUpdateOneWithoutSubNotebookItemsNestedInputSchema).optional(),
+  department: z.lazy(() => DepartmentUpdateOneWithoutNotebookItemsNestedInputSchema).optional(),
   page: z.lazy(() => NotebookPageUpdateOneRequiredWithoutItemsNestedInputSchema).optional(),
-  subCategory: z.lazy(() => SubCategoryUpdateOneWithoutNotebookItemsNestedInputSchema).optional(),
+  actions: z.lazy(() => NotebookItemActionUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
 }).strict();
 
 export const NotebookItemUncheckedUpdateInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateInput> = z.object({
@@ -26008,11 +26393,16 @@ export const NotebookItemUncheckedUpdateInputSchema: z.ZodType<Prisma.NotebookIt
   authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
-  departmentId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  departmentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  actions: z.lazy(() => NotebookItemActionUncheckedUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUncheckedUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
 }).strict();
 
 export const NotebookItemCreateManyInputSchema: z.ZodType<Prisma.NotebookItemCreateManyInput> = z.object({
@@ -26021,9 +26411,12 @@ export const NotebookItemCreateManyInputSchema: z.ZodType<Prisma.NotebookItemCre
   authorType: z.string(),
   authorName: z.string(),
   content: z.string(),
-  categoryId: z.number().int(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
-  departmentId: z.number().int(),
+  departmentId: z.number().int().optional().nullable(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
 }).strict();
@@ -26032,6 +26425,8 @@ export const NotebookItemUpdateManyMutationInputSchema: z.ZodType<Prisma.Noteboo
   authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
@@ -26042,9 +26437,225 @@ export const NotebookItemUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Notebo
   authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
-  departmentId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  departmentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const NotebookItemActionCreateInputSchema: z.ZodType<Prisma.NotebookItemActionCreateInput> = z.object({
+  content: z.string(),
+  proofUrl: z.string().optional().nullable(),
+  status: z.string(),
+  createdBy: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  notebookItem: z.lazy(() => NotebookItemCreateNestedOneWithoutActionsInputSchema),
+}).strict();
+
+export const NotebookItemActionUncheckedCreateInputSchema: z.ZodType<Prisma.NotebookItemActionUncheckedCreateInput> = z.object({
+  id: z.number().int().optional(),
+  notebookItemId: z.number().int(),
+  content: z.string(),
+  proofUrl: z.string().optional().nullable(),
+  status: z.string(),
+  createdBy: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const NotebookItemActionUpdateInputSchema: z.ZodType<Prisma.NotebookItemActionUpdateInput> = z.object({
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  proofUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  notebookItem: z.lazy(() => NotebookItemUpdateOneRequiredWithoutActionsNestedInputSchema).optional(),
+}).strict();
+
+export const NotebookItemActionUncheckedUpdateInputSchema: z.ZodType<Prisma.NotebookItemActionUncheckedUpdateInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  notebookItemId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  proofUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const NotebookItemActionCreateManyInputSchema: z.ZodType<Prisma.NotebookItemActionCreateManyInput> = z.object({
+  id: z.number().int().optional(),
+  notebookItemId: z.number().int(),
+  content: z.string(),
+  proofUrl: z.string().optional().nullable(),
+  status: z.string(),
+  createdBy: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const NotebookItemActionUpdateManyMutationInputSchema: z.ZodType<Prisma.NotebookItemActionUpdateManyMutationInput> = z.object({
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  proofUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const NotebookItemActionUncheckedUpdateManyInputSchema: z.ZodType<Prisma.NotebookItemActionUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  notebookItemId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  proofUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const NotebookItemCommentCreateInputSchema: z.ZodType<Prisma.NotebookItemCommentCreateInput> = z.object({
+  content: z.string(),
+  authorId: z.string().optional().nullable(),
+  authorName: z.string(),
+  attachments: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  notebookItem: z.lazy(() => NotebookItemCreateNestedOneWithoutCommentsInputSchema),
+}).strict();
+
+export const NotebookItemCommentUncheckedCreateInputSchema: z.ZodType<Prisma.NotebookItemCommentUncheckedCreateInput> = z.object({
+  id: z.number().int().optional(),
+  notebookItemId: z.number().int(),
+  content: z.string(),
+  authorId: z.string().optional().nullable(),
+  authorName: z.string(),
+  attachments: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const NotebookItemCommentUpdateInputSchema: z.ZodType<Prisma.NotebookItemCommentUpdateInput> = z.object({
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  attachments: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  notebookItem: z.lazy(() => NotebookItemUpdateOneRequiredWithoutCommentsNestedInputSchema).optional(),
+}).strict();
+
+export const NotebookItemCommentUncheckedUpdateInputSchema: z.ZodType<Prisma.NotebookItemCommentUncheckedUpdateInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  notebookItemId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  attachments: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const NotebookItemCommentCreateManyInputSchema: z.ZodType<Prisma.NotebookItemCommentCreateManyInput> = z.object({
+  id: z.number().int().optional(),
+  notebookItemId: z.number().int(),
+  content: z.string(),
+  authorId: z.string().optional().nullable(),
+  authorName: z.string(),
+  attachments: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const NotebookItemCommentUpdateManyMutationInputSchema: z.ZodType<Prisma.NotebookItemCommentUpdateManyMutationInput> = z.object({
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  attachments: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const NotebookItemCommentUncheckedUpdateManyInputSchema: z.ZodType<Prisma.NotebookItemCommentUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  notebookItemId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  attachments: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const IsgDefterSettingCreateInputSchema: z.ZodType<Prisma.IsgDefterSettingCreateInput> = z.object({
+  facilityId: z.string(),
+  currentCilt: z.number().int().optional(),
+  maxPagesPerCilt: z.number().int().optional(),
+  riskLevels: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const IsgDefterSettingUncheckedCreateInputSchema: z.ZodType<Prisma.IsgDefterSettingUncheckedCreateInput> = z.object({
+  id: z.number().int().optional(),
+  facilityId: z.string(),
+  currentCilt: z.number().int().optional(),
+  maxPagesPerCilt: z.number().int().optional(),
+  riskLevels: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const IsgDefterSettingUpdateInputSchema: z.ZodType<Prisma.IsgDefterSettingUpdateInput> = z.object({
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  currentCilt: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  maxPagesPerCilt: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  riskLevels: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const IsgDefterSettingUncheckedUpdateInputSchema: z.ZodType<Prisma.IsgDefterSettingUncheckedUpdateInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  currentCilt: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  maxPagesPerCilt: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  riskLevels: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const IsgDefterSettingCreateManyInputSchema: z.ZodType<Prisma.IsgDefterSettingCreateManyInput> = z.object({
+  id: z.number().int().optional(),
+  facilityId: z.string(),
+  currentCilt: z.number().int().optional(),
+  maxPagesPerCilt: z.number().int().optional(),
+  riskLevels: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const IsgDefterSettingUpdateManyMutationInputSchema: z.ZodType<Prisma.IsgDefterSettingUpdateManyMutationInput> = z.object({
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  currentCilt: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  maxPagesPerCilt: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  riskLevels: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const IsgDefterSettingUncheckedUpdateManyInputSchema: z.ZodType<Prisma.IsgDefterSettingUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  currentCilt: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  maxPagesPerCilt: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  riskLevels: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
@@ -33612,6 +34223,7 @@ export const IntegratedAuditCreateInputSchema: z.ZodType<Prisma.IntegratedAuditC
   purpose: z.string().optional().nullable(),
   executive: z.string().optional().nullable(),
   conclusion: z.string().optional().nullable(),
+  createdBy: z.string().optional().nullable(),
   team: z.union([ z.lazy(() => IntegratedAuditCreateteamInputSchema), z.string().array() ]).optional(),
   participants: z.union([ z.lazy(() => IntegratedAuditCreateparticipantsInputSchema), z.string().array() ]).optional(),
   criteria: z.union([ z.lazy(() => IntegratedAuditCreatecriteriaInputSchema), z.string().array() ]).optional(),
@@ -33636,6 +34248,7 @@ export const IntegratedAuditUncheckedCreateInputSchema: z.ZodType<Prisma.Integra
   purpose: z.string().optional().nullable(),
   executive: z.string().optional().nullable(),
   conclusion: z.string().optional().nullable(),
+  createdBy: z.string().optional().nullable(),
   team: z.union([ z.lazy(() => IntegratedAuditCreateteamInputSchema), z.string().array() ]).optional(),
   participants: z.union([ z.lazy(() => IntegratedAuditCreateparticipantsInputSchema), z.string().array() ]).optional(),
   criteria: z.union([ z.lazy(() => IntegratedAuditCreatecriteriaInputSchema), z.string().array() ]).optional(),
@@ -33658,6 +34271,7 @@ export const IntegratedAuditUpdateInputSchema: z.ZodType<Prisma.IntegratedAuditU
   purpose: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   executive: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   conclusion: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   team: z.union([ z.lazy(() => IntegratedAuditUpdateteamInputSchema), z.string().array() ]).optional(),
   participants: z.union([ z.lazy(() => IntegratedAuditUpdateparticipantsInputSchema), z.string().array() ]).optional(),
   criteria: z.union([ z.lazy(() => IntegratedAuditUpdatecriteriaInputSchema), z.string().array() ]).optional(),
@@ -33682,6 +34296,7 @@ export const IntegratedAuditUncheckedUpdateInputSchema: z.ZodType<Prisma.Integra
   purpose: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   executive: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   conclusion: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   team: z.union([ z.lazy(() => IntegratedAuditUpdateteamInputSchema), z.string().array() ]).optional(),
   participants: z.union([ z.lazy(() => IntegratedAuditUpdateparticipantsInputSchema), z.string().array() ]).optional(),
   criteria: z.union([ z.lazy(() => IntegratedAuditUpdatecriteriaInputSchema), z.string().array() ]).optional(),
@@ -33705,6 +34320,7 @@ export const IntegratedAuditCreateManyInputSchema: z.ZodType<Prisma.IntegratedAu
   purpose: z.string().optional().nullable(),
   executive: z.string().optional().nullable(),
   conclusion: z.string().optional().nullable(),
+  createdBy: z.string().optional().nullable(),
   team: z.union([ z.lazy(() => IntegratedAuditCreateteamInputSchema), z.string().array() ]).optional(),
   participants: z.union([ z.lazy(() => IntegratedAuditCreateparticipantsInputSchema), z.string().array() ]).optional(),
   criteria: z.union([ z.lazy(() => IntegratedAuditCreatecriteriaInputSchema), z.string().array() ]).optional(),
@@ -33726,6 +34342,7 @@ export const IntegratedAuditUpdateManyMutationInputSchema: z.ZodType<Prisma.Inte
   purpose: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   executive: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   conclusion: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   team: z.union([ z.lazy(() => IntegratedAuditUpdateteamInputSchema), z.string().array() ]).optional(),
   participants: z.union([ z.lazy(() => IntegratedAuditUpdateparticipantsInputSchema), z.string().array() ]).optional(),
   criteria: z.union([ z.lazy(() => IntegratedAuditUpdatecriteriaInputSchema), z.string().array() ]).optional(),
@@ -33748,6 +34365,7 @@ export const IntegratedAuditUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Int
   purpose: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   executive: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   conclusion: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   team: z.union([ z.lazy(() => IntegratedAuditUpdateteamInputSchema), z.string().array() ]).optional(),
   participants: z.union([ z.lazy(() => IntegratedAuditUpdateparticipantsInputSchema), z.string().array() ]).optional(),
   criteria: z.union([ z.lazy(() => IntegratedAuditUpdatecriteriaInputSchema), z.string().array() ]).optional(),
@@ -35319,14 +35937,16 @@ export const OhsBoardTopicCreateInputSchema: z.ZodType<Prisma.OhsBoardTopicCreat
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   meeting: z.lazy(() => OhsBoardMeetingCreateNestedOneWithoutTopicsInputSchema),
-  category: z.lazy(() => CategoryCreateNestedOneWithoutOhsBoardTopicInputSchema).optional(),
-  subCategory: z.lazy(() => SubCategoryCreateNestedOneWithoutOhsBoardTopicInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryCreateNestedOneWithoutMainTopicsInputSchema).optional(),
+  category: z.lazy(() => CategoryCreateNestedOneWithoutTopicsInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryCreateNestedOneWithoutSubTopicsInputSchema).optional(),
 }).strict();
 
 export const OhsBoardTopicUncheckedCreateInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedCreateInput> = z.object({
   id: z.string().optional(),
   meetingId: z.string(),
   topicText: z.string(),
+  mainCategoryId: z.number().int().optional().nullable(),
   categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
   riskScore: z.string().optional().nullable(),
@@ -35343,14 +35963,16 @@ export const OhsBoardTopicUpdateInputSchema: z.ZodType<Prisma.OhsBoardTopicUpdat
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   meeting: z.lazy(() => OhsBoardMeetingUpdateOneRequiredWithoutTopicsNestedInputSchema).optional(),
-  category: z.lazy(() => CategoryUpdateOneWithoutOhsBoardTopicNestedInputSchema).optional(),
-  subCategory: z.lazy(() => SubCategoryUpdateOneWithoutOhsBoardTopicNestedInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryUpdateOneWithoutMainTopicsNestedInputSchema).optional(),
+  category: z.lazy(() => CategoryUpdateOneWithoutTopicsNestedInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryUpdateOneWithoutSubTopicsNestedInputSchema).optional(),
 }).strict();
 
 export const OhsBoardTopicUncheckedUpdateInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedUpdateInput> = z.object({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   topicText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   riskScore: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
@@ -35363,6 +35985,7 @@ export const OhsBoardTopicCreateManyInputSchema: z.ZodType<Prisma.OhsBoardTopicC
   id: z.string().optional(),
   meetingId: z.string(),
   topicText: z.string(),
+  mainCategoryId: z.number().int().optional().nullable(),
   categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
   riskScore: z.string().optional().nullable(),
@@ -35384,6 +36007,7 @@ export const OhsBoardTopicUncheckedUpdateManyInputSchema: z.ZodType<Prisma.OhsBo
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   topicText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   riskScore: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
@@ -35409,8 +36033,9 @@ export const OhsBoardDecisionCreateInputSchema: z.ZodType<Prisma.OhsBoardDecisio
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   meeting: z.lazy(() => OhsBoardMeetingCreateNestedOneWithoutDecisionsInputSchema),
-  category: z.lazy(() => CategoryCreateNestedOneWithoutOhsBoardDecisionInputSchema),
-  subCategory: z.lazy(() => SubCategoryCreateNestedOneWithoutOhsBoardDecisionInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryCreateNestedOneWithoutMainDecisionsInputSchema).optional(),
+  category: z.lazy(() => CategoryCreateNestedOneWithoutDecisionsInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryCreateNestedOneWithoutSubDecisionsInputSchema).optional(),
   department: z.lazy(() => OhsBoardDepartmentCreateNestedOneWithoutDecisionsInputSchema).optional(),
   actions: z.lazy(() => OhsBoardDecisionActionCreateNestedManyWithoutDecisionInputSchema).optional(),
   auditLogs: z.lazy(() => OhsBoardAuditLogCreateNestedManyWithoutDecisionInputSchema).optional(),
@@ -35421,7 +36046,8 @@ export const OhsBoardDecisionUncheckedCreateInputSchema: z.ZodType<Prisma.OhsBoa
   meetingId: z.string(),
   decisionNumber: z.string(),
   decisionText: z.string(),
-  categoryId: z.number().int(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
   departmentId: z.string().optional().nullable(),
   priority: z.string(),
@@ -35457,8 +36083,9 @@ export const OhsBoardDecisionUpdateInputSchema: z.ZodType<Prisma.OhsBoardDecisio
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   meeting: z.lazy(() => OhsBoardMeetingUpdateOneRequiredWithoutDecisionsNestedInputSchema).optional(),
-  category: z.lazy(() => CategoryUpdateOneRequiredWithoutOhsBoardDecisionNestedInputSchema).optional(),
-  subCategory: z.lazy(() => SubCategoryUpdateOneWithoutOhsBoardDecisionNestedInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryUpdateOneWithoutMainDecisionsNestedInputSchema).optional(),
+  category: z.lazy(() => CategoryUpdateOneWithoutDecisionsNestedInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryUpdateOneWithoutSubDecisionsNestedInputSchema).optional(),
   department: z.lazy(() => OhsBoardDepartmentUpdateOneWithoutDecisionsNestedInputSchema).optional(),
   actions: z.lazy(() => OhsBoardDecisionActionUpdateManyWithoutDecisionNestedInputSchema).optional(),
   auditLogs: z.lazy(() => OhsBoardAuditLogUpdateManyWithoutDecisionNestedInputSchema).optional(),
@@ -35469,7 +36096,8 @@ export const OhsBoardDecisionUncheckedUpdateInputSchema: z.ZodType<Prisma.OhsBoa
   meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   departmentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   priority: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -35493,7 +36121,8 @@ export const OhsBoardDecisionCreateManyInputSchema: z.ZodType<Prisma.OhsBoardDec
   meetingId: z.string(),
   decisionNumber: z.string(),
   decisionText: z.string(),
-  categoryId: z.number().int(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
   departmentId: z.string().optional().nullable(),
   priority: z.string(),
@@ -35533,7 +36162,8 @@ export const OhsBoardDecisionUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Oh
   meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   departmentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   priority: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -38545,16 +39175,15 @@ export const MonthlyAccidentDataSumOrderByAggregateInputSchema: z.ZodType<Prisma
   id: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
-export const NotebookItemListRelationFilterSchema: z.ZodType<Prisma.NotebookItemListRelationFilter> = z.object({
-  every: z.lazy(() => NotebookItemWhereInputSchema).optional(),
-  some: z.lazy(() => NotebookItemWhereInputSchema).optional(),
-  none: z.lazy(() => NotebookItemWhereInputSchema).optional(),
+export const CategoryNullableRelationFilterSchema: z.ZodType<Prisma.CategoryNullableRelationFilter> = z.object({
+  is: z.lazy(() => CategoryWhereInputSchema).optional().nullable(),
+  isNot: z.lazy(() => CategoryWhereInputSchema).optional().nullable(),
 }).strict();
 
-export const SubCategoryListRelationFilterSchema: z.ZodType<Prisma.SubCategoryListRelationFilter> = z.object({
-  every: z.lazy(() => SubCategoryWhereInputSchema).optional(),
-  some: z.lazy(() => SubCategoryWhereInputSchema).optional(),
-  none: z.lazy(() => SubCategoryWhereInputSchema).optional(),
+export const CategoryListRelationFilterSchema: z.ZodType<Prisma.CategoryListRelationFilter> = z.object({
+  every: z.lazy(() => CategoryWhereInputSchema).optional(),
+  some: z.lazy(() => CategoryWhereInputSchema).optional(),
+  none: z.lazy(() => CategoryWhereInputSchema).optional(),
 }).strict();
 
 export const OhsBoardTopicListRelationFilterSchema: z.ZodType<Prisma.OhsBoardTopicListRelationFilter> = z.object({
@@ -38563,11 +39192,13 @@ export const OhsBoardTopicListRelationFilterSchema: z.ZodType<Prisma.OhsBoardTop
   none: z.lazy(() => OhsBoardTopicWhereInputSchema).optional(),
 }).strict();
 
-export const NotebookItemOrderByRelationAggregateInputSchema: z.ZodType<Prisma.NotebookItemOrderByRelationAggregateInput> = z.object({
-  _count: z.lazy(() => SortOrderSchema).optional(),
+export const NotebookItemListRelationFilterSchema: z.ZodType<Prisma.NotebookItemListRelationFilter> = z.object({
+  every: z.lazy(() => NotebookItemWhereInputSchema).optional(),
+  some: z.lazy(() => NotebookItemWhereInputSchema).optional(),
+  none: z.lazy(() => NotebookItemWhereInputSchema).optional(),
 }).strict();
 
-export const SubCategoryOrderByRelationAggregateInputSchema: z.ZodType<Prisma.SubCategoryOrderByRelationAggregateInput> = z.object({
+export const CategoryOrderByRelationAggregateInputSchema: z.ZodType<Prisma.CategoryOrderByRelationAggregateInput> = z.object({
   _count: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
@@ -38575,20 +39206,27 @@ export const OhsBoardTopicOrderByRelationAggregateInputSchema: z.ZodType<Prisma.
   _count: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
+export const NotebookItemOrderByRelationAggregateInputSchema: z.ZodType<Prisma.NotebookItemOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
 export const CategoryCountOrderByAggregateInputSchema: z.ZodType<Prisma.CategoryCountOrderByAggregateInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   name: z.lazy(() => SortOrderSchema).optional(),
+  parentId: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const CategoryAvgOrderByAggregateInputSchema: z.ZodType<Prisma.CategoryAvgOrderByAggregateInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
+  parentId: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const CategoryMaxOrderByAggregateInputSchema: z.ZodType<Prisma.CategoryMaxOrderByAggregateInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   name: z.lazy(() => SortOrderSchema).optional(),
+  parentId: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
@@ -38596,51 +39234,14 @@ export const CategoryMaxOrderByAggregateInputSchema: z.ZodType<Prisma.CategoryMa
 export const CategoryMinOrderByAggregateInputSchema: z.ZodType<Prisma.CategoryMinOrderByAggregateInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   name: z.lazy(() => SortOrderSchema).optional(),
+  parentId: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const CategorySumOrderByAggregateInputSchema: z.ZodType<Prisma.CategorySumOrderByAggregateInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
-}).strict();
-
-export const CategoryRelationFilterSchema: z.ZodType<Prisma.CategoryRelationFilter> = z.object({
-  is: z.lazy(() => CategoryWhereInputSchema).optional(),
-  isNot: z.lazy(() => CategoryWhereInputSchema).optional(),
-}).strict();
-
-export const SubCategoryCountOrderByAggregateInputSchema: z.ZodType<Prisma.SubCategoryCountOrderByAggregateInput> = z.object({
-  id: z.lazy(() => SortOrderSchema).optional(),
-  name: z.lazy(() => SortOrderSchema).optional(),
-  categoryId: z.lazy(() => SortOrderSchema).optional(),
-  createdAt: z.lazy(() => SortOrderSchema).optional(),
-  updatedAt: z.lazy(() => SortOrderSchema).optional(),
-}).strict();
-
-export const SubCategoryAvgOrderByAggregateInputSchema: z.ZodType<Prisma.SubCategoryAvgOrderByAggregateInput> = z.object({
-  id: z.lazy(() => SortOrderSchema).optional(),
-  categoryId: z.lazy(() => SortOrderSchema).optional(),
-}).strict();
-
-export const SubCategoryMaxOrderByAggregateInputSchema: z.ZodType<Prisma.SubCategoryMaxOrderByAggregateInput> = z.object({
-  id: z.lazy(() => SortOrderSchema).optional(),
-  name: z.lazy(() => SortOrderSchema).optional(),
-  categoryId: z.lazy(() => SortOrderSchema).optional(),
-  createdAt: z.lazy(() => SortOrderSchema).optional(),
-  updatedAt: z.lazy(() => SortOrderSchema).optional(),
-}).strict();
-
-export const SubCategoryMinOrderByAggregateInputSchema: z.ZodType<Prisma.SubCategoryMinOrderByAggregateInput> = z.object({
-  id: z.lazy(() => SortOrderSchema).optional(),
-  name: z.lazy(() => SortOrderSchema).optional(),
-  categoryId: z.lazy(() => SortOrderSchema).optional(),
-  createdAt: z.lazy(() => SortOrderSchema).optional(),
-  updatedAt: z.lazy(() => SortOrderSchema).optional(),
-}).strict();
-
-export const SubCategorySumOrderByAggregateInputSchema: z.ZodType<Prisma.SubCategorySumOrderByAggregateInput> = z.object({
-  id: z.lazy(() => SortOrderSchema).optional(),
-  categoryId: z.lazy(() => SortOrderSchema).optional(),
+  parentId: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const DepartmentCountOrderByAggregateInputSchema: z.ZodType<Prisma.DepartmentCountOrderByAggregateInput> = z.object({
@@ -38685,11 +39286,14 @@ export const NotebookPageCountOrderByAggregateInputSchema: z.ZodType<Prisma.Note
   documentUploadedAt: z.lazy(() => SortOrderSchema).optional(),
   isArchived: z.lazy(() => SortOrderSchema).optional(),
   isLocked: z.lazy(() => SortOrderSchema).optional(),
+  ciltNo: z.lazy(() => SortOrderSchema).optional(),
+  pageNo: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const NotebookPageAvgOrderByAggregateInputSchema: z.ZodType<Prisma.NotebookPageAvgOrderByAggregateInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   year: z.lazy(() => SortOrderSchema).optional(),
+  ciltNo: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const NotebookPageMaxOrderByAggregateInputSchema: z.ZodType<Prisma.NotebookPageMaxOrderByAggregateInput> = z.object({
@@ -38705,6 +39309,8 @@ export const NotebookPageMaxOrderByAggregateInputSchema: z.ZodType<Prisma.Notebo
   documentUploadedAt: z.lazy(() => SortOrderSchema).optional(),
   isArchived: z.lazy(() => SortOrderSchema).optional(),
   isLocked: z.lazy(() => SortOrderSchema).optional(),
+  ciltNo: z.lazy(() => SortOrderSchema).optional(),
+  pageNo: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const NotebookPageMinOrderByAggregateInputSchema: z.ZodType<Prisma.NotebookPageMinOrderByAggregateInput> = z.object({
@@ -38720,11 +39326,19 @@ export const NotebookPageMinOrderByAggregateInputSchema: z.ZodType<Prisma.Notebo
   documentUploadedAt: z.lazy(() => SortOrderSchema).optional(),
   isArchived: z.lazy(() => SortOrderSchema).optional(),
   isLocked: z.lazy(() => SortOrderSchema).optional(),
+  ciltNo: z.lazy(() => SortOrderSchema).optional(),
+  pageNo: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const NotebookPageSumOrderByAggregateInputSchema: z.ZodType<Prisma.NotebookPageSumOrderByAggregateInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   year: z.lazy(() => SortOrderSchema).optional(),
+  ciltNo: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const DepartmentNullableRelationFilterSchema: z.ZodType<Prisma.DepartmentNullableRelationFilter> = z.object({
+  is: z.lazy(() => DepartmentWhereInputSchema).optional().nullable(),
+  isNot: z.lazy(() => DepartmentWhereInputSchema).optional().nullable(),
 }).strict();
 
 export const NotebookPageRelationFilterSchema: z.ZodType<Prisma.NotebookPageRelationFilter> = z.object({
@@ -38732,9 +39346,24 @@ export const NotebookPageRelationFilterSchema: z.ZodType<Prisma.NotebookPageRela
   isNot: z.lazy(() => NotebookPageWhereInputSchema).optional(),
 }).strict();
 
-export const SubCategoryNullableRelationFilterSchema: z.ZodType<Prisma.SubCategoryNullableRelationFilter> = z.object({
-  is: z.lazy(() => SubCategoryWhereInputSchema).optional().nullable(),
-  isNot: z.lazy(() => SubCategoryWhereInputSchema).optional().nullable(),
+export const NotebookItemActionListRelationFilterSchema: z.ZodType<Prisma.NotebookItemActionListRelationFilter> = z.object({
+  every: z.lazy(() => NotebookItemActionWhereInputSchema).optional(),
+  some: z.lazy(() => NotebookItemActionWhereInputSchema).optional(),
+  none: z.lazy(() => NotebookItemActionWhereInputSchema).optional(),
+}).strict();
+
+export const NotebookItemCommentListRelationFilterSchema: z.ZodType<Prisma.NotebookItemCommentListRelationFilter> = z.object({
+  every: z.lazy(() => NotebookItemCommentWhereInputSchema).optional(),
+  some: z.lazy(() => NotebookItemCommentWhereInputSchema).optional(),
+  none: z.lazy(() => NotebookItemCommentWhereInputSchema).optional(),
+}).strict();
+
+export const NotebookItemActionOrderByRelationAggregateInputSchema: z.ZodType<Prisma.NotebookItemActionOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const NotebookItemCommentOrderByRelationAggregateInputSchema: z.ZodType<Prisma.NotebookItemCommentOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const NotebookItemCountOrderByAggregateInputSchema: z.ZodType<Prisma.NotebookItemCountOrderByAggregateInput> = z.object({
@@ -38743,9 +39372,12 @@ export const NotebookItemCountOrderByAggregateInputSchema: z.ZodType<Prisma.Note
   authorType: z.lazy(() => SortOrderSchema).optional(),
   authorName: z.lazy(() => SortOrderSchema).optional(),
   content: z.lazy(() => SortOrderSchema).optional(),
+  mainCategoryId: z.lazy(() => SortOrderSchema).optional(),
   categoryId: z.lazy(() => SortOrderSchema).optional(),
   subCategoryId: z.lazy(() => SortOrderSchema).optional(),
   departmentId: z.lazy(() => SortOrderSchema).optional(),
+  riskLevel: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
@@ -38753,6 +39385,7 @@ export const NotebookItemCountOrderByAggregateInputSchema: z.ZodType<Prisma.Note
 export const NotebookItemAvgOrderByAggregateInputSchema: z.ZodType<Prisma.NotebookItemAvgOrderByAggregateInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   pageId: z.lazy(() => SortOrderSchema).optional(),
+  mainCategoryId: z.lazy(() => SortOrderSchema).optional(),
   categoryId: z.lazy(() => SortOrderSchema).optional(),
   subCategoryId: z.lazy(() => SortOrderSchema).optional(),
   departmentId: z.lazy(() => SortOrderSchema).optional(),
@@ -38764,9 +39397,12 @@ export const NotebookItemMaxOrderByAggregateInputSchema: z.ZodType<Prisma.Notebo
   authorType: z.lazy(() => SortOrderSchema).optional(),
   authorName: z.lazy(() => SortOrderSchema).optional(),
   content: z.lazy(() => SortOrderSchema).optional(),
+  mainCategoryId: z.lazy(() => SortOrderSchema).optional(),
   categoryId: z.lazy(() => SortOrderSchema).optional(),
   subCategoryId: z.lazy(() => SortOrderSchema).optional(),
   departmentId: z.lazy(() => SortOrderSchema).optional(),
+  riskLevel: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
@@ -38777,9 +39413,12 @@ export const NotebookItemMinOrderByAggregateInputSchema: z.ZodType<Prisma.Notebo
   authorType: z.lazy(() => SortOrderSchema).optional(),
   authorName: z.lazy(() => SortOrderSchema).optional(),
   content: z.lazy(() => SortOrderSchema).optional(),
+  mainCategoryId: z.lazy(() => SortOrderSchema).optional(),
   categoryId: z.lazy(() => SortOrderSchema).optional(),
   subCategoryId: z.lazy(() => SortOrderSchema).optional(),
   departmentId: z.lazy(() => SortOrderSchema).optional(),
+  riskLevel: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
@@ -38787,9 +39426,143 @@ export const NotebookItemMinOrderByAggregateInputSchema: z.ZodType<Prisma.Notebo
 export const NotebookItemSumOrderByAggregateInputSchema: z.ZodType<Prisma.NotebookItemSumOrderByAggregateInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   pageId: z.lazy(() => SortOrderSchema).optional(),
+  mainCategoryId: z.lazy(() => SortOrderSchema).optional(),
   categoryId: z.lazy(() => SortOrderSchema).optional(),
   subCategoryId: z.lazy(() => SortOrderSchema).optional(),
   departmentId: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const NotebookItemRelationFilterSchema: z.ZodType<Prisma.NotebookItemRelationFilter> = z.object({
+  is: z.lazy(() => NotebookItemWhereInputSchema).optional(),
+  isNot: z.lazy(() => NotebookItemWhereInputSchema).optional(),
+}).strict();
+
+export const NotebookItemActionCountOrderByAggregateInputSchema: z.ZodType<Prisma.NotebookItemActionCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  notebookItemId: z.lazy(() => SortOrderSchema).optional(),
+  content: z.lazy(() => SortOrderSchema).optional(),
+  proofUrl: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  createdBy: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const NotebookItemActionAvgOrderByAggregateInputSchema: z.ZodType<Prisma.NotebookItemActionAvgOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  notebookItemId: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const NotebookItemActionMaxOrderByAggregateInputSchema: z.ZodType<Prisma.NotebookItemActionMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  notebookItemId: z.lazy(() => SortOrderSchema).optional(),
+  content: z.lazy(() => SortOrderSchema).optional(),
+  proofUrl: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  createdBy: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const NotebookItemActionMinOrderByAggregateInputSchema: z.ZodType<Prisma.NotebookItemActionMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  notebookItemId: z.lazy(() => SortOrderSchema).optional(),
+  content: z.lazy(() => SortOrderSchema).optional(),
+  proofUrl: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  createdBy: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const NotebookItemActionSumOrderByAggregateInputSchema: z.ZodType<Prisma.NotebookItemActionSumOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  notebookItemId: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const NotebookItemCommentCountOrderByAggregateInputSchema: z.ZodType<Prisma.NotebookItemCommentCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  notebookItemId: z.lazy(() => SortOrderSchema).optional(),
+  content: z.lazy(() => SortOrderSchema).optional(),
+  authorId: z.lazy(() => SortOrderSchema).optional(),
+  authorName: z.lazy(() => SortOrderSchema).optional(),
+  attachments: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const NotebookItemCommentAvgOrderByAggregateInputSchema: z.ZodType<Prisma.NotebookItemCommentAvgOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  notebookItemId: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const NotebookItemCommentMaxOrderByAggregateInputSchema: z.ZodType<Prisma.NotebookItemCommentMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  notebookItemId: z.lazy(() => SortOrderSchema).optional(),
+  content: z.lazy(() => SortOrderSchema).optional(),
+  authorId: z.lazy(() => SortOrderSchema).optional(),
+  authorName: z.lazy(() => SortOrderSchema).optional(),
+  attachments: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const NotebookItemCommentMinOrderByAggregateInputSchema: z.ZodType<Prisma.NotebookItemCommentMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  notebookItemId: z.lazy(() => SortOrderSchema).optional(),
+  content: z.lazy(() => SortOrderSchema).optional(),
+  authorId: z.lazy(() => SortOrderSchema).optional(),
+  authorName: z.lazy(() => SortOrderSchema).optional(),
+  attachments: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const NotebookItemCommentSumOrderByAggregateInputSchema: z.ZodType<Prisma.NotebookItemCommentSumOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  notebookItemId: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const IsgDefterSettingCountOrderByAggregateInputSchema: z.ZodType<Prisma.IsgDefterSettingCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  currentCilt: z.lazy(() => SortOrderSchema).optional(),
+  maxPagesPerCilt: z.lazy(() => SortOrderSchema).optional(),
+  riskLevels: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const IsgDefterSettingAvgOrderByAggregateInputSchema: z.ZodType<Prisma.IsgDefterSettingAvgOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  currentCilt: z.lazy(() => SortOrderSchema).optional(),
+  maxPagesPerCilt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const IsgDefterSettingMaxOrderByAggregateInputSchema: z.ZodType<Prisma.IsgDefterSettingMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  currentCilt: z.lazy(() => SortOrderSchema).optional(),
+  maxPagesPerCilt: z.lazy(() => SortOrderSchema).optional(),
+  riskLevels: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const IsgDefterSettingMinOrderByAggregateInputSchema: z.ZodType<Prisma.IsgDefterSettingMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  currentCilt: z.lazy(() => SortOrderSchema).optional(),
+  maxPagesPerCilt: z.lazy(() => SortOrderSchema).optional(),
+  riskLevels: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const IsgDefterSettingSumOrderByAggregateInputSchema: z.ZodType<Prisma.IsgDefterSettingSumOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  currentCilt: z.lazy(() => SortOrderSchema).optional(),
+  maxPagesPerCilt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const SmtpSettingsCountOrderByAggregateInputSchema: z.ZodType<Prisma.SmtpSettingsCountOrderByAggregateInput> = z.object({
@@ -42968,6 +43741,7 @@ export const IntegratedAuditCountOrderByAggregateInputSchema: z.ZodType<Prisma.I
   purpose: z.lazy(() => SortOrderSchema).optional(),
   executive: z.lazy(() => SortOrderSchema).optional(),
   conclusion: z.lazy(() => SortOrderSchema).optional(),
+  createdBy: z.lazy(() => SortOrderSchema).optional(),
   team: z.lazy(() => SortOrderSchema).optional(),
   participants: z.lazy(() => SortOrderSchema).optional(),
   criteria: z.lazy(() => SortOrderSchema).optional(),
@@ -42994,6 +43768,7 @@ export const IntegratedAuditMaxOrderByAggregateInputSchema: z.ZodType<Prisma.Int
   purpose: z.lazy(() => SortOrderSchema).optional(),
   executive: z.lazy(() => SortOrderSchema).optional(),
   conclusion: z.lazy(() => SortOrderSchema).optional(),
+  createdBy: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const IntegratedAuditMinOrderByAggregateInputSchema: z.ZodType<Prisma.IntegratedAuditMinOrderByAggregateInput> = z.object({
@@ -43013,6 +43788,7 @@ export const IntegratedAuditMinOrderByAggregateInputSchema: z.ZodType<Prisma.Int
   purpose: z.lazy(() => SortOrderSchema).optional(),
   executive: z.lazy(() => SortOrderSchema).optional(),
   conclusion: z.lazy(() => SortOrderSchema).optional(),
+  createdBy: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const IntegratedAuditSumOrderByAggregateInputSchema: z.ZodType<Prisma.IntegratedAuditSumOrderByAggregateInput> = z.object({
@@ -43952,15 +44728,11 @@ export const OhsBoardMeetingAttendanceSumOrderByAggregateInputSchema: z.ZodType<
   memberId: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
-export const CategoryNullableRelationFilterSchema: z.ZodType<Prisma.CategoryNullableRelationFilter> = z.object({
-  is: z.lazy(() => CategoryWhereInputSchema).optional().nullable(),
-  isNot: z.lazy(() => CategoryWhereInputSchema).optional().nullable(),
-}).strict();
-
 export const OhsBoardTopicCountOrderByAggregateInputSchema: z.ZodType<Prisma.OhsBoardTopicCountOrderByAggregateInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   meetingId: z.lazy(() => SortOrderSchema).optional(),
   topicText: z.lazy(() => SortOrderSchema).optional(),
+  mainCategoryId: z.lazy(() => SortOrderSchema).optional(),
   categoryId: z.lazy(() => SortOrderSchema).optional(),
   subCategoryId: z.lazy(() => SortOrderSchema).optional(),
   riskScore: z.lazy(() => SortOrderSchema).optional(),
@@ -43970,6 +44742,7 @@ export const OhsBoardTopicCountOrderByAggregateInputSchema: z.ZodType<Prisma.Ohs
 }).strict();
 
 export const OhsBoardTopicAvgOrderByAggregateInputSchema: z.ZodType<Prisma.OhsBoardTopicAvgOrderByAggregateInput> = z.object({
+  mainCategoryId: z.lazy(() => SortOrderSchema).optional(),
   categoryId: z.lazy(() => SortOrderSchema).optional(),
   subCategoryId: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
@@ -43978,6 +44751,7 @@ export const OhsBoardTopicMaxOrderByAggregateInputSchema: z.ZodType<Prisma.OhsBo
   id: z.lazy(() => SortOrderSchema).optional(),
   meetingId: z.lazy(() => SortOrderSchema).optional(),
   topicText: z.lazy(() => SortOrderSchema).optional(),
+  mainCategoryId: z.lazy(() => SortOrderSchema).optional(),
   categoryId: z.lazy(() => SortOrderSchema).optional(),
   subCategoryId: z.lazy(() => SortOrderSchema).optional(),
   riskScore: z.lazy(() => SortOrderSchema).optional(),
@@ -43990,6 +44764,7 @@ export const OhsBoardTopicMinOrderByAggregateInputSchema: z.ZodType<Prisma.OhsBo
   id: z.lazy(() => SortOrderSchema).optional(),
   meetingId: z.lazy(() => SortOrderSchema).optional(),
   topicText: z.lazy(() => SortOrderSchema).optional(),
+  mainCategoryId: z.lazy(() => SortOrderSchema).optional(),
   categoryId: z.lazy(() => SortOrderSchema).optional(),
   subCategoryId: z.lazy(() => SortOrderSchema).optional(),
   riskScore: z.lazy(() => SortOrderSchema).optional(),
@@ -43999,6 +44774,7 @@ export const OhsBoardTopicMinOrderByAggregateInputSchema: z.ZodType<Prisma.OhsBo
 }).strict();
 
 export const OhsBoardTopicSumOrderByAggregateInputSchema: z.ZodType<Prisma.OhsBoardTopicSumOrderByAggregateInput> = z.object({
+  mainCategoryId: z.lazy(() => SortOrderSchema).optional(),
   categoryId: z.lazy(() => SortOrderSchema).optional(),
   subCategoryId: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
@@ -44033,6 +44809,7 @@ export const OhsBoardDecisionCountOrderByAggregateInputSchema: z.ZodType<Prisma.
   meetingId: z.lazy(() => SortOrderSchema).optional(),
   decisionNumber: z.lazy(() => SortOrderSchema).optional(),
   decisionText: z.lazy(() => SortOrderSchema).optional(),
+  mainCategoryId: z.lazy(() => SortOrderSchema).optional(),
   categoryId: z.lazy(() => SortOrderSchema).optional(),
   subCategoryId: z.lazy(() => SortOrderSchema).optional(),
   departmentId: z.lazy(() => SortOrderSchema).optional(),
@@ -44051,6 +44828,7 @@ export const OhsBoardDecisionCountOrderByAggregateInputSchema: z.ZodType<Prisma.
 }).strict();
 
 export const OhsBoardDecisionAvgOrderByAggregateInputSchema: z.ZodType<Prisma.OhsBoardDecisionAvgOrderByAggregateInput> = z.object({
+  mainCategoryId: z.lazy(() => SortOrderSchema).optional(),
   categoryId: z.lazy(() => SortOrderSchema).optional(),
   subCategoryId: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
@@ -44060,6 +44838,7 @@ export const OhsBoardDecisionMaxOrderByAggregateInputSchema: z.ZodType<Prisma.Oh
   meetingId: z.lazy(() => SortOrderSchema).optional(),
   decisionNumber: z.lazy(() => SortOrderSchema).optional(),
   decisionText: z.lazy(() => SortOrderSchema).optional(),
+  mainCategoryId: z.lazy(() => SortOrderSchema).optional(),
   categoryId: z.lazy(() => SortOrderSchema).optional(),
   subCategoryId: z.lazy(() => SortOrderSchema).optional(),
   departmentId: z.lazy(() => SortOrderSchema).optional(),
@@ -44082,6 +44861,7 @@ export const OhsBoardDecisionMinOrderByAggregateInputSchema: z.ZodType<Prisma.Oh
   meetingId: z.lazy(() => SortOrderSchema).optional(),
   decisionNumber: z.lazy(() => SortOrderSchema).optional(),
   decisionText: z.lazy(() => SortOrderSchema).optional(),
+  mainCategoryId: z.lazy(() => SortOrderSchema).optional(),
   categoryId: z.lazy(() => SortOrderSchema).optional(),
   subCategoryId: z.lazy(() => SortOrderSchema).optional(),
   departmentId: z.lazy(() => SortOrderSchema).optional(),
@@ -44100,6 +44880,7 @@ export const OhsBoardDecisionMinOrderByAggregateInputSchema: z.ZodType<Prisma.Oh
 }).strict();
 
 export const OhsBoardDecisionSumOrderByAggregateInputSchema: z.ZodType<Prisma.OhsBoardDecisionSumOrderByAggregateInput> = z.object({
+  mainCategoryId: z.lazy(() => SortOrderSchema).optional(),
   categoryId: z.lazy(() => SortOrderSchema).optional(),
   subCategoryId: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
@@ -48546,18 +49327,24 @@ export const FacilityUpdateOneRequiredWithoutMonthlyAccidentNestedInputSchema: z
   update: z.union([ z.lazy(() => FacilityUpdateToOneWithWhereWithoutMonthlyAccidentInputSchema), z.lazy(() => FacilityUpdateWithoutMonthlyAccidentInputSchema), z.lazy(() => FacilityUncheckedUpdateWithoutMonthlyAccidentInputSchema) ]).optional(),
 }).strict();
 
-export const NotebookItemCreateNestedManyWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateNestedManyWithoutCategoryInput> = z.object({
-  create: z.union([ z.lazy(() => NotebookItemCreateWithoutCategoryInputSchema), z.lazy(() => NotebookItemCreateWithoutCategoryInputSchema).array(), z.lazy(() => NotebookItemUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => NotebookItemCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => NotebookItemCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
-  createMany: z.lazy(() => NotebookItemCreateManyCategoryInputEnvelopeSchema).optional(),
-  connect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+export const CategoryCreateNestedOneWithoutChildrenInputSchema: z.ZodType<Prisma.CategoryCreateNestedOneWithoutChildrenInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutChildrenInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutChildrenInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutChildrenInputSchema).optional(),
+  connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
 }).strict();
 
-export const SubCategoryCreateNestedManyWithoutCategoryInputSchema: z.ZodType<Prisma.SubCategoryCreateNestedManyWithoutCategoryInput> = z.object({
-  create: z.union([ z.lazy(() => SubCategoryCreateWithoutCategoryInputSchema), z.lazy(() => SubCategoryCreateWithoutCategoryInputSchema).array(), z.lazy(() => SubCategoryUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => SubCategoryUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => SubCategoryCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => SubCategoryCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
-  createMany: z.lazy(() => SubCategoryCreateManyCategoryInputEnvelopeSchema).optional(),
-  connect: z.union([ z.lazy(() => SubCategoryWhereUniqueInputSchema), z.lazy(() => SubCategoryWhereUniqueInputSchema).array() ]).optional(),
+export const CategoryCreateNestedManyWithoutParentInputSchema: z.ZodType<Prisma.CategoryCreateNestedManyWithoutParentInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutParentInputSchema), z.lazy(() => CategoryCreateWithoutParentInputSchema).array(), z.lazy(() => CategoryUncheckedCreateWithoutParentInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutParentInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => CategoryCreateOrConnectWithoutParentInputSchema), z.lazy(() => CategoryCreateOrConnectWithoutParentInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => CategoryCreateManyParentInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => CategoryWhereUniqueInputSchema), z.lazy(() => CategoryWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const OhsBoardTopicCreateNestedManyWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicCreateNestedManyWithoutMainCategoryInput> = z.object({
+  create: z.union([ z.lazy(() => OhsBoardTopicCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateWithoutMainCategoryInputSchema).array(), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutMainCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => OhsBoardTopicCreateOrConnectWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateOrConnectWithoutMainCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => OhsBoardTopicCreateManyMainCategoryInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
 export const OhsBoardTopicCreateNestedManyWithoutCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicCreateNestedManyWithoutCategoryInput> = z.object({
@@ -48567,6 +49354,20 @@ export const OhsBoardTopicCreateNestedManyWithoutCategoryInputSchema: z.ZodType<
   connect: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
+export const OhsBoardTopicCreateNestedManyWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicCreateNestedManyWithoutSubCategoryInput> = z.object({
+  create: z.union([ z.lazy(() => OhsBoardTopicCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateWithoutSubCategoryInputSchema).array(), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutSubCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => OhsBoardTopicCreateOrConnectWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateOrConnectWithoutSubCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => OhsBoardTopicCreateManySubCategoryInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const OhsBoardDecisionCreateNestedManyWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionCreateNestedManyWithoutMainCategoryInput> = z.object({
+  create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateWithoutMainCategoryInputSchema).array(), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutMainCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutMainCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => OhsBoardDecisionCreateManyMainCategoryInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
 export const OhsBoardDecisionCreateNestedManyWithoutCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionCreateNestedManyWithoutCategoryInput> = z.object({
   create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateWithoutCategoryInputSchema).array(), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
@@ -48574,18 +49375,46 @@ export const OhsBoardDecisionCreateNestedManyWithoutCategoryInputSchema: z.ZodTy
   connect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
-export const NotebookItemUncheckedCreateNestedManyWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedCreateNestedManyWithoutCategoryInput> = z.object({
+export const OhsBoardDecisionCreateNestedManyWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionCreateNestedManyWithoutSubCategoryInput> = z.object({
+  create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateWithoutSubCategoryInputSchema).array(), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutSubCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutSubCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => OhsBoardDecisionCreateManySubCategoryInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const NotebookItemCreateNestedManyWithoutMainCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateNestedManyWithoutMainCategoryInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemCreateWithoutMainCategoryInputSchema).array(), z.lazy(() => NotebookItemUncheckedCreateWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutMainCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => NotebookItemCreateOrConnectWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemCreateOrConnectWithoutMainCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => NotebookItemCreateManyMainCategoryInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const NotebookItemCreateNestedManyWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateNestedManyWithoutCategoryInput> = z.object({
   create: z.union([ z.lazy(() => NotebookItemCreateWithoutCategoryInputSchema), z.lazy(() => NotebookItemCreateWithoutCategoryInputSchema).array(), z.lazy(() => NotebookItemUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => NotebookItemCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => NotebookItemCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
   createMany: z.lazy(() => NotebookItemCreateManyCategoryInputEnvelopeSchema).optional(),
   connect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
-export const SubCategoryUncheckedCreateNestedManyWithoutCategoryInputSchema: z.ZodType<Prisma.SubCategoryUncheckedCreateNestedManyWithoutCategoryInput> = z.object({
-  create: z.union([ z.lazy(() => SubCategoryCreateWithoutCategoryInputSchema), z.lazy(() => SubCategoryCreateWithoutCategoryInputSchema).array(), z.lazy(() => SubCategoryUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => SubCategoryUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => SubCategoryCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => SubCategoryCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
-  createMany: z.lazy(() => SubCategoryCreateManyCategoryInputEnvelopeSchema).optional(),
-  connect: z.union([ z.lazy(() => SubCategoryWhereUniqueInputSchema), z.lazy(() => SubCategoryWhereUniqueInputSchema).array() ]).optional(),
+export const NotebookItemCreateNestedManyWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateNestedManyWithoutSubCategoryInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemCreateWithoutSubCategoryInputSchema).array(), z.lazy(() => NotebookItemUncheckedCreateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutSubCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => NotebookItemCreateOrConnectWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemCreateOrConnectWithoutSubCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => NotebookItemCreateManySubCategoryInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const CategoryUncheckedCreateNestedManyWithoutParentInputSchema: z.ZodType<Prisma.CategoryUncheckedCreateNestedManyWithoutParentInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutParentInputSchema), z.lazy(() => CategoryCreateWithoutParentInputSchema).array(), z.lazy(() => CategoryUncheckedCreateWithoutParentInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutParentInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => CategoryCreateOrConnectWithoutParentInputSchema), z.lazy(() => CategoryCreateOrConnectWithoutParentInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => CategoryCreateManyParentInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => CategoryWhereUniqueInputSchema), z.lazy(() => CategoryWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const OhsBoardTopicUncheckedCreateNestedManyWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedCreateNestedManyWithoutMainCategoryInput> = z.object({
+  create: z.union([ z.lazy(() => OhsBoardTopicCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateWithoutMainCategoryInputSchema).array(), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutMainCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => OhsBoardTopicCreateOrConnectWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateOrConnectWithoutMainCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => OhsBoardTopicCreateManyMainCategoryInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
 export const OhsBoardTopicUncheckedCreateNestedManyWithoutCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedCreateNestedManyWithoutCategoryInput> = z.object({
@@ -48595,6 +49424,20 @@ export const OhsBoardTopicUncheckedCreateNestedManyWithoutCategoryInputSchema: z
   connect: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
+export const OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInput> = z.object({
+  create: z.union([ z.lazy(() => OhsBoardTopicCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateWithoutSubCategoryInputSchema).array(), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutSubCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => OhsBoardTopicCreateOrConnectWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateOrConnectWithoutSubCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => OhsBoardTopicCreateManySubCategoryInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const OhsBoardDecisionUncheckedCreateNestedManyWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUncheckedCreateNestedManyWithoutMainCategoryInput> = z.object({
+  create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateWithoutMainCategoryInputSchema).array(), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutMainCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutMainCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => OhsBoardDecisionCreateManyMainCategoryInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
 export const OhsBoardDecisionUncheckedCreateNestedManyWithoutCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUncheckedCreateNestedManyWithoutCategoryInput> = z.object({
   create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateWithoutCategoryInputSchema).array(), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
@@ -48602,32 +49445,70 @@ export const OhsBoardDecisionUncheckedCreateNestedManyWithoutCategoryInputSchema
   connect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
-export const NotebookItemUpdateManyWithoutCategoryNestedInputSchema: z.ZodType<Prisma.NotebookItemUpdateManyWithoutCategoryNestedInput> = z.object({
-  create: z.union([ z.lazy(() => NotebookItemCreateWithoutCategoryInputSchema), z.lazy(() => NotebookItemCreateWithoutCategoryInputSchema).array(), z.lazy(() => NotebookItemUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => NotebookItemCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => NotebookItemCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
-  upsert: z.union([ z.lazy(() => NotebookItemUpsertWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => NotebookItemUpsertWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
-  createMany: z.lazy(() => NotebookItemCreateManyCategoryInputEnvelopeSchema).optional(),
-  set: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
-  disconnect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
-  delete: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
-  connect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
-  update: z.union([ z.lazy(() => NotebookItemUpdateWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => NotebookItemUpdateWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
-  updateMany: z.union([ z.lazy(() => NotebookItemUpdateManyWithWhereWithoutCategoryInputSchema), z.lazy(() => NotebookItemUpdateManyWithWhereWithoutCategoryInputSchema).array() ]).optional(),
-  deleteMany: z.union([ z.lazy(() => NotebookItemScalarWhereInputSchema), z.lazy(() => NotebookItemScalarWhereInputSchema).array() ]).optional(),
+export const OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInput> = z.object({
+  create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateWithoutSubCategoryInputSchema).array(), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutSubCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutSubCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => OhsBoardDecisionCreateManySubCategoryInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
-export const SubCategoryUpdateManyWithoutCategoryNestedInputSchema: z.ZodType<Prisma.SubCategoryUpdateManyWithoutCategoryNestedInput> = z.object({
-  create: z.union([ z.lazy(() => SubCategoryCreateWithoutCategoryInputSchema), z.lazy(() => SubCategoryCreateWithoutCategoryInputSchema).array(), z.lazy(() => SubCategoryUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => SubCategoryUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => SubCategoryCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => SubCategoryCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
-  upsert: z.union([ z.lazy(() => SubCategoryUpsertWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => SubCategoryUpsertWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
-  createMany: z.lazy(() => SubCategoryCreateManyCategoryInputEnvelopeSchema).optional(),
-  set: z.union([ z.lazy(() => SubCategoryWhereUniqueInputSchema), z.lazy(() => SubCategoryWhereUniqueInputSchema).array() ]).optional(),
-  disconnect: z.union([ z.lazy(() => SubCategoryWhereUniqueInputSchema), z.lazy(() => SubCategoryWhereUniqueInputSchema).array() ]).optional(),
-  delete: z.union([ z.lazy(() => SubCategoryWhereUniqueInputSchema), z.lazy(() => SubCategoryWhereUniqueInputSchema).array() ]).optional(),
-  connect: z.union([ z.lazy(() => SubCategoryWhereUniqueInputSchema), z.lazy(() => SubCategoryWhereUniqueInputSchema).array() ]).optional(),
-  update: z.union([ z.lazy(() => SubCategoryUpdateWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => SubCategoryUpdateWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
-  updateMany: z.union([ z.lazy(() => SubCategoryUpdateManyWithWhereWithoutCategoryInputSchema), z.lazy(() => SubCategoryUpdateManyWithWhereWithoutCategoryInputSchema).array() ]).optional(),
-  deleteMany: z.union([ z.lazy(() => SubCategoryScalarWhereInputSchema), z.lazy(() => SubCategoryScalarWhereInputSchema).array() ]).optional(),
+export const NotebookItemUncheckedCreateNestedManyWithoutMainCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedCreateNestedManyWithoutMainCategoryInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemCreateWithoutMainCategoryInputSchema).array(), z.lazy(() => NotebookItemUncheckedCreateWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutMainCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => NotebookItemCreateOrConnectWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemCreateOrConnectWithoutMainCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => NotebookItemCreateManyMainCategoryInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const NotebookItemUncheckedCreateNestedManyWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedCreateNestedManyWithoutCategoryInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutCategoryInputSchema), z.lazy(() => NotebookItemCreateWithoutCategoryInputSchema).array(), z.lazy(() => NotebookItemUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => NotebookItemCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => NotebookItemCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => NotebookItemCreateManyCategoryInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemCreateWithoutSubCategoryInputSchema).array(), z.lazy(() => NotebookItemUncheckedCreateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutSubCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => NotebookItemCreateOrConnectWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemCreateOrConnectWithoutSubCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => NotebookItemCreateManySubCategoryInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const CategoryUpdateOneWithoutChildrenNestedInputSchema: z.ZodType<Prisma.CategoryUpdateOneWithoutChildrenNestedInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutChildrenInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutChildrenInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutChildrenInputSchema).optional(),
+  upsert: z.lazy(() => CategoryUpsertWithoutChildrenInputSchema).optional(),
+  disconnect: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
+  delete: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
+  connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => CategoryUpdateToOneWithWhereWithoutChildrenInputSchema), z.lazy(() => CategoryUpdateWithoutChildrenInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutChildrenInputSchema) ]).optional(),
+}).strict();
+
+export const CategoryUpdateManyWithoutParentNestedInputSchema: z.ZodType<Prisma.CategoryUpdateManyWithoutParentNestedInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutParentInputSchema), z.lazy(() => CategoryCreateWithoutParentInputSchema).array(), z.lazy(() => CategoryUncheckedCreateWithoutParentInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutParentInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => CategoryCreateOrConnectWithoutParentInputSchema), z.lazy(() => CategoryCreateOrConnectWithoutParentInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => CategoryUpsertWithWhereUniqueWithoutParentInputSchema), z.lazy(() => CategoryUpsertWithWhereUniqueWithoutParentInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => CategoryCreateManyParentInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => CategoryWhereUniqueInputSchema), z.lazy(() => CategoryWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => CategoryWhereUniqueInputSchema), z.lazy(() => CategoryWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => CategoryWhereUniqueInputSchema), z.lazy(() => CategoryWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => CategoryWhereUniqueInputSchema), z.lazy(() => CategoryWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => CategoryUpdateWithWhereUniqueWithoutParentInputSchema), z.lazy(() => CategoryUpdateWithWhereUniqueWithoutParentInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => CategoryUpdateManyWithWhereWithoutParentInputSchema), z.lazy(() => CategoryUpdateManyWithWhereWithoutParentInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => CategoryScalarWhereInputSchema), z.lazy(() => CategoryScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const OhsBoardTopicUpdateManyWithoutMainCategoryNestedInputSchema: z.ZodType<Prisma.OhsBoardTopicUpdateManyWithoutMainCategoryNestedInput> = z.object({
+  create: z.union([ z.lazy(() => OhsBoardTopicCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateWithoutMainCategoryInputSchema).array(), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutMainCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => OhsBoardTopicCreateOrConnectWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateOrConnectWithoutMainCategoryInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => OhsBoardTopicUpsertWithWhereUniqueWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicUpsertWithWhereUniqueWithoutMainCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => OhsBoardTopicCreateManyMainCategoryInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => OhsBoardTopicUpdateWithWhereUniqueWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicUpdateWithWhereUniqueWithoutMainCategoryInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => OhsBoardTopicUpdateManyWithWhereWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicUpdateManyWithWhereWithoutMainCategoryInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => OhsBoardTopicScalarWhereInputSchema), z.lazy(() => OhsBoardTopicScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
 export const OhsBoardTopicUpdateManyWithoutCategoryNestedInputSchema: z.ZodType<Prisma.OhsBoardTopicUpdateManyWithoutCategoryNestedInput> = z.object({
@@ -48644,146 +49525,6 @@ export const OhsBoardTopicUpdateManyWithoutCategoryNestedInputSchema: z.ZodType<
   deleteMany: z.union([ z.lazy(() => OhsBoardTopicScalarWhereInputSchema), z.lazy(() => OhsBoardTopicScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
-export const OhsBoardDecisionUpdateManyWithoutCategoryNestedInputSchema: z.ZodType<Prisma.OhsBoardDecisionUpdateManyWithoutCategoryNestedInput> = z.object({
-  create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateWithoutCategoryInputSchema).array(), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
-  upsert: z.union([ z.lazy(() => OhsBoardDecisionUpsertWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpsertWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
-  createMany: z.lazy(() => OhsBoardDecisionCreateManyCategoryInputEnvelopeSchema).optional(),
-  set: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
-  disconnect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
-  delete: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
-  connect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
-  update: z.union([ z.lazy(() => OhsBoardDecisionUpdateWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpdateWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
-  updateMany: z.union([ z.lazy(() => OhsBoardDecisionUpdateManyWithWhereWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpdateManyWithWhereWithoutCategoryInputSchema).array() ]).optional(),
-  deleteMany: z.union([ z.lazy(() => OhsBoardDecisionScalarWhereInputSchema), z.lazy(() => OhsBoardDecisionScalarWhereInputSchema).array() ]).optional(),
-}).strict();
-
-export const NotebookItemUncheckedUpdateManyWithoutCategoryNestedInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateManyWithoutCategoryNestedInput> = z.object({
-  create: z.union([ z.lazy(() => NotebookItemCreateWithoutCategoryInputSchema), z.lazy(() => NotebookItemCreateWithoutCategoryInputSchema).array(), z.lazy(() => NotebookItemUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => NotebookItemCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => NotebookItemCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
-  upsert: z.union([ z.lazy(() => NotebookItemUpsertWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => NotebookItemUpsertWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
-  createMany: z.lazy(() => NotebookItemCreateManyCategoryInputEnvelopeSchema).optional(),
-  set: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
-  disconnect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
-  delete: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
-  connect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
-  update: z.union([ z.lazy(() => NotebookItemUpdateWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => NotebookItemUpdateWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
-  updateMany: z.union([ z.lazy(() => NotebookItemUpdateManyWithWhereWithoutCategoryInputSchema), z.lazy(() => NotebookItemUpdateManyWithWhereWithoutCategoryInputSchema).array() ]).optional(),
-  deleteMany: z.union([ z.lazy(() => NotebookItemScalarWhereInputSchema), z.lazy(() => NotebookItemScalarWhereInputSchema).array() ]).optional(),
-}).strict();
-
-export const SubCategoryUncheckedUpdateManyWithoutCategoryNestedInputSchema: z.ZodType<Prisma.SubCategoryUncheckedUpdateManyWithoutCategoryNestedInput> = z.object({
-  create: z.union([ z.lazy(() => SubCategoryCreateWithoutCategoryInputSchema), z.lazy(() => SubCategoryCreateWithoutCategoryInputSchema).array(), z.lazy(() => SubCategoryUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => SubCategoryUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => SubCategoryCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => SubCategoryCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
-  upsert: z.union([ z.lazy(() => SubCategoryUpsertWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => SubCategoryUpsertWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
-  createMany: z.lazy(() => SubCategoryCreateManyCategoryInputEnvelopeSchema).optional(),
-  set: z.union([ z.lazy(() => SubCategoryWhereUniqueInputSchema), z.lazy(() => SubCategoryWhereUniqueInputSchema).array() ]).optional(),
-  disconnect: z.union([ z.lazy(() => SubCategoryWhereUniqueInputSchema), z.lazy(() => SubCategoryWhereUniqueInputSchema).array() ]).optional(),
-  delete: z.union([ z.lazy(() => SubCategoryWhereUniqueInputSchema), z.lazy(() => SubCategoryWhereUniqueInputSchema).array() ]).optional(),
-  connect: z.union([ z.lazy(() => SubCategoryWhereUniqueInputSchema), z.lazy(() => SubCategoryWhereUniqueInputSchema).array() ]).optional(),
-  update: z.union([ z.lazy(() => SubCategoryUpdateWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => SubCategoryUpdateWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
-  updateMany: z.union([ z.lazy(() => SubCategoryUpdateManyWithWhereWithoutCategoryInputSchema), z.lazy(() => SubCategoryUpdateManyWithWhereWithoutCategoryInputSchema).array() ]).optional(),
-  deleteMany: z.union([ z.lazy(() => SubCategoryScalarWhereInputSchema), z.lazy(() => SubCategoryScalarWhereInputSchema).array() ]).optional(),
-}).strict();
-
-export const OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInput> = z.object({
-  create: z.union([ z.lazy(() => OhsBoardTopicCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateWithoutCategoryInputSchema).array(), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => OhsBoardTopicCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
-  upsert: z.union([ z.lazy(() => OhsBoardTopicUpsertWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => OhsBoardTopicUpsertWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
-  createMany: z.lazy(() => OhsBoardTopicCreateManyCategoryInputEnvelopeSchema).optional(),
-  set: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
-  disconnect: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
-  delete: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
-  connect: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
-  update: z.union([ z.lazy(() => OhsBoardTopicUpdateWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => OhsBoardTopicUpdateWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
-  updateMany: z.union([ z.lazy(() => OhsBoardTopicUpdateManyWithWhereWithoutCategoryInputSchema), z.lazy(() => OhsBoardTopicUpdateManyWithWhereWithoutCategoryInputSchema).array() ]).optional(),
-  deleteMany: z.union([ z.lazy(() => OhsBoardTopicScalarWhereInputSchema), z.lazy(() => OhsBoardTopicScalarWhereInputSchema).array() ]).optional(),
-}).strict();
-
-export const OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInputSchema: z.ZodType<Prisma.OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInput> = z.object({
-  create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateWithoutCategoryInputSchema).array(), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
-  upsert: z.union([ z.lazy(() => OhsBoardDecisionUpsertWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpsertWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
-  createMany: z.lazy(() => OhsBoardDecisionCreateManyCategoryInputEnvelopeSchema).optional(),
-  set: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
-  disconnect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
-  delete: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
-  connect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
-  update: z.union([ z.lazy(() => OhsBoardDecisionUpdateWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpdateWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
-  updateMany: z.union([ z.lazy(() => OhsBoardDecisionUpdateManyWithWhereWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpdateManyWithWhereWithoutCategoryInputSchema).array() ]).optional(),
-  deleteMany: z.union([ z.lazy(() => OhsBoardDecisionScalarWhereInputSchema), z.lazy(() => OhsBoardDecisionScalarWhereInputSchema).array() ]).optional(),
-}).strict();
-
-export const NotebookItemCreateNestedManyWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateNestedManyWithoutSubCategoryInput> = z.object({
-  create: z.union([ z.lazy(() => NotebookItemCreateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemCreateWithoutSubCategoryInputSchema).array(), z.lazy(() => NotebookItemUncheckedCreateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutSubCategoryInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => NotebookItemCreateOrConnectWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemCreateOrConnectWithoutSubCategoryInputSchema).array() ]).optional(),
-  createMany: z.lazy(() => NotebookItemCreateManySubCategoryInputEnvelopeSchema).optional(),
-  connect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
-}).strict();
-
-export const CategoryCreateNestedOneWithoutSubCategoriesInputSchema: z.ZodType<Prisma.CategoryCreateNestedOneWithoutSubCategoriesInput> = z.object({
-  create: z.union([ z.lazy(() => CategoryCreateWithoutSubCategoriesInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutSubCategoriesInputSchema) ]).optional(),
-  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutSubCategoriesInputSchema).optional(),
-  connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
-}).strict();
-
-export const OhsBoardTopicCreateNestedManyWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicCreateNestedManyWithoutSubCategoryInput> = z.object({
-  create: z.union([ z.lazy(() => OhsBoardTopicCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateWithoutSubCategoryInputSchema).array(), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutSubCategoryInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => OhsBoardTopicCreateOrConnectWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateOrConnectWithoutSubCategoryInputSchema).array() ]).optional(),
-  createMany: z.lazy(() => OhsBoardTopicCreateManySubCategoryInputEnvelopeSchema).optional(),
-  connect: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
-}).strict();
-
-export const OhsBoardDecisionCreateNestedManyWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionCreateNestedManyWithoutSubCategoryInput> = z.object({
-  create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateWithoutSubCategoryInputSchema).array(), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutSubCategoryInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutSubCategoryInputSchema).array() ]).optional(),
-  createMany: z.lazy(() => OhsBoardDecisionCreateManySubCategoryInputEnvelopeSchema).optional(),
-  connect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
-}).strict();
-
-export const NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInput> = z.object({
-  create: z.union([ z.lazy(() => NotebookItemCreateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemCreateWithoutSubCategoryInputSchema).array(), z.lazy(() => NotebookItemUncheckedCreateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutSubCategoryInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => NotebookItemCreateOrConnectWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemCreateOrConnectWithoutSubCategoryInputSchema).array() ]).optional(),
-  createMany: z.lazy(() => NotebookItemCreateManySubCategoryInputEnvelopeSchema).optional(),
-  connect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
-}).strict();
-
-export const OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInput> = z.object({
-  create: z.union([ z.lazy(() => OhsBoardTopicCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateWithoutSubCategoryInputSchema).array(), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutSubCategoryInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => OhsBoardTopicCreateOrConnectWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateOrConnectWithoutSubCategoryInputSchema).array() ]).optional(),
-  createMany: z.lazy(() => OhsBoardTopicCreateManySubCategoryInputEnvelopeSchema).optional(),
-  connect: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
-}).strict();
-
-export const OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInput> = z.object({
-  create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateWithoutSubCategoryInputSchema).array(), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutSubCategoryInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutSubCategoryInputSchema).array() ]).optional(),
-  createMany: z.lazy(() => OhsBoardDecisionCreateManySubCategoryInputEnvelopeSchema).optional(),
-  connect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
-}).strict();
-
-export const NotebookItemUpdateManyWithoutSubCategoryNestedInputSchema: z.ZodType<Prisma.NotebookItemUpdateManyWithoutSubCategoryNestedInput> = z.object({
-  create: z.union([ z.lazy(() => NotebookItemCreateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemCreateWithoutSubCategoryInputSchema).array(), z.lazy(() => NotebookItemUncheckedCreateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutSubCategoryInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => NotebookItemCreateOrConnectWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemCreateOrConnectWithoutSubCategoryInputSchema).array() ]).optional(),
-  upsert: z.union([ z.lazy(() => NotebookItemUpsertWithWhereUniqueWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUpsertWithWhereUniqueWithoutSubCategoryInputSchema).array() ]).optional(),
-  createMany: z.lazy(() => NotebookItemCreateManySubCategoryInputEnvelopeSchema).optional(),
-  set: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
-  disconnect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
-  delete: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
-  connect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
-  update: z.union([ z.lazy(() => NotebookItemUpdateWithWhereUniqueWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUpdateWithWhereUniqueWithoutSubCategoryInputSchema).array() ]).optional(),
-  updateMany: z.union([ z.lazy(() => NotebookItemUpdateManyWithWhereWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUpdateManyWithWhereWithoutSubCategoryInputSchema).array() ]).optional(),
-  deleteMany: z.union([ z.lazy(() => NotebookItemScalarWhereInputSchema), z.lazy(() => NotebookItemScalarWhereInputSchema).array() ]).optional(),
-}).strict();
-
-export const CategoryUpdateOneRequiredWithoutSubCategoriesNestedInputSchema: z.ZodType<Prisma.CategoryUpdateOneRequiredWithoutSubCategoriesNestedInput> = z.object({
-  create: z.union([ z.lazy(() => CategoryCreateWithoutSubCategoriesInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutSubCategoriesInputSchema) ]).optional(),
-  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutSubCategoriesInputSchema).optional(),
-  upsert: z.lazy(() => CategoryUpsertWithoutSubCategoriesInputSchema).optional(),
-  connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
-  update: z.union([ z.lazy(() => CategoryUpdateToOneWithWhereWithoutSubCategoriesInputSchema), z.lazy(() => CategoryUpdateWithoutSubCategoriesInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutSubCategoriesInputSchema) ]).optional(),
-}).strict();
-
 export const OhsBoardTopicUpdateManyWithoutSubCategoryNestedInputSchema: z.ZodType<Prisma.OhsBoardTopicUpdateManyWithoutSubCategoryNestedInput> = z.object({
   create: z.union([ z.lazy(() => OhsBoardTopicCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateWithoutSubCategoryInputSchema).array(), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutSubCategoryInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => OhsBoardTopicCreateOrConnectWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateOrConnectWithoutSubCategoryInputSchema).array() ]).optional(),
@@ -48796,6 +49537,34 @@ export const OhsBoardTopicUpdateManyWithoutSubCategoryNestedInputSchema: z.ZodTy
   update: z.union([ z.lazy(() => OhsBoardTopicUpdateWithWhereUniqueWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicUpdateWithWhereUniqueWithoutSubCategoryInputSchema).array() ]).optional(),
   updateMany: z.union([ z.lazy(() => OhsBoardTopicUpdateManyWithWhereWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicUpdateManyWithWhereWithoutSubCategoryInputSchema).array() ]).optional(),
   deleteMany: z.union([ z.lazy(() => OhsBoardTopicScalarWhereInputSchema), z.lazy(() => OhsBoardTopicScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const OhsBoardDecisionUpdateManyWithoutMainCategoryNestedInputSchema: z.ZodType<Prisma.OhsBoardDecisionUpdateManyWithoutMainCategoryNestedInput> = z.object({
+  create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateWithoutMainCategoryInputSchema).array(), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutMainCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutMainCategoryInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => OhsBoardDecisionUpsertWithWhereUniqueWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpsertWithWhereUniqueWithoutMainCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => OhsBoardDecisionCreateManyMainCategoryInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => OhsBoardDecisionUpdateWithWhereUniqueWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpdateWithWhereUniqueWithoutMainCategoryInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => OhsBoardDecisionUpdateManyWithWhereWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpdateManyWithWhereWithoutMainCategoryInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => OhsBoardDecisionScalarWhereInputSchema), z.lazy(() => OhsBoardDecisionScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const OhsBoardDecisionUpdateManyWithoutCategoryNestedInputSchema: z.ZodType<Prisma.OhsBoardDecisionUpdateManyWithoutCategoryNestedInput> = z.object({
+  create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateWithoutCategoryInputSchema).array(), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => OhsBoardDecisionUpsertWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpsertWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => OhsBoardDecisionCreateManyCategoryInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => OhsBoardDecisionUpdateWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpdateWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => OhsBoardDecisionUpdateManyWithWhereWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpdateManyWithWhereWithoutCategoryInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => OhsBoardDecisionScalarWhereInputSchema), z.lazy(() => OhsBoardDecisionScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
 export const OhsBoardDecisionUpdateManyWithoutSubCategoryNestedInputSchema: z.ZodType<Prisma.OhsBoardDecisionUpdateManyWithoutSubCategoryNestedInput> = z.object({
@@ -48812,7 +49581,35 @@ export const OhsBoardDecisionUpdateManyWithoutSubCategoryNestedInputSchema: z.Zo
   deleteMany: z.union([ z.lazy(() => OhsBoardDecisionScalarWhereInputSchema), z.lazy(() => OhsBoardDecisionScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
-export const NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInput> = z.object({
+export const NotebookItemUpdateManyWithoutMainCategoryNestedInputSchema: z.ZodType<Prisma.NotebookItemUpdateManyWithoutMainCategoryNestedInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemCreateWithoutMainCategoryInputSchema).array(), z.lazy(() => NotebookItemUncheckedCreateWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutMainCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => NotebookItemCreateOrConnectWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemCreateOrConnectWithoutMainCategoryInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => NotebookItemUpsertWithWhereUniqueWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemUpsertWithWhereUniqueWithoutMainCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => NotebookItemCreateManyMainCategoryInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => NotebookItemUpdateWithWhereUniqueWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemUpdateWithWhereUniqueWithoutMainCategoryInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => NotebookItemUpdateManyWithWhereWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemUpdateManyWithWhereWithoutMainCategoryInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => NotebookItemScalarWhereInputSchema), z.lazy(() => NotebookItemScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const NotebookItemUpdateManyWithoutCategoryNestedInputSchema: z.ZodType<Prisma.NotebookItemUpdateManyWithoutCategoryNestedInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutCategoryInputSchema), z.lazy(() => NotebookItemCreateWithoutCategoryInputSchema).array(), z.lazy(() => NotebookItemUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => NotebookItemCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => NotebookItemCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => NotebookItemUpsertWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => NotebookItemUpsertWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => NotebookItemCreateManyCategoryInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => NotebookItemUpdateWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => NotebookItemUpdateWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => NotebookItemUpdateManyWithWhereWithoutCategoryInputSchema), z.lazy(() => NotebookItemUpdateManyWithWhereWithoutCategoryInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => NotebookItemScalarWhereInputSchema), z.lazy(() => NotebookItemScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const NotebookItemUpdateManyWithoutSubCategoryNestedInputSchema: z.ZodType<Prisma.NotebookItemUpdateManyWithoutSubCategoryNestedInput> = z.object({
   create: z.union([ z.lazy(() => NotebookItemCreateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemCreateWithoutSubCategoryInputSchema).array(), z.lazy(() => NotebookItemUncheckedCreateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutSubCategoryInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => NotebookItemCreateOrConnectWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemCreateOrConnectWithoutSubCategoryInputSchema).array() ]).optional(),
   upsert: z.union([ z.lazy(() => NotebookItemUpsertWithWhereUniqueWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUpsertWithWhereUniqueWithoutSubCategoryInputSchema).array() ]).optional(),
@@ -48824,6 +49621,48 @@ export const NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInputSchema:
   update: z.union([ z.lazy(() => NotebookItemUpdateWithWhereUniqueWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUpdateWithWhereUniqueWithoutSubCategoryInputSchema).array() ]).optional(),
   updateMany: z.union([ z.lazy(() => NotebookItemUpdateManyWithWhereWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUpdateManyWithWhereWithoutSubCategoryInputSchema).array() ]).optional(),
   deleteMany: z.union([ z.lazy(() => NotebookItemScalarWhereInputSchema), z.lazy(() => NotebookItemScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const CategoryUncheckedUpdateManyWithoutParentNestedInputSchema: z.ZodType<Prisma.CategoryUncheckedUpdateManyWithoutParentNestedInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutParentInputSchema), z.lazy(() => CategoryCreateWithoutParentInputSchema).array(), z.lazy(() => CategoryUncheckedCreateWithoutParentInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutParentInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => CategoryCreateOrConnectWithoutParentInputSchema), z.lazy(() => CategoryCreateOrConnectWithoutParentInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => CategoryUpsertWithWhereUniqueWithoutParentInputSchema), z.lazy(() => CategoryUpsertWithWhereUniqueWithoutParentInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => CategoryCreateManyParentInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => CategoryWhereUniqueInputSchema), z.lazy(() => CategoryWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => CategoryWhereUniqueInputSchema), z.lazy(() => CategoryWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => CategoryWhereUniqueInputSchema), z.lazy(() => CategoryWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => CategoryWhereUniqueInputSchema), z.lazy(() => CategoryWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => CategoryUpdateWithWhereUniqueWithoutParentInputSchema), z.lazy(() => CategoryUpdateWithWhereUniqueWithoutParentInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => CategoryUpdateManyWithWhereWithoutParentInputSchema), z.lazy(() => CategoryUpdateManyWithWhereWithoutParentInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => CategoryScalarWhereInputSchema), z.lazy(() => CategoryScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const OhsBoardTopicUncheckedUpdateManyWithoutMainCategoryNestedInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedUpdateManyWithoutMainCategoryNestedInput> = z.object({
+  create: z.union([ z.lazy(() => OhsBoardTopicCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateWithoutMainCategoryInputSchema).array(), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutMainCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => OhsBoardTopicCreateOrConnectWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateOrConnectWithoutMainCategoryInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => OhsBoardTopicUpsertWithWhereUniqueWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicUpsertWithWhereUniqueWithoutMainCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => OhsBoardTopicCreateManyMainCategoryInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => OhsBoardTopicUpdateWithWhereUniqueWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicUpdateWithWhereUniqueWithoutMainCategoryInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => OhsBoardTopicUpdateManyWithWhereWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicUpdateManyWithWhereWithoutMainCategoryInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => OhsBoardTopicScalarWhereInputSchema), z.lazy(() => OhsBoardTopicScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInput> = z.object({
+  create: z.union([ z.lazy(() => OhsBoardTopicCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateWithoutCategoryInputSchema).array(), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => OhsBoardTopicCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => OhsBoardTopicUpsertWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => OhsBoardTopicUpsertWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => OhsBoardTopicCreateManyCategoryInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => OhsBoardTopicWhereUniqueInputSchema), z.lazy(() => OhsBoardTopicWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => OhsBoardTopicUpdateWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => OhsBoardTopicUpdateWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => OhsBoardTopicUpdateManyWithWhereWithoutCategoryInputSchema), z.lazy(() => OhsBoardTopicUpdateManyWithWhereWithoutCategoryInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => OhsBoardTopicScalarWhereInputSchema), z.lazy(() => OhsBoardTopicScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
 export const OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryNestedInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryNestedInput> = z.object({
@@ -48840,6 +49679,34 @@ export const OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryNestedInputSchema
   deleteMany: z.union([ z.lazy(() => OhsBoardTopicScalarWhereInputSchema), z.lazy(() => OhsBoardTopicScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
+export const OhsBoardDecisionUncheckedUpdateManyWithoutMainCategoryNestedInputSchema: z.ZodType<Prisma.OhsBoardDecisionUncheckedUpdateManyWithoutMainCategoryNestedInput> = z.object({
+  create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateWithoutMainCategoryInputSchema).array(), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutMainCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutMainCategoryInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => OhsBoardDecisionUpsertWithWhereUniqueWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpsertWithWhereUniqueWithoutMainCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => OhsBoardDecisionCreateManyMainCategoryInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => OhsBoardDecisionUpdateWithWhereUniqueWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpdateWithWhereUniqueWithoutMainCategoryInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => OhsBoardDecisionUpdateManyWithWhereWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpdateManyWithWhereWithoutMainCategoryInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => OhsBoardDecisionScalarWhereInputSchema), z.lazy(() => OhsBoardDecisionScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInputSchema: z.ZodType<Prisma.OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInput> = z.object({
+  create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateWithoutCategoryInputSchema).array(), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => OhsBoardDecisionUpsertWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpsertWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => OhsBoardDecisionCreateManyCategoryInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema), z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => OhsBoardDecisionUpdateWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpdateWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => OhsBoardDecisionUpdateManyWithWhereWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpdateManyWithWhereWithoutCategoryInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => OhsBoardDecisionScalarWhereInputSchema), z.lazy(() => OhsBoardDecisionScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
 export const OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryNestedInputSchema: z.ZodType<Prisma.OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryNestedInput> = z.object({
   create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateWithoutSubCategoryInputSchema).array(), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutSubCategoryInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateOrConnectWithoutSubCategoryInputSchema).array() ]).optional(),
@@ -48852,6 +49719,48 @@ export const OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryNestedInputSch
   update: z.union([ z.lazy(() => OhsBoardDecisionUpdateWithWhereUniqueWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpdateWithWhereUniqueWithoutSubCategoryInputSchema).array() ]).optional(),
   updateMany: z.union([ z.lazy(() => OhsBoardDecisionUpdateManyWithWhereWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardDecisionUpdateManyWithWhereWithoutSubCategoryInputSchema).array() ]).optional(),
   deleteMany: z.union([ z.lazy(() => OhsBoardDecisionScalarWhereInputSchema), z.lazy(() => OhsBoardDecisionScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const NotebookItemUncheckedUpdateManyWithoutMainCategoryNestedInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateManyWithoutMainCategoryNestedInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemCreateWithoutMainCategoryInputSchema).array(), z.lazy(() => NotebookItemUncheckedCreateWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutMainCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => NotebookItemCreateOrConnectWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemCreateOrConnectWithoutMainCategoryInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => NotebookItemUpsertWithWhereUniqueWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemUpsertWithWhereUniqueWithoutMainCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => NotebookItemCreateManyMainCategoryInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => NotebookItemUpdateWithWhereUniqueWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemUpdateWithWhereUniqueWithoutMainCategoryInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => NotebookItemUpdateManyWithWhereWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemUpdateManyWithWhereWithoutMainCategoryInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => NotebookItemScalarWhereInputSchema), z.lazy(() => NotebookItemScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const NotebookItemUncheckedUpdateManyWithoutCategoryNestedInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateManyWithoutCategoryNestedInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutCategoryInputSchema), z.lazy(() => NotebookItemCreateWithoutCategoryInputSchema).array(), z.lazy(() => NotebookItemUncheckedCreateWithoutCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => NotebookItemCreateOrConnectWithoutCategoryInputSchema), z.lazy(() => NotebookItemCreateOrConnectWithoutCategoryInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => NotebookItemUpsertWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => NotebookItemUpsertWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => NotebookItemCreateManyCategoryInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => NotebookItemUpdateWithWhereUniqueWithoutCategoryInputSchema), z.lazy(() => NotebookItemUpdateWithWhereUniqueWithoutCategoryInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => NotebookItemUpdateManyWithWhereWithoutCategoryInputSchema), z.lazy(() => NotebookItemUpdateManyWithWhereWithoutCategoryInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => NotebookItemScalarWhereInputSchema), z.lazy(() => NotebookItemScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemCreateWithoutSubCategoryInputSchema).array(), z.lazy(() => NotebookItemUncheckedCreateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutSubCategoryInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => NotebookItemCreateOrConnectWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemCreateOrConnectWithoutSubCategoryInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => NotebookItemUpsertWithWhereUniqueWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUpsertWithWhereUniqueWithoutSubCategoryInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => NotebookItemCreateManySubCategoryInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => NotebookItemWhereUniqueInputSchema), z.lazy(() => NotebookItemWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => NotebookItemUpdateWithWhereUniqueWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUpdateWithWhereUniqueWithoutSubCategoryInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => NotebookItemUpdateManyWithWhereWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUpdateManyWithWhereWithoutSubCategoryInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => NotebookItemScalarWhereInputSchema), z.lazy(() => NotebookItemScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
 export const ExtraordinaryIncidentCreateNestedManyWithoutDepartmentInputSchema: z.ZodType<Prisma.ExtraordinaryIncidentCreateNestedManyWithoutDepartmentInput> = z.object({
@@ -48994,9 +49903,21 @@ export const NotebookItemUncheckedUpdateManyWithoutPageNestedInputSchema: z.ZodT
   deleteMany: z.union([ z.lazy(() => NotebookItemScalarWhereInputSchema), z.lazy(() => NotebookItemScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
+export const CategoryCreateNestedOneWithoutMainNotebookItemsInputSchema: z.ZodType<Prisma.CategoryCreateNestedOneWithoutMainNotebookItemsInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutMainNotebookItemsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutMainNotebookItemsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutMainNotebookItemsInputSchema).optional(),
+  connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
+}).strict();
+
 export const CategoryCreateNestedOneWithoutNotebookItemsInputSchema: z.ZodType<Prisma.CategoryCreateNestedOneWithoutNotebookItemsInput> = z.object({
   create: z.union([ z.lazy(() => CategoryCreateWithoutNotebookItemsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutNotebookItemsInputSchema) ]).optional(),
   connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutNotebookItemsInputSchema).optional(),
+  connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const CategoryCreateNestedOneWithoutSubNotebookItemsInputSchema: z.ZodType<Prisma.CategoryCreateNestedOneWithoutSubNotebookItemsInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutSubNotebookItemsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutSubNotebookItemsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutSubNotebookItemsInputSchema).optional(),
   connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
 }).strict();
 
@@ -49012,24 +49933,70 @@ export const NotebookPageCreateNestedOneWithoutItemsInputSchema: z.ZodType<Prism
   connect: z.lazy(() => NotebookPageWhereUniqueInputSchema).optional(),
 }).strict();
 
-export const SubCategoryCreateNestedOneWithoutNotebookItemsInputSchema: z.ZodType<Prisma.SubCategoryCreateNestedOneWithoutNotebookItemsInput> = z.object({
-  create: z.union([ z.lazy(() => SubCategoryCreateWithoutNotebookItemsInputSchema), z.lazy(() => SubCategoryUncheckedCreateWithoutNotebookItemsInputSchema) ]).optional(),
-  connectOrCreate: z.lazy(() => SubCategoryCreateOrConnectWithoutNotebookItemsInputSchema).optional(),
-  connect: z.lazy(() => SubCategoryWhereUniqueInputSchema).optional(),
+export const NotebookItemActionCreateNestedManyWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemActionCreateNestedManyWithoutNotebookItemInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemActionCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionCreateWithoutNotebookItemInputSchema).array(), z.lazy(() => NotebookItemActionUncheckedCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionUncheckedCreateWithoutNotebookItemInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => NotebookItemActionCreateOrConnectWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionCreateOrConnectWithoutNotebookItemInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => NotebookItemActionCreateManyNotebookItemInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => NotebookItemActionWhereUniqueInputSchema), z.lazy(() => NotebookItemActionWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
-export const CategoryUpdateOneRequiredWithoutNotebookItemsNestedInputSchema: z.ZodType<Prisma.CategoryUpdateOneRequiredWithoutNotebookItemsNestedInput> = z.object({
+export const NotebookItemCommentCreateNestedManyWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemCommentCreateNestedManyWithoutNotebookItemInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemCommentCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentCreateWithoutNotebookItemInputSchema).array(), z.lazy(() => NotebookItemCommentUncheckedCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentUncheckedCreateWithoutNotebookItemInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => NotebookItemCommentCreateOrConnectWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentCreateOrConnectWithoutNotebookItemInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => NotebookItemCommentCreateManyNotebookItemInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => NotebookItemCommentWhereUniqueInputSchema), z.lazy(() => NotebookItemCommentWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const NotebookItemActionUncheckedCreateNestedManyWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemActionUncheckedCreateNestedManyWithoutNotebookItemInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemActionCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionCreateWithoutNotebookItemInputSchema).array(), z.lazy(() => NotebookItemActionUncheckedCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionUncheckedCreateWithoutNotebookItemInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => NotebookItemActionCreateOrConnectWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionCreateOrConnectWithoutNotebookItemInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => NotebookItemActionCreateManyNotebookItemInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => NotebookItemActionWhereUniqueInputSchema), z.lazy(() => NotebookItemActionWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const NotebookItemCommentUncheckedCreateNestedManyWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemCommentUncheckedCreateNestedManyWithoutNotebookItemInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemCommentCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentCreateWithoutNotebookItemInputSchema).array(), z.lazy(() => NotebookItemCommentUncheckedCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentUncheckedCreateWithoutNotebookItemInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => NotebookItemCommentCreateOrConnectWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentCreateOrConnectWithoutNotebookItemInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => NotebookItemCommentCreateManyNotebookItemInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => NotebookItemCommentWhereUniqueInputSchema), z.lazy(() => NotebookItemCommentWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const CategoryUpdateOneWithoutMainNotebookItemsNestedInputSchema: z.ZodType<Prisma.CategoryUpdateOneWithoutMainNotebookItemsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutMainNotebookItemsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutMainNotebookItemsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutMainNotebookItemsInputSchema).optional(),
+  upsert: z.lazy(() => CategoryUpsertWithoutMainNotebookItemsInputSchema).optional(),
+  disconnect: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
+  delete: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
+  connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => CategoryUpdateToOneWithWhereWithoutMainNotebookItemsInputSchema), z.lazy(() => CategoryUpdateWithoutMainNotebookItemsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutMainNotebookItemsInputSchema) ]).optional(),
+}).strict();
+
+export const CategoryUpdateOneWithoutNotebookItemsNestedInputSchema: z.ZodType<Prisma.CategoryUpdateOneWithoutNotebookItemsNestedInput> = z.object({
   create: z.union([ z.lazy(() => CategoryCreateWithoutNotebookItemsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutNotebookItemsInputSchema) ]).optional(),
   connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutNotebookItemsInputSchema).optional(),
   upsert: z.lazy(() => CategoryUpsertWithoutNotebookItemsInputSchema).optional(),
+  disconnect: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
+  delete: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
   connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
   update: z.union([ z.lazy(() => CategoryUpdateToOneWithWhereWithoutNotebookItemsInputSchema), z.lazy(() => CategoryUpdateWithoutNotebookItemsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutNotebookItemsInputSchema) ]).optional(),
 }).strict();
 
-export const DepartmentUpdateOneRequiredWithoutNotebookItemsNestedInputSchema: z.ZodType<Prisma.DepartmentUpdateOneRequiredWithoutNotebookItemsNestedInput> = z.object({
+export const CategoryUpdateOneWithoutSubNotebookItemsNestedInputSchema: z.ZodType<Prisma.CategoryUpdateOneWithoutSubNotebookItemsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutSubNotebookItemsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutSubNotebookItemsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutSubNotebookItemsInputSchema).optional(),
+  upsert: z.lazy(() => CategoryUpsertWithoutSubNotebookItemsInputSchema).optional(),
+  disconnect: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
+  delete: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
+  connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => CategoryUpdateToOneWithWhereWithoutSubNotebookItemsInputSchema), z.lazy(() => CategoryUpdateWithoutSubNotebookItemsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutSubNotebookItemsInputSchema) ]).optional(),
+}).strict();
+
+export const DepartmentUpdateOneWithoutNotebookItemsNestedInputSchema: z.ZodType<Prisma.DepartmentUpdateOneWithoutNotebookItemsNestedInput> = z.object({
   create: z.union([ z.lazy(() => DepartmentCreateWithoutNotebookItemsInputSchema), z.lazy(() => DepartmentUncheckedCreateWithoutNotebookItemsInputSchema) ]).optional(),
   connectOrCreate: z.lazy(() => DepartmentCreateOrConnectWithoutNotebookItemsInputSchema).optional(),
   upsert: z.lazy(() => DepartmentUpsertWithoutNotebookItemsInputSchema).optional(),
+  disconnect: z.union([ z.boolean(),z.lazy(() => DepartmentWhereInputSchema) ]).optional(),
+  delete: z.union([ z.boolean(),z.lazy(() => DepartmentWhereInputSchema) ]).optional(),
   connect: z.lazy(() => DepartmentWhereUniqueInputSchema).optional(),
   update: z.union([ z.lazy(() => DepartmentUpdateToOneWithWhereWithoutNotebookItemsInputSchema), z.lazy(() => DepartmentUpdateWithoutNotebookItemsInputSchema), z.lazy(() => DepartmentUncheckedUpdateWithoutNotebookItemsInputSchema) ]).optional(),
 }).strict();
@@ -49042,14 +50009,88 @@ export const NotebookPageUpdateOneRequiredWithoutItemsNestedInputSchema: z.ZodTy
   update: z.union([ z.lazy(() => NotebookPageUpdateToOneWithWhereWithoutItemsInputSchema), z.lazy(() => NotebookPageUpdateWithoutItemsInputSchema), z.lazy(() => NotebookPageUncheckedUpdateWithoutItemsInputSchema) ]).optional(),
 }).strict();
 
-export const SubCategoryUpdateOneWithoutNotebookItemsNestedInputSchema: z.ZodType<Prisma.SubCategoryUpdateOneWithoutNotebookItemsNestedInput> = z.object({
-  create: z.union([ z.lazy(() => SubCategoryCreateWithoutNotebookItemsInputSchema), z.lazy(() => SubCategoryUncheckedCreateWithoutNotebookItemsInputSchema) ]).optional(),
-  connectOrCreate: z.lazy(() => SubCategoryCreateOrConnectWithoutNotebookItemsInputSchema).optional(),
-  upsert: z.lazy(() => SubCategoryUpsertWithoutNotebookItemsInputSchema).optional(),
-  disconnect: z.union([ z.boolean(),z.lazy(() => SubCategoryWhereInputSchema) ]).optional(),
-  delete: z.union([ z.boolean(),z.lazy(() => SubCategoryWhereInputSchema) ]).optional(),
-  connect: z.lazy(() => SubCategoryWhereUniqueInputSchema).optional(),
-  update: z.union([ z.lazy(() => SubCategoryUpdateToOneWithWhereWithoutNotebookItemsInputSchema), z.lazy(() => SubCategoryUpdateWithoutNotebookItemsInputSchema), z.lazy(() => SubCategoryUncheckedUpdateWithoutNotebookItemsInputSchema) ]).optional(),
+export const NotebookItemActionUpdateManyWithoutNotebookItemNestedInputSchema: z.ZodType<Prisma.NotebookItemActionUpdateManyWithoutNotebookItemNestedInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemActionCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionCreateWithoutNotebookItemInputSchema).array(), z.lazy(() => NotebookItemActionUncheckedCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionUncheckedCreateWithoutNotebookItemInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => NotebookItemActionCreateOrConnectWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionCreateOrConnectWithoutNotebookItemInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => NotebookItemActionUpsertWithWhereUniqueWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionUpsertWithWhereUniqueWithoutNotebookItemInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => NotebookItemActionCreateManyNotebookItemInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => NotebookItemActionWhereUniqueInputSchema), z.lazy(() => NotebookItemActionWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => NotebookItemActionWhereUniqueInputSchema), z.lazy(() => NotebookItemActionWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => NotebookItemActionWhereUniqueInputSchema), z.lazy(() => NotebookItemActionWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => NotebookItemActionWhereUniqueInputSchema), z.lazy(() => NotebookItemActionWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => NotebookItemActionUpdateWithWhereUniqueWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionUpdateWithWhereUniqueWithoutNotebookItemInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => NotebookItemActionUpdateManyWithWhereWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionUpdateManyWithWhereWithoutNotebookItemInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => NotebookItemActionScalarWhereInputSchema), z.lazy(() => NotebookItemActionScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const NotebookItemCommentUpdateManyWithoutNotebookItemNestedInputSchema: z.ZodType<Prisma.NotebookItemCommentUpdateManyWithoutNotebookItemNestedInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemCommentCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentCreateWithoutNotebookItemInputSchema).array(), z.lazy(() => NotebookItemCommentUncheckedCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentUncheckedCreateWithoutNotebookItemInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => NotebookItemCommentCreateOrConnectWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentCreateOrConnectWithoutNotebookItemInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => NotebookItemCommentUpsertWithWhereUniqueWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentUpsertWithWhereUniqueWithoutNotebookItemInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => NotebookItemCommentCreateManyNotebookItemInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => NotebookItemCommentWhereUniqueInputSchema), z.lazy(() => NotebookItemCommentWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => NotebookItemCommentWhereUniqueInputSchema), z.lazy(() => NotebookItemCommentWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => NotebookItemCommentWhereUniqueInputSchema), z.lazy(() => NotebookItemCommentWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => NotebookItemCommentWhereUniqueInputSchema), z.lazy(() => NotebookItemCommentWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => NotebookItemCommentUpdateWithWhereUniqueWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentUpdateWithWhereUniqueWithoutNotebookItemInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => NotebookItemCommentUpdateManyWithWhereWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentUpdateManyWithWhereWithoutNotebookItemInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => NotebookItemCommentScalarWhereInputSchema), z.lazy(() => NotebookItemCommentScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const NotebookItemActionUncheckedUpdateManyWithoutNotebookItemNestedInputSchema: z.ZodType<Prisma.NotebookItemActionUncheckedUpdateManyWithoutNotebookItemNestedInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemActionCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionCreateWithoutNotebookItemInputSchema).array(), z.lazy(() => NotebookItemActionUncheckedCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionUncheckedCreateWithoutNotebookItemInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => NotebookItemActionCreateOrConnectWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionCreateOrConnectWithoutNotebookItemInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => NotebookItemActionUpsertWithWhereUniqueWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionUpsertWithWhereUniqueWithoutNotebookItemInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => NotebookItemActionCreateManyNotebookItemInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => NotebookItemActionWhereUniqueInputSchema), z.lazy(() => NotebookItemActionWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => NotebookItemActionWhereUniqueInputSchema), z.lazy(() => NotebookItemActionWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => NotebookItemActionWhereUniqueInputSchema), z.lazy(() => NotebookItemActionWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => NotebookItemActionWhereUniqueInputSchema), z.lazy(() => NotebookItemActionWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => NotebookItemActionUpdateWithWhereUniqueWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionUpdateWithWhereUniqueWithoutNotebookItemInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => NotebookItemActionUpdateManyWithWhereWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionUpdateManyWithWhereWithoutNotebookItemInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => NotebookItemActionScalarWhereInputSchema), z.lazy(() => NotebookItemActionScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const NotebookItemCommentUncheckedUpdateManyWithoutNotebookItemNestedInputSchema: z.ZodType<Prisma.NotebookItemCommentUncheckedUpdateManyWithoutNotebookItemNestedInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemCommentCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentCreateWithoutNotebookItemInputSchema).array(), z.lazy(() => NotebookItemCommentUncheckedCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentUncheckedCreateWithoutNotebookItemInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => NotebookItemCommentCreateOrConnectWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentCreateOrConnectWithoutNotebookItemInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => NotebookItemCommentUpsertWithWhereUniqueWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentUpsertWithWhereUniqueWithoutNotebookItemInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => NotebookItemCommentCreateManyNotebookItemInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => NotebookItemCommentWhereUniqueInputSchema), z.lazy(() => NotebookItemCommentWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => NotebookItemCommentWhereUniqueInputSchema), z.lazy(() => NotebookItemCommentWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => NotebookItemCommentWhereUniqueInputSchema), z.lazy(() => NotebookItemCommentWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => NotebookItemCommentWhereUniqueInputSchema), z.lazy(() => NotebookItemCommentWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => NotebookItemCommentUpdateWithWhereUniqueWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentUpdateWithWhereUniqueWithoutNotebookItemInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => NotebookItemCommentUpdateManyWithWhereWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentUpdateManyWithWhereWithoutNotebookItemInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => NotebookItemCommentScalarWhereInputSchema), z.lazy(() => NotebookItemCommentScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const NotebookItemCreateNestedOneWithoutActionsInputSchema: z.ZodType<Prisma.NotebookItemCreateNestedOneWithoutActionsInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutActionsInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutActionsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => NotebookItemCreateOrConnectWithoutActionsInputSchema).optional(),
+  connect: z.lazy(() => NotebookItemWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const NotebookItemUpdateOneRequiredWithoutActionsNestedInputSchema: z.ZodType<Prisma.NotebookItemUpdateOneRequiredWithoutActionsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutActionsInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutActionsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => NotebookItemCreateOrConnectWithoutActionsInputSchema).optional(),
+  upsert: z.lazy(() => NotebookItemUpsertWithoutActionsInputSchema).optional(),
+  connect: z.lazy(() => NotebookItemWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => NotebookItemUpdateToOneWithWhereWithoutActionsInputSchema), z.lazy(() => NotebookItemUpdateWithoutActionsInputSchema), z.lazy(() => NotebookItemUncheckedUpdateWithoutActionsInputSchema) ]).optional(),
+}).strict();
+
+export const NotebookItemCreateNestedOneWithoutCommentsInputSchema: z.ZodType<Prisma.NotebookItemCreateNestedOneWithoutCommentsInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutCommentsInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutCommentsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => NotebookItemCreateOrConnectWithoutCommentsInputSchema).optional(),
+  connect: z.lazy(() => NotebookItemWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const NotebookItemUpdateOneRequiredWithoutCommentsNestedInputSchema: z.ZodType<Prisma.NotebookItemUpdateOneRequiredWithoutCommentsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutCommentsInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutCommentsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => NotebookItemCreateOrConnectWithoutCommentsInputSchema).optional(),
+  upsert: z.lazy(() => NotebookItemUpsertWithoutCommentsInputSchema).optional(),
+  connect: z.lazy(() => NotebookItemWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => NotebookItemUpdateToOneWithWhereWithoutCommentsInputSchema), z.lazy(() => NotebookItemUpdateWithoutCommentsInputSchema), z.lazy(() => NotebookItemUncheckedUpdateWithoutCommentsInputSchema) ]).optional(),
 }).strict();
 
 export const FacilityCreateNestedOneWithoutRiskExpertFacilitiesInputSchema: z.ZodType<Prisma.FacilityCreateNestedOneWithoutRiskExpertFacilitiesInput> = z.object({
@@ -55489,16 +56530,22 @@ export const OhsBoardMeetingCreateNestedOneWithoutTopicsInputSchema: z.ZodType<P
   connect: z.lazy(() => OhsBoardMeetingWhereUniqueInputSchema).optional(),
 }).strict();
 
-export const CategoryCreateNestedOneWithoutOhsBoardTopicInputSchema: z.ZodType<Prisma.CategoryCreateNestedOneWithoutOhsBoardTopicInput> = z.object({
-  create: z.union([ z.lazy(() => CategoryCreateWithoutOhsBoardTopicInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutOhsBoardTopicInputSchema) ]).optional(),
-  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutOhsBoardTopicInputSchema).optional(),
+export const CategoryCreateNestedOneWithoutMainTopicsInputSchema: z.ZodType<Prisma.CategoryCreateNestedOneWithoutMainTopicsInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutMainTopicsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutMainTopicsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutMainTopicsInputSchema).optional(),
   connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
 }).strict();
 
-export const SubCategoryCreateNestedOneWithoutOhsBoardTopicInputSchema: z.ZodType<Prisma.SubCategoryCreateNestedOneWithoutOhsBoardTopicInput> = z.object({
-  create: z.union([ z.lazy(() => SubCategoryCreateWithoutOhsBoardTopicInputSchema), z.lazy(() => SubCategoryUncheckedCreateWithoutOhsBoardTopicInputSchema) ]).optional(),
-  connectOrCreate: z.lazy(() => SubCategoryCreateOrConnectWithoutOhsBoardTopicInputSchema).optional(),
-  connect: z.lazy(() => SubCategoryWhereUniqueInputSchema).optional(),
+export const CategoryCreateNestedOneWithoutTopicsInputSchema: z.ZodType<Prisma.CategoryCreateNestedOneWithoutTopicsInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutTopicsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutTopicsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutTopicsInputSchema).optional(),
+  connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const CategoryCreateNestedOneWithoutSubTopicsInputSchema: z.ZodType<Prisma.CategoryCreateNestedOneWithoutSubTopicsInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutSubTopicsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutSubTopicsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutSubTopicsInputSchema).optional(),
+  connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
 }).strict();
 
 export const OhsBoardMeetingUpdateOneRequiredWithoutTopicsNestedInputSchema: z.ZodType<Prisma.OhsBoardMeetingUpdateOneRequiredWithoutTopicsNestedInput> = z.object({
@@ -55509,24 +56556,34 @@ export const OhsBoardMeetingUpdateOneRequiredWithoutTopicsNestedInputSchema: z.Z
   update: z.union([ z.lazy(() => OhsBoardMeetingUpdateToOneWithWhereWithoutTopicsInputSchema), z.lazy(() => OhsBoardMeetingUpdateWithoutTopicsInputSchema), z.lazy(() => OhsBoardMeetingUncheckedUpdateWithoutTopicsInputSchema) ]).optional(),
 }).strict();
 
-export const CategoryUpdateOneWithoutOhsBoardTopicNestedInputSchema: z.ZodType<Prisma.CategoryUpdateOneWithoutOhsBoardTopicNestedInput> = z.object({
-  create: z.union([ z.lazy(() => CategoryCreateWithoutOhsBoardTopicInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutOhsBoardTopicInputSchema) ]).optional(),
-  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutOhsBoardTopicInputSchema).optional(),
-  upsert: z.lazy(() => CategoryUpsertWithoutOhsBoardTopicInputSchema).optional(),
+export const CategoryUpdateOneWithoutMainTopicsNestedInputSchema: z.ZodType<Prisma.CategoryUpdateOneWithoutMainTopicsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutMainTopicsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutMainTopicsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutMainTopicsInputSchema).optional(),
+  upsert: z.lazy(() => CategoryUpsertWithoutMainTopicsInputSchema).optional(),
   disconnect: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
   delete: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
   connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
-  update: z.union([ z.lazy(() => CategoryUpdateToOneWithWhereWithoutOhsBoardTopicInputSchema), z.lazy(() => CategoryUpdateWithoutOhsBoardTopicInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutOhsBoardTopicInputSchema) ]).optional(),
+  update: z.union([ z.lazy(() => CategoryUpdateToOneWithWhereWithoutMainTopicsInputSchema), z.lazy(() => CategoryUpdateWithoutMainTopicsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutMainTopicsInputSchema) ]).optional(),
 }).strict();
 
-export const SubCategoryUpdateOneWithoutOhsBoardTopicNestedInputSchema: z.ZodType<Prisma.SubCategoryUpdateOneWithoutOhsBoardTopicNestedInput> = z.object({
-  create: z.union([ z.lazy(() => SubCategoryCreateWithoutOhsBoardTopicInputSchema), z.lazy(() => SubCategoryUncheckedCreateWithoutOhsBoardTopicInputSchema) ]).optional(),
-  connectOrCreate: z.lazy(() => SubCategoryCreateOrConnectWithoutOhsBoardTopicInputSchema).optional(),
-  upsert: z.lazy(() => SubCategoryUpsertWithoutOhsBoardTopicInputSchema).optional(),
-  disconnect: z.union([ z.boolean(),z.lazy(() => SubCategoryWhereInputSchema) ]).optional(),
-  delete: z.union([ z.boolean(),z.lazy(() => SubCategoryWhereInputSchema) ]).optional(),
-  connect: z.lazy(() => SubCategoryWhereUniqueInputSchema).optional(),
-  update: z.union([ z.lazy(() => SubCategoryUpdateToOneWithWhereWithoutOhsBoardTopicInputSchema), z.lazy(() => SubCategoryUpdateWithoutOhsBoardTopicInputSchema), z.lazy(() => SubCategoryUncheckedUpdateWithoutOhsBoardTopicInputSchema) ]).optional(),
+export const CategoryUpdateOneWithoutTopicsNestedInputSchema: z.ZodType<Prisma.CategoryUpdateOneWithoutTopicsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutTopicsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutTopicsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutTopicsInputSchema).optional(),
+  upsert: z.lazy(() => CategoryUpsertWithoutTopicsInputSchema).optional(),
+  disconnect: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
+  delete: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
+  connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => CategoryUpdateToOneWithWhereWithoutTopicsInputSchema), z.lazy(() => CategoryUpdateWithoutTopicsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutTopicsInputSchema) ]).optional(),
+}).strict();
+
+export const CategoryUpdateOneWithoutSubTopicsNestedInputSchema: z.ZodType<Prisma.CategoryUpdateOneWithoutSubTopicsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutSubTopicsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutSubTopicsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutSubTopicsInputSchema).optional(),
+  upsert: z.lazy(() => CategoryUpsertWithoutSubTopicsInputSchema).optional(),
+  disconnect: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
+  delete: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
+  connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => CategoryUpdateToOneWithWhereWithoutSubTopicsInputSchema), z.lazy(() => CategoryUpdateWithoutSubTopicsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutSubTopicsInputSchema) ]).optional(),
 }).strict();
 
 export const OhsBoardMeetingCreateNestedOneWithoutDecisionsInputSchema: z.ZodType<Prisma.OhsBoardMeetingCreateNestedOneWithoutDecisionsInput> = z.object({
@@ -55535,16 +56592,22 @@ export const OhsBoardMeetingCreateNestedOneWithoutDecisionsInputSchema: z.ZodTyp
   connect: z.lazy(() => OhsBoardMeetingWhereUniqueInputSchema).optional(),
 }).strict();
 
-export const CategoryCreateNestedOneWithoutOhsBoardDecisionInputSchema: z.ZodType<Prisma.CategoryCreateNestedOneWithoutOhsBoardDecisionInput> = z.object({
-  create: z.union([ z.lazy(() => CategoryCreateWithoutOhsBoardDecisionInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutOhsBoardDecisionInputSchema) ]).optional(),
-  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutOhsBoardDecisionInputSchema).optional(),
+export const CategoryCreateNestedOneWithoutMainDecisionsInputSchema: z.ZodType<Prisma.CategoryCreateNestedOneWithoutMainDecisionsInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutMainDecisionsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutMainDecisionsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutMainDecisionsInputSchema).optional(),
   connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
 }).strict();
 
-export const SubCategoryCreateNestedOneWithoutOhsBoardDecisionInputSchema: z.ZodType<Prisma.SubCategoryCreateNestedOneWithoutOhsBoardDecisionInput> = z.object({
-  create: z.union([ z.lazy(() => SubCategoryCreateWithoutOhsBoardDecisionInputSchema), z.lazy(() => SubCategoryUncheckedCreateWithoutOhsBoardDecisionInputSchema) ]).optional(),
-  connectOrCreate: z.lazy(() => SubCategoryCreateOrConnectWithoutOhsBoardDecisionInputSchema).optional(),
-  connect: z.lazy(() => SubCategoryWhereUniqueInputSchema).optional(),
+export const CategoryCreateNestedOneWithoutDecisionsInputSchema: z.ZodType<Prisma.CategoryCreateNestedOneWithoutDecisionsInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutDecisionsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutDecisionsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutDecisionsInputSchema).optional(),
+  connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const CategoryCreateNestedOneWithoutSubDecisionsInputSchema: z.ZodType<Prisma.CategoryCreateNestedOneWithoutSubDecisionsInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutSubDecisionsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutSubDecisionsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutSubDecisionsInputSchema).optional(),
+  connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
 }).strict();
 
 export const OhsBoardDepartmentCreateNestedOneWithoutDecisionsInputSchema: z.ZodType<Prisma.OhsBoardDepartmentCreateNestedOneWithoutDecisionsInput> = z.object({
@@ -55589,22 +56652,34 @@ export const OhsBoardMeetingUpdateOneRequiredWithoutDecisionsNestedInputSchema: 
   update: z.union([ z.lazy(() => OhsBoardMeetingUpdateToOneWithWhereWithoutDecisionsInputSchema), z.lazy(() => OhsBoardMeetingUpdateWithoutDecisionsInputSchema), z.lazy(() => OhsBoardMeetingUncheckedUpdateWithoutDecisionsInputSchema) ]).optional(),
 }).strict();
 
-export const CategoryUpdateOneRequiredWithoutOhsBoardDecisionNestedInputSchema: z.ZodType<Prisma.CategoryUpdateOneRequiredWithoutOhsBoardDecisionNestedInput> = z.object({
-  create: z.union([ z.lazy(() => CategoryCreateWithoutOhsBoardDecisionInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutOhsBoardDecisionInputSchema) ]).optional(),
-  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutOhsBoardDecisionInputSchema).optional(),
-  upsert: z.lazy(() => CategoryUpsertWithoutOhsBoardDecisionInputSchema).optional(),
+export const CategoryUpdateOneWithoutMainDecisionsNestedInputSchema: z.ZodType<Prisma.CategoryUpdateOneWithoutMainDecisionsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutMainDecisionsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutMainDecisionsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutMainDecisionsInputSchema).optional(),
+  upsert: z.lazy(() => CategoryUpsertWithoutMainDecisionsInputSchema).optional(),
+  disconnect: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
+  delete: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
   connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
-  update: z.union([ z.lazy(() => CategoryUpdateToOneWithWhereWithoutOhsBoardDecisionInputSchema), z.lazy(() => CategoryUpdateWithoutOhsBoardDecisionInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutOhsBoardDecisionInputSchema) ]).optional(),
+  update: z.union([ z.lazy(() => CategoryUpdateToOneWithWhereWithoutMainDecisionsInputSchema), z.lazy(() => CategoryUpdateWithoutMainDecisionsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutMainDecisionsInputSchema) ]).optional(),
 }).strict();
 
-export const SubCategoryUpdateOneWithoutOhsBoardDecisionNestedInputSchema: z.ZodType<Prisma.SubCategoryUpdateOneWithoutOhsBoardDecisionNestedInput> = z.object({
-  create: z.union([ z.lazy(() => SubCategoryCreateWithoutOhsBoardDecisionInputSchema), z.lazy(() => SubCategoryUncheckedCreateWithoutOhsBoardDecisionInputSchema) ]).optional(),
-  connectOrCreate: z.lazy(() => SubCategoryCreateOrConnectWithoutOhsBoardDecisionInputSchema).optional(),
-  upsert: z.lazy(() => SubCategoryUpsertWithoutOhsBoardDecisionInputSchema).optional(),
-  disconnect: z.union([ z.boolean(),z.lazy(() => SubCategoryWhereInputSchema) ]).optional(),
-  delete: z.union([ z.boolean(),z.lazy(() => SubCategoryWhereInputSchema) ]).optional(),
-  connect: z.lazy(() => SubCategoryWhereUniqueInputSchema).optional(),
-  update: z.union([ z.lazy(() => SubCategoryUpdateToOneWithWhereWithoutOhsBoardDecisionInputSchema), z.lazy(() => SubCategoryUpdateWithoutOhsBoardDecisionInputSchema), z.lazy(() => SubCategoryUncheckedUpdateWithoutOhsBoardDecisionInputSchema) ]).optional(),
+export const CategoryUpdateOneWithoutDecisionsNestedInputSchema: z.ZodType<Prisma.CategoryUpdateOneWithoutDecisionsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutDecisionsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutDecisionsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutDecisionsInputSchema).optional(),
+  upsert: z.lazy(() => CategoryUpsertWithoutDecisionsInputSchema).optional(),
+  disconnect: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
+  delete: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
+  connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => CategoryUpdateToOneWithWhereWithoutDecisionsInputSchema), z.lazy(() => CategoryUpdateWithoutDecisionsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutDecisionsInputSchema) ]).optional(),
+}).strict();
+
+export const CategoryUpdateOneWithoutSubDecisionsNestedInputSchema: z.ZodType<Prisma.CategoryUpdateOneWithoutSubDecisionsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => CategoryCreateWithoutSubDecisionsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutSubDecisionsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => CategoryCreateOrConnectWithoutSubDecisionsInputSchema).optional(),
+  upsert: z.lazy(() => CategoryUpsertWithoutSubDecisionsInputSchema).optional(),
+  disconnect: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
+  delete: z.union([ z.boolean(),z.lazy(() => CategoryWhereInputSchema) ]).optional(),
+  connect: z.lazy(() => CategoryWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => CategoryUpdateToOneWithWhereWithoutSubDecisionsInputSchema), z.lazy(() => CategoryUpdateWithoutSubDecisionsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutSubDecisionsInputSchema) ]).optional(),
 }).strict();
 
 export const OhsBoardDepartmentUpdateOneWithoutDecisionsNestedInputSchema: z.ZodType<Prisma.OhsBoardDepartmentUpdateOneWithoutDecisionsNestedInput> = z.object({
@@ -59216,6 +60291,8 @@ export const NotebookPageCreateWithoutFacilityInputSchema: z.ZodType<Prisma.Note
   documentUploadedAt: z.coerce.date().optional().nullable(),
   isArchived: z.boolean().optional(),
   isLocked: z.boolean().optional(),
+  ciltNo: z.number().int().optional().nullable(),
+  pageNo: z.string().optional().nullable(),
   items: z.lazy(() => NotebookItemCreateNestedManyWithoutPageInputSchema).optional(),
 }).strict();
 
@@ -59231,6 +60308,8 @@ export const NotebookPageUncheckedCreateWithoutFacilityInputSchema: z.ZodType<Pr
   documentUploadedAt: z.coerce.date().optional().nullable(),
   isArchived: z.boolean().optional(),
   isLocked: z.boolean().optional(),
+  ciltNo: z.number().int().optional().nullable(),
+  pageNo: z.string().optional().nullable(),
   items: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutPageInputSchema).optional(),
 }).strict();
 
@@ -60301,6 +61380,7 @@ export const IntegratedAuditCreateWithoutFacilityInputSchema: z.ZodType<Prisma.I
   purpose: z.string().optional().nullable(),
   executive: z.string().optional().nullable(),
   conclusion: z.string().optional().nullable(),
+  createdBy: z.string().optional().nullable(),
   team: z.union([ z.lazy(() => IntegratedAuditCreateteamInputSchema), z.string().array() ]).optional(),
   participants: z.union([ z.lazy(() => IntegratedAuditCreateparticipantsInputSchema), z.string().array() ]).optional(),
   criteria: z.union([ z.lazy(() => IntegratedAuditCreatecriteriaInputSchema), z.string().array() ]).optional(),
@@ -60323,6 +61403,7 @@ export const IntegratedAuditUncheckedCreateWithoutFacilityInputSchema: z.ZodType
   purpose: z.string().optional().nullable(),
   executive: z.string().optional().nullable(),
   conclusion: z.string().optional().nullable(),
+  createdBy: z.string().optional().nullable(),
   team: z.union([ z.lazy(() => IntegratedAuditCreateteamInputSchema), z.string().array() ]).optional(),
   participants: z.union([ z.lazy(() => IntegratedAuditCreateparticipantsInputSchema), z.string().array() ]).optional(),
   criteria: z.union([ z.lazy(() => IntegratedAuditCreatecriteriaInputSchema), z.string().array() ]).optional(),
@@ -60794,6 +61875,8 @@ export const NotebookPageScalarWhereInputSchema: z.ZodType<Prisma.NotebookPageSc
   documentUploadedAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
   isArchived: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
   isLocked: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  ciltNo: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
+  pageNo: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
 }).strict();
 
 export const ReconciliationUpsertWithWhereUniqueWithoutFacilityInputSchema: z.ZodType<Prisma.ReconciliationUpsertWithWhereUniqueWithoutFacilityInput> = z.object({
@@ -61637,6 +62720,7 @@ export const IntegratedAuditScalarWhereInputSchema: z.ZodType<Prisma.IntegratedA
   purpose: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   executive: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   conclusion: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdBy: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   team: z.lazy(() => StringNullableListFilterSchema).optional(),
   participants: z.lazy(() => StringNullableListFilterSchema).optional(),
   criteria: z.lazy(() => StringNullableListFilterSchema).optional(),
@@ -65101,8 +66185,9 @@ export const OhsBoardDecisionCreateWithoutDepartmentInputSchema: z.ZodType<Prism
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   meeting: z.lazy(() => OhsBoardMeetingCreateNestedOneWithoutDecisionsInputSchema),
-  category: z.lazy(() => CategoryCreateNestedOneWithoutOhsBoardDecisionInputSchema),
-  subCategory: z.lazy(() => SubCategoryCreateNestedOneWithoutOhsBoardDecisionInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryCreateNestedOneWithoutMainDecisionsInputSchema).optional(),
+  category: z.lazy(() => CategoryCreateNestedOneWithoutDecisionsInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryCreateNestedOneWithoutSubDecisionsInputSchema).optional(),
   actions: z.lazy(() => OhsBoardDecisionActionCreateNestedManyWithoutDecisionInputSchema).optional(),
   auditLogs: z.lazy(() => OhsBoardAuditLogCreateNestedManyWithoutDecisionInputSchema).optional(),
 }).strict();
@@ -65112,7 +66197,8 @@ export const OhsBoardDecisionUncheckedCreateWithoutDepartmentInputSchema: z.ZodT
   meetingId: z.string(),
   decisionNumber: z.string(),
   decisionText: z.string(),
-  categoryId: z.number().int(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
   priority: z.string(),
   status: z.string(),
@@ -65344,7 +66430,8 @@ export const OhsBoardDecisionScalarWhereInputSchema: z.ZodType<Prisma.OhsBoardDe
   meetingId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   decisionNumber: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   decisionText: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  categoryId: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  mainCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
+  categoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
   subCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
   departmentId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   priority: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
@@ -66492,65 +67579,118 @@ export const FacilityUncheckedUpdateWithoutMonthlyAccidentInputSchema: z.ZodType
   ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
-export const NotebookItemCreateWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateWithoutCategoryInput> = z.object({
-  authorType: z.string(),
-  authorName: z.string(),
-  content: z.string(),
+export const CategoryCreateWithoutChildrenInputSchema: z.ZodType<Prisma.CategoryCreateWithoutChildrenInput> = z.object({
+  name: z.string(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  department: z.lazy(() => DepartmentCreateNestedOneWithoutNotebookItemsInputSchema),
-  page: z.lazy(() => NotebookPageCreateNestedOneWithoutItemsInputSchema),
-  subCategory: z.lazy(() => SubCategoryCreateNestedOneWithoutNotebookItemsInputSchema).optional(),
+  parent: z.lazy(() => CategoryCreateNestedOneWithoutChildrenInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutSubCategoryInputSchema).optional(),
 }).strict();
 
-export const NotebookItemUncheckedCreateWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedCreateWithoutCategoryInput> = z.object({
+export const CategoryUncheckedCreateWithoutChildrenInputSchema: z.ZodType<Prisma.CategoryUncheckedCreateWithoutChildrenInput> = z.object({
   id: z.number().int().optional(),
-  pageId: z.number().int(),
-  authorType: z.string(),
-  authorName: z.string(),
-  content: z.string(),
-  subCategoryId: z.number().int().optional().nullable(),
-  departmentId: z.number().int(),
+  name: z.string(),
+  parentId: z.number().int().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
 }).strict();
 
-export const NotebookItemCreateOrConnectWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateOrConnectWithoutCategoryInput> = z.object({
-  where: z.lazy(() => NotebookItemWhereUniqueInputSchema),
-  create: z.union([ z.lazy(() => NotebookItemCreateWithoutCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutCategoryInputSchema) ]),
+export const CategoryCreateOrConnectWithoutChildrenInputSchema: z.ZodType<Prisma.CategoryCreateOrConnectWithoutChildrenInput> = z.object({
+  where: z.lazy(() => CategoryWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutChildrenInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutChildrenInputSchema) ]),
 }).strict();
 
-export const NotebookItemCreateManyCategoryInputEnvelopeSchema: z.ZodType<Prisma.NotebookItemCreateManyCategoryInputEnvelope> = z.object({
-  data: z.union([ z.lazy(() => NotebookItemCreateManyCategoryInputSchema), z.lazy(() => NotebookItemCreateManyCategoryInputSchema).array() ]),
+export const CategoryCreateWithoutParentInputSchema: z.ZodType<Prisma.CategoryCreateWithoutParentInput> = z.object({
+  name: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  children: z.lazy(() => CategoryCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+}).strict();
+
+export const CategoryUncheckedCreateWithoutParentInputSchema: z.ZodType<Prisma.CategoryUncheckedCreateWithoutParentInput> = z.object({
+  id: z.number().int().optional(),
+  name: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  children: z.lazy(() => CategoryUncheckedCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+}).strict();
+
+export const CategoryCreateOrConnectWithoutParentInputSchema: z.ZodType<Prisma.CategoryCreateOrConnectWithoutParentInput> = z.object({
+  where: z.lazy(() => CategoryWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutParentInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutParentInputSchema) ]),
+}).strict();
+
+export const CategoryCreateManyParentInputEnvelopeSchema: z.ZodType<Prisma.CategoryCreateManyParentInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => CategoryCreateManyParentInputSchema), z.lazy(() => CategoryCreateManyParentInputSchema).array() ]),
   skipDuplicates: z.boolean().optional(),
 }).strict();
 
-export const SubCategoryCreateWithoutCategoryInputSchema: z.ZodType<Prisma.SubCategoryCreateWithoutCategoryInput> = z.object({
-  name: z.string(),
+export const OhsBoardTopicCreateWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicCreateWithoutMainCategoryInput> = z.object({
+  id: z.string().optional(),
+  topicText: z.string(),
+  riskScore: z.string().optional().nullable(),
+  remarks: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  notebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutSubCategoryInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutSubCategoryInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  meeting: z.lazy(() => OhsBoardMeetingCreateNestedOneWithoutTopicsInputSchema),
+  category: z.lazy(() => CategoryCreateNestedOneWithoutTopicsInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryCreateNestedOneWithoutSubTopicsInputSchema).optional(),
 }).strict();
 
-export const SubCategoryUncheckedCreateWithoutCategoryInputSchema: z.ZodType<Prisma.SubCategoryUncheckedCreateWithoutCategoryInput> = z.object({
-  id: z.number().int().optional(),
-  name: z.string(),
+export const OhsBoardTopicUncheckedCreateWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedCreateWithoutMainCategoryInput> = z.object({
+  id: z.string().optional(),
+  meetingId: z.string(),
+  topicText: z.string(),
+  categoryId: z.number().int().optional().nullable(),
+  subCategoryId: z.number().int().optional().nullable(),
+  riskScore: z.string().optional().nullable(),
+  remarks: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  notebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
 }).strict();
 
-export const SubCategoryCreateOrConnectWithoutCategoryInputSchema: z.ZodType<Prisma.SubCategoryCreateOrConnectWithoutCategoryInput> = z.object({
-  where: z.lazy(() => SubCategoryWhereUniqueInputSchema),
-  create: z.union([ z.lazy(() => SubCategoryCreateWithoutCategoryInputSchema), z.lazy(() => SubCategoryUncheckedCreateWithoutCategoryInputSchema) ]),
+export const OhsBoardTopicCreateOrConnectWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicCreateOrConnectWithoutMainCategoryInput> = z.object({
+  where: z.lazy(() => OhsBoardTopicWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => OhsBoardTopicCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutMainCategoryInputSchema) ]),
 }).strict();
 
-export const SubCategoryCreateManyCategoryInputEnvelopeSchema: z.ZodType<Prisma.SubCategoryCreateManyCategoryInputEnvelope> = z.object({
-  data: z.union([ z.lazy(() => SubCategoryCreateManyCategoryInputSchema), z.lazy(() => SubCategoryCreateManyCategoryInputSchema).array() ]),
+export const OhsBoardTopicCreateManyMainCategoryInputEnvelopeSchema: z.ZodType<Prisma.OhsBoardTopicCreateManyMainCategoryInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => OhsBoardTopicCreateManyMainCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateManyMainCategoryInputSchema).array() ]),
   skipDuplicates: z.boolean().optional(),
 }).strict();
 
@@ -66562,13 +67702,15 @@ export const OhsBoardTopicCreateWithoutCategoryInputSchema: z.ZodType<Prisma.Ohs
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   meeting: z.lazy(() => OhsBoardMeetingCreateNestedOneWithoutTopicsInputSchema),
-  subCategory: z.lazy(() => SubCategoryCreateNestedOneWithoutOhsBoardTopicInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryCreateNestedOneWithoutMainTopicsInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryCreateNestedOneWithoutSubTopicsInputSchema).optional(),
 }).strict();
 
 export const OhsBoardTopicUncheckedCreateWithoutCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedCreateWithoutCategoryInput> = z.object({
   id: z.string().optional(),
   meetingId: z.string(),
   topicText: z.string(),
+  mainCategoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
   riskScore: z.string().optional().nullable(),
   remarks: z.string().optional().nullable(),
@@ -66583,6 +67725,98 @@ export const OhsBoardTopicCreateOrConnectWithoutCategoryInputSchema: z.ZodType<P
 
 export const OhsBoardTopicCreateManyCategoryInputEnvelopeSchema: z.ZodType<Prisma.OhsBoardTopicCreateManyCategoryInputEnvelope> = z.object({
   data: z.union([ z.lazy(() => OhsBoardTopicCreateManyCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateManyCategoryInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const OhsBoardTopicCreateWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicCreateWithoutSubCategoryInput> = z.object({
+  id: z.string().optional(),
+  topicText: z.string(),
+  riskScore: z.string().optional().nullable(),
+  remarks: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  meeting: z.lazy(() => OhsBoardMeetingCreateNestedOneWithoutTopicsInputSchema),
+  mainCategory: z.lazy(() => CategoryCreateNestedOneWithoutMainTopicsInputSchema).optional(),
+  category: z.lazy(() => CategoryCreateNestedOneWithoutTopicsInputSchema).optional(),
+}).strict();
+
+export const OhsBoardTopicUncheckedCreateWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedCreateWithoutSubCategoryInput> = z.object({
+  id: z.string().optional(),
+  meetingId: z.string(),
+  topicText: z.string(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
+  riskScore: z.string().optional().nullable(),
+  remarks: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const OhsBoardTopicCreateOrConnectWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicCreateOrConnectWithoutSubCategoryInput> = z.object({
+  where: z.lazy(() => OhsBoardTopicWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => OhsBoardTopicCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutSubCategoryInputSchema) ]),
+}).strict();
+
+export const OhsBoardTopicCreateManySubCategoryInputEnvelopeSchema: z.ZodType<Prisma.OhsBoardTopicCreateManySubCategoryInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => OhsBoardTopicCreateManySubCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateManySubCategoryInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const OhsBoardDecisionCreateWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionCreateWithoutMainCategoryInput> = z.object({
+  id: z.string().optional(),
+  decisionNumber: z.string(),
+  decisionText: z.string(),
+  priority: z.string(),
+  status: z.string(),
+  dueDateType: z.string(),
+  dueDate: z.coerce.date().optional().nullable(),
+  periodicity: z.string().optional().nullable(),
+  remarks: z.string().optional().nullable(),
+  approvalStatus: z.string().optional(),
+  lockedAt: z.coerce.date().optional().nullable(),
+  sentForApprovalAt: z.coerce.date().optional().nullable(),
+  centralBoardStatus: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  meeting: z.lazy(() => OhsBoardMeetingCreateNestedOneWithoutDecisionsInputSchema),
+  category: z.lazy(() => CategoryCreateNestedOneWithoutDecisionsInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryCreateNestedOneWithoutSubDecisionsInputSchema).optional(),
+  department: z.lazy(() => OhsBoardDepartmentCreateNestedOneWithoutDecisionsInputSchema).optional(),
+  actions: z.lazy(() => OhsBoardDecisionActionCreateNestedManyWithoutDecisionInputSchema).optional(),
+  auditLogs: z.lazy(() => OhsBoardAuditLogCreateNestedManyWithoutDecisionInputSchema).optional(),
+}).strict();
+
+export const OhsBoardDecisionUncheckedCreateWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUncheckedCreateWithoutMainCategoryInput> = z.object({
+  id: z.string().optional(),
+  meetingId: z.string(),
+  decisionNumber: z.string(),
+  decisionText: z.string(),
+  categoryId: z.number().int().optional().nullable(),
+  subCategoryId: z.number().int().optional().nullable(),
+  departmentId: z.string().optional().nullable(),
+  priority: z.string(),
+  status: z.string(),
+  dueDateType: z.string(),
+  dueDate: z.coerce.date().optional().nullable(),
+  periodicity: z.string().optional().nullable(),
+  remarks: z.string().optional().nullable(),
+  approvalStatus: z.string().optional(),
+  lockedAt: z.coerce.date().optional().nullable(),
+  sentForApprovalAt: z.coerce.date().optional().nullable(),
+  centralBoardStatus: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  actions: z.lazy(() => OhsBoardDecisionActionUncheckedCreateNestedManyWithoutDecisionInputSchema).optional(),
+  auditLogs: z.lazy(() => OhsBoardAuditLogUncheckedCreateNestedManyWithoutDecisionInputSchema).optional(),
+}).strict();
+
+export const OhsBoardDecisionCreateOrConnectWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionCreateOrConnectWithoutMainCategoryInput> = z.object({
+  where: z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutMainCategoryInputSchema) ]),
+}).strict();
+
+export const OhsBoardDecisionCreateManyMainCategoryInputEnvelopeSchema: z.ZodType<Prisma.OhsBoardDecisionCreateManyMainCategoryInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => OhsBoardDecisionCreateManyMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionCreateManyMainCategoryInputSchema).array() ]),
   skipDuplicates: z.boolean().optional(),
 }).strict();
 
@@ -66603,7 +67837,8 @@ export const OhsBoardDecisionCreateWithoutCategoryInputSchema: z.ZodType<Prisma.
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   meeting: z.lazy(() => OhsBoardMeetingCreateNestedOneWithoutDecisionsInputSchema),
-  subCategory: z.lazy(() => SubCategoryCreateNestedOneWithoutOhsBoardDecisionInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryCreateNestedOneWithoutMainDecisionsInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryCreateNestedOneWithoutSubDecisionsInputSchema).optional(),
   department: z.lazy(() => OhsBoardDepartmentCreateNestedOneWithoutDecisionsInputSchema).optional(),
   actions: z.lazy(() => OhsBoardDecisionActionCreateNestedManyWithoutDecisionInputSchema).optional(),
   auditLogs: z.lazy(() => OhsBoardAuditLogCreateNestedManyWithoutDecisionInputSchema).optional(),
@@ -66614,6 +67849,7 @@ export const OhsBoardDecisionUncheckedCreateWithoutCategoryInputSchema: z.ZodTyp
   meetingId: z.string(),
   decisionNumber: z.string(),
   decisionText: z.string(),
+  mainCategoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
   departmentId: z.string().optional().nullable(),
   priority: z.string(),
@@ -66642,201 +67878,6 @@ export const OhsBoardDecisionCreateManyCategoryInputEnvelopeSchema: z.ZodType<Pr
   skipDuplicates: z.boolean().optional(),
 }).strict();
 
-export const NotebookItemUpsertWithWhereUniqueWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpsertWithWhereUniqueWithoutCategoryInput> = z.object({
-  where: z.lazy(() => NotebookItemWhereUniqueInputSchema),
-  update: z.union([ z.lazy(() => NotebookItemUpdateWithoutCategoryInputSchema), z.lazy(() => NotebookItemUncheckedUpdateWithoutCategoryInputSchema) ]),
-  create: z.union([ z.lazy(() => NotebookItemCreateWithoutCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutCategoryInputSchema) ]),
-}).strict();
-
-export const NotebookItemUpdateWithWhereUniqueWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpdateWithWhereUniqueWithoutCategoryInput> = z.object({
-  where: z.lazy(() => NotebookItemWhereUniqueInputSchema),
-  data: z.union([ z.lazy(() => NotebookItemUpdateWithoutCategoryInputSchema), z.lazy(() => NotebookItemUncheckedUpdateWithoutCategoryInputSchema) ]),
-}).strict();
-
-export const NotebookItemUpdateManyWithWhereWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpdateManyWithWhereWithoutCategoryInput> = z.object({
-  where: z.lazy(() => NotebookItemScalarWhereInputSchema),
-  data: z.union([ z.lazy(() => NotebookItemUpdateManyMutationInputSchema), z.lazy(() => NotebookItemUncheckedUpdateManyWithoutCategoryInputSchema) ]),
-}).strict();
-
-export const NotebookItemScalarWhereInputSchema: z.ZodType<Prisma.NotebookItemScalarWhereInput> = z.object({
-  AND: z.union([ z.lazy(() => NotebookItemScalarWhereInputSchema), z.lazy(() => NotebookItemScalarWhereInputSchema).array() ]).optional(),
-  OR: z.lazy(() => NotebookItemScalarWhereInputSchema).array().optional(),
-  NOT: z.union([ z.lazy(() => NotebookItemScalarWhereInputSchema), z.lazy(() => NotebookItemScalarWhereInputSchema).array() ]).optional(),
-  id: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
-  pageId: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
-  authorType: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  authorName: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  content: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  categoryId: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
-  subCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
-  departmentId: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
-  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
-  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
-}).strict();
-
-export const SubCategoryUpsertWithWhereUniqueWithoutCategoryInputSchema: z.ZodType<Prisma.SubCategoryUpsertWithWhereUniqueWithoutCategoryInput> = z.object({
-  where: z.lazy(() => SubCategoryWhereUniqueInputSchema),
-  update: z.union([ z.lazy(() => SubCategoryUpdateWithoutCategoryInputSchema), z.lazy(() => SubCategoryUncheckedUpdateWithoutCategoryInputSchema) ]),
-  create: z.union([ z.lazy(() => SubCategoryCreateWithoutCategoryInputSchema), z.lazy(() => SubCategoryUncheckedCreateWithoutCategoryInputSchema) ]),
-}).strict();
-
-export const SubCategoryUpdateWithWhereUniqueWithoutCategoryInputSchema: z.ZodType<Prisma.SubCategoryUpdateWithWhereUniqueWithoutCategoryInput> = z.object({
-  where: z.lazy(() => SubCategoryWhereUniqueInputSchema),
-  data: z.union([ z.lazy(() => SubCategoryUpdateWithoutCategoryInputSchema), z.lazy(() => SubCategoryUncheckedUpdateWithoutCategoryInputSchema) ]),
-}).strict();
-
-export const SubCategoryUpdateManyWithWhereWithoutCategoryInputSchema: z.ZodType<Prisma.SubCategoryUpdateManyWithWhereWithoutCategoryInput> = z.object({
-  where: z.lazy(() => SubCategoryScalarWhereInputSchema),
-  data: z.union([ z.lazy(() => SubCategoryUpdateManyMutationInputSchema), z.lazy(() => SubCategoryUncheckedUpdateManyWithoutCategoryInputSchema) ]),
-}).strict();
-
-export const SubCategoryScalarWhereInputSchema: z.ZodType<Prisma.SubCategoryScalarWhereInput> = z.object({
-  AND: z.union([ z.lazy(() => SubCategoryScalarWhereInputSchema), z.lazy(() => SubCategoryScalarWhereInputSchema).array() ]).optional(),
-  OR: z.lazy(() => SubCategoryScalarWhereInputSchema).array().optional(),
-  NOT: z.union([ z.lazy(() => SubCategoryScalarWhereInputSchema), z.lazy(() => SubCategoryScalarWhereInputSchema).array() ]).optional(),
-  id: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
-  name: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  categoryId: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
-  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
-  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
-}).strict();
-
-export const OhsBoardTopicUpsertWithWhereUniqueWithoutCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUpsertWithWhereUniqueWithoutCategoryInput> = z.object({
-  where: z.lazy(() => OhsBoardTopicWhereUniqueInputSchema),
-  update: z.union([ z.lazy(() => OhsBoardTopicUpdateWithoutCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedUpdateWithoutCategoryInputSchema) ]),
-  create: z.union([ z.lazy(() => OhsBoardTopicCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutCategoryInputSchema) ]),
-}).strict();
-
-export const OhsBoardTopicUpdateWithWhereUniqueWithoutCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUpdateWithWhereUniqueWithoutCategoryInput> = z.object({
-  where: z.lazy(() => OhsBoardTopicWhereUniqueInputSchema),
-  data: z.union([ z.lazy(() => OhsBoardTopicUpdateWithoutCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedUpdateWithoutCategoryInputSchema) ]),
-}).strict();
-
-export const OhsBoardTopicUpdateManyWithWhereWithoutCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUpdateManyWithWhereWithoutCategoryInput> = z.object({
-  where: z.lazy(() => OhsBoardTopicScalarWhereInputSchema),
-  data: z.union([ z.lazy(() => OhsBoardTopicUpdateManyMutationInputSchema), z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutCategoryInputSchema) ]),
-}).strict();
-
-export const OhsBoardTopicScalarWhereInputSchema: z.ZodType<Prisma.OhsBoardTopicScalarWhereInput> = z.object({
-  AND: z.union([ z.lazy(() => OhsBoardTopicScalarWhereInputSchema), z.lazy(() => OhsBoardTopicScalarWhereInputSchema).array() ]).optional(),
-  OR: z.lazy(() => OhsBoardTopicScalarWhereInputSchema).array().optional(),
-  NOT: z.union([ z.lazy(() => OhsBoardTopicScalarWhereInputSchema), z.lazy(() => OhsBoardTopicScalarWhereInputSchema).array() ]).optional(),
-  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  meetingId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  topicText: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  categoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
-  subCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
-  riskScore: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
-  remarks: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
-  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
-  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
-}).strict();
-
-export const OhsBoardDecisionUpsertWithWhereUniqueWithoutCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUpsertWithWhereUniqueWithoutCategoryInput> = z.object({
-  where: z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema),
-  update: z.union([ z.lazy(() => OhsBoardDecisionUpdateWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedUpdateWithoutCategoryInputSchema) ]),
-  create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutCategoryInputSchema) ]),
-}).strict();
-
-export const OhsBoardDecisionUpdateWithWhereUniqueWithoutCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUpdateWithWhereUniqueWithoutCategoryInput> = z.object({
-  where: z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema),
-  data: z.union([ z.lazy(() => OhsBoardDecisionUpdateWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedUpdateWithoutCategoryInputSchema) ]),
-}).strict();
-
-export const OhsBoardDecisionUpdateManyWithWhereWithoutCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUpdateManyWithWhereWithoutCategoryInput> = z.object({
-  where: z.lazy(() => OhsBoardDecisionScalarWhereInputSchema),
-  data: z.union([ z.lazy(() => OhsBoardDecisionUpdateManyMutationInputSchema), z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutCategoryInputSchema) ]),
-}).strict();
-
-export const NotebookItemCreateWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateWithoutSubCategoryInput> = z.object({
-  authorType: z.string(),
-  authorName: z.string(),
-  content: z.string(),
-  createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
-  category: z.lazy(() => CategoryCreateNestedOneWithoutNotebookItemsInputSchema),
-  department: z.lazy(() => DepartmentCreateNestedOneWithoutNotebookItemsInputSchema),
-  page: z.lazy(() => NotebookPageCreateNestedOneWithoutItemsInputSchema),
-}).strict();
-
-export const NotebookItemUncheckedCreateWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedCreateWithoutSubCategoryInput> = z.object({
-  id: z.number().int().optional(),
-  pageId: z.number().int(),
-  authorType: z.string(),
-  authorName: z.string(),
-  content: z.string(),
-  categoryId: z.number().int(),
-  departmentId: z.number().int(),
-  createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
-}).strict();
-
-export const NotebookItemCreateOrConnectWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateOrConnectWithoutSubCategoryInput> = z.object({
-  where: z.lazy(() => NotebookItemWhereUniqueInputSchema),
-  create: z.union([ z.lazy(() => NotebookItemCreateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutSubCategoryInputSchema) ]),
-}).strict();
-
-export const NotebookItemCreateManySubCategoryInputEnvelopeSchema: z.ZodType<Prisma.NotebookItemCreateManySubCategoryInputEnvelope> = z.object({
-  data: z.union([ z.lazy(() => NotebookItemCreateManySubCategoryInputSchema), z.lazy(() => NotebookItemCreateManySubCategoryInputSchema).array() ]),
-  skipDuplicates: z.boolean().optional(),
-}).strict();
-
-export const CategoryCreateWithoutSubCategoriesInputSchema: z.ZodType<Prisma.CategoryCreateWithoutSubCategoriesInput> = z.object({
-  name: z.string(),
-  createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
-  notebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutCategoryInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutCategoryInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutCategoryInputSchema).optional(),
-}).strict();
-
-export const CategoryUncheckedCreateWithoutSubCategoriesInputSchema: z.ZodType<Prisma.CategoryUncheckedCreateWithoutSubCategoriesInput> = z.object({
-  id: z.number().int().optional(),
-  name: z.string(),
-  createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
-  notebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
-}).strict();
-
-export const CategoryCreateOrConnectWithoutSubCategoriesInputSchema: z.ZodType<Prisma.CategoryCreateOrConnectWithoutSubCategoriesInput> = z.object({
-  where: z.lazy(() => CategoryWhereUniqueInputSchema),
-  create: z.union([ z.lazy(() => CategoryCreateWithoutSubCategoriesInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutSubCategoriesInputSchema) ]),
-}).strict();
-
-export const OhsBoardTopicCreateWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicCreateWithoutSubCategoryInput> = z.object({
-  id: z.string().optional(),
-  topicText: z.string(),
-  riskScore: z.string().optional().nullable(),
-  remarks: z.string().optional().nullable(),
-  createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
-  meeting: z.lazy(() => OhsBoardMeetingCreateNestedOneWithoutTopicsInputSchema),
-  category: z.lazy(() => CategoryCreateNestedOneWithoutOhsBoardTopicInputSchema).optional(),
-}).strict();
-
-export const OhsBoardTopicUncheckedCreateWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedCreateWithoutSubCategoryInput> = z.object({
-  id: z.string().optional(),
-  meetingId: z.string(),
-  topicText: z.string(),
-  categoryId: z.number().int().optional().nullable(),
-  riskScore: z.string().optional().nullable(),
-  remarks: z.string().optional().nullable(),
-  createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
-}).strict();
-
-export const OhsBoardTopicCreateOrConnectWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicCreateOrConnectWithoutSubCategoryInput> = z.object({
-  where: z.lazy(() => OhsBoardTopicWhereUniqueInputSchema),
-  create: z.union([ z.lazy(() => OhsBoardTopicCreateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutSubCategoryInputSchema) ]),
-}).strict();
-
-export const OhsBoardTopicCreateManySubCategoryInputEnvelopeSchema: z.ZodType<Prisma.OhsBoardTopicCreateManySubCategoryInputEnvelope> = z.object({
-  data: z.union([ z.lazy(() => OhsBoardTopicCreateManySubCategoryInputSchema), z.lazy(() => OhsBoardTopicCreateManySubCategoryInputSchema).array() ]),
-  skipDuplicates: z.boolean().optional(),
-}).strict();
-
 export const OhsBoardDecisionCreateWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionCreateWithoutSubCategoryInput> = z.object({
   id: z.string().optional(),
   decisionNumber: z.string(),
@@ -66854,7 +67895,8 @@ export const OhsBoardDecisionCreateWithoutSubCategoryInputSchema: z.ZodType<Pris
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   meeting: z.lazy(() => OhsBoardMeetingCreateNestedOneWithoutDecisionsInputSchema),
-  category: z.lazy(() => CategoryCreateNestedOneWithoutOhsBoardDecisionInputSchema),
+  mainCategory: z.lazy(() => CategoryCreateNestedOneWithoutMainDecisionsInputSchema).optional(),
+  category: z.lazy(() => CategoryCreateNestedOneWithoutDecisionsInputSchema).optional(),
   department: z.lazy(() => OhsBoardDepartmentCreateNestedOneWithoutDecisionsInputSchema).optional(),
   actions: z.lazy(() => OhsBoardDecisionActionCreateNestedManyWithoutDecisionInputSchema).optional(),
   auditLogs: z.lazy(() => OhsBoardAuditLogCreateNestedManyWithoutDecisionInputSchema).optional(),
@@ -66865,7 +67907,8 @@ export const OhsBoardDecisionUncheckedCreateWithoutSubCategoryInputSchema: z.Zod
   meetingId: z.string(),
   decisionNumber: z.string(),
   decisionText: z.string(),
-  categoryId: z.number().int(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
   departmentId: z.string().optional().nullable(),
   priority: z.string(),
   status: z.string(),
@@ -66893,50 +67936,252 @@ export const OhsBoardDecisionCreateManySubCategoryInputEnvelopeSchema: z.ZodType
   skipDuplicates: z.boolean().optional(),
 }).strict();
 
-export const NotebookItemUpsertWithWhereUniqueWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpsertWithWhereUniqueWithoutSubCategoryInput> = z.object({
+export const NotebookItemCreateWithoutMainCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateWithoutMainCategoryInput> = z.object({
+  authorType: z.string(),
+  authorName: z.string(),
+  content: z.string(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  category: z.lazy(() => CategoryCreateNestedOneWithoutNotebookItemsInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryCreateNestedOneWithoutSubNotebookItemsInputSchema).optional(),
+  department: z.lazy(() => DepartmentCreateNestedOneWithoutNotebookItemsInputSchema).optional(),
+  page: z.lazy(() => NotebookPageCreateNestedOneWithoutItemsInputSchema),
+  actions: z.lazy(() => NotebookItemActionCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+}).strict();
+
+export const NotebookItemUncheckedCreateWithoutMainCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedCreateWithoutMainCategoryInput> = z.object({
+  id: z.number().int().optional(),
+  pageId: z.number().int(),
+  authorType: z.string(),
+  authorName: z.string(),
+  content: z.string(),
+  categoryId: z.number().int().optional().nullable(),
+  subCategoryId: z.number().int().optional().nullable(),
+  departmentId: z.number().int().optional().nullable(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  actions: z.lazy(() => NotebookItemActionUncheckedCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUncheckedCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+}).strict();
+
+export const NotebookItemCreateOrConnectWithoutMainCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateOrConnectWithoutMainCategoryInput> = z.object({
   where: z.lazy(() => NotebookItemWhereUniqueInputSchema),
-  update: z.union([ z.lazy(() => NotebookItemUpdateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUncheckedUpdateWithoutSubCategoryInputSchema) ]),
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutMainCategoryInputSchema) ]),
+}).strict();
+
+export const NotebookItemCreateManyMainCategoryInputEnvelopeSchema: z.ZodType<Prisma.NotebookItemCreateManyMainCategoryInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => NotebookItemCreateManyMainCategoryInputSchema), z.lazy(() => NotebookItemCreateManyMainCategoryInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const NotebookItemCreateWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateWithoutCategoryInput> = z.object({
+  authorType: z.string(),
+  authorName: z.string(),
+  content: z.string(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  mainCategory: z.lazy(() => CategoryCreateNestedOneWithoutMainNotebookItemsInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryCreateNestedOneWithoutSubNotebookItemsInputSchema).optional(),
+  department: z.lazy(() => DepartmentCreateNestedOneWithoutNotebookItemsInputSchema).optional(),
+  page: z.lazy(() => NotebookPageCreateNestedOneWithoutItemsInputSchema),
+  actions: z.lazy(() => NotebookItemActionCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+}).strict();
+
+export const NotebookItemUncheckedCreateWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedCreateWithoutCategoryInput> = z.object({
+  id: z.number().int().optional(),
+  pageId: z.number().int(),
+  authorType: z.string(),
+  authorName: z.string(),
+  content: z.string(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  subCategoryId: z.number().int().optional().nullable(),
+  departmentId: z.number().int().optional().nullable(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  actions: z.lazy(() => NotebookItemActionUncheckedCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUncheckedCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+}).strict();
+
+export const NotebookItemCreateOrConnectWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateOrConnectWithoutCategoryInput> = z.object({
+  where: z.lazy(() => NotebookItemWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutCategoryInputSchema) ]),
+}).strict();
+
+export const NotebookItemCreateManyCategoryInputEnvelopeSchema: z.ZodType<Prisma.NotebookItemCreateManyCategoryInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => NotebookItemCreateManyCategoryInputSchema), z.lazy(() => NotebookItemCreateManyCategoryInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const NotebookItemCreateWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateWithoutSubCategoryInput> = z.object({
+  authorType: z.string(),
+  authorName: z.string(),
+  content: z.string(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  mainCategory: z.lazy(() => CategoryCreateNestedOneWithoutMainNotebookItemsInputSchema).optional(),
+  category: z.lazy(() => CategoryCreateNestedOneWithoutNotebookItemsInputSchema).optional(),
+  department: z.lazy(() => DepartmentCreateNestedOneWithoutNotebookItemsInputSchema).optional(),
+  page: z.lazy(() => NotebookPageCreateNestedOneWithoutItemsInputSchema),
+  actions: z.lazy(() => NotebookItemActionCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+}).strict();
+
+export const NotebookItemUncheckedCreateWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedCreateWithoutSubCategoryInput> = z.object({
+  id: z.number().int().optional(),
+  pageId: z.number().int(),
+  authorType: z.string(),
+  authorName: z.string(),
+  content: z.string(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
+  departmentId: z.number().int().optional().nullable(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  actions: z.lazy(() => NotebookItemActionUncheckedCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUncheckedCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+}).strict();
+
+export const NotebookItemCreateOrConnectWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateOrConnectWithoutSubCategoryInput> = z.object({
+  where: z.lazy(() => NotebookItemWhereUniqueInputSchema),
   create: z.union([ z.lazy(() => NotebookItemCreateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutSubCategoryInputSchema) ]),
 }).strict();
 
-export const NotebookItemUpdateWithWhereUniqueWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpdateWithWhereUniqueWithoutSubCategoryInput> = z.object({
-  where: z.lazy(() => NotebookItemWhereUniqueInputSchema),
-  data: z.union([ z.lazy(() => NotebookItemUpdateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUncheckedUpdateWithoutSubCategoryInputSchema) ]),
+export const NotebookItemCreateManySubCategoryInputEnvelopeSchema: z.ZodType<Prisma.NotebookItemCreateManySubCategoryInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => NotebookItemCreateManySubCategoryInputSchema), z.lazy(() => NotebookItemCreateManySubCategoryInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
 }).strict();
 
-export const NotebookItemUpdateManyWithWhereWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpdateManyWithWhereWithoutSubCategoryInput> = z.object({
-  where: z.lazy(() => NotebookItemScalarWhereInputSchema),
-  data: z.union([ z.lazy(() => NotebookItemUpdateManyMutationInputSchema), z.lazy(() => NotebookItemUncheckedUpdateManyWithoutSubCategoryInputSchema) ]),
-}).strict();
-
-export const CategoryUpsertWithoutSubCategoriesInputSchema: z.ZodType<Prisma.CategoryUpsertWithoutSubCategoriesInput> = z.object({
-  update: z.union([ z.lazy(() => CategoryUpdateWithoutSubCategoriesInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutSubCategoriesInputSchema) ]),
-  create: z.union([ z.lazy(() => CategoryCreateWithoutSubCategoriesInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutSubCategoriesInputSchema) ]),
+export const CategoryUpsertWithoutChildrenInputSchema: z.ZodType<Prisma.CategoryUpsertWithoutChildrenInput> = z.object({
+  update: z.union([ z.lazy(() => CategoryUpdateWithoutChildrenInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutChildrenInputSchema) ]),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutChildrenInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutChildrenInputSchema) ]),
   where: z.lazy(() => CategoryWhereInputSchema).optional(),
 }).strict();
 
-export const CategoryUpdateToOneWithWhereWithoutSubCategoriesInputSchema: z.ZodType<Prisma.CategoryUpdateToOneWithWhereWithoutSubCategoriesInput> = z.object({
+export const CategoryUpdateToOneWithWhereWithoutChildrenInputSchema: z.ZodType<Prisma.CategoryUpdateToOneWithWhereWithoutChildrenInput> = z.object({
   where: z.lazy(() => CategoryWhereInputSchema).optional(),
-  data: z.union([ z.lazy(() => CategoryUpdateWithoutSubCategoriesInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutSubCategoriesInputSchema) ]),
+  data: z.union([ z.lazy(() => CategoryUpdateWithoutChildrenInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutChildrenInputSchema) ]),
 }).strict();
 
-export const CategoryUpdateWithoutSubCategoriesInputSchema: z.ZodType<Prisma.CategoryUpdateWithoutSubCategoriesInput> = z.object({
+export const CategoryUpdateWithoutChildrenInputSchema: z.ZodType<Prisma.CategoryUpdateWithoutChildrenInput> = z.object({
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  parent: z.lazy(() => CategoryUpdateOneWithoutChildrenNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
   notebookItems: z.lazy(() => NotebookItemUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
 }).strict();
 
-export const CategoryUncheckedUpdateWithoutSubCategoriesInputSchema: z.ZodType<Prisma.CategoryUncheckedUpdateWithoutSubCategoriesInput> = z.object({
+export const CategoryUncheckedUpdateWithoutChildrenInputSchema: z.ZodType<Prisma.CategoryUncheckedUpdateWithoutChildrenInput> = z.object({
   id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  parentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
   notebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+}).strict();
+
+export const CategoryUpsertWithWhereUniqueWithoutParentInputSchema: z.ZodType<Prisma.CategoryUpsertWithWhereUniqueWithoutParentInput> = z.object({
+  where: z.lazy(() => CategoryWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => CategoryUpdateWithoutParentInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutParentInputSchema) ]),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutParentInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutParentInputSchema) ]),
+}).strict();
+
+export const CategoryUpdateWithWhereUniqueWithoutParentInputSchema: z.ZodType<Prisma.CategoryUpdateWithWhereUniqueWithoutParentInput> = z.object({
+  where: z.lazy(() => CategoryWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => CategoryUpdateWithoutParentInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutParentInputSchema) ]),
+}).strict();
+
+export const CategoryUpdateManyWithWhereWithoutParentInputSchema: z.ZodType<Prisma.CategoryUpdateManyWithWhereWithoutParentInput> = z.object({
+  where: z.lazy(() => CategoryScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => CategoryUpdateManyMutationInputSchema), z.lazy(() => CategoryUncheckedUpdateManyWithoutParentInputSchema) ]),
+}).strict();
+
+export const CategoryScalarWhereInputSchema: z.ZodType<Prisma.CategoryScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => CategoryScalarWhereInputSchema), z.lazy(() => CategoryScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => CategoryScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => CategoryScalarWhereInputSchema), z.lazy(() => CategoryScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  name: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  parentId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const OhsBoardTopicUpsertWithWhereUniqueWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUpsertWithWhereUniqueWithoutMainCategoryInput> = z.object({
+  where: z.lazy(() => OhsBoardTopicWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => OhsBoardTopicUpdateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedUpdateWithoutMainCategoryInputSchema) ]),
+  create: z.union([ z.lazy(() => OhsBoardTopicCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutMainCategoryInputSchema) ]),
+}).strict();
+
+export const OhsBoardTopicUpdateWithWhereUniqueWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUpdateWithWhereUniqueWithoutMainCategoryInput> = z.object({
+  where: z.lazy(() => OhsBoardTopicWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => OhsBoardTopicUpdateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedUpdateWithoutMainCategoryInputSchema) ]),
+}).strict();
+
+export const OhsBoardTopicUpdateManyWithWhereWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUpdateManyWithWhereWithoutMainCategoryInput> = z.object({
+  where: z.lazy(() => OhsBoardTopicScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => OhsBoardTopicUpdateManyMutationInputSchema), z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutMainCategoryInputSchema) ]),
+}).strict();
+
+export const OhsBoardTopicScalarWhereInputSchema: z.ZodType<Prisma.OhsBoardTopicScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => OhsBoardTopicScalarWhereInputSchema), z.lazy(() => OhsBoardTopicScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => OhsBoardTopicScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => OhsBoardTopicScalarWhereInputSchema), z.lazy(() => OhsBoardTopicScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  meetingId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  topicText: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  mainCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
+  categoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
+  subCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
+  riskScore: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  remarks: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const OhsBoardTopicUpsertWithWhereUniqueWithoutCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUpsertWithWhereUniqueWithoutCategoryInput> = z.object({
+  where: z.lazy(() => OhsBoardTopicWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => OhsBoardTopicUpdateWithoutCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedUpdateWithoutCategoryInputSchema) ]),
+  create: z.union([ z.lazy(() => OhsBoardTopicCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedCreateWithoutCategoryInputSchema) ]),
+}).strict();
+
+export const OhsBoardTopicUpdateWithWhereUniqueWithoutCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUpdateWithWhereUniqueWithoutCategoryInput> = z.object({
+  where: z.lazy(() => OhsBoardTopicWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => OhsBoardTopicUpdateWithoutCategoryInputSchema), z.lazy(() => OhsBoardTopicUncheckedUpdateWithoutCategoryInputSchema) ]),
+}).strict();
+
+export const OhsBoardTopicUpdateManyWithWhereWithoutCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUpdateManyWithWhereWithoutCategoryInput> = z.object({
+  where: z.lazy(() => OhsBoardTopicScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => OhsBoardTopicUpdateManyMutationInputSchema), z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutCategoryInputSchema) ]),
 }).strict();
 
 export const OhsBoardTopicUpsertWithWhereUniqueWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUpsertWithWhereUniqueWithoutSubCategoryInput> = z.object({
@@ -66955,6 +68200,38 @@ export const OhsBoardTopicUpdateManyWithWhereWithoutSubCategoryInputSchema: z.Zo
   data: z.union([ z.lazy(() => OhsBoardTopicUpdateManyMutationInputSchema), z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryInputSchema) ]),
 }).strict();
 
+export const OhsBoardDecisionUpsertWithWhereUniqueWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUpsertWithWhereUniqueWithoutMainCategoryInput> = z.object({
+  where: z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => OhsBoardDecisionUpdateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedUpdateWithoutMainCategoryInputSchema) ]),
+  create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutMainCategoryInputSchema) ]),
+}).strict();
+
+export const OhsBoardDecisionUpdateWithWhereUniqueWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUpdateWithWhereUniqueWithoutMainCategoryInput> = z.object({
+  where: z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => OhsBoardDecisionUpdateWithoutMainCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedUpdateWithoutMainCategoryInputSchema) ]),
+}).strict();
+
+export const OhsBoardDecisionUpdateManyWithWhereWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUpdateManyWithWhereWithoutMainCategoryInput> = z.object({
+  where: z.lazy(() => OhsBoardDecisionScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => OhsBoardDecisionUpdateManyMutationInputSchema), z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutMainCategoryInputSchema) ]),
+}).strict();
+
+export const OhsBoardDecisionUpsertWithWhereUniqueWithoutCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUpsertWithWhereUniqueWithoutCategoryInput> = z.object({
+  where: z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => OhsBoardDecisionUpdateWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedUpdateWithoutCategoryInputSchema) ]),
+  create: z.union([ z.lazy(() => OhsBoardDecisionCreateWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedCreateWithoutCategoryInputSchema) ]),
+}).strict();
+
+export const OhsBoardDecisionUpdateWithWhereUniqueWithoutCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUpdateWithWhereUniqueWithoutCategoryInput> = z.object({
+  where: z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => OhsBoardDecisionUpdateWithoutCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedUpdateWithoutCategoryInputSchema) ]),
+}).strict();
+
+export const OhsBoardDecisionUpdateManyWithWhereWithoutCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUpdateManyWithWhereWithoutCategoryInput> = z.object({
+  where: z.lazy(() => OhsBoardDecisionScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => OhsBoardDecisionUpdateManyMutationInputSchema), z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutCategoryInputSchema) ]),
+}).strict();
+
 export const OhsBoardDecisionUpsertWithWhereUniqueWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUpsertWithWhereUniqueWithoutSubCategoryInput> = z.object({
   where: z.lazy(() => OhsBoardDecisionWhereUniqueInputSchema),
   update: z.union([ z.lazy(() => OhsBoardDecisionUpdateWithoutSubCategoryInputSchema), z.lazy(() => OhsBoardDecisionUncheckedUpdateWithoutSubCategoryInputSchema) ]),
@@ -66969,6 +68246,73 @@ export const OhsBoardDecisionUpdateWithWhereUniqueWithoutSubCategoryInputSchema:
 export const OhsBoardDecisionUpdateManyWithWhereWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUpdateManyWithWhereWithoutSubCategoryInput> = z.object({
   where: z.lazy(() => OhsBoardDecisionScalarWhereInputSchema),
   data: z.union([ z.lazy(() => OhsBoardDecisionUpdateManyMutationInputSchema), z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryInputSchema) ]),
+}).strict();
+
+export const NotebookItemUpsertWithWhereUniqueWithoutMainCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpsertWithWhereUniqueWithoutMainCategoryInput> = z.object({
+  where: z.lazy(() => NotebookItemWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => NotebookItemUpdateWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemUncheckedUpdateWithoutMainCategoryInputSchema) ]),
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutMainCategoryInputSchema) ]),
+}).strict();
+
+export const NotebookItemUpdateWithWhereUniqueWithoutMainCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpdateWithWhereUniqueWithoutMainCategoryInput> = z.object({
+  where: z.lazy(() => NotebookItemWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => NotebookItemUpdateWithoutMainCategoryInputSchema), z.lazy(() => NotebookItemUncheckedUpdateWithoutMainCategoryInputSchema) ]),
+}).strict();
+
+export const NotebookItemUpdateManyWithWhereWithoutMainCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpdateManyWithWhereWithoutMainCategoryInput> = z.object({
+  where: z.lazy(() => NotebookItemScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => NotebookItemUpdateManyMutationInputSchema), z.lazy(() => NotebookItemUncheckedUpdateManyWithoutMainCategoryInputSchema) ]),
+}).strict();
+
+export const NotebookItemScalarWhereInputSchema: z.ZodType<Prisma.NotebookItemScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => NotebookItemScalarWhereInputSchema), z.lazy(() => NotebookItemScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => NotebookItemScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => NotebookItemScalarWhereInputSchema), z.lazy(() => NotebookItemScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  pageId: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  authorType: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  authorName: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  content: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  mainCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
+  categoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
+  subCategoryId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
+  departmentId: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
+  riskLevel: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const NotebookItemUpsertWithWhereUniqueWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpsertWithWhereUniqueWithoutCategoryInput> = z.object({
+  where: z.lazy(() => NotebookItemWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => NotebookItemUpdateWithoutCategoryInputSchema), z.lazy(() => NotebookItemUncheckedUpdateWithoutCategoryInputSchema) ]),
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutCategoryInputSchema) ]),
+}).strict();
+
+export const NotebookItemUpdateWithWhereUniqueWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpdateWithWhereUniqueWithoutCategoryInput> = z.object({
+  where: z.lazy(() => NotebookItemWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => NotebookItemUpdateWithoutCategoryInputSchema), z.lazy(() => NotebookItemUncheckedUpdateWithoutCategoryInputSchema) ]),
+}).strict();
+
+export const NotebookItemUpdateManyWithWhereWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpdateManyWithWhereWithoutCategoryInput> = z.object({
+  where: z.lazy(() => NotebookItemScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => NotebookItemUpdateManyMutationInputSchema), z.lazy(() => NotebookItemUncheckedUpdateManyWithoutCategoryInputSchema) ]),
+}).strict();
+
+export const NotebookItemUpsertWithWhereUniqueWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpsertWithWhereUniqueWithoutSubCategoryInput> = z.object({
+  where: z.lazy(() => NotebookItemWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => NotebookItemUpdateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUncheckedUpdateWithoutSubCategoryInputSchema) ]),
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutSubCategoryInputSchema) ]),
+}).strict();
+
+export const NotebookItemUpdateWithWhereUniqueWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpdateWithWhereUniqueWithoutSubCategoryInput> = z.object({
+  where: z.lazy(() => NotebookItemWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => NotebookItemUpdateWithoutSubCategoryInputSchema), z.lazy(() => NotebookItemUncheckedUpdateWithoutSubCategoryInputSchema) ]),
+}).strict();
+
+export const NotebookItemUpdateManyWithWhereWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpdateManyWithWhereWithoutSubCategoryInput> = z.object({
+  where: z.lazy(() => NotebookItemScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => NotebookItemUpdateManyMutationInputSchema), z.lazy(() => NotebookItemUncheckedUpdateManyWithoutSubCategoryInputSchema) ]),
 }).strict();
 
 export const ExtraordinaryIncidentCreateWithoutDepartmentInputSchema: z.ZodType<Prisma.ExtraordinaryIncidentCreateWithoutDepartmentInput> = z.object({
@@ -67050,11 +68394,16 @@ export const NotebookItemCreateWithoutDepartmentInputSchema: z.ZodType<Prisma.No
   authorType: z.string(),
   authorName: z.string(),
   content: z.string(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  category: z.lazy(() => CategoryCreateNestedOneWithoutNotebookItemsInputSchema),
+  mainCategory: z.lazy(() => CategoryCreateNestedOneWithoutMainNotebookItemsInputSchema).optional(),
+  category: z.lazy(() => CategoryCreateNestedOneWithoutNotebookItemsInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryCreateNestedOneWithoutSubNotebookItemsInputSchema).optional(),
   page: z.lazy(() => NotebookPageCreateNestedOneWithoutItemsInputSchema),
-  subCategory: z.lazy(() => SubCategoryCreateNestedOneWithoutNotebookItemsInputSchema).optional(),
+  actions: z.lazy(() => NotebookItemActionCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentCreateNestedManyWithoutNotebookItemInputSchema).optional(),
 }).strict();
 
 export const NotebookItemUncheckedCreateWithoutDepartmentInputSchema: z.ZodType<Prisma.NotebookItemUncheckedCreateWithoutDepartmentInput> = z.object({
@@ -67063,10 +68412,15 @@ export const NotebookItemUncheckedCreateWithoutDepartmentInputSchema: z.ZodType<
   authorType: z.string(),
   authorName: z.string(),
   content: z.string(),
-  categoryId: z.number().int(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  actions: z.lazy(() => NotebookItemActionUncheckedCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUncheckedCreateNestedManyWithoutNotebookItemInputSchema).optional(),
 }).strict();
 
 export const NotebookItemCreateOrConnectWithoutDepartmentInputSchema: z.ZodType<Prisma.NotebookItemCreateOrConnectWithoutDepartmentInput> = z.object({
@@ -67115,11 +68469,16 @@ export const NotebookItemCreateWithoutPageInputSchema: z.ZodType<Prisma.Notebook
   authorType: z.string(),
   authorName: z.string(),
   content: z.string(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  category: z.lazy(() => CategoryCreateNestedOneWithoutNotebookItemsInputSchema),
-  department: z.lazy(() => DepartmentCreateNestedOneWithoutNotebookItemsInputSchema),
-  subCategory: z.lazy(() => SubCategoryCreateNestedOneWithoutNotebookItemsInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryCreateNestedOneWithoutMainNotebookItemsInputSchema).optional(),
+  category: z.lazy(() => CategoryCreateNestedOneWithoutNotebookItemsInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryCreateNestedOneWithoutSubNotebookItemsInputSchema).optional(),
+  department: z.lazy(() => DepartmentCreateNestedOneWithoutNotebookItemsInputSchema).optional(),
+  actions: z.lazy(() => NotebookItemActionCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentCreateNestedManyWithoutNotebookItemInputSchema).optional(),
 }).strict();
 
 export const NotebookItemUncheckedCreateWithoutPageInputSchema: z.ZodType<Prisma.NotebookItemUncheckedCreateWithoutPageInput> = z.object({
@@ -67127,11 +68486,16 @@ export const NotebookItemUncheckedCreateWithoutPageInputSchema: z.ZodType<Prisma
   authorType: z.string(),
   authorName: z.string(),
   content: z.string(),
-  categoryId: z.number().int(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
-  departmentId: z.number().int(),
+  departmentId: z.number().int().optional().nullable(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  actions: z.lazy(() => NotebookItemActionUncheckedCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUncheckedCreateNestedManyWithoutNotebookItemInputSchema).optional(),
 }).strict();
 
 export const NotebookItemCreateOrConnectWithoutPageInputSchema: z.ZodType<Prisma.NotebookItemCreateOrConnectWithoutPageInput> = z.object({
@@ -67436,28 +68800,118 @@ export const FacilityUncheckedUpdateWithoutNotebookPagesInputSchema: z.ZodType<P
   ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
+export const CategoryCreateWithoutMainNotebookItemsInputSchema: z.ZodType<Prisma.CategoryCreateWithoutMainNotebookItemsInput> = z.object({
+  name: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  parent: z.lazy(() => CategoryCreateNestedOneWithoutChildrenInputSchema).optional(),
+  children: z.lazy(() => CategoryCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+}).strict();
+
+export const CategoryUncheckedCreateWithoutMainNotebookItemsInputSchema: z.ZodType<Prisma.CategoryUncheckedCreateWithoutMainNotebookItemsInput> = z.object({
+  id: z.number().int().optional(),
+  name: z.string(),
+  parentId: z.number().int().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  children: z.lazy(() => CategoryUncheckedCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+}).strict();
+
+export const CategoryCreateOrConnectWithoutMainNotebookItemsInputSchema: z.ZodType<Prisma.CategoryCreateOrConnectWithoutMainNotebookItemsInput> = z.object({
+  where: z.lazy(() => CategoryWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutMainNotebookItemsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutMainNotebookItemsInputSchema) ]),
+}).strict();
+
 export const CategoryCreateWithoutNotebookItemsInputSchema: z.ZodType<Prisma.CategoryCreateWithoutNotebookItemsInput> = z.object({
   name: z.string(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  subCategories: z.lazy(() => SubCategoryCreateNestedManyWithoutCategoryInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutCategoryInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutCategoryInputSchema).optional(),
+  parent: z.lazy(() => CategoryCreateNestedOneWithoutChildrenInputSchema).optional(),
+  children: z.lazy(() => CategoryCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutSubCategoryInputSchema).optional(),
 }).strict();
 
 export const CategoryUncheckedCreateWithoutNotebookItemsInputSchema: z.ZodType<Prisma.CategoryUncheckedCreateWithoutNotebookItemsInput> = z.object({
   id: z.number().int().optional(),
   name: z.string(),
+  parentId: z.number().int().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  subCategories: z.lazy(() => SubCategoryUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  children: z.lazy(() => CategoryUncheckedCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
 }).strict();
 
 export const CategoryCreateOrConnectWithoutNotebookItemsInputSchema: z.ZodType<Prisma.CategoryCreateOrConnectWithoutNotebookItemsInput> = z.object({
   where: z.lazy(() => CategoryWhereUniqueInputSchema),
   create: z.union([ z.lazy(() => CategoryCreateWithoutNotebookItemsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutNotebookItemsInputSchema) ]),
+}).strict();
+
+export const CategoryCreateWithoutSubNotebookItemsInputSchema: z.ZodType<Prisma.CategoryCreateWithoutSubNotebookItemsInput> = z.object({
+  name: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  parent: z.lazy(() => CategoryCreateNestedOneWithoutChildrenInputSchema).optional(),
+  children: z.lazy(() => CategoryCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutCategoryInputSchema).optional(),
+}).strict();
+
+export const CategoryUncheckedCreateWithoutSubNotebookItemsInputSchema: z.ZodType<Prisma.CategoryUncheckedCreateWithoutSubNotebookItemsInput> = z.object({
+  id: z.number().int().optional(),
+  name: z.string(),
+  parentId: z.number().int().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  children: z.lazy(() => CategoryUncheckedCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+}).strict();
+
+export const CategoryCreateOrConnectWithoutSubNotebookItemsInputSchema: z.ZodType<Prisma.CategoryCreateOrConnectWithoutSubNotebookItemsInput> = z.object({
+  where: z.lazy(() => CategoryWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutSubNotebookItemsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutSubNotebookItemsInputSchema) ]),
 }).strict();
 
 export const DepartmentCreateWithoutNotebookItemsInputSchema: z.ZodType<Prisma.DepartmentCreateWithoutNotebookItemsInput> = z.object({
@@ -67491,6 +68945,8 @@ export const NotebookPageCreateWithoutItemsInputSchema: z.ZodType<Prisma.Noteboo
   documentUploadedAt: z.coerce.date().optional().nullable(),
   isArchived: z.boolean().optional(),
   isLocked: z.boolean().optional(),
+  ciltNo: z.number().int().optional().nullable(),
+  pageNo: z.string().optional().nullable(),
   facility: z.lazy(() => FacilityCreateNestedOneWithoutNotebookPagesInputSchema),
 }).strict();
 
@@ -67507,6 +68963,8 @@ export const NotebookPageUncheckedCreateWithoutItemsInputSchema: z.ZodType<Prism
   documentUploadedAt: z.coerce.date().optional().nullable(),
   isArchived: z.boolean().optional(),
   isLocked: z.boolean().optional(),
+  ciltNo: z.number().int().optional().nullable(),
+  pageNo: z.string().optional().nullable(),
 }).strict();
 
 export const NotebookPageCreateOrConnectWithoutItemsInputSchema: z.ZodType<Prisma.NotebookPageCreateOrConnectWithoutItemsInput> = z.object({
@@ -67514,28 +68972,106 @@ export const NotebookPageCreateOrConnectWithoutItemsInputSchema: z.ZodType<Prism
   create: z.union([ z.lazy(() => NotebookPageCreateWithoutItemsInputSchema), z.lazy(() => NotebookPageUncheckedCreateWithoutItemsInputSchema) ]),
 }).strict();
 
-export const SubCategoryCreateWithoutNotebookItemsInputSchema: z.ZodType<Prisma.SubCategoryCreateWithoutNotebookItemsInput> = z.object({
-  name: z.string(),
+export const NotebookItemActionCreateWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemActionCreateWithoutNotebookItemInput> = z.object({
+  content: z.string(),
+  proofUrl: z.string().optional().nullable(),
+  status: z.string(),
+  createdBy: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  category: z.lazy(() => CategoryCreateNestedOneWithoutSubCategoriesInputSchema),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutSubCategoryInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutSubCategoryInputSchema).optional(),
 }).strict();
 
-export const SubCategoryUncheckedCreateWithoutNotebookItemsInputSchema: z.ZodType<Prisma.SubCategoryUncheckedCreateWithoutNotebookItemsInput> = z.object({
+export const NotebookItemActionUncheckedCreateWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemActionUncheckedCreateWithoutNotebookItemInput> = z.object({
   id: z.number().int().optional(),
-  name: z.string(),
-  categoryId: z.number().int(),
+  content: z.string(),
+  proofUrl: z.string().optional().nullable(),
+  status: z.string(),
+  createdBy: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
 }).strict();
 
-export const SubCategoryCreateOrConnectWithoutNotebookItemsInputSchema: z.ZodType<Prisma.SubCategoryCreateOrConnectWithoutNotebookItemsInput> = z.object({
-  where: z.lazy(() => SubCategoryWhereUniqueInputSchema),
-  create: z.union([ z.lazy(() => SubCategoryCreateWithoutNotebookItemsInputSchema), z.lazy(() => SubCategoryUncheckedCreateWithoutNotebookItemsInputSchema) ]),
+export const NotebookItemActionCreateOrConnectWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemActionCreateOrConnectWithoutNotebookItemInput> = z.object({
+  where: z.lazy(() => NotebookItemActionWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => NotebookItemActionCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionUncheckedCreateWithoutNotebookItemInputSchema) ]),
+}).strict();
+
+export const NotebookItemActionCreateManyNotebookItemInputEnvelopeSchema: z.ZodType<Prisma.NotebookItemActionCreateManyNotebookItemInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => NotebookItemActionCreateManyNotebookItemInputSchema), z.lazy(() => NotebookItemActionCreateManyNotebookItemInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const NotebookItemCommentCreateWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemCommentCreateWithoutNotebookItemInput> = z.object({
+  content: z.string(),
+  authorId: z.string().optional().nullable(),
+  authorName: z.string(),
+  attachments: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const NotebookItemCommentUncheckedCreateWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemCommentUncheckedCreateWithoutNotebookItemInput> = z.object({
+  id: z.number().int().optional(),
+  content: z.string(),
+  authorId: z.string().optional().nullable(),
+  authorName: z.string(),
+  attachments: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const NotebookItemCommentCreateOrConnectWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemCommentCreateOrConnectWithoutNotebookItemInput> = z.object({
+  where: z.lazy(() => NotebookItemCommentWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => NotebookItemCommentCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentUncheckedCreateWithoutNotebookItemInputSchema) ]),
+}).strict();
+
+export const NotebookItemCommentCreateManyNotebookItemInputEnvelopeSchema: z.ZodType<Prisma.NotebookItemCommentCreateManyNotebookItemInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => NotebookItemCommentCreateManyNotebookItemInputSchema), z.lazy(() => NotebookItemCommentCreateManyNotebookItemInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const CategoryUpsertWithoutMainNotebookItemsInputSchema: z.ZodType<Prisma.CategoryUpsertWithoutMainNotebookItemsInput> = z.object({
+  update: z.union([ z.lazy(() => CategoryUpdateWithoutMainNotebookItemsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutMainNotebookItemsInputSchema) ]),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutMainNotebookItemsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutMainNotebookItemsInputSchema) ]),
+  where: z.lazy(() => CategoryWhereInputSchema).optional(),
+}).strict();
+
+export const CategoryUpdateToOneWithWhereWithoutMainNotebookItemsInputSchema: z.ZodType<Prisma.CategoryUpdateToOneWithWhereWithoutMainNotebookItemsInput> = z.object({
+  where: z.lazy(() => CategoryWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => CategoryUpdateWithoutMainNotebookItemsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutMainNotebookItemsInputSchema) ]),
+}).strict();
+
+export const CategoryUpdateWithoutMainNotebookItemsInputSchema: z.ZodType<Prisma.CategoryUpdateWithoutMainNotebookItemsInput> = z.object({
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  parent: z.lazy(() => CategoryUpdateOneWithoutChildrenNestedInputSchema).optional(),
+  children: z.lazy(() => CategoryUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+}).strict();
+
+export const CategoryUncheckedUpdateWithoutMainNotebookItemsInputSchema: z.ZodType<Prisma.CategoryUncheckedUpdateWithoutMainNotebookItemsInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  parentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  children: z.lazy(() => CategoryUncheckedUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
 }).strict();
 
 export const CategoryUpsertWithoutNotebookItemsInputSchema: z.ZodType<Prisma.CategoryUpsertWithoutNotebookItemsInput> = z.object({
@@ -67553,19 +69089,77 @@ export const CategoryUpdateWithoutNotebookItemsInputSchema: z.ZodType<Prisma.Cat
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  subCategories: z.lazy(() => SubCategoryUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  parent: z.lazy(() => CategoryUpdateOneWithoutChildrenNestedInputSchema).optional(),
+  children: z.lazy(() => CategoryUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
 }).strict();
 
 export const CategoryUncheckedUpdateWithoutNotebookItemsInputSchema: z.ZodType<Prisma.CategoryUncheckedUpdateWithoutNotebookItemsInput> = z.object({
   id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  parentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  subCategories: z.lazy(() => SubCategoryUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  children: z.lazy(() => CategoryUncheckedUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+}).strict();
+
+export const CategoryUpsertWithoutSubNotebookItemsInputSchema: z.ZodType<Prisma.CategoryUpsertWithoutSubNotebookItemsInput> = z.object({
+  update: z.union([ z.lazy(() => CategoryUpdateWithoutSubNotebookItemsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutSubNotebookItemsInputSchema) ]),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutSubNotebookItemsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutSubNotebookItemsInputSchema) ]),
+  where: z.lazy(() => CategoryWhereInputSchema).optional(),
+}).strict();
+
+export const CategoryUpdateToOneWithWhereWithoutSubNotebookItemsInputSchema: z.ZodType<Prisma.CategoryUpdateToOneWithWhereWithoutSubNotebookItemsInput> = z.object({
+  where: z.lazy(() => CategoryWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => CategoryUpdateWithoutSubNotebookItemsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutSubNotebookItemsInputSchema) ]),
+}).strict();
+
+export const CategoryUpdateWithoutSubNotebookItemsInputSchema: z.ZodType<Prisma.CategoryUpdateWithoutSubNotebookItemsInput> = z.object({
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  parent: z.lazy(() => CategoryUpdateOneWithoutChildrenNestedInputSchema).optional(),
+  children: z.lazy(() => CategoryUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUpdateManyWithoutCategoryNestedInputSchema).optional(),
+}).strict();
+
+export const CategoryUncheckedUpdateWithoutSubNotebookItemsInputSchema: z.ZodType<Prisma.CategoryUncheckedUpdateWithoutSubNotebookItemsInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  parentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  children: z.lazy(() => CategoryUncheckedUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
 }).strict();
 
 export const DepartmentUpsertWithoutNotebookItemsInputSchema: z.ZodType<Prisma.DepartmentUpsertWithoutNotebookItemsInput> = z.object({
@@ -67616,6 +69210,8 @@ export const NotebookPageUpdateWithoutItemsInputSchema: z.ZodType<Prisma.Noteboo
   documentUploadedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   isArchived: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
   isLocked: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  ciltNo: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  pageNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   facility: z.lazy(() => FacilityUpdateOneRequiredWithoutNotebookPagesNestedInputSchema).optional(),
 }).strict();
 
@@ -67632,36 +69228,232 @@ export const NotebookPageUncheckedUpdateWithoutItemsInputSchema: z.ZodType<Prism
   documentUploadedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   isArchived: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
   isLocked: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  ciltNo: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  pageNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
 }).strict();
 
-export const SubCategoryUpsertWithoutNotebookItemsInputSchema: z.ZodType<Prisma.SubCategoryUpsertWithoutNotebookItemsInput> = z.object({
-  update: z.union([ z.lazy(() => SubCategoryUpdateWithoutNotebookItemsInputSchema), z.lazy(() => SubCategoryUncheckedUpdateWithoutNotebookItemsInputSchema) ]),
-  create: z.union([ z.lazy(() => SubCategoryCreateWithoutNotebookItemsInputSchema), z.lazy(() => SubCategoryUncheckedCreateWithoutNotebookItemsInputSchema) ]),
-  where: z.lazy(() => SubCategoryWhereInputSchema).optional(),
+export const NotebookItemActionUpsertWithWhereUniqueWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemActionUpsertWithWhereUniqueWithoutNotebookItemInput> = z.object({
+  where: z.lazy(() => NotebookItemActionWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => NotebookItemActionUpdateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionUncheckedUpdateWithoutNotebookItemInputSchema) ]),
+  create: z.union([ z.lazy(() => NotebookItemActionCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionUncheckedCreateWithoutNotebookItemInputSchema) ]),
 }).strict();
 
-export const SubCategoryUpdateToOneWithWhereWithoutNotebookItemsInputSchema: z.ZodType<Prisma.SubCategoryUpdateToOneWithWhereWithoutNotebookItemsInput> = z.object({
-  where: z.lazy(() => SubCategoryWhereInputSchema).optional(),
-  data: z.union([ z.lazy(() => SubCategoryUpdateWithoutNotebookItemsInputSchema), z.lazy(() => SubCategoryUncheckedUpdateWithoutNotebookItemsInputSchema) ]),
+export const NotebookItemActionUpdateWithWhereUniqueWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemActionUpdateWithWhereUniqueWithoutNotebookItemInput> = z.object({
+  where: z.lazy(() => NotebookItemActionWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => NotebookItemActionUpdateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemActionUncheckedUpdateWithoutNotebookItemInputSchema) ]),
 }).strict();
 
-export const SubCategoryUpdateWithoutNotebookItemsInputSchema: z.ZodType<Prisma.SubCategoryUpdateWithoutNotebookItemsInput> = z.object({
-  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+export const NotebookItemActionUpdateManyWithWhereWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemActionUpdateManyWithWhereWithoutNotebookItemInput> = z.object({
+  where: z.lazy(() => NotebookItemActionScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => NotebookItemActionUpdateManyMutationInputSchema), z.lazy(() => NotebookItemActionUncheckedUpdateManyWithoutNotebookItemInputSchema) ]),
+}).strict();
+
+export const NotebookItemActionScalarWhereInputSchema: z.ZodType<Prisma.NotebookItemActionScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => NotebookItemActionScalarWhereInputSchema), z.lazy(() => NotebookItemActionScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => NotebookItemActionScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => NotebookItemActionScalarWhereInputSchema), z.lazy(() => NotebookItemActionScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  notebookItemId: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  content: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  proofUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  createdBy: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const NotebookItemCommentUpsertWithWhereUniqueWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemCommentUpsertWithWhereUniqueWithoutNotebookItemInput> = z.object({
+  where: z.lazy(() => NotebookItemCommentWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => NotebookItemCommentUpdateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentUncheckedUpdateWithoutNotebookItemInputSchema) ]),
+  create: z.union([ z.lazy(() => NotebookItemCommentCreateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentUncheckedCreateWithoutNotebookItemInputSchema) ]),
+}).strict();
+
+export const NotebookItemCommentUpdateWithWhereUniqueWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemCommentUpdateWithWhereUniqueWithoutNotebookItemInput> = z.object({
+  where: z.lazy(() => NotebookItemCommentWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => NotebookItemCommentUpdateWithoutNotebookItemInputSchema), z.lazy(() => NotebookItemCommentUncheckedUpdateWithoutNotebookItemInputSchema) ]),
+}).strict();
+
+export const NotebookItemCommentUpdateManyWithWhereWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemCommentUpdateManyWithWhereWithoutNotebookItemInput> = z.object({
+  where: z.lazy(() => NotebookItemCommentScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => NotebookItemCommentUpdateManyMutationInputSchema), z.lazy(() => NotebookItemCommentUncheckedUpdateManyWithoutNotebookItemInputSchema) ]),
+}).strict();
+
+export const NotebookItemCommentScalarWhereInputSchema: z.ZodType<Prisma.NotebookItemCommentScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => NotebookItemCommentScalarWhereInputSchema), z.lazy(() => NotebookItemCommentScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => NotebookItemCommentScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => NotebookItemCommentScalarWhereInputSchema), z.lazy(() => NotebookItemCommentScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  notebookItemId: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  content: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  authorId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  authorName: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  attachments: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const NotebookItemCreateWithoutActionsInputSchema: z.ZodType<Prisma.NotebookItemCreateWithoutActionsInput> = z.object({
+  authorType: z.string(),
+  authorName: z.string(),
+  content: z.string(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  mainCategory: z.lazy(() => CategoryCreateNestedOneWithoutMainNotebookItemsInputSchema).optional(),
+  category: z.lazy(() => CategoryCreateNestedOneWithoutNotebookItemsInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryCreateNestedOneWithoutSubNotebookItemsInputSchema).optional(),
+  department: z.lazy(() => DepartmentCreateNestedOneWithoutNotebookItemsInputSchema).optional(),
+  page: z.lazy(() => NotebookPageCreateNestedOneWithoutItemsInputSchema),
+  comments: z.lazy(() => NotebookItemCommentCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+}).strict();
+
+export const NotebookItemUncheckedCreateWithoutActionsInputSchema: z.ZodType<Prisma.NotebookItemUncheckedCreateWithoutActionsInput> = z.object({
+  id: z.number().int().optional(),
+  pageId: z.number().int(),
+  authorType: z.string(),
+  authorName: z.string(),
+  content: z.string(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
+  subCategoryId: z.number().int().optional().nullable(),
+  departmentId: z.number().int().optional().nullable(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  comments: z.lazy(() => NotebookItemCommentUncheckedCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+}).strict();
+
+export const NotebookItemCreateOrConnectWithoutActionsInputSchema: z.ZodType<Prisma.NotebookItemCreateOrConnectWithoutActionsInput> = z.object({
+  where: z.lazy(() => NotebookItemWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutActionsInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutActionsInputSchema) ]),
+}).strict();
+
+export const NotebookItemUpsertWithoutActionsInputSchema: z.ZodType<Prisma.NotebookItemUpsertWithoutActionsInput> = z.object({
+  update: z.union([ z.lazy(() => NotebookItemUpdateWithoutActionsInputSchema), z.lazy(() => NotebookItemUncheckedUpdateWithoutActionsInputSchema) ]),
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutActionsInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutActionsInputSchema) ]),
+  where: z.lazy(() => NotebookItemWhereInputSchema).optional(),
+}).strict();
+
+export const NotebookItemUpdateToOneWithWhereWithoutActionsInputSchema: z.ZodType<Prisma.NotebookItemUpdateToOneWithWhereWithoutActionsInput> = z.object({
+  where: z.lazy(() => NotebookItemWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => NotebookItemUpdateWithoutActionsInputSchema), z.lazy(() => NotebookItemUncheckedUpdateWithoutActionsInputSchema) ]),
+}).strict();
+
+export const NotebookItemUpdateWithoutActionsInputSchema: z.ZodType<Prisma.NotebookItemUpdateWithoutActionsInput> = z.object({
+  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  category: z.lazy(() => CategoryUpdateOneRequiredWithoutSubCategoriesNestedInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryUpdateOneWithoutMainNotebookItemsNestedInputSchema).optional(),
+  category: z.lazy(() => CategoryUpdateOneWithoutNotebookItemsNestedInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryUpdateOneWithoutSubNotebookItemsNestedInputSchema).optional(),
+  department: z.lazy(() => DepartmentUpdateOneWithoutNotebookItemsNestedInputSchema).optional(),
+  page: z.lazy(() => NotebookPageUpdateOneRequiredWithoutItemsNestedInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
 }).strict();
 
-export const SubCategoryUncheckedUpdateWithoutNotebookItemsInputSchema: z.ZodType<Prisma.SubCategoryUncheckedUpdateWithoutNotebookItemsInput> = z.object({
+export const NotebookItemUncheckedUpdateWithoutActionsInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateWithoutActionsInput> = z.object({
   id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  pageId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  departmentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUncheckedUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+}).strict();
+
+export const NotebookItemCreateWithoutCommentsInputSchema: z.ZodType<Prisma.NotebookItemCreateWithoutCommentsInput> = z.object({
+  authorType: z.string(),
+  authorName: z.string(),
+  content: z.string(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  mainCategory: z.lazy(() => CategoryCreateNestedOneWithoutMainNotebookItemsInputSchema).optional(),
+  category: z.lazy(() => CategoryCreateNestedOneWithoutNotebookItemsInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryCreateNestedOneWithoutSubNotebookItemsInputSchema).optional(),
+  department: z.lazy(() => DepartmentCreateNestedOneWithoutNotebookItemsInputSchema).optional(),
+  page: z.lazy(() => NotebookPageCreateNestedOneWithoutItemsInputSchema),
+  actions: z.lazy(() => NotebookItemActionCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+}).strict();
+
+export const NotebookItemUncheckedCreateWithoutCommentsInputSchema: z.ZodType<Prisma.NotebookItemUncheckedCreateWithoutCommentsInput> = z.object({
+  id: z.number().int().optional(),
+  pageId: z.number().int(),
+  authorType: z.string(),
+  authorName: z.string(),
+  content: z.string(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
+  subCategoryId: z.number().int().optional().nullable(),
+  departmentId: z.number().int().optional().nullable(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  actions: z.lazy(() => NotebookItemActionUncheckedCreateNestedManyWithoutNotebookItemInputSchema).optional(),
+}).strict();
+
+export const NotebookItemCreateOrConnectWithoutCommentsInputSchema: z.ZodType<Prisma.NotebookItemCreateOrConnectWithoutCommentsInput> = z.object({
+  where: z.lazy(() => NotebookItemWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutCommentsInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutCommentsInputSchema) ]),
+}).strict();
+
+export const NotebookItemUpsertWithoutCommentsInputSchema: z.ZodType<Prisma.NotebookItemUpsertWithoutCommentsInput> = z.object({
+  update: z.union([ z.lazy(() => NotebookItemUpdateWithoutCommentsInputSchema), z.lazy(() => NotebookItemUncheckedUpdateWithoutCommentsInputSchema) ]),
+  create: z.union([ z.lazy(() => NotebookItemCreateWithoutCommentsInputSchema), z.lazy(() => NotebookItemUncheckedCreateWithoutCommentsInputSchema) ]),
+  where: z.lazy(() => NotebookItemWhereInputSchema).optional(),
+}).strict();
+
+export const NotebookItemUpdateToOneWithWhereWithoutCommentsInputSchema: z.ZodType<Prisma.NotebookItemUpdateToOneWithWhereWithoutCommentsInput> = z.object({
+  where: z.lazy(() => NotebookItemWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => NotebookItemUpdateWithoutCommentsInputSchema), z.lazy(() => NotebookItemUncheckedUpdateWithoutCommentsInputSchema) ]),
+}).strict();
+
+export const NotebookItemUpdateWithoutCommentsInputSchema: z.ZodType<Prisma.NotebookItemUpdateWithoutCommentsInput> = z.object({
+  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategory: z.lazy(() => CategoryUpdateOneWithoutMainNotebookItemsNestedInputSchema).optional(),
+  category: z.lazy(() => CategoryUpdateOneWithoutNotebookItemsNestedInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryUpdateOneWithoutSubNotebookItemsNestedInputSchema).optional(),
+  department: z.lazy(() => DepartmentUpdateOneWithoutNotebookItemsNestedInputSchema).optional(),
+  page: z.lazy(() => NotebookPageUpdateOneRequiredWithoutItemsNestedInputSchema).optional(),
+  actions: z.lazy(() => NotebookItemActionUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+}).strict();
+
+export const NotebookItemUncheckedUpdateWithoutCommentsInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateWithoutCommentsInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  pageId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  departmentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  actions: z.lazy(() => NotebookItemActionUncheckedUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateWithoutRiskExpertFacilitiesInputSchema: z.ZodType<Prisma.FacilityCreateWithoutRiskExpertFacilitiesInput> = z.object({
@@ -90491,6 +92283,7 @@ export const IntegratedAuditCreateWithoutFindingsInputSchema: z.ZodType<Prisma.I
   purpose: z.string().optional().nullable(),
   executive: z.string().optional().nullable(),
   conclusion: z.string().optional().nullable(),
+  createdBy: z.string().optional().nullable(),
   team: z.union([ z.lazy(() => IntegratedAuditCreateteamInputSchema), z.string().array() ]).optional(),
   participants: z.union([ z.lazy(() => IntegratedAuditCreateparticipantsInputSchema), z.string().array() ]).optional(),
   criteria: z.union([ z.lazy(() => IntegratedAuditCreatecriteriaInputSchema), z.string().array() ]).optional(),
@@ -90514,6 +92307,7 @@ export const IntegratedAuditUncheckedCreateWithoutFindingsInputSchema: z.ZodType
   purpose: z.string().optional().nullable(),
   executive: z.string().optional().nullable(),
   conclusion: z.string().optional().nullable(),
+  createdBy: z.string().optional().nullable(),
   team: z.union([ z.lazy(() => IntegratedAuditCreateteamInputSchema), z.string().array() ]).optional(),
   participants: z.union([ z.lazy(() => IntegratedAuditCreateparticipantsInputSchema), z.string().array() ]).optional(),
   criteria: z.union([ z.lazy(() => IntegratedAuditCreatecriteriaInputSchema), z.string().array() ]).optional(),
@@ -90611,6 +92405,7 @@ export const IntegratedAuditUpdateWithoutFindingsInputSchema: z.ZodType<Prisma.I
   purpose: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   executive: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   conclusion: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   team: z.union([ z.lazy(() => IntegratedAuditUpdateteamInputSchema), z.string().array() ]).optional(),
   participants: z.union([ z.lazy(() => IntegratedAuditUpdateparticipantsInputSchema), z.string().array() ]).optional(),
   criteria: z.union([ z.lazy(() => IntegratedAuditUpdatecriteriaInputSchema), z.string().array() ]).optional(),
@@ -90634,6 +92429,7 @@ export const IntegratedAuditUncheckedUpdateWithoutFindingsInputSchema: z.ZodType
   purpose: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   executive: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   conclusion: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   team: z.union([ z.lazy(() => IntegratedAuditUpdateteamInputSchema), z.string().array() ]).optional(),
   participants: z.union([ z.lazy(() => IntegratedAuditUpdateparticipantsInputSchema), z.string().array() ]).optional(),
   criteria: z.union([ z.lazy(() => IntegratedAuditUpdatecriteriaInputSchema), z.string().array() ]).optional(),
@@ -93822,8 +95618,9 @@ export const OhsBoardDecisionCreateWithoutMeetingInputSchema: z.ZodType<Prisma.O
   centralBoardStatus: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  category: z.lazy(() => CategoryCreateNestedOneWithoutOhsBoardDecisionInputSchema),
-  subCategory: z.lazy(() => SubCategoryCreateNestedOneWithoutOhsBoardDecisionInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryCreateNestedOneWithoutMainDecisionsInputSchema).optional(),
+  category: z.lazy(() => CategoryCreateNestedOneWithoutDecisionsInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryCreateNestedOneWithoutSubDecisionsInputSchema).optional(),
   department: z.lazy(() => OhsBoardDepartmentCreateNestedOneWithoutDecisionsInputSchema).optional(),
   actions: z.lazy(() => OhsBoardDecisionActionCreateNestedManyWithoutDecisionInputSchema).optional(),
   auditLogs: z.lazy(() => OhsBoardAuditLogCreateNestedManyWithoutDecisionInputSchema).optional(),
@@ -93833,7 +95630,8 @@ export const OhsBoardDecisionUncheckedCreateWithoutMeetingInputSchema: z.ZodType
   id: z.string().optional(),
   decisionNumber: z.string(),
   decisionText: z.string(),
-  categoryId: z.number().int(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
   departmentId: z.string().optional().nullable(),
   priority: z.string(),
@@ -93901,13 +95699,15 @@ export const OhsBoardTopicCreateWithoutMeetingInputSchema: z.ZodType<Prisma.OhsB
   remarks: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  category: z.lazy(() => CategoryCreateNestedOneWithoutOhsBoardTopicInputSchema).optional(),
-  subCategory: z.lazy(() => SubCategoryCreateNestedOneWithoutOhsBoardTopicInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryCreateNestedOneWithoutMainTopicsInputSchema).optional(),
+  category: z.lazy(() => CategoryCreateNestedOneWithoutTopicsInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryCreateNestedOneWithoutSubTopicsInputSchema).optional(),
 }).strict();
 
 export const OhsBoardTopicUncheckedCreateWithoutMeetingInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedCreateWithoutMeetingInput> = z.object({
   id: z.string().optional(),
   topicText: z.string(),
+  mainCategoryId: z.number().int().optional().nullable(),
   categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
   riskScore: z.string().optional().nullable(),
@@ -94350,52 +96150,118 @@ export const OhsBoardMeetingCreateOrConnectWithoutTopicsInputSchema: z.ZodType<P
   create: z.union([ z.lazy(() => OhsBoardMeetingCreateWithoutTopicsInputSchema), z.lazy(() => OhsBoardMeetingUncheckedCreateWithoutTopicsInputSchema) ]),
 }).strict();
 
-export const CategoryCreateWithoutOhsBoardTopicInputSchema: z.ZodType<Prisma.CategoryCreateWithoutOhsBoardTopicInput> = z.object({
+export const CategoryCreateWithoutMainTopicsInputSchema: z.ZodType<Prisma.CategoryCreateWithoutMainTopicsInput> = z.object({
   name: z.string(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  parent: z.lazy(() => CategoryCreateNestedOneWithoutChildrenInputSchema).optional(),
+  children: z.lazy(() => CategoryCreateNestedManyWithoutParentInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutMainCategoryInputSchema).optional(),
   notebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutCategoryInputSchema).optional(),
-  subCategories: z.lazy(() => SubCategoryCreateNestedManyWithoutCategoryInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutSubCategoryInputSchema).optional(),
 }).strict();
 
-export const CategoryUncheckedCreateWithoutOhsBoardTopicInputSchema: z.ZodType<Prisma.CategoryUncheckedCreateWithoutOhsBoardTopicInput> = z.object({
+export const CategoryUncheckedCreateWithoutMainTopicsInputSchema: z.ZodType<Prisma.CategoryUncheckedCreateWithoutMainTopicsInput> = z.object({
   id: z.number().int().optional(),
   name: z.string(),
+  parentId: z.number().int().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  children: z.lazy(() => CategoryUncheckedCreateNestedManyWithoutParentInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
   notebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
-  subCategories: z.lazy(() => SubCategoryUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
 }).strict();
 
-export const CategoryCreateOrConnectWithoutOhsBoardTopicInputSchema: z.ZodType<Prisma.CategoryCreateOrConnectWithoutOhsBoardTopicInput> = z.object({
+export const CategoryCreateOrConnectWithoutMainTopicsInputSchema: z.ZodType<Prisma.CategoryCreateOrConnectWithoutMainTopicsInput> = z.object({
   where: z.lazy(() => CategoryWhereUniqueInputSchema),
-  create: z.union([ z.lazy(() => CategoryCreateWithoutOhsBoardTopicInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutOhsBoardTopicInputSchema) ]),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutMainTopicsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutMainTopicsInputSchema) ]),
 }).strict();
 
-export const SubCategoryCreateWithoutOhsBoardTopicInputSchema: z.ZodType<Prisma.SubCategoryCreateWithoutOhsBoardTopicInput> = z.object({
+export const CategoryCreateWithoutTopicsInputSchema: z.ZodType<Prisma.CategoryCreateWithoutTopicsInput> = z.object({
   name: z.string(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  notebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutSubCategoryInputSchema).optional(),
-  category: z.lazy(() => CategoryCreateNestedOneWithoutSubCategoriesInputSchema),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  parent: z.lazy(() => CategoryCreateNestedOneWithoutChildrenInputSchema).optional(),
+  children: z.lazy(() => CategoryCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutSubCategoryInputSchema).optional(),
 }).strict();
 
-export const SubCategoryUncheckedCreateWithoutOhsBoardTopicInputSchema: z.ZodType<Prisma.SubCategoryUncheckedCreateWithoutOhsBoardTopicInput> = z.object({
+export const CategoryUncheckedCreateWithoutTopicsInputSchema: z.ZodType<Prisma.CategoryUncheckedCreateWithoutTopicsInput> = z.object({
   id: z.number().int().optional(),
   name: z.string(),
-  categoryId: z.number().int(),
+  parentId: z.number().int().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  notebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  children: z.lazy(() => CategoryUncheckedCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
 }).strict();
 
-export const SubCategoryCreateOrConnectWithoutOhsBoardTopicInputSchema: z.ZodType<Prisma.SubCategoryCreateOrConnectWithoutOhsBoardTopicInput> = z.object({
-  where: z.lazy(() => SubCategoryWhereUniqueInputSchema),
-  create: z.union([ z.lazy(() => SubCategoryCreateWithoutOhsBoardTopicInputSchema), z.lazy(() => SubCategoryUncheckedCreateWithoutOhsBoardTopicInputSchema) ]),
+export const CategoryCreateOrConnectWithoutTopicsInputSchema: z.ZodType<Prisma.CategoryCreateOrConnectWithoutTopicsInput> = z.object({
+  where: z.lazy(() => CategoryWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutTopicsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutTopicsInputSchema) ]),
+}).strict();
+
+export const CategoryCreateWithoutSubTopicsInputSchema: z.ZodType<Prisma.CategoryCreateWithoutSubTopicsInput> = z.object({
+  name: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  parent: z.lazy(() => CategoryCreateNestedOneWithoutChildrenInputSchema).optional(),
+  children: z.lazy(() => CategoryCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+}).strict();
+
+export const CategoryUncheckedCreateWithoutSubTopicsInputSchema: z.ZodType<Prisma.CategoryUncheckedCreateWithoutSubTopicsInput> = z.object({
+  id: z.number().int().optional(),
+  name: z.string(),
+  parentId: z.number().int().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  children: z.lazy(() => CategoryUncheckedCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+}).strict();
+
+export const CategoryCreateOrConnectWithoutSubTopicsInputSchema: z.ZodType<Prisma.CategoryCreateOrConnectWithoutSubTopicsInput> = z.object({
+  where: z.lazy(() => CategoryWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutSubTopicsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutSubTopicsInputSchema) ]),
 }).strict();
 
 export const OhsBoardMeetingUpsertWithoutTopicsInputSchema: z.ZodType<Prisma.OhsBoardMeetingUpsertWithoutTopicsInput> = z.object({
@@ -94439,64 +96305,136 @@ export const OhsBoardMeetingUncheckedUpdateWithoutTopicsInputSchema: z.ZodType<P
   attendances: z.lazy(() => OhsBoardMeetingAttendanceUncheckedUpdateManyWithoutMeetingNestedInputSchema).optional(),
 }).strict();
 
-export const CategoryUpsertWithoutOhsBoardTopicInputSchema: z.ZodType<Prisma.CategoryUpsertWithoutOhsBoardTopicInput> = z.object({
-  update: z.union([ z.lazy(() => CategoryUpdateWithoutOhsBoardTopicInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutOhsBoardTopicInputSchema) ]),
-  create: z.union([ z.lazy(() => CategoryCreateWithoutOhsBoardTopicInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutOhsBoardTopicInputSchema) ]),
+export const CategoryUpsertWithoutMainTopicsInputSchema: z.ZodType<Prisma.CategoryUpsertWithoutMainTopicsInput> = z.object({
+  update: z.union([ z.lazy(() => CategoryUpdateWithoutMainTopicsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutMainTopicsInputSchema) ]),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutMainTopicsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutMainTopicsInputSchema) ]),
   where: z.lazy(() => CategoryWhereInputSchema).optional(),
 }).strict();
 
-export const CategoryUpdateToOneWithWhereWithoutOhsBoardTopicInputSchema: z.ZodType<Prisma.CategoryUpdateToOneWithWhereWithoutOhsBoardTopicInput> = z.object({
+export const CategoryUpdateToOneWithWhereWithoutMainTopicsInputSchema: z.ZodType<Prisma.CategoryUpdateToOneWithWhereWithoutMainTopicsInput> = z.object({
   where: z.lazy(() => CategoryWhereInputSchema).optional(),
-  data: z.union([ z.lazy(() => CategoryUpdateWithoutOhsBoardTopicInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutOhsBoardTopicInputSchema) ]),
+  data: z.union([ z.lazy(() => CategoryUpdateWithoutMainTopicsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutMainTopicsInputSchema) ]),
 }).strict();
 
-export const CategoryUpdateWithoutOhsBoardTopicInputSchema: z.ZodType<Prisma.CategoryUpdateWithoutOhsBoardTopicInput> = z.object({
+export const CategoryUpdateWithoutMainTopicsInputSchema: z.ZodType<Prisma.CategoryUpdateWithoutMainTopicsInput> = z.object({
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  parent: z.lazy(() => CategoryUpdateOneWithoutChildrenNestedInputSchema).optional(),
+  children: z.lazy(() => CategoryUpdateManyWithoutParentNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
   notebookItems: z.lazy(() => NotebookItemUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  subCategories: z.lazy(() => SubCategoryUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
 }).strict();
 
-export const CategoryUncheckedUpdateWithoutOhsBoardTopicInputSchema: z.ZodType<Prisma.CategoryUncheckedUpdateWithoutOhsBoardTopicInput> = z.object({
+export const CategoryUncheckedUpdateWithoutMainTopicsInputSchema: z.ZodType<Prisma.CategoryUncheckedUpdateWithoutMainTopicsInput> = z.object({
   id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  parentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  children: z.lazy(() => CategoryUncheckedUpdateManyWithoutParentNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
   notebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  subCategories: z.lazy(() => SubCategoryUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
 }).strict();
 
-export const SubCategoryUpsertWithoutOhsBoardTopicInputSchema: z.ZodType<Prisma.SubCategoryUpsertWithoutOhsBoardTopicInput> = z.object({
-  update: z.union([ z.lazy(() => SubCategoryUpdateWithoutOhsBoardTopicInputSchema), z.lazy(() => SubCategoryUncheckedUpdateWithoutOhsBoardTopicInputSchema) ]),
-  create: z.union([ z.lazy(() => SubCategoryCreateWithoutOhsBoardTopicInputSchema), z.lazy(() => SubCategoryUncheckedCreateWithoutOhsBoardTopicInputSchema) ]),
-  where: z.lazy(() => SubCategoryWhereInputSchema).optional(),
+export const CategoryUpsertWithoutTopicsInputSchema: z.ZodType<Prisma.CategoryUpsertWithoutTopicsInput> = z.object({
+  update: z.union([ z.lazy(() => CategoryUpdateWithoutTopicsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutTopicsInputSchema) ]),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutTopicsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutTopicsInputSchema) ]),
+  where: z.lazy(() => CategoryWhereInputSchema).optional(),
 }).strict();
 
-export const SubCategoryUpdateToOneWithWhereWithoutOhsBoardTopicInputSchema: z.ZodType<Prisma.SubCategoryUpdateToOneWithWhereWithoutOhsBoardTopicInput> = z.object({
-  where: z.lazy(() => SubCategoryWhereInputSchema).optional(),
-  data: z.union([ z.lazy(() => SubCategoryUpdateWithoutOhsBoardTopicInputSchema), z.lazy(() => SubCategoryUncheckedUpdateWithoutOhsBoardTopicInputSchema) ]),
+export const CategoryUpdateToOneWithWhereWithoutTopicsInputSchema: z.ZodType<Prisma.CategoryUpdateToOneWithWhereWithoutTopicsInput> = z.object({
+  where: z.lazy(() => CategoryWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => CategoryUpdateWithoutTopicsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutTopicsInputSchema) ]),
 }).strict();
 
-export const SubCategoryUpdateWithoutOhsBoardTopicInputSchema: z.ZodType<Prisma.SubCategoryUpdateWithoutOhsBoardTopicInput> = z.object({
+export const CategoryUpdateWithoutTopicsInputSchema: z.ZodType<Prisma.CategoryUpdateWithoutTopicsInput> = z.object({
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  notebookItems: z.lazy(() => NotebookItemUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
-  category: z.lazy(() => CategoryUpdateOneRequiredWithoutSubCategoriesNestedInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  parent: z.lazy(() => CategoryUpdateOneWithoutChildrenNestedInputSchema).optional(),
+  children: z.lazy(() => CategoryUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
 }).strict();
 
-export const SubCategoryUncheckedUpdateWithoutOhsBoardTopicInputSchema: z.ZodType<Prisma.SubCategoryUncheckedUpdateWithoutOhsBoardTopicInput> = z.object({
+export const CategoryUncheckedUpdateWithoutTopicsInputSchema: z.ZodType<Prisma.CategoryUncheckedUpdateWithoutTopicsInput> = z.object({
   id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  parentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  notebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  children: z.lazy(() => CategoryUncheckedUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+}).strict();
+
+export const CategoryUpsertWithoutSubTopicsInputSchema: z.ZodType<Prisma.CategoryUpsertWithoutSubTopicsInput> = z.object({
+  update: z.union([ z.lazy(() => CategoryUpdateWithoutSubTopicsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutSubTopicsInputSchema) ]),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutSubTopicsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutSubTopicsInputSchema) ]),
+  where: z.lazy(() => CategoryWhereInputSchema).optional(),
+}).strict();
+
+export const CategoryUpdateToOneWithWhereWithoutSubTopicsInputSchema: z.ZodType<Prisma.CategoryUpdateToOneWithWhereWithoutSubTopicsInput> = z.object({
+  where: z.lazy(() => CategoryWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => CategoryUpdateWithoutSubTopicsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutSubTopicsInputSchema) ]),
+}).strict();
+
+export const CategoryUpdateWithoutSubTopicsInputSchema: z.ZodType<Prisma.CategoryUpdateWithoutSubTopicsInput> = z.object({
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  parent: z.lazy(() => CategoryUpdateOneWithoutChildrenNestedInputSchema).optional(),
+  children: z.lazy(() => CategoryUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+}).strict();
+
+export const CategoryUncheckedUpdateWithoutSubTopicsInputSchema: z.ZodType<Prisma.CategoryUncheckedUpdateWithoutSubTopicsInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  parentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  children: z.lazy(() => CategoryUncheckedUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
 }).strict();
 
 export const OhsBoardMeetingCreateWithoutDecisionsInputSchema: z.ZodType<Prisma.OhsBoardMeetingCreateWithoutDecisionsInput> = z.object({
@@ -94534,52 +96472,118 @@ export const OhsBoardMeetingCreateOrConnectWithoutDecisionsInputSchema: z.ZodTyp
   create: z.union([ z.lazy(() => OhsBoardMeetingCreateWithoutDecisionsInputSchema), z.lazy(() => OhsBoardMeetingUncheckedCreateWithoutDecisionsInputSchema) ]),
 }).strict();
 
-export const CategoryCreateWithoutOhsBoardDecisionInputSchema: z.ZodType<Prisma.CategoryCreateWithoutOhsBoardDecisionInput> = z.object({
+export const CategoryCreateWithoutMainDecisionsInputSchema: z.ZodType<Prisma.CategoryCreateWithoutMainDecisionsInput> = z.object({
   name: z.string(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  parent: z.lazy(() => CategoryCreateNestedOneWithoutChildrenInputSchema).optional(),
+  children: z.lazy(() => CategoryCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutMainCategoryInputSchema).optional(),
   notebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutCategoryInputSchema).optional(),
-  subCategories: z.lazy(() => SubCategoryCreateNestedManyWithoutCategoryInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutSubCategoryInputSchema).optional(),
 }).strict();
 
-export const CategoryUncheckedCreateWithoutOhsBoardDecisionInputSchema: z.ZodType<Prisma.CategoryUncheckedCreateWithoutOhsBoardDecisionInput> = z.object({
+export const CategoryUncheckedCreateWithoutMainDecisionsInputSchema: z.ZodType<Prisma.CategoryUncheckedCreateWithoutMainDecisionsInput> = z.object({
   id: z.number().int().optional(),
   name: z.string(),
+  parentId: z.number().int().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
+  children: z.lazy(() => CategoryUncheckedCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
   notebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
-  subCategories: z.lazy(() => SubCategoryUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
 }).strict();
 
-export const CategoryCreateOrConnectWithoutOhsBoardDecisionInputSchema: z.ZodType<Prisma.CategoryCreateOrConnectWithoutOhsBoardDecisionInput> = z.object({
+export const CategoryCreateOrConnectWithoutMainDecisionsInputSchema: z.ZodType<Prisma.CategoryCreateOrConnectWithoutMainDecisionsInput> = z.object({
   where: z.lazy(() => CategoryWhereUniqueInputSchema),
-  create: z.union([ z.lazy(() => CategoryCreateWithoutOhsBoardDecisionInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutOhsBoardDecisionInputSchema) ]),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutMainDecisionsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutMainDecisionsInputSchema) ]),
 }).strict();
 
-export const SubCategoryCreateWithoutOhsBoardDecisionInputSchema: z.ZodType<Prisma.SubCategoryCreateWithoutOhsBoardDecisionInput> = z.object({
+export const CategoryCreateWithoutDecisionsInputSchema: z.ZodType<Prisma.CategoryCreateWithoutDecisionsInput> = z.object({
   name: z.string(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  notebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutSubCategoryInputSchema).optional(),
-  category: z.lazy(() => CategoryCreateNestedOneWithoutSubCategoriesInputSchema),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  parent: z.lazy(() => CategoryCreateNestedOneWithoutChildrenInputSchema).optional(),
+  children: z.lazy(() => CategoryCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutSubCategoryInputSchema).optional(),
 }).strict();
 
-export const SubCategoryUncheckedCreateWithoutOhsBoardDecisionInputSchema: z.ZodType<Prisma.SubCategoryUncheckedCreateWithoutOhsBoardDecisionInput> = z.object({
+export const CategoryUncheckedCreateWithoutDecisionsInputSchema: z.ZodType<Prisma.CategoryUncheckedCreateWithoutDecisionsInput> = z.object({
   id: z.number().int().optional(),
   name: z.string(),
-  categoryId: z.number().int(),
+  parentId: z.number().int().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  notebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  children: z.lazy(() => CategoryUncheckedCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
 }).strict();
 
-export const SubCategoryCreateOrConnectWithoutOhsBoardDecisionInputSchema: z.ZodType<Prisma.SubCategoryCreateOrConnectWithoutOhsBoardDecisionInput> = z.object({
-  where: z.lazy(() => SubCategoryWhereUniqueInputSchema),
-  create: z.union([ z.lazy(() => SubCategoryCreateWithoutOhsBoardDecisionInputSchema), z.lazy(() => SubCategoryUncheckedCreateWithoutOhsBoardDecisionInputSchema) ]),
+export const CategoryCreateOrConnectWithoutDecisionsInputSchema: z.ZodType<Prisma.CategoryCreateOrConnectWithoutDecisionsInput> = z.object({
+  where: z.lazy(() => CategoryWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutDecisionsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutDecisionsInputSchema) ]),
+}).strict();
+
+export const CategoryCreateWithoutSubDecisionsInputSchema: z.ZodType<Prisma.CategoryCreateWithoutSubDecisionsInput> = z.object({
+  name: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  parent: z.lazy(() => CategoryCreateNestedOneWithoutChildrenInputSchema).optional(),
+  children: z.lazy(() => CategoryCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionCreateNestedManyWithoutCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+}).strict();
+
+export const CategoryUncheckedCreateWithoutSubDecisionsInputSchema: z.ZodType<Prisma.CategoryUncheckedCreateWithoutSubDecisionsInput> = z.object({
+  id: z.number().int().optional(),
+  name: z.string(),
+  parentId: z.number().int().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  children: z.lazy(() => CategoryUncheckedCreateNestedManyWithoutParentInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutMainCategoryInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedCreateNestedManyWithoutSubCategoryInputSchema).optional(),
+}).strict();
+
+export const CategoryCreateOrConnectWithoutSubDecisionsInputSchema: z.ZodType<Prisma.CategoryCreateOrConnectWithoutSubDecisionsInput> = z.object({
+  where: z.lazy(() => CategoryWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutSubDecisionsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutSubDecisionsInputSchema) ]),
 }).strict();
 
 export const OhsBoardDepartmentCreateWithoutDecisionsInputSchema: z.ZodType<Prisma.OhsBoardDepartmentCreateWithoutDecisionsInput> = z.object({
@@ -94702,64 +96706,136 @@ export const OhsBoardMeetingUncheckedUpdateWithoutDecisionsInputSchema: z.ZodTyp
   topics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutMeetingNestedInputSchema).optional(),
 }).strict();
 
-export const CategoryUpsertWithoutOhsBoardDecisionInputSchema: z.ZodType<Prisma.CategoryUpsertWithoutOhsBoardDecisionInput> = z.object({
-  update: z.union([ z.lazy(() => CategoryUpdateWithoutOhsBoardDecisionInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutOhsBoardDecisionInputSchema) ]),
-  create: z.union([ z.lazy(() => CategoryCreateWithoutOhsBoardDecisionInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutOhsBoardDecisionInputSchema) ]),
+export const CategoryUpsertWithoutMainDecisionsInputSchema: z.ZodType<Prisma.CategoryUpsertWithoutMainDecisionsInput> = z.object({
+  update: z.union([ z.lazy(() => CategoryUpdateWithoutMainDecisionsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutMainDecisionsInputSchema) ]),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutMainDecisionsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutMainDecisionsInputSchema) ]),
   where: z.lazy(() => CategoryWhereInputSchema).optional(),
 }).strict();
 
-export const CategoryUpdateToOneWithWhereWithoutOhsBoardDecisionInputSchema: z.ZodType<Prisma.CategoryUpdateToOneWithWhereWithoutOhsBoardDecisionInput> = z.object({
+export const CategoryUpdateToOneWithWhereWithoutMainDecisionsInputSchema: z.ZodType<Prisma.CategoryUpdateToOneWithWhereWithoutMainDecisionsInput> = z.object({
   where: z.lazy(() => CategoryWhereInputSchema).optional(),
-  data: z.union([ z.lazy(() => CategoryUpdateWithoutOhsBoardDecisionInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutOhsBoardDecisionInputSchema) ]),
+  data: z.union([ z.lazy(() => CategoryUpdateWithoutMainDecisionsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutMainDecisionsInputSchema) ]),
 }).strict();
 
-export const CategoryUpdateWithoutOhsBoardDecisionInputSchema: z.ZodType<Prisma.CategoryUpdateWithoutOhsBoardDecisionInput> = z.object({
+export const CategoryUpdateWithoutMainDecisionsInputSchema: z.ZodType<Prisma.CategoryUpdateWithoutMainDecisionsInput> = z.object({
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  parent: z.lazy(() => CategoryUpdateOneWithoutChildrenNestedInputSchema).optional(),
+  children: z.lazy(() => CategoryUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
   notebookItems: z.lazy(() => NotebookItemUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  subCategories: z.lazy(() => SubCategoryUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
 }).strict();
 
-export const CategoryUncheckedUpdateWithoutOhsBoardDecisionInputSchema: z.ZodType<Prisma.CategoryUncheckedUpdateWithoutOhsBoardDecisionInput> = z.object({
+export const CategoryUncheckedUpdateWithoutMainDecisionsInputSchema: z.ZodType<Prisma.CategoryUncheckedUpdateWithoutMainDecisionsInput> = z.object({
   id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  parentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  children: z.lazy(() => CategoryUncheckedUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
   notebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  subCategories: z.lazy(() => SubCategoryUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
 }).strict();
 
-export const SubCategoryUpsertWithoutOhsBoardDecisionInputSchema: z.ZodType<Prisma.SubCategoryUpsertWithoutOhsBoardDecisionInput> = z.object({
-  update: z.union([ z.lazy(() => SubCategoryUpdateWithoutOhsBoardDecisionInputSchema), z.lazy(() => SubCategoryUncheckedUpdateWithoutOhsBoardDecisionInputSchema) ]),
-  create: z.union([ z.lazy(() => SubCategoryCreateWithoutOhsBoardDecisionInputSchema), z.lazy(() => SubCategoryUncheckedCreateWithoutOhsBoardDecisionInputSchema) ]),
-  where: z.lazy(() => SubCategoryWhereInputSchema).optional(),
+export const CategoryUpsertWithoutDecisionsInputSchema: z.ZodType<Prisma.CategoryUpsertWithoutDecisionsInput> = z.object({
+  update: z.union([ z.lazy(() => CategoryUpdateWithoutDecisionsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutDecisionsInputSchema) ]),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutDecisionsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutDecisionsInputSchema) ]),
+  where: z.lazy(() => CategoryWhereInputSchema).optional(),
 }).strict();
 
-export const SubCategoryUpdateToOneWithWhereWithoutOhsBoardDecisionInputSchema: z.ZodType<Prisma.SubCategoryUpdateToOneWithWhereWithoutOhsBoardDecisionInput> = z.object({
-  where: z.lazy(() => SubCategoryWhereInputSchema).optional(),
-  data: z.union([ z.lazy(() => SubCategoryUpdateWithoutOhsBoardDecisionInputSchema), z.lazy(() => SubCategoryUncheckedUpdateWithoutOhsBoardDecisionInputSchema) ]),
+export const CategoryUpdateToOneWithWhereWithoutDecisionsInputSchema: z.ZodType<Prisma.CategoryUpdateToOneWithWhereWithoutDecisionsInput> = z.object({
+  where: z.lazy(() => CategoryWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => CategoryUpdateWithoutDecisionsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutDecisionsInputSchema) ]),
 }).strict();
 
-export const SubCategoryUpdateWithoutOhsBoardDecisionInputSchema: z.ZodType<Prisma.SubCategoryUpdateWithoutOhsBoardDecisionInput> = z.object({
+export const CategoryUpdateWithoutDecisionsInputSchema: z.ZodType<Prisma.CategoryUpdateWithoutDecisionsInput> = z.object({
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  notebookItems: z.lazy(() => NotebookItemUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
-  category: z.lazy(() => CategoryUpdateOneRequiredWithoutSubCategoriesNestedInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  parent: z.lazy(() => CategoryUpdateOneWithoutChildrenNestedInputSchema).optional(),
+  children: z.lazy(() => CategoryUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
 }).strict();
 
-export const SubCategoryUncheckedUpdateWithoutOhsBoardDecisionInputSchema: z.ZodType<Prisma.SubCategoryUncheckedUpdateWithoutOhsBoardDecisionInput> = z.object({
+export const CategoryUncheckedUpdateWithoutDecisionsInputSchema: z.ZodType<Prisma.CategoryUncheckedUpdateWithoutDecisionsInput> = z.object({
   id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  parentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  notebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  children: z.lazy(() => CategoryUncheckedUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+}).strict();
+
+export const CategoryUpsertWithoutSubDecisionsInputSchema: z.ZodType<Prisma.CategoryUpsertWithoutSubDecisionsInput> = z.object({
+  update: z.union([ z.lazy(() => CategoryUpdateWithoutSubDecisionsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutSubDecisionsInputSchema) ]),
+  create: z.union([ z.lazy(() => CategoryCreateWithoutSubDecisionsInputSchema), z.lazy(() => CategoryUncheckedCreateWithoutSubDecisionsInputSchema) ]),
+  where: z.lazy(() => CategoryWhereInputSchema).optional(),
+}).strict();
+
+export const CategoryUpdateToOneWithWhereWithoutSubDecisionsInputSchema: z.ZodType<Prisma.CategoryUpdateToOneWithWhereWithoutSubDecisionsInput> = z.object({
+  where: z.lazy(() => CategoryWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => CategoryUpdateWithoutSubDecisionsInputSchema), z.lazy(() => CategoryUncheckedUpdateWithoutSubDecisionsInputSchema) ]),
+}).strict();
+
+export const CategoryUpdateWithoutSubDecisionsInputSchema: z.ZodType<Prisma.CategoryUpdateWithoutSubDecisionsInput> = z.object({
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  parent: z.lazy(() => CategoryUpdateOneWithoutChildrenNestedInputSchema).optional(),
+  children: z.lazy(() => CategoryUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+}).strict();
+
+export const CategoryUncheckedUpdateWithoutSubDecisionsInputSchema: z.ZodType<Prisma.CategoryUncheckedUpdateWithoutSubDecisionsInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  parentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  children: z.lazy(() => CategoryUncheckedUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
 }).strict();
 
 export const OhsBoardDepartmentUpsertWithoutDecisionsInputSchema: z.ZodType<Prisma.OhsBoardDepartmentUpsertWithoutDecisionsInput> = z.object({
@@ -94866,8 +96942,9 @@ export const OhsBoardDecisionCreateWithoutActionsInputSchema: z.ZodType<Prisma.O
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   meeting: z.lazy(() => OhsBoardMeetingCreateNestedOneWithoutDecisionsInputSchema),
-  category: z.lazy(() => CategoryCreateNestedOneWithoutOhsBoardDecisionInputSchema),
-  subCategory: z.lazy(() => SubCategoryCreateNestedOneWithoutOhsBoardDecisionInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryCreateNestedOneWithoutMainDecisionsInputSchema).optional(),
+  category: z.lazy(() => CategoryCreateNestedOneWithoutDecisionsInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryCreateNestedOneWithoutSubDecisionsInputSchema).optional(),
   department: z.lazy(() => OhsBoardDepartmentCreateNestedOneWithoutDecisionsInputSchema).optional(),
   auditLogs: z.lazy(() => OhsBoardAuditLogCreateNestedManyWithoutDecisionInputSchema).optional(),
 }).strict();
@@ -94877,7 +96954,8 @@ export const OhsBoardDecisionUncheckedCreateWithoutActionsInputSchema: z.ZodType
   meetingId: z.string(),
   decisionNumber: z.string(),
   decisionText: z.string(),
-  categoryId: z.number().int(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
   departmentId: z.string().optional().nullable(),
   priority: z.string(),
@@ -94928,8 +97006,9 @@ export const OhsBoardDecisionUpdateWithoutActionsInputSchema: z.ZodType<Prisma.O
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   meeting: z.lazy(() => OhsBoardMeetingUpdateOneRequiredWithoutDecisionsNestedInputSchema).optional(),
-  category: z.lazy(() => CategoryUpdateOneRequiredWithoutOhsBoardDecisionNestedInputSchema).optional(),
-  subCategory: z.lazy(() => SubCategoryUpdateOneWithoutOhsBoardDecisionNestedInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryUpdateOneWithoutMainDecisionsNestedInputSchema).optional(),
+  category: z.lazy(() => CategoryUpdateOneWithoutDecisionsNestedInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryUpdateOneWithoutSubDecisionsNestedInputSchema).optional(),
   department: z.lazy(() => OhsBoardDepartmentUpdateOneWithoutDecisionsNestedInputSchema).optional(),
   auditLogs: z.lazy(() => OhsBoardAuditLogUpdateManyWithoutDecisionNestedInputSchema).optional(),
 }).strict();
@@ -94939,7 +97018,8 @@ export const OhsBoardDecisionUncheckedUpdateWithoutActionsInputSchema: z.ZodType
   meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   departmentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   priority: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -94974,8 +97054,9 @@ export const OhsBoardDecisionCreateWithoutAuditLogsInputSchema: z.ZodType<Prisma
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   meeting: z.lazy(() => OhsBoardMeetingCreateNestedOneWithoutDecisionsInputSchema),
-  category: z.lazy(() => CategoryCreateNestedOneWithoutOhsBoardDecisionInputSchema),
-  subCategory: z.lazy(() => SubCategoryCreateNestedOneWithoutOhsBoardDecisionInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryCreateNestedOneWithoutMainDecisionsInputSchema).optional(),
+  category: z.lazy(() => CategoryCreateNestedOneWithoutDecisionsInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryCreateNestedOneWithoutSubDecisionsInputSchema).optional(),
   department: z.lazy(() => OhsBoardDepartmentCreateNestedOneWithoutDecisionsInputSchema).optional(),
   actions: z.lazy(() => OhsBoardDecisionActionCreateNestedManyWithoutDecisionInputSchema).optional(),
 }).strict();
@@ -94985,7 +97066,8 @@ export const OhsBoardDecisionUncheckedCreateWithoutAuditLogsInputSchema: z.ZodTy
   meetingId: z.string(),
   decisionNumber: z.string(),
   decisionText: z.string(),
-  categoryId: z.number().int(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
   departmentId: z.string().optional().nullable(),
   priority: z.string(),
@@ -95036,8 +97118,9 @@ export const OhsBoardDecisionUpdateWithoutAuditLogsInputSchema: z.ZodType<Prisma
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   meeting: z.lazy(() => OhsBoardMeetingUpdateOneRequiredWithoutDecisionsNestedInputSchema).optional(),
-  category: z.lazy(() => CategoryUpdateOneRequiredWithoutOhsBoardDecisionNestedInputSchema).optional(),
-  subCategory: z.lazy(() => SubCategoryUpdateOneWithoutOhsBoardDecisionNestedInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryUpdateOneWithoutMainDecisionsNestedInputSchema).optional(),
+  category: z.lazy(() => CategoryUpdateOneWithoutDecisionsNestedInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryUpdateOneWithoutSubDecisionsNestedInputSchema).optional(),
   department: z.lazy(() => OhsBoardDepartmentUpdateOneWithoutDecisionsNestedInputSchema).optional(),
   actions: z.lazy(() => OhsBoardDecisionActionUpdateManyWithoutDecisionNestedInputSchema).optional(),
 }).strict();
@@ -95047,7 +97130,8 @@ export const OhsBoardDecisionUncheckedUpdateWithoutAuditLogsInputSchema: z.ZodTy
   meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   departmentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   priority: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -97875,6 +99959,8 @@ export const NotebookPageCreateManyFacilityInputSchema: z.ZodType<Prisma.Noteboo
   documentUploadedAt: z.coerce.date().optional().nullable(),
   isArchived: z.boolean().optional(),
   isLocked: z.boolean().optional(),
+  ciltNo: z.number().int().optional().nullable(),
+  pageNo: z.string().optional().nullable(),
 }).strict();
 
 export const ReconciliationCreateManyFacilityInputSchema: z.ZodType<Prisma.ReconciliationCreateManyFacilityInput> = z.object({
@@ -98227,6 +100313,7 @@ export const IntegratedAuditCreateManyFacilityInputSchema: z.ZodType<Prisma.Inte
   purpose: z.string().optional().nullable(),
   executive: z.string().optional().nullable(),
   conclusion: z.string().optional().nullable(),
+  createdBy: z.string().optional().nullable(),
   team: z.union([ z.lazy(() => IntegratedAuditCreateteamInputSchema), z.string().array() ]).optional(),
   participants: z.union([ z.lazy(() => IntegratedAuditCreateparticipantsInputSchema), z.string().array() ]).optional(),
   criteria: z.union([ z.lazy(() => IntegratedAuditCreatecriteriaInputSchema), z.string().array() ]).optional(),
@@ -98603,6 +100690,8 @@ export const NotebookPageUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.Note
   documentUploadedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   isArchived: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
   isLocked: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  ciltNo: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  pageNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   items: z.lazy(() => NotebookItemUpdateManyWithoutPageNestedInputSchema).optional(),
 }).strict();
 
@@ -98618,6 +100707,8 @@ export const NotebookPageUncheckedUpdateWithoutFacilityInputSchema: z.ZodType<Pr
   documentUploadedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   isArchived: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
   isLocked: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  ciltNo: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  pageNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   items: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutPageNestedInputSchema).optional(),
 }).strict();
 
@@ -98633,6 +100724,8 @@ export const NotebookPageUncheckedUpdateManyWithoutFacilityInputSchema: z.ZodTyp
   documentUploadedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   isArchived: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
   isLocked: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  ciltNo: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  pageNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
 }).strict();
 
 export const ReconciliationUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.ReconciliationUpdateWithoutFacilityInput> = z.object({
@@ -99746,6 +101839,7 @@ export const IntegratedAuditUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.I
   purpose: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   executive: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   conclusion: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   team: z.union([ z.lazy(() => IntegratedAuditUpdateteamInputSchema), z.string().array() ]).optional(),
   participants: z.union([ z.lazy(() => IntegratedAuditUpdateparticipantsInputSchema), z.string().array() ]).optional(),
   criteria: z.union([ z.lazy(() => IntegratedAuditUpdatecriteriaInputSchema), z.string().array() ]).optional(),
@@ -99768,6 +101862,7 @@ export const IntegratedAuditUncheckedUpdateWithoutFacilityInputSchema: z.ZodType
   purpose: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   executive: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   conclusion: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   team: z.union([ z.lazy(() => IntegratedAuditUpdateteamInputSchema), z.string().array() ]).optional(),
   participants: z.union([ z.lazy(() => IntegratedAuditUpdateparticipantsInputSchema), z.string().array() ]).optional(),
   criteria: z.union([ z.lazy(() => IntegratedAuditUpdatecriteriaInputSchema), z.string().array() ]).optional(),
@@ -99790,6 +101885,7 @@ export const IntegratedAuditUncheckedUpdateManyWithoutFacilityInputSchema: z.Zod
   purpose: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   executive: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   conclusion: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   team: z.union([ z.lazy(() => IntegratedAuditUpdateteamInputSchema), z.string().array() ]).optional(),
   participants: z.union([ z.lazy(() => IntegratedAuditUpdateparticipantsInputSchema), z.string().array() ]).optional(),
   criteria: z.union([ z.lazy(() => IntegratedAuditUpdatecriteriaInputSchema), z.string().array() ]).optional(),
@@ -101078,7 +103174,8 @@ export const OhsBoardDecisionCreateManyDepartmentInputSchema: z.ZodType<Prisma.O
   meetingId: z.string(),
   decisionNumber: z.string(),
   decisionText: z.string(),
-  categoryId: z.number().int(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
   priority: z.string(),
   status: z.string(),
@@ -101125,8 +103222,9 @@ export const OhsBoardDecisionUpdateWithoutDepartmentInputSchema: z.ZodType<Prism
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   meeting: z.lazy(() => OhsBoardMeetingUpdateOneRequiredWithoutDecisionsNestedInputSchema).optional(),
-  category: z.lazy(() => CategoryUpdateOneRequiredWithoutOhsBoardDecisionNestedInputSchema).optional(),
-  subCategory: z.lazy(() => SubCategoryUpdateOneWithoutOhsBoardDecisionNestedInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryUpdateOneWithoutMainDecisionsNestedInputSchema).optional(),
+  category: z.lazy(() => CategoryUpdateOneWithoutDecisionsNestedInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryUpdateOneWithoutSubDecisionsNestedInputSchema).optional(),
   actions: z.lazy(() => OhsBoardDecisionActionUpdateManyWithoutDecisionNestedInputSchema).optional(),
   auditLogs: z.lazy(() => OhsBoardAuditLogUpdateManyWithoutDecisionNestedInputSchema).optional(),
 }).strict();
@@ -101136,7 +103234,8 @@ export const OhsBoardDecisionUncheckedUpdateWithoutDepartmentInputSchema: z.ZodT
   meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   priority: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -101159,7 +103258,8 @@ export const OhsBoardDecisionUncheckedUpdateManyWithoutDepartmentInputSchema: z.
   meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   priority: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -101254,21 +103354,21 @@ export const AssignmentDocumentUncheckedUpdateManyWithoutAssignmentInputSchema: 
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
-export const NotebookItemCreateManyCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateManyCategoryInput> = z.object({
+export const CategoryCreateManyParentInputSchema: z.ZodType<Prisma.CategoryCreateManyParentInput> = z.object({
   id: z.number().int().optional(),
-  pageId: z.number().int(),
-  authorType: z.string(),
-  authorName: z.string(),
-  content: z.string(),
-  subCategoryId: z.number().int().optional().nullable(),
-  departmentId: z.number().int(),
+  name: z.string(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
 }).strict();
 
-export const SubCategoryCreateManyCategoryInputSchema: z.ZodType<Prisma.SubCategoryCreateManyCategoryInput> = z.object({
-  id: z.number().int().optional(),
-  name: z.string(),
+export const OhsBoardTopicCreateManyMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicCreateManyMainCategoryInput> = z.object({
+  id: z.string().optional(),
+  meetingId: z.string(),
+  topicText: z.string(),
+  categoryId: z.number().int().optional().nullable(),
+  subCategoryId: z.number().int().optional().nullable(),
+  riskScore: z.string().optional().nullable(),
+  remarks: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
 }).strict();
@@ -101277,6 +103377,7 @@ export const OhsBoardTopicCreateManyCategoryInputSchema: z.ZodType<Prisma.OhsBoa
   id: z.string().optional(),
   meetingId: z.string(),
   topicText: z.string(),
+  mainCategoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
   riskScore: z.string().optional().nullable(),
   remarks: z.string().optional().nullable(),
@@ -101284,11 +103385,24 @@ export const OhsBoardTopicCreateManyCategoryInputSchema: z.ZodType<Prisma.OhsBoa
   updatedAt: z.coerce.date().optional(),
 }).strict();
 
-export const OhsBoardDecisionCreateManyCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionCreateManyCategoryInput> = z.object({
+export const OhsBoardTopicCreateManySubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicCreateManySubCategoryInput> = z.object({
+  id: z.string().optional(),
+  meetingId: z.string(),
+  topicText: z.string(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
+  riskScore: z.string().optional().nullable(),
+  remarks: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const OhsBoardDecisionCreateManyMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionCreateManyMainCategoryInput> = z.object({
   id: z.string().optional(),
   meetingId: z.string(),
   decisionNumber: z.string(),
   decisionText: z.string(),
+  categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
   departmentId: z.string().optional().nullable(),
   priority: z.string(),
@@ -101305,63 +103419,167 @@ export const OhsBoardDecisionCreateManyCategoryInputSchema: z.ZodType<Prisma.Ohs
   updatedAt: z.coerce.date().optional(),
 }).strict();
 
-export const NotebookItemUpdateWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpdateWithoutCategoryInput> = z.object({
-  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  department: z.lazy(() => DepartmentUpdateOneRequiredWithoutNotebookItemsNestedInputSchema).optional(),
-  page: z.lazy(() => NotebookPageUpdateOneRequiredWithoutItemsNestedInputSchema).optional(),
-  subCategory: z.lazy(() => SubCategoryUpdateOneWithoutNotebookItemsNestedInputSchema).optional(),
+export const OhsBoardDecisionCreateManyCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionCreateManyCategoryInput> = z.object({
+  id: z.string().optional(),
+  meetingId: z.string(),
+  decisionNumber: z.string(),
+  decisionText: z.string(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  subCategoryId: z.number().int().optional().nullable(),
+  departmentId: z.string().optional().nullable(),
+  priority: z.string(),
+  status: z.string(),
+  dueDateType: z.string(),
+  dueDate: z.coerce.date().optional().nullable(),
+  periodicity: z.string().optional().nullable(),
+  remarks: z.string().optional().nullable(),
+  approvalStatus: z.string().optional(),
+  lockedAt: z.coerce.date().optional().nullable(),
+  sentForApprovalAt: z.coerce.date().optional().nullable(),
+  centralBoardStatus: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
 }).strict();
 
-export const NotebookItemUncheckedUpdateWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateWithoutCategoryInput> = z.object({
+export const OhsBoardDecisionCreateManySubCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionCreateManySubCategoryInput> = z.object({
+  id: z.string().optional(),
+  meetingId: z.string(),
+  decisionNumber: z.string(),
+  decisionText: z.string(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
+  departmentId: z.string().optional().nullable(),
+  priority: z.string(),
+  status: z.string(),
+  dueDateType: z.string(),
+  dueDate: z.coerce.date().optional().nullable(),
+  periodicity: z.string().optional().nullable(),
+  remarks: z.string().optional().nullable(),
+  approvalStatus: z.string().optional(),
+  lockedAt: z.coerce.date().optional().nullable(),
+  sentForApprovalAt: z.coerce.date().optional().nullable(),
+  centralBoardStatus: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const NotebookItemCreateManyMainCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateManyMainCategoryInput> = z.object({
+  id: z.number().int().optional(),
+  pageId: z.number().int(),
+  authorType: z.string(),
+  authorName: z.string(),
+  content: z.string(),
+  categoryId: z.number().int().optional().nullable(),
+  subCategoryId: z.number().int().optional().nullable(),
+  departmentId: z.number().int().optional().nullable(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const NotebookItemCreateManyCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateManyCategoryInput> = z.object({
+  id: z.number().int().optional(),
+  pageId: z.number().int(),
+  authorType: z.string(),
+  authorName: z.string(),
+  content: z.string(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  subCategoryId: z.number().int().optional().nullable(),
+  departmentId: z.number().int().optional().nullable(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const NotebookItemCreateManySubCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateManySubCategoryInput> = z.object({
+  id: z.number().int().optional(),
+  pageId: z.number().int(),
+  authorType: z.string(),
+  authorName: z.string(),
+  content: z.string(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
+  departmentId: z.number().int().optional().nullable(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const CategoryUpdateWithoutParentInputSchema: z.ZodType<Prisma.CategoryUpdateWithoutParentInput> = z.object({
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  children: z.lazy(() => CategoryUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+}).strict();
+
+export const CategoryUncheckedUpdateWithoutParentInputSchema: z.ZodType<Prisma.CategoryUncheckedUpdateWithoutParentInput> = z.object({
   id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  pageId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  children: z.lazy(() => CategoryUncheckedUpdateManyWithoutParentNestedInputSchema).optional(),
+  mainTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  topics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subTopics: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  decisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subDecisions: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+  mainNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutMainCategoryNestedInputSchema).optional(),
+  notebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
+  subNotebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
+}).strict();
+
+export const CategoryUncheckedUpdateManyWithoutParentInputSchema: z.ZodType<Prisma.CategoryUncheckedUpdateManyWithoutParentInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const OhsBoardTopicUpdateWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUpdateWithoutMainCategoryInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  topicText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  riskScore: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  remarks: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  meeting: z.lazy(() => OhsBoardMeetingUpdateOneRequiredWithoutTopicsNestedInputSchema).optional(),
+  category: z.lazy(() => CategoryUpdateOneWithoutTopicsNestedInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryUpdateOneWithoutSubTopicsNestedInputSchema).optional(),
+}).strict();
+
+export const OhsBoardTopicUncheckedUpdateWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedUpdateWithoutMainCategoryInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  topicText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
-  departmentId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  riskScore: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  remarks: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
-export const NotebookItemUncheckedUpdateManyWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateManyWithoutCategoryInput> = z.object({
-  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  pageId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+export const OhsBoardTopicUncheckedUpdateManyWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedUpdateManyWithoutMainCategoryInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  topicText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
-  departmentId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-}).strict();
-
-export const SubCategoryUpdateWithoutCategoryInputSchema: z.ZodType<Prisma.SubCategoryUpdateWithoutCategoryInput> = z.object({
-  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  notebookItems: z.lazy(() => NotebookItemUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
-}).strict();
-
-export const SubCategoryUncheckedUpdateWithoutCategoryInputSchema: z.ZodType<Prisma.SubCategoryUncheckedUpdateWithoutCategoryInput> = z.object({
-  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  notebookItems: z.lazy(() => NotebookItemUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
-  OhsBoardTopic: z.lazy(() => OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
-  OhsBoardDecision: z.lazy(() => OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryNestedInputSchema).optional(),
-}).strict();
-
-export const SubCategoryUncheckedUpdateManyWithoutCategoryInputSchema: z.ZodType<Prisma.SubCategoryUncheckedUpdateManyWithoutCategoryInput> = z.object({
-  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  riskScore: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  remarks: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
@@ -101374,13 +103592,15 @@ export const OhsBoardTopicUpdateWithoutCategoryInputSchema: z.ZodType<Prisma.Ohs
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   meeting: z.lazy(() => OhsBoardMeetingUpdateOneRequiredWithoutTopicsNestedInputSchema).optional(),
-  subCategory: z.lazy(() => SubCategoryUpdateOneWithoutOhsBoardTopicNestedInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryUpdateOneWithoutMainTopicsNestedInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryUpdateOneWithoutSubTopicsNestedInputSchema).optional(),
 }).strict();
 
 export const OhsBoardTopicUncheckedUpdateWithoutCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedUpdateWithoutCategoryInput> = z.object({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   topicText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   riskScore: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   remarks: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
@@ -101392,9 +103612,116 @@ export const OhsBoardTopicUncheckedUpdateManyWithoutCategoryInputSchema: z.ZodTy
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   topicText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   riskScore: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   remarks: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const OhsBoardTopicUpdateWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUpdateWithoutSubCategoryInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  topicText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  riskScore: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  remarks: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  meeting: z.lazy(() => OhsBoardMeetingUpdateOneRequiredWithoutTopicsNestedInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryUpdateOneWithoutMainTopicsNestedInputSchema).optional(),
+  category: z.lazy(() => CategoryUpdateOneWithoutTopicsNestedInputSchema).optional(),
+}).strict();
+
+export const OhsBoardTopicUncheckedUpdateWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedUpdateWithoutSubCategoryInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  topicText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  riskScore: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  remarks: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  topicText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  riskScore: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  remarks: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const OhsBoardDecisionUpdateWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUpdateWithoutMainCategoryInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  decisionNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  decisionText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  priority: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  dueDateType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  dueDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  periodicity: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  remarks: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  approvalStatus: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  lockedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sentForApprovalAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  centralBoardStatus: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  meeting: z.lazy(() => OhsBoardMeetingUpdateOneRequiredWithoutDecisionsNestedInputSchema).optional(),
+  category: z.lazy(() => CategoryUpdateOneWithoutDecisionsNestedInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryUpdateOneWithoutSubDecisionsNestedInputSchema).optional(),
+  department: z.lazy(() => OhsBoardDepartmentUpdateOneWithoutDecisionsNestedInputSchema).optional(),
+  actions: z.lazy(() => OhsBoardDecisionActionUpdateManyWithoutDecisionNestedInputSchema).optional(),
+  auditLogs: z.lazy(() => OhsBoardAuditLogUpdateManyWithoutDecisionNestedInputSchema).optional(),
+}).strict();
+
+export const OhsBoardDecisionUncheckedUpdateWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUncheckedUpdateWithoutMainCategoryInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  decisionNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  decisionText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  departmentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  priority: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  dueDateType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  dueDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  periodicity: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  remarks: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  approvalStatus: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  lockedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sentForApprovalAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  centralBoardStatus: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  actions: z.lazy(() => OhsBoardDecisionActionUncheckedUpdateManyWithoutDecisionNestedInputSchema).optional(),
+  auditLogs: z.lazy(() => OhsBoardAuditLogUncheckedUpdateManyWithoutDecisionNestedInputSchema).optional(),
+}).strict();
+
+export const OhsBoardDecisionUncheckedUpdateManyWithoutMainCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionUncheckedUpdateManyWithoutMainCategoryInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  decisionNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  decisionText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  departmentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  priority: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  dueDateType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  dueDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  periodicity: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  remarks: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  approvalStatus: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  lockedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sentForApprovalAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  centralBoardStatus: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
@@ -101416,7 +103743,8 @@ export const OhsBoardDecisionUpdateWithoutCategoryInputSchema: z.ZodType<Prisma.
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   meeting: z.lazy(() => OhsBoardMeetingUpdateOneRequiredWithoutDecisionsNestedInputSchema).optional(),
-  subCategory: z.lazy(() => SubCategoryUpdateOneWithoutOhsBoardDecisionNestedInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryUpdateOneWithoutMainDecisionsNestedInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryUpdateOneWithoutSubDecisionsNestedInputSchema).optional(),
   department: z.lazy(() => OhsBoardDepartmentUpdateOneWithoutDecisionsNestedInputSchema).optional(),
   actions: z.lazy(() => OhsBoardDecisionActionUpdateManyWithoutDecisionNestedInputSchema).optional(),
   auditLogs: z.lazy(() => OhsBoardAuditLogUpdateManyWithoutDecisionNestedInputSchema).optional(),
@@ -101427,6 +103755,7 @@ export const OhsBoardDecisionUncheckedUpdateWithoutCategoryInputSchema: z.ZodTyp
   meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   departmentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   priority: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -101450,6 +103779,7 @@ export const OhsBoardDecisionUncheckedUpdateManyWithoutCategoryInputSchema: z.Zo
   meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   departmentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   priority: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -101462,118 +103792,6 @@ export const OhsBoardDecisionUncheckedUpdateManyWithoutCategoryInputSchema: z.Zo
   lockedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   sentForApprovalAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   centralBoardStatus: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
-  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-}).strict();
-
-export const NotebookItemCreateManySubCategoryInputSchema: z.ZodType<Prisma.NotebookItemCreateManySubCategoryInput> = z.object({
-  id: z.number().int().optional(),
-  pageId: z.number().int(),
-  authorType: z.string(),
-  authorName: z.string(),
-  content: z.string(),
-  categoryId: z.number().int(),
-  departmentId: z.number().int(),
-  createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
-}).strict();
-
-export const OhsBoardTopicCreateManySubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicCreateManySubCategoryInput> = z.object({
-  id: z.string().optional(),
-  meetingId: z.string(),
-  topicText: z.string(),
-  categoryId: z.number().int().optional().nullable(),
-  riskScore: z.string().optional().nullable(),
-  remarks: z.string().optional().nullable(),
-  createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
-}).strict();
-
-export const OhsBoardDecisionCreateManySubCategoryInputSchema: z.ZodType<Prisma.OhsBoardDecisionCreateManySubCategoryInput> = z.object({
-  id: z.string().optional(),
-  meetingId: z.string(),
-  decisionNumber: z.string(),
-  decisionText: z.string(),
-  categoryId: z.number().int(),
-  departmentId: z.string().optional().nullable(),
-  priority: z.string(),
-  status: z.string(),
-  dueDateType: z.string(),
-  dueDate: z.coerce.date().optional().nullable(),
-  periodicity: z.string().optional().nullable(),
-  remarks: z.string().optional().nullable(),
-  approvalStatus: z.string().optional(),
-  lockedAt: z.coerce.date().optional().nullable(),
-  sentForApprovalAt: z.coerce.date().optional().nullable(),
-  centralBoardStatus: z.string().optional().nullable(),
-  createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
-}).strict();
-
-export const NotebookItemUpdateWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpdateWithoutSubCategoryInput> = z.object({
-  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  category: z.lazy(() => CategoryUpdateOneRequiredWithoutNotebookItemsNestedInputSchema).optional(),
-  department: z.lazy(() => DepartmentUpdateOneRequiredWithoutNotebookItemsNestedInputSchema).optional(),
-  page: z.lazy(() => NotebookPageUpdateOneRequiredWithoutItemsNestedInputSchema).optional(),
-}).strict();
-
-export const NotebookItemUncheckedUpdateWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateWithoutSubCategoryInput> = z.object({
-  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  pageId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  departmentId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-}).strict();
-
-export const NotebookItemUncheckedUpdateManyWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateManyWithoutSubCategoryInput> = z.object({
-  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  pageId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  departmentId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-}).strict();
-
-export const OhsBoardTopicUpdateWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUpdateWithoutSubCategoryInput> = z.object({
-  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  topicText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  riskScore: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
-  remarks: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
-  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  meeting: z.lazy(() => OhsBoardMeetingUpdateOneRequiredWithoutTopicsNestedInputSchema).optional(),
-  category: z.lazy(() => CategoryUpdateOneWithoutOhsBoardTopicNestedInputSchema).optional(),
-}).strict();
-
-export const OhsBoardTopicUncheckedUpdateWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedUpdateWithoutSubCategoryInput> = z.object({
-  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  topicText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
-  riskScore: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
-  remarks: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
-  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-}).strict();
-
-export const OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedUpdateManyWithoutSubCategoryInput> = z.object({
-  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  topicText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
-  riskScore: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
-  remarks: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
@@ -101595,7 +103813,8 @@ export const OhsBoardDecisionUpdateWithoutSubCategoryInputSchema: z.ZodType<Pris
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   meeting: z.lazy(() => OhsBoardMeetingUpdateOneRequiredWithoutDecisionsNestedInputSchema).optional(),
-  category: z.lazy(() => CategoryUpdateOneRequiredWithoutOhsBoardDecisionNestedInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryUpdateOneWithoutMainDecisionsNestedInputSchema).optional(),
+  category: z.lazy(() => CategoryUpdateOneWithoutDecisionsNestedInputSchema).optional(),
   department: z.lazy(() => OhsBoardDepartmentUpdateOneWithoutDecisionsNestedInputSchema).optional(),
   actions: z.lazy(() => OhsBoardDecisionActionUpdateManyWithoutDecisionNestedInputSchema).optional(),
   auditLogs: z.lazy(() => OhsBoardAuditLogUpdateManyWithoutDecisionNestedInputSchema).optional(),
@@ -101606,7 +103825,8 @@ export const OhsBoardDecisionUncheckedUpdateWithoutSubCategoryInputSchema: z.Zod
   meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   departmentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   priority: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -101629,7 +103849,8 @@ export const OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryInputSchema: z
   meetingId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   departmentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   priority: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -101641,6 +103862,150 @@ export const OhsBoardDecisionUncheckedUpdateManyWithoutSubCategoryInputSchema: z
   lockedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   sentForApprovalAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   centralBoardStatus: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const NotebookItemUpdateWithoutMainCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpdateWithoutMainCategoryInput> = z.object({
+  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  category: z.lazy(() => CategoryUpdateOneWithoutNotebookItemsNestedInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryUpdateOneWithoutSubNotebookItemsNestedInputSchema).optional(),
+  department: z.lazy(() => DepartmentUpdateOneWithoutNotebookItemsNestedInputSchema).optional(),
+  page: z.lazy(() => NotebookPageUpdateOneRequiredWithoutItemsNestedInputSchema).optional(),
+  actions: z.lazy(() => NotebookItemActionUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+}).strict();
+
+export const NotebookItemUncheckedUpdateWithoutMainCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateWithoutMainCategoryInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  pageId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  departmentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  actions: z.lazy(() => NotebookItemActionUncheckedUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUncheckedUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+}).strict();
+
+export const NotebookItemUncheckedUpdateManyWithoutMainCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateManyWithoutMainCategoryInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  pageId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  departmentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const NotebookItemUpdateWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpdateWithoutCategoryInput> = z.object({
+  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategory: z.lazy(() => CategoryUpdateOneWithoutMainNotebookItemsNestedInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryUpdateOneWithoutSubNotebookItemsNestedInputSchema).optional(),
+  department: z.lazy(() => DepartmentUpdateOneWithoutNotebookItemsNestedInputSchema).optional(),
+  page: z.lazy(() => NotebookPageUpdateOneRequiredWithoutItemsNestedInputSchema).optional(),
+  actions: z.lazy(() => NotebookItemActionUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+}).strict();
+
+export const NotebookItemUncheckedUpdateWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateWithoutCategoryInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  pageId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  departmentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  actions: z.lazy(() => NotebookItemActionUncheckedUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUncheckedUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+}).strict();
+
+export const NotebookItemUncheckedUpdateManyWithoutCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateManyWithoutCategoryInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  pageId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  departmentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const NotebookItemUpdateWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemUpdateWithoutSubCategoryInput> = z.object({
+  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategory: z.lazy(() => CategoryUpdateOneWithoutMainNotebookItemsNestedInputSchema).optional(),
+  category: z.lazy(() => CategoryUpdateOneWithoutNotebookItemsNestedInputSchema).optional(),
+  department: z.lazy(() => DepartmentUpdateOneWithoutNotebookItemsNestedInputSchema).optional(),
+  page: z.lazy(() => NotebookPageUpdateOneRequiredWithoutItemsNestedInputSchema).optional(),
+  actions: z.lazy(() => NotebookItemActionUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+}).strict();
+
+export const NotebookItemUncheckedUpdateWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateWithoutSubCategoryInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  pageId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  departmentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  actions: z.lazy(() => NotebookItemActionUncheckedUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUncheckedUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+}).strict();
+
+export const NotebookItemUncheckedUpdateManyWithoutSubCategoryInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateManyWithoutSubCategoryInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  pageId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  departmentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
@@ -101684,8 +104049,11 @@ export const NotebookItemCreateManyDepartmentInputSchema: z.ZodType<Prisma.Noteb
   authorType: z.string(),
   authorName: z.string(),
   content: z.string(),
-  categoryId: z.number().int(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
 }).strict();
@@ -101792,11 +104160,16 @@ export const NotebookItemUpdateWithoutDepartmentInputSchema: z.ZodType<Prisma.No
   authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  category: z.lazy(() => CategoryUpdateOneRequiredWithoutNotebookItemsNestedInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryUpdateOneWithoutMainNotebookItemsNestedInputSchema).optional(),
+  category: z.lazy(() => CategoryUpdateOneWithoutNotebookItemsNestedInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryUpdateOneWithoutSubNotebookItemsNestedInputSchema).optional(),
   page: z.lazy(() => NotebookPageUpdateOneRequiredWithoutItemsNestedInputSchema).optional(),
-  subCategory: z.lazy(() => SubCategoryUpdateOneWithoutNotebookItemsNestedInputSchema).optional(),
+  actions: z.lazy(() => NotebookItemActionUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
 }).strict();
 
 export const NotebookItemUncheckedUpdateWithoutDepartmentInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateWithoutDepartmentInput> = z.object({
@@ -101805,10 +104178,15 @@ export const NotebookItemUncheckedUpdateWithoutDepartmentInputSchema: z.ZodType<
   authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  actions: z.lazy(() => NotebookItemActionUncheckedUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUncheckedUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
 }).strict();
 
 export const NotebookItemUncheckedUpdateManyWithoutDepartmentInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateManyWithoutDepartmentInput> = z.object({
@@ -101817,8 +104195,11 @@ export const NotebookItemUncheckedUpdateManyWithoutDepartmentInputSchema: z.ZodT
   authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
@@ -101828,9 +104209,12 @@ export const NotebookItemCreateManyPageInputSchema: z.ZodType<Prisma.NotebookIte
   authorType: z.string(),
   authorName: z.string(),
   content: z.string(),
-  categoryId: z.number().int(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
-  departmentId: z.number().int(),
+  departmentId: z.number().int().optional().nullable(),
+  riskLevel: z.string().optional(),
+  status: z.string().optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
 }).strict();
@@ -101839,11 +104223,16 @@ export const NotebookItemUpdateWithoutPageInputSchema: z.ZodType<Prisma.Notebook
   authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  category: z.lazy(() => CategoryUpdateOneRequiredWithoutNotebookItemsNestedInputSchema).optional(),
-  department: z.lazy(() => DepartmentUpdateOneRequiredWithoutNotebookItemsNestedInputSchema).optional(),
-  subCategory: z.lazy(() => SubCategoryUpdateOneWithoutNotebookItemsNestedInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryUpdateOneWithoutMainNotebookItemsNestedInputSchema).optional(),
+  category: z.lazy(() => CategoryUpdateOneWithoutNotebookItemsNestedInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryUpdateOneWithoutSubNotebookItemsNestedInputSchema).optional(),
+  department: z.lazy(() => DepartmentUpdateOneWithoutNotebookItemsNestedInputSchema).optional(),
+  actions: z.lazy(() => NotebookItemActionUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
 }).strict();
 
 export const NotebookItemUncheckedUpdateWithoutPageInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateWithoutPageInput> = z.object({
@@ -101851,11 +104240,16 @@ export const NotebookItemUncheckedUpdateWithoutPageInputSchema: z.ZodType<Prisma
   authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
-  departmentId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  departmentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  actions: z.lazy(() => NotebookItemActionUncheckedUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
+  comments: z.lazy(() => NotebookItemCommentUncheckedUpdateManyWithoutNotebookItemNestedInputSchema).optional(),
 }).strict();
 
 export const NotebookItemUncheckedUpdateManyWithoutPageInputSchema: z.ZodType<Prisma.NotebookItemUncheckedUpdateManyWithoutPageInput> = z.object({
@@ -101863,9 +104257,90 @@ export const NotebookItemUncheckedUpdateManyWithoutPageInputSchema: z.ZodType<Pr
   authorType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
-  departmentId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  departmentId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  riskLevel: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const NotebookItemActionCreateManyNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemActionCreateManyNotebookItemInput> = z.object({
+  id: z.number().int().optional(),
+  content: z.string(),
+  proofUrl: z.string().optional().nullable(),
+  status: z.string(),
+  createdBy: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const NotebookItemCommentCreateManyNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemCommentCreateManyNotebookItemInput> = z.object({
+  id: z.number().int().optional(),
+  content: z.string(),
+  authorId: z.string().optional().nullable(),
+  authorName: z.string(),
+  attachments: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const NotebookItemActionUpdateWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemActionUpdateWithoutNotebookItemInput> = z.object({
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  proofUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const NotebookItemActionUncheckedUpdateWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemActionUncheckedUpdateWithoutNotebookItemInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  proofUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const NotebookItemActionUncheckedUpdateManyWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemActionUncheckedUpdateManyWithoutNotebookItemInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  proofUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const NotebookItemCommentUpdateWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemCommentUpdateWithoutNotebookItemInput> = z.object({
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  attachments: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const NotebookItemCommentUncheckedUpdateWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemCommentUncheckedUpdateWithoutNotebookItemInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  attachments: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const NotebookItemCommentUncheckedUpdateManyWithoutNotebookItemInputSchema: z.ZodType<Prisma.NotebookItemCommentUncheckedUpdateManyWithoutNotebookItemInput> = z.object({
+  id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  content: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  authorId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  authorName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  attachments: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
@@ -107137,7 +109612,8 @@ export const OhsBoardDecisionCreateManyMeetingInputSchema: z.ZodType<Prisma.OhsB
   id: z.string().optional(),
   decisionNumber: z.string(),
   decisionText: z.string(),
-  categoryId: z.number().int(),
+  mainCategoryId: z.number().int().optional().nullable(),
+  categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
   departmentId: z.string().optional().nullable(),
   priority: z.string(),
@@ -107168,6 +109644,7 @@ export const OhsBoardMeetingAttendanceCreateManyMeetingInputSchema: z.ZodType<Pr
 export const OhsBoardTopicCreateManyMeetingInputSchema: z.ZodType<Prisma.OhsBoardTopicCreateManyMeetingInput> = z.object({
   id: z.string().optional(),
   topicText: z.string(),
+  mainCategoryId: z.number().int().optional().nullable(),
   categoryId: z.number().int().optional().nullable(),
   subCategoryId: z.number().int().optional().nullable(),
   riskScore: z.string().optional().nullable(),
@@ -107192,8 +109669,9 @@ export const OhsBoardDecisionUpdateWithoutMeetingInputSchema: z.ZodType<Prisma.O
   centralBoardStatus: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  category: z.lazy(() => CategoryUpdateOneRequiredWithoutOhsBoardDecisionNestedInputSchema).optional(),
-  subCategory: z.lazy(() => SubCategoryUpdateOneWithoutOhsBoardDecisionNestedInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryUpdateOneWithoutMainDecisionsNestedInputSchema).optional(),
+  category: z.lazy(() => CategoryUpdateOneWithoutDecisionsNestedInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryUpdateOneWithoutSubDecisionsNestedInputSchema).optional(),
   department: z.lazy(() => OhsBoardDepartmentUpdateOneWithoutDecisionsNestedInputSchema).optional(),
   actions: z.lazy(() => OhsBoardDecisionActionUpdateManyWithoutDecisionNestedInputSchema).optional(),
   auditLogs: z.lazy(() => OhsBoardAuditLogUpdateManyWithoutDecisionNestedInputSchema).optional(),
@@ -107203,7 +109681,8 @@ export const OhsBoardDecisionUncheckedUpdateWithoutMeetingInputSchema: z.ZodType
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   departmentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   priority: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -107226,7 +109705,8 @@ export const OhsBoardDecisionUncheckedUpdateManyWithoutMeetingInputSchema: z.Zod
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   decisionText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  categoryId: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   departmentId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   priority: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
@@ -107283,13 +109763,15 @@ export const OhsBoardTopicUpdateWithoutMeetingInputSchema: z.ZodType<Prisma.OhsB
   remarks: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  category: z.lazy(() => CategoryUpdateOneWithoutOhsBoardTopicNestedInputSchema).optional(),
-  subCategory: z.lazy(() => SubCategoryUpdateOneWithoutOhsBoardTopicNestedInputSchema).optional(),
+  mainCategory: z.lazy(() => CategoryUpdateOneWithoutMainTopicsNestedInputSchema).optional(),
+  category: z.lazy(() => CategoryUpdateOneWithoutTopicsNestedInputSchema).optional(),
+  subCategory: z.lazy(() => CategoryUpdateOneWithoutSubTopicsNestedInputSchema).optional(),
 }).strict();
 
 export const OhsBoardTopicUncheckedUpdateWithoutMeetingInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedUpdateWithoutMeetingInput> = z.object({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   topicText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   riskScore: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
@@ -107301,6 +109783,7 @@ export const OhsBoardTopicUncheckedUpdateWithoutMeetingInputSchema: z.ZodType<Pr
 export const OhsBoardTopicUncheckedUpdateManyWithoutMeetingInputSchema: z.ZodType<Prisma.OhsBoardTopicUncheckedUpdateManyWithoutMeetingInput> = z.object({
   id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   topicText: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  mainCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   categoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   subCategoryId: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   riskScore: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
@@ -109340,68 +111823,6 @@ export const CategoryFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.CategoryFindU
   where: CategoryWhereUniqueInputSchema, 
 }).strict();
 
-export const SubCategoryFindFirstArgsSchema: z.ZodType<Prisma.SubCategoryFindFirstArgs> = z.object({
-  select: SubCategorySelectSchema.optional(),
-  include: SubCategoryIncludeSchema.optional(),
-  where: SubCategoryWhereInputSchema.optional(), 
-  orderBy: z.union([ SubCategoryOrderByWithRelationInputSchema.array(), SubCategoryOrderByWithRelationInputSchema ]).optional(),
-  cursor: SubCategoryWhereUniqueInputSchema.optional(), 
-  take: z.number().optional(),
-  skip: z.number().optional(),
-  distinct: z.union([ SubCategoryScalarFieldEnumSchema, SubCategoryScalarFieldEnumSchema.array() ]).optional(),
-}).strict();
-
-export const SubCategoryFindFirstOrThrowArgsSchema: z.ZodType<Prisma.SubCategoryFindFirstOrThrowArgs> = z.object({
-  select: SubCategorySelectSchema.optional(),
-  include: SubCategoryIncludeSchema.optional(),
-  where: SubCategoryWhereInputSchema.optional(), 
-  orderBy: z.union([ SubCategoryOrderByWithRelationInputSchema.array(), SubCategoryOrderByWithRelationInputSchema ]).optional(),
-  cursor: SubCategoryWhereUniqueInputSchema.optional(), 
-  take: z.number().optional(),
-  skip: z.number().optional(),
-  distinct: z.union([ SubCategoryScalarFieldEnumSchema, SubCategoryScalarFieldEnumSchema.array() ]).optional(),
-}).strict();
-
-export const SubCategoryFindManyArgsSchema: z.ZodType<Prisma.SubCategoryFindManyArgs> = z.object({
-  select: SubCategorySelectSchema.optional(),
-  include: SubCategoryIncludeSchema.optional(),
-  where: SubCategoryWhereInputSchema.optional(), 
-  orderBy: z.union([ SubCategoryOrderByWithRelationInputSchema.array(), SubCategoryOrderByWithRelationInputSchema ]).optional(),
-  cursor: SubCategoryWhereUniqueInputSchema.optional(), 
-  take: z.number().optional(),
-  skip: z.number().optional(),
-  distinct: z.union([ SubCategoryScalarFieldEnumSchema, SubCategoryScalarFieldEnumSchema.array() ]).optional(),
-}).strict();
-
-export const SubCategoryAggregateArgsSchema: z.ZodType<Prisma.SubCategoryAggregateArgs> = z.object({
-  where: SubCategoryWhereInputSchema.optional(), 
-  orderBy: z.union([ SubCategoryOrderByWithRelationInputSchema.array(), SubCategoryOrderByWithRelationInputSchema ]).optional(),
-  cursor: SubCategoryWhereUniqueInputSchema.optional(), 
-  take: z.number().optional(),
-  skip: z.number().optional(),
-}).strict();
-
-export const SubCategoryGroupByArgsSchema: z.ZodType<Prisma.SubCategoryGroupByArgs> = z.object({
-  where: SubCategoryWhereInputSchema.optional(), 
-  orderBy: z.union([ SubCategoryOrderByWithAggregationInputSchema.array(), SubCategoryOrderByWithAggregationInputSchema ]).optional(),
-  by: SubCategoryScalarFieldEnumSchema.array(), 
-  having: SubCategoryScalarWhereWithAggregatesInputSchema.optional(), 
-  take: z.number().optional(),
-  skip: z.number().optional(),
-}).strict();
-
-export const SubCategoryFindUniqueArgsSchema: z.ZodType<Prisma.SubCategoryFindUniqueArgs> = z.object({
-  select: SubCategorySelectSchema.optional(),
-  include: SubCategoryIncludeSchema.optional(),
-  where: SubCategoryWhereUniqueInputSchema, 
-}).strict();
-
-export const SubCategoryFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.SubCategoryFindUniqueOrThrowArgs> = z.object({
-  select: SubCategorySelectSchema.optional(),
-  include: SubCategoryIncludeSchema.optional(),
-  where: SubCategoryWhereUniqueInputSchema, 
-}).strict();
-
 export const DepartmentFindFirstArgsSchema: z.ZodType<Prisma.DepartmentFindFirstArgs> = z.object({
   select: DepartmentSelectSchema.optional(),
   include: DepartmentIncludeSchema.optional(),
@@ -109586,6 +112007,187 @@ export const NotebookItemFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.NotebookI
   select: NotebookItemSelectSchema.optional(),
   include: NotebookItemIncludeSchema.optional(),
   where: NotebookItemWhereUniqueInputSchema, 
+}).strict();
+
+export const NotebookItemActionFindFirstArgsSchema: z.ZodType<Prisma.NotebookItemActionFindFirstArgs> = z.object({
+  select: NotebookItemActionSelectSchema.optional(),
+  include: NotebookItemActionIncludeSchema.optional(),
+  where: NotebookItemActionWhereInputSchema.optional(), 
+  orderBy: z.union([ NotebookItemActionOrderByWithRelationInputSchema.array(), NotebookItemActionOrderByWithRelationInputSchema ]).optional(),
+  cursor: NotebookItemActionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ NotebookItemActionScalarFieldEnumSchema, NotebookItemActionScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const NotebookItemActionFindFirstOrThrowArgsSchema: z.ZodType<Prisma.NotebookItemActionFindFirstOrThrowArgs> = z.object({
+  select: NotebookItemActionSelectSchema.optional(),
+  include: NotebookItemActionIncludeSchema.optional(),
+  where: NotebookItemActionWhereInputSchema.optional(), 
+  orderBy: z.union([ NotebookItemActionOrderByWithRelationInputSchema.array(), NotebookItemActionOrderByWithRelationInputSchema ]).optional(),
+  cursor: NotebookItemActionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ NotebookItemActionScalarFieldEnumSchema, NotebookItemActionScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const NotebookItemActionFindManyArgsSchema: z.ZodType<Prisma.NotebookItemActionFindManyArgs> = z.object({
+  select: NotebookItemActionSelectSchema.optional(),
+  include: NotebookItemActionIncludeSchema.optional(),
+  where: NotebookItemActionWhereInputSchema.optional(), 
+  orderBy: z.union([ NotebookItemActionOrderByWithRelationInputSchema.array(), NotebookItemActionOrderByWithRelationInputSchema ]).optional(),
+  cursor: NotebookItemActionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ NotebookItemActionScalarFieldEnumSchema, NotebookItemActionScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const NotebookItemActionAggregateArgsSchema: z.ZodType<Prisma.NotebookItemActionAggregateArgs> = z.object({
+  where: NotebookItemActionWhereInputSchema.optional(), 
+  orderBy: z.union([ NotebookItemActionOrderByWithRelationInputSchema.array(), NotebookItemActionOrderByWithRelationInputSchema ]).optional(),
+  cursor: NotebookItemActionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const NotebookItemActionGroupByArgsSchema: z.ZodType<Prisma.NotebookItemActionGroupByArgs> = z.object({
+  where: NotebookItemActionWhereInputSchema.optional(), 
+  orderBy: z.union([ NotebookItemActionOrderByWithAggregationInputSchema.array(), NotebookItemActionOrderByWithAggregationInputSchema ]).optional(),
+  by: NotebookItemActionScalarFieldEnumSchema.array(), 
+  having: NotebookItemActionScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const NotebookItemActionFindUniqueArgsSchema: z.ZodType<Prisma.NotebookItemActionFindUniqueArgs> = z.object({
+  select: NotebookItemActionSelectSchema.optional(),
+  include: NotebookItemActionIncludeSchema.optional(),
+  where: NotebookItemActionWhereUniqueInputSchema, 
+}).strict();
+
+export const NotebookItemActionFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.NotebookItemActionFindUniqueOrThrowArgs> = z.object({
+  select: NotebookItemActionSelectSchema.optional(),
+  include: NotebookItemActionIncludeSchema.optional(),
+  where: NotebookItemActionWhereUniqueInputSchema, 
+}).strict();
+
+export const NotebookItemCommentFindFirstArgsSchema: z.ZodType<Prisma.NotebookItemCommentFindFirstArgs> = z.object({
+  select: NotebookItemCommentSelectSchema.optional(),
+  include: NotebookItemCommentIncludeSchema.optional(),
+  where: NotebookItemCommentWhereInputSchema.optional(), 
+  orderBy: z.union([ NotebookItemCommentOrderByWithRelationInputSchema.array(), NotebookItemCommentOrderByWithRelationInputSchema ]).optional(),
+  cursor: NotebookItemCommentWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ NotebookItemCommentScalarFieldEnumSchema, NotebookItemCommentScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const NotebookItemCommentFindFirstOrThrowArgsSchema: z.ZodType<Prisma.NotebookItemCommentFindFirstOrThrowArgs> = z.object({
+  select: NotebookItemCommentSelectSchema.optional(),
+  include: NotebookItemCommentIncludeSchema.optional(),
+  where: NotebookItemCommentWhereInputSchema.optional(), 
+  orderBy: z.union([ NotebookItemCommentOrderByWithRelationInputSchema.array(), NotebookItemCommentOrderByWithRelationInputSchema ]).optional(),
+  cursor: NotebookItemCommentWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ NotebookItemCommentScalarFieldEnumSchema, NotebookItemCommentScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const NotebookItemCommentFindManyArgsSchema: z.ZodType<Prisma.NotebookItemCommentFindManyArgs> = z.object({
+  select: NotebookItemCommentSelectSchema.optional(),
+  include: NotebookItemCommentIncludeSchema.optional(),
+  where: NotebookItemCommentWhereInputSchema.optional(), 
+  orderBy: z.union([ NotebookItemCommentOrderByWithRelationInputSchema.array(), NotebookItemCommentOrderByWithRelationInputSchema ]).optional(),
+  cursor: NotebookItemCommentWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ NotebookItemCommentScalarFieldEnumSchema, NotebookItemCommentScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const NotebookItemCommentAggregateArgsSchema: z.ZodType<Prisma.NotebookItemCommentAggregateArgs> = z.object({
+  where: NotebookItemCommentWhereInputSchema.optional(), 
+  orderBy: z.union([ NotebookItemCommentOrderByWithRelationInputSchema.array(), NotebookItemCommentOrderByWithRelationInputSchema ]).optional(),
+  cursor: NotebookItemCommentWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const NotebookItemCommentGroupByArgsSchema: z.ZodType<Prisma.NotebookItemCommentGroupByArgs> = z.object({
+  where: NotebookItemCommentWhereInputSchema.optional(), 
+  orderBy: z.union([ NotebookItemCommentOrderByWithAggregationInputSchema.array(), NotebookItemCommentOrderByWithAggregationInputSchema ]).optional(),
+  by: NotebookItemCommentScalarFieldEnumSchema.array(), 
+  having: NotebookItemCommentScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const NotebookItemCommentFindUniqueArgsSchema: z.ZodType<Prisma.NotebookItemCommentFindUniqueArgs> = z.object({
+  select: NotebookItemCommentSelectSchema.optional(),
+  include: NotebookItemCommentIncludeSchema.optional(),
+  where: NotebookItemCommentWhereUniqueInputSchema, 
+}).strict();
+
+export const NotebookItemCommentFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.NotebookItemCommentFindUniqueOrThrowArgs> = z.object({
+  select: NotebookItemCommentSelectSchema.optional(),
+  include: NotebookItemCommentIncludeSchema.optional(),
+  where: NotebookItemCommentWhereUniqueInputSchema, 
+}).strict();
+
+export const IsgDefterSettingFindFirstArgsSchema: z.ZodType<Prisma.IsgDefterSettingFindFirstArgs> = z.object({
+  select: IsgDefterSettingSelectSchema.optional(),
+  where: IsgDefterSettingWhereInputSchema.optional(), 
+  orderBy: z.union([ IsgDefterSettingOrderByWithRelationInputSchema.array(), IsgDefterSettingOrderByWithRelationInputSchema ]).optional(),
+  cursor: IsgDefterSettingWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ IsgDefterSettingScalarFieldEnumSchema, IsgDefterSettingScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const IsgDefterSettingFindFirstOrThrowArgsSchema: z.ZodType<Prisma.IsgDefterSettingFindFirstOrThrowArgs> = z.object({
+  select: IsgDefterSettingSelectSchema.optional(),
+  where: IsgDefterSettingWhereInputSchema.optional(), 
+  orderBy: z.union([ IsgDefterSettingOrderByWithRelationInputSchema.array(), IsgDefterSettingOrderByWithRelationInputSchema ]).optional(),
+  cursor: IsgDefterSettingWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ IsgDefterSettingScalarFieldEnumSchema, IsgDefterSettingScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const IsgDefterSettingFindManyArgsSchema: z.ZodType<Prisma.IsgDefterSettingFindManyArgs> = z.object({
+  select: IsgDefterSettingSelectSchema.optional(),
+  where: IsgDefterSettingWhereInputSchema.optional(), 
+  orderBy: z.union([ IsgDefterSettingOrderByWithRelationInputSchema.array(), IsgDefterSettingOrderByWithRelationInputSchema ]).optional(),
+  cursor: IsgDefterSettingWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ IsgDefterSettingScalarFieldEnumSchema, IsgDefterSettingScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const IsgDefterSettingAggregateArgsSchema: z.ZodType<Prisma.IsgDefterSettingAggregateArgs> = z.object({
+  where: IsgDefterSettingWhereInputSchema.optional(), 
+  orderBy: z.union([ IsgDefterSettingOrderByWithRelationInputSchema.array(), IsgDefterSettingOrderByWithRelationInputSchema ]).optional(),
+  cursor: IsgDefterSettingWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const IsgDefterSettingGroupByArgsSchema: z.ZodType<Prisma.IsgDefterSettingGroupByArgs> = z.object({
+  where: IsgDefterSettingWhereInputSchema.optional(), 
+  orderBy: z.union([ IsgDefterSettingOrderByWithAggregationInputSchema.array(), IsgDefterSettingOrderByWithAggregationInputSchema ]).optional(),
+  by: IsgDefterSettingScalarFieldEnumSchema.array(), 
+  having: IsgDefterSettingScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const IsgDefterSettingFindUniqueArgsSchema: z.ZodType<Prisma.IsgDefterSettingFindUniqueArgs> = z.object({
+  select: IsgDefterSettingSelectSchema.optional(),
+  where: IsgDefterSettingWhereUniqueInputSchema, 
+}).strict();
+
+export const IsgDefterSettingFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.IsgDefterSettingFindUniqueOrThrowArgs> = z.object({
+  select: IsgDefterSettingSelectSchema.optional(),
+  where: IsgDefterSettingWhereUniqueInputSchema, 
 }).strict();
 
 export const SmtpSettingsFindFirstArgsSchema: z.ZodType<Prisma.SmtpSettingsFindFirstArgs> = z.object({
@@ -117875,52 +120477,6 @@ export const CategoryDeleteManyArgsSchema: z.ZodType<Prisma.CategoryDeleteManyAr
   where: CategoryWhereInputSchema.optional(), 
 }).strict();
 
-export const SubCategoryCreateArgsSchema: z.ZodType<Prisma.SubCategoryCreateArgs> = z.object({
-  select: SubCategorySelectSchema.optional(),
-  include: SubCategoryIncludeSchema.optional(),
-  data: z.union([ SubCategoryCreateInputSchema, SubCategoryUncheckedCreateInputSchema ]),
-}).strict();
-
-export const SubCategoryUpsertArgsSchema: z.ZodType<Prisma.SubCategoryUpsertArgs> = z.object({
-  select: SubCategorySelectSchema.optional(),
-  include: SubCategoryIncludeSchema.optional(),
-  where: SubCategoryWhereUniqueInputSchema, 
-  create: z.union([ SubCategoryCreateInputSchema, SubCategoryUncheckedCreateInputSchema ]),
-  update: z.union([ SubCategoryUpdateInputSchema, SubCategoryUncheckedUpdateInputSchema ]),
-}).strict();
-
-export const SubCategoryCreateManyArgsSchema: z.ZodType<Prisma.SubCategoryCreateManyArgs> = z.object({
-  data: z.union([ SubCategoryCreateManyInputSchema, SubCategoryCreateManyInputSchema.array() ]),
-  skipDuplicates: z.boolean().optional(),
-}).strict();
-
-export const SubCategoryCreateManyAndReturnArgsSchema: z.ZodType<Prisma.SubCategoryCreateManyAndReturnArgs> = z.object({
-  data: z.union([ SubCategoryCreateManyInputSchema, SubCategoryCreateManyInputSchema.array() ]),
-  skipDuplicates: z.boolean().optional(),
-}).strict();
-
-export const SubCategoryDeleteArgsSchema: z.ZodType<Prisma.SubCategoryDeleteArgs> = z.object({
-  select: SubCategorySelectSchema.optional(),
-  include: SubCategoryIncludeSchema.optional(),
-  where: SubCategoryWhereUniqueInputSchema, 
-}).strict();
-
-export const SubCategoryUpdateArgsSchema: z.ZodType<Prisma.SubCategoryUpdateArgs> = z.object({
-  select: SubCategorySelectSchema.optional(),
-  include: SubCategoryIncludeSchema.optional(),
-  data: z.union([ SubCategoryUpdateInputSchema, SubCategoryUncheckedUpdateInputSchema ]),
-  where: SubCategoryWhereUniqueInputSchema, 
-}).strict();
-
-export const SubCategoryUpdateManyArgsSchema: z.ZodType<Prisma.SubCategoryUpdateManyArgs> = z.object({
-  data: z.union([ SubCategoryUpdateManyMutationInputSchema, SubCategoryUncheckedUpdateManyInputSchema ]),
-  where: SubCategoryWhereInputSchema.optional(), 
-}).strict();
-
-export const SubCategoryDeleteManyArgsSchema: z.ZodType<Prisma.SubCategoryDeleteManyArgs> = z.object({
-  where: SubCategoryWhereInputSchema.optional(), 
-}).strict();
-
 export const DepartmentCreateArgsSchema: z.ZodType<Prisma.DepartmentCreateArgs> = z.object({
   select: DepartmentSelectSchema.optional(),
   include: DepartmentIncludeSchema.optional(),
@@ -118057,6 +120613,140 @@ export const NotebookItemUpdateManyArgsSchema: z.ZodType<Prisma.NotebookItemUpda
 
 export const NotebookItemDeleteManyArgsSchema: z.ZodType<Prisma.NotebookItemDeleteManyArgs> = z.object({
   where: NotebookItemWhereInputSchema.optional(), 
+}).strict();
+
+export const NotebookItemActionCreateArgsSchema: z.ZodType<Prisma.NotebookItemActionCreateArgs> = z.object({
+  select: NotebookItemActionSelectSchema.optional(),
+  include: NotebookItemActionIncludeSchema.optional(),
+  data: z.union([ NotebookItemActionCreateInputSchema, NotebookItemActionUncheckedCreateInputSchema ]),
+}).strict();
+
+export const NotebookItemActionUpsertArgsSchema: z.ZodType<Prisma.NotebookItemActionUpsertArgs> = z.object({
+  select: NotebookItemActionSelectSchema.optional(),
+  include: NotebookItemActionIncludeSchema.optional(),
+  where: NotebookItemActionWhereUniqueInputSchema, 
+  create: z.union([ NotebookItemActionCreateInputSchema, NotebookItemActionUncheckedCreateInputSchema ]),
+  update: z.union([ NotebookItemActionUpdateInputSchema, NotebookItemActionUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const NotebookItemActionCreateManyArgsSchema: z.ZodType<Prisma.NotebookItemActionCreateManyArgs> = z.object({
+  data: z.union([ NotebookItemActionCreateManyInputSchema, NotebookItemActionCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const NotebookItemActionCreateManyAndReturnArgsSchema: z.ZodType<Prisma.NotebookItemActionCreateManyAndReturnArgs> = z.object({
+  data: z.union([ NotebookItemActionCreateManyInputSchema, NotebookItemActionCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const NotebookItemActionDeleteArgsSchema: z.ZodType<Prisma.NotebookItemActionDeleteArgs> = z.object({
+  select: NotebookItemActionSelectSchema.optional(),
+  include: NotebookItemActionIncludeSchema.optional(),
+  where: NotebookItemActionWhereUniqueInputSchema, 
+}).strict();
+
+export const NotebookItemActionUpdateArgsSchema: z.ZodType<Prisma.NotebookItemActionUpdateArgs> = z.object({
+  select: NotebookItemActionSelectSchema.optional(),
+  include: NotebookItemActionIncludeSchema.optional(),
+  data: z.union([ NotebookItemActionUpdateInputSchema, NotebookItemActionUncheckedUpdateInputSchema ]),
+  where: NotebookItemActionWhereUniqueInputSchema, 
+}).strict();
+
+export const NotebookItemActionUpdateManyArgsSchema: z.ZodType<Prisma.NotebookItemActionUpdateManyArgs> = z.object({
+  data: z.union([ NotebookItemActionUpdateManyMutationInputSchema, NotebookItemActionUncheckedUpdateManyInputSchema ]),
+  where: NotebookItemActionWhereInputSchema.optional(), 
+}).strict();
+
+export const NotebookItemActionDeleteManyArgsSchema: z.ZodType<Prisma.NotebookItemActionDeleteManyArgs> = z.object({
+  where: NotebookItemActionWhereInputSchema.optional(), 
+}).strict();
+
+export const NotebookItemCommentCreateArgsSchema: z.ZodType<Prisma.NotebookItemCommentCreateArgs> = z.object({
+  select: NotebookItemCommentSelectSchema.optional(),
+  include: NotebookItemCommentIncludeSchema.optional(),
+  data: z.union([ NotebookItemCommentCreateInputSchema, NotebookItemCommentUncheckedCreateInputSchema ]),
+}).strict();
+
+export const NotebookItemCommentUpsertArgsSchema: z.ZodType<Prisma.NotebookItemCommentUpsertArgs> = z.object({
+  select: NotebookItemCommentSelectSchema.optional(),
+  include: NotebookItemCommentIncludeSchema.optional(),
+  where: NotebookItemCommentWhereUniqueInputSchema, 
+  create: z.union([ NotebookItemCommentCreateInputSchema, NotebookItemCommentUncheckedCreateInputSchema ]),
+  update: z.union([ NotebookItemCommentUpdateInputSchema, NotebookItemCommentUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const NotebookItemCommentCreateManyArgsSchema: z.ZodType<Prisma.NotebookItemCommentCreateManyArgs> = z.object({
+  data: z.union([ NotebookItemCommentCreateManyInputSchema, NotebookItemCommentCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const NotebookItemCommentCreateManyAndReturnArgsSchema: z.ZodType<Prisma.NotebookItemCommentCreateManyAndReturnArgs> = z.object({
+  data: z.union([ NotebookItemCommentCreateManyInputSchema, NotebookItemCommentCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const NotebookItemCommentDeleteArgsSchema: z.ZodType<Prisma.NotebookItemCommentDeleteArgs> = z.object({
+  select: NotebookItemCommentSelectSchema.optional(),
+  include: NotebookItemCommentIncludeSchema.optional(),
+  where: NotebookItemCommentWhereUniqueInputSchema, 
+}).strict();
+
+export const NotebookItemCommentUpdateArgsSchema: z.ZodType<Prisma.NotebookItemCommentUpdateArgs> = z.object({
+  select: NotebookItemCommentSelectSchema.optional(),
+  include: NotebookItemCommentIncludeSchema.optional(),
+  data: z.union([ NotebookItemCommentUpdateInputSchema, NotebookItemCommentUncheckedUpdateInputSchema ]),
+  where: NotebookItemCommentWhereUniqueInputSchema, 
+}).strict();
+
+export const NotebookItemCommentUpdateManyArgsSchema: z.ZodType<Prisma.NotebookItemCommentUpdateManyArgs> = z.object({
+  data: z.union([ NotebookItemCommentUpdateManyMutationInputSchema, NotebookItemCommentUncheckedUpdateManyInputSchema ]),
+  where: NotebookItemCommentWhereInputSchema.optional(), 
+}).strict();
+
+export const NotebookItemCommentDeleteManyArgsSchema: z.ZodType<Prisma.NotebookItemCommentDeleteManyArgs> = z.object({
+  where: NotebookItemCommentWhereInputSchema.optional(), 
+}).strict();
+
+export const IsgDefterSettingCreateArgsSchema: z.ZodType<Prisma.IsgDefterSettingCreateArgs> = z.object({
+  select: IsgDefterSettingSelectSchema.optional(),
+  data: z.union([ IsgDefterSettingCreateInputSchema, IsgDefterSettingUncheckedCreateInputSchema ]),
+}).strict();
+
+export const IsgDefterSettingUpsertArgsSchema: z.ZodType<Prisma.IsgDefterSettingUpsertArgs> = z.object({
+  select: IsgDefterSettingSelectSchema.optional(),
+  where: IsgDefterSettingWhereUniqueInputSchema, 
+  create: z.union([ IsgDefterSettingCreateInputSchema, IsgDefterSettingUncheckedCreateInputSchema ]),
+  update: z.union([ IsgDefterSettingUpdateInputSchema, IsgDefterSettingUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const IsgDefterSettingCreateManyArgsSchema: z.ZodType<Prisma.IsgDefterSettingCreateManyArgs> = z.object({
+  data: z.union([ IsgDefterSettingCreateManyInputSchema, IsgDefterSettingCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const IsgDefterSettingCreateManyAndReturnArgsSchema: z.ZodType<Prisma.IsgDefterSettingCreateManyAndReturnArgs> = z.object({
+  data: z.union([ IsgDefterSettingCreateManyInputSchema, IsgDefterSettingCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const IsgDefterSettingDeleteArgsSchema: z.ZodType<Prisma.IsgDefterSettingDeleteArgs> = z.object({
+  select: IsgDefterSettingSelectSchema.optional(),
+  where: IsgDefterSettingWhereUniqueInputSchema, 
+}).strict();
+
+export const IsgDefterSettingUpdateArgsSchema: z.ZodType<Prisma.IsgDefterSettingUpdateArgs> = z.object({
+  select: IsgDefterSettingSelectSchema.optional(),
+  data: z.union([ IsgDefterSettingUpdateInputSchema, IsgDefterSettingUncheckedUpdateInputSchema ]),
+  where: IsgDefterSettingWhereUniqueInputSchema, 
+}).strict();
+
+export const IsgDefterSettingUpdateManyArgsSchema: z.ZodType<Prisma.IsgDefterSettingUpdateManyArgs> = z.object({
+  data: z.union([ IsgDefterSettingUpdateManyMutationInputSchema, IsgDefterSettingUncheckedUpdateManyInputSchema ]),
+  where: IsgDefterSettingWhereInputSchema.optional(), 
+}).strict();
+
+export const IsgDefterSettingDeleteManyArgsSchema: z.ZodType<Prisma.IsgDefterSettingDeleteManyArgs> = z.object({
+  where: IsgDefterSettingWhereInputSchema.optional(), 
 }).strict();
 
 export const SmtpSettingsCreateArgsSchema: z.ZodType<Prisma.SmtpSettingsCreateArgs> = z.object({

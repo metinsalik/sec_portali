@@ -455,24 +455,23 @@ model MonthlyAccidentData {
 model Category {
   id               Int                @id @default(autoincrement())
   name             String
+  parentId         Int?
+  parent           Category?          @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children         Category[]         @relation("CategoryHierarchy")
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
-  notebookItems    NotebookItem[]
-  subCategories    SubCategory[]
-  OhsBoardTopic    OhsBoardTopic[]
-  OhsBoardDecision OhsBoardDecision[]
-}
 
-model SubCategory {
-  id               Int                @id @default(autoincrement())
-  name             String
-  categoryId       Int
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  notebookItems    NotebookItem[]
-  category         Category           @relation(fields: [categoryId], references: [id])
-  OhsBoardTopic    OhsBoardTopic[]
-  OhsBoardDecision OhsBoardDecision[]
+  mainTopics       OhsBoardTopic[]    @relation("TopicMainCategory")
+  topics           OhsBoardTopic[]    @relation("TopicCategory")
+  subTopics        OhsBoardTopic[]    @relation("TopicSubCategory")
+
+  mainDecisions    OhsBoardDecision[] @relation("DecisionMainCategory")
+  decisions        OhsBoardDecision[] @relation("DecisionCategory")
+  subDecisions     OhsBoardDecision[] @relation("DecisionSubCategory")
+
+  mainNotebookItems NotebookItem[]    @relation("NotebookMainCat")
+  notebookItems     NotebookItem[]    @relation("NotebookCat")
+  subNotebookItems  NotebookItem[]    @relation("NotebookSubCat")
 }
 
 model Department {
@@ -497,6 +496,8 @@ model NotebookPage {
   documentUploadedAt DateTime?
   isArchived         Boolean        @default(false)
   isLocked           Boolean        @default(false)
+  ciltNo             Int?
+  pageNo             String?
   items              NotebookItem[]
   facility           Facility       @relation(fields: [facilityId], references: [id])
 
@@ -504,20 +505,63 @@ model NotebookPage {
 }
 
 model NotebookItem {
-  id            Int          @id @default(autoincrement())
+  id            Int                  @id @default(autoincrement())
   pageId        Int
   authorType    String
   authorName    String
   content       String
-  categoryId    Int
-  subCategoryId Int?
-  departmentId  Int
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  category      Category     @relation(fields: [categoryId], references: [id])
-  department    Department   @relation(fields: [departmentId], references: [id])
-  page          NotebookPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id])
+  mainCategoryId Int?
+  categoryId     Int?
+  subCategoryId  Int?
+  departmentId  Int?
+  riskLevel     String               @default("Düşük")
+  status        String               @default("Açık")
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  
+  mainCategory  Category?            @relation("NotebookMainCat", fields: [mainCategoryId], references: [id])
+  category      Category?            @relation("NotebookCat", fields: [categoryId], references: [id])
+  subCategory   Category?            @relation("NotebookSubCat", fields: [subCategoryId], references: [id])
+  
+  department    Department?          @relation(fields: [departmentId], references: [id])
+  page          NotebookPage         @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  actions       NotebookItemAction[]
+  comments      NotebookItemComment[]
+}
+
+model NotebookItemAction {
+  id             Int          @id @default(autoincrement())
+  notebookItemId Int
+  content        String
+  proofUrl       String?
+  status         String
+  createdBy      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  notebookItem   NotebookItem @relation(fields: [notebookItemId], references: [id], onDelete: Cascade)
+}
+
+model NotebookItemComment {
+  id             Int          @id @default(autoincrement())
+  notebookItemId Int
+  content        String
+  authorId       String?
+  authorName     String
+  attachments    String?      // JSON array of URLs
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  notebookItem   NotebookItem @relation(fields: [notebookItemId], references: [id], onDelete: Cascade)
+}
+
+
+model IsgDefterSetting {
+  id               Int      @id @default(autoincrement())
+  facilityId       String   @unique
+  currentCilt      Int      @default(1)
+  maxPagesPerCilt  Int      @default(50)
+  riskLevels       String?  // JSON
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model SmtpSettings {
@@ -2304,10 +2348,13 @@ model OhsBoardTopic {
   meeting   OhsBoardMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
 
   topicText     String
-  categoryId    Int?
-  category      Category?    @relation(fields: [categoryId], references: [id])
-  subCategoryId Int?
-  subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id])
+  mainCategoryId Int?
+  categoryId     Int?
+  subCategoryId  Int?
+  
+  mainCategory   Category?    @relation("TopicMainCategory", fields: [mainCategoryId], references: [id])
+  category       Category?    @relation("TopicCategory", fields: [categoryId], references: [id])
+  subCategory    Category?    @relation("TopicSubCategory", fields: [subCategoryId], references: [id])
   riskScore     String?
   remarks       String?
 
@@ -2323,11 +2370,14 @@ model OhsBoardDecision {
   decisionNumber String
   decisionText   String
 
-  categoryId Int
-  category   Category @relation(fields: [categoryId], references: [id])
+  mainCategoryId Int?
+  mainCategory   Category? @relation("DecisionMainCategory", fields: [mainCategoryId], references: [id])
+
+  categoryId Int?
+  category   Category? @relation("DecisionCategory", fields: [categoryId], references: [id])
 
   subCategoryId Int?
-  subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id])
+  subCategory   Category? @relation("DecisionSubCategory", fields: [subCategoryId], references: [id])
 
   departmentId String?
   department   OhsBoardDepartment? @relation(fields: [departmentId], references: [id], onDelete: SetNull)

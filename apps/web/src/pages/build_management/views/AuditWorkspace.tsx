@@ -8,11 +8,29 @@ import AnalysisTab from './AnalysisTab';
 import ReportTemplate from './ReportTemplate';
 import { saveAudit, uploadAuditFiles } from '../services/auditApi';
 import toast from 'react-hot-toast';
+import { useQuery } from '@tanstack/react-query';
+import api from '../../../lib/api';
+import LocationTreeSelector from '../../../components/shared/LocationTreeSelector';
 
 export default function AuditWorkspace() {
-  const { setCurrentView, facilities, categories, departments, audits, setAudits, activeAuditId, setActiveAuditId, globalAreas, setGlobalAreas, globalCriteria, setGlobalCriteria } = useIRSC();
+  const { setCurrentView, facilities, categories: irscCategories, departments, audits, setAudits, activeAuditId, setActiveAuditId, globalAreas, setGlobalAreas, globalCriteria, setGlobalCriteria } = useIRSC();
   const { user } = useAuth();
   const isManager = user?.isAdmin || user?.roles.includes('admin') || user?.roles.includes('management') || user?.roles.includes('safety');
+  const [selectedFacility, setSelectedFacility] = useState<string | null>(null);
+
+  const { data: globalCategories = [] } = useQuery<any[]>({
+    queryKey: ['global-categories'],
+    queryFn: async () => (await api.get('/settings/definitions/categories')).json()
+  });
+
+  const { data: globalLocations = [] } = useQuery<any[]>({
+    queryKey: ['global-locations', selectedFacility],
+    queryFn: async () => {
+      if (!selectedFacility) return [];
+      return (await api.get(`/risks/facilities/${selectedFacility}/locations`)).json();
+    },
+    enabled: !!selectedFacility
+  });
 
   const [activeTab, setActiveTab] = useState<'INFO' | 'FINDINGS' | 'ANALYSIS' | 'REPORT'>('INFO');
   const [activeAreaView, setActiveAreaView] = useState<string | null>(null);
@@ -43,7 +61,6 @@ export default function AuditWorkspace() {
   });
   
   const [findings, setFindings] = useState<Finding[]>([]);
-  const [selectedFacility, setSelectedFacility] = useState<string | null>(null);
 
   // Load existing draft if activeAuditId is provided
   useEffect(() => {
@@ -94,11 +111,17 @@ export default function AuditWorkspace() {
 
   // Finding Modal State
   const [newFinding, setNewFinding] = useState<Partial<Finding>>({
+    mainCategory: '',
     category: '',
     subcategory: '',
     findingDesc: '',
     riskDesc: '',
     recommendation: '',
+    locationId: '',
+    building: '',
+    floor: '',
+    department: '',
+    room: '',
     area: '',
     subarea: '',
     files: []
@@ -191,25 +214,33 @@ export default function AuditWorkspace() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const handleSaveFinding = (keepFormOpen = false) => {
+    let updatedFindings: Finding[];
     if (activeFindingId && activeFindingForm === 'EDIT') {
-      setFindings(findings.map(f => {
+      updatedFindings = findings.map(f => {
         if (f.id === activeFindingId) {
           return {
             ...f,
             risk: newFinding.risk as RiskLevel,
+            mainCategory: newFinding.mainCategory || '',
             category: newFinding.category || '',
             subcategory: newFinding.subcategory || '',
             findingDesc: newFinding.findingDesc || '',
             recommendation: newFinding.recommendation || '',
-            area: newFinding.area || '',
-            subarea: newFinding.subarea || '',
+            locationId: newFinding.locationId,
+            building: newFinding.building || '',
+            floor: newFinding.floor || '',
+            department: newFinding.department || '',
+            room: newFinding.room || '',
+            area: newFinding.building || newFinding.area || '',
+            subarea: newFinding.room || newFinding.subarea || '',
             targetDate: newFinding.targetDate || '',
             files: newFinding.files || [],
             departments: selectedDepartments
           };
         }
         return f;
-      }));
+      });
+      setFindings(updatedFindings);
     } else {
       const fCount = findings.length + 1;
       const fNo = auditMeta.reportNo ? `${auditMeta.reportNo}-${String(fCount).padStart(3, '0')}` : `BULGU-${fCount}`;
@@ -217,8 +248,14 @@ export default function AuditWorkspace() {
       const completeFinding: Finding = {
         id: `f_${Date.now()}`,
         no: fNo,
-        area: newFinding.area || '',
-        subarea: newFinding.subarea || '',
+        locationId: newFinding.locationId,
+        building: newFinding.building || '',
+        floor: newFinding.floor || '',
+        department: newFinding.department || '',
+        room: newFinding.room || '',
+        area: newFinding.building || newFinding.area || '',
+        subarea: newFinding.room || newFinding.subarea || '',
+        mainCategory: newFinding.mainCategory || '',
         category: newFinding.category || '',
         subcategory: newFinding.subcategory || '',
         risk: newFinding.risk as RiskLevel,
@@ -233,7 +270,28 @@ export default function AuditWorkspace() {
         departments: selectedDepartments,
         history: 'Yeni kayıt oluşturuldu.'
       };
-      setFindings([...findings, completeFinding]);
+      updatedFindings = [...findings, completeFinding];
+      setFindings(updatedFindings);
+    }
+    
+    // OTOMATİK TASLAK KAYIT (AUTO SAVE DRAFT)
+    if (auditMeta.locationId) {
+      const currentAudit = activeAuditId ? audits.find(a => a.id === activeAuditId) : null;
+      const audit = {
+        id: activeAuditId || undefined,
+        status: currentAudit?.status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT',
+        saved: true,
+        meta: auditMeta,
+        findings: updatedFindings
+      };
+      
+      saveAudit(audit as any, auditMeta.locationId).then(savedAudit => {
+        if (!activeAuditId && savedAudit.id) {
+          setActiveAuditId(savedAudit.id);
+        }
+        let updatedAudits = audits.filter(a => a.id !== activeAuditId && a.id !== savedAudit.id);
+        setAudits([...updatedAudits, savedAudit]);
+      }).catch(err => console.error("Auto-save error:", err));
     }
     
     if (!keepFormOpen) {
@@ -244,11 +302,17 @@ export default function AuditWorkspace() {
     }
     
     setNewFinding(prev => ({
-      category: '',
-      subcategory: '',
+      mainCategory: keepFormOpen ? prev.mainCategory : '',
+      category: keepFormOpen ? prev.category : '',
+      subcategory: keepFormOpen ? prev.subcategory : '',
       findingDesc: '',
       riskDesc: '',
       recommendation: '',
+      locationId: keepFormOpen ? prev.locationId : '',
+      building: keepFormOpen ? prev.building : '',
+      floor: keepFormOpen ? prev.floor : '',
+      department: keepFormOpen ? prev.department : '',
+      room: keepFormOpen ? prev.room : '',
       area: keepFormOpen ? prev.area : '',
       subarea: keepFormOpen ? prev.subarea : '',
       risk: undefined,
@@ -661,6 +725,7 @@ export default function AuditWorkspace() {
                       findingDesc: '',
                       riskDesc: '',
                       recommendation: '',
+                      locationId: '',
                       area: activeAreaView || '',
                       subarea: activeSubareaView || '',
                       files: []
@@ -688,7 +753,8 @@ export default function AuditWorkspace() {
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {Object.entries(
                       findings.reduce((acc, f) => {
-                        const groupKey = f.area || 'Mahal Belirtilmemiş';
+                        const parts = [f.building, f.floor, f.department, f.room].filter(Boolean);
+                        const groupKey = parts.length > 0 ? parts.join(' > ') : (f.area || 'Mahal Belirtilmemiş');
                         if (!acc[groupKey]) acc[groupKey] = [];
                         acc[groupKey].push(f);
                         return acc;
@@ -775,14 +841,22 @@ export default function AuditWorkspace() {
                           <div className="flex flex-col items-end">
                             <span className="text-xs text-slate-500 font-medium uppercase tracking-wider dark:text-slate-400">Toplam</span>
                             <span className="font-bold text-slate-800 dark:text-white leading-none">
-                              {findings.filter(f => (f.area || 'Mahal Belirtilmemiş') === activeAreaView && (!activeSubareaView || f.subarea === activeSubareaView)).length} Tespit
+                              {findings.filter(f => {
+                                const parts = [f.building, f.floor, f.department, f.room].filter(Boolean);
+                                const locString = parts.length > 0 ? parts.join(' > ') : (f.area || 'Mahal Belirtilmemiş');
+                                return locString === activeAreaView && (!activeSubareaView || f.subarea === activeSubareaView);
+                              }).length} Tespit
                             </span>
                           </div>
                           <div className="h-8 w-px bg-slate-200 mx-2 dark:bg-slate-700"></div>
                           <div className="flex flex-col items-start">
                             <span className="text-xs text-amber-500 font-medium uppercase tracking-wider">Açık</span>
                             <span className="font-bold text-amber-600 leading-none">
-                              {findings.filter(f => (f.area || 'Mahal Belirtilmemiş') === activeAreaView && (!activeSubareaView || f.subarea === activeSubareaView) && f.status !== 'Tamamlanan').length} İşlem
+                              {findings.filter(f => {
+                                const parts = [f.building, f.floor, f.department, f.room].filter(Boolean);
+                                const locString = parts.length > 0 ? parts.join(' > ') : (f.area || 'Mahal Belirtilmemiş');
+                                return locString === activeAreaView && (!activeSubareaView || f.subarea === activeSubareaView) && f.status !== 'Tamamlanan';
+                              }).length} İşlem
                             </span>
                           </div>
                         </div>
@@ -790,7 +864,11 @@ export default function AuditWorkspace() {
                     </div>
 
                     {!activeSubareaView && (() => {
-                      const areaFindings = findings.filter(f => (f.area || 'Mahal Belirtilmemiş') === activeAreaView);
+                      const areaFindings = findings.filter(f => {
+                        const parts = [f.building, f.floor, f.department, f.room].filter(Boolean);
+                        const locString = parts.length > 0 ? parts.join(' > ') : (f.area || 'Mahal Belirtilmemiş');
+                        return locString === activeAreaView;
+                      });
                       const subareas = areaFindings.reduce((acc, f) => {
                         if (f.subarea) {
                           if (!acc[f.subarea]) acc[f.subarea] = [];
@@ -1260,18 +1338,42 @@ export default function AuditWorkspace() {
                         )}
                         <h3 className="text-xl font-bold text-slate-800 dark:text-white">{activeFindingId ? 'Bulguyu Düzenle' : 'Yeni Bulgu Girişi'}</h3>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1 dark:text-slate-300">Ana Kategori *</label>
+                            <select 
+                              className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50 outline-none dark:bg-slate-900 dark:border-slate-600 dark:text-white"
+                              value={globalCategories.find(c => c.name === newFinding.mainCategory && !c.parentId)?.id || ''}
+                              onChange={e => {
+                                const cat = globalCategories.find(c => c.id.toString() === e.target.value);
+                                setNewFinding({...newFinding, mainCategory: cat ? cat.name : '', category: '', subcategory: ''});
+                              }}
+                            >
+                              <option value="">Seçiniz...</option>
+                              {globalCategories.filter(c => !c.parentId).map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
+                          </div>
+
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1 dark:text-slate-300">Kategori *</label>
                             <select 
-                              className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50 outline-none dark:bg-slate-900 dark:border-slate-600 dark:text-white"
-                              value={newFinding.category || ''}
-                              onChange={e => setNewFinding({...newFinding, category: e.target.value, subcategory: ''})}
+                              className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50 outline-none dark:bg-slate-900 dark:border-slate-600 dark:text-white disabled:opacity-50"
+                              value={globalCategories.find(c => c.name === newFinding.category && c.parentId)?.id || ''}
+                              onChange={e => {
+                                const cat = globalCategories.find(c => c.id.toString() === e.target.value);
+                                setNewFinding({...newFinding, category: cat ? cat.name : '', subcategory: ''});
+                              }}
+                              disabled={!newFinding.mainCategory}
                             >
                               <option value="">Seçiniz...</option>
-                              {categories.map(c => (
-                                <option key={c.id} value={c.name}>{c.name}</option>
-                              ))}
+                              {newFinding.mainCategory && (() => {
+                                const parent = globalCategories.find(c => c.name === newFinding.mainCategory && !c.parentId);
+                                return parent ? globalCategories.filter(c => c.parentId === parent.id).map(c => (
+                                  <option key={c.id} value={c.id}>{c.name}</option>
+                                )) : null;
+                              })()}
                             </select>
                           </div>
                           
@@ -1279,44 +1381,90 @@ export default function AuditWorkspace() {
                             <label className="block text-sm font-medium text-slate-700 mb-1 dark:text-slate-300">Alt Kategori</label>
                             <select 
                               className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50 outline-none dark:bg-slate-900 dark:border-slate-600 dark:text-white disabled:opacity-50"
-                              value={newFinding.subcategory || ''}
-                              onChange={e => setNewFinding({...newFinding, subcategory: e.target.value})}
+                              value={globalCategories.find(c => c.name === newFinding.subcategory && c.parentId)?.id || ''}
+                              onChange={e => {
+                                const subcat = globalCategories.find(c => c.id.toString() === e.target.value);
+                                setNewFinding({...newFinding, subcategory: subcat ? subcat.name : ''});
+                              }}
                               disabled={!newFinding.category}
                             >
                               <option value="">Seçiniz...</option>
-                              {newFinding.category && categories.find(c => c.name === newFinding.category)?.subcategories.map((s,i) => (
-                                <option key={i} value={s}>{s}</option>
-                              ))}
+                              {newFinding.category && (() => {
+                                const parent = globalCategories.find(c => c.name === newFinding.category && c.parentId);
+                                return parent ? globalCategories.filter(c => c.parentId === parent.id).map(c => (
+                                  <option key={c.id} value={c.id}>{c.name}</option>
+                                )) : null;
+                              })()}
                             </select>
                           </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1 dark:text-slate-300">Mahal *</label>
-                            <select 
-                              className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50 outline-none dark:bg-slate-900 dark:border-slate-600 dark:text-white"
-                              value={newFinding.area || ''}
-                              onChange={e => setNewFinding({...newFinding, area: e.target.value, subarea: ''})}
-                            >
-                              <option value="">Seçiniz...</option>
-                              {globalAreas.map(a => (
-                                <option key={a.id} value={a.name}>{a.name}</option>
-                              ))}
-                            </select>
-                          </div>
+                          <div className="col-span-1 md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-2 pt-4 border-t border-slate-200 dark:border-slate-700">
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1 dark:text-slate-300">Ana Bina *</label>
+                              <select 
+                                className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50 outline-none dark:bg-slate-900 dark:border-slate-600 dark:text-white"
+                                value={newFinding.building || ''}
+                                onChange={e => setNewFinding({...newFinding, building: e.target.value, floor: '', department: '', room: '', locationId: ''})}
+                              >
+                                <option value="">Seçiniz...</option>
+                                {Array.from(new Set(globalLocations.map(l => l.building).filter(Boolean))).map((b: any) => (
+                                  <option key={b} value={b}>{b}</option>
+                                ))}
+                              </select>
+                            </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1 dark:text-slate-300">Alan / Alt Mahal</label>
-                            <select 
-                              className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50 outline-none dark:bg-slate-900 dark:border-slate-600 dark:text-white disabled:opacity-50"
-                              value={newFinding.subarea || ''}
-                              onChange={e => setNewFinding({...newFinding, subarea: e.target.value})}
-                              disabled={!newFinding.area}
-                            >
-                              <option value="">Seçiniz...</option>
-                              {newFinding.area && globalAreas.find(a => a.name === newFinding.area)?.subareas?.map((s,i) => (
-                                <option key={i} value={s}>{s}</option>
-                              ))}
-                            </select>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1 dark:text-slate-300">Kat *</label>
+                              <select 
+                                className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50 outline-none dark:bg-slate-900 dark:border-slate-600 dark:text-white disabled:opacity-50"
+                                value={newFinding.floor || ''}
+                                onChange={e => setNewFinding({...newFinding, floor: e.target.value, department: '', room: '', locationId: ''})}
+                                disabled={!newFinding.building}
+                              >
+                                <option value="">Seçiniz...</option>
+                                {newFinding.building && Array.from(new Set(globalLocations.filter(l => l.building === newFinding.building).map(l => l.floor).filter(Boolean))).map((f: any) => (
+                                  <option key={f} value={f}>{f}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1 dark:text-slate-300">Birim</label>
+                              <select 
+                                className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50 outline-none dark:bg-slate-900 dark:border-slate-600 dark:text-white disabled:opacity-50"
+                                value={newFinding.department || ''}
+                                onChange={e => setNewFinding({...newFinding, department: e.target.value, room: '', locationId: ''})}
+                                disabled={!newFinding.floor}
+                              >
+                                <option value="">Seçiniz...</option>
+                                {newFinding.floor && Array.from(new Set(globalLocations.filter(l => l.building === newFinding.building && l.floor === newFinding.floor).map(l => l.department).filter(Boolean))).map((d: any) => (
+                                  <option key={d} value={d}>{d}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1 dark:text-slate-300">Mahal</label>
+                              <select 
+                                className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50 outline-none dark:bg-slate-900 dark:border-slate-600 dark:text-white disabled:opacity-50"
+                                value={newFinding.room || ''}
+                                onChange={e => {
+                                  const roomVal = e.target.value;
+                                  const loc = globalLocations.find(l => l.building === newFinding.building && l.floor === newFinding.floor && l.department === newFinding.department && (l.description === roomVal || l.name === roomVal));
+                                  setNewFinding({
+                                    ...newFinding, 
+                                    room: roomVal, 
+                                    locationId: loc ? loc.id : ''
+                                  });
+                                }}
+                                disabled={!newFinding.department}
+                              >
+                                <option value="">Seçiniz...</option>
+                                {newFinding.department && Array.from(new Set(globalLocations.filter(l => l.building === newFinding.building && l.floor === newFinding.floor && l.department === newFinding.department).map(l => l.description || l.name).filter(Boolean))).map((r: any) => (
+                                  <option key={r} value={r}>{r}</option>
+                                ))}
+                              </select>
+                            </div>
                           </div>
                         </div>
 
@@ -1479,7 +1627,7 @@ export default function AuditWorkspace() {
                         {!activeFindingId && (
                           <button 
                             onClick={() => handleSaveFinding(true)}
-                            disabled={!newFinding.findingDesc || !newFinding.risk || !newFinding.area}
+                            disabled={!newFinding.findingDesc || !newFinding.risk || (!newFinding.area && !newFinding.building) || (!newFinding.category && !newFinding.mainCategory)}
                             className="px-5 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50"
                           >
                             Kaydet ve Aynı Mahal İçin Yeni Ekle
@@ -1488,7 +1636,7 @@ export default function AuditWorkspace() {
                         
                         <button 
                           onClick={() => handleSaveFinding(false)}
-                          disabled={!newFinding.findingDesc || !newFinding.risk || !newFinding.area}
+                          disabled={!newFinding.findingDesc || !newFinding.risk || (!newFinding.area && !newFinding.building) || (!newFinding.category && !newFinding.mainCategory)}
                           className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
                         >
                           {activeFindingId ? 'Değişiklikleri Kaydet' : 'Bulguyu Kaydet (Bitir)'}

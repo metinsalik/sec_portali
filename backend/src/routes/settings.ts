@@ -547,7 +547,6 @@ router.post('/parameters', managementMiddleware, async (req: AuthRequest, res: R
 router.get('/definitions/categories', async (req: AuthRequest, res: Response) => {
   try {
     const categories = await prisma.category.findMany({
-      include: { subCategories: true },
       orderBy: { name: 'asc' },
     });
     res.json(categories);
@@ -557,10 +556,10 @@ router.get('/definitions/categories', async (req: AuthRequest, res: Response) =>
 });
 
 router.post('/definitions/categories', managementMiddleware, async (req: AuthRequest, res: Response) => {
-  const { name } = req.body;
+  const { name, parentId } = req.body;
   if (!name) return res.status(400).json({ error: 'Kategori adı zorunludur.' });
   try {
-    const category = await prisma.category.create({ data: { name } });
+    const category = await prisma.category.create({ data: { name, parentId: parentId || null } });
     res.status(201).json(category);
   } catch {
     res.status(500).json({ error: 'Kategori oluşturulamadı.' });
@@ -569,9 +568,9 @@ router.post('/definitions/categories', managementMiddleware, async (req: AuthReq
 
 router.put('/definitions/categories/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
   const id = parseInt(String(req.params.id));
-  const { name } = req.body;
+  const { name, parentId } = req.body;
   try {
-    const category = await prisma.category.update({ where: { id }, data: { name } });
+    const category = await prisma.category.update({ where: { id }, data: { name, parentId: parentId !== undefined ? parentId : undefined } });
     res.json(category);
   } catch {
     res.status(500).json({ error: 'Kategori güncellenemedi.' });
@@ -581,53 +580,10 @@ router.put('/definitions/categories/:id', managementMiddleware, async (req: Auth
 router.delete('/definitions/categories/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
   const id = parseInt(String(req.params.id));
   try {
-    // Önce alt kategorileri sil (veya kontrol et)
-    await prisma.subCategory.deleteMany({ where: { categoryId: id } });
     await prisma.category.delete({ where: { id } });
     res.json({ message: 'Kategori silindi.' });
   } catch (error) {
     res.status(500).json({ error: 'Kategori silinemedi. Başka verilerle ilişkili olabilir.' });
-  }
-});
-
-router.get('/definitions/subcategories', async (req: AuthRequest, res: Response) => {
-  try {
-    const subs = await prisma.subCategory.findMany({ include: { category: true }, orderBy: { name: 'asc' } });
-    res.json(subs);
-  } catch {
-    res.status(500).json({ error: 'Alt kategoriler getirilemedi.' });
-  }
-});
-
-router.post('/definitions/subcategories', managementMiddleware, async (req: AuthRequest, res: Response) => {
-  const { name, categoryId } = req.body;
-  if (!name || !categoryId) return res.status(400).json({ error: 'Alt kategori adı ve kategori ID zorunludur.' });
-  try {
-    const sub = await prisma.subCategory.create({ data: { name, categoryId } });
-    res.status(201).json(sub);
-  } catch {
-    res.status(500).json({ error: 'Alt kategori oluşturulamadı.' });
-  }
-});
-
-router.put('/definitions/subcategories/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
-  const id = parseInt(String(req.params.id));
-  const { name } = req.body;
-  try {
-    const sub = await prisma.subCategory.update({ where: { id }, data: { name } });
-    res.json(sub);
-  } catch {
-    res.status(500).json({ error: 'Alt kategori güncellenemedi.' });
-  }
-});
-
-router.delete('/definitions/subcategories/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
-  const id = parseInt(String(req.params.id));
-  try {
-    await prisma.subCategory.delete({ where: { id } });
-    res.json({ message: 'Alt kategori silindi.' });
-  } catch {
-    res.status(500).json({ error: 'Alt kategori silinemedi.' });
   }
 });
 

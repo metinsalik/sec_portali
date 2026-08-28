@@ -32,6 +32,7 @@ const checklists_1 = __importDefault(require("./routes/checklists"));
 const ohs_boards_1 = __importDefault(require("./routes/ohs_boards"));
 const public_1 = __importDefault(require("./routes/public"));
 const fire_doors_1 = __importDefault(require("./routes/fire_doors"));
+const isgDefter_routes_1 = __importDefault(require("./routes/isgDefter.routes"));
 // Middleware
 const errorHandler_1 = require("./middleware/errorHandler");
 dotenv_1.default.config();
@@ -75,6 +76,7 @@ app.use('/api/renovation-reports', renovation_report_1.default);
 app.use('/api/locations', require('./routes/locations').default);
 app.use('/api/checklists', checklists_1.default);
 app.use('/api/safety-management/fire-doors', fire_doors_1.default);
+app.use('/api/safety-management/isg-defter', isgDefter_routes_1.default);
 // Sağlık kontrolü
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

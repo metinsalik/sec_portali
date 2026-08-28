@@ -4,26 +4,38 @@ import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, ChevronDown, ChevronRight, Pencil, Check, Loader2 } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronRight, Pencil, Check, Loader2, Building } from 'lucide-react';
 import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/context/AuthContext';
 
 export default function FacilityLocationsPage() {
   const queryClient = useQueryClient();
-  const facilityId = localStorage.getItem('activeFacilityId') || '';
+  const { user } = useAuth();
+  const [facilityId, setFacilityId] = useState(localStorage.getItem('activeFacilityId') || '');
   
   const [newLocation, setNewLocation] = useState({ building: '', floor: '', department: '', description: '', type: 'DEPARTMAN' });
   const [editingNode, setEditingNode] = useState<any>(null); // { level, oldValue, parentBuilding, parentFloor, newValue }
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
 
+  const { data: facilities = [] } = useQuery({
+    queryKey: ['facilities'],
+    queryFn: async () => {
+      const res = await api.get('/settings/facilities');
+      if (!res.ok) return [];
+      return res.json();
+    }
+  });
+
   const { data: locations = [], isLoading } = useQuery({
     queryKey: ['facility-locations', facilityId],
     queryFn: async () => {
-      if (!facilityId) return [];
+      if (!facilityId || facilityId === 'all') return [];
       const res = await api.get(`/locations?facilityId=${facilityId}`);
       if (!res.ok) throw new Error('Lokasyonlar getirilemedi');
       return res.json();
     },
-    enabled: !!facilityId
+    enabled: !!facilityId && facilityId !== 'all'
   });
 
   const addMutation = useMutation({
@@ -100,7 +112,11 @@ export default function FacilityLocationsPage() {
     return root;
   }, [locations]);
 
-  if (!facilityId) return <div>Lütfen bir tesis seçin</div>;
+  const handleFacilityChange = (val: string) => {
+    setFacilityId(val);
+    localStorage.setItem('activeFacilityId', val);
+    window.dispatchEvent(new Event('storage'));
+  };
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12 pt-6">
@@ -111,9 +127,33 @@ export default function FacilityLocationsPage() {
             Tüm modüllerin kullanacağı ağaç yapısındaki ana lokasyon havuzu.
           </p>
         </div>
+        <div className="w-[300px]">
+          <Label className="text-xs mb-1 block text-muted-foreground">İşlem Yapılacak Tesis</Label>
+          <Select value={facilityId} onValueChange={handleFacilityChange}>
+            <SelectTrigger className="bg-white">
+              <div className="flex items-center gap-2">
+                <Building className="w-4 h-4 text-slate-500" />
+                <SelectValue placeholder="Tesis Seçin..." />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {facilities.map((f: any) => (
+                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       
-      {/* Hızlı Ekleme Formu */}
+      {(!facilityId || facilityId === 'all') ? (
+        <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed rounded-xl bg-slate-50">
+          <Building className="w-12 h-12 text-slate-300 mb-4" />
+          <h3 className="text-lg font-medium text-slate-700">Tesis Seçimi Bekleniyor</h3>
+          <p className="text-slate-500 mt-2 max-w-sm">Lokasyon eklemek veya düzenlemek için lütfen sağ üstten bir tesis seçin.</p>
+        </div>
+      ) : (
+        <>
+          {/* Hızlı Ekleme Formu */}
       <div className="bg-slate-50 border rounded-xl p-4 shadow-sm mb-6">
         <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Plus className="w-4 h-4"/> Yeni Lokasyon Ekle</h3>
         <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 items-end">
@@ -310,6 +350,8 @@ export default function FacilityLocationsPage() {
             </div>
           ))}
         </div>
+      )}
+        </>
       )}
     </div>
   );

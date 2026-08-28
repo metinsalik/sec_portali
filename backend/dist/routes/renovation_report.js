@@ -51,7 +51,7 @@ router.post('/upload', auth_1.authMiddleware, upload.array('files', 20), async (
 // Get all audits (optionally filtered by facility)
 router.get('/', auth_1.authMiddleware, async (req, res) => {
     const { facilityId } = req.query;
-    const isManager = req.user?.isAdmin || req.user?.isManagement;
+    const isManager = req.user?.isAdmin || req.user?.isManagement || req.user?.roles?.includes('admin') || req.user?.roles?.includes('management') || req.user?.roles?.includes('safety');
     try {
         const whereClause = {};
         if (facilityId)
@@ -109,7 +109,10 @@ router.post('/save', auth_1.authMiddleware, async (req, res) => {
             if (!id || id.startsWith('draft_')) {
                 // Create new
                 const createdAudit = await tx.integratedAudit.create({
-                    data: { ...auditData }
+                    data: {
+                        ...auditData,
+                        createdBy: req.user?.username || req.user?.fullName || 'unknown'
+                    }
                 });
                 auditId = createdAudit.id;
             }

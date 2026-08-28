@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '@/lib/api';
+import api, { BASE_URL } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,9 +11,7 @@ import { FileText, ArrowLeft, Edit, Copy, Trash2, MapPin, Activity, Download, Wr
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { QRCodeCanvas } from 'qrcode.react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-// removed default imports, handled above
 
 export default function FireEquipmentDetailPage() {
   const { id } = useParams();
@@ -280,7 +278,7 @@ export default function FireEquipmentDetailPage() {
                       
                       {m.attachmentUrl && (
                         <div className="mt-3 pt-3 border-t">
-                          <a href={api.defaults.baseURL?.replace('/api', '') + m.attachmentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs text-blue-600 hover:underline">
+                          <a href={BASE_URL + m.attachmentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs text-blue-600 hover:underline">
                             <Download className="w-3 h-3 mr-1" /> Ekli Dosyayı / Fotoğrafı Gör
                           </a>
                         </div>

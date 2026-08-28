@@ -170,6 +170,47 @@ export default function SafetyManagementPage() {
             </div>
           </div>
           )}
+          {/* Card: İSG Tespit ve Öneri Defteri */}
+          {(hasAdminAccess || user?.modules?.includes('ISG_DEFTER')) && (
+          <div
+            onClick={() => navigate('/safety-management/isg-defter')}
+            className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
+          >
+            {/* Mobile Card Layout */}
+            <div className="flex md:hidden items-start gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#e3f2fd] dark:bg-[#1565c0]/20 flex items-center justify-center text-[#1565c0] dark:text-blue-400">
+                <span className="material-symbols-outlined text-[28px]">menu_book</span>
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">Tespit ve Öneri Defteri</h2>
+                <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
+                  İSG Uzmanı ve İşyeri Hekimi onaylı karar kayıtları.
+                </p>
+                <div className="flex items-center gap-2 text-[#1565c0] dark:text-blue-400 text-sm font-medium group-hover:underline">
+                  Uygulamaya Git
+                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop Card Layout */}
+            <div className="hidden md:flex flex-col justify-between h-full">
+              <div>
+                <div className="w-14 h-14 rounded-xl bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center mb-6 text-[#1565c0] dark:text-blue-400 transition-transform group-hover:scale-110">
+                  <span className="material-symbols-outlined text-[32px]">menu_book</span>
+                </div>
+                <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">Tespit ve Öneri Defteri</h3>
+                <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
+                  İSG Uzmanı ve İşyeri Hekimi onaylı karar kayıtları, aksiyonlar ve iyileştirme süreçleri.
+                </p>
+              </div>
+              <div className="inline-flex items-center gap-2 text-[#1565c0] dark:text-blue-400 text-sm font-medium group-hover:gap-4 transition-all">
+                Uygulamaya Git
+                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+              </div>
+            </div>
+          </div>
+          )}
           {/* Card: Aylık Veri Sistemi */}
           {(hasAdminAccess || user?.modules?.includes('OPERATIONS')) && (
           <div

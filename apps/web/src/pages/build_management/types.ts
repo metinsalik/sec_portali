@@ -28,8 +28,15 @@ export interface ActionStep {
 export interface Finding {
   id: string;
   no: string;
-  area: string;
+  area: string; // Eskiler için geriye dönük uyumluluk
   subarea?: string;
+  locationId?: string;
+  building?: string;
+  floor?: string;
+  department?: string;
+  room?: string;
+  
+  mainCategory?: string;
   category: string;
   subcategory?: string;
   risk: RiskLevel;

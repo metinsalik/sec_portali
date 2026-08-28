@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Pencil, Trash2, Plus, Save, X, Settings2 } from 'lucide-react';
+import { Pencil, Trash2, Plus, Save, X, Settings2, Info } from 'lucide-react';
 import { useIRSC } from '../context/IRSCContext';
 import type { IRSCCategory, IRSCDepartment, IRSCArea } from '../types';
 
@@ -242,116 +242,18 @@ export default function RenovationReportSettings() {
         <div className="p-6">
           {/* CATEGORIES TAB */}
           {activeTab === 'CATEGORIES' && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="font-semibold text-lg text-slate-800 dark:text-white">Tanımlı Kategoriler</h3>
-                {!isAddingCategory && (
-                  <button 
-                    onClick={() => setIsAddingCategory(true)}
-                    className="flex items-center gap-1 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md transition-colors"
-                  >
-                    <Plus size={16} /> Yeni Kategori
-                  </button>
-                )}
-              </div>
-
-              {isAddingCategory && (
-                <div className="flex items-center gap-2 p-4 bg-slate-50 border border-slate-200 rounded-lg dark:bg-slate-900/50 dark:border-slate-700">
-                  <input
-                    type="text"
-                    value={newCategoryName}
-                    onChange={e => setNewCategoryName(e.target.value)}
-                    placeholder="Yeni kategori adı..."
-                    className="flex-1 px-3 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none dark:bg-slate-800 dark:border-slate-600 dark:text-white"
-                  />
-                  <button onClick={handleAddCategory} className="p-1.5 text-white bg-green-600 hover:bg-green-700 rounded-md"><Save size={18} /></button>
-                  <button onClick={() => { setIsAddingCategory(false); setNewCategoryName(''); }} className="p-1.5 text-slate-600 bg-slate-200 hover:bg-slate-300 rounded-md dark:bg-slate-700 dark:text-slate-300"><X size={18} /></button>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {categories.map(c => (
-                  <div key={c.id} className="border border-slate-200 rounded-lg p-4 bg-white dark:bg-slate-800 dark:border-slate-700 shadow-sm flex flex-col">
-                    <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100 dark:border-slate-700">
-                      {editingCategoryId === c.id ? (
-                        <div className="flex items-center gap-2 flex-1 mr-2">
-                          <input
-                            type="text"
-                            value={editCategoryName}
-                            onChange={e => setEditCategoryName(e.target.value)}
-                            className="flex-1 px-2 py-1 text-sm border border-slate-300 rounded outline-none dark:bg-slate-900 dark:border-slate-600 dark:text-white"
-                          />
-                          <button onClick={() => handleUpdateCategory(c.id)} className="text-green-600 hover:text-green-700"><Save size={16} /></button>
-                          <button onClick={() => setEditingCategoryId(null)} className="text-slate-500 hover:text-slate-700"><X size={16} /></button>
-                        </div>
-                      ) : (
-                        <div className="font-bold text-slate-800 dark:text-white">{c.name}</div>
-                      )}
-                      
-                      {editingCategoryId !== c.id && (
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => { setEditingCategoryId(c.id); setEditCategoryName(c.name); }} className="p-1 text-slate-400 hover:text-blue-600 transition-colors"><Pencil size={16} /></button>
-                          <button onClick={() => handleDeleteCategory(c.id)} className="p-1 text-slate-400 hover:text-red-600 transition-colors"><Trash2 size={16} /></button>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1">
-                      {c.subcategories.length > 0 ? (
-                        <ul className="space-y-2 mb-4">
-                          {c.subcategories.map((sub, i) => (
-                            <li key={i} className="flex items-center justify-between text-sm text-slate-600 bg-slate-50 px-3 py-1.5 rounded-md dark:bg-slate-900/50 dark:text-slate-300">
-                              {editingSubcategory?.catId === c.id && editingSubcategory?.index === i ? (
-                                <div className="flex items-center gap-2 flex-1 mr-2">
-                                  <input
-                                    type="text"
-                                    value={editSubcategoryName}
-                                    onChange={e => setEditSubcategoryName(e.target.value)}
-                                    className="flex-1 px-2 py-1 text-sm border border-slate-300 rounded outline-none dark:bg-slate-900 dark:border-slate-600 dark:text-white"
-                                  />
-                                  <button onClick={() => handleUpdateSubcategory()} className="text-green-600 hover:text-green-700"><Save size={16} /></button>
-                                  <button onClick={() => setEditingSubcategory(null)} className="text-slate-500 hover:text-slate-700"><X size={16} /></button>
-                                </div>
-                              ) : (
-                                <>
-                                  <span>{sub}</span>
-                                  <div className="flex gap-1">
-                                    <button onClick={() => { setEditingSubcategory({ catId: c.id, index: i }); setEditSubcategoryName(sub); }} className="text-slate-400 hover:text-blue-500"><Pencil size={14} /></button>
-                                    <button onClick={() => handleDeleteSubcategory(c.id, i)} className="text-slate-400 hover:text-red-500"><Trash2 size={14} /></button>
-                                  </div>
-                                </>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <div className="text-sm text-slate-400 italic mb-4">Alt kategori bulunmuyor.</div>
-                      )}
-                    </div>
-
-                    {addingSubcategoryTo === c.id ? (
-                      <div className="flex items-center gap-2 mt-auto pt-2 border-t border-slate-100 dark:border-slate-700">
-                        <input
-                          type="text"
-                          value={newSubcategoryName}
-                          onChange={e => setNewSubcategoryName(e.target.value)}
-                          placeholder="Alt kategori..."
-                          className="flex-1 px-2 py-1 text-sm border border-slate-300 rounded outline-none dark:bg-slate-900 dark:border-slate-600 dark:text-white"
-                        />
-                        <button onClick={() => handleAddSubcategory(c.id)} className="text-green-600 hover:text-green-700"><Save size={16} /></button>
-                        <button onClick={() => { setAddingSubcategoryTo(null); setNewSubcategoryName(''); }} className="text-slate-500 hover:text-slate-700"><X size={16} /></button>
-                      </div>
-                    ) : (
-                      <button 
-                        onClick={() => { setAddingSubcategoryTo(c.id); setNewSubcategoryName(''); }}
-                        className="mt-auto text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 flex items-center gap-1 pt-2 border-t border-slate-100 dark:border-slate-700 w-fit"
-                      >
-                        <Plus size={14} /> Alt Kategori Ekle
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
+            <div className="flex flex-col items-center justify-center p-8 text-center bg-slate-50 border border-dashed border-slate-300 rounded-xl dark:bg-slate-900/50 dark:border-slate-700">
+              <Info className="w-12 h-12 text-blue-500 mb-4" />
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">Kategoriler Artık Ortak Yönetiliyor</h3>
+              <p className="text-slate-500 dark:text-slate-400 max-w-md mb-6">
+                Uygulama genelinde standartlaşmayı sağlamak amacıyla tüm kategoriler <strong>"Ayarlar &gt; Tanımlar"</strong> bölümüne taşınmıştır.
+              </p>
+              <button 
+                onClick={() => navigate('/settings/definitions')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Global Tanımlara Git
+              </button>
             </div>
           )}
 
@@ -418,116 +320,18 @@ export default function RenovationReportSettings() {
 
           {/* AREAS TAB */}
           {activeTab === 'AREAS' && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="font-semibold text-lg text-slate-800 dark:text-white">Tanımlı Mahaller & Alanlar</h3>
-                {!isAddingArea && (
-                  <button 
-                    onClick={() => setIsAddingArea(true)}
-                    className="flex items-center gap-1 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md transition-colors"
-                  >
-                    <Plus size={16} /> Yeni Mahal
-                  </button>
-                )}
-              </div>
-
-              {isAddingArea && (
-                <div className="flex items-center gap-2 p-4 bg-slate-50 border border-slate-200 rounded-lg dark:bg-slate-900/50 dark:border-slate-700">
-                  <input
-                    type="text"
-                    value={newAreaName}
-                    onChange={e => setNewAreaName(e.target.value)}
-                    placeholder="Yeni mahal adı..."
-                    className="flex-1 px-3 py-1.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none dark:bg-slate-800 dark:border-slate-600 dark:text-white"
-                  />
-                  <button onClick={handleAddArea} className="p-1.5 text-white bg-green-600 hover:bg-green-700 rounded-md"><Save size={18} /></button>
-                  <button onClick={() => { setIsAddingArea(false); setNewAreaName(''); }} className="p-1.5 text-slate-600 bg-slate-200 hover:bg-slate-300 rounded-md dark:bg-slate-700 dark:text-slate-300"><X size={18} /></button>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {globalAreas.map(a => (
-                  <div key={a.id} className="border border-slate-200 rounded-lg p-4 bg-white dark:bg-slate-800 dark:border-slate-700 shadow-sm flex flex-col">
-                    <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100 dark:border-slate-700">
-                      {editingAreaId === a.id ? (
-                        <div className="flex items-center gap-2 flex-1 mr-2">
-                          <input
-                            type="text"
-                            value={editAreaName}
-                            onChange={e => setEditAreaName(e.target.value)}
-                            className="flex-1 px-2 py-1 text-sm border border-slate-300 rounded outline-none dark:bg-slate-900 dark:border-slate-600 dark:text-white"
-                          />
-                          <button onClick={() => handleUpdateArea(a.id)} className="text-green-600 hover:text-green-700"><Save size={16} /></button>
-                          <button onClick={() => setEditingAreaId(null)} className="text-slate-500 hover:text-slate-700"><X size={16} /></button>
-                        </div>
-                      ) : (
-                        <div className="font-bold text-slate-800 dark:text-white">{a.name}</div>
-                      )}
-                      
-                      {editingAreaId !== a.id && (
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => { setEditingAreaId(a.id); setEditAreaName(a.name); }} className="p-1 text-slate-400 hover:text-blue-600 transition-colors"><Pencil size={16} /></button>
-                          <button onClick={() => handleDeleteArea(a.id)} className="p-1 text-slate-400 hover:text-red-600 transition-colors"><Trash2 size={16} /></button>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1">
-                      {(a.subareas && a.subareas.length > 0) ? (
-                        <ul className="space-y-2 mb-4">
-                          {a.subareas?.map((sub, i) => (
-                            <li key={i} className="flex items-center justify-between text-sm text-slate-600 bg-slate-50 px-3 py-1.5 rounded-md dark:bg-slate-900/50 dark:text-slate-300">
-                              {editingSubarea?.areaId === a.id && editingSubarea?.index === i ? (
-                                <div className="flex items-center gap-2 flex-1 mr-2">
-                                  <input
-                                    type="text"
-                                    value={editSubareaName}
-                                    onChange={e => setEditSubareaName(e.target.value)}
-                                    className="flex-1 px-2 py-1 text-sm border border-slate-300 rounded outline-none dark:bg-slate-900 dark:border-slate-600 dark:text-white"
-                                  />
-                                  <button onClick={() => handleUpdateSubarea()} className="text-green-600 hover:text-green-700"><Save size={16} /></button>
-                                  <button onClick={() => setEditingSubarea(null)} className="text-slate-500 hover:text-slate-700"><X size={16} /></button>
-                                </div>
-                              ) : (
-                                <>
-                                  <span>{sub}</span>
-                                  <div className="flex gap-1">
-                                    <button onClick={() => { setEditingSubarea({ areaId: a.id, index: i }); setEditSubareaName(sub); }} className="text-slate-400 hover:text-blue-500"><Pencil size={14} /></button>
-                                    <button onClick={() => handleDeleteSubarea(a.id, i)} className="text-slate-400 hover:text-red-500"><Trash2 size={14} /></button>
-                                  </div>
-                                </>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <div className="text-sm text-slate-400 italic mb-4">Alt mahal bulunmuyor.</div>
-                      )}
-                    </div>
-
-                    {addingSubareaTo === a.id ? (
-                      <div className="flex items-center gap-2 mt-auto pt-2 border-t border-slate-100 dark:border-slate-700">
-                        <input
-                          type="text"
-                          value={newSubareaName}
-                          onChange={e => setNewSubareaName(e.target.value)}
-                          placeholder="Alt mahal..."
-                          className="flex-1 px-2 py-1 text-sm border border-slate-300 rounded outline-none dark:bg-slate-900 dark:border-slate-600 dark:text-white"
-                        />
-                        <button onClick={() => handleAddSubarea(a.id)} className="text-green-600 hover:text-green-700"><Save size={16} /></button>
-                        <button onClick={() => { setAddingSubareaTo(null); setNewSubareaName(''); }} className="text-slate-500 hover:text-slate-700"><X size={16} /></button>
-                      </div>
-                    ) : (
-                      <button 
-                        onClick={() => { setAddingSubareaTo(a.id); setNewSubareaName(''); }}
-                        className="mt-auto text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 flex items-center gap-1 pt-2 border-t border-slate-100 dark:border-slate-700 w-fit"
-                      >
-                        <Plus size={14} /> Alt Mahal Ekle
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
+            <div className="flex flex-col items-center justify-center p-8 text-center bg-slate-50 border border-dashed border-slate-300 rounded-xl dark:bg-slate-900/50 dark:border-slate-700">
+              <Info className="w-12 h-12 text-blue-500 mb-4" />
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">Mahaller Artık Ortak Yönetiliyor</h3>
+              <p className="text-slate-500 dark:text-slate-400 max-w-md mb-6">
+                Uygulama genelinde standartlaşmayı sağlamak amacıyla tüm mahaller ve lokasyonlar <strong>"Ayarlar &gt; Lokasyonlar"</strong> bölümüne taşınmıştır.
+              </p>
+              <button 
+                onClick={() => navigate('/settings/locations')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Merkezi Lokasyonlara Git
+              </button>
             </div>
           )}
         </div>

@@ -8,8 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Edit, ChevronRight, Loader2, Tag, Building2, Trash2 } from 'lucide-react';
 
-interface SubCategory { id: number; name: string; categoryId: number }
-interface Category { id: number; name: string; subCategories: SubCategory[] }
+interface Category { id: number; name: string; parentId: number | null; }
 interface Department { id: number; name: string }
 
 export default function DefinitionsPage() {
@@ -18,8 +17,7 @@ export default function DefinitionsPage() {
   // ── Kategori state ───────────────────────────────────────────
   const [catModal, setCatModal] = useState<{ open: boolean; edit?: Category }>({ open: false });
   const [catName, setCatName] = useState('');
-  const [subModal, setSubModal] = useState<{ open: boolean; categoryId?: number; edit?: SubCategory }>({ open: false });
-  const [subName, setSubName] = useState('');
+  const [catParentId, setCatParentId] = useState<string>('none');
 
   // ── Departman state ──────────────────────────────────────────
   const [deptModal, setDeptModal] = useState<{ open: boolean; edit?: Department }>({ open: false });
@@ -46,25 +44,15 @@ export default function DefinitionsPage() {
 
   // ── Mutations ─────────────────────────────────────────────────
   const saveCatMutation = useMutation({
-    mutationFn: async ({ name, id }: { name: string; id?: number }) => {
+    mutationFn: async ({ name, parentId, id }: { name: string; parentId?: number | null; id?: number }) => {
+      const payload = { name, parentId: parentId || null };
       const res = id
-        ? await api.put(`/settings/definitions/categories/${id}`, { name })
-        : await api.post('/settings/definitions/categories', { name });
+        ? await api.put(`/settings/definitions/categories/${id}`, payload)
+        : await api.post('/settings/definitions/categories', payload);
       if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
       return res.json();
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['categories'] }); setCatModal({ open: false }); setCatName(''); },
-  });
-
-  const saveSubMutation = useMutation({
-    mutationFn: async ({ name, categoryId, id }: { name: string; categoryId?: number; id?: number }) => {
-      const res = id
-        ? await api.put(`/settings/definitions/subcategories/${id}`, { name })
-        : await api.post('/settings/definitions/subcategories', { name, categoryId });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
-      return res.json();
-    },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['categories'] }); setSubModal({ open: false }); setSubName(''); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['categories'] }); setCatModal({ open: false }); setCatName(''); setCatParentId('none'); },
   });
 
   const saveDeptMutation = useMutation({
@@ -87,14 +75,7 @@ export default function DefinitionsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
   });
 
-  const deleteSubMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await api.delete(`/settings/definitions/subcategories/${id}`);
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
-      return res.json();
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
-  });
+
 
   const deleteDeptMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -105,8 +86,24 @@ export default function DefinitionsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['departments'] }),
   });
 
-  const openCatEdit = (cat: Category) => { setCatName(cat.name); setCatModal({ open: true, edit: cat }); };
-  const openSubEdit = (sub: SubCategory) => { setSubName(sub.name); setSubModal({ open: true, edit: sub }); };
+  const openCatEdit = (cat: Category) => { setCatModal({ open: true, edit: cat }); setCatName(cat.name); setCatParentId(cat.parentId ? cat.parentId.toString() : 'none'); };
+
+  const getCategoryPath = (cat: Category) => {
+    const path = [];
+    if (cat.parentId) {
+      const parent = categories.find((c: any) => c.id === cat.parentId);
+      if (parent) {
+        if (parent.parentId) {
+          const grandParent = categories.find((c: any) => c.id === parent.parentId);
+          if (grandParent) path.push(grandParent.name);
+        }
+        path.push(parent.name);
+      }
+    }
+    path.push(cat.name);
+    return path.join(' > ');
+  };
+
   const openDeptEdit = (d: Department) => { setDeptName(d.name); setDeptModal({ open: true, edit: d }); };
 
   return (
@@ -128,8 +125,12 @@ export default function DefinitionsPage() {
 
         {/* ── KATEGORİLER ────────────────────────────────────────── */}
         <TabsContent value="categories" className="pt-4 space-y-4">
-          <div className="flex justify-end">
-            <Button onClick={() => { setCatName(''); setCatModal({ open: true }); }}>
+          <div className="flex justify-between items-end">
+            <div>
+              <h3 className="text-lg font-semibold">Global Kategori Yönetimi</h3>
+              <p className="text-sm text-muted-foreground">Tüm sistemlerde (ISG Defter, Kurul vb.) kullanılacak 3 seviyeli kategori yapısını yönetin.</p>
+            </div>
+            <Button onClick={() => { setCatName(''); setCatParentId('none'); setCatModal({ open: true }); }}>
               <Plus className="w-4 h-4 mr-2" /> Kategori Ekle
             </Button>
           </div>
@@ -138,68 +139,81 @@ export default function DefinitionsPage() {
             <div className="space-y-4">{[1, 2, 3].map((i) => <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />)}</div>
           ) : (
             <div className="space-y-4">
-              {categories.map((cat) => (
-                <div key={cat.id} className="bg-card border rounded-lg overflow-hidden">
-                  {/* Kategori başlığı */}
+              {categories.filter(c => !c.parentId).map(main => (
+                <div key={main.id} className="bg-card border rounded-lg overflow-hidden shadow-sm">
                   <div className="flex items-center justify-between px-5 py-4 bg-muted/30 border-b">
                     <div className="flex items-center gap-3">
                       <Tag className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-semibold text-foreground text-sm">{cat.name}</span>
-                      <Badge variant="outline" className="text-xs font-normal text-muted-foreground bg-background">{cat.subCategories.length} alt kategori</Badge>
+                      <span className="font-semibold text-foreground text-base">{main.name}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => openCatEdit(cat)} className="h-8 px-3 text-xs text-muted-foreground">
-                        <Edit className="w-3.5 h-3.5 mr-2" /> Düzenle
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => { setCatName(''); setCatParentId(main.id.toString()); setCatModal({ open: true }); }} className="h-8 px-2 text-muted-foreground">
+                        <Plus className="w-4 h-4 mr-1" /> Kategori Ekle
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => openCatEdit(main)} className="h-8 px-2 text-muted-foreground">
+                        <Edit className="w-4 h-4" />
                       </Button>
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        onClick={() => { if(confirm('Bu kategoriyi ve tüm alt kategorilerini silmek istediğinize emin misiniz?')) deleteCatMutation.mutate(cat.id); }} 
-                        className="h-8 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => { if(confirm('Bu kategoriyi (ve varsa alt kategorilerini) silmek istediğinize emin misiniz?')) deleteCatMutation.mutate(main.id); }} 
+                        className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="h-8 px-3 text-xs"
-                        onClick={() => { setSubName(''); setSubModal({ open: true, categoryId: cat.id }); }}
-                      >
-                        <Plus className="w-3.5 h-3.5 mr-2" /> Alt Kategori
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
 
-                  {/* Alt kategoriler */}
-                  {cat.subCategories.length > 0 && (
-                    <div className="divide-y divide-border">
-                      {cat.subCategories.map((sub) => (
-                        <div key={sub.id} className="flex items-center justify-between px-5 py-3 hover:bg-muted/30 transition-colors">
-                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                            <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
-                            <span className="text-foreground">{sub.name}</span>
+                  <div className="divide-y divide-border">
+                    {categories.filter(c => c.parentId === main.id).map(child => (
+                      <React.Fragment key={child.id}>
+                        <div className="flex items-center justify-between px-5 py-3 hover:bg-muted/10 transition-colors pl-8">
+                          <div className="flex items-center gap-2">
+                            <ChevronRight className="w-4 h-4 text-muted-foreground/70" />
+                            <span className="font-medium text-sm text-foreground">{child.name}</span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => openSubEdit(sub)} className="h-7 px-2 text-xs text-muted-foreground">
+                            <Button variant="ghost" size="sm" onClick={() => { setCatName(''); setCatParentId(child.id.toString()); setCatModal({ open: true }); }} className="h-7 px-2 text-muted-foreground text-xs">
+                              <Plus className="w-3.5 h-3.5 mr-1" /> Alt Kategori Ekle
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => openCatEdit(child)} className="h-7 px-2 text-muted-foreground">
                               <Edit className="w-3.5 h-3.5" />
                             </Button>
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              onClick={() => { if(confirm('Bu alt kategoriyi silmek istediğinize emin misiniz?')) deleteSubMutation.mutate(sub.id); }} 
-                              className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => { if(confirm('Bu kategoriyi (ve varsa alt kategorilerini) silmek istediğinize emin misiniz?')) deleteCatMutation.mutate(child.id); }} 
+                              className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </Button>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
 
-                  {cat.subCategories.length === 0 && (
-                    <div className="px-5 py-4 text-sm text-muted-foreground/70 italic bg-card">Alt kategori yok.</div>
-                  )}
+                        {categories.filter(c => c.parentId === child.id).map(sub => (
+                          <div key={sub.id} className="flex items-center justify-between px-5 py-2 hover:bg-muted/20 transition-colors pl-14 bg-muted/5">
+                            <div className="flex items-center gap-2">
+                              <ChevronRight className="w-3 h-3 text-muted-foreground/50" />
+                              <span className="text-sm text-muted-foreground">{sub.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => openCatEdit(sub)} className="h-6 px-2 text-muted-foreground">
+                                <Edit className="w-3 h-3" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => { if(confirm('Bu alt kategoriyi silmek istediğinize emin misiniz?')) deleteCatMutation.mutate(sub.id); }} 
+                                className="h-6 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </React.Fragment>
+                    ))}
+                  </div>
                 </div>
               ))}
               {categories.length === 0 && (
@@ -265,7 +279,7 @@ export default function DefinitionsPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              saveCatMutation.mutate({ name: catName, id: catModal.edit?.id });
+              saveCatMutation.mutate({ name: catName, parentId: catParentId !== 'none' ? parseInt(catParentId) : null, id: catModal.edit?.id });
             }}
             className="space-y-4 pt-4"
           >
@@ -273,39 +287,25 @@ export default function DefinitionsPage() {
               <label className="text-sm font-medium">Kategori Adı *</label>
               <Input value={catName} onChange={(e) => setCatName(e.target.value)} required autoFocus />
             </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Üst Kategori</label>
+              <select 
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={catParentId} 
+                onChange={(e) => setCatParentId(e.target.value)}
+              >
+                <option value="none">Ana Kategori (En Üst Seviye)</option>
+                {categories.filter(c => c.id !== catModal.edit?.id && (!c.parentId || !categories.find((cc:any)=>cc.id===c.parentId)?.parentId)).map((c) => (
+                  <option key={c.id} value={c.id}>{getCategoryPath(c)}</option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">Kategori seviyesini seçin. Maksimum 3 seviye oluşturulabilir.</p>
+            </div>
             {saveCatMutation.isError && <p className="text-sm text-destructive font-medium">{(saveCatMutation.error as Error).message}</p>}
             <DialogFooter className="mt-6">
               <Button type="button" variant="outline" onClick={() => setCatModal({ open: false })}>Vazgeç</Button>
               <Button type="submit" disabled={saveCatMutation.isPending}>
                 {saveCatMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Kaydet
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Alt Kategori Modal ───────────────────────────────────── */}
-      <Dialog open={subModal.open} onOpenChange={(v) => setSubModal({ open: v })}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>{subModal.edit ? 'Alt Kategori Düzenle' : 'Yeni Alt Kategori'}</DialogTitle>
-          </DialogHeader>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              saveSubMutation.mutate({ name: subName, categoryId: subModal.categoryId, id: subModal.edit?.id });
-            }}
-            className="space-y-4 pt-4"
-          >
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Alt Kategori Adı *</label>
-              <Input value={subName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSubName(e.target.value)} required autoFocus />
-            </div>
-            {saveSubMutation.isError && <p className="text-sm text-destructive font-medium">{(saveSubMutation.error as Error).message}</p>}
-            <DialogFooter className="mt-6">
-              <Button type="button" variant="outline" onClick={() => setSubModal({ open: false })}>Vazgeç</Button>
-              <Button type="submit" disabled={saveSubMutation.isPending}>
-                {saveSubMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Kaydet
               </Button>
             </DialogFooter>
           </form>

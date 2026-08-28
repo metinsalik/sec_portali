@@ -169,6 +169,14 @@ import ReportsPage from './pages/checklists/ReportsPage';
 import ChecklistSettingsPage from './pages/settings/ChecklistSettingsPage';
 import ChecklistDashboardPage from './pages/checklists/ChecklistDashboardPage';
 
+// İSG Tespit ve Öneri Defteri
+import IsgDefterLayout from './pages/safety-management/isg-defter/IsgDefterLayout';
+import IsgDefterDashboard from './pages/safety-management/isg-defter/IsgDefterDashboard';
+import IsgDefterRecords from './pages/safety-management/isg-defter/IsgDefterRecords';
+import IsgDefterSettings from './pages/safety-management/isg-defter/IsgDefterSettings';
+import IsgDefterItemDetail from './pages/safety-management/isg-defter/IsgDefterItemDetail';
+import IsgDefterPageBuilder from './pages/safety-management/isg-defter/IsgDefterPageBuilder';
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -263,6 +271,22 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
+
+                  {/* ── İSG TESPİT VE ÖNERİ DEFTERİ ────────────────── */}
+                  <Route
+                    path="/safety-management/isg-defter"
+                    element={
+                      <ProtectedRoute>
+                        <IsgDefterLayout />
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route index element={<IsgDefterDashboard />} />
+                    <Route path="records" element={<IsgDefterRecords />} />
+                    <Route path="pages/:pageId/builder" element={<IsgDefterPageBuilder />} />
+                    <Route path="items/:itemId" element={<IsgDefterItemDetail />} />
+                    <Route path="settings" element={<IsgDefterSettings />} />
+                  </Route>
 
                   {/* ── İSG KURUL YÖNETİMİ ─────────────────────── */}
                   <Route
