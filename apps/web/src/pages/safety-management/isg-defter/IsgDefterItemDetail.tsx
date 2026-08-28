@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Send, FileText, ImageIcon, ArrowLeft, CheckCircle, ShieldAlert, Folder, Clock, Activity, CheckCircle2, Calendar, Pencil, X, Check, Building2 } from 'lucide-react';
+import { Send, FileText, ImageIcon, ArrowLeft, CheckCircle, ShieldAlert, Folder, Clock, Activity, CheckCircle2, Calendar, Pencil, X, Check, Building2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -108,6 +108,19 @@ export default function IsgDefterItemDetail() {
     onError: () => toast.error('Kayıt güncellenirken hata oluştu.')
   });
 
+  const deleteItemMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.delete(`/safety-management/isg-defter/items/${itemId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['isg-defter-pages'] });
+      toast.success('Kayıt başarıyla silindi.');
+      navigate(-1);
+    },
+    onError: () => toast.error('Kayıt silinirken hata oluştu.')
+  });
+
   const addActionMutation = useMutation({
     mutationFn: async (formData: FormData) => {
       const res = await api.post(`/safety-management/isg-defter/actions`, formData);
@@ -175,15 +188,31 @@ export default function IsgDefterItemDetail() {
             </p>
           </div>
         </div>
-        {!isCompleted && (
-          <Button 
-            onClick={() => setIsCompleteModalOpen(true)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md transition-transform active:scale-95"
-            size="lg"
-          >
-            <CheckCircle className="w-5 h-5 mr-2" /> İşlemi Tamamla ve Kapat
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {user?.roles?.some((r: string) => ['admin', 'management'].includes(r)) && (
+            <Button 
+              onClick={() => {
+                if (window.confirm("Bu tespiti tamamen silmek istediğinize emin misiniz?")) {
+                  deleteItemMutation.mutate();
+                }
+              }}
+              variant="destructive"
+              className="shadow-md transition-transform active:scale-95"
+              size="lg"
+            >
+              <Trash2 className="w-5 h-5 mr-2" /> Sil
+            </Button>
+          )}
+          {!isCompleted && (
+            <Button 
+              onClick={() => setIsCompleteModalOpen(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md transition-transform active:scale-95"
+              size="lg"
+            >
+              <CheckCircle className="w-5 h-5 mr-2" /> İşlemi Tamamla ve Kapat
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* KATEGORİLER VE RİSK - ÜST BÖLÜM TAM GENİŞLİK */}

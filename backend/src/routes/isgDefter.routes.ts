@@ -92,6 +92,15 @@ router.put('/facilities/:facilityId/pages/:id', requireAdmin, upload.single('fil
   }
 });
 
+router.delete('/pages/:id', requireAdmin, async (req, res) => {
+  try {
+    await isgDefterService.deletePage(parseInt(req.params.id));
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Defter sayfası silinemedi.' });
+  }
+});
+
 // === ITEMS ===
 router.post('/items', async (req, res) => {
   try {
@@ -108,6 +117,15 @@ router.put('/items/:id', async (req, res) => {
     res.json(item);
   } catch (error) {
     res.status(500).json({ error: 'Tespit/öneri güncellenemedi.' });
+  }
+});
+
+router.delete('/items/:id', requireAdmin, async (req, res) => {
+  try {
+    await isgDefterService.deleteItem(parseInt(req.params.id));
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Tespit/öneri silinemedi.' });
   }
 });
 

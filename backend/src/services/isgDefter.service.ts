@@ -236,6 +236,18 @@ export const isgDefterService = {
     return results;
   },
 
+  deletePage: async (id: number) => {
+    return prisma.notebookPage.delete({
+      where: { id }
+    });
+  },
+
+  deleteItem: async (id: number) => {
+    return prisma.notebookItem.delete({
+      where: { id }
+    });
+  },
+
   getDashboardStats: async (facilityId: string, filters: any = {}) => {
     const { year, month, mainCategoryId, categoryId, subCategoryId, riskLevel, status, mainCategory, category } = filters;
     
