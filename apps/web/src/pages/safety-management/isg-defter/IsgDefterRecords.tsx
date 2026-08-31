@@ -222,7 +222,7 @@ export default function IsgDefterRecords() {
   const groupedByDate = useMemo(() => {
     const groups: Record<string, any> = {};
     filteredPages.forEach((p: any) => {
-      const d = new Date(p.date).toISOString().split('T')[0];
+      const d = format(new Date(p.date), 'yyyy-MM-dd');
       if (!groups[d]) {
         groups[d] = { dateString: d, date: p.date, facility: p.facility, pages: [], items: [], hasPdf: false, documentUrl: null };
       }
@@ -311,7 +311,7 @@ export default function IsgDefterRecords() {
                         });
                       }}
                     >
-                      <Input name="date" type="date" defaultValue={new Date(activeGroup.date).toISOString().split('T')[0]} className="w-36 h-8 text-xs" required />
+                      <Input name="date" type="date" defaultValue={format(new Date(activeGroup.date), 'yyyy-MM-dd')} className="w-36 h-8 text-xs" required />
                       <Input name="ciltNo" type="number" defaultValue={primaryPage?.ciltNo || ''} placeholder="Cilt" className="w-16 h-8 text-xs" />
                       <Input name="pageNo" type="text" defaultValue={primaryPage?.pageNo || ''} placeholder="Sayfa (Örn: 1-3)" className="w-[120px] h-8 text-xs" />
                       <Button type="submit" size="sm" className="h-8 bg-slate-900 text-white hover:bg-slate-800">Kaydet</Button>
@@ -678,7 +678,7 @@ export default function IsgDefterRecords() {
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="date">Kayıt Tarihi (Zorunlu)</Label>
-                <Input id="date" name="date" type="date" required defaultValue={new Date().toISOString().split('T')[0]} />
+                <Input id="date" name="date" type="date" required defaultValue={format(new Date(), 'yyyy-MM-dd')} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="pageNo">Sayfa Numarası (Opsiyonel)</Label>
