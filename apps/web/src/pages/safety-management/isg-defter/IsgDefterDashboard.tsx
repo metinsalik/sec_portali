@@ -140,7 +140,17 @@ export default function IsgDefterDashboard() {
     return <div className="p-8 text-center text-muted-foreground animate-pulse">Veriler yükleniyor...</div>;
   }
 
-  if (!stats) return null;
+  if (stats?.error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center text-red-500">
+        <AlertTriangle className="h-16 w-16 mb-4 opacity-50" />
+        <h2 className="text-2xl font-semibold mb-2">Hata</h2>
+        <p>{stats.error}</p>
+      </div>
+    );
+  }
+
+  if (!stats || !stats.mainCategoryDistribution) return null;
 
   // Chart Colors
   const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6'];

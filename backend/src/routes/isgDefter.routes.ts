@@ -32,7 +32,7 @@ const requireModuleAccess = (req: any, res: any, next: any) => {
   const user = req.user;
   const hasAccess = user?.roles?.includes('admin') || 
                     user?.roles?.includes('management') || 
-                    user?.modules?.some((m: any) => m.code === 'ISG_DEFTER');
+                    user?.modules?.includes('ISG_DEFTER');
   
   if (!hasAccess) {
     return res.status(403).json({ error: 'Bu modüle erişim yetkiniz yok.' });
