@@ -184,7 +184,7 @@ export default function IsgDefterItemDetail() {
             </div>
             <p className="text-muted-foreground flex items-center gap-2 mt-1 font-medium">
                <Calendar className="w-4 h-4" />
-               {format(new Date(itemData.createdAt), 'dd MMMM yyyy', { locale: tr })}
+               {format(new Date(pageData?.date || itemData.createdAt), 'dd MMMM yyyy', { locale: tr })}
             </p>
           </div>
         </div>
