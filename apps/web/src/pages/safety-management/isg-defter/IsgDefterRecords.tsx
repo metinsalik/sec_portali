@@ -14,10 +14,13 @@ import { PlusCircle, Search, Upload, FileText, FileDown, ArrowLeft, Calendar, Fi
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 
 export default function IsgDefterRecords() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin || user?.isManagement || user?.roles?.includes('admin');
   const activeFacilityId = localStorage.getItem('activeFacilityId');
   
   const [searchParams, setSearchParams] = useSearchParams();
@@ -123,6 +126,19 @@ export default function IsgDefterRecords() {
       queryClient.invalidateQueries({ queryKey: ['isg-defter-pages'] });
       toast.success('Kayıt güncellendi.');
     }
+  });
+
+  const deleteItemMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await api.delete(`/safety-management/isg-defter/items/${id}`);
+      if (!res.ok) throw new Error('Silinemedi');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['isg-defter-pages'] });
+      toast.success('Madde başarıyla silindi.');
+    },
+    onError: () => toast.error('Madde silinirken hata oluştu.')
   });
 
   const createPageMutation = useMutation({
@@ -378,12 +394,28 @@ export default function IsgDefterRecords() {
                       <Badge className={getStatusBadgeColor(item.status)} variant="outline">{item.status}</Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="default" className="bg-slate-900 text-white hover:bg-slate-800" size="sm" onClick={(e) => {
-                         e.stopPropagation();
-                         navigate(`/safety-management/isg-defter/items/${item.id}`);
-                      }}>
-                        Detay
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        {isAdmin && (
+                          <Button 
+                            variant="destructive" 
+                            size="sm" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm('Bu maddeyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
+                                deleteItemMutation.mutate(item.id);
+                              }
+                            }}
+                          >
+                            İlgili Maddeyi Sil
+                          </Button>
+                        )}
+                        <Button variant="default" className="bg-slate-900 text-white hover:bg-slate-800" size="sm" onClick={(e) => {
+                           e.stopPropagation();
+                           navigate(`/safety-management/isg-defter/items/${item.id}`);
+                        }}>
+                          Detay
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

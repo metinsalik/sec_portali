@@ -145,6 +145,8 @@ export const isgDefterService = {
       defaultDepartment = await prisma.department.create({ data: { name: 'Genel' } });
     }
 
+    let duplicateCount = 0;
+
     // Skip first row assuming it's headers
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
@@ -182,7 +184,20 @@ export const isgDefterService = {
         }
       });
 
-      if (!page) {
+      if (page) {
+        // Check if item already exists
+        const existingItem = await prisma.notebookItem.findFirst({
+          where: {
+            pageId: page.id,
+            content: content
+          }
+        });
+        
+        if (existingItem) {
+          duplicateCount++;
+          continue;
+        }
+      } else {
         // Create new page with correct cilt/page numbers
         const settings = await prisma.isgDefterSetting.findUnique({ where: { facilityId } });
         const maxPages = settings?.maxPagesPerCilt || 50;
@@ -231,6 +246,10 @@ export const isgDefterService = {
       }
 
       results.push(item);
+    }
+
+    if (results.length === 0 && duplicateCount > 0) {
+      throw new Error('Bu Excel dosyası daha önce yüklenmiş veya içerisindeki tüm maddeler zaten mevcut.');
     }
 
     return results;

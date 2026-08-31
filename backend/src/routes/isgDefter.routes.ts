@@ -203,7 +203,8 @@ router.post('/facilities/:facilityId/import', requireAdmin, upload.single('file'
     res.json({ success: true, importedCount: results.length });
   } catch (error) {
     console.error('Import error:', error);
-    res.status(500).json({ error: 'İçe aktarma sırasında hata oluştu.' });
+    const message = error instanceof Error ? error.message : 'İçe aktarma sırasında hata oluştu.';
+    res.status(500).json({ error: message });
   }
 });
 
