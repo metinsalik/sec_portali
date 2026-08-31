@@ -84,7 +84,8 @@ export default function FacilityLocationsPage() {
 
   const addLoc = () => {
     if (!newLocation.building) return;
-    const name = newLocation.department || newLocation.description || newLocation.floor || newLocation.building || 'İsimsiz';
+    const nameParts = [newLocation.building, newLocation.floor, newLocation.department, newLocation.description].filter(Boolean);
+    const name = nameParts.length > 0 ? nameParts.join(' - ') : 'İsimsiz';
     addMutation.mutate({ ...newLocation, name });
   };
 

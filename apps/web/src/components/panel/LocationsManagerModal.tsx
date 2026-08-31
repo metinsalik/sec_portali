@@ -39,7 +39,8 @@ export default function LocationsManagerModal({ facilityId, isOpen, onClose }: L
 
   const createLocationMutation = useMutation({
     mutationFn: async (data: any) => {
-      const payload = { ...data, name: data.description || data.department || data.floor || data.building || 'İsimsiz' };
+      const nameParts = [data.building, data.floor, data.department, data.description].filter(Boolean);
+      const payload = { ...data, name: nameParts.length > 0 ? nameParts.join(' - ') : 'İsimsiz' };
       const res = await api.post(`/risks/facilities/${facilityId}/locations`, payload);
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -57,7 +58,8 @@ export default function LocationsManagerModal({ facilityId, isOpen, onClose }: L
 
   const updateLocationMutation = useMutation({
     mutationFn: async (data: any) => {
-      const payload = { ...data, name: data.description || data.department || data.floor || data.building || 'İsimsiz' };
+      const nameParts = [data.building, data.floor, data.department, data.description].filter(Boolean);
+      const payload = { ...data, name: nameParts.length > 0 ? nameParts.join(' - ') : 'İsimsiz' };
       const res = await api.put(`/risks/facilities/${facilityId}/locations/${data.id}`, payload);
       if (!res.ok) throw new Error('Güncellenemedi');
       return res.json();

@@ -129,8 +129,8 @@ router.post('/:id/locations', authMiddleware, async (req: AuthRequest, res: Resp
       data: { facilityId: id, name, building, floor, department, description }
     });
     res.status(201).json(loc);
-  } catch (err) {
-    res.status(500).json({ error: 'Lokasyon oluşturulamadı.' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Lokasyon oluşturulamadı.' });
   }
 });
 
@@ -144,8 +144,8 @@ router.put('/:id/locations/:locationId', authMiddleware, async (req: AuthRequest
       data: { name, building, floor, department, description }
     });
     res.json(loc);
-  } catch (err) {
-    res.status(500).json({ error: 'Lokasyon güncellenemedi.' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Lokasyon güncellenemedi.' });
   }
 });
 
