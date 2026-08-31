@@ -50,6 +50,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   else if (location.pathname.startsWith('/workflow')) requiredModule = 'WORKFLOW';
   else if (location.pathname.startsWith('/panel')) requiredModule = 'PANEL';
   else if (location.pathname.startsWith('/checklists')) requiredModule = 'CHECKLISTS';
+  else if (location.pathname.startsWith('/safety-management/isg-defter')) requiredModule = 'ISG_DEFTER';
 
   const hasModuleAccess = requiredModule ? (user.modules?.includes(requiredModule) || false) : false;
 
