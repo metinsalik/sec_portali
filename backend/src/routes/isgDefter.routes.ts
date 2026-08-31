@@ -79,7 +79,7 @@ router.post('/pages', async (req, res) => {
   }
 });
 
-router.put('/facilities/:facilityId/pages/:id', requireAdmin, upload.single('file'), async (req: any, res: any) => {
+router.put('/facilities/:facilityId/pages/:id', upload.single('file'), async (req: any, res: any) => {
   try {
     const data = { ...req.body };
     if (req.file) {

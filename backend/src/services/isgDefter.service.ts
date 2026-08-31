@@ -117,6 +117,10 @@ export const isgDefterService = {
       updateData.documentUrl = data.documentUrl;
       updateData.documentUploadedAt = new Date();
     }
+    if (data.date !== undefined) {
+      updateData.date = new Date(data.date);
+      updateData.year = updateData.date.getFullYear();
+    }
 
     return prisma.notebookPage.update({
       where: { id },

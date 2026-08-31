@@ -292,20 +292,22 @@ export default function IsgDefterRecords() {
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-primary" />
                 <div>
-                  <div className="text-xs text-muted-foreground">Kayıt Numaraları</div>
+                  <div className="text-xs text-muted-foreground">Kayıt Detayları</div>
                   {editingPageId === primaryPage?.id ? (
                     <form 
-                      className="flex items-center gap-2 mt-1"
+                      className="flex items-center gap-2 mt-1 flex-wrap"
                       onSubmit={(e) => {
                         e.preventDefault();
                         const formData = new FormData(e.currentTarget);
                         updatePageMutation.mutate({
                           id: primaryPage.id,
                           ciltNo: Number(formData.get('ciltNo')),
-                          pageNo: formData.get('pageNo') as string
+                          pageNo: formData.get('pageNo') as string,
+                          date: formData.get('date') as string
                         });
                       }}
                     >
+                      <Input name="date" type="date" defaultValue={new Date(activeGroup.date).toISOString().split('T')[0]} className="w-36 h-8 text-xs" required />
                       <Input name="ciltNo" type="number" defaultValue={primaryPage?.ciltNo || ''} placeholder="Cilt" className="w-16 h-8 text-xs" />
                       <Input name="pageNo" type="text" defaultValue={primaryPage?.pageNo || ''} placeholder="Sayfa (Örn: 1-3)" className="w-[120px] h-8 text-xs" />
                       <Button type="submit" size="sm" className="h-8 bg-slate-900 text-white hover:bg-slate-800">Kaydet</Button>
