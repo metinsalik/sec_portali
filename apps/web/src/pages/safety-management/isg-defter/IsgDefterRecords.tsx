@@ -156,20 +156,24 @@ export default function IsgDefterRecords() {
   });
 
   const updatePageMutation = useMutation({
-    mutationFn: async (data: { id: number, ciltNo?: number, pageNo?: number, file?: File }) => {
+    mutationFn: async (data: { id: number, ciltNo?: number, pageNo?: number | string, date?: string, file?: File }) => {
       const formData = new FormData();
       if (data.ciltNo) formData.append('ciltNo', data.ciltNo.toString());
       if (data.pageNo) formData.append('pageNo', data.pageNo.toString());
+      if (data.date) formData.append('date', data.date);
       if (data.file) formData.append('file', data.file);
       
       const res = await api.put(`/safety-management/isg-defter/facilities/${activeFacilityId}/pages/${data.id}`, formData);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['isg-defter-pages'] });
       toast.success('Sayfa bilgileri güncellendi.');
       setEditingPageId(null);
       setUploadingPageId(null);
+      if (variables.date && selectedDate !== variables.date) {
+        updateParam('date', variables.date);
+      }
     }
   });
 
