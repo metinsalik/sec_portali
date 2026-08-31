@@ -6,14 +6,31 @@ const prisma = new PrismaClient();
 export const isgDefterService = {
   // === SETTINGS ===
   getSettings: async (facilityId: string) => {
-    const settings = await prisma.isgDefterSetting.findUnique({ where: { facilityId } });
+    let settings = null;
+    if (facilityId !== 'all') {
+      settings = await prisma.isgDefterSetting.findUnique({ where: { facilityId } });
+    }
+    
+    // Always fetch global settings for risk levels
+    const globalSettings = await prisma.isgDefterSetting.findUnique({ where: { facilityId: 'all' } });
+
+    // Use global risk levels if available, else local, else empty array
+    const rawRiskLevels = globalSettings?.riskLevels || settings?.riskLevels;
+    const parsedRiskLevels = rawRiskLevels ? JSON.parse(rawRiskLevels) : [];
+
     if (settings) {
       return {
         ...settings,
-        riskLevels: settings.riskLevels ? JSON.parse(settings.riskLevels) : []
+        riskLevels: parsedRiskLevels
       };
     }
-    return settings;
+    
+    return {
+      currentCilt: 1,
+      maxPagesPerCilt: 50,
+      ...(globalSettings || {}),
+      riskLevels: parsedRiskLevels
+    };
   },
 
   updateSettings: async (facilityId: string, data: any) => {

@@ -31,10 +31,11 @@ export default function IsgDefterSettings() {
   const { data: settings, isLoading: isSettingsLoading } = useQuery({
     queryKey: ['isg-defter-settings', activeFacilityId],
     queryFn: async () => {
-      const res = await api.get(`/safety-management/isg-defter/facilities/${activeFacilityId}/settings`);
+      const targetId = activeFacilityId || 'all';
+      const res = await api.get(`/safety-management/isg-defter/facilities/${targetId}/settings`);
       return res.json();
     },
-    enabled: hasAdminAccess && !!activeFacilityId && activeFacilityId !== 'all',
+    enabled: hasAdminAccess,
   });
 
   const { data: facilities = [] } = useQuery({
@@ -49,7 +50,8 @@ export default function IsgDefterSettings() {
   // Mutations
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await api.put(`/safety-management/isg-defter/facilities/${activeFacilityId}/settings`, data);
+      const targetId = activeFacilityId || 'all';
+      const res = await api.put(`/safety-management/isg-defter/facilities/${targetId}/settings`, data);
       return res.json();
     },
     onSuccess: () => {
@@ -103,14 +105,9 @@ export default function IsgDefterSettings() {
     );
   }
 
-  if (!activeFacilityId || activeFacilityId === 'all') {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh]">
-        <h2 className="text-xl font-semibold mb-2">Tesis Seçimi Gerekli</h2>
-        <p className="text-muted-foreground">Ayarları görüntülemek için lütfen bir tesis seçin.</p>
-      </div>
-    );
-  }
+  // We will no longer block the whole page if activeFacilityId is all,
+  // because Risk Levels should be configured globally.
+  const isGlobal = !activeFacilityId || activeFacilityId === 'all';
 
   return (
     <div className="space-y-6">
@@ -136,7 +133,12 @@ export default function IsgDefterSettings() {
               <CardDescription>Otomatik cilt takibi için sayfa sınırını belirleyin.</CardDescription>
             </CardHeader>
             <CardContent>
-              {isSettingsLoading ? <p>Yükleniyor...</p> : (
+              {isGlobal ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground border border-dashed rounded-lg">
+                  <h3 className="font-semibold text-lg text-foreground mb-1">Tesis Seçimi Gerekli</h3>
+                  <p>Cilt ve sayfa yapılandırması her tesis için ayrıdır. Lütfen sağ üstten bir tesis seçin.</p>
+                </div>
+              ) : isSettingsLoading ? <p>Yükleniyor...</p> : (
                 <form onSubmit={handleSettingsSubmit} className="space-y-4 max-w-md">
                   <div className="space-y-2">
                     <Label>Aktif Cilt Numarası</Label>
@@ -181,8 +183,10 @@ export default function IsgDefterSettings() {
           <Card>
             <CardHeader className="flex flex-row justify-between items-center">
               <div>
-                <CardTitle>Risk Düzeyleri</CardTitle>
-                <CardDescription>Risk seviyelerini ve renklerini yönetin.</CardDescription>
+                <CardTitle>Risk Düzeyleri (Global)</CardTitle>
+                <CardDescription>Uygulama genelindeki (Tüm Tesisler) risk seviyelerini ve renklerini yönetin. 
+                {isGlobal ? '' : ' Not: Risk düzeyleri tüm tesisler için ortaktır.'}
+                </CardDescription>
               </div>
               <Button className="bg-slate-900 text-white hover:bg-slate-800" onClick={() => { setCurrentRisk({ name: '', color: 'bg-gray-500' }); setIsRiskModalOpen(true); }}>Yeni Risk Düzeyi</Button>
             </CardHeader>
@@ -284,7 +288,11 @@ export default function IsgDefterSettings() {
             }
             
             updateSettingsMutation.mutate({ riskLevels: newLevels }, {
-              onSuccess: () => setIsRiskModalOpen(false)
+              onSuccess: () => {
+                setIsRiskModalOpen(false);
+                // invalidate to refresh immediately
+                queryClient.invalidateQueries({ queryKey: ['isg-defter-settings'] });
+              }
             });
           }} className="space-y-4">
             <div className="space-y-2">
