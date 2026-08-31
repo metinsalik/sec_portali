@@ -35,10 +35,25 @@ export const isgDefterService = {
 
   updateSettings: async (facilityId: string, data: any) => {
     const { riskLevels, maxPagesPerCilt, currentCilt } = data;
+    
+    // Risk düzeyleri her zaman 'all' (global) olarak kaydedilir
+    if (riskLevels !== undefined) {
+      await prisma.isgDefterSetting.upsert({
+        where: { facilityId: 'all' },
+        update: { riskLevels: JSON.stringify(riskLevels) },
+        create: {
+          facilityId: 'all',
+          riskLevels: JSON.stringify(riskLevels),
+          maxPagesPerCilt: 50,
+          currentCilt: 1
+        }
+      });
+    }
+
+    // Diğer ayarlar (cilt vb.) seçili tesise kaydedilir
     return prisma.isgDefterSetting.upsert({
       where: { facilityId },
       update: {
-        ...(riskLevels && { riskLevels: JSON.stringify(riskLevels) }),
         ...(maxPagesPerCilt && { maxPagesPerCilt: parseInt(maxPagesPerCilt) }),
         ...(currentCilt && { currentCilt: parseInt(currentCilt) }),
       },
@@ -46,7 +61,6 @@ export const isgDefterService = {
         facilityId,
         maxPagesPerCilt: maxPagesPerCilt ? parseInt(maxPagesPerCilt) : 50,
         currentCilt: currentCilt ? parseInt(currentCilt) : 1,
-        riskLevels: riskLevels ? JSON.stringify(riskLevels) : null
       }
     });
   },
