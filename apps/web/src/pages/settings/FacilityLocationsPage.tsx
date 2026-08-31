@@ -41,13 +41,19 @@ export default function FacilityLocationsPage() {
   const addMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await api.post('/locations', { ...data, facilityId });
-      if (!res.ok) throw new Error('Ekleme basarisiz');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Ekleme basarisiz');
+      }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['facility-locations'] });
       toast.success('Lokasyon eklendi');
       setNewLocation({ building: '', floor: '', department: '', description: '', type: 'DEPARTMAN' });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Lokasyon eklenirken hata oluştu');
     }
   });
 

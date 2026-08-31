@@ -41,7 +41,10 @@ export default function LocationsManagerModal({ facilityId, isOpen, onClose }: L
     mutationFn: async (data: any) => {
       const payload = { ...data, name: data.description || data.department || data.floor || data.building || 'İsimsiz' };
       const res = await api.post(`/risks/facilities/${facilityId}/locations`, payload);
-      if (!res.ok) throw new Error('Eklenemedi');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Eklenemedi');
+      }
       return res.json();
     },
     onSuccess: () => {
