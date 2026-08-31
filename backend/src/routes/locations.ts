@@ -45,8 +45,9 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       }
     });
     res.status(201).json(location);
-  } catch (err) {
-    res.status(500).json({ error: 'Lokasyon eklenemedi.' });
+  } catch (err: any) {
+    console.error('Lokasyon ekleme hatası:', err);
+    res.status(500).json({ error: err.message || 'Lokasyon eklenemedi.' });
   }
 });
 
