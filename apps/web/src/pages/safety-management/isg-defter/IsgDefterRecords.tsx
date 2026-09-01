@@ -425,31 +425,29 @@ export default function IsgDefterRecords() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button 
-                              variant="destructive" 
-                              size="sm" 
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Maddeyi Sil</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Bu maddeyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>İptal</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => deleteItemMutation.mutate(item.id)} className="bg-red-600 hover:bg-red-700 text-white">
-                                Evet, Sil
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="sm">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Maddeyi Sil</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Bu maddeyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>İptal</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteItemMutation.mutate(item.id)} className="bg-red-600 hover:bg-red-700 text-white">
+                                  Evet, Sil
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                         <Button variant="default" className="bg-slate-900 text-white hover:bg-slate-800" size="sm" onClick={(e) => {
                            e.stopPropagation();
                            navigate(`/safety-management/isg-defter/items/${item.id}`);
