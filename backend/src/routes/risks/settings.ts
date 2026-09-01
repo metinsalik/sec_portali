@@ -77,6 +77,8 @@ async function initializeFacilityRiskSettings(facilityId: string) {
   }
 
   // 3. Default Kategoriler ve Alt Kategoriler
+}
+
 // GET /api/risks/settings?facilityId=xxx
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
@@ -188,3 +190,4 @@ router.delete('/departments/:id', authMiddleware, async (req: AuthRequest, res: 
 });
 
 // POST /api/risks/settings/categories
+export default router;
