@@ -62,15 +62,15 @@ function LevelBadge({ level }: { level: string }) {
   );
 }
 
-export default function RiskDepartmentPage() {
-  const { departmentId } = useParams<{ departmentId: string }>();
+export default function RiskLocationPage() {
+  const { locationId } = useParams<{ locationId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const token = localStorage.getItem('token');
   const { user } = useAuth();
   const isAdminOrMgmt = user?.isAdmin || user?.isManagement;
 
-  const storageKey = `risk_dept_filters_${departmentId}`;
+  const storageKey = `risk_dept_filters_${locationId}`;
   const loadState = (key: string, defaultVal: any) => {
     try {
       const stored = sessionStorage.getItem(storageKey);
@@ -101,26 +101,26 @@ export default function RiskDepartmentPage() {
     }));
   }, [filterStatus, filterCategory, filterResponsible, filterArea, filterInitialLevel, filterFinalLevel, searchTerm, sortConfig, storageKey]);
 
-  const { data: department } = useQuery({
-    queryKey: ['risk-department-details', departmentId],
+  const { data: location } = useQuery({
+    queryKey: ['risk-location-details', locationId],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/risks/departments/${departmentId}`, {
+      const res = await fetch(`${API}/api/risks/locations/${locationId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (!res.ok) throw new Error('Departman detayları alınamadı');
+      if (!res.ok) throw new Error('Lokasyon detayları alınamadı');
       return res.json();
     },
-    enabled: !!departmentId
+    enabled: !!locationId
   });
 
   const { data: risks = [], isLoading } = useQuery({
-    queryKey: ['risks', departmentId],
+    queryKey: ['risks', locationId],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (departmentId?.startsWith('group:')) {
-        const parts = departmentId.split(':');
+      if (locationId?.startsWith('group:')) {
+        const parts = locationId.split(':');
         // group:{level}:{facId}:{path}
-        if (['building', 'floor', 'department'].includes(parts[1])) {
+        if (['building', 'floor', 'location'].includes(parts[1])) {
           const level = parts[1];
           const facId = parts[2];
           const path = parts.slice(3).join(':');
@@ -129,13 +129,13 @@ export default function RiskDepartmentPage() {
           params.set('path', path);
         } else {
           // old format fallback
-          const [_, facId, ...nameParts] = departmentId.split(':');
+          const [_, facId, ...nameParts] = locationId.split(':');
           params.set('facilityId', facId);
-          params.set('level', 'department');
+          params.set('level', 'location');
           params.set('path', `||${nameParts.join(':')}`); // Mock path for fallback
         }
       } else {
-        params.set('locationId', departmentId!);
+        params.set('locationId', locationId!);
       }
       if (filterStatus) params.set('status', filterStatus);
       const res = await fetch(`${API}/api/risks/lifecycle?${params}`, {
@@ -144,7 +144,7 @@ export default function RiskDepartmentPage() {
       if (!res.ok) throw new Error('Riskler alınamadı');
       return res.json();
     },
-    enabled: !!departmentId,
+    enabled: !!locationId,
   });
 
   const deleteMutation = useMutation({
@@ -157,7 +157,7 @@ export default function RiskDepartmentPage() {
     },
     onSuccess: () => {
       toast.success('Risk silindi');
-      queryClient.invalidateQueries({ queryKey: ['risks', departmentId] });
+      queryClient.invalidateQueries({ queryKey: ['risks', locationId] });
     },
     onError: () => toast.error('Silme işlemi başarısız'),
   });
@@ -265,9 +265,9 @@ export default function RiskDepartmentPage() {
     }, {});
   }, [sortedRisks]);
 
-  const deptName = department?.name || 'Departman';
-  const deptCode = department?.name ? department.name.replace(/i/g, 'İ').replace(/ı/g, 'I').toUpperCase().substring(0, 3) : 'GEN';
-  const facilityId = department?.facilityId;
+  const deptName = location?.name || 'Lokasyon';
+  const deptCode = location?.name ? location.name.replace(/i/g, 'İ').replace(/ı/g, 'I').toUpperCase().substring(0, 3) : 'GEN';
+  const facilityId = location?.facilityId;
 
   // Dinamik Filtre Metni
   const activeFiltersText = [
@@ -287,14 +287,14 @@ export default function RiskDepartmentPage() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => navigate(facilityId ? `/risks/facility/${facilityId}` : '/risks')} className="h-8 px-2">
-            <ArrowLeft className="w-4 h-4 mr-1" /> Departmanlar
+            <ArrowLeft className="w-4 h-4 mr-1" /> Lokasyonlar
           </Button>
           <div className="h-5 w-px bg-border" />
           <div>
             <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
               {deptName}
             </h1>
-            <p className="text-xs text-muted-foreground font-mono mt-0.5">Departman Kodu: {deptCode}</p>
+            <p className="text-xs text-muted-foreground font-mono mt-0.5">Lokasyon Kodu: {deptCode}</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -306,7 +306,7 @@ export default function RiskDepartmentPage() {
               <Upload className="w-4 h-4 mr-1.5" /> Excel İçe Aktar
             </Button>
           )}
-          <Button size="sm" onClick={() => navigate(`/risks/department/${departmentId}/create`)} className="shadow-md">
+          <Button size="sm" onClick={() => navigate(`/risks/location/${locationId}/create`)} className="shadow-md">
             <Plus className="w-4 h-4 mr-1.5" /> Yeni Risk Ekle
           </Button>
         </div>
@@ -340,8 +340,8 @@ export default function RiskDepartmentPage() {
           <>
           <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             <div className="lg:col-span-1 bg-card dark:bg-slate-900 p-6 rounded-xl border border-border dark:border-slate-800 form-shadow flex flex-col">
-              <h4 className="text-sm font-bold text-foreground dark:text-slate-100 mb-6 truncate" title={`Departman Durum Dağılımı${chartTitleSuffix}`}>
-                Departman Durum Dağılımı{chartTitleSuffix && <span className="font-normal text-xs ml-1 opacity-70">({chartTitleSuffix})</span>}
+              <h4 className="text-sm font-bold text-foreground dark:text-slate-100 mb-6 truncate" title={`Lokasyon Durum Dağılımı${chartTitleSuffix}`}>
+                Lokasyon Durum Dağılımı{chartTitleSuffix && <span className="font-normal text-xs ml-1 opacity-70">({chartTitleSuffix})</span>}
               </h4>
               <div className="flex-1 flex flex-col items-center justify-center relative">
                 <div 
@@ -367,8 +367,8 @@ export default function RiskDepartmentPage() {
             </div>
 
             <div className="lg:col-span-2 bg-card dark:bg-slate-900 p-6 rounded-xl border border-border dark:border-slate-800 form-shadow flex flex-col">
-              <h4 className="text-sm font-bold text-foreground dark:text-slate-100 mb-4 truncate" title={`Departman Risk Seviyesi Dağılımı${chartTitleSuffix}`}>
-                Departman Risk Seviyesi Dağılımı{chartTitleSuffix && <span className="font-normal text-xs ml-1 opacity-70">({chartTitleSuffix})</span>}
+              <h4 className="text-sm font-bold text-foreground dark:text-slate-100 mb-4 truncate" title={`Lokasyon Risk Seviyesi Dağılımı${chartTitleSuffix}`}>
+                Lokasyon Risk Seviyesi Dağılımı{chartTitleSuffix && <span className="font-normal text-xs ml-1 opacity-70">({chartTitleSuffix})</span>}
               </h4>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1">
@@ -479,14 +479,14 @@ export default function RiskDepartmentPage() {
         </div>
         
         <div className="flex gap-2 flex-wrap ml-auto">
-          {department?.areas && department.areas.length > 0 && (
+          {location?.areas && location.areas.length > 0 && (
             <select 
               value={filterArea} 
               onChange={(e) => setFilterArea(e.target.value)}
               className="h-8 text-xs bg-background border border-border rounded-full px-3 focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
               <option value="">Tüm Alanlar</option>
-              {department.areas.map((a: any) => (
+              {location.areas.map((a: any) => (
                 <option key={a.id} value={a.name}>{a.name}</option>
               ))}
             </select>
@@ -579,13 +579,13 @@ export default function RiskDepartmentPage() {
                   <tr 
                     key={risk.id} 
                     className="hover:bg-muted/50 cursor-pointer transition-colors group"
-                    onClick={() => navigate(`/risks/department/${departmentId}/view/${risk.id}`)}
+                    onClick={() => navigate(`/risks/location/${locationId}/view/${risk.id}`)}
                   >
                     <td className="px-4 py-3 font-mono font-medium text-muted-foreground">
                       {deptCode}-{String(risk.riskNo).padStart(3, '0')}
                     </td>
                     <td className="px-4 py-3 min-w-[120px] font-medium text-foreground">
-                      {risk.area || department?.name}
+                      {risk.area || location?.name}
                     </td>
                     <td className="px-4 py-3 min-w-[200px]">
                       <div className="font-medium text-foreground">{risk.riskCategory}</div>
@@ -605,10 +605,10 @@ export default function RiskDepartmentPage() {
                     </td>
                     <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-blue-600" onClick={() => navigate(`/risks/department/${departmentId}/view/${risk.id}`)}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-blue-600" onClick={() => navigate(`/risks/location/${locationId}/view/${risk.id}`)}>
                           <Eye className="w-4 h-4" />
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-orange-600" onClick={() => navigate(`/risks/department/${departmentId}/edit/${risk.id}`)}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-orange-600" onClick={() => navigate(`/risks/location/${locationId}/edit/${risk.id}`)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(risk.id)}>
@@ -628,12 +628,12 @@ export default function RiskDepartmentPage() {
       {showImport && (
         <RiskExcelImport
           facilityId={facilityId}
-          departmentName={department?.name}
+          locationName={location?.name}
           areaName={filterArea || undefined}
           onClose={() => setShowImport(false)}
           onSuccess={() => {
             setShowImport(false);
-            queryClient.invalidateQueries({ queryKey: ['risks', departmentId] });
+            queryClient.invalidateQueries({ queryKey: ['risks', locationId] });
           }}
         />
       )}
@@ -643,7 +643,7 @@ export default function RiskDepartmentPage() {
         isOpen={showPrintModal}
         onClose={() => setShowPrintModal(false)}
         risks={risks}
-        department={department}
+        location={location}
         deptCode={deptCode}
       />
     </div>

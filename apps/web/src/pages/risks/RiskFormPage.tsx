@@ -151,7 +151,7 @@ const MultiSelectResponsibles = ({
 }
 
 export default function RiskFormPage() {
-  const { departmentId, riskId } = useParams<{ departmentId: string; riskId?: string }>();
+  const { locationId, riskId } = useParams<{ locationId: string; riskId?: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const token = localStorage.getItem('token');
@@ -163,7 +163,7 @@ export default function RiskFormPage() {
     riskCategory: '',
     subCategory: '',
     area: '',
-    locationId: departmentId,
+    locationId: locationId,
     method: 'Fine Kinney',
     activity: '',
     hazard: '',
@@ -204,15 +204,15 @@ export default function RiskFormPage() {
 
   // 1. Fetch Department & Facility Context
   const { data: department, isLoading: deptLoading } = useQuery({
-    queryKey: ['risk-department-details', departmentId],
+    queryKey: ['risk-department-details', locationId],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/risks/departments/${departmentId}`, {
+      const res = await fetch(`${API}/api/risks/locations/${locationId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error();
       return res.json();
     },
-    enabled: !!departmentId,
+    enabled: !!locationId,
   });
 
   const facilityId = department?.facilityId;
@@ -223,7 +223,7 @@ export default function RiskFormPage() {
   const { data: locations = [] } = useQuery({
     queryKey: ['risk-locations-flat', facilityId],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/risks/departments?facilityId=${facilityId}&flat=true`, {
+      const res = await fetch(`${API}/api/risks/locations?facilityId=${facilityId}&flat=true`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error();
@@ -281,7 +281,7 @@ export default function RiskFormPage() {
         riskCategory: existingRisk.riskCategory || '',
         subCategory: existingRisk.subCategory || '',
         area: existingRisk.area || '',
-        locationId: existingRisk.locationId || departmentId,
+        locationId: existingRisk.locationId || locationId,
         method: existingRisk.method || 'Fine Kinney',
         activity: existingRisk.activity || '',
         hazard: existingRisk.hazard || '',
@@ -451,7 +451,7 @@ export default function RiskFormPage() {
       const res = await fetch(url, {
         method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ...form, departmentId: form.locationId || departmentId, locationId: form.locationId || departmentId, area: form.area }),
+        body: JSON.stringify({ ...form, locationId: form.locationId || locationId, area: form.area }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -461,10 +461,10 @@ export default function RiskFormPage() {
     },
     onSuccess: () => {
       toast.success(isEdit ? 'Risk değerlendirmesi güncellendi.' : 'Risk değerlendirmesi eklendi.');
-      queryClient.invalidateQueries({ queryKey: ['risks', departmentId] });
+      queryClient.invalidateQueries({ queryKey: ['risks', locationId] });
       queryClient.invalidateQueries({ queryKey: ['facility-risks'] });
       queryClient.invalidateQueries({ queryKey: ['risk-departments'] });
-      navigate(`/risks/department/${departmentId}`);
+      navigate(`/risks/location/${locationId}`);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -513,7 +513,7 @@ export default function RiskFormPage() {
             variant="outline"
             size="icon"
             className="rounded-full shrink-0"
-            onClick={() => navigate(`/risks/department/${departmentId}`)}
+            onClick={() => navigate(`/risks/location/${locationId}`)}
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
@@ -531,7 +531,7 @@ export default function RiskFormPage() {
         <div className="flex gap-2">
           <Button
             variant="ghost"
-            onClick={() => navigate(`/risks/department/${departmentId}`)}
+            onClick={() => navigate(`/risks/location/${locationId}`)}
           >
             Vazgeç
           </Button>
@@ -577,7 +577,7 @@ export default function RiskFormPage() {
               <div className="col-span-1 md:col-span-3">
                 <LocationCascadingSelector 
                   locations={locations}
-                  value={form.locationId || departmentId || ''}
+                  value={form.locationId || locationId || ''}
                   onChange={(val, level, path) => {
                     updateField('locationId', val);
                     updateField('area', path.description || path.department || path.floor || path.building);

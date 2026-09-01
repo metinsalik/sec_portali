@@ -245,7 +245,7 @@ export function RiskReportsPage() {
           <div className="mt-6">
             <Card className="print:break-inside-avoid">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">Departman Dağılımı</CardTitle>
+                <CardTitle className="text-base">Lokasyon Dağılımı</CardTitle>
               </CardHeader>
               <CardContent className="h-72">
                 {deptData.length > 0 ? (
@@ -295,7 +295,7 @@ export function RiskReportsPage() {
                         <div className="flex items-center gap-1">No <ArrowUpDown className="w-3 h-3"/></div>
                       </th>
                       <th className="px-4 py-3 cursor-pointer hover:bg-muted/80" onClick={() => handleSort('department')}>
-                        <div className="flex items-center gap-1">Departman <ArrowUpDown className="w-3 h-3"/></div>
+                        <div className="flex items-center gap-1">Lokasyon <ArrowUpDown className="w-3 h-3"/></div>
                       </th>
                       <th className="px-4 py-3 cursor-pointer hover:bg-muted/80" onClick={() => handleSort('hazard')}>
                         <div className="flex items-center gap-1">Tehlike / Risk <ArrowUpDown className="w-3 h-3"/></div>
@@ -316,7 +316,7 @@ export function RiskReportsPage() {
                       <tr 
                         key={risk.id} 
                         className="hover:bg-muted/50 cursor-pointer transition-colors"
-                        onClick={() => navigate(`/risks/department/${risk.departmentId}/view/${risk.id}`, { state: { from: '/risks/reports' } })}
+                        onClick={() => navigate(`/risks/location/${risk.departmentId}/view/${risk.id}`, { state: { from: '/risks/reports' } })}
                       >
                         <td className="px-4 py-3 font-medium">#{risk.riskNo}</td>
                         <td className="px-4 py-3">{risk.department?.name}</td>

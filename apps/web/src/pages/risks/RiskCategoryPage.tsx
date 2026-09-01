@@ -103,11 +103,11 @@ export default function RiskCategoryPage() {
   });
   const facility = facilities.find((f: any) => f.id === facilityId);
 
-  // Departmanlar (Haritalama için)
+  // Lokasyonlar (Haritalama için)
   const { data: departments = [] } = useQuery({
     queryKey: ['risk-departments', facilityId],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/risks/departments?facilityId=${facilityId}`, {
+      const res = await fetch(`${API}/api/risks/locations?facilityId=${facilityId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       return res.json();
@@ -180,7 +180,7 @@ export default function RiskCategoryPage() {
 
   const uniqueDepartments = useMemo(() => {
     const ids = Array.from(new Set(categoryRisks.map((r: any) => r.departmentId).filter(Boolean))) as string[];
-    return ids.map(id => ({ id, name: departmentMap[id]?.name || 'Bilinmeyen Departman' }));
+    return ids.map(id => ({ id, name: departmentMap[id]?.name || 'Bilinmeyen Lokasyon' }));
   }, [categoryRisks, departmentMap]);
 
   const uniqueResponsibles = useMemo(() => Array.from(new Set(categoryRisks.map((r: any) => r.improvementResponsible).filter(Boolean))) as string[], [categoryRisks]);
@@ -258,7 +258,7 @@ export default function RiskCategoryPage() {
 
   const activeFiltersText = [
     filterStatus && `Durum: ${STATUS_CONFIG[filterStatus]?.label}`,
-    filterDepartment && `Departman: ${departmentMap[filterDepartment]?.name}`,
+    filterDepartment && `Lokasyon: ${departmentMap[filterDepartment]?.name}`,
     filterResponsible && `Sorumlu: ${filterResponsible}`,
     filterInitialLevel && `İlk Tespit: ${filterInitialLevel}`,
     filterFinalLevel && `Sonrası Risk: ${filterFinalLevel}`
@@ -455,7 +455,7 @@ export default function RiskCategoryPage() {
             onChange={(e) => setFilterDepartment(e.target.value)}
             className="h-8 text-xs bg-background border border-border rounded-full px-3 focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
-            <option value="">Tüm Departmanlar</option>
+            <option value="">Tüm Lokasyonlar</option>
             {uniqueDepartments.map(dept => (
               <option key={dept.id} value={dept.id}>{dept.name}</option>
             ))}
@@ -507,7 +507,7 @@ export default function RiskCategoryPage() {
                     <div className="flex items-center gap-1">Risk No <ArrowUpDown className="w-3 h-3"/></div>
                   </th>
                   <th className="px-4 py-3 font-medium cursor-pointer hover:bg-muted/80 transition-colors" onClick={() => handleSort('departmentId')}>
-                    <div className="flex items-center gap-1">Departman <ArrowUpDown className="w-3 h-3"/></div>
+                    <div className="flex items-center gap-1">Lokasyon <ArrowUpDown className="w-3 h-3"/></div>
                   </th>
                   <th className="px-4 py-3 font-medium cursor-pointer hover:bg-muted/80 transition-colors" onClick={() => handleSort('subCategory')}>
                     <div className="flex items-center gap-1">Alt Kategori <ArrowUpDown className="w-3 h-3"/></div>
@@ -535,7 +535,7 @@ export default function RiskCategoryPage() {
                     <tr 
                       key={risk.id} 
                       className="hover:bg-muted/50 cursor-pointer transition-colors group"
-                      onClick={() => navigate(`/risks/department/${risk.departmentId}/view/${risk.id}`)}
+                      onClick={() => navigate(`/risks/location/${risk.departmentId}/view/${risk.id}`)}
                     >
                       <td className="px-4 py-3 font-mono font-medium text-muted-foreground">
                         {dCode}-{String(risk.riskNo).padStart(3, '0')}
@@ -563,10 +563,10 @@ export default function RiskCategoryPage() {
                       </td>
                       <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-blue-600" onClick={() => navigate(`/risks/department/${risk.departmentId}/view/${risk.id}`)}>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-blue-600" onClick={() => navigate(`/risks/location/${risk.departmentId}/view/${risk.id}`)}>
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-orange-600" onClick={() => navigate(`/risks/department/${risk.departmentId}/edit/${risk.id}`)}>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-orange-600" onClick={() => navigate(`/risks/location/${risk.departmentId}/edit/${risk.id}`)}>
                             <Pencil className="w-4 h-4" />
                           </Button>
                           <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(risk.id)}>

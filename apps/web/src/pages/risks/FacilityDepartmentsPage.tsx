@@ -76,7 +76,7 @@ export default function FacilityDepartmentsPage() {
       const res = await fetch(`${API}/api/risks/departments?facilityId=${facilityId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error('Departmanlar alınamadı');
+      if (!res.ok) throw new Error('Lokasyonlar alınamadı');
       return res.json();
     },
     enabled: !!facilityId && viewMode !== 'tree',
@@ -130,17 +130,6 @@ export default function FacilityDepartmentsPage() {
           <div className="flex items-center gap-4">
             {renderStats(bNode.stats, bNode.risks)}
             <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-semibold">{bNode.risks} Risk</span>
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              className="h-8 px-3 opacity-0 group-hover:opacity-100"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/risks/department/${bNode.groupId}`);
-              }}
-            >
-              Risk Ekle / İncele
-            </Button>
           </div>
         </div>
 
@@ -160,18 +149,7 @@ export default function FacilityDepartmentsPage() {
                   </div>
                   <div className="flex items-center gap-4">
                     {renderStats(fNode.stats, fNode.risks)}
-                    <span className="text-xs font-semibold text-muted-foreground">{fNode.risks} Risk</span>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      className="h-7 px-2 opacity-0 group-hover:opacity-100"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/risks/department/${fNode.groupId}`);
-                      }}
-                    >
-                      Risk Ekle / İncele
-                    </Button>
+                    <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-xs font-semibold">{fNode.risks} Risk</span>
                   </div>
                 </div>
 
@@ -191,18 +169,7 @@ export default function FacilityDepartmentsPage() {
                           </div>
                           <div className="flex items-center gap-3">
                             {renderStats(dNode.stats, dNode.risks)}
-                            <span className="text-xs font-semibold text-muted-foreground">{dNode.risks} Risk</span>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-7 px-2 opacity-0 group-hover:opacity-100"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/risks/department/${dNode.groupId}`);
-                              }}
-                            >
-                              Risk Ekle / İncele
-                            </Button>
+                            <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-xs font-semibold">{dNode.risks} Risk</span>
                           </div>
                         </div>
 
@@ -213,7 +180,7 @@ export default function FacilityDepartmentsPage() {
                               <div 
                                 key={unit.id}
                                 className="flex items-center justify-between p-2 text-sm hover:bg-muted/50 rounded-md cursor-pointer group"
-                                onClick={() => navigate(`/risks/department/${unit.id}`)}
+                                onClick={() => navigate(`/risks/location/${unit.id}`)}
                               >
                                 <div className="flex items-center gap-2">
                                   <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
@@ -320,7 +287,7 @@ export default function FacilityDepartmentsPage() {
             return (
               <div
                 key={dept.id}
-                onClick={() => navigate(`/risks/department/${dept.id}`)}
+                onClick={() => navigate(`/risks/location/${dept.id}`)}
                 className="bg-card dark:bg-slate-900 p-6 rounded-xl border border-border dark:border-slate-800 form-shadow hover:border-primary transition-colors cursor-pointer group flex flex-col h-full"
               >
                 <div className="flex justify-between items-start mb-4">
@@ -392,7 +359,7 @@ export default function FacilityDepartmentsPage() {
                 return (
                   <tr 
                     key={dept.id} 
-                    onClick={() => navigate(`/risks/department/${dept.id}`)}
+                    onClick={() => navigate(`/risks/location/${dept.id}`)}
                     className="hover:bg-muted/30 cursor-pointer transition-colors group"
                   >
                     <td className="px-6 py-4 font-medium text-foreground">

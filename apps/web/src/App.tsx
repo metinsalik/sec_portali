@@ -87,7 +87,7 @@ import FacilityDepartmentsPage from './pages/risks/FacilityDepartmentsPage';
 import FacilityCategoriesPage from './pages/risks/FacilityCategoriesPage';
 import FacilityRiskLevelPage from './pages/risks/FacilityRiskLevelPage';
 import RiskCategoryPage from './pages/risks/RiskCategoryPage';
-import RiskDepartmentPage from './pages/risks/RiskDepartmentPage';
+import RiskLocationPage from './pages/risks/RiskLocationPage';
 import RiskFormPage from './pages/risks/RiskFormPage';
 import RiskViewPage from './pages/risks/RiskViewPage';
 import RiskSettings from './pages/risks/RiskSettings';
@@ -645,15 +645,15 @@ function App() {
                     }
                   />
                   <Route
-                    path="/risks/department/:departmentId"
+                    path="/risks/location/:locationId"
                     element={
                       <ProtectedRoute>
-                        <AppLayout><RiskDepartmentPage /></AppLayout>
+                        <AppLayout><RiskLocationPage /></AppLayout>
                       </ProtectedRoute>
                     }
                   />
                   <Route
-                    path="/risks/department/:departmentId/create"
+                    path="/risks/location/:locationId/create"
                     element={
                       <ProtectedRoute>
                         <AppLayout><RiskFormPage /></AppLayout>
@@ -661,7 +661,7 @@ function App() {
                     }
                   />
                   <Route
-                    path="/risks/department/:departmentId/view/:riskId"
+                    path="/risks/location/:locationId/view/:riskId"
                     element={
                       <ProtectedRoute>
                         <AppLayout><RiskViewPage /></AppLayout>
@@ -669,7 +669,7 @@ function App() {
                     }
                   />
                   <Route
-                    path="/risks/department/:departmentId/edit/:riskId"
+                    path="/risks/location/:locationId/edit/:riskId"
                     element={
                       <ProtectedRoute>
                         <AppLayout><RiskFormPage /></AppLayout>

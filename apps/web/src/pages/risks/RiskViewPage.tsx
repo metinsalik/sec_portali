@@ -81,7 +81,7 @@ function LevelBadge({ level }: { level: string }) {
 }
 
 export default function RiskViewPage() {
-  const { departmentId, riskId } = useParams<{ departmentId: string; riskId: string }>();
+  const { locationId, riskId } = useParams<{ locationId: string; riskId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const token = localStorage.getItem('token');
@@ -122,7 +122,7 @@ export default function RiskViewPage() {
             if (window.history.state && window.history.state.idx > 0) {
               navigate(-1);
             } else {
-              navigate(location.state?.from || `/risks/department/${departmentId}`);
+              navigate(location.state?.from || `/risks/location/${locationId}`);
             }
           }} className="h-8 px-2 -ml-2">
             <ArrowLeft className="w-4 h-4 mr-1" /> Geri
@@ -134,7 +134,7 @@ export default function RiskViewPage() {
           <h1 className="text-xl font-bold truncate max-w-lg">{risk.hazard}</h1>
           <StatusBadge status={risk.status} />
         </div>
-        <Button size="sm" variant="outline" onClick={() => navigate(`/risks/department/${departmentId}/edit/${risk.id}`)}>
+        <Button size="sm" variant="outline" onClick={() => navigate(`/risks/location/${locationId}/edit/${risk.id}`)}>
           <Pencil className="w-4 h-4 mr-1.5" /> Düzenle
         </Button>
       </div>

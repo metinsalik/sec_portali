@@ -270,53 +270,11 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const where: any = {};
 
     if (locationId) {
-      let actualLocationId = locationId as string;
-
-      if (actualLocationId.startsWith('group:')) {
-        const parts = actualLocationId.split(':');
-        let facId = '';
-        let b = '', f = '', d = '';
-
-        if (['building', 'floor', 'department'].includes(parts[1])) {
-          const level = parts[1];
-          facId = parts[2];
-          const pathParts = parts.slice(3).join(':').split('|');
-          if (level === 'building') {
-            b = pathParts[0] || '';
-          } else if (level === 'floor') {
-            b = pathParts[0] || '';
-            f = pathParts[1] || '';
-          } else {
-            b = pathParts[0] || '';
-            f = pathParts[1] || '';
-            d = pathParts[2] || '';
-          }
-        } else {
-          facId = parts[1];
-          d = parts.slice(2).join(':');
-        }
-
-        const groupLoc = await prisma.facilityLocation.findFirst({
-          where: { 
-            facilityId: facId, 
-            building: b || null,
-            floor: f || null,
-            department: d || null,
-            description: null 
-          }
-        });
-
-        if (groupLoc) {
-          actualLocationId = groupLoc.id;
-        }
-      }
-
       const dept = await prisma.facilityLocation.findUnique({
-        where: { id: actualLocationId },
+        where: { id: locationId as string },
         select: { facilityId: true }
       });
       if (!dept) {
-        // If not found, return empty array instead of 404
         return res.json([]);
       }
 
@@ -325,7 +283,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
         return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
       }
 
-      where.locationId = actualLocationId;
+      where.locationId = locationId as string;
     } else if (facilityId && req.query.level && req.query.path) {
       const level = req.query.level as string;
       const path = req.query.path as string;
@@ -439,63 +397,10 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       dueDatePeriod, statusDate,
     } = req.body;
 
-    let actualLocationId = locationId;
-
-    if (locationId && locationId.startsWith('group:')) {
-      const parts = locationId.split(':');
-      // group:{level}:{facId}:{path}
-      let facId = '';
-      let b = '', f = '', d = '';
-
-      if (['building', 'floor', 'department'].includes(parts[1])) {
-        const level = parts[1];
-        facId = parts[2];
-        const pathParts = parts.slice(3).join(':').split('|');
-        if (level === 'building') {
-          b = pathParts[0] || '';
-        } else if (level === 'floor') {
-          b = pathParts[0] || '';
-          f = pathParts[1] || '';
-        } else {
-          b = pathParts[0] || '';
-          f = pathParts[1] || '';
-          d = pathParts[2] || '';
-        }
-      } else {
-        // Fallback to old group format group:facId:department
-        facId = parts[1];
-        d = parts.slice(2).join(':');
-      }
-
-      let groupLoc = await prisma.facilityLocation.findFirst({
-        where: { 
-          facilityId: facId, 
-          building: b || null,
-          floor: f || null,
-          department: d || null,
-          description: null 
-        }
-      });
-
-      if (!groupLoc) {
-        groupLoc = await prisma.facilityLocation.create({
-          data: {
-            facilityId: facId,
-            name: d || f || b || 'Bilinmeyen',
-            building: b || null,
-            floor: f || null,
-            department: d || null,
-            description: null
-          }
-        });
-      }
-      actualLocationId = groupLoc.id;
-    }
-
     let dept = await prisma.facilityLocation.findUnique({
-      where: { id: actualLocationId as string },
+      where: { id: locationId as string },
     });
-    if (!dept) return res.status(404).json({ error: 'Departman bulunamadı.' });
+    if (!dept) return res.status(404).json({ error: 'Departman/Lokasyon bulunamadı.' });
 
     // Eğer departmanın kodu yoksa, isminden oluşturup kaydet
     // @ts-ignore
@@ -516,14 +421,14 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     // Dinamik Risk No oluşturma
     const maxRisk = await prisma.riskLifecycle.findFirst({
-      where: { locationId: actualLocationId as string },
+      where: { locationId: locationId as string },
       orderBy: { riskNo: 'desc' }
     });
     const nextRiskNo = maxRisk ? maxRisk.riskNo + 1 : 1;
 
     const risk = await prisma.riskLifecycle.create({
       data: {
-        locationId:    actualLocationId as string,
+        locationId:      locationId as string,
         riskNo:          nextRiskNo,
         riskCategory:    riskCategory || 'Genel',
         subCategory:     subCategory || null,

@@ -51,10 +51,10 @@ export default function RiskFacilityPage() {
   const { data: departments = [], isLoading, refetch } = useQuery({
     queryKey: ['risk-departments', facilityId],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/risks/departments?facilityId=${facilityId}`, {
+      const res = await fetch(`${API}/api/risks/locations?facilityId=${facilityId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error('Departmanlar alınamadı');
+      if (!res.ok) throw new Error('Lokasyonlar alınamadı');
       return res.json();
     },
     enabled: !!facilityId,
@@ -84,7 +84,7 @@ export default function RiskFacilityPage() {
 
   const facility = facilities.find((f: any) => f.id === facilityId);
 
-  // Departman listesi artık burada search edilmeyecek, tümünü göstereceğiz
+  // Lokasyon listesi artık burada search edilmeyecek, tümünü göstereceğiz
   const filteredDepartments = useMemo(() => {
     return departments;
   }, [departments]);
@@ -343,7 +343,7 @@ export default function RiskFacilityPage() {
           </div>
         </div>
 
-        {/* Departman Listesi */}
+        {/* Lokasyon Listesi */}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[1,2,3].map(i => <Skeleton key={i} className="h-40 w-full rounded-xl bg-muted dark:bg-slate-800" />)}
@@ -362,7 +362,7 @@ export default function RiskFacilityPage() {
               return (
                 <div
                   key={dept.id}
-                  onClick={() => navigate(`/risks/department/${dept.id}`)}
+                  onClick={() => navigate(`/risks/location/${dept.id}`)}
                   className="bg-card dark:bg-slate-900 p-6 rounded-xl border border-border dark:border-slate-800 form-shadow hover:border-secondary transition-colors cursor-pointer group flex flex-col h-full"
                 >
                   <div className="flex justify-between items-start mb-4">
