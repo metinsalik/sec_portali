@@ -319,14 +319,14 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
         return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
       }
 
-      where.department = { facilityId: facilityId as string };
+      where.location = { facilityId: facilityId as string };
     } else if (!isAdminOrMgmt) {
       const userFacilities = await prisma.userFacility.findMany({
         where: { username: user!.username },
         select: { facilityId: true }
       });
       const facilityIds = userFacilities.map(f => f.facilityId);
-      where.department = { facilityId: { in: facilityIds } };
+      where.location = { facilityId: { in: facilityIds } };
     }
 
     if (status) where.status = status as string;

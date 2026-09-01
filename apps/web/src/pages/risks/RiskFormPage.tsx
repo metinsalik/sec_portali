@@ -437,7 +437,7 @@ export default function RiskFormPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const categoryOptions = globalCategories.filter((c) => c.parentId === null);
+  const categoryOptions = globalCategories.filter((c) => !c.parentId);
   const selectedCatObj = categoryOptions.find((c) => c.name === form.riskCategory);
   const subCategoryOptions = selectedCatObj ? globalCategories.filter((c) => c.parentId === selectedCatObj.id) : [];
   const settingsDepartments = settingsData?.departments || [];
