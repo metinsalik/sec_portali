@@ -270,18 +270,62 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const where: any = {};
 
     if (locationId) {
+      let actualLocationId = locationId as string;
+
+      if (actualLocationId.startsWith('group:')) {
+        const parts = actualLocationId.split(':');
+        let facId = '';
+        let b = '', f = '', d = '';
+
+        if (['building', 'floor', 'department'].includes(parts[1])) {
+          const level = parts[1];
+          facId = parts[2];
+          const pathParts = parts.slice(3).join(':').split('|');
+          if (level === 'building') {
+            b = pathParts[0] || '';
+          } else if (level === 'floor') {
+            b = pathParts[0] || '';
+            f = pathParts[1] || '';
+          } else {
+            b = pathParts[0] || '';
+            f = pathParts[1] || '';
+            d = pathParts[2] || '';
+          }
+        } else {
+          facId = parts[1];
+          d = parts.slice(2).join(':');
+        }
+
+        const groupLoc = await prisma.facilityLocation.findFirst({
+          where: { 
+            facilityId: facId, 
+            building: b || null,
+            floor: f || null,
+            department: d || null,
+            description: null 
+          }
+        });
+
+        if (groupLoc) {
+          actualLocationId = groupLoc.id;
+        }
+      }
+
       const dept = await prisma.facilityLocation.findUnique({
-        where: { id: locationId as string },
+        where: { id: actualLocationId },
         select: { facilityId: true }
       });
-      if (!dept) return res.status(404).json({ error: 'Departman/Lokasyon bulunamadı.' });
+      if (!dept) {
+        // If not found, return empty array instead of 404
+        return res.json([]);
+      }
 
       const hasAccess = await checkFacilityAccess(req, dept.facilityId);
       if (!hasAccess) {
         return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
       }
 
-      where.locationId = locationId as string;
+      where.locationId = actualLocationId;
     } else if (facilityId && req.query.level && req.query.path) {
       const level = req.query.level as string;
       const path = req.query.path as string;
@@ -385,11 +429,11 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const username = req.user?.username;
     const {
       locationId, riskNo, riskCategory, subCategory, area, method,
-      activity, hazard, riskDescription, initialCondition, initialImage,
+      activity, hazard, riskDescription, initialCondition, initialImage, initialImages,
       initialProb, initialFreq, initialSev, initialScore, status,
       // New fields
       detectionDate, impactDamage, affectedPeople, improvementResponsible, dueDate,
-      actionsTaken, actionDate, actionImage,
+      actionsTaken, actionDate, actionImage, actionImages,
       finalProb, finalFreq, finalSev, finalScore, postImprovementResponsible, postImprovementDueDate,
       effectivenessMethod, controlResponsible, controlResult, legislation,
       dueDatePeriod, statusDate,
@@ -490,6 +534,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
         riskDescription: riskDescription || '',
         initialCondition: initialCondition || null,
         initialImage:     initialImage || null,
+        initialImages:    initialImages || [],
         initialProb:     Number(initialProb) || 0,
         initialFreq:     initialFreq ? Number(initialFreq) : null,
         initialSev:      Number(initialSev) || 0,

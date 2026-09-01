@@ -665,6 +665,7 @@ model RiskLifecycle {
   riskDescription            String
   initialCondition           String?
   initialImage               String?
+  initialImages              String[]   @default([])
   initialProb                Float
   initialFreq                Float?
   initialSev                 Float
@@ -675,6 +676,7 @@ model RiskLifecycle {
   actionDate                 DateTime?
   actionBy                   String?
   actionImage                String?
+  actionImages               String[]   @default([])
   followUpMeasure            String?
   extraImprovement           String?
   finalProb                  Float?

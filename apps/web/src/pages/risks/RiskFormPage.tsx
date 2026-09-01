@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import LocationTreeSelector from '@/components/shared/LocationTreeSelector';
 import LocationCascadingSelector from '@/components/shared/LocationCascadingSelector';
-import { ArrowLeft, Save, Upload, Image as ImageIcon, Loader2, Calendar, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Image as ImageIcon, Loader2, Calendar, AlertTriangle, ShieldCheck, HelpCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -62,6 +62,7 @@ interface FormState {
   // Mevcut durum
   initialCondition: string;
   initialImage: string;
+  initialImages: string[];
   initialProb: string;
   initialFreq: string;
   initialSev: string;
@@ -76,6 +77,7 @@ interface FormState {
   actionsTaken: string;
   actionDate: string;
   actionImage: string;
+  actionImages: string[];
 
   // İyileştirme Sonrası
   finalProb: string;
@@ -171,6 +173,7 @@ export default function RiskFormPage() {
     legislation: '',
     initialCondition: '',
     initialImage: '',
+    initialImages: [],
     initialProb: '',
     initialFreq: '',
     initialSev: '',
@@ -183,6 +186,7 @@ export default function RiskFormPage() {
     actionsTaken: '',
     actionDate: '',
     actionImage: '',
+    actionImages: [],
     finalProb: '',
     finalFreq: '',
     finalSev: '',
@@ -287,6 +291,7 @@ export default function RiskFormPage() {
         legislation: existingRisk.legislation || '',
         initialCondition: existingRisk.initialCondition || '',
         initialImage: existingRisk.initialImage || '',
+        initialImages: existingRisk.initialImages || [],
         initialProb: existingRisk.initialProb !== null ? String(existingRisk.initialProb) : '',
         initialFreq: existingRisk.initialFreq !== null ? String(existingRisk.initialFreq) : '',
         initialSev: existingRisk.initialSev !== null ? String(existingRisk.initialSev) : '',
@@ -299,6 +304,7 @@ export default function RiskFormPage() {
         actionsTaken: existingRisk.actionsTaken || '',
         actionDate: existingRisk.actionDate ? existingRisk.actionDate.slice(0, 10) : '',
         actionImage: existingRisk.actionImage || '',
+        actionImages: existingRisk.actionImages || [],
         finalProb: existingRisk.finalProb !== null ? String(existingRisk.finalProb) : '',
         finalFreq: existingRisk.finalFreq !== null ? String(existingRisk.finalFreq) : '',
         finalSev: existingRisk.finalSev !== null ? String(existingRisk.finalSev) : '',
@@ -391,6 +397,12 @@ export default function RiskFormPage() {
 
   // Image upload
   const uploadImage = async (field: 'initialImage' | 'actionImage', file: File) => {
+    const arrayField = field === 'initialImage' ? 'initialImages' : 'actionImages';
+    if (form[arrayField].length >= 5) {
+      toast.error('En fazla 5 fotoğraf yükleyebilirsiniz.');
+      return;
+    }
+    
     setUploadingField(field);
     const fd = new FormData();
     fd.append('file', file);
@@ -402,13 +414,33 @@ export default function RiskFormPage() {
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      updateField(field, data.url);
+      
+      setForm((prev) => {
+        const newArray = [...prev[arrayField], data.url];
+        return {
+          ...prev,
+          [arrayField]: newArray,
+          [field]: newArray[0] || '', // Always keep the first one in the scalar field
+        };
+      });
       toast.success('Fotoğraf başarıyla yüklendi.');
     } catch {
       toast.error('Fotoğraf yüklenemedi.');
     } finally {
       setUploadingField(null);
     }
+  };
+
+  const removeImage = (field: 'initialImage' | 'actionImage', index: number) => {
+    const arrayField = field === 'initialImage' ? 'initialImages' : 'actionImages';
+    setForm((prev) => {
+      const newArray = prev[arrayField].filter((_, i) => i !== index);
+      return {
+        ...prev,
+        [arrayField]: newArray,
+        [field]: newArray[0] || '',
+      };
+    });
   };
 
   const mutation = useMutation({
@@ -605,23 +637,30 @@ export default function RiskFormPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-muted-foreground block">Mevcut Durum Görseli (Varsa tespit edilen riske ilişkin görsel)</label>
+              <label className="text-xs font-semibold text-muted-foreground block">Mevcut Durum Görseli (En fazla 5 görsel)</label>
               <div className="flex flex-wrap items-center gap-4 border p-3 rounded-lg bg-muted/10">
-                {form.initialImage ? (
-                  <div className="relative group w-28 h-20 rounded-md overflow-hidden border">
-                    <img src={form.initialImage} alt="Mevcut Durum" className="w-full h-full object-cover" />
-                    <a href={form.initialImage} target="_blank" rel="noreferrer" className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] text-white transition-opacity font-medium">Görüntüle</a>
-                  </div>
+                {form.initialImages && form.initialImages.length > 0 ? (
+                  form.initialImages.map((img, idx) => (
+                    <div key={idx} className="relative group w-28 h-20 rounded-md overflow-hidden border">
+                      <img src={img} alt={`Mevcut Durum ${idx + 1}`} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
+                        <a href={img} target="_blank" rel="noreferrer" className="text-white hover:text-primary"><ImageIcon className="w-4 h-4" /></a>
+                        <button type="button" onClick={() => removeImage('initialImage', idx)} className="text-white hover:text-destructive"><X className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+                  ))
                 ) : (
                   <div className="w-28 h-20 bg-muted/40 rounded-md border border-dashed flex flex-col items-center justify-center text-muted-foreground text-xs gap-1">
                     <ImageIcon className="w-5 h-5 text-muted-foreground/50" /><span>Görsel Yok</span>
                   </div>
                 )}
-                <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-muted-foreground hover:text-foreground border border-dashed rounded-md px-4 py-2 hover:border-foreground/40 transition-colors bg-background">
-                  {uploadingField === 'initialImage' ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Upload className="w-4 h-4" />}
-                  Fotoğraf Yükle
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadImage('initialImage', e.target.files[0]); }} />
-                </label>
+                {form.initialImages.length < 5 && (
+                  <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-muted-foreground hover:text-foreground border border-dashed rounded-md px-4 py-2 hover:border-foreground/40 transition-colors bg-background">
+                    {uploadingField === 'initialImage' ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Upload className="w-4 h-4" />}
+                    Fotoğraf Yükle
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadImage('initialImage', e.target.files[0]); }} />
+                  </label>
+                )}
               </div>
             </div>
 
@@ -717,19 +756,24 @@ export default function RiskFormPage() {
                 <Input type="date" value={form.actionDate} onChange={(e) => updateField('actionDate', e.target.value)} />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-muted-foreground block">İyileştirme Sonrası Görseli (Yapılan iyileştirme sonrasını gösteren görsel)</label>
-                <div className="flex items-center gap-3">
-                  {form.actionImage && (
-                    <div className="relative group w-20 h-10 rounded border overflow-hidden shrink-0">
-                      <img src={form.actionImage} alt="İyileştirme Sonrası" className="w-full h-full object-cover" />
-                      <a href={form.actionImage} target="_blank" rel="noreferrer" className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[8px] text-white transition-opacity">Görüntüle</a>
+                <label className="text-xs font-semibold text-muted-foreground block">İyileştirme Sonrası Görseli (En fazla 5 görsel)</label>
+                <div className="flex flex-wrap items-center gap-3">
+                  {form.actionImages && form.actionImages.length > 0 && form.actionImages.map((img, idx) => (
+                    <div key={idx} className="relative group w-20 h-10 rounded border overflow-hidden shrink-0">
+                      <img src={img} alt={`İyileştirme Sonrası ${idx + 1}`} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-1 transition-opacity">
+                        <a href={img} target="_blank" rel="noreferrer" className="text-white hover:text-primary"><ImageIcon className="w-3 h-3" /></a>
+                        <button type="button" onClick={() => removeImage('actionImage', idx)} className="text-white hover:text-destructive"><X className="w-3 h-3" /></button>
+                      </div>
                     </div>
+                  ))}
+                  {form.actionImages.length < 5 && (
+                    <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-muted-foreground hover:text-foreground border border-dashed rounded px-3 py-1.5 hover:border-foreground/40 transition-colors bg-background">
+                      {uploadingField === 'actionImage' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                      Yükle
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadImage('actionImage', e.target.files[0]); }} />
+                    </label>
                   )}
-                  <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-muted-foreground hover:text-foreground border border-dashed rounded px-3 py-1.5 hover:border-foreground/40 transition-colors bg-background">
-                    {uploadingField === 'actionImage' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                    Yükle
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadImage('actionImage', e.target.files[0]); }} />
-                  </label>
                 </div>
               </div>
             </div>
