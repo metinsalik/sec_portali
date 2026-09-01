@@ -50,12 +50,6 @@ export default function RiskSettings() {
   const [deptName, setDeptName] = useState('');
 
   // 3. Kategoriler (RiskCategorySetting)
-  const [catModal, setCatModal] = useState<{ open: boolean; edit?: Category }>({ open: false });
-  const [catName, setCatName] = useState('');
-
-  // 4. Alt Kategoriler (RiskSubCategorySetting)
-  const [subModal, setSubModal] = useState<{ open: boolean; categoryId?: number; edit?: SubCategory }>({ open: false });
-  const [subName, setSubName] = useState('');
 
   // ── Fetching Data ───────────────────────────────────────────
   // Hospital Departments (from existing /api/risks/departments)
@@ -216,96 +210,7 @@ export default function RiskSettings() {
     onError: (err: any) => toast.error(err.message || 'Departman silinemedi.'),
   });
 
-  // Kategoriler Mutations
-  const saveCatMutation = useMutation({
-    mutationFn: async ({ name, id }: { name: string; id?: number }) => {
-      const res = id
-        ? await fetch(`${API}/api/risks/settings/categories/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ name })
-          })
-        : await fetch(`${API}/api/risks/settings/categories`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ facilityId: selectedFacilityId, name })
-          });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['risk-settings', selectedFacilityId] });
-      setCatModal({ open: false });
-      setCatName('');
-      toast.success('Kategori başarıyla kaydedildi.');
-    },
-    onError: (err: any) => toast.error(err.message || 'Kategori kaydedilemedi.'),
-  });
-
-  const deleteCatMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await fetch(`${API}/api/risks/settings/categories/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['risk-settings', selectedFacilityId] });
-      toast.success('Kategori silindi.');
-    },
-    onError: (err: any) => toast.error(err.message || 'Kategori silinemedi.'),
-  });
-
-  // Alt Kategoriler Mutations
-  const saveSubMutation = useMutation({
-    mutationFn: async ({ name, categoryId, id }: { name: string; categoryId?: number; id?: number }) => {
-      const res = id
-        ? await fetch(`${API}/api/risks/settings/subcategories/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ name })
-          })
-        : await fetch(`${API}/api/risks/settings/subcategories`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ categoryId, name })
-          });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['risk-settings', selectedFacilityId] });
-      setSubModal({ open: false });
-      setSubName('');
-      toast.success('Alt kategori başarıyla kaydedildi.');
-    },
-    onError: (err: any) => toast.error(err.message || 'Alt kategori kaydedilemedi.'),
-  });
-
-  const deleteSubMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await fetch(`${API}/api/risks/settings/subcategories/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['risk-settings', selectedFacilityId] });
-      toast.success('Alt kategori silindi.');
-    },
-    onError: (err: any) => toast.error(err.message || 'Alt kategori silinemedi.'),
-  });
-
-  // Open Edit Dialog Helpers
-  const openHospEdit = (h: HospitalDepartment) => { setHospName(h.name); setHospModal({ open: true, edit: h }); };
-  const openAreaEdit = (a: Area) => { setAreaName(a.name); setAreaModal({ open: true, edit: a }); };
   const openDeptEdit = (d: Department) => { setDeptName(d.name); setDeptModal({ open: true, edit: d }); };
-  const openCatEdit = (cat: Category) => { setCatName(cat.name); setCatModal({ open: true, edit: cat }); };
-  const openSubEdit = (sub: SubCategory) => { setSubName(sub.name); setSubModal({ open: true, edit: sub }); };
 
   return (
     <div className="space-y-6">
@@ -330,15 +235,12 @@ export default function RiskSettings() {
         </Card>
       ) : (
         <Tabs defaultValue="departments" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:w-[400px] bg-muted/50 p-1 rounded-xl">
+          <TabsList className="grid w-full grid-cols-1 md:w-[200px] bg-muted/50 p-1 rounded-xl">
             {/* <TabsTrigger value="hosp-depts" className="gap-2 rounded-lg">
               <Building2 className="w-4 h-4" /> Hastane Bölümleri
             </TabsTrigger> */}
             <TabsTrigger value="departments" className="gap-2 rounded-lg">
               <Building2 className="w-4 h-4" /> Departmanlar / Sorumlular
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="gap-2 rounded-lg">
-              <Tag className="w-4 h-4" /> Kategoriler
             </TabsTrigger>
           </TabsList>
 
@@ -496,107 +398,7 @@ export default function RiskSettings() {
             )}
           </TabsContent>
 
-          {/* ── 3. KATEGORİLER VE ALT KATEGORİLER ──────────────────────────── */}
-          <TabsContent value="categories" className="pt-4 space-y-4">
-            <div className="flex justify-between items-center bg-card border px-4 py-3 rounded-xl">
-              <div className="text-xs text-muted-foreground font-medium">
-                Örn: Tıbbi Hizmetler, Yönetsel Hizmetler, Tesis Güvenliği, Çevre Güvenliği.
-              </div>
-              <Button size="sm" onClick={() => { setCatName(''); setCatModal({ open: true }); }} className="shrink-0 ml-4">
-                <Plus className="w-4 h-4 mr-1.5" /> Kategori Ekle
-              </Button>
-            </div>
 
-            {settingsLoading ? (
-              <div className="space-y-4">
-                {[1, 2].map((i) => <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />)}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {settingsData.categories.map((cat) => (
-                  <div key={cat.id} className="bg-card border rounded-xl overflow-hidden shadow-sm">
-                    {/* Kategori Başlığı */}
-                    <div className="flex items-center justify-between px-5 py-4 bg-muted/40 border-b">
-                      <div className="flex items-center gap-3">
-                        <Tag className="w-4 h-4 text-primary" />
-                        <span className="font-bold text-sm text-foreground">{cat.name}</span>
-                        <Badge variant="outline" className="text-xs font-normal bg-background">
-                          {cat.subCategories.length} alt kategori
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => openCatEdit(cat)} className="h-8 px-3 text-xs text-muted-foreground">
-                          <Edit className="w-3.5 h-3.5 mr-1" /> Düzenle
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => {
-                            if (confirm('Bu kategoriyi ve bağlı tüm alt kategorilerini silmek istediğinize emin misiniz?')) {
-                              deleteCatMutation.mutate(cat.id);
-                            }
-                          }} 
-                          className="h-8 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                        <div className="h-4 w-px bg-border mx-1" />
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="h-8 px-3 text-xs bg-primary/5 text-primary hover:bg-primary/10 border border-primary/20"
-                          onClick={() => { setSubName(''); setSubModal({ open: true, categoryId: cat.id }); }}
-                        >
-                          <Plus className="w-3.5 h-3.5 mr-1" /> Alt Kategori Ekle
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Alt Kategoriler Listesi */}
-                    {cat.subCategories.length > 0 ? (
-                      <div className="divide-y divide-border">
-                        {cat.subCategories.map((sub) => (
-                          <div key={sub.id} className="flex items-center justify-between px-5 py-3 hover:bg-muted/20 transition-colors">
-                            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                              <ChevronRight className="w-4 h-4 text-muted-foreground/50" />
-                              <span className="text-foreground font-medium">{sub.name}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Button variant="ghost" size="sm" onClick={() => openSubEdit(sub)} className="h-7 px-2 text-xs text-muted-foreground">
-                                <Edit className="w-3.5 h-3.5" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => {
-                                  if (confirm('Bu alt kategoriyi silmek istediğinize emin misiniz?')) {
-                                    deleteSubMutation.mutate(sub.id);
-                                  }
-                                }} 
-                                className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="px-5 py-4 text-sm text-muted-foreground/60 italic bg-card text-center">
-                        Alt kategori bulunamadı. "Alt Kategori Ekle" butonunu kullanarak ekleyebilirsiniz.
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {settingsData.categories.length === 0 && (
-                  <div className="text-center py-16 bg-background rounded-xl border border-dashed">
-                    <Tag className="w-10 h-10 text-muted-foreground/30 mx-auto mb-4" />
-                    <p className="text-muted-foreground text-sm">Henüz kategori eklenmemiş.</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </TabsContent>
         </Tabs>
       )}
 
@@ -704,75 +506,7 @@ export default function RiskSettings() {
         </DialogContent>
       </Dialog>
 
-      {/* 3. Kategori Ekle/Düzenle */}
-      <Dialog open={catModal.open} onOpenChange={(v) => setCatModal({ open: v })}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>{catModal.edit ? 'Kategori Düzenle' : 'Yeni Kategori Ekle'}</DialogTitle>
-          </DialogHeader>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              saveCatMutation.mutate({ name: catName, id: catModal.edit?.id });
-            }}
-            className="space-y-4 pt-4"
-          >
-            <div className="space-y-2">
-              <label className="text-sm font-semibold">Kategori Adı *</label>
-              <Input 
-                value={catName} 
-                onChange={(e) => setCatName(e.target.value)} 
-                placeholder="Örn: Tıbbi Hizmetler" 
-                required 
-                autoFocus 
-              />
-            </div>
-            <DialogFooter className="mt-6">
-              <Button type="button" variant="outline" onClick={() => setCatModal({ open: false })}>Vazgeç</Button>
-              <Button type="submit" disabled={saveCatMutation.isPending}>
-                {saveCatMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Kaydet
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
-      {/* 4. Alt Kategori Ekle/Düzenle */}
-      <Dialog open={subModal.open} onOpenChange={(v) => setSubModal({ open: v })}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>{subModal.edit ? 'Alt Kategori Düzenle' : 'Yeni Alt Kategori Ekle'}</DialogTitle>
-          </DialogHeader>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              saveSubMutation.mutate({ 
-                name: subName, 
-                categoryId: subModal.categoryId, 
-                id: subModal.edit?.id 
-              });
-            }}
-            className="space-y-4 pt-4"
-          >
-            <div className="space-y-2">
-              <label className="text-sm font-semibold">Alt Kategori Adı *</label>
-              <Input 
-                value={subName} 
-                onChange={(e) => setSubName(e.target.value)} 
-                placeholder="Örn: Hizmete erişim ile ilgili riskler" 
-                required 
-                autoFocus 
-              />
-            </div>
-            <DialogFooter className="mt-6">
-              <Button type="button" variant="outline" onClick={() => setSubModal({ open: false })}>Vazgeç</Button>
-              <Button type="submit" disabled={saveSubMutation.isPending}>
-                {saveSubMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Kaydet
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

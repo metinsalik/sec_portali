@@ -228,10 +228,9 @@ export default function RiskFormPage() {
     enabled: !!facilityId,
   });
 
-  // 3. Fetch Settings (Categories and custom Departments)
+  // 3. Fetch Settings (Custom Departments)
   const { data: settingsData } = useQuery<{
     departments: any[];
-    categories: any[];
   }>({
     queryKey: ['risk-settings', facilityId],
     queryFn: async () => {
@@ -242,6 +241,18 @@ export default function RiskFormPage() {
       return res.json();
     },
     enabled: !!facilityId,
+  });
+
+  // 3.5. Fetch Global Categories
+  const { data: globalCategories = [] } = useQuery<{ id: number, name: string, parentId: number | null }[]>({
+    queryKey: ['global-categories'],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/settings/definitions/categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error();
+      return res.json();
+    },
   });
 
   // 4. Fetch existing Risk details if Edit
@@ -426,9 +437,9 @@ export default function RiskFormPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const categoryOptions = settingsData?.categories || [];
+  const categoryOptions = globalCategories.filter((c) => c.parentId === null);
   const selectedCatObj = categoryOptions.find((c) => c.name === form.riskCategory);
-  const subCategoryOptions = selectedCatObj?.subCategories || [];
+  const subCategoryOptions = selectedCatObj ? globalCategories.filter((c) => c.parentId === selectedCatObj.id) : [];
   const settingsDepartments = settingsData?.departments || [];
 
   const isFormValid =
