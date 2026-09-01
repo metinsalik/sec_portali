@@ -128,6 +128,31 @@ export const isgDefterService = {
     });
   },
 
+  updatePagesBulk: async (ids: number[], data: any) => {
+    const updateData: any = {};
+    if (data.ciltNo !== undefined) updateData.ciltNo = parseInt(data.ciltNo);
+    if (data.pageNo !== undefined) updateData.pageNo = data.pageNo.toString();
+    if (data.documentUrl !== undefined) {
+      updateData.documentUrl = data.documentUrl;
+      updateData.documentUploadedAt = new Date();
+    }
+    if (data.date !== undefined) {
+      updateData.date = new Date(data.date);
+      updateData.year = updateData.date.getFullYear();
+    }
+
+    return prisma.notebookPage.updateMany({
+      where: { id: { in: ids } },
+      data: updateData
+    });
+  },
+
+  deletePagesBulk: async (ids: number[]) => {
+    return prisma.notebookPage.deleteMany({
+      where: { id: { in: ids } }
+    });
+  },
+
   createItem: async (data: any) => {
     return prisma.notebookItem.create({ data });
   },

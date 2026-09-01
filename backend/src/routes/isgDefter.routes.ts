@@ -79,6 +79,23 @@ router.post('/pages', async (req, res) => {
   }
 });
 
+router.put('/facilities/:facilityId/pages/bulk', upload.single('file'), async (req: any, res: any) => {
+  try {
+    const data = { ...req.body };
+    if (req.file) {
+      data.documentUrl = `/uploads/${req.file.filename}`;
+    }
+    const ids = String(req.body.ids).split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+    if (!ids.length) {
+      return res.status(400).json({ error: 'Geçersiz sayfa IDleri' });
+    }
+    await isgDefterService.updatePagesBulk(ids, data);
+    res.json({ success: true, updatedIds: ids });
+  } catch (error) {
+    res.status(500).json({ error: 'Defter sayfaları güncellenemedi.' });
+  }
+});
+
 router.put('/facilities/:facilityId/pages/:id', upload.single('file'), async (req: any, res: any) => {
   try {
     const data = { ...req.body };
@@ -92,7 +109,20 @@ router.put('/facilities/:facilityId/pages/:id', upload.single('file'), async (re
   }
 });
 
-router.delete('/pages/:id', requireAdmin, async (req, res) => {
+router.delete('/facilities/:facilityId/pages/bulk', async (req, res) => {
+  try {
+    const ids = String(req.query.ids).split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+    if (!ids.length) {
+      return res.status(400).json({ error: 'Geçersiz sayfa IDleri' });
+    }
+    await isgDefterService.deletePagesBulk(ids);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Defter sayfaları silinemedi.' });
+  }
+});
+
+router.delete('/pages/:id', async (req, res) => {
   try {
     await isgDefterService.deletePage(parseInt(req.params.id));
     res.json({ success: true });
@@ -120,7 +150,7 @@ router.put('/items/:id', async (req, res) => {
   }
 });
 
-router.delete('/items/:id', requireAdmin, async (req, res) => {
+router.delete('/items/:id', async (req, res) => {
   try {
     await isgDefterService.deleteItem(parseInt(req.params.id));
     res.json({ success: true });

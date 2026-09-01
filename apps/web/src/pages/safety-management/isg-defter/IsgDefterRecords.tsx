@@ -10,7 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { PlusCircle, Search, Upload, FileText, FileDown, ArrowLeft, Calendar, FileCheck, Building2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { PlusCircle, Search, Upload, FileText, FileDown, ArrowLeft, Calendar, FileCheck, Building2, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -156,15 +157,21 @@ export default function IsgDefterRecords() {
   });
 
   const updatePageMutation = useMutation({
-    mutationFn: async (data: { id: number, ciltNo?: number, pageNo?: number | string, date?: string, file?: File }) => {
+    mutationFn: async (data: { id?: number, ids?: number[], ciltNo?: number, pageNo?: number | string, date?: string, file?: File }) => {
       const formData = new FormData();
       if (data.ciltNo) formData.append('ciltNo', data.ciltNo.toString());
       if (data.pageNo) formData.append('pageNo', data.pageNo.toString());
       if (data.date) formData.append('date', data.date);
       if (data.file) formData.append('file', data.file);
       
-      const res = await api.put(`/safety-management/isg-defter/facilities/${activeFacilityId}/pages/${data.id}`, formData);
-      return res.json();
+      if (data.ids && data.ids.length > 0) {
+        formData.append('ids', data.ids.join(','));
+        const res = await api.put(`/safety-management/isg-defter/facilities/${activeFacilityId}/pages/bulk`, formData);
+        return res.json();
+      } else if (data.id) {
+        const res = await api.put(`/safety-management/isg-defter/facilities/${activeFacilityId}/pages/${data.id}`, formData);
+        return res.json();
+      }
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['isg-defter-pages'] });
@@ -172,9 +179,26 @@ export default function IsgDefterRecords() {
       setEditingPageId(null);
       setUploadingPageId(null);
       if (variables.date && selectedDate !== variables.date) {
-        updateParam('date', variables.date);
+        // Just update search param without resetting everything
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('date', variables.date);
+        setSearchParams(newParams);
       }
     }
+  });
+
+  const deletePageGroupMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      const res = await api.delete(`/safety-management/isg-defter/facilities/${activeFacilityId}/pages/bulk?ids=${ids.join(',')}`);
+      if (!res.ok) throw new Error('Silinemedi');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['isg-defter-pages'] });
+      toast.success('Defter sayfası başarıyla silindi.');
+      updateParam('date', null);
+    },
+    onError: () => toast.error('Silinirken hata oluştu.')
   });
 
   // Helpers
@@ -304,7 +328,7 @@ export default function IsgDefterRecords() {
                         e.preventDefault();
                         const formData = new FormData(e.currentTarget);
                         updatePageMutation.mutate({
-                          id: primaryPage.id,
+                          ids: activeGroup.pages.map((p: any) => p.id),
                           ciltNo: Number(formData.get('ciltNo')),
                           pageNo: formData.get('pageNo') as string,
                           date: formData.get('date') as string
@@ -401,20 +425,31 @@ export default function IsgDefterRecords() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        {isAdmin && (
-                          <Button 
-                            variant="destructive" 
-                            size="sm" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm('Bu maddeyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
-                                deleteItemMutation.mutate(item.id);
-                              }
-                            }}
-                          >
-                            İlgili Maddeyi Sil
-                          </Button>
-                        )}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="destructive" 
+                              size="sm" 
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Maddeyi Sil</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Bu maddeyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>İptal</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteItemMutation.mutate(item.id)} className="bg-red-600 hover:bg-red-700 text-white">
+                                Evet, Sil
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                         <Button variant="default" className="bg-slate-900 text-white hover:bg-slate-800" size="sm" onClick={(e) => {
                            e.stopPropagation();
                            navigate(`/safety-management/isg-defter/items/${item.id}`);
@@ -566,13 +601,36 @@ export default function IsgDefterRecords() {
                         <Building2 className="w-3 h-3" /> {group.facility?.name}
                       </CardDescription>
                     </div>
-                    {group.hasPdf ? (
-                      <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">
-                        <FileCheck className="w-3 h-3 mr-1" /> PDF
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-amber-600 bg-amber-50 border-amber-200">Eksik</Badge>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {group.hasPdf ? (
+                        <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">
+                          <FileCheck className="w-3 h-3 mr-1" /> PDF
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-amber-600 bg-amber-50 border-amber-200">Eksik</Badge>
+                      )}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50" title="Defter Kaydını Sil">
+                            <Trash2 className="w-3 h-3 mr-1" /> Sil
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Defter Kaydını Sil</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Bu defter kaydını silmek istediğinize emin misiniz? {group.items.length > 0 && <span className="block mt-2 font-bold text-red-600">İçerisindeki {group.items.length} madde de tamamen silinecektir.</span>} Bu işlem geri alınamaz.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>İptal</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deletePageGroupMutation.mutate(group.pages.map((p: any) => p.id))} className="bg-red-600 hover:bg-red-700 text-white">
+                              Evet, Sil
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </CardHeader>
                   <CardContent className="text-sm">
                     <div className="flex justify-between items-center py-2 border-b">
