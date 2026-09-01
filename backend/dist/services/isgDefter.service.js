@@ -38,71 +38,49 @@ const client_1 = require("@prisma/client");
 const xlsx = __importStar(require("xlsx"));
 const prisma = new client_1.PrismaClient();
 exports.isgDefterService = {
-    // === CATEGORIES ===
-    getCategories: async (facilityId) => {
-        return prisma.isgDefterCategory.findMany({
-            where: {
-                OR: [{ facilityId }, { facilityId: null }]
-            },
-            orderBy: { name: 'asc' }
-        });
-    },
-    createCategory: async (facilityId, name) => {
-        return prisma.isgDefterCategory.create({
-            data: { facilityId, name }
-        });
-    },
-    updateCategory: async (id, name) => {
-        return prisma.isgDefterCategory.update({
-            where: { id },
-            data: { name }
-        });
-    },
-    deleteCategory: async (id, transferToId) => {
-        if (transferToId) {
-            await prisma.notebookItem.updateMany({
-                where: { categoryId: id },
-                data: { categoryId: transferToId }
-            });
-        }
-        return prisma.isgDefterCategory.delete({
-            where: { id }
-        });
-    },
     // === SETTINGS ===
     getSettings: async (facilityId) => {
-        let setting = await prisma.isgDefterSetting.findUnique({
-            where: { facilityId }
-        });
-        if (!setting) {
-            // Default risk levels
-            const defaultRiskLevels = [
-                { name: 'Çok Yüksek', color: 'bg-red-600' },
-                { name: 'Yüksek', color: 'bg-orange-500' },
-                { name: 'Önemli', color: 'bg-yellow-500' },
-                { name: 'Olası', color: 'bg-blue-500' },
-                { name: 'Düşük', color: 'bg-green-500' }
-            ];
-            setting = await prisma.isgDefterSetting.create({
-                data: {
-                    facilityId,
-                    maxPagesPerCilt: 50,
-                    currentCilt: 1,
-                    riskLevels: JSON.stringify(defaultRiskLevels)
-                }
-            });
+        let settings = null;
+        if (facilityId !== 'all') {
+            settings = await prisma.isgDefterSetting.findUnique({ where: { facilityId } });
+        }
+        // Always fetch global settings for risk levels
+        const globalSettings = await prisma.isgDefterSetting.findUnique({ where: { facilityId: 'all' } });
+        // Use global risk levels if available, else local, else empty array
+        const rawRiskLevels = globalSettings?.riskLevels || settings?.riskLevels;
+        const parsedRiskLevels = rawRiskLevels ? JSON.parse(rawRiskLevels) : [];
+        if (settings) {
+            return {
+                ...settings,
+                riskLevels: parsedRiskLevels
+            };
         }
         return {
-            ...setting,
-            riskLevels: setting.riskLevels ? JSON.parse(setting.riskLevels) : []
+            currentCilt: 1,
+            maxPagesPerCilt: 50,
+            ...(globalSettings || {}),
+            riskLevels: parsedRiskLevels
         };
     },
     updateSettings: async (facilityId, data) => {
         const { riskLevels, maxPagesPerCilt, currentCilt } = data;
+        // Risk düzeyleri her zaman 'all' (global) olarak kaydedilir
+        if (riskLevels !== undefined) {
+            await prisma.isgDefterSetting.upsert({
+                where: { facilityId: 'all' },
+                update: { riskLevels: JSON.stringify(riskLevels) },
+                create: {
+                    facilityId: 'all',
+                    riskLevels: JSON.stringify(riskLevels),
+                    maxPagesPerCilt: 50,
+                    currentCilt: 1
+                }
+            });
+        }
+        // Diğer ayarlar (cilt vb.) seçili tesise kaydedilir
         return prisma.isgDefterSetting.upsert({
             where: { facilityId },
             update: {
-                ...(riskLevels && { riskLevels: JSON.stringify(riskLevels) }),
                 ...(maxPagesPerCilt && { maxPagesPerCilt: parseInt(maxPagesPerCilt) }),
                 ...(currentCilt && { currentCilt: parseInt(currentCilt) }),
             },
@@ -110,7 +88,6 @@ exports.isgDefterService = {
                 facilityId,
                 maxPagesPerCilt: maxPagesPerCilt ? parseInt(maxPagesPerCilt) : 50,
                 currentCilt: currentCilt ? parseInt(currentCilt) : 1,
-                riskLevels: riskLevels ? JSON.stringify(riskLevels) : null
             }
         });
     },
@@ -118,10 +95,11 @@ exports.isgDefterService = {
     getPages: async (facilityId, year) => {
         return prisma.notebookPage.findMany({
             where: {
-                facilityId,
+                ...(facilityId && facilityId !== 'all' && { facilityId }),
                 ...(year && { year }),
             },
             include: {
+                facility: true,
                 items: {
                     include: {
                         actions: true,
@@ -148,7 +126,7 @@ exports.isgDefterService = {
             data: {
                 ...data,
                 ciltNo,
-                pageNo
+                pageNo: pageNo.toString()
             }
         });
     },
@@ -157,10 +135,14 @@ exports.isgDefterService = {
         if (data.ciltNo !== undefined)
             updateData.ciltNo = parseInt(data.ciltNo);
         if (data.pageNo !== undefined)
-            updateData.pageNo = parseInt(data.pageNo);
+            updateData.pageNo = data.pageNo.toString();
         if (data.documentUrl !== undefined) {
             updateData.documentUrl = data.documentUrl;
             updateData.documentUploadedAt = new Date();
+        }
+        if (data.date !== undefined) {
+            updateData.date = new Date(data.date);
+            updateData.year = updateData.date.getFullYear();
         }
         return prisma.notebookPage.update({
             where: { id },
@@ -210,6 +192,7 @@ exports.isgDefterService = {
         if (!defaultDepartment) {
             defaultDepartment = await prisma.department.create({ data: { name: 'Genel' } });
         }
+        let duplicateCount = 0;
         // Skip first row assuming it's headers
         for (let i = 1; i < data.length; i++) {
             const row = data[i];
@@ -247,7 +230,20 @@ exports.isgDefterService = {
                     }
                 }
             });
-            if (!page) {
+            if (page) {
+                // Check if item already exists
+                const existingItem = await prisma.notebookItem.findFirst({
+                    where: {
+                        pageId: page.id,
+                        content: content
+                    }
+                });
+                if (existingItem) {
+                    duplicateCount++;
+                    continue;
+                }
+            }
+            else {
                 // Create new page with correct cilt/page numbers
                 const settings = await prisma.isgDefterSetting.findUnique({ where: { facilityId } });
                 const maxPages = settings?.maxPagesPerCilt || 50;
@@ -262,7 +258,7 @@ exports.isgDefterService = {
                         year: itemDate.getFullYear(),
                         date: itemDate,
                         ciltNo,
-                        pageNo
+                        pageNo: pageNo.toString()
                     }
                 });
             }
@@ -272,7 +268,7 @@ exports.isgDefterService = {
                     pageId: page.id,
                     content: content,
                     authorType: authorType,
-                    authorName: 'Sistem', // In excel there is no user name, just type usually
+                    authorName: '', // In excel there is no user name, just type usually
                     categoryId: null, // Empty as requested
                     riskLevel: 'Belirlenmedi',
                     departmentId: defaultDepartment.id,
@@ -291,19 +287,178 @@ exports.isgDefterService = {
             }
             results.push(item);
         }
+        if (results.length === 0 && duplicateCount > 0) {
+            throw new Error('Bu Excel dosyası daha önce yüklenmiş veya içerisindeki tüm maddeler zaten mevcut.');
+        }
         return results;
     },
-    getDashboardStats: async (facilityId) => {
-        const totalItems = await prisma.notebookItem.count({
-            where: { page: { facilityId } }
+    deletePage: async (id) => {
+        return prisma.notebookPage.delete({
+            where: { id }
         });
-        const openItems = await prisma.notebookItem.count({
-            where: { page: { facilityId }, status: 'Açık' }
+    },
+    deleteItem: async (id) => {
+        return prisma.notebookItem.delete({
+            where: { id }
         });
+    },
+    getDashboardStats: async (facilityId, filters = {}) => {
+        const { year, month, mainCategoryId, categoryId, subCategoryId, riskLevel, status, mainCategory, category } = filters;
+        // Base filter applied to notebook items
+        const baseWhere = {
+            page: {
+                ...(facilityId && facilityId !== 'all' && { facilityId }),
+                ...(year && year !== 'all' && { year: parseInt(year) }),
+            },
+            ...(mainCategoryId && { mainCategoryId: parseInt(mainCategoryId) }),
+            ...(categoryId && { categoryId: parseInt(categoryId) }),
+            ...(subCategoryId && { subCategoryId: parseInt(subCategoryId) }),
+            ...(riskLevel && riskLevel !== 'all' && { riskLevel }),
+            ...(status && status !== 'all' && status !== 'Tamamlanmamış' && { status }),
+        };
+        const items = await prisma.notebookItem.findMany({
+            where: baseWhere,
+            include: {
+                page: {
+                    include: {
+                        facility: true
+                    }
+                },
+                category: true,
+                mainCategory: true,
+            }
+        });
+        let filteredItems = items;
+        if (month && month !== 'all') {
+            const monthInt = parseInt(month);
+            filteredItems = filteredItems.filter(item => item.page.date.getMonth() === monthInt);
+        }
+        if (status === 'Tamamlanmamış') {
+            filteredItems = filteredItems.filter(item => item.status !== 'Tamamlandı' && item.status !== 'İptal Edildi');
+        }
+        if (mainCategory && mainCategory !== 'all') {
+            filteredItems = filteredItems.filter(item => item.mainCategory?.name === mainCategory);
+        }
+        if (category && category !== 'all') {
+            filteredItems = filteredItems.filter(item => item.category?.name === category);
+        }
+        const facilityName = facilityId === 'all'
+            ? 'Tüm Tesisler'
+            : (items.length > 0 ? items[0].page.facility?.name : (await prisma.facility.findUnique({ where: { id: facilityId } }))?.name || 'Bilinmeyen Tesis');
+        const totalItems = filteredItems.length;
+        const incompleteItemsList = filteredItems.filter(i => i.status !== 'Tamamlandı' && i.status !== 'İptal Edildi');
+        const closedItemsList = filteredItems.filter(i => i.status === 'Tamamlandı');
+        const incompleteItems = incompleteItemsList.length;
+        const closedItems = closedItemsList.length;
+        const now = new Date();
+        // Status Distribution
+        const statusDistributionMap = {};
+        filteredItems.forEach(i => {
+            statusDistributionMap[i.status] = (statusDistributionMap[i.status] || 0) + 1;
+        });
+        const statusDistribution = Object.entries(statusDistributionMap).map(([name, value]) => ({ name, value }));
+        // Risk Distribution
+        const riskDistributionMap = {};
+        filteredItems.forEach(i => {
+            riskDistributionMap[i.riskLevel] = (riskDistributionMap[i.riskLevel] || 0) + 1;
+        });
+        const riskDistribution = Object.entries(riskDistributionMap).map(([name, value]) => ({ name, value }));
+        // Category Distribution (Split into Main and Sub)
+        const mainCategoryDistributionMap = {};
+        const subCategoryDistributionMap = {};
+        filteredItems.forEach(i => {
+            const mainName = i.mainCategory?.name || 'Diğer';
+            mainCategoryDistributionMap[mainName] = (mainCategoryDistributionMap[mainName] || 0) + 1;
+            if (i.category?.name) {
+                const subName = i.category.name;
+                subCategoryDistributionMap[subName] = (subCategoryDistributionMap[subName] || 0) + 1;
+            }
+        });
+        const mainCategoryDistribution = Object.entries(mainCategoryDistributionMap)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 10);
+        const subCategoryDistribution = Object.entries(subCategoryDistributionMap)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 10);
+        // Incomplete Item Age (Days since creation)
+        let age0_30 = 0, age31_60 = 0, age61_90 = 0, age91_180 = 0, age180plus = 0;
+        incompleteItemsList.forEach(i => {
+            const diffTime = Math.abs(now.getTime() - new Date(i.createdAt).getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            if (diffDays <= 30)
+                age0_30++;
+            else if (diffDays <= 60)
+                age31_60++;
+            else if (diffDays <= 90)
+                age61_90++;
+            else if (diffDays <= 180)
+                age91_180++;
+            else
+                age180plus++;
+        });
+        const incompleteJobAge = [
+            { name: '0-30 Gün', value: age0_30, color: 'bg-blue-100 text-blue-600' },
+            { name: '31-60 Gün', value: age31_60, color: 'bg-blue-200 text-blue-700' },
+            { name: '61-90 Gün', value: age61_90, color: 'bg-blue-300 text-blue-800' },
+            { name: '91-180 Gün', value: age91_180, color: 'bg-blue-600 text-white' },
+            { name: '180+ Gün', value: age180plus, color: 'bg-red-500 text-white' }
+        ];
+        // Monthly Flow (Last 12 months)
+        const monthlyFlowMap = {};
+        for (let i = 11; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const mKey = `${d.getFullYear()}-${d.getMonth()}`;
+            monthlyFlowMap[mKey] = {
+                month: d.toLocaleString('tr-TR', { month: 'short' }),
+                index: i,
+                open: 0,
+                closed: 0
+            };
+        }
+        filteredItems.forEach(i => {
+            const d = new Date(i.page.date); // Using page date for flow
+            const mKey = `${d.getFullYear()}-${d.getMonth()}`;
+            if (monthlyFlowMap[mKey]) {
+                if (i.status === 'Tamamlandı')
+                    monthlyFlowMap[mKey].closed++;
+                else
+                    monthlyFlowMap[mKey].open++;
+            }
+        });
+        const monthlyFlow = Object.values(monthlyFlowMap)
+            .sort((a, b) => b.index - a.index) // Sort by chronological order
+            .map(m => ({ month: m.month, open: m.open, closed: m.closed }));
+        // Fire and Emergency (Specific Alarm)
+        const fireKeywords = ['yangın', 'acil'];
+        const fireItems = filteredItems.filter(i => {
+            const mainName = i.mainCategory?.name?.toLowerCase() || '';
+            return fireKeywords.some(k => mainName.includes(k));
+        });
+        const fireTotal = fireItems.length;
+        const fireOpen = fireItems.filter(i => i.status !== 'Tamamlandı' && i.status !== 'İptal Edildi').length;
+        // Finally, the recent items for the table (limited to 50 for performance)
+        const recentItems = filteredItems
+            .sort((a, b) => new Date(b.page.date).getTime() - new Date(a.page.date).getTime())
+            .slice(0, 50);
         return {
+            facilityName,
             totalItems,
-            openItems,
-            openPercentage: totalItems > 0 ? (openItems / totalItems) * 100 : 0
+            incompleteItems,
+            closedItems,
+            openPercentage: totalItems > 0 ? (closedItems / totalItems) * 100 : 0,
+            monthlyFlow,
+            statusDistribution,
+            riskDistribution,
+            mainCategoryDistribution,
+            subCategoryDistribution,
+            incompleteJobAge,
+            fireAndEmergency: {
+                total: fireTotal,
+                open: fireOpen
+            },
+            recentItems
         };
     }
 };

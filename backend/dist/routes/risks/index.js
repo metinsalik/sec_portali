@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const facilities_1 = __importDefault(require("./facilities"));
-const departments_1 = __importDefault(require("./departments"));
+const locations_1 = __importDefault(require("./locations"));
 const lifecycle_1 = __importDefault(require("./lifecycle"));
 const upload_1 = __importDefault(require("./upload"));
 const settings_1 = __importDefault(require("./settings"));
@@ -16,7 +16,7 @@ router.get('/health', (_req, res) => {
 // /api/risks/facilities  → uzmanın tesis listesi + yönetim
 router.use('/facilities', facilities_1.default);
 // /api/risks/departments → departman (bölüm) yönetimi
-router.use('/departments', departments_1.default);
+router.use('/locations', locations_1.default);
 // /api/risks/lifecycle   → risk yaşam döngüsü CRUD + Excel import
 router.use('/lifecycle', lifecycle_1.default);
 // /api/risks/upload      → fotoğraf yükleme

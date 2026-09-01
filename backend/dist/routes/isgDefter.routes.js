@@ -7,14 +7,31 @@ const express_1 = require("express");
 const isgDefter_service_1 = require("../services/isgDefter.service");
 const auth_1 = require("../middleware/auth");
 const multer_1 = __importDefault(require("multer"));
-const upload = (0, multer_1.default)({ dest: '/tmp/uploads/' });
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
+// Ensure uploads directory exists
+const uploadDir = path_1.default.join(process.cwd(), 'uploads');
+if (!fs_1.default.existsSync(uploadDir)) {
+    fs_1.default.mkdirSync(uploadDir, { recursive: true });
+}
+const storage = multer_1.default.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        const ext = path_1.default.extname(file.originalname);
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+    }
+});
+const upload = (0, multer_1.default)({ storage: storage });
 const router = (0, express_1.Router)();
 // Middleware to check if user has access to ISG_DEFTER module
 const requireModuleAccess = (req, res, next) => {
     const user = req.user;
     const hasAccess = user?.roles?.includes('admin') ||
         user?.roles?.includes('management') ||
-        user?.modules?.some((m) => m.code === 'ISG_DEFTER');
+        user?.modules?.includes('ISG_DEFTER');
     if (!hasAccess) {
         return res.status(403).json({ error: 'Bu modüle erişim yetkiniz yok.' });
     }
@@ -31,7 +48,7 @@ router.use(auth_1.authMiddleware, requireModuleAccess);
 // === DASHBOARD & PAGES ===
 router.get('/facilities/:facilityId/dashboard', async (req, res) => {
     try {
-        const stats = await isgDefter_service_1.isgDefterService.getDashboardStats(req.params.facilityId);
+        const stats = await isgDefter_service_1.isgDefterService.getDashboardStats(req.params.facilityId, req.query);
         res.json(stats);
     }
     catch (error) {
@@ -57,7 +74,7 @@ router.post('/pages', async (req, res) => {
         res.status(500).json({ error: 'Defter sayfası oluşturulamadı.' });
     }
 });
-router.put('/facilities/:facilityId/pages/:id', requireAdmin, upload.single('file'), async (req, res) => {
+router.put('/facilities/:facilityId/pages/:id', upload.single('file'), async (req, res) => {
     try {
         const data = { ...req.body };
         if (req.file) {
@@ -68,6 +85,15 @@ router.put('/facilities/:facilityId/pages/:id', requireAdmin, upload.single('fil
     }
     catch (error) {
         res.status(500).json({ error: 'Defter sayfası güncellenemedi.' });
+    }
+});
+router.delete('/pages/:id', requireAdmin, async (req, res) => {
+    try {
+        await isgDefter_service_1.isgDefterService.deletePage(parseInt(req.params.id));
+        res.json({ success: true });
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Defter sayfası silinemedi.' });
     }
 });
 // === ITEMS ===
@@ -89,11 +115,27 @@ router.put('/items/:id', async (req, res) => {
         res.status(500).json({ error: 'Tespit/öneri güncellenemedi.' });
     }
 });
-router.post('/actions', async (req, res) => {
+router.delete('/items/:id', requireAdmin, async (req, res) => {
     try {
+        await isgDefter_service_1.isgDefterService.deleteItem(parseInt(req.params.id));
+        res.json({ success: true });
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Tespit/öneri silinemedi.' });
+    }
+});
+router.post('/actions', upload.single('file'), async (req, res) => {
+    try {
+        const data = { ...req.body };
+        if (req.file) {
+            data.proofUrl = `/uploads/${req.file.filename}`;
+        }
+        // Convert status to correctly format if it comes as string
+        if (data.notebookItemId)
+            data.notebookItemId = parseInt(data.notebookItemId);
         const action = await isgDefter_service_1.isgDefterService.createItemAction({
-            ...req.body,
-            createdBy: req.user?.username
+            ...data,
+            createdBy: req.user?.fullName || req.user?.username
         });
         res.json(action);
     }
@@ -125,46 +167,8 @@ router.post('/items/:id/comments', async (req, res) => {
         res.status(500).json({ error: 'Yorum oluşturulamadı.' });
     }
 });
-// === CATEGORIES ===
-router.get('/facilities/:facilityId/categories', async (req, res) => {
-    try {
-        const cats = await isgDefter_service_1.isgDefterService.getCategories(req.params.facilityId);
-        res.json(cats);
-    }
-    catch (error) {
-        res.status(500).json({ error: 'Kategoriler alınamadı.' });
-    }
-});
-router.post('/facilities/:facilityId/categories', requireAdmin, async (req, res) => {
-    try {
-        const cat = await isgDefter_service_1.isgDefterService.createCategory(req.params.facilityId, req.body.name);
-        res.json(cat);
-    }
-    catch (error) {
-        res.status(500).json({ error: 'Kategori oluşturulamadı.' });
-    }
-});
-router.put('/facilities/:facilityId/categories/:id', requireAdmin, async (req, res) => {
-    try {
-        const cat = await isgDefter_service_1.isgDefterService.updateCategory(parseInt(req.params.id), req.body.name);
-        res.json(cat);
-    }
-    catch (error) {
-        res.status(500).json({ error: 'Kategori güncellenemedi.' });
-    }
-});
-router.delete('/facilities/:facilityId/categories/:id', requireAdmin, async (req, res) => {
-    try {
-        const transferId = req.query.transferToId ? parseInt(req.query.transferToId) : undefined;
-        await isgDefter_service_1.isgDefterService.deleteCategory(parseInt(req.params.id), transferId);
-        res.json({ success: true });
-    }
-    catch (error) {
-        res.status(500).json({ error: 'Kategori silinemedi.' });
-    }
-});
 // === SETTINGS ===
-router.get('/facilities/:facilityId/settings', requireAdmin, async (req, res) => {
+router.get('/facilities/:facilityId/settings', async (req, res) => {
     try {
         const settings = await isgDefter_service_1.isgDefterService.getSettings(req.params.facilityId);
         res.json(settings);
@@ -194,7 +198,8 @@ router.post('/facilities/:facilityId/import', requireAdmin, upload.single('file'
     }
     catch (error) {
         console.error('Import error:', error);
-        res.status(500).json({ error: 'İçe aktarma sırasında hata oluştu.' });
+        const message = error instanceof Error ? error.message : 'İçe aktarma sırasında hata oluştu.';
+        res.status(500).json({ error: message });
     }
 });
 exports.default = router;

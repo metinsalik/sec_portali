@@ -65,7 +65,8 @@ async function ensureModulesExist() {
         { code: 'BUILD_MANAGEMENT', name: 'İnşaat ve Renovasyon Yönetimi', description: 'İnşaat projelerinin ICRA, risk ve onay süreçleri', icon: 'construction' },
         { code: 'BUILDING_TOUR', name: 'Bina Turu Yönetimi', description: 'Bina turları ve denetimleri', icon: 'apartment' },
         { code: 'CHECKLISTS', name: 'Kontrol Listeleri', description: 'İSG Kontrol ve Denetim Listeleri', icon: 'ClipboardCheck' },
-        { code: 'ISG_KURUL', name: 'İSG Kurul Yönetimi', description: 'İSG Kurul Üyeleri ve Toplantı Kararları', icon: 'Users' }
+        { code: 'ISG_KURUL', name: 'İSG Kurul Yönetimi', description: 'İSG Kurul Üyeleri ve Toplantı Kararları', icon: 'Users' },
+        { code: 'ISG_DEFTER', name: 'İSG Defteri', description: 'İSG Onaylı Defter ve Tespit Kayıtları', icon: 'BookOpen' }
     ];
     for (const mod of defaultModules) {
         await prisma.module.upsert({
@@ -519,7 +520,6 @@ router.post('/parameters', auth_1.managementMiddleware, async (req, res) => {
 router.get('/definitions/categories', async (req, res) => {
     try {
         const categories = await prisma.category.findMany({
-            include: { subCategories: true },
             orderBy: { name: 'asc' },
         });
         res.json(categories);
@@ -529,11 +529,11 @@ router.get('/definitions/categories', async (req, res) => {
     }
 });
 router.post('/definitions/categories', auth_1.managementMiddleware, async (req, res) => {
-    const { name } = req.body;
+    const { name, parentId } = req.body;
     if (!name)
         return res.status(400).json({ error: 'Kategori adı zorunludur.' });
     try {
-        const category = await prisma.category.create({ data: { name } });
+        const category = await prisma.category.create({ data: { name, parentId: parentId || null } });
         res.status(201).json(category);
     }
     catch {
@@ -542,9 +542,9 @@ router.post('/definitions/categories', auth_1.managementMiddleware, async (req, 
 });
 router.put('/definitions/categories/:id', auth_1.managementMiddleware, async (req, res) => {
     const id = parseInt(String(req.params.id));
-    const { name } = req.body;
+    const { name, parentId } = req.body;
     try {
-        const category = await prisma.category.update({ where: { id }, data: { name } });
+        const category = await prisma.category.update({ where: { id }, data: { name, parentId: parentId !== undefined ? parentId : undefined } });
         res.json(category);
     }
     catch {
@@ -554,55 +554,11 @@ router.put('/definitions/categories/:id', auth_1.managementMiddleware, async (re
 router.delete('/definitions/categories/:id', auth_1.managementMiddleware, async (req, res) => {
     const id = parseInt(String(req.params.id));
     try {
-        // Önce alt kategorileri sil (veya kontrol et)
-        await prisma.subCategory.deleteMany({ where: { categoryId: id } });
         await prisma.category.delete({ where: { id } });
         res.json({ message: 'Kategori silindi.' });
     }
     catch (error) {
         res.status(500).json({ error: 'Kategori silinemedi. Başka verilerle ilişkili olabilir.' });
-    }
-});
-router.get('/definitions/subcategories', async (req, res) => {
-    try {
-        const subs = await prisma.subCategory.findMany({ include: { category: true }, orderBy: { name: 'asc' } });
-        res.json(subs);
-    }
-    catch {
-        res.status(500).json({ error: 'Alt kategoriler getirilemedi.' });
-    }
-});
-router.post('/definitions/subcategories', auth_1.managementMiddleware, async (req, res) => {
-    const { name, categoryId } = req.body;
-    if (!name || !categoryId)
-        return res.status(400).json({ error: 'Alt kategori adı ve kategori ID zorunludur.' });
-    try {
-        const sub = await prisma.subCategory.create({ data: { name, categoryId } });
-        res.status(201).json(sub);
-    }
-    catch {
-        res.status(500).json({ error: 'Alt kategori oluşturulamadı.' });
-    }
-});
-router.put('/definitions/subcategories/:id', auth_1.managementMiddleware, async (req, res) => {
-    const id = parseInt(String(req.params.id));
-    const { name } = req.body;
-    try {
-        const sub = await prisma.subCategory.update({ where: { id }, data: { name } });
-        res.json(sub);
-    }
-    catch {
-        res.status(500).json({ error: 'Alt kategori güncellenemedi.' });
-    }
-});
-router.delete('/definitions/subcategories/:id', auth_1.managementMiddleware, async (req, res) => {
-    const id = parseInt(String(req.params.id));
-    try {
-        await prisma.subCategory.delete({ where: { id } });
-        res.json({ message: 'Alt kategori silindi.' });
-    }
-    catch {
-        res.status(500).json({ error: 'Alt kategori silinemedi.' });
     }
 });
 router.get('/definitions/departments', async (req, res) => {

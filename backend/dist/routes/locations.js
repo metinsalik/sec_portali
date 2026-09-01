@@ -46,7 +46,8 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
         res.status(201).json(location);
     }
     catch (err) {
-        res.status(500).json({ error: 'Lokasyon eklenemedi.' });
+        console.error('Lokasyon ekleme hatası:', err);
+        res.status(500).json({ error: err.message || 'Lokasyon eklenemedi.' });
     }
 });
 // Rename node (bulk update)

@@ -124,7 +124,7 @@ router.post('/:id/locations', auth_1.authMiddleware, async (req, res) => {
         res.status(201).json(loc);
     }
     catch (err) {
-        res.status(500).json({ error: 'Lokasyon oluşturulamadı.' });
+        res.status(500).json({ error: err.message || 'Lokasyon oluşturulamadı.' });
     }
 });
 router.put('/:id/locations/:locationId', auth_1.authMiddleware, async (req, res) => {
@@ -140,7 +140,7 @@ router.put('/:id/locations/:locationId', auth_1.authMiddleware, async (req, res)
         res.json(loc);
     }
     catch (err) {
-        res.status(500).json({ error: 'Lokasyon güncellenemedi.' });
+        res.status(500).json({ error: err.message || 'Lokasyon güncellenemedi.' });
     }
 });
 router.post('/:id/locations/rename-node', auth_1.authMiddleware, async (req, res) => {

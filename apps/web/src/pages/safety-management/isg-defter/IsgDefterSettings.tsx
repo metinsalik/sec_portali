@@ -52,6 +52,10 @@ export default function IsgDefterSettings() {
     mutationFn: async (data: any) => {
       const targetId = activeFacilityId || 'all';
       const res = await api.put(`/safety-management/isg-defter/facilities/${targetId}/settings`, data);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Ayarlar güncellenemedi');
+      }
       return res.json();
     },
     onSuccess: () => {

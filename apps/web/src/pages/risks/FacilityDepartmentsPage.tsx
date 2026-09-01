@@ -61,7 +61,7 @@ export default function FacilityDepartmentsPage() {
   const { data: locations = [], isLoading } = useQuery({
     queryKey: ['risk-departments-flat', facilityId],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/risks/departments?facilityId=${facilityId}&flat=true`, {
+      const res = await fetch(`${API}/api/risks/locations?facilityId=${facilityId}&flat=true`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error('Lokasyonlar alınamadı');
@@ -73,7 +73,7 @@ export default function FacilityDepartmentsPage() {
   const { data: departments = [] } = useQuery({
     queryKey: ['risk-departments', facilityId],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/risks/departments?facilityId=${facilityId}`, {
+      const res = await fetch(`${API}/api/risks/locations?facilityId=${facilityId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error('Lokasyonlar alınamadı');

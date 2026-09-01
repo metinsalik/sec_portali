@@ -1,6 +1,6 @@
 import express from 'express';
 import facilityRoutes from './facilities';
-import departmentRoutes from './departments';
+import locationRoutes from './locations';
 import lifecycleRoutes from './lifecycle';
 import uploadRoutes from './upload';
 import settingsRoutes from './settings';
@@ -15,7 +15,7 @@ router.get('/health', (_req, res) => {
 router.use('/facilities', facilityRoutes);
 
 // /api/risks/departments → departman (bölüm) yönetimi
-router.use('/departments', departmentRoutes);
+router.use('/locations', locationRoutes);
 
 // /api/risks/lifecycle   → risk yaşam döngüsü CRUD + Excel import
 router.use('/lifecycle', lifecycleRoutes);

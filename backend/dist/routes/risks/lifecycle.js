@@ -260,8 +260,9 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
                 where: { id: locationId },
                 select: { facilityId: true }
             });
-            if (!dept)
-                return res.status(404).json({ error: 'Departman/Lokasyon bulunamadı.' });
+            if (!dept) {
+                return res.json([]);
+            }
             const hasAccess = await checkFacilityAccess(req, dept.facilityId);
             if (!hasAccess) {
                 return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
@@ -304,7 +305,7 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
             if (!hasAccess) {
                 return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
             }
-            where.department = { facilityId: facilityId };
+            where.location = { facilityId: facilityId };
         }
         else if (!isAdminOrMgmt) {
             const userFacilities = await prisma.userFacility.findMany({
@@ -312,7 +313,7 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
                 select: { facilityId: true }
             });
             const facilityIds = userFacilities.map(f => f.facilityId);
-            where.department = { facilityId: { in: facilityIds } };
+            where.location = { facilityId: { in: facilityIds } };
         }
         if (status)
             where.status = status;
@@ -365,65 +366,14 @@ router.get('/:id', auth_1.authMiddleware, async (req, res) => {
 router.post('/', auth_1.authMiddleware, async (req, res) => {
     try {
         const username = req.user?.username;
-        const { locationId, riskNo, riskCategory, subCategory, area, method, activity, hazard, riskDescription, initialCondition, initialImage, initialProb, initialFreq, initialSev, initialScore, status, 
+        const { locationId, riskNo, riskCategory, subCategory, area, method, activity, hazard, riskDescription, initialCondition, initialImage, initialImages, initialProb, initialFreq, initialSev, initialScore, status, 
         // New fields
-        detectionDate, impactDamage, affectedPeople, improvementResponsible, dueDate, actionsTaken, actionDate, actionImage, finalProb, finalFreq, finalSev, finalScore, postImprovementResponsible, postImprovementDueDate, effectivenessMethod, controlResponsible, controlResult, legislation, dueDatePeriod, statusDate, } = req.body;
-        let actualLocationId = locationId;
-        if (locationId && locationId.startsWith('group:')) {
-            const parts = locationId.split(':');
-            // group:{level}:{facId}:{path}
-            let facId = '';
-            let b = '', f = '', d = '';
-            if (['building', 'floor', 'department'].includes(parts[1])) {
-                const level = parts[1];
-                facId = parts[2];
-                const pathParts = parts.slice(3).join(':').split('|');
-                if (level === 'building') {
-                    b = pathParts[0] || '';
-                }
-                else if (level === 'floor') {
-                    b = pathParts[0] || '';
-                    f = pathParts[1] || '';
-                }
-                else {
-                    b = pathParts[0] || '';
-                    f = pathParts[1] || '';
-                    d = pathParts[2] || '';
-                }
-            }
-            else {
-                // Fallback to old group format group:facId:department
-                facId = parts[1];
-                d = parts.slice(2).join(':');
-            }
-            let groupLoc = await prisma.facilityLocation.findFirst({
-                where: {
-                    facilityId: facId,
-                    building: b || null,
-                    floor: f || null,
-                    department: d || null,
-                    description: null
-                }
-            });
-            if (!groupLoc) {
-                groupLoc = await prisma.facilityLocation.create({
-                    data: {
-                        facilityId: facId,
-                        name: d || f || b || 'Bilinmeyen',
-                        building: b || null,
-                        floor: f || null,
-                        department: d || null,
-                        description: null
-                    }
-                });
-            }
-            actualLocationId = groupLoc.id;
-        }
+        detectionDate, impactDamage, affectedPeople, improvementResponsible, dueDate, actionsTaken, actionDate, actionImage, actionImages, finalProb, finalFreq, finalSev, finalScore, postImprovementResponsible, postImprovementDueDate, effectivenessMethod, controlResponsible, controlResult, legislation, dueDatePeriod, statusDate, } = req.body;
         let dept = await prisma.facilityLocation.findUnique({
-            where: { id: actualLocationId },
+            where: { id: locationId },
         });
         if (!dept)
-            return res.status(404).json({ error: 'Departman bulunamadı.' });
+            return res.status(404).json({ error: 'Departman/Lokasyon bulunamadı.' });
         // Eğer departmanın kodu yoksa, isminden oluşturup kaydet
         // @ts-ignore
         if (!dept.code) {
@@ -441,13 +391,13 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
         }
         // Dinamik Risk No oluşturma
         const maxRisk = await prisma.riskLifecycle.findFirst({
-            where: { locationId: actualLocationId },
+            where: { locationId: locationId },
             orderBy: { riskNo: 'desc' }
         });
         const nextRiskNo = maxRisk ? maxRisk.riskNo + 1 : 1;
         const risk = await prisma.riskLifecycle.create({
             data: {
-                locationId: actualLocationId,
+                locationId: locationId,
                 riskNo: nextRiskNo,
                 riskCategory: riskCategory || 'Genel',
                 subCategory: subCategory || null,
@@ -458,6 +408,7 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
                 riskDescription: riskDescription || '',
                 initialCondition: initialCondition || null,
                 initialImage: initialImage || null,
+                initialImages: initialImages || [],
                 initialProb: Number(initialProb) || 0,
                 initialFreq: initialFreq ? Number(initialFreq) : null,
                 initialSev: Number(initialSev) || 0,
