@@ -328,100 +328,103 @@ export const isgDefterService = {
   },
 
   getDashboardStats: async (facilityId: string, filters: any = {}) => {
-    const { year, month, mainCategoryId, categoryId, subCategoryId, riskLevel, status, mainCategory, category } = filters;
+    const { year, month, status, mainCategory, category, risk } = filters;
     
-    // Base filter applied to notebook items
+    // Fetch base items for facility and year (Global filters)
     const baseWhere: any = {
       page: {
         ...(facilityId && facilityId !== 'all' && { facilityId }),
         ...(year && year !== 'all' && { year: parseInt(year) }),
-      },
-      ...(mainCategoryId && { mainCategoryId: parseInt(mainCategoryId) }),
-      ...(categoryId && { categoryId: parseInt(categoryId) }),
-      ...(subCategoryId && { subCategoryId: parseInt(subCategoryId) }),
-      ...(riskLevel && riskLevel !== 'all' && { riskLevel }),
-      ...(status && status !== 'all' && status !== 'Tamamlanmamış' && { status }),
+      }
     };
 
-    const items = await prisma.notebookItem.findMany({
+    const allItems = await prisma.notebookItem.findMany({
       where: baseWhere,
       include: {
-        page: {
-          include: {
-            facility: true
-          }
-        },
+        page: { include: { facility: true } },
         category: true,
         mainCategory: true,
       }
     });
 
-    let filteredItems = items;
-    if (month && month !== 'all') {
-      const monthInt = parseInt(month);
-      filteredItems = filteredItems.filter(item => item.page.date.getMonth() === monthInt);
-    }
-    if (status === 'Tamamlanmamış') {
-      filteredItems = filteredItems.filter(item => item.status !== 'Tamamlandı' && item.status !== 'İptal Edildi');
-    }
-    if (mainCategory && mainCategory !== 'all') {
-      filteredItems = filteredItems.filter(item => item.mainCategory?.name === mainCategory);
-    }
-    if (category && category !== 'all') {
-      filteredItems = filteredItems.filter(item => item.category?.name === category);
-    }
+    const monthInt = month && month !== 'all' ? parseInt(month) : null;
+    const activeStatus = status && status !== 'all' ? status : null;
+    const activeRisk = risk && risk !== 'all' ? risk : null;
+    const activeMainCat = mainCategory && mainCategory !== 'all' ? mainCategory : null;
+    const activeCat = category && category !== 'all' ? category : null;
+
+    // Helpers
+    const matchesMonth = (item: any) => monthInt === null || item.page.date.getMonth() === monthInt;
+    const matchesStatus = (item: any) => {
+      if (!activeStatus) return true;
+      if (activeStatus === 'Tamamlanmamış') return item.status !== 'Tamamlandı' && item.status !== 'İptal Edildi';
+      return item.status === activeStatus;
+    };
+    const matchesRisk = (item: any) => !activeRisk || item.riskLevel === activeRisk;
+    const matchesMainCat = (item: any) => !activeMainCat || item.mainCategory?.name === activeMainCat;
+    const matchesCat = (item: any) => !activeCat || item.category?.name === activeCat;
+
+    // Fully filtered items (for table and totals)
+    const fullyFilteredItems = allItems.filter(i => 
+      matchesMonth(i) && matchesStatus(i) && matchesRisk(i) && matchesMainCat(i) && matchesCat(i)
+    );
 
     const facilityName = facilityId === 'all' 
       ? 'Tüm Tesisler' 
-      : (items.length > 0 ? items[0].page.facility?.name : (await prisma.facility.findUnique({ where: { id: facilityId } }))?.name || 'Bilinmeyen Tesis');
+      : (allItems.length > 0 ? allItems[0].page.facility?.name : (await prisma.facility.findUnique({ where: { id: facilityId } }))?.name || 'Bilinmeyen Tesis');
 
-    const totalItems = filteredItems.length;
-    const incompleteItemsList = filteredItems.filter(i => i.status !== 'Tamamlandı' && i.status !== 'İptal Edildi');
-    const closedItemsList = filteredItems.filter(i => i.status === 'Tamamlandı');
+    const totalItems = fullyFilteredItems.length;
+    const incompleteItemsList = fullyFilteredItems.filter(i => i.status !== 'Tamamlandı' && i.status !== 'İptal Edildi');
+    const closedItemsList = fullyFilteredItems.filter(i => i.status === 'Tamamlandı');
     
     const incompleteItems = incompleteItemsList.length;
     const closedItems = closedItemsList.length;
     
     const now = new Date();
     
-    // Status Distribution
+    // Status Distribution (Filter by everything EXCEPT status)
+    const statusItems = allItems.filter(i => matchesMonth(i) && matchesRisk(i) && matchesMainCat(i) && matchesCat(i));
     const statusDistributionMap: Record<string, number> = {};
-    filteredItems.forEach(i => {
+    statusItems.forEach(i => {
       statusDistributionMap[i.status] = (statusDistributionMap[i.status] || 0) + 1;
     });
     const statusDistribution = Object.entries(statusDistributionMap).map(([name, value]) => ({ name, value }));
 
-    // Risk Distribution
+    // Risk Distribution (Filter by everything EXCEPT risk)
+    const riskItems = allItems.filter(i => matchesMonth(i) && matchesStatus(i) && matchesMainCat(i) && matchesCat(i));
     const riskDistributionMap: Record<string, number> = {};
-    filteredItems.forEach(i => {
+    riskItems.forEach(i => {
       riskDistributionMap[i.riskLevel] = (riskDistributionMap[i.riskLevel] || 0) + 1;
     });
     const riskDistribution = Object.entries(riskDistributionMap).map(([name, value]) => ({ name, value }));
 
-    // Category Distribution (Split into Main and Sub)
+    // Main Category Distribution (Filter by everything EXCEPT mainCategory and category)
+    const mainCatItems = allItems.filter(i => matchesMonth(i) && matchesStatus(i) && matchesRisk(i));
     const mainCategoryDistributionMap: Record<string, number> = {};
-    const subCategoryDistributionMap: Record<string, number> = {};
-    filteredItems.forEach(i => {
-      const mainName = i.mainCategory?.name || 'Diğer';
-      mainCategoryDistributionMap[mainName] = (mainCategoryDistributionMap[mainName] || 0) + 1;
-      
-      if (i.category?.name) {
-        const subName = i.category.name;
-        subCategoryDistributionMap[subName] = (subCategoryDistributionMap[subName] || 0) + 1;
-      }
+    mainCatItems.forEach(i => {
+      const name = i.mainCategory?.name || 'Diğer';
+      mainCategoryDistributionMap[name] = (mainCategoryDistributionMap[name] || 0) + 1;
     });
-    
     const mainCategoryDistribution = Object.entries(mainCategoryDistributionMap)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
       
+    // Sub Category Distribution (Filter by everything EXCEPT category, but KEEP mainCat filter)
+    const catItems = allItems.filter(i => matchesMonth(i) && matchesStatus(i) && matchesRisk(i) && matchesMainCat(i));
+    const subCategoryDistributionMap: Record<string, number> = {};
+    catItems.forEach(i => {
+      if (i.category?.name) {
+        const name = i.category.name;
+        subCategoryDistributionMap[name] = (subCategoryDistributionMap[name] || 0) + 1;
+      }
+    });
     const subCategoryDistribution = Object.entries(subCategoryDistributionMap)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
 
-    // Incomplete Item Age (Days since creation)
+    // Incomplete Item Age (Days since creation) - Uses fully filtered list
     let age0_30 = 0, age31_60 = 0, age61_90 = 0, age91_180 = 0, age180plus = 0;
     incompleteItemsList.forEach(i => {
       const diffTime = Math.abs(now.getTime() - new Date(i.createdAt).getTime());
@@ -441,7 +444,8 @@ export const isgDefterService = {
       { name: '180+ Gün', value: age180plus, color: 'bg-red-500 text-white' }
     ];
 
-    // Monthly Flow (Last 12 months)
+    // Monthly Flow (Filter by everything EXCEPT month)
+    const flowItems = allItems.filter(i => matchesStatus(i) && matchesRisk(i) && matchesMainCat(i) && matchesCat(i));
     const monthlyFlowMap: Record<string, { month: string, index: number, open: number, closed: number }> = {};
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -454,8 +458,8 @@ export const isgDefterService = {
       };
     }
     
-    filteredItems.forEach(i => {
-      const d = new Date(i.page.date); // Using page date for flow
+    flowItems.forEach(i => {
+      const d = new Date(i.page.date); 
       const mKey = `${d.getFullYear()}-${d.getMonth()}`;
       if (monthlyFlowMap[mKey]) {
         if (i.status === 'Tamamlandı') monthlyFlowMap[mKey].closed++;
@@ -464,12 +468,12 @@ export const isgDefterService = {
     });
     
     const monthlyFlow = Object.values(monthlyFlowMap)
-      .sort((a, b) => b.index - a.index) // Sort by chronological order
+      .sort((a, b) => b.index - a.index)
       .map(m => ({ month: m.month, open: m.open, closed: m.closed }));
 
     // Fire and Emergency (Specific Alarm)
     const fireKeywords = ['yangın', 'acil'];
-    const fireItems = filteredItems.filter(i => {
+    const fireItems = fullyFilteredItems.filter(i => {
       const mainName = i.mainCategory?.name?.toLowerCase() || '';
       return fireKeywords.some(k => mainName.includes(k));
     });
@@ -477,8 +481,8 @@ export const isgDefterService = {
     const fireTotal = fireItems.length;
     const fireOpen = fireItems.filter(i => i.status !== 'Tamamlandı' && i.status !== 'İptal Edildi').length;
 
-    // Finally, the recent items for the table (limited to 50 for performance)
-    const recentItems = filteredItems
+    // Recent items for the table
+    const recentItems = fullyFilteredItems
       .sort((a, b) => new Date(b.page.date).getTime() - new Date(a.page.date).getTime())
       .slice(0, 50);
 
