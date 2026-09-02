@@ -144,6 +144,15 @@ const fireDoorsNavItems = (hasAdminAccess: boolean) => [
   ] : []),
 ];
 
+const elevatorTrackingNavItems = (hasAdminAccess: boolean) => [
+  { label: 'GENEL', type: 'group' },
+  { label: 'Asansör Listesi', icon: DoorClosed, to: '/safety-management/elevator-tracking' },
+  ...(hasAdminAccess ? [
+    { label: 'AYARLAR', type: 'group' },
+    { label: 'Modül Ayarları', icon: Settings, to: '/safety-management/elevator-tracking/settings' },
+  ] : []),
+];
+
 const binaTuruNavItems = [
   { label: 'GENEL', type: 'group' },
   { label: 'Dashboard', icon: LayoutDashboard, to: '/bina-turu', end: true },
@@ -241,6 +250,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   } else if (path.startsWith('/safety-management/fire-doors')) {
     navItems = fireDoorsNavItems(hasAdminAccess);
     moduleName = 'Yangın Kapıları';
+  } else if (path.startsWith('/safety-management/elevator-tracking')) {
+    navItems = elevatorTrackingNavItems(!!hasAdminAccess);
+    moduleName = 'Asansör Takip Yönetimi';
   } else if (path.startsWith('/bina-turu')) {
     navItems = binaTuruNavItems;
     moduleName = 'Bina Turu Yönetimi';
@@ -271,12 +283,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   const getAppsUrl = () => {
     if (
-      path.startsWith('/operations') ||
+      path.startsWith('/bina-turu') || 
+      path.startsWith('/hazmat') || 
       path.startsWith('/risks') ||
-      path.startsWith('/hazmat') ||
       path.startsWith('/checklists') ||
-      path.startsWith('/isg-kurul') ||
-      path.startsWith('/safety-management/fire-doors')
+      path.startsWith('/safety-management/fire-doors') ||
+      path.startsWith('/safety-management/elevator-tracking')
     ) {
       return '/safety-management';
     }
@@ -320,8 +332,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* Facility Switcher (Show for modules that need it) */}
-        {(path.startsWith('/isg-kurul') || path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management') || path.startsWith('/renovation-report') || path.startsWith('/checklists') || path.startsWith('/safety-management/fire-doors')) && (
-          <FacilitySwitcher />
+        {(path.startsWith('/isg-kurul') || path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management') || path.startsWith('/renovation-report') || path.startsWith('/checklists') || path.startsWith('/safety-management/fire-doors') || path.startsWith('/safety-management/elevator-tracking')) && (
+          <div className="flex-shrink-0">
+            <FacilitySwitcher />
+          </div>
         )}
 
         {/* Navigation */}

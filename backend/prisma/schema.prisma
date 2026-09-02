@@ -172,6 +172,7 @@ model Facility {
   FireDoor               FireDoor[]
   OhsBoardPeriod         OhsBoardPeriod[]
   ohsBoardDepartments    OhsBoardDepartment[]
+  elevators              Elevator[]
 }
 
 model IncidentCategory {
@@ -371,11 +372,11 @@ model OhsBoardDepartment {
   facilityId String
   facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
   name       String
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
-  
-  decisions  OhsBoardDecision[]
-  members    OhsBoardMember[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  decisions OhsBoardDecision[]
+  members   OhsBoardMember[]
 
   @@unique([facilityId, name])
 }
@@ -453,34 +454,34 @@ model MonthlyAccidentData {
 }
 
 model Category {
-  id               Int                @id @default(autoincrement())
-  name             String
-  parentId         Int?
-  parent           Category?          @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children         Category[]         @relation("CategoryHierarchy")
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  id        Int        @id @default(autoincrement())
+  name      String
+  parentId  Int?
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryHierarchy")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
-  mainTopics       OhsBoardTopic[]    @relation("TopicMainCategory")
-  topics           OhsBoardTopic[]    @relation("TopicCategory")
-  subTopics        OhsBoardTopic[]    @relation("TopicSubCategory")
+  mainTopics OhsBoardTopic[] @relation("TopicMainCategory")
+  topics     OhsBoardTopic[] @relation("TopicCategory")
+  subTopics  OhsBoardTopic[] @relation("TopicSubCategory")
 
-  mainDecisions    OhsBoardDecision[] @relation("DecisionMainCategory")
-  decisions        OhsBoardDecision[] @relation("DecisionCategory")
-  subDecisions     OhsBoardDecision[] @relation("DecisionSubCategory")
+  mainDecisions OhsBoardDecision[] @relation("DecisionMainCategory")
+  decisions     OhsBoardDecision[] @relation("DecisionCategory")
+  subDecisions  OhsBoardDecision[] @relation("DecisionSubCategory")
 
-  mainNotebookItems NotebookItem[]    @relation("NotebookMainCat")
-  notebookItems     NotebookItem[]    @relation("NotebookCat")
-  subNotebookItems  NotebookItem[]    @relation("NotebookSubCat")
+  mainNotebookItems NotebookItem[] @relation("NotebookMainCat")
+  notebookItems     NotebookItem[] @relation("NotebookCat")
+  subNotebookItems  NotebookItem[] @relation("NotebookSubCat")
 }
 
 model Department {
-  id              Int                     @id @default(autoincrement())
-  name            String
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
-  incidents       ExtraordinaryIncident[]
-  notebookItems   NotebookItem[]
+  id            Int                     @id @default(autoincrement())
+  name          String
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  incidents     ExtraordinaryIncident[]
+  notebookItems NotebookItem[]
 }
 
 model NotebookPage {
@@ -505,28 +506,28 @@ model NotebookPage {
 }
 
 model NotebookItem {
-  id            Int                  @id @default(autoincrement())
-  pageId        Int
-  authorType    String
-  authorName    String
-  content       String
+  id             Int      @id @default(autoincrement())
+  pageId         Int
+  authorType     String
+  authorName     String
+  content        String
   mainCategoryId Int?
   categoryId     Int?
   subCategoryId  Int?
-  departmentId  Int?
-  riskLevel     String               @default("Düşük")
-  status        String               @default("Açık")
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
-  
-  mainCategory  Category?            @relation("NotebookMainCat", fields: [mainCategoryId], references: [id])
-  category      Category?            @relation("NotebookCat", fields: [categoryId], references: [id])
-  subCategory   Category?            @relation("NotebookSubCat", fields: [subCategoryId], references: [id])
-  
-  department    Department?          @relation(fields: [departmentId], references: [id])
-  page          NotebookPage         @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  actions       NotebookItemAction[]
-  comments      NotebookItemComment[]
+  departmentId   Int?
+  riskLevel      String   @default("Düşük")
+  status         String   @default("Açık")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  mainCategory Category? @relation("NotebookMainCat", fields: [mainCategoryId], references: [id])
+  category     Category? @relation("NotebookCat", fields: [categoryId], references: [id])
+  subCategory  Category? @relation("NotebookSubCat", fields: [subCategoryId], references: [id])
+
+  department Department?           @relation(fields: [departmentId], references: [id])
+  page       NotebookPage          @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  actions    NotebookItemAction[]
+  comments   NotebookItemComment[]
 }
 
 model NotebookItemAction {
@@ -547,21 +548,20 @@ model NotebookItemComment {
   content        String
   authorId       String?
   authorName     String
-  attachments    String?      // JSON array of URLs
+  attachments    String? // JSON array of URLs
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   notebookItem   NotebookItem @relation(fields: [notebookItemId], references: [id], onDelete: Cascade)
 }
 
-
 model IsgDefterSetting {
-  id               Int      @id @default(autoincrement())
-  facilityId       String   @unique
-  currentCilt      Int      @default(1)
-  maxPagesPerCilt  Int      @default(50)
-  riskLevels       String?  // JSON
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id              Int      @id @default(autoincrement())
+  facilityId      String   @unique
+  currentCilt     Int      @default(1)
+  maxPagesPerCilt Int      @default(50)
+  riskLevels      String? // JSON
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model SmtpSettings {
@@ -665,7 +665,7 @@ model RiskLifecycle {
   riskDescription            String
   initialCondition           String?
   initialImage               String?
-  initialImages              String[]   @default([])
+  initialImages              String[]          @default([])
   initialProb                Float
   initialFreq                Float?
   initialSev                 Float
@@ -676,7 +676,7 @@ model RiskLifecycle {
   actionDate                 DateTime?
   actionBy                   String?
   actionImage                String?
-  actionImages               String[]   @default([])
+  actionImages               String[]          @default([])
   followUpMeasure            String?
   extraImprovement           String?
   finalProb                  Float?
@@ -2020,27 +2020,26 @@ model TelegramSettings {
 }
 
 model IntegratedAudit {
-  id           String   @id @default(cuid())
-  facilityId   String
-  facility     Facility @relation(fields: [facilityId], references: [id])
-  status       String   @default("DRAFT") // DRAFT, PUBLISHED
-  saved        Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
-  // Meta fields
-  round        Int      @default(1)
-  startDate    DateTime
-  endDate      DateTime
-  reportDate   DateTime
-  reportNo     String
-  reporter     String
-  auditStatus  String   @default("Devam Ediyor")
-  purpose      String?
-  executive    String?
-  conclusion   String?
-  createdBy    String?
+  id         String   @id @default(cuid())
+  facilityId String
+  facility   Facility @relation(fields: [facilityId], references: [id])
+  status     String   @default("DRAFT") // DRAFT, PUBLISHED
+  saved      Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
+  // Meta fields
+  round       Int      @default(1)
+  startDate   DateTime
+  endDate     DateTime
+  reportDate  DateTime
+  reportNo    String
+  reporter    String
+  auditStatus String   @default("Devam Ediyor")
+  purpose     String?
+  executive   String?
+  conclusion  String?
+  createdBy   String?
 
   team         String[]
   participants String[]
@@ -2048,13 +2047,11 @@ model IntegratedAudit {
   findings     IntegratedFinding[]
 }
 
-
-
 model IntegratedFinding {
-  id             String   @id @default(cuid())
-  auditId        String
-  audit          IntegratedAudit @relation(fields: [auditId], references: [id], onDelete: Cascade)
-  
+  id      String          @id @default(cuid())
+  auditId String
+  audit   IntegratedAudit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+
   no             String
   area           String
   subarea        String?
@@ -2062,7 +2059,7 @@ model IntegratedFinding {
   subcategory    String?
   risk           String
   targetDate     DateTime?
-  isStarted      Boolean  @default(false)
+  isStarted      Boolean   @default(false)
   residualRisk   String?
   riskReasoning  String?
   findingDesc    String
@@ -2072,12 +2069,12 @@ model IntegratedFinding {
   history        String?
   departments    String[]
 
-  actions        IntegratedAction[]
-  files          IntegratedFile[]
+  actions IntegratedAction[]
+  files   IntegratedFile[]
 }
 
 model IntegratedAction {
-  id          String   @id @default(cuid())
+  id          String            @id @default(cuid())
   findingId   String
   finding     IntegratedFinding @relation(fields: [findingId], references: [id], onDelete: Cascade)
   department  String
@@ -2088,20 +2085,20 @@ model IntegratedAction {
   explanation String?
   completedAt DateTime?
 
-  files       IntegratedFile[]
+  files IntegratedFile[]
 }
 
 model IntegratedFile {
-  id          String   @id @default(cuid())
-  name        String
-  url         String
-  type        String
-  
-  findingId   String?
-  finding     IntegratedFinding? @relation(fields: [findingId], references: [id], onDelete: Cascade)
-  
-  actionId    String?
-  action      IntegratedAction? @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  id   String @id @default(cuid())
+  name String
+  url  String
+  type String
+
+  findingId String?
+  finding   IntegratedFinding? @relation(fields: [findingId], references: [id], onDelete: Cascade)
+
+  actionId String?
+  action   IntegratedAction? @relation(fields: [actionId], references: [id], onDelete: Cascade)
 }
 
 model OperationsCategory {
@@ -2349,16 +2346,16 @@ model OhsBoardTopic {
   meetingId String
   meeting   OhsBoardMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
 
-  topicText     String
+  topicText      String
   mainCategoryId Int?
   categoryId     Int?
   subCategoryId  Int?
-  
-  mainCategory   Category?    @relation("TopicMainCategory", fields: [mainCategoryId], references: [id])
-  category       Category?    @relation("TopicCategory", fields: [categoryId], references: [id])
-  subCategory    Category?    @relation("TopicSubCategory", fields: [subCategoryId], references: [id])
-  riskScore     String?
-  remarks       String?
+
+  mainCategory Category? @relation("TopicMainCategory", fields: [mainCategoryId], references: [id])
+  category     Category? @relation("TopicCategory", fields: [categoryId], references: [id])
+  subCategory  Category? @relation("TopicSubCategory", fields: [subCategoryId], references: [id])
+  riskScore    String?
+  remarks      String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2453,7 +2450,7 @@ model OhsBoardMember {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  facility   Facility   @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
 }
 
 // --- FIRE DOORS MODULE ---
@@ -2563,3 +2560,112 @@ model RenovationReportSetting {
   updatedAt   DateTime @updatedAt
 }
 
+model Elevator {
+  id                 String    @id @default(uuid())
+  facilityId         String
+  elevatorNo         String
+  name               String?
+  type               String?
+  label              String?
+  brand              String?
+  model              String?
+  serialNo           String?
+  capacityKg         String? // Changed to String to accommodate raw data like "1000", "", etc. We can keep it String for now based on JSON, or handle parsing later. Actually, the DB schema I wrote had Float? but JSON has "". Let's keep it String in the model to avoid parsing issues, but actually let's stick to String since JSON has string. Let's make it String?.
+  capacityPerson     String? // Same here
+  stopsCount         String? // Same here
+  installationYear   String? // Same here
+  maintenanceCompany String?
+  maintenanceContact String?
+  lastInspectionDate DateTime?
+  nextInspectionDate DateTime?
+  contractEndDate    DateTime?
+  reportUrl          String?
+  proposalStatus     String?
+  status             String?
+  notes              String?
+  manager            String?
+  managerPhone       String?
+  managerEmail       String?
+  source             String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  facility    Facility             @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  inspections ElevatorInspection[]
+
+  @@index([facilityId])
+}
+
+model ElevatorInspection {
+  id             String   @id @default(uuid())
+  elevatorId     String
+  inspectionDate DateTime
+  label          String? // Yeşil, Mavi, Sarı, Kırmızı
+  reportUrl      String?
+  notes          String?
+  inspectorName  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  elevator Elevator @relation(fields: [elevatorId], references: [id], onDelete: Cascade)
+
+  @@index([elevatorId])
+}
+
+model ElevatorBrand {
+  id         String   @id @default(uuid())
+  facilityId String
+  name       String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([facilityId, name])
+}
+
+model ElevatorMaintenanceCompany {
+  id         String   @id @default(uuid())
+  facilityId String
+  name       String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([facilityId, name])
+}
+
+model ElevatorType {
+  id         String   @id @default(uuid())
+  facilityId String
+  name       String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([facilityId, name])
+}
+
+model ElevatorStatus {
+  id         String   @id @default(uuid())
+  facilityId String
+  name       String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([facilityId, name])
+}
+
+model ElevatorLabel {
+  id         String   @id @default(uuid())
+  facilityId String
+  name       String
+  color      String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([facilityId, name])
+}

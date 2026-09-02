@@ -28,6 +28,8 @@ import ohsBoardRoutes from './routes/ohs_boards';
 import publicRoutes from './routes/public';
 import fireDoorsRoutes from './routes/fire_doors';
 import isgDefterRoutes from './routes/isgDefter.routes';
+import elevatorRoutes from './routes/elevator.routes';
+import elevatorSettingsRoutes from './routes/elevator-settings.routes';
 
 // Middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
@@ -80,6 +82,8 @@ app.use('/api/locations', require('./routes/locations').default);
 app.use('/api/checklists', checklistRoutes);
 app.use('/api/safety-management/fire-doors', fireDoorsRoutes);
 app.use('/api/safety-management/isg-defter', isgDefterRoutes);
+app.use('/api/safety-management/elevators', elevatorRoutes);
+app.use('/api/safety-management/elevator-settings', elevatorSettingsRoutes);
 
 // Sağlık kontrolü
 app.get('/health', (req, res) => {

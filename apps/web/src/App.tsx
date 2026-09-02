@@ -173,6 +173,9 @@ import ChecklistDashboardPage from './pages/checklists/ChecklistDashboardPage';
 import IsgDefterLayout from './pages/safety-management/isg-defter/IsgDefterLayout';
 import IsgDefterDashboard from './pages/safety-management/isg-defter/IsgDefterDashboard';
 import IsgDefterRecords from './pages/safety-management/isg-defter/IsgDefterRecords';
+import ElevatorRecords from './pages/safety-management/elevator-tracking/ElevatorRecords';
+import ElevatorDetail from './pages/safety-management/elevator-tracking/ElevatorDetail';
+import ElevatorSettings from './pages/safety-management/elevator-tracking/Settings';
 import IsgDefterSettings from './pages/safety-management/isg-defter/IsgDefterSettings';
 import IsgDefterItemDetail from './pages/safety-management/isg-defter/IsgDefterItemDetail';
 import IsgDefterPageBuilder from './pages/safety-management/isg-defter/IsgDefterPageBuilder';
@@ -287,6 +290,31 @@ function App() {
                     <Route path="items/:itemId" element={<IsgDefterItemDetail />} />
                     <Route path="settings" element={<IsgDefterSettings />} />
                   </Route>
+                  
+                  <Route
+                    path="/safety-management/elevator-tracking"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><ElevatorRecords /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/safety-management/elevator-tracking/:id"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><ElevatorDetail /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/safety-management/elevator-tracking/settings"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><ElevatorSettings /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
 
                   {/* ── İSG KURUL YÖNETİMİ ─────────────────────── */}
                   <Route

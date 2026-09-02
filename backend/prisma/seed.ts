@@ -298,10 +298,50 @@ async function main() {
       { code: 'BUILDING_TOUR', name: 'Bina Turu Yönetimi', description: 'Bina turları ve denetimleri', icon: 'apartment' },
       { code: 'CHECKLISTS', name: 'İSG Kontrol Listeleri', description: 'Saha denetimleri ve kontrol şablonları', icon: 'ClipboardList' },
       { code: 'FIRE_DOORS', name: 'Yangın Kapıları', description: 'Yangın kapıları denetimi ve özellikleri', icon: 'DoorClosed' },
+      { code: 'ELEVATOR_TRACKING', name: 'Asansör Takip Yönetimi', description: 'Asansör kayıt, periyodik kontrol ve takip sistemi', icon: 'ArrowUpDown' }
     ],
     skipDuplicates: true,
   });
   console.log('Seeding Modules complete.');
+
+  // Seed default Elevator Settings
+  const defaultBrands = ['Kone', 'Otis', 'Schindler', 'ThyssenKrupp', 'Mitsubishi', 'Diğer'];
+  for (const brand of defaultBrands) {
+    const exists = await prisma.elevatorBrand.findFirst({ where: { name: brand, facilityId: 'all' } });
+    if (!exists) {
+      await prisma.elevatorBrand.create({ data: { name: brand, facilityId: 'all' } });
+    }
+  }
+
+  const defaultTypes = ['Sedye Asansörü', 'Yük Asansörü', 'Personel Asansörü', 'Yemek Asansörü', 'Ziyaretçi Asansörü', 'Diğer'];
+  for (const type of defaultTypes) {
+    const exists = await prisma.elevatorType.findFirst({ where: { name: type, facilityId: 'all' } });
+    if (!exists) {
+      await prisma.elevatorType.create({ data: { name: type, facilityId: 'all' } });
+    }
+  }
+
+  const defaultStatuses = ['Aktif', 'Pasif', 'Devre Dışı', 'Bakımda'];
+  for (const status of defaultStatuses) {
+    const exists = await prisma.elevatorStatus.findFirst({ where: { name: status, facilityId: 'all' } });
+    if (!exists) {
+      await prisma.elevatorStatus.create({ data: { name: status, facilityId: 'all' } });
+    }
+  }
+
+  const defaultLabels = [
+    { name: 'Yeşil', color: '#10b981' },
+    { name: 'Mavi', color: '#3b82f6' },
+    { name: 'Sarı', color: '#eab308' },
+    { name: 'Kırmızı', color: '#ef4444' }
+  ];
+  for (const label of defaultLabels) {
+    const exists = await prisma.elevatorLabel.findFirst({ where: { name: label.name, facilityId: 'all' } });
+    if (!exists) {
+      await prisma.elevatorLabel.create({ data: { name: label.name, color: label.color, facilityId: 'all' } });
+    }
+  }
+  console.log('Seeding Elevator settings complete.');
 
   console.log('Seeding complete.');
 }

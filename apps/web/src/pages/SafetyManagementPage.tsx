@@ -421,6 +421,48 @@ export default function SafetyManagementPage() {
           </div>
           )}
 
+          {/* Card: Asansör Takip Yönetimi */}
+          {(hasAdminAccess || user?.modules?.includes('ELEVATOR_TRACKING')) && (
+          <div
+            onClick={() => navigate('/safety-management/elevator-tracking')}
+            className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
+          >
+            {/* Mobile Card Layout */}
+            <div className="flex md:hidden items-start gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#f3e5f5] dark:bg-[#6a1b9a]/20 flex items-center justify-center text-[#8e24aa] dark:text-purple-400">
+                <span className="material-symbols-outlined text-[28px]">elevator</span>
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">Asansör Takip Yönetimi</h2>
+                <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
+                  Tesislerdeki asansörlerin envanteri, muayene tarihleri ve etiket durumlarının takibi.
+                </p>
+                <div className="flex items-center gap-2 text-[#8e24aa] dark:text-purple-400 text-sm font-medium group-hover:underline">
+                  Uygulamaya Git
+                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop Card Layout */}
+            <div className="hidden md:flex flex-col justify-between h-full">
+              <div>
+                <div className="w-14 h-14 rounded-xl bg-purple-50 dark:bg-purple-950/20 flex items-center justify-center mb-6 text-[#8e24aa] dark:text-purple-400 transition-transform group-hover:scale-110">
+                  <span className="material-symbols-outlined text-[32px]">elevator</span>
+                </div>
+                <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">Asansör Takip Yönetimi</h3>
+                <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
+                  Tesislerdeki asansörlerin envanteri, muayene tarihleri ve etiket durumlarının takibi.
+                </p>
+              </div>
+              <div className="inline-flex items-center gap-2 text-[#8e24aa] dark:text-purple-400 text-sm font-medium group-hover:gap-4 transition-all">
+                Uygulamaya Git
+                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+              </div>
+            </div>
+          </div>
+          )}
+
         </div>
       </main>
 
