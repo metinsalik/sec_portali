@@ -3,8 +3,9 @@ import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
 
 const SoruBankasi = () => {
   const [data, setData] = useState<any[]>([]);
@@ -56,8 +57,8 @@ const SoruBankasi = () => {
 
   const handleSave = async () => {
     const facilityId = localStorage.getItem('activeFacilityId');
-    if (!facilityId) {
-      toast.error('Lütfen sol menüden işlem yapmak istediğiniz tesisi seçin.');
+    if (!facilityId || facilityId === 'all' || facilityId === 'null' || facilityId === 'undefined') {
+      toast.error('Lütfen sol menüden işlem yapmak istediğiniz belirli bir tesisi seçin (Tüm Tesisler seçilemez).');
       return;
     }
     if (!kriter || !anaGrupId || !denetlenenAlanId || !kategoriId) {
@@ -100,10 +101,33 @@ const SoruBankasi = () => {
     }
   };
 
+  const handleDownloadExcel = () => {
+    if (data.length === 0) {
+      toast.error('İndirilecek soru bulunamadı.');
+      return;
+    }
+
+    const dataToExport = data.map(q => ({
+      'Ana Grup': q.anaGrup?.ad || '',
+      'Denetlenen Alan': q.denetlenenAlan?.ad || '',
+      'Kategori': q.kategori?.ad || '',
+      'Soru/Kriter': q.kriter || ''
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sorular');
+    XLSX.writeFile(workbook, 'Soru_Bankasi.xlsx');
+  };
+
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Soru Bankası Yönetimi</CardTitle>
+        <Button variant="outline" onClick={handleDownloadExcel} disabled={data.length === 0}>
+          <Download className="w-4 h-4 mr-2" />
+          Excel Olarak İndir
+        </Button>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 mb-6">
