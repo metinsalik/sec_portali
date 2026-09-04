@@ -485,7 +485,8 @@ export default function FacilityRiskLevelPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {sortedRisks.map((risk) => {
-                  const dept = departmentMap[risk.departmentId];
+                  const locId = risk.locationId || risk.departmentId;
+                  const dept = departmentMap[locId];
                   const dCode = dept?.code || 'GEN';
                   return (
                     <tr key={risk.id} className="hover:bg-muted/20 transition-colors group">
@@ -495,7 +496,7 @@ export default function FacilityRiskLevelPage() {
                       <td className="px-4 py-3">
                         <div className="font-medium flex items-center gap-2">
                           <Building2 className="w-3 h-3 text-muted-foreground" />
-                          {dept?.name || 'Bilinmeyen'}
+                          {dept?.name || risk.department?.name || 'Bilinmeyen'}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
@@ -515,10 +516,10 @@ export default function FacilityRiskLevelPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-blue-600" onClick={() => navigate(`/risks/location/${risk.departmentId}/view/${risk.id}`)}>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-blue-600" onClick={() => navigate(`/risks/location/${locId}/view/${risk.id}`)}>
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-orange-600" onClick={() => navigate(`/risks/location/${risk.departmentId}/edit/${risk.id}`)}>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-orange-600" onClick={() => navigate(`/risks/location/${locId}/edit/${risk.id}`)}>
                             <Pencil className="w-4 h-4" />
                           </Button>
                           <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(risk.id)}>

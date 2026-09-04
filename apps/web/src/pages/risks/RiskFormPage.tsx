@@ -407,7 +407,10 @@ export default function RiskFormPage() {
     const fd = new FormData();
     fd.append('file', file);
     try {
-      const res = await fetch(`${API}/api/risks/upload`, {
+      const uploadUrl = facilityId 
+        ? `${API}/api/risks/upload?facilityId=${encodeURIComponent(facilityId)}` 
+        : `${API}/api/risks/upload`;
+      const res = await fetch(uploadUrl, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
@@ -606,7 +609,10 @@ export default function RiskFormPage() {
         {/* Bölüm 2: Mevcut Durum Değerlendirmesi */}
         <Card className="shadow-sm border-muted">
           <CardHeader className="pb-3 border-b bg-muted/20">
-            <CardTitle className="text-base font-bold text-foreground">2. Bölüm: Mevcut Durum Değerlendirmesi</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-bold text-foreground">2. Bölüm: Mevcut Durum Değerlendirmesi</CardTitle>
+              <span className="text-xs text-muted-foreground">Excel Alanı: Tehlike, Risk & Mevcut Risk Skoru</span>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -19,7 +19,11 @@ import {
 } from '@/components/ui/popover';
 import { useAuth } from '@/context/AuthContext';
 
-export function FacilitySwitcher() {
+interface FacilitySwitcherProps {
+  isCollapsed?: boolean;
+}
+
+export function FacilitySwitcher({ isCollapsed = false }: FacilitySwitcherProps) {
   const [open, setOpen] = useState(false);
   const [activeFacilityId, setActiveFacilityId] = useState<string | null>(
     localStorage.getItem('activeFacilityId')
@@ -70,37 +74,51 @@ export function FacilitySwitcher() {
 
   if (isLoading || accessibleFacilities.length === 0) {
     return (
-      <div className="px-3 py-2">
-        <Button variant="outline" className="w-full justify-start text-muted-foreground" disabled>
-          <Building2 className="mr-2 h-4 w-4" />
-          Yükleniyor...
+      <div className={cn("px-3 py-2", isCollapsed && "px-2 py-2 flex justify-center")}>
+        <Button variant="outline" size={isCollapsed ? "icon" : "default"} className={cn(isCollapsed ? "h-9 w-9 p-0" : "w-full justify-start", "text-muted-foreground")} disabled>
+          <Building2 className={cn("h-4 w-4", !isCollapsed && "mr-2")} />
+          {!isCollapsed && <span>Yükleniyor...</span>}
         </Button>
       </div>
     );
   }
 
   const activeFacility = accessibleFacilities.find((f: any) => f.id === activeFacilityId) || accessibleFacilities[0];
+  const activeLabel = activeFacilityId === 'all' ? 'Tüm Tesisler' : (activeFacility?.name || 'Tesis Seçin');
 
   return (
-    <div className="px-3 py-3 border-b border-border/50">
+    <div className={cn("border-b border-border/50 transition-all", isCollapsed ? "p-2 flex justify-center" : "px-3 py-3")}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between bg-background shadow-sm hover:bg-accent hover:text-accent-foreground"
-          >
-            <div className="flex items-center truncate">
-              <Building2 className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="truncate text-sm font-medium">
-                {activeFacilityId === 'all' ? 'Tüm Tesisler' : (activeFacility?.name || 'Tesis Seçin')}
-              </span>
-            </div>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
+          {isCollapsed ? (
+            <Button
+              variant="outline"
+              size="icon"
+              role="combobox"
+              aria-expanded={open}
+              title={`Tesis: ${activeLabel}`}
+              className="h-10 w-10 p-0 rounded-lg bg-background shadow-xs hover:bg-accent hover:text-accent-foreground"
+            >
+              <Building2 className="h-4 w-4 text-foreground" />
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className="w-full justify-between bg-background shadow-sm hover:bg-accent hover:text-accent-foreground"
+            >
+              <div className="flex items-center truncate">
+                <Building2 className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="truncate text-sm font-medium">
+                  {activeLabel}
+                </span>
+              </div>
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          )}
         </PopoverTrigger>
-        <PopoverContent className="w-[240px] p-0" align="start">
+        <PopoverContent className="w-[240px] p-0 z-50" align={isCollapsed ? "start" : "start"} side={isCollapsed ? "right" : "bottom"} sideOffset={8}>
           <Command>
             <CommandInput placeholder="Tesis ara..." />
             <CommandList>

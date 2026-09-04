@@ -92,6 +92,7 @@ import RiskFormPage from './pages/risks/RiskFormPage';
 import RiskViewPage from './pages/risks/RiskViewPage';
 import RiskSettings from './pages/risks/RiskSettings';
 import { RiskReportsPage } from './pages/risks/RiskReportsPage';
+import ExecutiveRiskDashboard from './pages/risks/ExecutiveRiskDashboard';
 
 // HazMat
 import HazmatDashboardPage from './pages/hazmat/HazmatDashboardPage';
@@ -625,6 +626,14 @@ function App() {
                     }
                   />
                   <Route
+                    path="/risks/facility/all"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><ExecutiveRiskDashboard /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
                     path="/risks/facility/:facilityId"
                     element={
                       <ProtectedRoute>
@@ -682,6 +691,14 @@ function App() {
                   />
                   <Route
                     path="/risks/location/:locationId/create"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><RiskFormPage /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/risks/location/:locationId/new"
                     element={
                       <ProtectedRoute>
                         <AppLayout><RiskFormPage /></AppLayout>

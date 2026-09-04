@@ -239,7 +239,11 @@ export const elevatorService = {
     if (!sheet) throw new Error('Şablon sayfası bulunamadı');
 
     const facilities = await prisma.facility.findMany({ select: { id: true, name: true } });
-    const facilityMap = new Map(facilities.map(f => [f.name, f.id]));
+    const facilityMap = new Map();
+    facilities.forEach(f => {
+      facilityMap.set(f.name.trim().toLowerCase(), f.id);
+      facilityMap.set(f.id.trim().toLowerCase(), f.id);
+    });
 
     let importedCount = 0;
 
@@ -252,10 +256,13 @@ export const elevatorService = {
     await prisma.$transaction(async (tx) => {
       for (const rowVals of rows) {
         // exceljs row.values is 1-indexed (index 0 is empty)
-        const getVal = (idx: number) => {
+        const getVal = (idx: number, fallbackDash = false) => {
           const val = rowVals[idx];
-          if (!val) return null;
-          return typeof val === 'object' && 'result' in val ? String(val.result) : String(val);
+          if (val === null || val === undefined || String(val).trim() === '') {
+            return fallbackDash ? '-' : null;
+          }
+          const str = typeof val === 'object' && 'result' in val ? String(val.result).trim() : String(val).trim();
+          return str === '' ? (fallbackDash ? '-' : null) : str;
         };
 
         const tesisAdi = getVal(1);
@@ -264,8 +271,8 @@ export const elevatorService = {
         if (!elevatorNo) continue;
 
         let rowFacilityId = facilityIdFallback;
-        if (tesisAdi && facilityMap.has(tesisAdi)) {
-          rowFacilityId = facilityMap.get(tesisAdi)!;
+        if (tesisAdi && facilityMap.has(tesisAdi.toLowerCase())) {
+          rowFacilityId = facilityMap.get(tesisAdi.toLowerCase())!;
         }
 
         if (!rowFacilityId) continue;
@@ -280,17 +287,17 @@ export const elevatorService = {
         };
 
         const dataPayload = {
-          name: getVal(3),
-          type: getVal(4),
-          label: getVal(5),
-          brand: getVal(6),
-          model: getVal(7),
-          serialNo: getVal(8),
-          capacityKg: getVal(9),
-          capacityPerson: getVal(10),
-          stopsCount: getVal(11),
-          installationYear: getVal(12),
-          maintenanceCompany: getVal(13),
+          name: getVal(3, true),
+          type: getVal(4, true),
+          label: getVal(5, true),
+          brand: getVal(6, true),
+          model: getVal(7, true),
+          serialNo: getVal(8, true),
+          capacityKg: getVal(9, true),
+          capacityPerson: getVal(10, true),
+          stopsCount: getVal(11, true),
+          installationYear: getVal(12, true),
+          maintenanceCompany: getVal(13, true),
           lastInspectionDate: getDateVal(14),
           nextInspectionDate: getDateVal(15),
           status: 'Aktif'

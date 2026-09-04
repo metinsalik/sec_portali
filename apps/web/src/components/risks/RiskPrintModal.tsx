@@ -8,11 +8,13 @@ interface RiskPrintModalProps {
   isOpen: boolean;
   onClose: () => void;
   risks: any[];
-  department: any;
+  department?: any;
+  location?: any;
   deptCode: string;
 }
 
-export function RiskPrintModal({ isOpen, onClose, risks, department, deptCode }: RiskPrintModalProps) {
+export function RiskPrintModal({ isOpen, onClose, risks, department, location, deptCode }: RiskPrintModalProps) {
+  const activeDept = department || location;
   const [isGenerating, setIsGenerating] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -65,7 +67,7 @@ export function RiskPrintModal({ isOpen, onClose, risks, department, deptCode }:
     }, 100);
   };
 
-  if (!department) return null;
+  if (!activeDept) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -92,7 +94,7 @@ export function RiskPrintModal({ isOpen, onClose, risks, department, deptCode }:
              <RiskPrintTable 
                ref={printRef}
                risks={risks}
-               department={department}
+               department={activeDept}
                deptCode={deptCode}
              />
           </div>

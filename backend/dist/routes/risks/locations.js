@@ -71,7 +71,18 @@ router.get('/:id', auth_1.authMiddleware, async (req, res) => {
         const id = req.params.id;
         const dept = await prisma.facilityLocation.findUnique({
             where: { id },
-            include: { facility: true }
+            include: {
+                facility: {
+                    include: {
+                        assignments: {
+                            include: {
+                                professional: true,
+                                employerRep: true,
+                            }
+                        }
+                    }
+                }
+            }
         });
         if (!dept)
             return res.status(404).json({ error: 'Lokasyon bulunamadı.' });

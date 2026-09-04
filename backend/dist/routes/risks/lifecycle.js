@@ -34,7 +34,6 @@ function generateDeptCode(name) {
     const str = name.replace(/[ıişğüöçIİŞĞÜÖÇ]/g, (m) => charMap[m]);
     return str.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase() || 'GEN';
 }
-// ─── Yardımcı Fonksiyonlar ────────────────────────────────────────────────────
 function scoreToLevel(score) {
     if (score > 400)
         return 'Tolere Gösterilmez Risk';
@@ -46,6 +45,12 @@ function scoreToLevel(score) {
         return 'Olası Risk';
     return 'Önemsiz Risk';
 }
+const statusNames = {
+    ACIK_TEHLIKE: 'Açık Tehlike',
+    ILK_MUDAHALE_EDILDI: 'İlk Müdahale Edildi',
+    TAKIP_SURECINDE: 'Takip Sürecinde',
+    KAPATILDI_GUVENLI: 'Kapatıldı (Güvenli)'
+};
 function deriveStatus(row) {
     if (row.finalScore && Number(row.finalScore) > 0) {
         if (row.followUpMeasure || row.extraImprovement)
@@ -133,8 +138,7 @@ router.get('/stats/summary', auth_1.authMiddleware, async (req, res) => {
 // POST /api/risks/lifecycle/import — Excel/JSON toplu yükleme
 router.post('/import', auth_1.authMiddleware, async (req, res) => {
     try {
-        const username = req.user?.username;
-        const { facilityId, rows } = req.body;
+        const { facilityId, rows, targetLocationId } = req.body;
         if (!facilityId || !Array.isArray(rows) || rows.length === 0) {
             return res.status(400).json({ error: 'facilityId ve rows gerekli.' });
         }
@@ -142,35 +146,133 @@ router.post('/import', auth_1.authMiddleware, async (req, res) => {
         if (!hasAccess) {
             return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
         }
+        // Tesisin tüm mevcut tanımlı lokasyonlarını çekelim (Akıllı Eşleştirme için)
+        const facilityLocations = await prisma.facilityLocation.findMany({
+            where: { facilityId },
+            orderBy: { createdAt: 'asc' }
+        });
+        // Sabit hedef seçilmiş mi?
+        const { targetLevel, targetPath } = req.body;
+        let fixedTargetLocation = null;
+        if (targetLocationId && targetLocationId !== 'auto') {
+            fixedTargetLocation = facilityLocations.find(l => l.id === targetLocationId);
+        }
+        // Eğer kullanıcı seviye olarak bir Kat veya Bina seçtiyse (Örn: targetLevel = 'floor', targetPath = 'Ana Bina|Zemin Kat')
+        // veya targetLevel = 'building' seçtiyse ve satırlar bu seviyeye aitse:
+        let scopeBuilding = null;
+        let scopeFloor = null;
+        let scopeDept = null;
+        if (targetLevel === 'floor' && targetPath) {
+            const parts = targetPath.split('|');
+            scopeBuilding = parts[0] || null;
+            scopeFloor = parts[1] || null;
+        }
+        else if (targetLevel === 'building' && targetPath) {
+            scopeBuilding = targetPath;
+        }
+        else if (targetLevel === 'department' && targetPath) {
+            const parts = targetPath.split('|');
+            scopeBuilding = parts[0] || null;
+            scopeFloor = parts[1] || null;
+            scopeDept = parts[2] || null;
+        }
         const existingSettings = await prisma.riskDepartmentSetting.findMany({
             where: { facilityId }
         });
         const settingNames = new Set(existingSettings.map(s => s.name.toLowerCase().trim()));
+        // Yardımcı: Excel satırındaki isimden SADECE BU TESİSE AİT en uygun lokasyonu bul (Tesis Bazlı Akıllı Eşleştirme)
+        const findBestLocation = (deptName, areaName) => {
+            if (fixedTargetLocation)
+                return fixedTargetLocation;
+            const normDept = deptName.toLowerCase().trim();
+            const normArea = (areaName || '').toLowerCase().trim();
+            // SADECE BU TESİSE (facilityId) AİT lokasyonlar taranır
+            let candidates = facilityLocations;
+            if (scopeBuilding) {
+                candidates = candidates.filter(l => l.building?.toLowerCase().trim() === scopeBuilding.toLowerCase().trim());
+            }
+            if (scopeFloor) {
+                candidates = candidates.filter(l => l.floor?.toLowerCase().trim() === scopeFloor.toLowerCase().trim());
+            }
+            if (scopeDept) {
+                candidates = candidates.filter(l => l.department?.toLowerCase().trim() === scopeDept.toLowerCase().trim());
+            }
+            // 1. Bu tesiste Bina > Kat > Birim tam örtüşüyor mu?
+            const fullHierarchyMatch = candidates.find(l => {
+                const matchD = l.department && l.department.toLowerCase().trim() === normDept;
+                const matchA = normArea && l.description && l.description.toLowerCase().trim() === normArea;
+                return matchD && (normArea ? matchA : true);
+            });
+            if (fullHierarchyMatch)
+                return fullHierarchyMatch;
+            // 2. Birim/Departman adıyla tam eşleşen tanımlı lokasyon (Sadece bu tesiste)
+            const matchDept = candidates.find(l => (l.department && l.department.toLowerCase().trim() === normDept) ||
+                (l.name && l.name.toLowerCase().trim() === normDept));
+            if (matchDept)
+                return matchDept;
+            // 3. Alan / Mahal adıyla tam eşleşen lokasyon (description veya name)
+            if (normArea) {
+                const matchArea = candidates.find(l => (l.description && l.description.toLowerCase().trim() === normArea) ||
+                    (l.name && l.name.toLowerCase().trim() === normArea));
+                if (matchArea)
+                    return matchArea;
+            }
+            // 4. İçerik eşleşmesi (Sadece bu tesisin adayları içinde)
+            const partialMatch = candidates.find(l => (l.department && (l.department.toLowerCase().includes(normDept) || normDept.includes(l.department.toLowerCase()))) ||
+                (l.name && (l.name.toLowerCase().includes(normDept) || normDept.includes(l.name.toLowerCase()))));
+            if (partialMatch)
+                return partialMatch;
+            return null;
+        };
         let created = 0;
         let skipped = 0;
         for (const row of rows) {
-            const deptName = row.department || 'Genel';
-            // Departman yoksa otomatik oluştur (spec §4.4)
-            let dept = await prisma.facilityLocation.findUnique({
-                where: { facilityId_name: { facilityId, name: deptName } },
-            });
+            const deptName = (row.department || scopeDept || 'Genel').trim();
+            const areaName = (row.area || deptName).trim();
+            // En uygun lokasyonu bul
+            let dept = findBestLocation(deptName, areaName);
+            // Eşleşme yoksa seçilen bina/kat veya varsayılan bina altına bağlayarak bul veya oluştur
             if (!dept) {
-                // Global Department senkronizasyonu
-                const globalDept = await prisma.facilityLocation.findFirst({
-                    where: { name: { equals: deptName.trim(), mode: 'insensitive' } }
-                });
-                if (!globalDept) {
-                    await prisma.facilityLocation.create({ data: { facilityId: req.body.facilityId || "tmp", name: deptName.trim() } });
+                const buildingToUse = scopeBuilding || facilityLocations.find(l => l.building)?.building || 'Ana Bina';
+                const floorToUse = scopeFloor || 'Genel';
+                const departmentToUse = scopeDept || deptName;
+                const targetLocName = `${buildingToUse} - ${floorToUse} - ${departmentToUse}`;
+                // 1. Önce RAM ve DB'deki tam isme bak
+                dept = facilityLocations.find(l => l.name === targetLocName);
+                if (!dept) {
+                    dept = await prisma.facilityLocation.findUnique({
+                        where: {
+                            facilityId_name: {
+                                facilityId,
+                                name: targetLocName
+                            }
+                        }
+                    });
                 }
-                // @ts-ignore
-                dept = await prisma.facilityLocation.create({});
-                // @ts-ignore
-            }
-            else if (!dept.code) {
-                // @ts-ignore
-                dept = await prisma.facilityLocation.update({
-                    where: { id: dept.id },
-                });
+                // 2. Halen yoksa oluştur
+                if (!dept) {
+                    try {
+                        dept = await prisma.facilityLocation.create({
+                            data: {
+                                facilityId,
+                                name: targetLocName,
+                                building: buildingToUse,
+                                floor: floorToUse,
+                                department: departmentToUse,
+                                description: areaName !== deptName ? areaName : null
+                            }
+                        });
+                    }
+                    catch (createErr) {
+                        // Yarış durumu / aynı isimde varsa tekrar çek
+                        dept = await prisma.facilityLocation.findFirst({
+                            where: { facilityId, name: targetLocName }
+                        });
+                    }
+                }
+                if (dept && !facilityLocations.some(l => l.id === dept.id)) {
+                    facilityLocations.push(dept);
+                }
             }
             // Auto-create responsibles in settings if they don't exist
             for (const field of ['improvementResponsible', 'controlResponsible']) {
@@ -218,7 +320,7 @@ router.post('/import', auth_1.authMiddleware, async (req, res) => {
                         finalScore,
                         finalLevel: finalScore ? scoreToLevel(finalScore) : null,
                         status,
-                        createdBy: username,
+                        createdBy: req.user?.username || 'Sistem',
                         // Yeni alanlar
                         detectionDate: parseDate(row.detectionDate),
                         impactDamage: row.impactDamage || null,
@@ -232,6 +334,14 @@ router.post('/import', auth_1.authMiddleware, async (req, res) => {
                         controlResponsible: row.controlResponsible || null,
                         controlResult: row.controlResult || null,
                         legislation: row.legislation || null,
+                        auditLogs: {
+                            create: {
+                                action: 'Excel İle Aktarıldı',
+                                details: `Risk kaydı toplu Excel aktarımıyla oluşturuldu. Başlangıç Skoru: ${initialScore} (${scoreToLevel(initialScore)}).`,
+                                username: req.user?.username || 'Sistem',
+                                createdAt: parseDate(row.detectionDate) || new Date(),
+                            }
+                        }
                     },
                 });
                 created++;
@@ -285,12 +395,20 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
             const f = pathParts[1] || '';
             const d = pathParts[2] || '';
             const matchedIds = allLocs.filter(l => {
-                if (level === 'building')
-                    return l.building === b || l.name === b || l.department === b;
-                if (level === 'floor')
-                    return l.building === b && l.floor === f;
-                if (level === 'department')
-                    return l.building === b && l.floor === f && l.department === d;
+                if (level === 'building') {
+                    return l.building === b || l.name === b || (!l.building && b === 'Belirtilmemiş Bina');
+                }
+                if (level === 'floor') {
+                    const locB = l.building || 'Belirtilmemiş Bina';
+                    const locF = l.floor || 'Belirtilmemiş Kat';
+                    return locB === b && locF === f;
+                }
+                if (level === 'department') {
+                    const locB = l.building || 'Belirtilmemiş Bina';
+                    const locF = l.floor || 'Belirtilmemiş Kat';
+                    const locD = l.department || 'Belirtilmemiş Birim';
+                    return locB === b && locF === f && locD === d;
+                }
                 return false;
             }).map(l => l.id);
             if (matchedIds.length === 0) {
@@ -328,11 +446,21 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
         const risks = await prisma.riskLifecycle.findMany({
             where,
             include: {
+                location: {
+                    include: {
+                        facility: true
+                    }
+                },
                 auditLogs: { orderBy: { createdAt: 'desc' } }
             },
             orderBy: [{ status: 'asc' }, { riskNo: 'asc' }],
         });
-        res.json(risks);
+        const mappedRisks = risks.map(r => ({
+            ...r,
+            departmentId: r.locationId,
+            department: r.location ? { id: r.location.id, name: r.location.department || r.location.name || 'Bölüm' } : null
+        }));
+        res.json(mappedRisks);
     }
     catch (error) {
         console.error('Risk lifecycle list error:', error);
@@ -346,17 +474,32 @@ router.get('/:id', auth_1.authMiddleware, async (req, res) => {
             where: { id: req.params.id },
             include: {
                 location: true,
-                auditLogs: { orderBy: { createdAt: 'desc' } }
+                auditLogs: {
+                    orderBy: { createdAt: 'desc' },
+                    include: { user: { select: { fullName: true } } }
+                }
             },
         });
         if (!risk)
             return res.status(404).json({ error: 'Risk bulunamadı.' });
-        // @ts-ignore
-        const hasAccess = await checkFacilityAccess(req, risk.location.facilityId);
+        const hasAccess = await checkFacilityAccess(req, risk.location?.facilityId || '');
         if (!hasAccess) {
             return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
         }
-        res.json(risk);
+        const mappedRisk = {
+            ...risk,
+            departmentId: risk.locationId,
+            department: risk.location ? {
+                id: risk.location.id,
+                name: risk.location.department || risk.location.name || 'Bölüm',
+                facilityId: risk.location.facilityId,
+            } : null,
+            auditLogs: risk.auditLogs.map(log => ({
+                ...log,
+                displayName: log.user?.fullName || log.userFullName || (log.username === 'Sistem' ? 'Sistem Yöneticisi' : log.username)
+            }))
+        };
+        res.json(mappedRisk);
     }
     catch (error) {
         res.status(500).json({ error: 'Risk alınamadı.' });
@@ -374,17 +517,6 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
         });
         if (!dept)
             return res.status(404).json({ error: 'Departman/Lokasyon bulunamadı.' });
-        // Eğer departmanın kodu yoksa, isminden oluşturup kaydet
-        // @ts-ignore
-        if (!dept.code) {
-            const generatedCode = generateDeptCode(dept.name || dept.department || 'Brm');
-            await prisma.facilityLocation.update({
-                where: { id: dept.id },
-                data: {} // Mock update since there is no code column? The old code tried to do this.
-            });
-            // @ts-ignore
-            dept.code = generatedCode;
-        }
         const hasAccess = await checkFacilityAccess(req, dept.facilityId);
         if (!hasAccess) {
             return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
@@ -449,6 +581,7 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
                         action: 'Oluşturuldu',
                         details: 'Yeni risk kaydı oluşturuldu.',
                         username: username || 'Sistem',
+                        createdAt: parseDate(detectionDate) || new Date(),
                     }
                 }
             },
@@ -483,8 +616,7 @@ router.put('/:id', auth_1.authMiddleware, async (req, res) => {
         delete data.updatedAt;
         if (data.locationId) {
             const newDept = await prisma.facilityLocation.findUnique({
-                // @ts-ignore
-                where: { id: parseInt(data.locationId) },
+                where: { id: String(data.locationId) },
                 select: { facilityId: true }
             });
             if (!newDept)
@@ -501,7 +633,7 @@ router.put('/:id', auth_1.authMiddleware, async (req, res) => {
             data.finalLevel = scoreToLevel(Number(data.finalScore));
         }
         const numFields = [
-            'locationId', 'riskNo', 'initialProb', 'initialFreq', 'initialSev', 'initialScore',
+            'riskNo', 'initialProb', 'initialFreq', 'initialSev', 'initialScore',
             'finalProb', 'finalFreq', 'finalSev', 'finalScore',
         ];
         numFields.forEach(f => {
@@ -518,6 +650,16 @@ router.put('/:id', auth_1.authMiddleware, async (req, res) => {
                 data[f] = parseDate(data[f]);
             }
         });
+        // Array ve JSON alanları
+        if (data.effectivenessImages !== undefined && !Array.isArray(data.effectivenessImages)) {
+            data.effectivenessImages = [];
+        }
+        if (data.initialImages !== undefined && !Array.isArray(data.initialImages)) {
+            data.initialImages = [];
+        }
+        if (data.actionImages !== undefined && !Array.isArray(data.actionImages)) {
+            data.actionImages = [];
+        }
         const updatedRisk = await prisma.riskLifecycle.update({
             where: { id: req.params.id },
             data,
@@ -525,7 +667,14 @@ router.put('/:id', auth_1.authMiddleware, async (req, res) => {
         });
         // Audit Log oluşturma mantığı
         const changedFields = {};
-        const trackFields = ['status', 'detectionDate', 'dueDate', 'improvementResponsible', 'initialScore', 'finalScore', 'actionDate', 'actionsTaken', 'hazard', 'riskCategory'];
+        const trackFields = [
+            'status', 'detectionDate', 'dueDate', 'dueDatePeriod',
+            'improvementResponsible', 'initialScore', 'initialLevel',
+            'finalScore', 'finalLevel', 'actionDate', 'actionsTaken',
+            'hazard', 'riskDescription', 'impactDamage', 'affectedPeople',
+            'legislation', 'firstActionPlan', 'effectivenessMethod',
+            'controlResponsible', 'controlResult', 'riskCategory', 'subCategory', 'area'
+        ];
         trackFields.forEach(f => {
             const oldVal = risk[f];
             const newVal = updatedRisk[f];
@@ -535,18 +684,51 @@ router.put('/:id', auth_1.authMiddleware, async (req, res) => {
                     changedFields[f] = { old: oldVal, new: newVal };
                 }
             }
-            else if (oldVal !== newVal) {
+            else if (oldVal !== newVal && !(oldVal == null && newVal === '')) {
                 changedFields[f] = { old: oldVal, new: newVal };
             }
         });
         if (Object.keys(changedFields).length > 0) {
+            let logAction = 'Risk Bilgileri Güncellendi';
+            let logDetails = 'Risk kaydında güncellemeler yapıldı.';
+            // Log için mantıklı bir tarih belirle: Kullanıcının girdiği işlem/aksiyon/durum/tespit tarihi varsa onu kullan
+            let logDate = new Date();
+            if (changedFields.status) {
+                logAction = `Durum Değişti: ${statusNames[changedFields.status.new] || changedFields.status.new}`;
+                logDetails = `Risk durumu "${statusNames[changedFields.status.old] || changedFields.status.old}" → "${statusNames[changedFields.status.new] || changedFields.status.new}" olarak güncellendi.`;
+                if (updatedRisk.statusDate)
+                    logDate = new Date(updatedRisk.statusDate);
+            }
+            else if (changedFields.controlResult || changedFields.effectivenessMethod || changedFields.controlResponsible) {
+                logAction = 'Etkinlik Ölçümü ve Sonuç Kaydedildi';
+                logDetails = `Etkinlik denetim sonucu işlendi. Kontrol Sonucu: ${updatedRisk.controlResult || 'Tamamlandı'}.`;
+                if (updatedRisk.statusDate)
+                    logDate = new Date(updatedRisk.statusDate);
+            }
+            else if (changedFields.finalScore || changedFields.finalLevel) {
+                logAction = 'İyileştirme Skoru Değerlendirildi';
+                logDetails = `İyileştirme sonrası skor ${changedFields.finalScore?.new || updatedRisk.finalScore} (${changedFields.finalLevel?.new || updatedRisk.finalLevel}) olarak işlendi.`;
+                if (updatedRisk.actionDate)
+                    logDate = new Date(updatedRisk.actionDate);
+            }
+            else if (changedFields.actionsTaken || changedFields.actionDate) {
+                logAction = 'İyileştirme Aksiyonu Kaydedildi';
+                logDetails = 'Uygulanan iyileştirici faaliyetler ve tarih güncellendi.';
+                if (updatedRisk.actionDate)
+                    logDate = new Date(updatedRisk.actionDate);
+            }
+            else if (changedFields.detectionDate && updatedRisk.detectionDate) {
+                logDate = new Date(updatedRisk.detectionDate);
+            }
             const newLog = await prisma.riskAuditLog.create({
                 data: {
                     riskId: updatedRisk.id,
-                    action: 'Güncellendi',
-                    details: 'Risk detayları güncellendi.',
+                    action: logAction,
+                    details: logDetails,
                     changedFields,
                     username: req.user?.username || 'Sistem',
+                    userFullName: req.user?.fullName || null,
+                    createdAt: logDate,
                 }
             });
             updatedRisk.auditLogs.unshift(newLog);
@@ -556,6 +738,44 @@ router.put('/:id', auth_1.authMiddleware, async (req, res) => {
     catch (error) {
         console.error('Risk update error:', error);
         res.status(500).json({ error: 'Risk güncellenemedi.' });
+    }
+});
+// PATCH /api/risks/lifecycle/:id/logs/:logId — Belirli bir logun tarihini veya açıklamasını güncelleme
+router.patch('/:id/logs/:logId', auth_1.authMiddleware, async (req, res) => {
+    try {
+        const { id, logId } = req.params;
+        const { createdAt, details, action } = req.body;
+        const log = await prisma.riskAuditLog.findUnique({
+            where: { id: logId },
+            include: { risk: { include: { location: true } } }
+        });
+        if (!log || log.riskId !== id) {
+            return res.status(404).json({ error: 'Log kaydı bulunamadı.' });
+        }
+        // @ts-ignore
+        const hasAccess = await checkFacilityAccess(req, log.risk.location?.facilityId || '');
+        if (!hasAccess) {
+            return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
+        }
+        const updateData = {};
+        if (createdAt) {
+            const parsed = parseDate(createdAt);
+            if (parsed)
+                updateData.createdAt = parsed;
+        }
+        if (details !== undefined)
+            updateData.details = details;
+        if (action !== undefined)
+            updateData.action = action;
+        const updatedLog = await prisma.riskAuditLog.update({
+            where: { id: logId },
+            data: updateData,
+        });
+        res.json(updatedLog);
+    }
+    catch (error) {
+        console.error('Audit log update error:', error);
+        res.status(500).json({ error: 'Log güncellenemedi.' });
     }
 });
 // DELETE /api/risks/lifecycle/:id

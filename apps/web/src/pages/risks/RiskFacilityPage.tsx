@@ -13,7 +13,6 @@ import RiskExcelImport from './RiskExcelImport';
 import { useAuth } from '@/context/AuthContext';
 import { FacilityRiskPrintModal } from '@/components/risks/FacilityRiskPrintModal';
 import { Printer } from 'lucide-react';
-import LocationsManagerModal from '@/components/panel/LocationsManagerModal';
 
 
 const API = import.meta.env.VITE_API_URL || '';
@@ -46,7 +45,6 @@ export default function RiskFacilityPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showImport, setShowImport] = useState(false);
   const [showBulkPrint, setShowBulkPrint] = useState(false);
-  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 
   const { data: departments = [], isLoading, refetch } = useQuery({
     queryKey: ['risk-departments', facilityId],
@@ -151,9 +149,6 @@ export default function RiskFacilityPage() {
           <p className="text-xs text-muted-foreground">Lokasyon bazlı risk yönetimi</p>
         </div>
         <div className="flex gap-2 shrink-0">
-          <Button size="sm" variant="outline" onClick={() => setIsLocationModalOpen(true)} className="shadow-sm border-purple-200 text-purple-700 hover:bg-purple-50">
-            <MapPin className="w-4 h-4 mr-1.5" /> Lokasyon Yönetimi
-          </Button>
           <Button size="sm" variant="outline" onClick={() => setShowBulkPrint(true)} className="shadow-sm border-blue-200 text-blue-700 hover:bg-blue-50">
             <Printer className="w-4 h-4 mr-1.5" /> Toplu Risk Çıktısı
           </Button>
@@ -614,7 +609,6 @@ export default function RiskFacilityPage() {
           facility={facility}
         />
       )}
-      <LocationsManagerModal facilityId={facilityId || ''} isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} />
     </div>
   );
 }

@@ -6,7 +6,8 @@ import {
   Shield, LayoutDashboard, Building2, Users, Briefcase, UserCheck,
   ClipboardList, FileText, Settings, Bell, ChevronDown, LogOut,
   User, BarChart3, ChevronRight, LayoutGrid, Database, Users2, Mail,
-  BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame, PenTool, Menu, X, ShoppingCart, PieChart, Calendar, AlertCircle, MessageSquare, BookOpen, DoorClosed
+  BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame, PenTool, Menu, X, ShoppingCart, PieChart, Calendar, AlertCircle, MessageSquare, BookOpen, DoorClosed,
+  PanelLeftClose, PanelLeftOpen, PanelLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -85,9 +86,10 @@ const workflowNavItems = (hasAdminAccess: boolean) => [
   ...(hasAdminAccess ? [{ label: 'Ayarlar', icon: Settings, to: '/workflow/settings' }] : []),
 ];
 
-const riskNavItems = [
+const riskNavItems = (hasAdminAccess: boolean) => [
   { label: 'GENEL', type: 'group' },
-  { label: 'Dashboard', icon: LayoutDashboard, to: '/risks', end: true },
+  { label: 'Tesisler', icon: LayoutDashboard, to: '/risks', end: true },
+  ...(hasAdminAccess ? [{ label: '🏢 Tüm Tesisler Kokpiti', icon: Building2, to: '/risks/facility/all' }] : []),
   { label: 'RAPORLAR', type: 'group' },
   { label: 'Analiz ve Raporlar', icon: PieChart, to: '/risks/reports' },
   { label: 'AYARLAR', type: 'group' },
@@ -222,7 +224,24 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const { openChat, hasUnread } = useChat();
+
+  const toggleCollapse = () => {
+    setIsCollapsed(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('sidebar_collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   // Route'a göre sidebar menüsünü belirle
   const path = location.pathname;
@@ -239,7 +258,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     navItems = workflowNavItems(!!hasAdminAccess);
     moduleName = 'İş Takip (Workflow)';
   } else if (path.startsWith('/risks')) {
-    navItems = riskNavItems;
+    navItems = riskNavItems(!!hasAdminAccess);
     moduleName = 'Risk Yaşam Döngüsü';
   } else if (path.startsWith('/hazmat')) {
     navItems = hazmatNavItems;
@@ -313,37 +332,83 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
       {/* Sidebar */}
       <aside className={cn(
-        "w-64 bg-card border-r flex flex-col shrink-0 shadow-sm fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 print:hidden",
-        isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        "bg-card border-r flex flex-col shrink-0 shadow-sm fixed inset-y-0 left-0 z-50 transition-all duration-300 ease-in-out lg:relative lg:translate-x-0 print:hidden",
+        isSidebarOpen ? "translate-x-0" : "-translate-x-full",
+        isCollapsed ? "lg:w-[68px]" : "lg:w-64",
+        "w-64"
       )}>
-        {/* Logo & Module Name */}
-        <div className="h-16 flex flex-col justify-center px-5 border-b relative">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 flex items-center justify-center">
-              <img src="/mlpcare.jpg" alt="MLP Care Logo" className="w-full h-full object-contain rounded" />
-            </div>
-            <span className="font-semibold tracking-tight text-sm">
-              HSE Portalı
-            </span>
-          </div>
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mt-0.5 ml-8">
-            {moduleName}
-          </span>
+        {/* Logo & Header / Collapse Button */}
+        <div className={cn(
+          "h-16 flex items-center border-b relative transition-all duration-300",
+          isCollapsed ? "justify-center px-2" : "justify-between px-4"
+        )}>
+          {isCollapsed ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleCollapse}
+              className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors hidden lg:flex items-center justify-center"
+              title="Kenar çubuğunu aç"
+            >
+              <PanelLeftOpen className="w-5 h-5" />
+            </Button>
+          ) : (
+            <>
+              <div className="flex flex-col justify-center min-w-0 pr-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 flex items-center justify-center shrink-0">
+                    <img src="/mlpcare.jpg" alt="MLP Care Logo" className="w-full h-full object-contain rounded" />
+                  </div>
+                  <span className="font-semibold tracking-tight text-sm truncate">
+                    HSE Portalı
+                  </span>
+                </div>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mt-0.5 ml-8 truncate">
+                  {moduleName}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleCollapse}
+                className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors hidden lg:flex shrink-0 items-center justify-center"
+                title="Kenar çubuğunu kapat"
+              >
+                <PanelLeftClose className="w-4 h-4" />
+              </Button>
+            </>
+          )}
+
+          {/* Mobile close button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsSidebarOpen(false)}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground lg:hidden"
+          >
+            <X className="w-4 h-4" />
+          </Button>
         </div>
 
         {/* Facility Switcher (Show for modules that need it) */}
         {(path.startsWith('/isg-kurul') || path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management') || path.startsWith('/renovation-report') || path.startsWith('/checklists') || path.startsWith('/safety-management/fire-doors') || path.startsWith('/safety-management/elevator-tracking')) && (
           <div className="flex-shrink-0">
-            <FacilitySwitcher />
+            <FacilitySwitcher isCollapsed={isCollapsed} />
           </div>
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+        <nav className={cn(
+          "flex-1 overflow-y-auto py-3 space-y-1 transition-all duration-300",
+          isCollapsed ? "px-2" : "px-3"
+        )}>
           {navItems.map((item, i) => {
             if (item.type === 'group') {
+              if (isCollapsed) {
+                return <div key={i} className="my-2 border-t border-border/40" />;
+              }
               return (
-                <div key={i} className="px-2 pt-5 pb-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <div key={i} className="px-2 pt-4 pb-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                   {item.label}
                 </div>
               );
@@ -358,7 +423,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             } else if (item.to === '/fire-equipment/list') {
               customIsActive = location.pathname === item.to && (!decodedSearch || !decodedSearch.includes('category='));
             } else {
-              customIsActive = location.pathname.startsWith(item.to!) || (location.pathname === item.to); // React router default behavior approximation
+              customIsActive = location.pathname.startsWith(item.to!) || (location.pathname === item.to);
               if ((item as any).end && location.pathname !== item.to) {
                 customIsActive = false;
               }
@@ -370,38 +435,50 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 to={item.to!}
                 end={!!(item as any).end}
                 onClick={() => setIsSidebarOpen(false)}
+                title={isCollapsed ? item.label : undefined}
                 className={() =>
                   cn(
-                    'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors group',
+                    'flex items-center rounded-lg text-sm font-medium transition-colors group relative',
+                    isCollapsed ? 'justify-center h-10 w-full px-0' : 'gap-3 px-3 py-2',
                     customIsActive
                       ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   )
                 }
               >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span className="truncate">{item.label}</span>
+                <Icon className={cn("shrink-0", isCollapsed ? "w-5 h-5" : "w-4 h-4")} />
+                {!isCollapsed && <span className="truncate">{item.label}</span>}
               </NavLink>
             );
           })}
         </nav>
 
         {/* User Section */}
-        <div className="border-t p-3">
+        <div className={cn("border-t transition-all duration-300", isCollapsed ? "p-2 flex justify-center" : "p-3")}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted transition-colors text-left">
+              <button 
+                title={isCollapsed ? `${user?.fullName || 'Kullanıcı'} (${user?.username || ''})` : undefined}
+                className={cn(
+                  "flex items-center rounded-lg hover:bg-muted transition-colors text-left",
+                  isCollapsed ? "h-10 w-10 justify-center p-0" : "w-full gap-3 px-3 py-2"
+                )}
+              >
                 <div className="w-8 h-8 bg-slate-900 dark:bg-slate-50 rounded-full flex items-center justify-center shrink-0">
                   <User className="w-4 h-4 text-white dark:text-slate-900" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{user?.fullName}</p>
-                  <p className="text-xs text-muted-foreground truncate">{user?.username}</p>
-                </div>
-                <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                {!isCollapsed && (
+                  <>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{user?.fullName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user?.username}</p>
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                  </>
+                )}
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuContent align={isCollapsed ? "end" : "start"} side={isCollapsed ? "right" : "top"} sideOffset={8} className="w-56">
               <DropdownMenuItem onClick={() => navigate('/profile')}>
                 <User className="w-4 h-4 mr-2" /> Profil
               </DropdownMenuItem>
@@ -425,7 +502,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <div className="flex-1 flex flex-col overflow-hidden bg-muted/20 print:bg-white print:overflow-visible print:block">
         {/* Top Header */}
         <header className="h-16 bg-card border-b flex items-center justify-between px-4 lg:px-6 shrink-0 print:hidden">
-          <div className="flex items-center gap-2 lg:gap-4">
+          <div className="flex items-center gap-2 lg:gap-3">
+            {/* Mobile Sidebar Toggle */}
             <Button 
               variant="ghost" 
               size="icon" 
@@ -434,6 +512,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
             >
               <Menu className="w-5 h-5" />
             </Button>
+
+            {/* Collapsed mode expand button in top header if collapsed */}
+            {isCollapsed && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleCollapse}
+                className="hidden lg:flex h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
+                title="Kenar çubuğunu aç"
+              >
+                <PanelLeftOpen className="w-4 h-4" />
+              </Button>
+            )}
+
             <Button 
               variant="outline" 
               size="sm" 
@@ -495,7 +587,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-6 print:p-0 print:overflow-visible print:block">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-[1600px] w-full mx-auto">
             {children}
           </div>
         </main>

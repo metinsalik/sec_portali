@@ -19,6 +19,10 @@ export default function FacilityCategoriesPage() {
   const [filterSubCategory, setFilterSubCategory] = useState('');
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
 
+  useEffect(() => {
+    setFilterMainCategory(searchParams.get('category') || '');
+  }, [searchParams]);
+
   // Tesis Bilgisi
   const { data: facilities = [] } = useQuery({
     queryKey: ['risk-facilities'],

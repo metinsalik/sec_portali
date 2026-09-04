@@ -138,9 +138,9 @@ export const ReportTemplateScalarFieldEnumSchema = z.enum(['id','code','name','v
 
 export const RiskExpertFacilityScalarFieldEnumSchema = z.enum(['expertUsername','facilityId']);
 
-export const RiskLifecycleScalarFieldEnumSchema = z.enum(['id','locationId','riskNo','riskCategory','subCategory','area','method','activity','hazard','riskDescription','initialCondition','initialImage','initialImages','initialProb','initialFreq','initialSev','initialScore','initialLevel','firstActionPlan','actionsTaken','actionDate','actionBy','actionImage','actionImages','followUpMeasure','extraImprovement','finalProb','finalFreq','finalSev','finalScore','finalLevel','status','statusDate','createdBy','createdAt','updatedAt','affectedPeople','controlResponsible','controlResult','detectionDate','dueDate','effectivenessMethod','impactDamage','improvementResponsible','legislation','postImprovementDueDate','dueDatePeriod','postImprovementResponsible']);
+export const RiskLifecycleScalarFieldEnumSchema = z.enum(['id','locationId','riskNo','riskCategory','subCategory','area','method','activity','hazard','riskDescription','initialCondition','initialImage','initialImages','initialProb','initialFreq','initialSev','initialScore','initialLevel','firstActionPlan','actionsTaken','actionDate','actionBy','actionImage','actionImages','followUpMeasure','extraImprovement','finalProb','finalFreq','finalSev','finalScore','finalLevel','status','statusDate','createdBy','createdAt','updatedAt','affectedPeople','controlResponsible','controlResult','detectionDate','dueDate','effectivenessMethod','impactDamage','improvementResponsible','legislation','postImprovementDueDate','dueDatePeriod','postImprovementResponsible','effectivenessImages','documents']);
 
-export const RiskAuditLogScalarFieldEnumSchema = z.enum(['id','riskId','action','details','changedFields','username','createdAt']);
+export const RiskAuditLogScalarFieldEnumSchema = z.enum(['id','riskId','action','details','changedFields','username','userFullName','createdAt']);
 
 export const RiskDepartmentSettingScalarFieldEnumSchema = z.enum(['id','facilityId','name','createdAt','updatedAt']);
 
@@ -456,6 +456,7 @@ export type UserRelations = {
   workflowRole?: WorkflowUserRoleWithRelations | null;
   checklistTemplates: ChecklistTemplateWithRelations[];
   checklistSubmissions: ChecklistSubmissionWithRelations[];
+  riskAuditLogs: RiskAuditLogWithRelations[];
 };
 
 export type UserWithRelations = z.infer<typeof UserSchema> & UserRelations
@@ -485,6 +486,7 @@ export const UserWithRelationsSchema: z.ZodType<UserWithRelations> = UserSchema.
   workflowRole: z.lazy(() => WorkflowUserRoleWithRelationsSchema).nullable(),
   checklistTemplates: z.lazy(() => ChecklistTemplateWithRelationsSchema).array(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionWithRelationsSchema).array(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogWithRelationsSchema).array(),
 }))
 
 /////////////////////////////////////////
@@ -1819,6 +1821,8 @@ export const RiskLifecycleSchema = z.object({
   postImprovementDueDate: z.coerce.date().nullable(),
   dueDatePeriod: z.string().nullable(),
   postImprovementResponsible: z.string().nullable(),
+  effectivenessImages: z.string().array(),
+  documents: JsonValueSchema.nullable(),
 })
 
 export type RiskLifecycle = z.infer<typeof RiskLifecycleSchema>
@@ -1831,7 +1835,9 @@ export type RiskLifecycleRelations = {
   location?: FacilityLocationWithRelations | null;
 };
 
-export type RiskLifecycleWithRelations = z.infer<typeof RiskLifecycleSchema> & RiskLifecycleRelations
+export type RiskLifecycleWithRelations = Omit<z.infer<typeof RiskLifecycleSchema>, "documents"> & {
+  documents?: JsonValueType | null;
+} & RiskLifecycleRelations
 
 export const RiskLifecycleWithRelationsSchema: z.ZodType<RiskLifecycleWithRelations> = RiskLifecycleSchema.merge(z.object({
   auditLogs: z.lazy(() => RiskAuditLogWithRelationsSchema).array(),
@@ -1849,6 +1855,7 @@ export const RiskAuditLogSchema = z.object({
   details: z.string().nullable(),
   changedFields: JsonValueSchema.nullable(),
   username: z.string(),
+  userFullName: z.string().nullable(),
   createdAt: z.coerce.date(),
 })
 
@@ -1859,6 +1866,7 @@ export type RiskAuditLog = z.infer<typeof RiskAuditLogSchema>
 
 export type RiskAuditLogRelations = {
   risk: RiskLifecycleWithRelations;
+  user?: UserWithRelations | null;
 };
 
 export type RiskAuditLogWithRelations = Omit<z.infer<typeof RiskAuditLogSchema>, "changedFields"> & {
@@ -1867,6 +1875,7 @@ export type RiskAuditLogWithRelations = Omit<z.infer<typeof RiskAuditLogSchema>,
 
 export const RiskAuditLogWithRelationsSchema: z.ZodType<RiskAuditLogWithRelations> = RiskAuditLogSchema.merge(z.object({
   risk: z.lazy(() => RiskLifecycleWithRelationsSchema),
+  user: z.lazy(() => UserWithRelationsSchema).nullable(),
 }))
 
 /////////////////////////////////////////
@@ -5632,6 +5641,7 @@ export const UserIncludeSchema: z.ZodType<Prisma.UserInclude> = z.object({
   workflowRole: z.union([z.boolean(),z.lazy(() => WorkflowUserRoleArgsSchema)]).optional(),
   checklistTemplates: z.union([z.boolean(),z.lazy(() => ChecklistTemplateFindManyArgsSchema)]).optional(),
   checklistSubmissions: z.union([z.boolean(),z.lazy(() => ChecklistSubmissionFindManyArgsSchema)]).optional(),
+  riskAuditLogs: z.union([z.boolean(),z.lazy(() => RiskAuditLogFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => UserCountOutputTypeArgsSchema)]).optional(),
 }).strict();
 
@@ -5668,6 +5678,7 @@ export const UserCountOutputTypeSelectSchema: z.ZodType<Prisma.UserCountOutputTy
   wfTransferRequestsTarget: z.boolean().optional(),
   checklistTemplates: z.boolean().optional(),
   checklistSubmissions: z.boolean().optional(),
+  riskAuditLogs: z.boolean().optional(),
 }).strict();
 
 export const UserSelectSchema: z.ZodType<Prisma.UserSelect> = z.object({
@@ -5708,6 +5719,7 @@ export const UserSelectSchema: z.ZodType<Prisma.UserSelect> = z.object({
   workflowRole: z.union([z.boolean(),z.lazy(() => WorkflowUserRoleArgsSchema)]).optional(),
   checklistTemplates: z.union([z.boolean(),z.lazy(() => ChecklistTemplateFindManyArgsSchema)]).optional(),
   checklistSubmissions: z.union([z.boolean(),z.lazy(() => ChecklistSubmissionFindManyArgsSchema)]).optional(),
+  riskAuditLogs: z.union([z.boolean(),z.lazy(() => RiskAuditLogFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => UserCountOutputTypeArgsSchema)]).optional(),
 }).strict()
 
@@ -7070,6 +7082,8 @@ export const RiskLifecycleSelectSchema: z.ZodType<Prisma.RiskLifecycleSelect> = 
   postImprovementDueDate: z.boolean().optional(),
   dueDatePeriod: z.boolean().optional(),
   postImprovementResponsible: z.boolean().optional(),
+  effectivenessImages: z.boolean().optional(),
+  documents: z.boolean().optional(),
   auditLogs: z.union([z.boolean(),z.lazy(() => RiskAuditLogFindManyArgsSchema)]).optional(),
   location: z.union([z.boolean(),z.lazy(() => FacilityLocationArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => RiskLifecycleCountOutputTypeArgsSchema)]).optional(),
@@ -7080,6 +7094,7 @@ export const RiskLifecycleSelectSchema: z.ZodType<Prisma.RiskLifecycleSelect> = 
 
 export const RiskAuditLogIncludeSchema: z.ZodType<Prisma.RiskAuditLogInclude> = z.object({
   risk: z.union([z.boolean(),z.lazy(() => RiskLifecycleArgsSchema)]).optional(),
+  user: z.union([z.boolean(),z.lazy(() => UserArgsSchema)]).optional(),
 }).strict();
 
 export const RiskAuditLogArgsSchema: z.ZodType<Prisma.RiskAuditLogDefaultArgs> = z.object({
@@ -7094,8 +7109,10 @@ export const RiskAuditLogSelectSchema: z.ZodType<Prisma.RiskAuditLogSelect> = z.
   details: z.boolean().optional(),
   changedFields: z.boolean().optional(),
   username: z.boolean().optional(),
+  userFullName: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   risk: z.union([z.boolean(),z.lazy(() => RiskLifecycleArgsSchema)]).optional(),
+  user: z.union([z.boolean(),z.lazy(() => UserArgsSchema)]).optional(),
 }).strict()
 
 // RISK DEPARTMENT SETTING
@@ -10798,6 +10815,7 @@ export const UserWhereInputSchema: z.ZodType<Prisma.UserWhereInput> = z.object({
   workflowRole: z.union([ z.lazy(() => WorkflowUserRoleNullableRelationFilterSchema), z.lazy(() => WorkflowUserRoleWhereInputSchema) ]).optional().nullable(),
   checklistTemplates: z.lazy(() => ChecklistTemplateListRelationFilterSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionListRelationFilterSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogListRelationFilterSchema).optional(),
 }).strict();
 
 export const UserOrderByWithRelationInputSchema: z.ZodType<Prisma.UserOrderByWithRelationInput> = z.object({
@@ -10838,6 +10856,7 @@ export const UserOrderByWithRelationInputSchema: z.ZodType<Prisma.UserOrderByWit
   workflowRole: z.lazy(() => WorkflowUserRoleOrderByWithRelationInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateOrderByRelationAggregateInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionOrderByRelationAggregateInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogOrderByRelationAggregateInputSchema).optional(),
 }).strict();
 
 export const UserWhereUniqueInputSchema: z.ZodType<Prisma.UserWhereUniqueInput> = z.union([
@@ -10909,6 +10928,7 @@ export const UserWhereUniqueInputSchema: z.ZodType<Prisma.UserWhereUniqueInput> 
   workflowRole: z.union([ z.lazy(() => WorkflowUserRoleNullableRelationFilterSchema), z.lazy(() => WorkflowUserRoleWhereInputSchema) ]).optional().nullable(),
   checklistTemplates: z.lazy(() => ChecklistTemplateListRelationFilterSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionListRelationFilterSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogListRelationFilterSchema).optional(),
 }).strict());
 
 export const UserOrderByWithAggregationInputSchema: z.ZodType<Prisma.UserOrderByWithAggregationInput> = z.object({
@@ -14437,6 +14457,8 @@ export const RiskLifecycleWhereInputSchema: z.ZodType<Prisma.RiskLifecycleWhereI
   postImprovementDueDate: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
   dueDatePeriod: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   postImprovementResponsible: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  effectivenessImages: z.lazy(() => StringNullableListFilterSchema).optional(),
+  documents: z.lazy(() => JsonNullableFilterSchema).optional(),
   auditLogs: z.lazy(() => RiskAuditLogListRelationFilterSchema).optional(),
   location: z.union([ z.lazy(() => FacilityLocationNullableRelationFilterSchema), z.lazy(() => FacilityLocationWhereInputSchema) ]).optional().nullable(),
 }).strict();
@@ -14490,6 +14512,8 @@ export const RiskLifecycleOrderByWithRelationInputSchema: z.ZodType<Prisma.RiskL
   postImprovementDueDate: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   dueDatePeriod: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   postImprovementResponsible: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  effectivenessImages: z.lazy(() => SortOrderSchema).optional(),
+  documents: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   auditLogs: z.lazy(() => RiskAuditLogOrderByRelationAggregateInputSchema).optional(),
   location: z.lazy(() => FacilityLocationOrderByWithRelationInputSchema).optional(),
 }).strict();
@@ -14549,6 +14573,8 @@ export const RiskLifecycleWhereUniqueInputSchema: z.ZodType<Prisma.RiskLifecycle
   postImprovementDueDate: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
   dueDatePeriod: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   postImprovementResponsible: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  effectivenessImages: z.lazy(() => StringNullableListFilterSchema).optional(),
+  documents: z.lazy(() => JsonNullableFilterSchema).optional(),
   auditLogs: z.lazy(() => RiskAuditLogListRelationFilterSchema).optional(),
   location: z.union([ z.lazy(() => FacilityLocationNullableRelationFilterSchema), z.lazy(() => FacilityLocationWhereInputSchema) ]).optional().nullable(),
 }).strict());
@@ -14602,6 +14628,8 @@ export const RiskLifecycleOrderByWithAggregationInputSchema: z.ZodType<Prisma.Ri
   postImprovementDueDate: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   dueDatePeriod: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   postImprovementResponsible: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  effectivenessImages: z.lazy(() => SortOrderSchema).optional(),
+  documents: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   _count: z.lazy(() => RiskLifecycleCountOrderByAggregateInputSchema).optional(),
   _avg: z.lazy(() => RiskLifecycleAvgOrderByAggregateInputSchema).optional(),
   _max: z.lazy(() => RiskLifecycleMaxOrderByAggregateInputSchema).optional(),
@@ -14661,6 +14689,8 @@ export const RiskLifecycleScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma
   postImprovementDueDate: z.union([ z.lazy(() => DateTimeNullableWithAggregatesFilterSchema), z.coerce.date() ]).optional().nullable(),
   dueDatePeriod: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   postImprovementResponsible: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  effectivenessImages: z.lazy(() => StringNullableListFilterSchema).optional(),
+  documents: z.lazy(() => JsonNullableWithAggregatesFilterSchema).optional(),
 }).strict();
 
 export const RiskAuditLogWhereInputSchema: z.ZodType<Prisma.RiskAuditLogWhereInput> = z.object({
@@ -14673,8 +14703,10 @@ export const RiskAuditLogWhereInputSchema: z.ZodType<Prisma.RiskAuditLogWhereInp
   details: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   changedFields: z.lazy(() => JsonNullableFilterSchema).optional(),
   username: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  userFullName: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   risk: z.union([ z.lazy(() => RiskLifecycleRelationFilterSchema), z.lazy(() => RiskLifecycleWhereInputSchema) ]).optional(),
+  user: z.union([ z.lazy(() => UserNullableRelationFilterSchema), z.lazy(() => UserWhereInputSchema) ]).optional().nullable(),
 }).strict();
 
 export const RiskAuditLogOrderByWithRelationInputSchema: z.ZodType<Prisma.RiskAuditLogOrderByWithRelationInput> = z.object({
@@ -14684,8 +14716,10 @@ export const RiskAuditLogOrderByWithRelationInputSchema: z.ZodType<Prisma.RiskAu
   details: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   changedFields: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   username: z.lazy(() => SortOrderSchema).optional(),
+  userFullName: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   risk: z.lazy(() => RiskLifecycleOrderByWithRelationInputSchema).optional(),
+  user: z.lazy(() => UserOrderByWithRelationInputSchema).optional(),
 }).strict();
 
 export const RiskAuditLogWhereUniqueInputSchema: z.ZodType<Prisma.RiskAuditLogWhereUniqueInput> = z.object({
@@ -14701,8 +14735,10 @@ export const RiskAuditLogWhereUniqueInputSchema: z.ZodType<Prisma.RiskAuditLogWh
   details: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   changedFields: z.lazy(() => JsonNullableFilterSchema).optional(),
   username: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  userFullName: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   risk: z.union([ z.lazy(() => RiskLifecycleRelationFilterSchema), z.lazy(() => RiskLifecycleWhereInputSchema) ]).optional(),
+  user: z.union([ z.lazy(() => UserNullableRelationFilterSchema), z.lazy(() => UserWhereInputSchema) ]).optional().nullable(),
 }).strict());
 
 export const RiskAuditLogOrderByWithAggregationInputSchema: z.ZodType<Prisma.RiskAuditLogOrderByWithAggregationInput> = z.object({
@@ -14712,6 +14748,7 @@ export const RiskAuditLogOrderByWithAggregationInputSchema: z.ZodType<Prisma.Ris
   details: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   changedFields: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   username: z.lazy(() => SortOrderSchema).optional(),
+  userFullName: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   _count: z.lazy(() => RiskAuditLogCountOrderByAggregateInputSchema).optional(),
   _max: z.lazy(() => RiskAuditLogMaxOrderByAggregateInputSchema).optional(),
@@ -14728,6 +14765,7 @@ export const RiskAuditLogScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.
   details: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   changedFields: z.lazy(() => JsonNullableWithAggregatesFilterSchema).optional(),
   username: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  userFullName: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
 }).strict();
 
@@ -24659,6 +24697,7 @@ export const UserCreateInputSchema: z.ZodType<Prisma.UserCreateInput> = z.object
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateInputSchema: z.ZodType<Prisma.UserUncheckedCreateInput> = z.object({
@@ -24699,6 +24738,7 @@ export const UserUncheckedCreateInputSchema: z.ZodType<Prisma.UserUncheckedCreat
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUpdateInputSchema: z.ZodType<Prisma.UserUpdateInput> = z.object({
@@ -24739,6 +24779,7 @@ export const UserUpdateInputSchema: z.ZodType<Prisma.UserUpdateInput> = z.object
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateInputSchema: z.ZodType<Prisma.UserUncheckedUpdateInput> = z.object({
@@ -24779,6 +24820,7 @@ export const UserUncheckedUpdateInputSchema: z.ZodType<Prisma.UserUncheckedUpdat
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserCreateManyInputSchema: z.ZodType<Prisma.UserCreateManyInput> = z.object({
@@ -28223,6 +28265,8 @@ export const RiskLifecycleCreateInputSchema: z.ZodType<Prisma.RiskLifecycleCreat
   postImprovementDueDate: z.coerce.date().optional().nullable(),
   dueDatePeriod: z.string().optional().nullable(),
   postImprovementResponsible: z.string().optional().nullable(),
+  effectivenessImages: z.union([ z.lazy(() => RiskLifecycleCreateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
+  documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   auditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutRiskInputSchema).optional(),
   location: z.lazy(() => FacilityLocationCreateNestedOneWithoutRisksInputSchema).optional(),
 }).strict();
@@ -28276,6 +28320,8 @@ export const RiskLifecycleUncheckedCreateInputSchema: z.ZodType<Prisma.RiskLifec
   postImprovementDueDate: z.coerce.date().optional().nullable(),
   dueDatePeriod: z.string().optional().nullable(),
   postImprovementResponsible: z.string().optional().nullable(),
+  effectivenessImages: z.union([ z.lazy(() => RiskLifecycleCreateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
+  documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   auditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutRiskInputSchema).optional(),
 }).strict();
 
@@ -28327,6 +28373,8 @@ export const RiskLifecycleUpdateInputSchema: z.ZodType<Prisma.RiskLifecycleUpdat
   postImprovementDueDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   dueDatePeriod: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   postImprovementResponsible: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  effectivenessImages: z.union([ z.lazy(() => RiskLifecycleUpdateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
+  documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   auditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutRiskNestedInputSchema).optional(),
   location: z.lazy(() => FacilityLocationUpdateOneWithoutRisksNestedInputSchema).optional(),
 }).strict();
@@ -28380,6 +28428,8 @@ export const RiskLifecycleUncheckedUpdateInputSchema: z.ZodType<Prisma.RiskLifec
   postImprovementDueDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   dueDatePeriod: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   postImprovementResponsible: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  effectivenessImages: z.union([ z.lazy(() => RiskLifecycleUpdateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
+  documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   auditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutRiskNestedInputSchema).optional(),
 }).strict();
 
@@ -28432,6 +28482,8 @@ export const RiskLifecycleCreateManyInputSchema: z.ZodType<Prisma.RiskLifecycleC
   postImprovementDueDate: z.coerce.date().optional().nullable(),
   dueDatePeriod: z.string().optional().nullable(),
   postImprovementResponsible: z.string().optional().nullable(),
+  effectivenessImages: z.union([ z.lazy(() => RiskLifecycleCreateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
+  documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
 }).strict();
 
 export const RiskLifecycleUpdateManyMutationInputSchema: z.ZodType<Prisma.RiskLifecycleUpdateManyMutationInput> = z.object({
@@ -28482,6 +28534,8 @@ export const RiskLifecycleUpdateManyMutationInputSchema: z.ZodType<Prisma.RiskLi
   postImprovementDueDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   dueDatePeriod: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   postImprovementResponsible: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  effectivenessImages: z.union([ z.lazy(() => RiskLifecycleUpdateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
+  documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
 }).strict();
 
 export const RiskLifecycleUncheckedUpdateManyInputSchema: z.ZodType<Prisma.RiskLifecycleUncheckedUpdateManyInput> = z.object({
@@ -28533,6 +28587,8 @@ export const RiskLifecycleUncheckedUpdateManyInputSchema: z.ZodType<Prisma.RiskL
   postImprovementDueDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   dueDatePeriod: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   postImprovementResponsible: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  effectivenessImages: z.union([ z.lazy(() => RiskLifecycleUpdateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
+  documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
 }).strict();
 
 export const RiskAuditLogCreateInputSchema: z.ZodType<Prisma.RiskAuditLogCreateInput> = z.object({
@@ -28540,9 +28596,10 @@ export const RiskAuditLogCreateInputSchema: z.ZodType<Prisma.RiskAuditLogCreateI
   action: z.string(),
   details: z.string().optional().nullable(),
   changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
-  username: z.string(),
+  userFullName: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   risk: z.lazy(() => RiskLifecycleCreateNestedOneWithoutAuditLogsInputSchema),
+  user: z.lazy(() => UserCreateNestedOneWithoutRiskAuditLogsInputSchema).optional(),
 }).strict();
 
 export const RiskAuditLogUncheckedCreateInputSchema: z.ZodType<Prisma.RiskAuditLogUncheckedCreateInput> = z.object({
@@ -28552,6 +28609,7 @@ export const RiskAuditLogUncheckedCreateInputSchema: z.ZodType<Prisma.RiskAuditL
   details: z.string().optional().nullable(),
   changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   username: z.string(),
+  userFullName: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
 }).strict();
 
@@ -28560,9 +28618,10 @@ export const RiskAuditLogUpdateInputSchema: z.ZodType<Prisma.RiskAuditLogUpdateI
   action: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   details: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
-  username: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  userFullName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   risk: z.lazy(() => RiskLifecycleUpdateOneRequiredWithoutAuditLogsNestedInputSchema).optional(),
+  user: z.lazy(() => UserUpdateOneWithoutRiskAuditLogsNestedInputSchema).optional(),
 }).strict();
 
 export const RiskAuditLogUncheckedUpdateInputSchema: z.ZodType<Prisma.RiskAuditLogUncheckedUpdateInput> = z.object({
@@ -28572,6 +28631,7 @@ export const RiskAuditLogUncheckedUpdateInputSchema: z.ZodType<Prisma.RiskAuditL
   details: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   username: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  userFullName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
@@ -28582,6 +28642,7 @@ export const RiskAuditLogCreateManyInputSchema: z.ZodType<Prisma.RiskAuditLogCre
   details: z.string().optional().nullable(),
   changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   username: z.string(),
+  userFullName: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
 }).strict();
 
@@ -28590,7 +28651,7 @@ export const RiskAuditLogUpdateManyMutationInputSchema: z.ZodType<Prisma.RiskAud
   action: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   details: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
-  username: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  userFullName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
@@ -28601,6 +28662,7 @@ export const RiskAuditLogUncheckedUpdateManyInputSchema: z.ZodType<Prisma.RiskAu
   details: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   username: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  userFullName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
@@ -38745,6 +38807,12 @@ export const ChecklistSubmissionListRelationFilterSchema: z.ZodType<Prisma.Check
   none: z.lazy(() => ChecklistSubmissionWhereInputSchema).optional(),
 }).strict();
 
+export const RiskAuditLogListRelationFilterSchema: z.ZodType<Prisma.RiskAuditLogListRelationFilter> = z.object({
+  every: z.lazy(() => RiskAuditLogWhereInputSchema).optional(),
+  some: z.lazy(() => RiskAuditLogWhereInputSchema).optional(),
+  none: z.lazy(() => RiskAuditLogWhereInputSchema).optional(),
+}).strict();
+
 export const SortOrderInputSchema: z.ZodType<Prisma.SortOrderInput> = z.object({
   sort: z.lazy(() => SortOrderSchema),
   nulls: z.lazy(() => NullsOrderSchema).optional(),
@@ -38823,6 +38891,10 @@ export const ChecklistTemplateOrderByRelationAggregateInputSchema: z.ZodType<Pri
 }).strict();
 
 export const ChecklistSubmissionOrderByRelationAggregateInputSchema: z.ZodType<Prisma.ChecklistSubmissionOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const RiskAuditLogOrderByRelationAggregateInputSchema: z.ZodType<Prisma.RiskAuditLogOrderByRelationAggregateInput> = z.object({
   _count: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
@@ -41491,16 +41563,6 @@ export const StringNullableListFilterSchema: z.ZodType<Prisma.StringNullableList
   isEmpty: z.boolean().optional(),
 }).strict();
 
-export const RiskAuditLogListRelationFilterSchema: z.ZodType<Prisma.RiskAuditLogListRelationFilter> = z.object({
-  every: z.lazy(() => RiskAuditLogWhereInputSchema).optional(),
-  some: z.lazy(() => RiskAuditLogWhereInputSchema).optional(),
-  none: z.lazy(() => RiskAuditLogWhereInputSchema).optional(),
-}).strict();
-
-export const RiskAuditLogOrderByRelationAggregateInputSchema: z.ZodType<Prisma.RiskAuditLogOrderByRelationAggregateInput> = z.object({
-  _count: z.lazy(() => SortOrderSchema).optional(),
-}).strict();
-
 export const RiskLifecycleCountOrderByAggregateInputSchema: z.ZodType<Prisma.RiskLifecycleCountOrderByAggregateInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   locationId: z.lazy(() => SortOrderSchema).optional(),
@@ -41550,6 +41612,8 @@ export const RiskLifecycleCountOrderByAggregateInputSchema: z.ZodType<Prisma.Ris
   postImprovementDueDate: z.lazy(() => SortOrderSchema).optional(),
   dueDatePeriod: z.lazy(() => SortOrderSchema).optional(),
   postImprovementResponsible: z.lazy(() => SortOrderSchema).optional(),
+  effectivenessImages: z.lazy(() => SortOrderSchema).optional(),
+  documents: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const RiskLifecycleAvgOrderByAggregateInputSchema: z.ZodType<Prisma.RiskLifecycleAvgOrderByAggregateInput> = z.object({
@@ -41679,6 +41743,11 @@ export const RiskLifecycleRelationFilterSchema: z.ZodType<Prisma.RiskLifecycleRe
   isNot: z.lazy(() => RiskLifecycleWhereInputSchema).optional(),
 }).strict();
 
+export const UserNullableRelationFilterSchema: z.ZodType<Prisma.UserNullableRelationFilter> = z.object({
+  is: z.lazy(() => UserWhereInputSchema).optional().nullable(),
+  isNot: z.lazy(() => UserWhereInputSchema).optional().nullable(),
+}).strict();
+
 export const RiskAuditLogCountOrderByAggregateInputSchema: z.ZodType<Prisma.RiskAuditLogCountOrderByAggregateInput> = z.object({
   id: z.lazy(() => SortOrderSchema).optional(),
   riskId: z.lazy(() => SortOrderSchema).optional(),
@@ -41686,6 +41755,7 @@ export const RiskAuditLogCountOrderByAggregateInputSchema: z.ZodType<Prisma.Risk
   details: z.lazy(() => SortOrderSchema).optional(),
   changedFields: z.lazy(() => SortOrderSchema).optional(),
   username: z.lazy(() => SortOrderSchema).optional(),
+  userFullName: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
@@ -41695,6 +41765,7 @@ export const RiskAuditLogMaxOrderByAggregateInputSchema: z.ZodType<Prisma.RiskAu
   action: z.lazy(() => SortOrderSchema).optional(),
   details: z.lazy(() => SortOrderSchema).optional(),
   username: z.lazy(() => SortOrderSchema).optional(),
+  userFullName: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
@@ -41704,6 +41775,7 @@ export const RiskAuditLogMinOrderByAggregateInputSchema: z.ZodType<Prisma.RiskAu
   action: z.lazy(() => SortOrderSchema).optional(),
   details: z.lazy(() => SortOrderSchema).optional(),
   username: z.lazy(() => SortOrderSchema).optional(),
+  userFullName: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
@@ -42888,11 +42960,6 @@ export const HazmatEyewashRiskAnalysisSumOrderByAggregateInputSchema: z.ZodType<
 export const HazmatIncidentTypeNullableRelationFilterSchema: z.ZodType<Prisma.HazmatIncidentTypeNullableRelationFilter> = z.object({
   is: z.lazy(() => HazmatIncidentTypeWhereInputSchema).optional().nullable(),
   isNot: z.lazy(() => HazmatIncidentTypeWhereInputSchema).optional().nullable(),
-}).strict();
-
-export const UserNullableRelationFilterSchema: z.ZodType<Prisma.UserNullableRelationFilter> = z.object({
-  is: z.lazy(() => UserWhereInputSchema).optional().nullable(),
-  isNot: z.lazy(() => UserWhereInputSchema).optional().nullable(),
 }).strict();
 
 export const HazmatIncidentCountOrderByAggregateInputSchema: z.ZodType<Prisma.HazmatIncidentCountOrderByAggregateInput> = z.object({
@@ -47414,6 +47481,13 @@ export const ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema: z
   connect: z.union([ z.lazy(() => ChecklistSubmissionWhereUniqueInputSchema), z.lazy(() => ChecklistSubmissionWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
+export const RiskAuditLogCreateNestedManyWithoutUserInputSchema: z.ZodType<Prisma.RiskAuditLogCreateNestedManyWithoutUserInput> = z.object({
+  create: z.union([ z.lazy(() => RiskAuditLogCreateWithoutUserInputSchema), z.lazy(() => RiskAuditLogCreateWithoutUserInputSchema).array(), z.lazy(() => RiskAuditLogUncheckedCreateWithoutUserInputSchema), z.lazy(() => RiskAuditLogUncheckedCreateWithoutUserInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => RiskAuditLogCreateOrConnectWithoutUserInputSchema), z.lazy(() => RiskAuditLogCreateOrConnectWithoutUserInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => RiskAuditLogCreateManyUserInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => RiskAuditLogWhereUniqueInputSchema), z.lazy(() => RiskAuditLogWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
 export const UserFacilityUncheckedCreateNestedManyWithoutUserInputSchema: z.ZodType<Prisma.UserFacilityUncheckedCreateNestedManyWithoutUserInput> = z.object({
   create: z.union([ z.lazy(() => UserFacilityCreateWithoutUserInputSchema), z.lazy(() => UserFacilityCreateWithoutUserInputSchema).array(), z.lazy(() => UserFacilityUncheckedCreateWithoutUserInputSchema), z.lazy(() => UserFacilityUncheckedCreateWithoutUserInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => UserFacilityCreateOrConnectWithoutUserInputSchema), z.lazy(() => UserFacilityCreateOrConnectWithoutUserInputSchema).array() ]).optional(),
@@ -47579,6 +47653,13 @@ export const ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInput
   connectOrCreate: z.union([ z.lazy(() => ChecklistSubmissionCreateOrConnectWithoutConductedByInputSchema), z.lazy(() => ChecklistSubmissionCreateOrConnectWithoutConductedByInputSchema).array() ]).optional(),
   createMany: z.lazy(() => ChecklistSubmissionCreateManyConductedByInputEnvelopeSchema).optional(),
   connect: z.union([ z.lazy(() => ChecklistSubmissionWhereUniqueInputSchema), z.lazy(() => ChecklistSubmissionWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema: z.ZodType<Prisma.RiskAuditLogUncheckedCreateNestedManyWithoutUserInput> = z.object({
+  create: z.union([ z.lazy(() => RiskAuditLogCreateWithoutUserInputSchema), z.lazy(() => RiskAuditLogCreateWithoutUserInputSchema).array(), z.lazy(() => RiskAuditLogUncheckedCreateWithoutUserInputSchema), z.lazy(() => RiskAuditLogUncheckedCreateWithoutUserInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => RiskAuditLogCreateOrConnectWithoutUserInputSchema), z.lazy(() => RiskAuditLogCreateOrConnectWithoutUserInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => RiskAuditLogCreateManyUserInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => RiskAuditLogWhereUniqueInputSchema), z.lazy(() => RiskAuditLogWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
 export const StringFieldUpdateOperationsInputSchema: z.ZodType<Prisma.StringFieldUpdateOperationsInput> = z.object({
@@ -47929,6 +48010,20 @@ export const ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema: z
   deleteMany: z.union([ z.lazy(() => ChecklistSubmissionScalarWhereInputSchema), z.lazy(() => ChecklistSubmissionScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
+export const RiskAuditLogUpdateManyWithoutUserNestedInputSchema: z.ZodType<Prisma.RiskAuditLogUpdateManyWithoutUserNestedInput> = z.object({
+  create: z.union([ z.lazy(() => RiskAuditLogCreateWithoutUserInputSchema), z.lazy(() => RiskAuditLogCreateWithoutUserInputSchema).array(), z.lazy(() => RiskAuditLogUncheckedCreateWithoutUserInputSchema), z.lazy(() => RiskAuditLogUncheckedCreateWithoutUserInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => RiskAuditLogCreateOrConnectWithoutUserInputSchema), z.lazy(() => RiskAuditLogCreateOrConnectWithoutUserInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => RiskAuditLogUpsertWithWhereUniqueWithoutUserInputSchema), z.lazy(() => RiskAuditLogUpsertWithWhereUniqueWithoutUserInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => RiskAuditLogCreateManyUserInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => RiskAuditLogWhereUniqueInputSchema), z.lazy(() => RiskAuditLogWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => RiskAuditLogWhereUniqueInputSchema), z.lazy(() => RiskAuditLogWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => RiskAuditLogWhereUniqueInputSchema), z.lazy(() => RiskAuditLogWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => RiskAuditLogWhereUniqueInputSchema), z.lazy(() => RiskAuditLogWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => RiskAuditLogUpdateWithWhereUniqueWithoutUserInputSchema), z.lazy(() => RiskAuditLogUpdateWithWhereUniqueWithoutUserInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => RiskAuditLogUpdateManyWithWhereWithoutUserInputSchema), z.lazy(() => RiskAuditLogUpdateManyWithWhereWithoutUserInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => RiskAuditLogScalarWhereInputSchema), z.lazy(() => RiskAuditLogScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
 export const UserFacilityUncheckedUpdateManyWithoutUserNestedInputSchema: z.ZodType<Prisma.UserFacilityUncheckedUpdateManyWithoutUserNestedInput> = z.object({
   create: z.union([ z.lazy(() => UserFacilityCreateWithoutUserInputSchema), z.lazy(() => UserFacilityCreateWithoutUserInputSchema).array(), z.lazy(() => UserFacilityUncheckedCreateWithoutUserInputSchema), z.lazy(() => UserFacilityUncheckedCreateWithoutUserInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => UserFacilityCreateOrConnectWithoutUserInputSchema), z.lazy(() => UserFacilityCreateOrConnectWithoutUserInputSchema).array() ]).optional(),
@@ -48259,6 +48354,20 @@ export const ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInput
   update: z.union([ z.lazy(() => ChecklistSubmissionUpdateWithWhereUniqueWithoutConductedByInputSchema), z.lazy(() => ChecklistSubmissionUpdateWithWhereUniqueWithoutConductedByInputSchema).array() ]).optional(),
   updateMany: z.union([ z.lazy(() => ChecklistSubmissionUpdateManyWithWhereWithoutConductedByInputSchema), z.lazy(() => ChecklistSubmissionUpdateManyWithWhereWithoutConductedByInputSchema).array() ]).optional(),
   deleteMany: z.union([ z.lazy(() => ChecklistSubmissionScalarWhereInputSchema), z.lazy(() => ChecklistSubmissionScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema: z.ZodType<Prisma.RiskAuditLogUncheckedUpdateManyWithoutUserNestedInput> = z.object({
+  create: z.union([ z.lazy(() => RiskAuditLogCreateWithoutUserInputSchema), z.lazy(() => RiskAuditLogCreateWithoutUserInputSchema).array(), z.lazy(() => RiskAuditLogUncheckedCreateWithoutUserInputSchema), z.lazy(() => RiskAuditLogUncheckedCreateWithoutUserInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => RiskAuditLogCreateOrConnectWithoutUserInputSchema), z.lazy(() => RiskAuditLogCreateOrConnectWithoutUserInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => RiskAuditLogUpsertWithWhereUniqueWithoutUserInputSchema), z.lazy(() => RiskAuditLogUpsertWithWhereUniqueWithoutUserInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => RiskAuditLogCreateManyUserInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => RiskAuditLogWhereUniqueInputSchema), z.lazy(() => RiskAuditLogWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => RiskAuditLogWhereUniqueInputSchema), z.lazy(() => RiskAuditLogWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => RiskAuditLogWhereUniqueInputSchema), z.lazy(() => RiskAuditLogWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => RiskAuditLogWhereUniqueInputSchema), z.lazy(() => RiskAuditLogWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => RiskAuditLogUpdateWithWhereUniqueWithoutUserInputSchema), z.lazy(() => RiskAuditLogUpdateWithWhereUniqueWithoutUserInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => RiskAuditLogUpdateManyWithWhereWithoutUserInputSchema), z.lazy(() => RiskAuditLogUpdateManyWithWhereWithoutUserInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => RiskAuditLogScalarWhereInputSchema), z.lazy(() => RiskAuditLogScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
 export const UserRoleCreateNestedManyWithoutRoleInputSchema: z.ZodType<Prisma.UserRoleCreateNestedManyWithoutRoleInput> = z.object({
@@ -52065,6 +52174,10 @@ export const RiskLifecycleCreateactionImagesInputSchema: z.ZodType<Prisma.RiskLi
   set: z.string().array(),
 }).strict();
 
+export const RiskLifecycleCreateeffectivenessImagesInputSchema: z.ZodType<Prisma.RiskLifecycleCreateeffectivenessImagesInput> = z.object({
+  set: z.string().array(),
+}).strict();
+
 export const RiskAuditLogCreateNestedManyWithoutRiskInputSchema: z.ZodType<Prisma.RiskAuditLogCreateNestedManyWithoutRiskInput> = z.object({
   create: z.union([ z.lazy(() => RiskAuditLogCreateWithoutRiskInputSchema), z.lazy(() => RiskAuditLogCreateWithoutRiskInputSchema).array(), z.lazy(() => RiskAuditLogUncheckedCreateWithoutRiskInputSchema), z.lazy(() => RiskAuditLogUncheckedCreateWithoutRiskInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => RiskAuditLogCreateOrConnectWithoutRiskInputSchema), z.lazy(() => RiskAuditLogCreateOrConnectWithoutRiskInputSchema).array() ]).optional(),
@@ -52091,6 +52204,11 @@ export const RiskLifecycleUpdateinitialImagesInputSchema: z.ZodType<Prisma.RiskL
 }).strict();
 
 export const RiskLifecycleUpdateactionImagesInputSchema: z.ZodType<Prisma.RiskLifecycleUpdateactionImagesInput> = z.object({
+  set: z.string().array().optional(),
+  push: z.union([ z.string(),z.string().array() ]).optional(),
+}).strict();
+
+export const RiskLifecycleUpdateeffectivenessImagesInputSchema: z.ZodType<Prisma.RiskLifecycleUpdateeffectivenessImagesInput> = z.object({
   set: z.string().array().optional(),
   push: z.union([ z.string(),z.string().array() ]).optional(),
 }).strict();
@@ -52139,12 +52257,28 @@ export const RiskLifecycleCreateNestedOneWithoutAuditLogsInputSchema: z.ZodType<
   connect: z.lazy(() => RiskLifecycleWhereUniqueInputSchema).optional(),
 }).strict();
 
+export const UserCreateNestedOneWithoutRiskAuditLogsInputSchema: z.ZodType<Prisma.UserCreateNestedOneWithoutRiskAuditLogsInput> = z.object({
+  create: z.union([ z.lazy(() => UserCreateWithoutRiskAuditLogsInputSchema), z.lazy(() => UserUncheckedCreateWithoutRiskAuditLogsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => UserCreateOrConnectWithoutRiskAuditLogsInputSchema).optional(),
+  connect: z.lazy(() => UserWhereUniqueInputSchema).optional(),
+}).strict();
+
 export const RiskLifecycleUpdateOneRequiredWithoutAuditLogsNestedInputSchema: z.ZodType<Prisma.RiskLifecycleUpdateOneRequiredWithoutAuditLogsNestedInput> = z.object({
   create: z.union([ z.lazy(() => RiskLifecycleCreateWithoutAuditLogsInputSchema), z.lazy(() => RiskLifecycleUncheckedCreateWithoutAuditLogsInputSchema) ]).optional(),
   connectOrCreate: z.lazy(() => RiskLifecycleCreateOrConnectWithoutAuditLogsInputSchema).optional(),
   upsert: z.lazy(() => RiskLifecycleUpsertWithoutAuditLogsInputSchema).optional(),
   connect: z.lazy(() => RiskLifecycleWhereUniqueInputSchema).optional(),
   update: z.union([ z.lazy(() => RiskLifecycleUpdateToOneWithWhereWithoutAuditLogsInputSchema), z.lazy(() => RiskLifecycleUpdateWithoutAuditLogsInputSchema), z.lazy(() => RiskLifecycleUncheckedUpdateWithoutAuditLogsInputSchema) ]).optional(),
+}).strict();
+
+export const UserUpdateOneWithoutRiskAuditLogsNestedInputSchema: z.ZodType<Prisma.UserUpdateOneWithoutRiskAuditLogsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => UserCreateWithoutRiskAuditLogsInputSchema), z.lazy(() => UserUncheckedCreateWithoutRiskAuditLogsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => UserCreateOrConnectWithoutRiskAuditLogsInputSchema).optional(),
+  upsert: z.lazy(() => UserUpsertWithoutRiskAuditLogsInputSchema).optional(),
+  disconnect: z.union([ z.boolean(),z.lazy(() => UserWhereInputSchema) ]).optional(),
+  delete: z.union([ z.boolean(),z.lazy(() => UserWhereInputSchema) ]).optional(),
+  connect: z.lazy(() => UserWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => UserUpdateToOneWithWhereWithoutRiskAuditLogsInputSchema), z.lazy(() => UserUpdateWithoutRiskAuditLogsInputSchema), z.lazy(() => UserUncheckedUpdateWithoutRiskAuditLogsInputSchema) ]).optional(),
 }).strict();
 
 export const FacilityCreateNestedOneWithoutRiskDepartmentSettingsInputSchema: z.ZodType<Prisma.FacilityCreateNestedOneWithoutRiskDepartmentSettingsInput> = z.object({
@@ -60482,6 +60616,36 @@ export const ChecklistSubmissionCreateManyConductedByInputEnvelopeSchema: z.ZodT
   skipDuplicates: z.boolean().optional(),
 }).strict();
 
+export const RiskAuditLogCreateWithoutUserInputSchema: z.ZodType<Prisma.RiskAuditLogCreateWithoutUserInput> = z.object({
+  id: z.string().optional(),
+  action: z.string(),
+  details: z.string().optional().nullable(),
+  changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  userFullName: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  risk: z.lazy(() => RiskLifecycleCreateNestedOneWithoutAuditLogsInputSchema),
+}).strict();
+
+export const RiskAuditLogUncheckedCreateWithoutUserInputSchema: z.ZodType<Prisma.RiskAuditLogUncheckedCreateWithoutUserInput> = z.object({
+  id: z.string().optional(),
+  riskId: z.string(),
+  action: z.string(),
+  details: z.string().optional().nullable(),
+  changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  userFullName: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+}).strict();
+
+export const RiskAuditLogCreateOrConnectWithoutUserInputSchema: z.ZodType<Prisma.RiskAuditLogCreateOrConnectWithoutUserInput> = z.object({
+  where: z.lazy(() => RiskAuditLogWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => RiskAuditLogCreateWithoutUserInputSchema), z.lazy(() => RiskAuditLogUncheckedCreateWithoutUserInputSchema) ]),
+}).strict();
+
+export const RiskAuditLogCreateManyUserInputEnvelopeSchema: z.ZodType<Prisma.RiskAuditLogCreateManyUserInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => RiskAuditLogCreateManyUserInputSchema), z.lazy(() => RiskAuditLogCreateManyUserInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
 export const UserFacilityUpsertWithWhereUniqueWithoutUserInputSchema: z.ZodType<Prisma.UserFacilityUpsertWithWhereUniqueWithoutUserInput> = z.object({
   where: z.lazy(() => UserFacilityWhereUniqueInputSchema),
   update: z.union([ z.lazy(() => UserFacilityUpdateWithoutUserInputSchema), z.lazy(() => UserFacilityUncheckedUpdateWithoutUserInputSchema) ]),
@@ -61179,6 +61343,36 @@ export const ChecklistSubmissionScalarWhereInputSchema: z.ZodType<Prisma.Checkli
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
 }).strict();
 
+export const RiskAuditLogUpsertWithWhereUniqueWithoutUserInputSchema: z.ZodType<Prisma.RiskAuditLogUpsertWithWhereUniqueWithoutUserInput> = z.object({
+  where: z.lazy(() => RiskAuditLogWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => RiskAuditLogUpdateWithoutUserInputSchema), z.lazy(() => RiskAuditLogUncheckedUpdateWithoutUserInputSchema) ]),
+  create: z.union([ z.lazy(() => RiskAuditLogCreateWithoutUserInputSchema), z.lazy(() => RiskAuditLogUncheckedCreateWithoutUserInputSchema) ]),
+}).strict();
+
+export const RiskAuditLogUpdateWithWhereUniqueWithoutUserInputSchema: z.ZodType<Prisma.RiskAuditLogUpdateWithWhereUniqueWithoutUserInput> = z.object({
+  where: z.lazy(() => RiskAuditLogWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => RiskAuditLogUpdateWithoutUserInputSchema), z.lazy(() => RiskAuditLogUncheckedUpdateWithoutUserInputSchema) ]),
+}).strict();
+
+export const RiskAuditLogUpdateManyWithWhereWithoutUserInputSchema: z.ZodType<Prisma.RiskAuditLogUpdateManyWithWhereWithoutUserInput> = z.object({
+  where: z.lazy(() => RiskAuditLogScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => RiskAuditLogUpdateManyMutationInputSchema), z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserInputSchema) ]),
+}).strict();
+
+export const RiskAuditLogScalarWhereInputSchema: z.ZodType<Prisma.RiskAuditLogScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => RiskAuditLogScalarWhereInputSchema), z.lazy(() => RiskAuditLogScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => RiskAuditLogScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => RiskAuditLogScalarWhereInputSchema), z.lazy(() => RiskAuditLogScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  riskId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  action: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  details: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  changedFields: z.lazy(() => JsonNullableFilterSchema).optional(),
+  username: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  userFullName: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
 export const UserRoleCreateWithoutRoleInputSchema: z.ZodType<Prisma.UserRoleCreateWithoutRoleInput> = z.object({
   user: z.lazy(() => UserCreateNestedOneWithoutRolesInputSchema),
 }).strict();
@@ -61310,6 +61504,7 @@ export const UserCreateWithoutRolesInputSchema: z.ZodType<Prisma.UserCreateWitho
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutRolesInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutRolesInput> = z.object({
@@ -61349,6 +61544,7 @@ export const UserUncheckedCreateWithoutRolesInputSchema: z.ZodType<Prisma.UserUn
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutRolesInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutRolesInput> = z.object({
@@ -61428,6 +61624,7 @@ export const UserUpdateWithoutRolesInputSchema: z.ZodType<Prisma.UserUpdateWitho
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutRolesInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutRolesInput> = z.object({
@@ -61467,6 +61664,7 @@ export const UserUncheckedUpdateWithoutRolesInputSchema: z.ZodType<Prisma.UserUn
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserCreateWithoutWorkflowRoleInputSchema: z.ZodType<Prisma.UserCreateWithoutWorkflowRoleInput> = z.object({
@@ -61506,6 +61704,7 @@ export const UserCreateWithoutWorkflowRoleInputSchema: z.ZodType<Prisma.UserCrea
   wfTransferRequestsTarget: z.lazy(() => WfTransferRequestCreateNestedManyWithoutTargetUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutWorkflowRoleInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutWorkflowRoleInput> = z.object({
@@ -61545,6 +61744,7 @@ export const UserUncheckedCreateWithoutWorkflowRoleInputSchema: z.ZodType<Prisma
   wfTransferRequestsTarget: z.lazy(() => WfTransferRequestUncheckedCreateNestedManyWithoutTargetUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutWorkflowRoleInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutWorkflowRoleInput> = z.object({
@@ -61600,6 +61800,7 @@ export const UserUpdateWithoutWorkflowRoleInputSchema: z.ZodType<Prisma.UserUpda
   wfTransferRequestsTarget: z.lazy(() => WfTransferRequestUpdateManyWithoutTargetUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutWorkflowRoleInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutWorkflowRoleInput> = z.object({
@@ -61639,6 +61840,7 @@ export const UserUncheckedUpdateWithoutWorkflowRoleInputSchema: z.ZodType<Prisma
   wfTransferRequestsTarget: z.lazy(() => WfTransferRequestUncheckedUpdateManyWithoutTargetUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const RoleModuleCreateWithoutModuleInputSchema: z.ZodType<Prisma.RoleModuleCreateWithoutModuleInput> = z.object({
@@ -61850,6 +62052,7 @@ export const UserCreateWithoutModulesInputSchema: z.ZodType<Prisma.UserCreateWit
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutModulesInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutModulesInput> = z.object({
@@ -61889,6 +62092,7 @@ export const UserUncheckedCreateWithoutModulesInputSchema: z.ZodType<Prisma.User
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutModulesInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutModulesInput> = z.object({
@@ -61972,6 +62176,7 @@ export const UserUpdateWithoutModulesInputSchema: z.ZodType<Prisma.UserUpdateWit
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutModulesInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutModulesInput> = z.object({
@@ -62011,6 +62216,7 @@ export const UserUncheckedUpdateWithoutModulesInputSchema: z.ZodType<Prisma.User
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const ModuleUpsertWithoutUsersInputSchema: z.ZodType<Prisma.ModuleUpsertWithoutUsersInput> = z.object({
@@ -67377,6 +67583,7 @@ export const UserCreateWithoutFacilitiesInputSchema: z.ZodType<Prisma.UserCreate
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutFacilitiesInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutFacilitiesInput> = z.object({
@@ -67416,6 +67623,7 @@ export const UserUncheckedCreateWithoutFacilitiesInputSchema: z.ZodType<Prisma.U
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutFacilitiesInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutFacilitiesInput> = z.object({
@@ -67614,6 +67822,7 @@ export const UserUpdateWithoutFacilitiesInputSchema: z.ZodType<Prisma.UserUpdate
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutFacilitiesInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutFacilitiesInput> = z.object({
@@ -67653,6 +67862,7 @@ export const UserUncheckedUpdateWithoutFacilitiesInputSchema: z.ZodType<Prisma.U
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const AssignmentCreateWithoutProfessionalInputSchema: z.ZodType<Prisma.AssignmentCreateWithoutProfessionalInput> = z.object({
@@ -71945,8 +72155,9 @@ export const RiskAuditLogCreateWithoutRiskInputSchema: z.ZodType<Prisma.RiskAudi
   action: z.string(),
   details: z.string().optional().nullable(),
   changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
-  username: z.string(),
+  userFullName: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
+  user: z.lazy(() => UserCreateNestedOneWithoutRiskAuditLogsInputSchema).optional(),
 }).strict();
 
 export const RiskAuditLogUncheckedCreateWithoutRiskInputSchema: z.ZodType<Prisma.RiskAuditLogUncheckedCreateWithoutRiskInput> = z.object({
@@ -71955,6 +72166,7 @@ export const RiskAuditLogUncheckedCreateWithoutRiskInputSchema: z.ZodType<Prisma
   details: z.string().optional().nullable(),
   changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   username: z.string(),
+  userFullName: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
 }).strict();
 
@@ -72033,19 +72245,6 @@ export const RiskAuditLogUpdateWithWhereUniqueWithoutRiskInputSchema: z.ZodType<
 export const RiskAuditLogUpdateManyWithWhereWithoutRiskInputSchema: z.ZodType<Prisma.RiskAuditLogUpdateManyWithWhereWithoutRiskInput> = z.object({
   where: z.lazy(() => RiskAuditLogScalarWhereInputSchema),
   data: z.union([ z.lazy(() => RiskAuditLogUpdateManyMutationInputSchema), z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutRiskInputSchema) ]),
-}).strict();
-
-export const RiskAuditLogScalarWhereInputSchema: z.ZodType<Prisma.RiskAuditLogScalarWhereInput> = z.object({
-  AND: z.union([ z.lazy(() => RiskAuditLogScalarWhereInputSchema), z.lazy(() => RiskAuditLogScalarWhereInputSchema).array() ]).optional(),
-  OR: z.lazy(() => RiskAuditLogScalarWhereInputSchema).array().optional(),
-  NOT: z.union([ z.lazy(() => RiskAuditLogScalarWhereInputSchema), z.lazy(() => RiskAuditLogScalarWhereInputSchema).array() ]).optional(),
-  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  riskId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  action: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  details: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
-  changedFields: z.lazy(() => JsonNullableFilterSchema).optional(),
-  username: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
-  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
 }).strict();
 
 export const FacilityLocationUpsertWithoutRisksInputSchema: z.ZodType<Prisma.FacilityLocationUpsertWithoutRisksInput> = z.object({
@@ -72153,6 +72352,8 @@ export const RiskLifecycleCreateWithoutAuditLogsInputSchema: z.ZodType<Prisma.Ri
   postImprovementDueDate: z.coerce.date().optional().nullable(),
   dueDatePeriod: z.string().optional().nullable(),
   postImprovementResponsible: z.string().optional().nullable(),
+  effectivenessImages: z.union([ z.lazy(() => RiskLifecycleCreateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
+  documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   location: z.lazy(() => FacilityLocationCreateNestedOneWithoutRisksInputSchema).optional(),
 }).strict();
 
@@ -72205,11 +72406,98 @@ export const RiskLifecycleUncheckedCreateWithoutAuditLogsInputSchema: z.ZodType<
   postImprovementDueDate: z.coerce.date().optional().nullable(),
   dueDatePeriod: z.string().optional().nullable(),
   postImprovementResponsible: z.string().optional().nullable(),
+  effectivenessImages: z.union([ z.lazy(() => RiskLifecycleCreateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
+  documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
 }).strict();
 
 export const RiskLifecycleCreateOrConnectWithoutAuditLogsInputSchema: z.ZodType<Prisma.RiskLifecycleCreateOrConnectWithoutAuditLogsInput> = z.object({
   where: z.lazy(() => RiskLifecycleWhereUniqueInputSchema),
   create: z.union([ z.lazy(() => RiskLifecycleCreateWithoutAuditLogsInputSchema), z.lazy(() => RiskLifecycleUncheckedCreateWithoutAuditLogsInputSchema) ]),
+}).strict();
+
+export const UserCreateWithoutRiskAuditLogsInputSchema: z.ZodType<Prisma.UserCreateWithoutRiskAuditLogsInput> = z.object({
+  username: z.string(),
+  fullName: z.string(),
+  isActive: z.boolean().optional(),
+  employmentType: z.string().optional().nullable(),
+  osgbName: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  telegramChatId: z.string().optional().nullable(),
+  telegramConnectToken: z.string().optional().nullable(),
+  updatedAt: z.coerce.date().optional(),
+  department: z.string().optional().nullable(),
+  email: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  title: z.string().optional().nullable(),
+  facilities: z.lazy(() => UserFacilityCreateNestedManyWithoutUserInputSchema).optional(),
+  roles: z.lazy(() => UserRoleCreateNestedManyWithoutUserInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentCreateNestedManyWithoutCreatorInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectCreateNestedManyWithoutCreatorInputSchema).optional(),
+  BuildApproval: z.lazy(() => BuildApprovalCreateNestedManyWithoutApproverInputSchema).optional(),
+  BuildPermit: z.lazy(() => BuildPermitCreateNestedManyWithoutApproverInputSchema).optional(),
+  BuildDocument: z.lazy(() => BuildDocumentCreateNestedManyWithoutUploaderInputSchema).optional(),
+  BuildHandover: z.lazy(() => BuildHandoverCreateNestedManyWithoutApproverInputSchema).optional(),
+  modules: z.lazy(() => UserModuleCreateNestedManyWithoutUserInputSchema).optional(),
+  wfPlansOwned: z.lazy(() => WfPlanCreateNestedManyWithoutOwnerInputSchema).optional(),
+  wfTasksAssigned: z.lazy(() => WfTaskCreateNestedManyWithoutAssigneeInputSchema).optional(),
+  wfTasksFollowed: z.lazy(() => WfTaskCreateNestedManyWithoutFollowerInputSchema).optional(),
+  wfTasksCreated: z.lazy(() => WfTaskCreateNestedManyWithoutCreatorInputSchema).optional(),
+  wfComments: z.lazy(() => WfCommentCreateNestedManyWithoutAuthorInputSchema).optional(),
+  wfDueRequestsMade: z.lazy(() => WfDueChangeRequestCreateNestedManyWithoutRequestedByInputSchema).optional(),
+  wfDueRequestsReviewed: z.lazy(() => WfDueChangeRequestCreateNestedManyWithoutReviewedByInputSchema).optional(),
+  wfDueHistories: z.lazy(() => WfDueHistoryCreateNestedManyWithoutChangedByInputSchema).optional(),
+  wfChatMessages: z.lazy(() => WfChatMessageCreateNestedManyWithoutSenderInputSchema).optional(),
+  wfActivityLogs: z.lazy(() => WfActivityLogCreateNestedManyWithoutActorInputSchema).optional(),
+  wfTransferRequestsMade: z.lazy(() => WfTransferRequestCreateNestedManyWithoutRequestedByUserInputSchema).optional(),
+  wfTransferRequestsTarget: z.lazy(() => WfTransferRequestCreateNestedManyWithoutTargetUserInputSchema).optional(),
+  workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
+  checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+}).strict();
+
+export const UserUncheckedCreateWithoutRiskAuditLogsInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutRiskAuditLogsInput> = z.object({
+  username: z.string(),
+  fullName: z.string(),
+  isActive: z.boolean().optional(),
+  employmentType: z.string().optional().nullable(),
+  osgbName: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  telegramChatId: z.string().optional().nullable(),
+  telegramConnectToken: z.string().optional().nullable(),
+  updatedAt: z.coerce.date().optional(),
+  department: z.string().optional().nullable(),
+  email: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  title: z.string().optional().nullable(),
+  facilities: z.lazy(() => UserFacilityUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
+  roles: z.lazy(() => UserRoleUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentUncheckedCreateNestedManyWithoutCreatorInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectUncheckedCreateNestedManyWithoutCreatorInputSchema).optional(),
+  BuildApproval: z.lazy(() => BuildApprovalUncheckedCreateNestedManyWithoutApproverInputSchema).optional(),
+  BuildPermit: z.lazy(() => BuildPermitUncheckedCreateNestedManyWithoutApproverInputSchema).optional(),
+  BuildDocument: z.lazy(() => BuildDocumentUncheckedCreateNestedManyWithoutUploaderInputSchema).optional(),
+  BuildHandover: z.lazy(() => BuildHandoverUncheckedCreateNestedManyWithoutApproverInputSchema).optional(),
+  modules: z.lazy(() => UserModuleUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
+  wfPlansOwned: z.lazy(() => WfPlanUncheckedCreateNestedManyWithoutOwnerInputSchema).optional(),
+  wfTasksAssigned: z.lazy(() => WfTaskUncheckedCreateNestedManyWithoutAssigneeInputSchema).optional(),
+  wfTasksFollowed: z.lazy(() => WfTaskUncheckedCreateNestedManyWithoutFollowerInputSchema).optional(),
+  wfTasksCreated: z.lazy(() => WfTaskUncheckedCreateNestedManyWithoutCreatorInputSchema).optional(),
+  wfComments: z.lazy(() => WfCommentUncheckedCreateNestedManyWithoutAuthorInputSchema).optional(),
+  wfDueRequestsMade: z.lazy(() => WfDueChangeRequestUncheckedCreateNestedManyWithoutRequestedByInputSchema).optional(),
+  wfDueRequestsReviewed: z.lazy(() => WfDueChangeRequestUncheckedCreateNestedManyWithoutReviewedByInputSchema).optional(),
+  wfDueHistories: z.lazy(() => WfDueHistoryUncheckedCreateNestedManyWithoutChangedByInputSchema).optional(),
+  wfChatMessages: z.lazy(() => WfChatMessageUncheckedCreateNestedManyWithoutSenderInputSchema).optional(),
+  wfActivityLogs: z.lazy(() => WfActivityLogUncheckedCreateNestedManyWithoutActorInputSchema).optional(),
+  wfTransferRequestsMade: z.lazy(() => WfTransferRequestUncheckedCreateNestedManyWithoutRequestedByUserInputSchema).optional(),
+  wfTransferRequestsTarget: z.lazy(() => WfTransferRequestUncheckedCreateNestedManyWithoutTargetUserInputSchema).optional(),
+  workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
+  checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+}).strict();
+
+export const UserCreateOrConnectWithoutRiskAuditLogsInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutRiskAuditLogsInput> = z.object({
+  where: z.lazy(() => UserWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => UserCreateWithoutRiskAuditLogsInputSchema), z.lazy(() => UserUncheckedCreateWithoutRiskAuditLogsInputSchema) ]),
 }).strict();
 
 export const RiskLifecycleUpsertWithoutAuditLogsInputSchema: z.ZodType<Prisma.RiskLifecycleUpsertWithoutAuditLogsInput> = z.object({
@@ -72271,6 +72559,8 @@ export const RiskLifecycleUpdateWithoutAuditLogsInputSchema: z.ZodType<Prisma.Ri
   postImprovementDueDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   dueDatePeriod: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   postImprovementResponsible: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  effectivenessImages: z.union([ z.lazy(() => RiskLifecycleUpdateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
+  documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   location: z.lazy(() => FacilityLocationUpdateOneWithoutRisksNestedInputSchema).optional(),
 }).strict();
 
@@ -72323,6 +72613,99 @@ export const RiskLifecycleUncheckedUpdateWithoutAuditLogsInputSchema: z.ZodType<
   postImprovementDueDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   dueDatePeriod: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   postImprovementResponsible: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  effectivenessImages: z.union([ z.lazy(() => RiskLifecycleUpdateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
+  documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+}).strict();
+
+export const UserUpsertWithoutRiskAuditLogsInputSchema: z.ZodType<Prisma.UserUpsertWithoutRiskAuditLogsInput> = z.object({
+  update: z.union([ z.lazy(() => UserUpdateWithoutRiskAuditLogsInputSchema), z.lazy(() => UserUncheckedUpdateWithoutRiskAuditLogsInputSchema) ]),
+  create: z.union([ z.lazy(() => UserCreateWithoutRiskAuditLogsInputSchema), z.lazy(() => UserUncheckedCreateWithoutRiskAuditLogsInputSchema) ]),
+  where: z.lazy(() => UserWhereInputSchema).optional(),
+}).strict();
+
+export const UserUpdateToOneWithWhereWithoutRiskAuditLogsInputSchema: z.ZodType<Prisma.UserUpdateToOneWithWhereWithoutRiskAuditLogsInput> = z.object({
+  where: z.lazy(() => UserWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => UserUpdateWithoutRiskAuditLogsInputSchema), z.lazy(() => UserUncheckedUpdateWithoutRiskAuditLogsInputSchema) ]),
+}).strict();
+
+export const UserUpdateWithoutRiskAuditLogsInputSchema: z.ZodType<Prisma.UserUpdateWithoutRiskAuditLogsInput> = z.object({
+  username: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fullName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  employmentType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  osgbName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  telegramChatId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  telegramConnectToken: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  department: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  email: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  phone: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  title: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  facilities: z.lazy(() => UserFacilityUpdateManyWithoutUserNestedInputSchema).optional(),
+  roles: z.lazy(() => UserRoleUpdateManyWithoutUserNestedInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentUpdateManyWithoutCreatorNestedInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectUpdateManyWithoutCreatorNestedInputSchema).optional(),
+  BuildApproval: z.lazy(() => BuildApprovalUpdateManyWithoutApproverNestedInputSchema).optional(),
+  BuildPermit: z.lazy(() => BuildPermitUpdateManyWithoutApproverNestedInputSchema).optional(),
+  BuildDocument: z.lazy(() => BuildDocumentUpdateManyWithoutUploaderNestedInputSchema).optional(),
+  BuildHandover: z.lazy(() => BuildHandoverUpdateManyWithoutApproverNestedInputSchema).optional(),
+  modules: z.lazy(() => UserModuleUpdateManyWithoutUserNestedInputSchema).optional(),
+  wfPlansOwned: z.lazy(() => WfPlanUpdateManyWithoutOwnerNestedInputSchema).optional(),
+  wfTasksAssigned: z.lazy(() => WfTaskUpdateManyWithoutAssigneeNestedInputSchema).optional(),
+  wfTasksFollowed: z.lazy(() => WfTaskUpdateManyWithoutFollowerNestedInputSchema).optional(),
+  wfTasksCreated: z.lazy(() => WfTaskUpdateManyWithoutCreatorNestedInputSchema).optional(),
+  wfComments: z.lazy(() => WfCommentUpdateManyWithoutAuthorNestedInputSchema).optional(),
+  wfDueRequestsMade: z.lazy(() => WfDueChangeRequestUpdateManyWithoutRequestedByNestedInputSchema).optional(),
+  wfDueRequestsReviewed: z.lazy(() => WfDueChangeRequestUpdateManyWithoutReviewedByNestedInputSchema).optional(),
+  wfDueHistories: z.lazy(() => WfDueHistoryUpdateManyWithoutChangedByNestedInputSchema).optional(),
+  wfChatMessages: z.lazy(() => WfChatMessageUpdateManyWithoutSenderNestedInputSchema).optional(),
+  wfActivityLogs: z.lazy(() => WfActivityLogUpdateManyWithoutActorNestedInputSchema).optional(),
+  wfTransferRequestsMade: z.lazy(() => WfTransferRequestUpdateManyWithoutRequestedByUserNestedInputSchema).optional(),
+  wfTransferRequestsTarget: z.lazy(() => WfTransferRequestUpdateManyWithoutTargetUserNestedInputSchema).optional(),
+  workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
+  checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+}).strict();
+
+export const UserUncheckedUpdateWithoutRiskAuditLogsInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutRiskAuditLogsInput> = z.object({
+  username: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fullName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  employmentType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  osgbName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  telegramChatId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  telegramConnectToken: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  department: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  email: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  phone: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  title: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  facilities: z.lazy(() => UserFacilityUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
+  roles: z.lazy(() => UserRoleUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentUncheckedUpdateManyWithoutCreatorNestedInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectUncheckedUpdateManyWithoutCreatorNestedInputSchema).optional(),
+  BuildApproval: z.lazy(() => BuildApprovalUncheckedUpdateManyWithoutApproverNestedInputSchema).optional(),
+  BuildPermit: z.lazy(() => BuildPermitUncheckedUpdateManyWithoutApproverNestedInputSchema).optional(),
+  BuildDocument: z.lazy(() => BuildDocumentUncheckedUpdateManyWithoutUploaderNestedInputSchema).optional(),
+  BuildHandover: z.lazy(() => BuildHandoverUncheckedUpdateManyWithoutApproverNestedInputSchema).optional(),
+  modules: z.lazy(() => UserModuleUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
+  wfPlansOwned: z.lazy(() => WfPlanUncheckedUpdateManyWithoutOwnerNestedInputSchema).optional(),
+  wfTasksAssigned: z.lazy(() => WfTaskUncheckedUpdateManyWithoutAssigneeNestedInputSchema).optional(),
+  wfTasksFollowed: z.lazy(() => WfTaskUncheckedUpdateManyWithoutFollowerNestedInputSchema).optional(),
+  wfTasksCreated: z.lazy(() => WfTaskUncheckedUpdateManyWithoutCreatorNestedInputSchema).optional(),
+  wfComments: z.lazy(() => WfCommentUncheckedUpdateManyWithoutAuthorNestedInputSchema).optional(),
+  wfDueRequestsMade: z.lazy(() => WfDueChangeRequestUncheckedUpdateManyWithoutRequestedByNestedInputSchema).optional(),
+  wfDueRequestsReviewed: z.lazy(() => WfDueChangeRequestUncheckedUpdateManyWithoutReviewedByNestedInputSchema).optional(),
+  wfDueHistories: z.lazy(() => WfDueHistoryUncheckedUpdateManyWithoutChangedByNestedInputSchema).optional(),
+  wfChatMessages: z.lazy(() => WfChatMessageUncheckedUpdateManyWithoutSenderNestedInputSchema).optional(),
+  wfActivityLogs: z.lazy(() => WfActivityLogUncheckedUpdateManyWithoutActorNestedInputSchema).optional(),
+  wfTransferRequestsMade: z.lazy(() => WfTransferRequestUncheckedUpdateManyWithoutRequestedByUserNestedInputSchema).optional(),
+  wfTransferRequestsTarget: z.lazy(() => WfTransferRequestUncheckedUpdateManyWithoutTargetUserNestedInputSchema).optional(),
+  workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
+  checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateWithoutRiskDepartmentSettingsInputSchema: z.ZodType<Prisma.FacilityCreateWithoutRiskDepartmentSettingsInput> = z.object({
@@ -77693,6 +78076,7 @@ export const UserCreateWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.UserC
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutHazmatIncidentsInput> = z.object({
@@ -77732,6 +78116,7 @@ export const UserUncheckedCreateWithoutHazmatIncidentsInputSchema: z.ZodType<Pri
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutHazmatIncidentsInput> = z.object({
@@ -78172,6 +78557,7 @@ export const UserUpdateWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.UserU
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutHazmatIncidentsInput> = z.object({
@@ -78211,6 +78597,7 @@ export const UserUncheckedUpdateWithoutHazmatIncidentsInputSchema: z.ZodType<Pri
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const HazmatMaterialUpsertWithWhereUniqueWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.HazmatMaterialUpsertWithWhereUniqueWithoutHazmatIncidentsInput> = z.object({
@@ -81133,6 +81520,7 @@ export const UserCreateWithoutBuildProjectInputSchema: z.ZodType<Prisma.UserCrea
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutBuildProjectInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutBuildProjectInput> = z.object({
@@ -81172,6 +81560,7 @@ export const UserUncheckedCreateWithoutBuildProjectInputSchema: z.ZodType<Prisma
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutBuildProjectInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutBuildProjectInput> = z.object({
@@ -81939,6 +82328,7 @@ export const UserUpdateWithoutBuildProjectInputSchema: z.ZodType<Prisma.UserUpda
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutBuildProjectInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutBuildProjectInput> = z.object({
@@ -81978,6 +82368,7 @@ export const UserUncheckedUpdateWithoutBuildProjectInputSchema: z.ZodType<Prisma
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUpsertWithoutBuildProjectsInputSchema: z.ZodType<Prisma.FacilityLocationUpsertWithoutBuildProjectsInput> = z.object({
@@ -83070,6 +83461,7 @@ export const UserCreateWithoutBuildApprovalInputSchema: z.ZodType<Prisma.UserCre
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutBuildApprovalInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutBuildApprovalInput> = z.object({
@@ -83109,6 +83501,7 @@ export const UserUncheckedCreateWithoutBuildApprovalInputSchema: z.ZodType<Prism
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutBuildApprovalInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutBuildApprovalInput> = z.object({
@@ -83239,6 +83632,7 @@ export const UserUpdateWithoutBuildApprovalInputSchema: z.ZodType<Prisma.UserUpd
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutBuildApprovalInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutBuildApprovalInput> = z.object({
@@ -83278,6 +83672,7 @@ export const UserUncheckedUpdateWithoutBuildApprovalInputSchema: z.ZodType<Prism
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const BuildProjectCreateWithoutPermitsInputSchema: z.ZodType<Prisma.BuildProjectCreateWithoutPermitsInput> = z.object({
@@ -83386,6 +83781,7 @@ export const UserCreateWithoutBuildPermitInputSchema: z.ZodType<Prisma.UserCreat
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutBuildPermitInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutBuildPermitInput> = z.object({
@@ -83425,6 +83821,7 @@ export const UserUncheckedCreateWithoutBuildPermitInputSchema: z.ZodType<Prisma.
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutBuildPermitInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutBuildPermitInput> = z.object({
@@ -83555,6 +83952,7 @@ export const UserUpdateWithoutBuildPermitInputSchema: z.ZodType<Prisma.UserUpdat
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutBuildPermitInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutBuildPermitInput> = z.object({
@@ -83594,6 +83992,7 @@ export const UserUncheckedUpdateWithoutBuildPermitInputSchema: z.ZodType<Prisma.
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const BuildProjectCreateWithoutInspectionsOHSInputSchema: z.ZodType<Prisma.BuildProjectCreateWithoutInspectionsOHSInput> = z.object({
@@ -84392,6 +84791,7 @@ export const UserCreateWithoutBuildDocumentInputSchema: z.ZodType<Prisma.UserCre
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutBuildDocumentInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutBuildDocumentInput> = z.object({
@@ -84431,6 +84831,7 @@ export const UserUncheckedCreateWithoutBuildDocumentInputSchema: z.ZodType<Prism
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutBuildDocumentInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutBuildDocumentInput> = z.object({
@@ -84561,6 +84962,7 @@ export const UserUpdateWithoutBuildDocumentInputSchema: z.ZodType<Prisma.UserUpd
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutBuildDocumentInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutBuildDocumentInput> = z.object({
@@ -84600,6 +85002,7 @@ export const UserUncheckedUpdateWithoutBuildDocumentInputSchema: z.ZodType<Prism
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const BuildProjectCreateWithoutHandoverInputSchema: z.ZodType<Prisma.BuildProjectCreateWithoutHandoverInput> = z.object({
@@ -84708,6 +85111,7 @@ export const UserCreateWithoutBuildHandoverInputSchema: z.ZodType<Prisma.UserCre
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutBuildHandoverInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutBuildHandoverInput> = z.object({
@@ -84747,6 +85151,7 @@ export const UserUncheckedCreateWithoutBuildHandoverInputSchema: z.ZodType<Prism
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutBuildHandoverInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutBuildHandoverInput> = z.object({
@@ -84877,6 +85282,7 @@ export const UserUpdateWithoutBuildHandoverInputSchema: z.ZodType<Prisma.UserUpd
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutBuildHandoverInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutBuildHandoverInput> = z.object({
@@ -84916,6 +85322,7 @@ export const UserUncheckedUpdateWithoutBuildHandoverInputSchema: z.ZodType<Prism
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const BuildProjectCreateWithoutHandoverOHSInspectionsInputSchema: z.ZodType<Prisma.BuildProjectCreateWithoutHandoverOHSInspectionsInput> = z.object({
@@ -89413,6 +89820,8 @@ export const RiskLifecycleCreateWithoutLocationInputSchema: z.ZodType<Prisma.Ris
   postImprovementDueDate: z.coerce.date().optional().nullable(),
   dueDatePeriod: z.string().optional().nullable(),
   postImprovementResponsible: z.string().optional().nullable(),
+  effectivenessImages: z.union([ z.lazy(() => RiskLifecycleCreateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
+  documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   auditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutRiskInputSchema).optional(),
 }).strict();
 
@@ -89464,6 +89873,8 @@ export const RiskLifecycleUncheckedCreateWithoutLocationInputSchema: z.ZodType<P
   postImprovementDueDate: z.coerce.date().optional().nullable(),
   dueDatePeriod: z.string().optional().nullable(),
   postImprovementResponsible: z.string().optional().nullable(),
+  effectivenessImages: z.union([ z.lazy(() => RiskLifecycleCreateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
+  documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   auditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutRiskInputSchema).optional(),
 }).strict();
 
@@ -90109,6 +90520,8 @@ export const RiskLifecycleScalarWhereInputSchema: z.ZodType<Prisma.RiskLifecycle
   postImprovementDueDate: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
   dueDatePeriod: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   postImprovementResponsible: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  effectivenessImages: z.lazy(() => StringNullableListFilterSchema).optional(),
+  documents: z.lazy(() => JsonNullableFilterSchema).optional(),
 }).strict();
 
 export const HazmatIncidentUpsertWithWhereUniqueWithoutLocationInputSchema: z.ZodType<Prisma.HazmatIncidentUpsertWithWhereUniqueWithoutLocationInput> = z.object({
@@ -90646,6 +91059,7 @@ export const UserCreateWithoutWfPlansOwnedInputSchema: z.ZodType<Prisma.UserCrea
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutWfPlansOwnedInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutWfPlansOwnedInput> = z.object({
@@ -90685,6 +91099,7 @@ export const UserUncheckedCreateWithoutWfPlansOwnedInputSchema: z.ZodType<Prisma
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutWfPlansOwnedInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutWfPlansOwnedInput> = z.object({
@@ -90779,6 +91194,7 @@ export const UserUpdateWithoutWfPlansOwnedInputSchema: z.ZodType<Prisma.UserUpda
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutWfPlansOwnedInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutWfPlansOwnedInput> = z.object({
@@ -90818,6 +91234,7 @@ export const UserUncheckedUpdateWithoutWfPlansOwnedInputSchema: z.ZodType<Prisma
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const WfCategoryUpsertWithoutPlansInputSchema: z.ZodType<Prisma.WfCategoryUpsertWithoutPlansInput> = z.object({
@@ -91181,6 +91598,7 @@ export const UserCreateWithoutWfTasksAssignedInputSchema: z.ZodType<Prisma.UserC
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutWfTasksAssignedInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutWfTasksAssignedInput> = z.object({
@@ -91220,6 +91638,7 @@ export const UserUncheckedCreateWithoutWfTasksAssignedInputSchema: z.ZodType<Pri
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutWfTasksAssignedInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutWfTasksAssignedInput> = z.object({
@@ -91264,6 +91683,7 @@ export const UserCreateWithoutWfTasksFollowedInputSchema: z.ZodType<Prisma.UserC
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutWfTasksFollowedInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutWfTasksFollowedInput> = z.object({
@@ -91303,6 +91723,7 @@ export const UserUncheckedCreateWithoutWfTasksFollowedInputSchema: z.ZodType<Pri
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutWfTasksFollowedInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutWfTasksFollowedInput> = z.object({
@@ -91347,6 +91768,7 @@ export const UserCreateWithoutWfTasksCreatedInputSchema: z.ZodType<Prisma.UserCr
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutWfTasksCreatedInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutWfTasksCreatedInput> = z.object({
@@ -91386,6 +91808,7 @@ export const UserUncheckedCreateWithoutWfTasksCreatedInputSchema: z.ZodType<Pris
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutWfTasksCreatedInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutWfTasksCreatedInput> = z.object({
@@ -91612,6 +92035,7 @@ export const UserUpdateWithoutWfTasksAssignedInputSchema: z.ZodType<Prisma.UserU
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutWfTasksAssignedInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutWfTasksAssignedInput> = z.object({
@@ -91651,6 +92075,7 @@ export const UserUncheckedUpdateWithoutWfTasksAssignedInputSchema: z.ZodType<Pri
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUpsertWithoutWfTasksFollowedInputSchema: z.ZodType<Prisma.UserUpsertWithoutWfTasksFollowedInput> = z.object({
@@ -91701,6 +92126,7 @@ export const UserUpdateWithoutWfTasksFollowedInputSchema: z.ZodType<Prisma.UserU
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutWfTasksFollowedInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutWfTasksFollowedInput> = z.object({
@@ -91740,6 +92166,7 @@ export const UserUncheckedUpdateWithoutWfTasksFollowedInputSchema: z.ZodType<Pri
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUpsertWithoutWfTasksCreatedInputSchema: z.ZodType<Prisma.UserUpsertWithoutWfTasksCreatedInput> = z.object({
@@ -91790,6 +92217,7 @@ export const UserUpdateWithoutWfTasksCreatedInputSchema: z.ZodType<Prisma.UserUp
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutWfTasksCreatedInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutWfTasksCreatedInput> = z.object({
@@ -91829,6 +92257,7 @@ export const UserUncheckedUpdateWithoutWfTasksCreatedInputSchema: z.ZodType<Pris
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const WfTaskCreateWithoutChecklistInputSchema: z.ZodType<Prisma.WfTaskCreateWithoutChecklistInput> = z.object({
@@ -92081,6 +92510,7 @@ export const UserCreateWithoutWfCommentsInputSchema: z.ZodType<Prisma.UserCreate
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutWfCommentsInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutWfCommentsInput> = z.object({
@@ -92120,6 +92550,7 @@ export const UserUncheckedCreateWithoutWfCommentsInputSchema: z.ZodType<Prisma.U
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutWfCommentsInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutWfCommentsInput> = z.object({
@@ -92250,6 +92681,7 @@ export const UserUpdateWithoutWfCommentsInputSchema: z.ZodType<Prisma.UserUpdate
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutWfCommentsInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutWfCommentsInput> = z.object({
@@ -92289,6 +92721,7 @@ export const UserUncheckedUpdateWithoutWfCommentsInputSchema: z.ZodType<Prisma.U
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const WfTaskCreateWithoutDueRequestsInputSchema: z.ZodType<Prisma.WfTaskCreateWithoutDueRequestsInput> = z.object({
@@ -92397,6 +92830,7 @@ export const UserCreateWithoutWfDueRequestsMadeInputSchema: z.ZodType<Prisma.Use
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutWfDueRequestsMadeInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutWfDueRequestsMadeInput> = z.object({
@@ -92436,6 +92870,7 @@ export const UserUncheckedCreateWithoutWfDueRequestsMadeInputSchema: z.ZodType<P
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutWfDueRequestsMadeInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutWfDueRequestsMadeInput> = z.object({
@@ -92480,6 +92915,7 @@ export const UserCreateWithoutWfDueRequestsReviewedInputSchema: z.ZodType<Prisma
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutWfDueRequestsReviewedInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutWfDueRequestsReviewedInput> = z.object({
@@ -92519,6 +92955,7 @@ export const UserUncheckedCreateWithoutWfDueRequestsReviewedInputSchema: z.ZodTy
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutWfDueRequestsReviewedInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutWfDueRequestsReviewedInput> = z.object({
@@ -92649,6 +93086,7 @@ export const UserUpdateWithoutWfDueRequestsMadeInputSchema: z.ZodType<Prisma.Use
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutWfDueRequestsMadeInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutWfDueRequestsMadeInput> = z.object({
@@ -92688,6 +93126,7 @@ export const UserUncheckedUpdateWithoutWfDueRequestsMadeInputSchema: z.ZodType<P
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUpsertWithoutWfDueRequestsReviewedInputSchema: z.ZodType<Prisma.UserUpsertWithoutWfDueRequestsReviewedInput> = z.object({
@@ -92738,6 +93177,7 @@ export const UserUpdateWithoutWfDueRequestsReviewedInputSchema: z.ZodType<Prisma
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutWfDueRequestsReviewedInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutWfDueRequestsReviewedInput> = z.object({
@@ -92777,6 +93217,7 @@ export const UserUncheckedUpdateWithoutWfDueRequestsReviewedInputSchema: z.ZodTy
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const WfTaskCreateWithoutDueHistoriesInputSchema: z.ZodType<Prisma.WfTaskCreateWithoutDueHistoriesInput> = z.object({
@@ -92885,6 +93326,7 @@ export const UserCreateWithoutWfDueHistoriesInputSchema: z.ZodType<Prisma.UserCr
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutWfDueHistoriesInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutWfDueHistoriesInput> = z.object({
@@ -92924,6 +93366,7 @@ export const UserUncheckedCreateWithoutWfDueHistoriesInputSchema: z.ZodType<Pris
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutWfDueHistoriesInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutWfDueHistoriesInput> = z.object({
@@ -93054,6 +93497,7 @@ export const UserUpdateWithoutWfDueHistoriesInputSchema: z.ZodType<Prisma.UserUp
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutWfDueHistoriesInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutWfDueHistoriesInput> = z.object({
@@ -93093,6 +93537,7 @@ export const UserUncheckedUpdateWithoutWfDueHistoriesInputSchema: z.ZodType<Pris
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const WfTaskCreateWithoutChatMessagesInputSchema: z.ZodType<Prisma.WfTaskCreateWithoutChatMessagesInput> = z.object({
@@ -93201,6 +93646,7 @@ export const UserCreateWithoutWfChatMessagesInputSchema: z.ZodType<Prisma.UserCr
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutWfChatMessagesInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutWfChatMessagesInput> = z.object({
@@ -93240,6 +93686,7 @@ export const UserUncheckedCreateWithoutWfChatMessagesInputSchema: z.ZodType<Pris
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutWfChatMessagesInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutWfChatMessagesInput> = z.object({
@@ -93370,6 +93817,7 @@ export const UserUpdateWithoutWfChatMessagesInputSchema: z.ZodType<Prisma.UserUp
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutWfChatMessagesInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutWfChatMessagesInput> = z.object({
@@ -93409,6 +93857,7 @@ export const UserUncheckedUpdateWithoutWfChatMessagesInputSchema: z.ZodType<Pris
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const WfTaskCreateWithoutActivityLogsInputSchema: z.ZodType<Prisma.WfTaskCreateWithoutActivityLogsInput> = z.object({
@@ -93517,6 +93966,7 @@ export const UserCreateWithoutWfActivityLogsInputSchema: z.ZodType<Prisma.UserCr
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutWfActivityLogsInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutWfActivityLogsInput> = z.object({
@@ -93556,6 +94006,7 @@ export const UserUncheckedCreateWithoutWfActivityLogsInputSchema: z.ZodType<Pris
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutWfActivityLogsInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutWfActivityLogsInput> = z.object({
@@ -93686,6 +94137,7 @@ export const UserUpdateWithoutWfActivityLogsInputSchema: z.ZodType<Prisma.UserUp
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutWfActivityLogsInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutWfActivityLogsInput> = z.object({
@@ -93725,6 +94177,7 @@ export const UserUncheckedUpdateWithoutWfActivityLogsInputSchema: z.ZodType<Pris
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const WfTaskCreateWithoutTransferRequestsInputSchema: z.ZodType<Prisma.WfTaskCreateWithoutTransferRequestsInput> = z.object({
@@ -93833,6 +94286,7 @@ export const UserCreateWithoutWfTransferRequestsMadeInputSchema: z.ZodType<Prism
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutWfTransferRequestsMadeInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutWfTransferRequestsMadeInput> = z.object({
@@ -93872,6 +94326,7 @@ export const UserUncheckedCreateWithoutWfTransferRequestsMadeInputSchema: z.ZodT
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutWfTransferRequestsMadeInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutWfTransferRequestsMadeInput> = z.object({
@@ -93916,6 +94371,7 @@ export const UserCreateWithoutWfTransferRequestsTargetInputSchema: z.ZodType<Pri
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutWfTransferRequestsTargetInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutWfTransferRequestsTargetInput> = z.object({
@@ -93955,6 +94411,7 @@ export const UserUncheckedCreateWithoutWfTransferRequestsTargetInputSchema: z.Zo
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutWfTransferRequestsTargetInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutWfTransferRequestsTargetInput> = z.object({
@@ -94085,6 +94542,7 @@ export const UserUpdateWithoutWfTransferRequestsMadeInputSchema: z.ZodType<Prism
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutWfTransferRequestsMadeInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutWfTransferRequestsMadeInput> = z.object({
@@ -94124,6 +94582,7 @@ export const UserUncheckedUpdateWithoutWfTransferRequestsMadeInputSchema: z.ZodT
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUpsertWithoutWfTransferRequestsTargetInputSchema: z.ZodType<Prisma.UserUpsertWithoutWfTransferRequestsTargetInput> = z.object({
@@ -94174,6 +94633,7 @@ export const UserUpdateWithoutWfTransferRequestsTargetInputSchema: z.ZodType<Pri
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutWfTransferRequestsTargetInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutWfTransferRequestsTargetInput> = z.object({
@@ -94213,6 +94673,7 @@ export const UserUncheckedUpdateWithoutWfTransferRequestsTargetInputSchema: z.Zo
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateWithoutIntegratedAuditsInputSchema: z.ZodType<Prisma.FacilityCreateWithoutIntegratedAuditsInput> = z.object({
@@ -95611,6 +96072,7 @@ export const UserCreateWithoutChecklistTemplatesInputSchema: z.ZodType<Prisma.Us
   wfTransferRequestsTarget: z.lazy(() => WfTransferRequestCreateNestedManyWithoutTargetUserInputSchema).optional(),
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutChecklistTemplatesInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutChecklistTemplatesInput> = z.object({
@@ -95650,6 +96112,7 @@ export const UserUncheckedCreateWithoutChecklistTemplatesInputSchema: z.ZodType<
   wfTransferRequestsTarget: z.lazy(() => WfTransferRequestUncheckedCreateNestedManyWithoutTargetUserInputSchema).optional(),
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutConductedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutChecklistTemplatesInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutChecklistTemplatesInput> = z.object({
@@ -95829,6 +96292,7 @@ export const UserUpdateWithoutChecklistTemplatesInputSchema: z.ZodType<Prisma.Us
   wfTransferRequestsTarget: z.lazy(() => WfTransferRequestUpdateManyWithoutTargetUserNestedInputSchema).optional(),
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutChecklistTemplatesInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutChecklistTemplatesInput> = z.object({
@@ -95868,6 +96332,7 @@ export const UserUncheckedUpdateWithoutChecklistTemplatesInputSchema: z.ZodType<
   wfTransferRequestsTarget: z.lazy(() => WfTransferRequestUncheckedUpdateManyWithoutTargetUserNestedInputSchema).optional(),
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutConductedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const ChecklistTemplateGroupUpsertWithoutTemplatesInputSchema: z.ZodType<Prisma.ChecklistTemplateGroupUpsertWithoutTemplatesInput> = z.object({
@@ -96580,6 +97045,7 @@ export const UserCreateWithoutChecklistSubmissionsInputSchema: z.ZodType<Prisma.
   wfTransferRequestsTarget: z.lazy(() => WfTransferRequestCreateNestedManyWithoutTargetUserInputSchema).optional(),
   workflowRole: z.lazy(() => WorkflowUserRoleCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateCreateNestedManyWithoutCreatedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedCreateWithoutChecklistSubmissionsInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutChecklistSubmissionsInput> = z.object({
@@ -96619,6 +97085,7 @@ export const UserUncheckedCreateWithoutChecklistSubmissionsInputSchema: z.ZodTyp
   wfTransferRequestsTarget: z.lazy(() => WfTransferRequestUncheckedCreateNestedManyWithoutTargetUserInputSchema).optional(),
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedCreateNestedOneWithoutUserInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedCreateNestedManyWithoutCreatedByInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutUserInputSchema).optional(),
 }).strict();
 
 export const UserCreateOrConnectWithoutChecklistSubmissionsInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutChecklistSubmissionsInput> = z.object({
@@ -96902,6 +97369,7 @@ export const UserUpdateWithoutChecklistSubmissionsInputSchema: z.ZodType<Prisma.
   wfTransferRequestsTarget: z.lazy(() => WfTransferRequestUpdateManyWithoutTargetUserNestedInputSchema).optional(),
   workflowRole: z.lazy(() => WorkflowUserRoleUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUpdateManyWithoutCreatedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const UserUncheckedUpdateWithoutChecklistSubmissionsInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutChecklistSubmissionsInput> = z.object({
@@ -96941,6 +97409,7 @@ export const UserUncheckedUpdateWithoutChecklistSubmissionsInputSchema: z.ZodTyp
   wfTransferRequestsTarget: z.lazy(() => WfTransferRequestUncheckedUpdateManyWithoutTargetUserNestedInputSchema).optional(),
   workflowRole: z.lazy(() => WorkflowUserRoleUncheckedUpdateOneWithoutUserNestedInputSchema).optional(),
   checklistTemplates: z.lazy(() => ChecklistTemplateUncheckedUpdateManyWithoutCreatedByNestedInputSchema).optional(),
+  riskAuditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutUserNestedInputSchema).optional(),
 }).strict();
 
 export const ChecklistSubmissionCreateWithoutAnswersInputSchema: z.ZodType<Prisma.ChecklistSubmissionCreateWithoutAnswersInput> = z.object({
@@ -101609,6 +102078,16 @@ export const ChecklistSubmissionCreateManyConductedByInputSchema: z.ZodType<Pris
   updatedAt: z.coerce.date().optional(),
 }).strict();
 
+export const RiskAuditLogCreateManyUserInputSchema: z.ZodType<Prisma.RiskAuditLogCreateManyUserInput> = z.object({
+  id: z.string().optional(),
+  riskId: z.string(),
+  action: z.string(),
+  details: z.string().optional().nullable(),
+  changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  userFullName: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+}).strict();
+
 export const UserFacilityUpdateWithoutUserInputSchema: z.ZodType<Prisma.UserFacilityUpdateWithoutUserInput> = z.object({
   facility: z.lazy(() => FacilityUpdateOneRequiredWithoutUsersNestedInputSchema).optional(),
 }).strict();
@@ -102604,6 +103083,36 @@ export const ChecklistSubmissionUncheckedUpdateManyWithoutConductedByInputSchema
   notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const RiskAuditLogUpdateWithoutUserInputSchema: z.ZodType<Prisma.RiskAuditLogUpdateWithoutUserInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  action: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  details: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  userFullName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  risk: z.lazy(() => RiskLifecycleUpdateOneRequiredWithoutAuditLogsNestedInputSchema).optional(),
+}).strict();
+
+export const RiskAuditLogUncheckedUpdateWithoutUserInputSchema: z.ZodType<Prisma.RiskAuditLogUncheckedUpdateWithoutUserInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  riskId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  action: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  details: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  userFullName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const RiskAuditLogUncheckedUpdateManyWithoutUserInputSchema: z.ZodType<Prisma.RiskAuditLogUncheckedUpdateManyWithoutUserInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  riskId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  action: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  details: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  userFullName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
 export const UserRoleCreateManyRoleInputSchema: z.ZodType<Prisma.UserRoleCreateManyRoleInput> = z.object({
@@ -107298,6 +107807,7 @@ export const RiskAuditLogCreateManyRiskInputSchema: z.ZodType<Prisma.RiskAuditLo
   details: z.string().optional().nullable(),
   changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   username: z.string(),
+  userFullName: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
 }).strict();
 
@@ -107306,8 +107816,9 @@ export const RiskAuditLogUpdateWithoutRiskInputSchema: z.ZodType<Prisma.RiskAudi
   action: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   details: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
-  username: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  userFullName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  user: z.lazy(() => UserUpdateOneWithoutRiskAuditLogsNestedInputSchema).optional(),
 }).strict();
 
 export const RiskAuditLogUncheckedUpdateWithoutRiskInputSchema: z.ZodType<Prisma.RiskAuditLogUncheckedUpdateWithoutRiskInput> = z.object({
@@ -107316,6 +107827,7 @@ export const RiskAuditLogUncheckedUpdateWithoutRiskInputSchema: z.ZodType<Prisma
   details: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   username: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  userFullName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
@@ -107325,6 +107837,7 @@ export const RiskAuditLogUncheckedUpdateManyWithoutRiskInputSchema: z.ZodType<Pr
   details: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   changedFields: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   username: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  userFullName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
@@ -110324,6 +110837,8 @@ export const RiskLifecycleCreateManyLocationInputSchema: z.ZodType<Prisma.RiskLi
   postImprovementDueDate: z.coerce.date().optional().nullable(),
   dueDatePeriod: z.string().optional().nullable(),
   postImprovementResponsible: z.string().optional().nullable(),
+  effectivenessImages: z.union([ z.lazy(() => RiskLifecycleCreateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
+  documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
 }).strict();
 
 export const HazmatIncidentCreateManyLocationInputSchema: z.ZodType<Prisma.HazmatIncidentCreateManyLocationInput> = z.object({
@@ -110609,6 +111124,8 @@ export const RiskLifecycleUpdateWithoutLocationInputSchema: z.ZodType<Prisma.Ris
   postImprovementDueDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   dueDatePeriod: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   postImprovementResponsible: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  effectivenessImages: z.union([ z.lazy(() => RiskLifecycleUpdateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
+  documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   auditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutRiskNestedInputSchema).optional(),
 }).strict();
 
@@ -110660,6 +111177,8 @@ export const RiskLifecycleUncheckedUpdateWithoutLocationInputSchema: z.ZodType<P
   postImprovementDueDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   dueDatePeriod: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   postImprovementResponsible: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  effectivenessImages: z.union([ z.lazy(() => RiskLifecycleUpdateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
+  documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   auditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutRiskNestedInputSchema).optional(),
 }).strict();
 
@@ -110711,6 +111230,8 @@ export const RiskLifecycleUncheckedUpdateManyWithoutLocationInputSchema: z.ZodTy
   postImprovementDueDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   dueDatePeriod: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   postImprovementResponsible: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  effectivenessImages: z.union([ z.lazy(() => RiskLifecycleUpdateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
+  documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
 }).strict();
 
 export const HazmatIncidentUpdateWithoutLocationInputSchema: z.ZodType<Prisma.HazmatIncidentUpdateWithoutLocationInput> = z.object({

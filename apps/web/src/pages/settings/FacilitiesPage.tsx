@@ -17,7 +17,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import LocationsManagerModal from '@/components/panel/LocationsManagerModal';
 
 import type { Facility as BaseFacility } from '@sec-portali/shared';
 
@@ -126,7 +125,6 @@ const FacilitiesPage = () => {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [dangerClassFilter, setDangerClassFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
-  const [managingLocationsFor, setManagingLocationsFor] = useState<string | null>(null);
 
   const { data: facilities, isLoading } = useQuery<Facility[]>({
     queryKey: ['facilities'],
@@ -558,9 +556,6 @@ const FacilitiesPage = () => {
                                   <Button variant="ghost" size="icon" onClick={() => handleView(facility)} className="w-8 h-8 rounded-lg hover:bg-primary/5 text-slate-400 hover:text-primary transition-colors" title="Detay">
                                     <Eye className="w-4 h-4" />
                                   </Button>
-                                  <Button variant="ghost" size="icon" onClick={() => setManagingLocationsFor(facility.id)} className="w-8 h-8 rounded-lg hover:bg-primary/5 text-slate-400 hover:text-primary transition-colors" title="Lokasyonları Yönet">
-                                    <MapPin className="w-4 h-4" />
-                                  </Button>
                                   <Button variant="ghost" size="icon" onClick={() => navigate(`/settings/facilities/${facility.id}/edit`)} className="w-8 h-8 rounded-lg hover:bg-primary/5 text-slate-400 hover:text-primary transition-colors" title="Düzenle">
                                     <Edit2 className="w-4 h-4" />
                                   </Button>
@@ -642,9 +637,6 @@ const FacilitiesPage = () => {
                          <Button onClick={() => handleView(facility)} className="flex-1 bg-slate-50 hover:bg-primary hover:text-white text-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-primary h-10 rounded-xl transition-all font-medium text-xs">
                            Detayı Gör
                          </Button>
-                         <Button variant="ghost" size="icon" onClick={() => setManagingLocationsFor(facility.id)} className="w-10 h-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400" title="Lokasyonları Yönet">
-                           <MapPin className="w-4 h-4" />
-                         </Button>
                          <Button variant="ghost" size="icon" onClick={() => navigate(`/settings/facilities/${facility.id}/edit`)} className="w-10 h-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400" title="Düzenle">
                            <Edit2 className="w-4 h-4" />
                          </Button>
@@ -664,14 +656,6 @@ const FacilitiesPage = () => {
           </div>
         )}
       </div>
-
-      {managingLocationsFor && (
-        <LocationsManagerModal 
-          facilityId={managingLocationsFor} 
-          isOpen={true} 
-          onClose={() => setManagingLocationsFor(null)} 
-        />
-      )}
     </div>
   );
 };
@@ -694,11 +678,10 @@ const RoleMiniBadge = ({ type, compliance }: { type: string, compliance: any }) 
   );
 };
 
-const LifeCardView = ({ facility, onBack, onEdit, onManageLocations, complianceData }: { 
+const LifeCardView = ({ facility, onBack, onEdit, complianceData }: { 
   facility: Facility, 
   onBack: () => void, 
   onEdit: () => void,
-  onManageLocations: () => void,
   complianceData?: any[]
 }) => {
   const navigate = useNavigate();
@@ -717,8 +700,15 @@ const LifeCardView = ({ facility, onBack, onEdit, onManageLocations, complianceD
            <span className="font-medium text-xs tracking-tight">Tesis Listesi</span>
          </Button>
          <div className="flex items-center gap-3">
-           <Button variant="outline" onClick={onManageLocations} className="gap-2 px-6 h-10 rounded-xl shadow-sm font-medium transition-all">
-             <MapPin className="w-3.5 h-3.5" /> Lokasyon Yönetimi
+           <Button 
+             variant="outline" 
+             onClick={() => {
+               localStorage.setItem('activeFacilityId', facility.id);
+               navigate('/settings/locations');
+             }} 
+             className="gap-2 px-6 h-10 rounded-xl shadow-sm font-medium transition-all"
+           >
+             <MapPin className="w-3.5 h-3.5" /> Lokasyon Yönetimine Git
            </Button>
            <Button onClick={onEdit} className="bg-primary hover:bg-primary/90 gap-2 px-6 h-10 rounded-xl shadow-md shadow-primary/10 font-medium transition-all">
              <Edit2 className="w-3.5 h-3.5" /> Bilgileri Güncelle

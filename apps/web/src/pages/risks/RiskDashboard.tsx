@@ -40,13 +40,23 @@ export default function RiskDashboard() {
   return (
     <div className="space-y-6">
       {/* Başlık */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Risk Yaşam Döngüsü</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             Tesis bazlı risk değerlendirme ve 4 aşamalı takip sistemi
           </p>
         </div>
+        {(user?.isAdmin || user?.isManagement) && (
+          <Button 
+            onClick={() => navigate('/risks/facility/all')}
+            className="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-2 shadow-sm"
+          >
+            <Building2 className="w-4 h-4" />
+            Tüm Tesisler Yönetici Kokpiti
+            <ArrowUpRight className="w-4 h-4" />
+          </Button>
+        )}
       </div>
 
       {/* KPI Kartları */}

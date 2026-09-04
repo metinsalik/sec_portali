@@ -24,22 +24,52 @@ const storage = multer_1.default.diskStorage({
     }
 });
 const upload = (0, multer_1.default)({ storage });
+const uploadMemory = (0, multer_1.default)({ storage: multer_1.default.memoryStorage() });
 // Get elevators by facility
 router.get('/facility/:facilityId', async (req, res) => {
     try {
         const { facilityId } = req.params;
-        const { brand, maintenanceCompany, label, status } = req.query;
+        const { brand, maintenanceCompany, label, type, inspectionStatus } = req.query;
         const filters = {
             ...(brand ? { brand: String(brand) } : {}),
             ...(maintenanceCompany ? { maintenanceCompany: String(maintenanceCompany) } : {}),
             ...(label ? { label: String(label) } : {}),
-            ...(status ? { status: String(status) } : {})
+            ...(type ? { type: String(type) } : {}),
+            ...(inspectionStatus ? { inspectionStatus: String(inspectionStatus) } : {})
         };
         const elevators = await elevator_service_1.elevatorService.getElevators(facilityId, filters);
         res.json(elevators);
     }
     catch (error) {
         console.error('Error fetching elevators:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+// Generate Excel template
+router.get('/import-template', async (req, res) => {
+    try {
+        const buffer = await elevator_service_1.elevatorService.generateTemplate();
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="asansor_sablon.xlsx"');
+        res.send(buffer);
+    }
+    catch (error) {
+        console.error('Error generating template:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+// Import Excel data
+router.post('/import', uploadMemory.single('file'), async (req, res) => {
+    try {
+        const { facilityId } = req.body;
+        if (!req.file || !facilityId) {
+            return res.status(400).json({ error: 'File and facilityId are required' });
+        }
+        const result = await elevator_service_1.elevatorService.importExcel(facilityId, req.file.buffer);
+        res.json(result);
+    }
+    catch (error) {
+        console.error('Error importing excel:', error);
         res.status(500).json({ error: error.message });
     }
 });

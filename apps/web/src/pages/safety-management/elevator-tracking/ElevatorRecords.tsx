@@ -181,7 +181,21 @@ export default function ElevatorRecords() {
                         <TableCell>
                           <Badge className={getLabelColor(elevator.label)}>{elevator.label || 'Belirsiz'}</Badge>
                         </TableCell>
-                        <TableCell>{elevator.type || '-'}</TableCell>
+                        <TableCell>
+                          {elevator.type && elevator.type !== '-' ? (
+                            <div className="flex flex-wrap gap-1 max-w-[200px]">
+                              {elevator.type.split(',').map((t: string, idx: number) => (
+                                <Badge 
+                                  key={idx} 
+                                  variant="outline" 
+                                  className="px-2 py-0.5 text-[11px] font-medium bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                                >
+                                  {t.trim()}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : '-'}
+                        </TableCell>
                         <TableCell>{elevator.maintenanceCompany || '-'}</TableCell>
                         <TableCell>{elevator.brand || '-'}</TableCell>
                         <TableCell>{elevator.lastInspectionDate ? format(new Date(elevator.lastInspectionDate), 'dd.MM.yyyy') : '-'}</TableCell>
@@ -279,7 +293,21 @@ export default function ElevatorRecords() {
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 font-medium uppercase">Tür</p>
-                        <p className="font-semibold text-gray-900">{quickViewElevator?.type || '-'}</p>
+                        {quickViewElevator?.type && quickViewElevator.type !== '-' ? (
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            {quickViewElevator.type.split(',').map((t: string, idx: number) => (
+                              <Badge 
+                                key={idx} 
+                                variant="outline" 
+                                className="px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700"
+                              >
+                                {t.trim()}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="font-semibold text-gray-900">-</p>
+                        )}
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 font-medium uppercase">Kapasite</p>

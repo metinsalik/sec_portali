@@ -14,8 +14,9 @@ router.get('/health', (_req, res) => {
 // /api/risks/facilities  → uzmanın tesis listesi + yönetim
 router.use('/facilities', facilityRoutes);
 
-// /api/risks/departments → departman (bölüm) yönetimi
+// /api/risks/locations & /api/risks/departments → departman (bölüm) ve lokasyon yönetimi
 router.use('/locations', locationRoutes);
+router.use('/departments', locationRoutes);
 
 // /api/risks/lifecycle   → risk yaşam döngüsü CRUD + Excel import
 router.use('/lifecycle', lifecycleRoutes);

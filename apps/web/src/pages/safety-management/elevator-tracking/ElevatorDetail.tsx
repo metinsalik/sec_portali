@@ -8,8 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, PlusCircle, FileText, Upload, Save, X, Edit, ExternalLink } from 'lucide-react';
+import { ArrowLeft, PlusCircle, FileText, Upload, Save, X, Edit, ExternalLink, ChevronDown } from 'lucide-react';
 import { elevatorService } from '@/services/elevator.service';
 import { elevatorSettingsService } from '@/services/elevator-settings.service';
 import { format } from 'date-fns';
@@ -341,18 +343,77 @@ export default function ElevatorDetail() {
               <div>
                 <span className="text-gray-500 block mb-1">Tür</span>
                 {isEditing ? (
-                  <Select value={editForm.type || ''} onValueChange={(val) => setEditForm({ ...editForm, type: val })}>
-                    <SelectTrigger className="h-8">
-                      <SelectValue placeholder="Seçiniz" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {types.map(t => (
-                        <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between h-auto min-h-8 py-1 px-2 text-xs font-normal text-left"
+                      >
+                        <div className="flex flex-wrap gap-1 items-center max-w-[90%]">
+                          {editForm.type && editForm.type !== '-' ? (
+                            editForm.type.split(',').map((t: string) => t.trim()).filter(Boolean).map((t: string, idx: number) => (
+                              <Badge key={idx} variant="outline" className="px-2 py-0.5 text-[11px] font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700">
+                                {t}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-muted-foreground">Tür seçiniz...</span>
+                          )}
+                        </div>
+                        <ChevronDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-2 bg-popover" align="start">
+                      <div className="space-y-1 max-h-56 overflow-y-auto">
+                        {types.map((t) => {
+                          const currentList = (editForm.type && editForm.type !== '-')
+                            ? editForm.type.split(',').map((x: string) => x.trim()).filter(Boolean)
+                            : [];
+                          const isChecked = currentList.includes(t.name);
+                          return (
+                            <label
+                              key={t.id}
+                              className="flex items-center gap-2 p-1.5 rounded-md hover:bg-muted cursor-pointer text-xs transition-colors"
+                            >
+                              <Checkbox
+                                checked={isChecked}
+                                onCheckedChange={(checked) => {
+                                  let updated: string[];
+                                  if (checked) {
+                                    updated = [...currentList, t.name];
+                                  } else {
+                                    updated = currentList.filter((x: string) => x !== t.name);
+                                  }
+                                  setEditForm({
+                                    ...editForm,
+                                    type: updated.length > 0 ? updated.join(', ') : '-'
+                                  });
+                                }}
+                              />
+                              <span>{t.name}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 ) : (
-                  <span className="font-medium">{elevator.type || '-'}</span>
+                  <div className="flex flex-wrap gap-1.5 mt-0.5">
+                    {elevator.type && elevator.type !== '-' ? (
+                      elevator.type.split(',').map((t: string, idx: number) => (
+                        <Badge 
+                          key={idx} 
+                          variant="outline" 
+                          className="px-2.5 py-0.5 text-xs font-medium bg-slate-100/90 text-slate-700 dark:bg-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 shadow-2xs"
+                        >
+                          {t.trim()}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="font-medium text-muted-foreground">-</span>
+                    )}
+                  </div>
                 )}
               </div>
               <div>

@@ -21,6 +21,29 @@ export const RiskPrintTable = forwardRef<HTMLDivElement, RiskPrintTableProps>(
   ({ risks, department, deptCode }, ref) => {
     const facility = department?.facility || {};
     
+    // Extract assigned team members from facility assignments
+    const assignments: any[] = facility?.assignments || [];
+    
+    // Find specialist(s), doctor(s), employerRep
+    const safetySpecialists = assignments
+      .filter(a => a.type?.toLowerCase().includes('uzman') || a.type?.toLowerCase().includes('safety') || a.type?.toLowerCase().includes('isg'))
+      .map(a => a.professional?.fullName || a.professional?.username)
+      .filter(Boolean);
+
+    const doctors = assignments
+      .filter(a => a.type?.toLowerCase().includes('hekim') || a.type?.toLowerCase().includes('doctor'))
+      .map(a => a.professional?.fullName || a.professional?.username)
+      .filter(Boolean);
+
+    const employerReps = assignments
+      .filter(a => a.employerRep || a.type?.toLowerCase().includes('isveren') || a.type?.toLowerCase().includes('vekil'))
+      .map(a => a.employerRep?.fullName || a.professional?.fullName)
+      .filter(Boolean);
+
+    const specialistText = safetySpecialists.length > 0 ? safetySpecialists.join(', ') : '';
+    const doctorText = doctors.length > 0 ? doctors.join(', ') : '';
+    const employerRepText = employerReps.length > 0 ? employerReps.join(', ') : '';
+
     // Sort risks: highest initialScore first
     const sortedRisks = [...risks].sort((a, b) => {
       const scoreA = Number(a.initialScore) || 0;
@@ -30,6 +53,16 @@ export const RiskPrintTable = forwardRef<HTMLDivElement, RiskPrintTableProps>(
 
     const currentDate = format(new Date(), 'dd.MM.yyyy');
     const validUntilDate = format(addYears(new Date(), 2), 'dd.MM.yyyy');
+
+    // Logo check
+    const logoUrl = facility.logoUrl || '/mlpcare.jpg';
+
+    // Format address components
+    const addressParts = [
+      facility.fullAddress,
+      facility.district ? `${facility.district}` : null,
+      facility.city
+    ].filter(Boolean).join(', ');
 
     return (
       <div ref={ref} style={{ padding: '10px', fontFamily: 'Arial, sans-serif', color: '#000', backgroundColor: '#fff', width: '100%', boxSizing: 'border-box' }}>
@@ -45,9 +78,37 @@ export const RiskPrintTable = forwardRef<HTMLDivElement, RiskPrintTableProps>(
           <tbody>
             <tr>
               <td style={{ border: 'none', padding: 0 }}>
-                {/* HEADER TITLE */}
-                <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-                  <h1 style={{ fontSize: '14px', fontWeight: 'bold', margin: '0' }}>TEHLİKE BELİRLEME VE RİSK DEĞERLENDİRME TABLOSU (FINE KINNEY METODU)</h1>
+                {/* HEADER TITLE & LOGO */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', borderBottom: '2px solid #0f172a', paddingBottom: '8px' }}>
+                  <div style={{ width: '180px', textAlign: 'left' }}>
+                    {logoUrl ? (
+                      <img 
+                        src={logoUrl} 
+                        alt={facility.name || 'Logo'} 
+                        style={{ maxHeight: '42px', maxWidth: '170px', objectFit: 'contain' }}
+                        onError={(e) => {
+                          // Hide on broken image
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#0f172a' }}>{facility.name || ''}</span>
+                    )}
+                  </div>
+                  
+                  <div style={{ textAlign: 'center', flex: 1, padding: '0 10px' }}>
+                    <h1 style={{ fontSize: '13px', fontWeight: 'bold', margin: '0', textTransform: 'uppercase', letterSpacing: '0.3px', color: '#0f172a' }}>
+                      TEHLİKE BELİRLEME VE RİSK DEĞERLENDİRME TABLOSU (FINE KINNEY METODU)
+                    </h1>
+                    <div style={{ fontSize: '9px', color: '#475569', marginTop: '2px' }}>
+                      {facility.commercialTitle || facility.name || ''}
+                    </div>
+                  </div>
+
+                  <div style={{ width: '180px', textAlign: 'right', fontSize: '8px', color: '#64748b' }}>
+                    <div><strong>Form No:</strong> İSG-F56</div>
+                    <div><strong>Tarih:</strong> {currentDate}</div>
+                  </div>
                 </div>
 
         {/* HEADER INFO TABLE */}
@@ -55,7 +116,7 @@ export const RiskPrintTable = forwardRef<HTMLDivElement, RiskPrintTableProps>(
           <tbody>
             <tr>
               <td style={{ border: '1px solid #000', padding: '4px', fontWeight: 'bold', width: '15%', backgroundColor: '#f3f4f6' }}>Değerlendirilen Birim / Bölüm</td>
-              <td style={{ border: '1px solid #000', padding: '4px', width: '15%' }}>{department?.name || '-'}</td>
+              <td style={{ border: '1px solid #000', padding: '4px', width: '15%', fontWeight: '600' }}>{department?.name || '-'}</td>
               <td style={{ border: '1px solid #000', padding: '4px', fontWeight: 'bold', width: '5%', backgroundColor: '#f3f4f6' }}>Diğer</td>
               <td style={{ border: '1px solid #000', padding: '4px', width: '5%' }}>-</td>
               <td style={{ border: '1px solid #000', padding: '4px', fontWeight: 'bold', width: '10%', backgroundColor: '#f3f4f6' }}>Diğer ise belirtiniz;</td>
@@ -68,10 +129,11 @@ export const RiskPrintTable = forwardRef<HTMLDivElement, RiskPrintTableProps>(
             <tr>
               <td style={{ border: '1px solid #000', padding: '4px', fontWeight: 'bold', backgroundColor: '#f3f4f6' }}>İşyeri Unvanı, Adresi</td>
               <td colSpan={5} style={{ border: '1px solid #000', padding: '4px' }}>
-                {facility.commercialTitle || facility.name || '-'}, {facility.fullAddress || ''} {facility.district ? `${facility.district}/` : ''}{facility.city || ''}
+                <strong>{facility.commercialTitle || facility.name || '-'}</strong>
+                {addressParts && <span> — {addressParts}</span>}
               </td>
               <td style={{ border: '1px solid #000', padding: '4px', fontWeight: 'bold', backgroundColor: '#f3f4f6' }} colSpan={2}>Kullanılan Metod</td>
-              <td style={{ border: '1px solid #000', padding: '4px' }} colSpan={2}>Fine-Kinney Metodu</td>
+              <td style={{ border: '1px solid #000', padding: '4px', fontWeight: '600' }} colSpan={2}>Fine-Kinney Metodu</td>
             </tr>
           </tbody>
         </table>
@@ -142,6 +204,15 @@ export const RiskPrintTable = forwardRef<HTMLDivElement, RiskPrintTableProps>(
               const finalLevelColor = LEVEL_COLORS[risk.finalLevel] || '#ffffff';
               const finalLevelTextColor = risk.finalLevel && risk.finalLevel !== 'Bilinmiyor' ? '#ffffff' : '#000000';
 
+              // Fallback to first image from array if single image field is empty, or vice versa
+              const initialImg = (Array.isArray(risk.initialImages) && risk.initialImages.length > 0)
+                ? risk.initialImages[0]
+                : (risk.initialImage || null);
+
+              const actionImg = (Array.isArray(risk.actionImages) && risk.actionImages.length > 0)
+                ? risk.actionImages[0]
+                : (risk.actionImage || null);
+
               return (
                 <tr key={risk.id} style={{ backgroundColor: '#ffffff' }}>
                   <td style={{ border: '1px solid #000', padding: '2px' }}>{formattedRiskNo}</td>
@@ -156,8 +227,8 @@ export const RiskPrintTable = forwardRef<HTMLDivElement, RiskPrintTableProps>(
                   <td style={{ border: '1px solid #000', padding: '2px' }}>{risk.affectedPeople || '-'}</td>
                   <td style={{ border: '1px solid #000', padding: '2px', textAlign: 'left' }}>{risk.initialCondition || '-'}</td>
                   <td style={{ border: '1px solid #000', padding: '2px' }}>
-                    {risk.initialImage ? (
-                      <img src={risk.initialImage} alt="Mevcut Durum" style={{ maxWidth: '100%', maxHeight: '40px', objectFit: 'contain' }} />
+                    {initialImg ? (
+                      <img src={initialImg} alt="Mevcut Durum" style={{ maxWidth: '100%', maxHeight: '42px', objectFit: 'contain' }} />
                     ) : '-'}
                   </td>
                   
@@ -177,8 +248,8 @@ export const RiskPrintTable = forwardRef<HTMLDivElement, RiskPrintTableProps>(
                   <td style={{ border: '1px solid #000', padding: '2px', textAlign: 'left' }}>{risk.actionsTaken || '-'}</td>
                   <td style={{ border: '1px solid #000', padding: '2px' }}>{risk.actionDate ? format(new Date(risk.actionDate), 'dd.MM.yyyy') : '-'}</td>
                   <td style={{ border: '1px solid #000', padding: '2px' }}>
-                    {risk.actionImage ? (
-                      <img src={risk.actionImage} alt="Sonrası Durum" style={{ maxWidth: '100%', maxHeight: '40px', objectFit: 'contain' }} />
+                    {actionImg ? (
+                      <img src={actionImg} alt="Sonrası Durum" style={{ maxWidth: '100%', maxHeight: '42px', objectFit: 'contain' }} />
                     ) : '-'}
                   </td>
 
@@ -203,7 +274,7 @@ export const RiskPrintTable = forwardRef<HTMLDivElement, RiskPrintTableProps>(
             {sortedRisks.length === 0 && (
               <tr>
                 <td colSpan={32} style={{ border: '1px solid #000', padding: '10px', textAlign: 'center', fontSize: '8px' }}>
-                  Bu departmanda henüz risk kaydı bulunmamaktadır.
+                  Bu birimde henüz kayıtlı risk bulunmamaktadır.
                 </td>
               </tr>
             )}
@@ -229,13 +300,19 @@ export const RiskPrintTable = forwardRef<HTMLDivElement, RiskPrintTableProps>(
             </thead>
             <tbody>
               <tr>
-                <td style={{ border: '1px solid #000', height: '40px' }}></td>
-                <td style={{ border: '1px solid #000', height: '40px' }}></td>
-                <td style={{ border: '1px solid #000', height: '40px' }}></td>
-                <td style={{ border: '1px solid #000', height: '40px' }}></td>
-                <td style={{ border: '1px solid #000', height: '40px' }}></td>
-                <td style={{ border: '1px solid #000', height: '40px' }}></td>
-                <td style={{ border: '1px solid #000', height: '40px' }}></td>
+                <td style={{ border: '1px solid #000', height: '42px', verticalAlign: 'top', padding: '4px' }}>
+                  {employerRepText && <div style={{ fontWeight: 'bold', fontSize: '7.5px' }}>{employerRepText}</div>}
+                </td>
+                <td style={{ border: '1px solid #000', height: '42px', verticalAlign: 'top', padding: '4px' }}>
+                  {specialistText && <div style={{ fontWeight: 'bold', fontSize: '7.5px' }}>{specialistText}</div>}
+                </td>
+                <td style={{ border: '1px solid #000', height: '42px', verticalAlign: 'top', padding: '4px' }}>
+                  {doctorText && <div style={{ fontWeight: 'bold', fontSize: '7.5px' }}>{doctorText}</div>}
+                </td>
+                <td style={{ border: '1px solid #000', height: '42px', verticalAlign: 'top', padding: '4px' }}></td>
+                <td style={{ border: '1px solid #000', height: '42px', verticalAlign: 'top', padding: '4px' }}></td>
+                <td style={{ border: '1px solid #000', height: '42px', verticalAlign: 'top', padding: '4px' }}></td>
+                <td style={{ border: '1px solid #000', height: '42px', verticalAlign: 'top', padding: '4px' }}></td>
               </tr>
               <tr>
                 <td colSpan={7} style={{ border: '1px solid #000', padding: '4px', backgroundColor: '#f3f4f6', fontWeight: 'bold' }}>
@@ -243,7 +320,7 @@ export const RiskPrintTable = forwardRef<HTMLDivElement, RiskPrintTableProps>(
                 </td>
               </tr>
               <tr>
-                <td colSpan={7} style={{ border: '1px solid #000', height: '40px' }}></td>
+                <td colSpan={7} style={{ border: '1px solid #000', height: '35px' }}></td>
               </tr>
             </tbody>
           </table>

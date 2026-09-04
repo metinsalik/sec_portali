@@ -27,6 +27,14 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
                     commercialTitle: true,
                     fullAddress: true,
                     district: true,
+                    logoUrl: true,
+                    phone: true,
+                    assignments: {
+                        include: {
+                            professional: true,
+                            employerRep: true,
+                        }
+                    },
                     locations: {
                         select: {
                             id: true,
@@ -56,6 +64,14 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
                     commercialTitle: true,
                     fullAddress: true,
                     district: true,
+                    logoUrl: true,
+                    phone: true,
+                    assignments: {
+                        include: {
+                            professional: true,
+                            employerRep: true,
+                        }
+                    },
                     locations: {
                         select: {
                             id: true,

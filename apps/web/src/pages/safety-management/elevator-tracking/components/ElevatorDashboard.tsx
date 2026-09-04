@@ -85,7 +85,18 @@ export default function ElevatorDashboard({ elevators, onFilterChange, onClearFi
       maintMap[maint] = (maintMap[maint] || 0) + 1;
 
       const stat = e.type || 'Belirtilmedi';
-      typeMap[stat] = (typeMap[stat] || 0) + 1;
+      if (stat === '-' || stat === 'Belirtilmedi') {
+        typeMap['Belirtilmedi'] = (typeMap['Belirtilmedi'] || 0) + 1;
+      } else {
+        const splitTypes = stat.split(',').map((s: string) => s.trim()).filter(Boolean);
+        if (splitTypes.length === 0) {
+          typeMap['Belirtilmedi'] = (typeMap['Belirtilmedi'] || 0) + 1;
+        } else {
+          splitTypes.forEach((tName: string) => {
+            typeMap[tName] = (typeMap[tName] || 0) + 1;
+          });
+        }
+      }
 
       if (!e.nextInspectionDate) {
         noDate++;

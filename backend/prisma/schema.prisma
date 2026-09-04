@@ -52,6 +52,7 @@ model User {
   workflowRole             WorkflowUserRole?
   checklistTemplates       ChecklistTemplate[]
   checklistSubmissions     ChecklistSubmission[]
+  riskAuditLogs            RiskAuditLog[]
 }
 
 model Role {
@@ -701,6 +702,8 @@ model RiskLifecycle {
   postImprovementDueDate     DateTime?
   dueDatePeriod              String?
   postImprovementResponsible String?
+  effectivenessImages        String[]          @default([])
+  documents                  Json?
   auditLogs                  RiskAuditLog[]
   location                   FacilityLocation? @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
@@ -714,8 +717,10 @@ model RiskAuditLog {
   details       String?
   changedFields Json?
   username      String
+  userFullName  String?
   createdAt     DateTime      @default(now())
   risk          RiskLifecycle @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  user          User?         @relation(fields: [username], references: [username])
 
   @@index([riskId])
 }

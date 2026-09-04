@@ -15,8 +15,9 @@ router.get('/health', (_req, res) => {
 });
 // /api/risks/facilities  → uzmanın tesis listesi + yönetim
 router.use('/facilities', facilities_1.default);
-// /api/risks/departments → departman (bölüm) yönetimi
+// /api/risks/locations & /api/risks/departments → departman (bölüm) ve lokasyon yönetimi
 router.use('/locations', locations_1.default);
+router.use('/departments', locations_1.default);
 // /api/risks/lifecycle   → risk yaşam döngüsü CRUD + Excel import
 router.use('/lifecycle', lifecycle_1.default);
 // /api/risks/upload      → fotoğraf yükleme

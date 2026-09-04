@@ -7,8 +7,12 @@ import { authMiddleware } from '../../middleware/auth';
 const router = express.Router();
 
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    const dir = path.join(process.cwd(), 'uploads', 'risks');
+  destination: (req, _file, cb) => {
+    // Tesis bazlı klasörleme: facilityId sorgu veya body'den alınır
+    const facilityId = (req.query.facilityId as string) || (req.body?.facilityId as string) || 'common';
+    // Güvenli klasör adı (özel karakterleri temizle)
+    const sanitizedFacility = facilityId.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const dir = path.join(process.cwd(), 'uploads', 'risks', sanitizedFacility);
     fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
@@ -20,21 +24,32 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25 MB (Görsel ve Dokümanlar için)
   fileFilter: (_req, file, cb) => {
-    const allowed = /jpeg|jpg|png|gif|webp/;
-    const ok = allowed.test(path.extname(file.originalname).toLowerCase()) &&
-      allowed.test(file.mimetype.split('/')[1]);
-    if (ok) cb(null, true);
-    else cb(new Error('Sadece resim dosyaları yüklenebilir.'));
+    // Resim ve yaygın doküman türlerine (PDF, DOCX, XLSX, TXT) izin ver
+    const allowed = /jpeg|jpg|png|gif|webp|pdf|docx|doc|xlsx|xls|txt/;
+    const ext = path.extname(file.originalname).toLowerCase().replace('.', '');
+    if (allowed.test(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Desteklenmeyen dosya formatı.'));
+    }
   },
 });
 
-// POST /api/risks/upload
+// POST /api/risks/upload?facilityId=XYZ
 router.post('/', authMiddleware, upload.single('file'), (req: Request, res: Response) => {
   if (!req.file) return res.status(400).json({ error: 'Dosya bulunamadı.' });
-  const filePath = `/uploads/risks/${req.file.filename}`;
-  res.json({ url: filePath });
+  
+  const facilityId = (req.query.facilityId as string) || (req.body?.facilityId as string) || 'common';
+  const sanitizedFacility = facilityId.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const filePath = `/uploads/risks/${sanitizedFacility}/${req.file.filename}`;
+  
+  res.json({ 
+    url: filePath,
+    filename: req.file.originalname,
+    size: req.file.size
+  });
 });
 
 export default router;
