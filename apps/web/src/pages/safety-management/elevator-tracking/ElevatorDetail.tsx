@@ -78,15 +78,13 @@ export default function ElevatorDetail() {
     enabled: isNew && isAdmin
   });
 
-  const targetFacilityForSettings = editForm.facilityId && editForm.facilityId !== 'all' ? editForm.facilityId : facilityId;
-
   useEffect(() => {
     Promise.all([
-      elevatorSettingsService.getBrands(targetFacilityForSettings || 'all'),
-      elevatorSettingsService.getMaintenanceCompanies(targetFacilityForSettings || 'all'),
-      elevatorSettingsService.getTypes(targetFacilityForSettings || 'all'),
-      elevatorSettingsService.getStatuses(targetFacilityForSettings || 'all'),
-      elevatorSettingsService.getLabels(targetFacilityForSettings || 'all')
+      elevatorSettingsService.getBrands('all'),
+      elevatorSettingsService.getMaintenanceCompanies('all'),
+      elevatorSettingsService.getTypes('all'),
+      elevatorSettingsService.getStatuses('all'),
+      elevatorSettingsService.getLabels('all')
     ]).then(([b, c, t, s, l]) => {
       setBrands(b.filter((x: any) => x.isActive));
       setCompanies(c.filter((x: any) => x.isActive));
@@ -94,7 +92,7 @@ export default function ElevatorDetail() {
       setStatuses(s.filter((x: any) => x.isActive));
       setLabels(l.filter((x: any) => x.isActive));
     }).catch(console.error);
-  }, [targetFacilityForSettings]);
+  }, []);
 
   const fetchElevator = async () => {
     if (isNew || !id) return;

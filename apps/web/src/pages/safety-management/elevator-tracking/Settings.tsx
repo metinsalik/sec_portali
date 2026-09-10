@@ -71,15 +71,14 @@ export default function ElevatorSettings() {
     }
   };
 
-  const loadAll = async (targetFacId?: string) => {
-    const fId = targetFacId !== undefined ? targetFacId : facilityId;
+  const loadAll = async () => {
     try {
       const [b, c, t, s, l] = await Promise.all([
-        elevatorSettingsService.getBrands(fId),
-        elevatorSettingsService.getMaintenanceCompanies(fId),
-        elevatorSettingsService.getTypes(fId),
-        elevatorSettingsService.getStatuses(fId),
-        elevatorSettingsService.getLabels(fId)
+        elevatorSettingsService.getBrands('all'),
+        elevatorSettingsService.getMaintenanceCompanies('all'),
+        elevatorSettingsService.getTypes('all'),
+        elevatorSettingsService.getStatuses('all'),
+        elevatorSettingsService.getLabels('all')
       ]);
       setBrands(b);
       setCompanies(c);
@@ -95,11 +94,11 @@ export default function ElevatorSettings() {
     const handleFacilityChanged = () => {
       const current = localStorage.getItem('activeFacilityId') || 'all';
       setFacilityId(current);
-      loadAll(current);
+      loadAll();
     };
 
     window.addEventListener('facilityChanged', handleFacilityChanged);
-    loadAll(facilityId);
+    loadAll();
 
     return () => {
       window.removeEventListener('facilityChanged', handleFacilityChanged);
@@ -109,7 +108,7 @@ export default function ElevatorSettings() {
   const handleAddBrand = async () => {
     if (!newBrand) return;
     try {
-      await elevatorSettingsService.addBrand({ facilityId, name: newBrand });
+      await elevatorSettingsService.addBrand({ facilityId: 'all', name: newBrand });
       setNewBrand('');
       loadAll();
       toast.success('Firma eklendi');
@@ -121,7 +120,7 @@ export default function ElevatorSettings() {
   const handleAddCompany = async () => {
     if (!newCompany) return;
     try {
-      await elevatorSettingsService.addMaintenanceCompany({ facilityId, name: newCompany });
+      await elevatorSettingsService.addMaintenanceCompany({ facilityId: 'all', name: newCompany });
       setNewCompany('');
       loadAll();
       toast.success('Bakım firması eklendi');
@@ -133,7 +132,7 @@ export default function ElevatorSettings() {
   const handleAddType = async () => {
     if (!newType) return;
     try {
-      await elevatorSettingsService.addType({ facilityId, name: newType });
+      await elevatorSettingsService.addType({ facilityId: 'all', name: newType });
       setNewType('');
       loadAll();
       toast.success('Tür eklendi');
@@ -145,7 +144,7 @@ export default function ElevatorSettings() {
   const handleAddStatus = async () => {
     if (!newStatus) return;
     try {
-      await elevatorSettingsService.addStatus({ facilityId, name: newStatus });
+      await elevatorSettingsService.addStatus({ facilityId: 'all', name: newStatus });
       setNewStatus('');
       loadAll();
       toast.success('Durum eklendi');
@@ -157,7 +156,7 @@ export default function ElevatorSettings() {
   const handleAddLabel = async () => {
     if (!newLabel) return;
     try {
-      await elevatorSettingsService.addLabel({ facilityId, name: newLabel, color: newLabelColor });
+      await elevatorSettingsService.addLabel({ facilityId: 'all', name: newLabel, color: newLabelColor });
       setNewLabel('');
       setNewLabelColor('');
       loadAll();
