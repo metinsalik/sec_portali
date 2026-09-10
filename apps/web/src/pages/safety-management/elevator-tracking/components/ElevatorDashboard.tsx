@@ -11,7 +11,7 @@ interface ElevatorDashboardProps {
   elevators: any[];
   onFilterChange: (type: string, value: string | undefined) => void;
   onClearFilters: () => void;
-  activeFilters: { brand?: string; maintenanceCompany?: string; label?: string; type?: string; isOverdue?: string };
+  activeFilters: { brand?: string; maintenanceCompany?: string; label?: string; type?: string; inspectionStatus?: string; isOverdue?: string };
 }
 
 // Generate unique colors for dynamic data
@@ -159,8 +159,8 @@ export default function ElevatorDashboard({ elevators, onFilterChange, onClearFi
     return null;
   };
 
-  const handlePieClick = (type: 'brand' | 'maintenanceCompany' | 'label', entry: any) => {
-    let value = entry.filterValue || entry.name;
+  const handlePieClick = (type: 'brand' | 'maintenanceCompany' | 'label' | 'type', entry: any) => {
+    let value = entry.filterValue !== undefined ? entry.filterValue : entry.name;
     if (activeFilters[type] === value) {
       value = undefined; 
     }

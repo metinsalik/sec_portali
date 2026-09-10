@@ -16,7 +16,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || '';
 
 export default function ElevatorRecords() {
-  const activeFacilityId = localStorage.getItem('activeFacilityId') || '';
+  const [activeFacilityId, setActiveFacilityId] = useState<string>(
+    localStorage.getItem('activeFacilityId') || 'all'
+  );
   const [elevators, setElevators] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -62,11 +64,11 @@ export default function ElevatorRecords() {
     return sortedResult;
   };
 
-  const fetchElevators = async () => {
-    if (!activeFacilityId) return;
+  const fetchElevators = async (facId = activeFacilityId) => {
+    if (!facId) return;
     setLoading(true);
     try {
-      const data = await elevatorService.getElevatorsByFacility(activeFacilityId, filters);
+      const data = await elevatorService.getElevatorsByFacility(facId, filters);
       setElevators(sortElevators(data));
       setCurrentPage(1);
     } catch (error) {
@@ -78,7 +80,18 @@ export default function ElevatorRecords() {
   };
 
   useEffect(() => {
-    fetchElevators();
+    const handleFacilityChanged = () => {
+      const current = localStorage.getItem('activeFacilityId') || 'all';
+      setActiveFacilityId(current);
+      fetchElevators(current);
+    };
+
+    window.addEventListener('facilityChanged', handleFacilityChanged);
+    fetchElevators(activeFacilityId);
+
+    return () => {
+      window.removeEventListener('facilityChanged', handleFacilityChanged);
+    };
   }, [activeFacilityId, searchParams.toString()]);
 
   const handleDelete = async () => {

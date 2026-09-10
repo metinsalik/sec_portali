@@ -201,11 +201,48 @@ export default function ElevatorDetail() {
         payload.nextInspectionDate = new Date(newInspection.nextInspectionDate).toISOString();
       }
 
-      await elevatorService.addInspection(id!, payload);
-      toast.success('Muayene başarıyla eklendi');
-      setIsModalOpen(false);
-      setNewInspection({ inspectionDate: '', nextInspectionDate: '', label: '', notes: '', inspectorName: '', reportUrl: '' });
-      fetchElevator();
+      if (!isNew && id) {
+        // Eğer kullanıcı düzenleme yapıyorsa, önce mevcut formdaki değişiklikleri de kaydet
+        // böylece kullanıcının girdiği bilgiler sıfırlanmaz veya kaybolmaz!
+        if (isEditing) {
+          const formPayload = { ...editForm };
+          if (formPayload.lastInspectionDate) formPayload.lastInspectionDate = new Date(formPayload.lastInspectionDate).toISOString();
+          if (formPayload.nextInspectionDate) formPayload.nextInspectionDate = new Date(formPayload.nextInspectionDate).toISOString();
+          if (formPayload.contractEndDate) formPayload.contractEndDate = new Date(formPayload.contractEndDate).toISOString();
+          delete formPayload.id;
+          delete formPayload.inspections;
+          delete formPayload.facility;
+          delete formPayload.createdAt;
+          delete formPayload.updatedAt;
+
+          await elevatorService.updateElevator(id, formPayload);
+        }
+
+        await elevatorService.addInspection(id, payload);
+        toast.success('Muayene başarıyla eklendi');
+        setIsModalOpen(false);
+        
+        const inspDate = newInspection.inspectionDate;
+        const nextInspDate = newInspection.nextInspectionDate;
+        const inspLabel = newInspection.label;
+
+        setNewInspection({ inspectionDate: '', nextInspectionDate: '', label: '', notes: '', inspectorName: '', reportUrl: '' });
+        
+        const updatedData = await elevatorService.getElevatorById(id);
+        setElevator(updatedData);
+
+        setEditForm((prev: any) => {
+          const nextForm = { ...prev, ...updatedData };
+          if (nextForm.lastInspectionDate) nextForm.lastInspectionDate = new Date(nextForm.lastInspectionDate).toISOString().split('T')[0];
+          if (nextForm.nextInspectionDate) nextForm.nextInspectionDate = new Date(nextForm.nextInspectionDate).toISOString().split('T')[0];
+          if (nextForm.contractEndDate) nextForm.contractEndDate = new Date(nextForm.contractEndDate).toISOString().split('T')[0];
+          
+          if (inspDate) nextForm.lastInspectionDate = inspDate;
+          if (nextInspDate) nextForm.nextInspectionDate = nextInspDate;
+          if (inspLabel) nextForm.label = inspLabel;
+          return nextForm;
+        });
+      }
     } catch (error) {
       console.error(error);
       toast.error('Muayene eklenemedi');
