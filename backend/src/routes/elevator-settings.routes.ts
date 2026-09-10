@@ -30,12 +30,30 @@ router.get('/brands', async (req, res) => {
 router.post('/brands', adminMiddleware, async (req, res) => {
   try {
     const { facilityId, name } = req.body;
+    const targetFacilityId = (!facilityId || facilityId === 'all') ? 'all' : String(facilityId);
     const brand = await prisma.elevatorBrand.create({
-      data: { facilityId, name }
+      data: { facilityId: targetFacilityId, name }
     });
     res.json(brand);
   } catch (error) {
     res.status(500).json({ error: 'Failed to create brand' });
+  }
+});
+
+router.put('/brands/:id', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, facilityId } = req.body;
+    const data: any = {};
+    if (name !== undefined) data.name = name;
+    if (facilityId !== undefined) data.facilityId = facilityId;
+    const brand = await prisma.elevatorBrand.update({
+      where: { id },
+      data
+    });
+    res.json(brand);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update brand' });
   }
 });
 
@@ -85,12 +103,30 @@ router.get('/maintenance-companies', async (req, res) => {
 router.post('/maintenance-companies', adminMiddleware, async (req, res) => {
   try {
     const { facilityId, name } = req.body;
+    const targetFacilityId = (!facilityId || facilityId === 'all') ? 'all' : String(facilityId);
     const company = await prisma.elevatorMaintenanceCompany.create({
-      data: { facilityId, name }
+      data: { facilityId: targetFacilityId, name }
     });
     res.json(company);
   } catch (error) {
     res.status(500).json({ error: 'Failed to create company' });
+  }
+});
+
+router.put('/maintenance-companies/:id', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, facilityId } = req.body;
+    const data: any = {};
+    if (name !== undefined) data.name = name;
+    if (facilityId !== undefined) data.facilityId = facilityId;
+    const company = await prisma.elevatorMaintenanceCompany.update({
+      where: { id },
+      data
+    });
+    res.json(company);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update company' });
   }
 });
 
@@ -140,12 +176,30 @@ router.get('/types', async (req, res) => {
 router.post('/types', adminMiddleware, async (req, res) => {
   try {
     const { facilityId, name } = req.body;
+    const targetFacilityId = (!facilityId || facilityId === 'all') ? 'all' : String(facilityId);
     const type = await prisma.elevatorType.create({
-      data: { facilityId, name }
+      data: { facilityId: targetFacilityId, name }
     });
     res.json(type);
   } catch (error) {
     res.status(500).json({ error: 'Failed to create type' });
+  }
+});
+
+router.put('/types/:id', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, facilityId } = req.body;
+    const data: any = {};
+    if (name !== undefined) data.name = name;
+    if (facilityId !== undefined) data.facilityId = facilityId;
+    const type = await prisma.elevatorType.update({
+      where: { id },
+      data
+    });
+    res.json(type);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update type' });
   }
 });
 
@@ -195,12 +249,30 @@ router.get('/statuses', async (req, res) => {
 router.post('/statuses', adminMiddleware, async (req, res) => {
   try {
     const { facilityId, name } = req.body;
+    const targetFacilityId = (!facilityId || facilityId === 'all') ? 'all' : String(facilityId);
     const status = await prisma.elevatorStatus.create({
-      data: { facilityId, name }
+      data: { facilityId: targetFacilityId, name }
     });
     res.json(status);
   } catch (error) {
     res.status(500).json({ error: 'Failed to create status' });
+  }
+});
+
+router.put('/statuses/:id', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, facilityId } = req.body;
+    const data: any = {};
+    if (name !== undefined) data.name = name;
+    if (facilityId !== undefined) data.facilityId = facilityId;
+    const status = await prisma.elevatorStatus.update({
+      where: { id },
+      data
+    });
+    res.json(status);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update status' });
   }
 });
 
@@ -250,12 +322,31 @@ router.get('/labels', async (req, res) => {
 router.post('/labels', adminMiddleware, async (req, res) => {
   try {
     const { facilityId, name, color } = req.body;
+    const targetFacilityId = (!facilityId || facilityId === 'all') ? 'all' : String(facilityId);
     const label = await prisma.elevatorLabel.create({
-      data: { facilityId, name, color }
+      data: { facilityId: targetFacilityId, name, color }
     });
     res.json(label);
   } catch (error) {
     res.status(500).json({ error: 'Failed to create label' });
+  }
+});
+
+router.put('/labels/:id', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, color, facilityId } = req.body;
+    const data: any = {};
+    if (name !== undefined) data.name = name;
+    if (color !== undefined) data.color = color;
+    if (facilityId !== undefined) data.facilityId = facilityId;
+    const label = await prisma.elevatorLabel.update({
+      where: { id },
+      data
+    });
+    res.json(label);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update label' });
   }
 });
 

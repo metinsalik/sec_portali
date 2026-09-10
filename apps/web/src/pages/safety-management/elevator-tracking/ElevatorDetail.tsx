@@ -62,7 +62,7 @@ export default function ElevatorDetail() {
   const [isUploading, setIsUploading] = useState(false);
   const [pdfReportUrl, setPdfReportUrl] = useState<string | null>(null);
 
-  const [isEditing, setIsEditing] = useState(isNew);
+  const [isEditing, setIsEditing] = useState(isNew || !!location.state?.edit);
   const [editForm, setEditForm] = useState<any>({ facilityId: initialFacilityId });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -81,21 +81,19 @@ export default function ElevatorDetail() {
   const targetFacilityForSettings = editForm.facilityId && editForm.facilityId !== 'all' ? editForm.facilityId : facilityId;
 
   useEffect(() => {
-    if (targetFacilityForSettings && targetFacilityForSettings !== 'all') {
-      Promise.all([
-        elevatorSettingsService.getBrands(targetFacilityForSettings),
-        elevatorSettingsService.getMaintenanceCompanies(targetFacilityForSettings),
-        elevatorSettingsService.getTypes(targetFacilityForSettings),
-        elevatorSettingsService.getStatuses(targetFacilityForSettings),
-        elevatorSettingsService.getLabels(targetFacilityForSettings)
-      ]).then(([b, c, t, s, l]) => {
-        setBrands(b.filter((x: any) => x.isActive));
-        setCompanies(c.filter((x: any) => x.isActive));
-        setTypes(t.filter((x: any) => x.isActive));
-        setStatuses(s.filter((x: any) => x.isActive));
-        setLabels(l.filter((x: any) => x.isActive));
-      }).catch(console.error);
-    }
+    Promise.all([
+      elevatorSettingsService.getBrands(targetFacilityForSettings || 'all'),
+      elevatorSettingsService.getMaintenanceCompanies(targetFacilityForSettings || 'all'),
+      elevatorSettingsService.getTypes(targetFacilityForSettings || 'all'),
+      elevatorSettingsService.getStatuses(targetFacilityForSettings || 'all'),
+      elevatorSettingsService.getLabels(targetFacilityForSettings || 'all')
+    ]).then(([b, c, t, s, l]) => {
+      setBrands(b.filter((x: any) => x.isActive));
+      setCompanies(c.filter((x: any) => x.isActive));
+      setTypes(t.filter((x: any) => x.isActive));
+      setStatuses(s.filter((x: any) => x.isActive));
+      setLabels(l.filter((x: any) => x.isActive));
+    }).catch(console.error);
   }, [targetFacilityForSettings]);
 
   const fetchElevator = async () => {

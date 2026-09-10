@@ -107,10 +107,22 @@ export default function FireDoorsList() {
     enabled: user?.isAdmin || (!!activeFacilityId && activeFacilityId !== 'all'),
   });
 
-  // Extract unique locations from current doors for cascading location filters
-  const binalar = Array.from(new Set(doors?.map((d: any) => d.properties?.Bina).filter(Boolean))) as string[];
-  const katlar = Array.from(new Set(doors?.map((d: any) => d.properties?.Kat).filter(Boolean))) as string[];
-  const departmanlar = Array.from(new Set(doors?.map((d: any) => d.properties?.Departman).filter(Boolean))) as string[];
+  // Fetch all doors for active facility (without filters) to populate location options
+  const { data: allFacilityDoors } = useQuery({
+    queryKey: ['fireDoorsAll', activeFacilityId],
+    queryFn: async () => {
+      if (!user?.isAdmin && (!activeFacilityId || activeFacilityId === 'all')) return [];
+      const res = await api.get(`/safety-management/fire-doors/doors?facilityId=${activeFacilityId}`);
+      return res.json();
+    },
+    enabled: user?.isAdmin || (!!activeFacilityId && activeFacilityId !== 'all'),
+  });
+
+  // Extract unique locations from facility doors for stable location filters
+  const locationSourceDoors = (allFacilityDoors && allFacilityDoors.length > 0) ? allFacilityDoors : (doors || []);
+  const binalar = Array.from(new Set(locationSourceDoors.map((d: any) => d.properties?.Bina).filter(Boolean))) as string[];
+  const katlar = Array.from(new Set(locationSourceDoors.map((d: any) => d.properties?.Kat).filter(Boolean))) as string[];
+  const departmanlar = Array.from(new Set(locationSourceDoors.map((d: any) => d.properties?.Departman).filter(Boolean))) as string[];
 
   const handleFilterChange = (key: string, value: string) => {
       const newParams = new URLSearchParams(searchParams);

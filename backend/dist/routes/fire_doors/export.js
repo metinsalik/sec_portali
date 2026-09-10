@@ -23,22 +23,39 @@ const exportDoors = async (req, res) => {
         if (filters) {
             try {
                 const parsedFilters = JSON.parse(String(filters));
+                const allProperties = await prisma.fireDoorProperty.findMany();
                 for (const [key, value] of Object.entries(parsedFilters)) {
                     if (value && value !== 'Tümü' && value !== 'all') {
-                        if (key === 'grade') {
-                            andConditions.push({ lastGrade: String(value) });
-                        }
-                        else if (key === 'facilityId') {
+                        if (key === 'facilityId') {
                             doorWhere.facilityId = String(value);
                         }
-                        else {
-                            // All other keys are assumed to be in properties
+                        else if (key === 'grade') {
+                            andConditions.push({ lastGrade: String(value) });
+                        }
+                        else if (key === 'doorType') {
                             andConditions.push({
-                                properties: {
-                                    path: [key],
-                                    equals: String(value)
-                                }
+                                properties: { path: ['Kapı Çeşidi'], equals: String(value) }
                             });
+                        }
+                        else {
+                            const matchedProp = allProperties.find(p => p.id === key || p.name === key);
+                            if (matchedProp) {
+                                andConditions.push({
+                                    OR: [
+                                        { properties: { path: [matchedProp.id], equals: String(value) } },
+                                        { properties: { path: [matchedProp.name], equals: String(value) } }
+                                    ]
+                                });
+                            }
+                            else {
+                                // Standard property (e.g. Bina, Kat, Departman, Mahal)
+                                andConditions.push({
+                                    properties: {
+                                        path: [key],
+                                        equals: String(value)
+                                    }
+                                });
+                            }
                         }
                     }
                 }

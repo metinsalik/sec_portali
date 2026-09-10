@@ -33,16 +33,38 @@ router.get('/', async (req, res) => {
         if (filters) {
             try {
                 const parsedFilters = JSON.parse(String(filters));
+                // Load property definitions to allow matching by either id or name
+                const allProperties = await prisma.fireDoorProperty.findMany();
                 for (const [key, value] of Object.entries(parsedFilters)) {
-                    if (!value || value === 'Tümü')
+                    if (!value || value === 'Tümü' || value === 'all')
                         continue;
+                    if (key === 'facilityId')
+                        continue; // facilityId is handled at root where clause
                     if (key === 'grade') {
                         doorWhere.lastGrade = String(value);
                     }
-                    else {
+                    else if (key === 'doorType') {
                         andConditions.push({
-                            properties: { path: [key], equals: String(value) }
+                            properties: { path: ['Kapı Çeşidi'], equals: String(value) }
                         });
+                    }
+                    else {
+                        // Check if key corresponds to a dynamic property by id or name
+                        const matchedProp = allProperties.find(p => p.id === key || p.name === key);
+                        if (matchedProp) {
+                            andConditions.push({
+                                OR: [
+                                    { properties: { path: [matchedProp.id], equals: String(value) } },
+                                    { properties: { path: [matchedProp.name], equals: String(value) } }
+                                ]
+                            });
+                        }
+                        else {
+                            // Standard property (e.g. Bina, Kat, Departman, Mahal)
+                            andConditions.push({
+                                properties: { path: [key], equals: String(value) }
+                            });
+                        }
                     }
                 }
             }

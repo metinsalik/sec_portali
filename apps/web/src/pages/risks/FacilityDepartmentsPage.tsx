@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Building2, ArrowLeft, Search, ChevronRight, MapPin, 
-  Layers, ShieldAlert, Eye, ArrowUpDown, RefreshCw, FileSpreadsheet,
+  Layers, ShieldAlert, Eye, Pencil, Trash2, ArrowUpDown, RefreshCw, FileSpreadsheet,
   CheckCircle2, AlertTriangle, Clock, X, Sparkles, Compass, Plus, Printer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -112,6 +112,7 @@ function buildHierarchyTree(locations: any[]) {
 export default function FacilityDepartmentsPage() {
   const { facilityId } = useParams<{ facilityId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const token = localStorage.getItem('token');
 
   const [showImport, setShowImport] = useState(false);
@@ -220,6 +221,29 @@ export default function FacilityDepartmentsPage() {
     },
     enabled: !!facilityId,
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API}/api/risks/lifecycle/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Silinemedi');
+    },
+    onSuccess: () => {
+      toast.success('Risk silindi');
+      queryClient.invalidateQueries({ queryKey: ['scoped-risks'] });
+      queryClient.invalidateQueries({ queryKey: ['risk-departments-flat', facilityId] });
+      queryClient.invalidateQueries({ queryKey: ['facility-risks', facilityId] });
+    },
+    onError: () => toast.error('Silme işlemi başarısız'),
+  });
+
+  const handleDelete = (id: string) => {
+    if (confirm('Bu riski silmek istediğinize emin misiniz?')) {
+      deleteMutation.mutate(id);
+    }
+  };
 
   // Level counts & Dashboard metrics for the selected scope
   const levelCounts = useMemo(() => {
@@ -902,7 +926,7 @@ export default function FacilityDepartmentsPage() {
                     <th className="w-[8%] p-2 font-bold text-center cursor-pointer" onClick={() => handleSort('status')}>
                       <div className="flex items-center justify-center gap-0.5">Durum <ArrowUpDown className="w-2.5 h-2.5" /></div>
                     </th>
-                    <th className="w-[4%] p-2 font-bold text-center">İşlem</th>
+                    <th className="w-[8%] p-2 font-bold text-center">İşlem</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60 bg-card">
@@ -911,12 +935,13 @@ export default function FacilityDepartmentsPage() {
                     const deptName = loc?.department || risk.department?.name || 'Birim';
                     const buildingFloor = [loc?.building, loc?.floor].filter(Boolean).join(' • ');
                     const areaName = risk.area || loc?.description;
+                    const locId = risk.locationId || risk.departmentId;
 
                     return (
                       <tr 
                         key={risk.id}
                         className="cursor-pointer hover:bg-muted/40 transition-colors group"
-                        onClick={() => navigate(`/risks/location/${risk.locationId || risk.departmentId}/view/${risk.id}`)}
+                        onClick={() => navigate(`/risks/location/${locId}/view/${risk.id}`)}
                       >
                         {/* No */}
                         <td className="p-3 text-center font-mono font-bold text-foreground text-xs align-top whitespace-normal">
@@ -993,15 +1018,35 @@ export default function FacilityDepartmentsPage() {
                           className="p-2 text-center align-middle" 
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors mx-auto"
-                            title="Detayı Görüntüle"
-                            onClick={() => navigate(`/risks/location/${risk.locationId || risk.departmentId}/view/${risk.id}`)}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 rounded-lg hover:text-blue-600 transition-colors"
+                              title="Detayı Görüntüle"
+                              onClick={() => navigate(`/risks/location/${locId}/view/${risk.id}`)}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 rounded-lg hover:text-orange-600 transition-colors"
+                              title="Düzenle"
+                              onClick={() => navigate(`/risks/location/${locId}/edit/${risk.id}`)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+                              title="Sil"
+                              onClick={() => handleDelete(risk.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );

@@ -5,13 +5,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PlusCircle, Trash2, Download, Upload } from 'lucide-react';
+import { PlusCircle, Trash2, Download, Upload, Edit } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { elevatorSettingsService } from '../../../services/elevator-settings.service';
 import { elevatorService } from '../../../services/elevator.service';
 
 export default function ElevatorSettings() {
-  const facilityId = localStorage.getItem('activeFacilityId') || '';
+  const [facilityId, setFacilityId] = useState<string>(
+    localStorage.getItem('activeFacilityId') || 'all'
+  );
 
   const [brands, setBrands] = useState<any[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);
@@ -26,6 +35,17 @@ export default function ElevatorSettings() {
   const [newLabel, setNewLabel] = useState('');
   const [newLabelColor, setNewLabelColor] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+
+  // Düzenleme (Edit) State'i
+  const [editingItem, setEditingItem] = useState<{
+    type: string;
+    id: string;
+    name: string;
+    color?: string;
+  } | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editColor, setEditColor] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const handleDownloadTemplate = async () => {
     try {
@@ -51,14 +71,15 @@ export default function ElevatorSettings() {
     }
   };
 
-  const loadAll = async () => {
+  const loadAll = async (targetFacId?: string) => {
+    const fId = targetFacId !== undefined ? targetFacId : facilityId;
     try {
       const [b, c, t, s, l] = await Promise.all([
-        elevatorSettingsService.getBrands(facilityId),
-        elevatorSettingsService.getMaintenanceCompanies(facilityId),
-        elevatorSettingsService.getTypes(facilityId),
-        elevatorSettingsService.getStatuses(facilityId),
-        elevatorSettingsService.getLabels(facilityId)
+        elevatorSettingsService.getBrands(fId),
+        elevatorSettingsService.getMaintenanceCompanies(fId),
+        elevatorSettingsService.getTypes(fId),
+        elevatorSettingsService.getStatuses(fId),
+        elevatorSettingsService.getLabels(fId)
       ]);
       setBrands(b);
       setCompanies(c);
@@ -71,8 +92,19 @@ export default function ElevatorSettings() {
   };
 
   useEffect(() => {
-    if (facilityId) loadAll();
-  }, [facilityId]);
+    const handleFacilityChanged = () => {
+      const current = localStorage.getItem('activeFacilityId') || 'all';
+      setFacilityId(current);
+      loadAll(current);
+    };
+
+    window.addEventListener('facilityChanged', handleFacilityChanged);
+    loadAll(facilityId);
+
+    return () => {
+      window.removeEventListener('facilityChanged', handleFacilityChanged);
+    };
+  }, []);
 
   const handleAddBrand = async () => {
     if (!newBrand) return;
@@ -163,6 +195,48 @@ export default function ElevatorSettings() {
     }
   };
 
+  const handleStartEdit = (type: string, item: any) => {
+    setEditingItem({
+      type,
+      id: item.id,
+      name: item.name,
+      color: item.color,
+    });
+    setEditName(item.name || '');
+    setEditColor(item.color || '');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingItem || !editName.trim()) {
+      toast.error('İsim alanı boş bırakılamaz');
+      return;
+    }
+
+    setIsSavingEdit(true);
+    try {
+      const { type, id } = editingItem;
+      if (type === 'brand') {
+        await elevatorSettingsService.updateBrand(id, { name: editName });
+      } else if (type === 'company') {
+        await elevatorSettingsService.updateMaintenanceCompany(id, { name: editName });
+      } else if (type === 'type') {
+        await elevatorSettingsService.updateType(id, { name: editName });
+      } else if (type === 'status') {
+        await elevatorSettingsService.updateStatus(id, { name: editName });
+      } else if (type === 'label') {
+        await elevatorSettingsService.updateLabel(id, { name: editName, color: editColor });
+      }
+
+      toast.success('Güncelleme başarılı');
+      setEditingItem(null);
+      loadAll();
+    } catch (e: any) {
+      toast.error(e.message || 'Güncellenemedi');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
   const renderTable = (data: any[], type: string, value: string, setter: any, handler: any, colorValue?: string, colorSetter?: any) => (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
@@ -178,7 +252,7 @@ export default function ElevatorSettings() {
             <TableHead>Adı</TableHead>
             {colorSetter && <TableHead>Renk</TableHead>}
             <TableHead>Aktif</TableHead>
-            <TableHead className="w-24">İşlem</TableHead>
+            <TableHead className="w-28 text-right">İşlemler</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -193,14 +267,17 @@ export default function ElevatorSettings() {
               <TableCell>
                 <Switch checked={item.isActive} onCheckedChange={(v) => handleToggle(type, item.id, v)} />
               </TableCell>
-              <TableCell>
-                <Button variant="ghost" size="icon" onClick={() => handleDelete(type, item.id)}>
+              <TableCell className="text-right space-x-1">
+                <Button variant="ghost" size="icon" title="Düzenle" onClick={() => handleStartEdit(type, item)}>
+                  <Edit className="w-4 h-4 text-blue-500" />
+                </Button>
+                <Button variant="ghost" size="icon" title="Sil" onClick={() => handleDelete(type, item.id)}>
                   <Trash2 className="w-4 h-4 text-red-500" />
                 </Button>
               </TableCell>
             </TableRow>
           ))}
-          {(!data || data.length === 0) && <TableRow><TableCell colSpan={4} className="text-center py-4">Kayıt bulunamadı.</TableCell></TableRow>}
+          {(!data || data.length === 0) && <TableRow><TableCell colSpan={colorSetter ? 4 : 3} className="text-center py-4">Kayıt bulunamadı.</TableCell></TableRow>}
         </TableBody>
       </Table>
     </div>
@@ -271,6 +348,58 @@ export default function ElevatorSettings() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Düzenleme (Edit) Modalı */}
+      <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {editingItem?.type === 'brand' && 'Marka Düzenle'}
+              {editingItem?.type === 'company' && 'Bakım Firması Düzenle'}
+              {editingItem?.type === 'type' && 'Tür Düzenle'}
+              {editingItem?.type === 'status' && 'Durum Düzenle'}
+              {editingItem?.type === 'label' && 'Etiket Düzenle'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-3">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Adı / Tanımı</label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="İsim giriniz..."
+              />
+            </div>
+            {editingItem?.type === 'label' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Renk Kodu</label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={editColor}
+                    onChange={(e) => setEditColor(e.target.value)}
+                    placeholder="örn: #ef4444"
+                  />
+                  {editColor && (
+                    <div
+                      className="w-8 h-8 rounded border shadow-sm shrink-0"
+                      style={{ backgroundColor: editColor }}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingItem(null)} disabled={isSavingEdit}>
+              İptal
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={isSavingEdit}>
+              {isSavingEdit ? 'Kaydediliyor...' : 'Kaydet'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+

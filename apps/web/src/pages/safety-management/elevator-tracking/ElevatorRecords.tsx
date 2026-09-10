@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Eye, Trash2, FileText, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { PlusCircle, Eye, Edit, Trash2, FileText, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { elevatorService } from '@/services/elevator.service';
 import ElevatorDashboard from './components/ElevatorDashboard';
@@ -207,11 +207,14 @@ export default function ElevatorRecords() {
                             </Button>
                           ) : '-'}
                         </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => navigate(`/safety-management/elevator-tracking/${elevator.id}`, { state: { search: searchParams.toString() } })}>
+                        <TableCell className="text-right whitespace-nowrap">
+                          <Button variant="ghost" size="icon" title="Görüntüle" onClick={() => navigate(`/safety-management/elevator-tracking/${elevator.id}`, { state: { search: searchParams.toString() } })}>
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="text-red-500" onClick={() => setDeleteConfirmId(elevator.id)}>
+                          <Button variant="ghost" size="icon" title="Düzenle" className="text-blue-600 hover:text-blue-800" onClick={() => navigate(`/safety-management/elevator-tracking/${elevator.id}`, { state: { search: searchParams.toString(), edit: true } })}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" title="Sil" className="text-red-500 hover:text-red-700" onClick={() => setDeleteConfirmId(elevator.id)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>

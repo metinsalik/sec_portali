@@ -11,6 +11,10 @@ export const elevatorSettingsService = {
     const res = await api.post('/safety-management/elevator-settings/brands', data);
     return res.json();
   },
+  updateBrand: async (id: string, data: { name?: string; facilityId?: string }) => {
+    const res = await api.put(`/safety-management/elevator-settings/brands/${id}`, data);
+    return res.json();
+  },
   toggleBrand: async (id: string, isActive: boolean) => {
     const res = await api.put(`/safety-management/elevator-settings/brands/${id}/toggle`, { isActive });
     return res.json();
@@ -28,6 +32,10 @@ export const elevatorSettingsService = {
   },
   addMaintenanceCompany: async (data: { facilityId: string; name: string }) => {
     const res = await api.post('/safety-management/elevator-settings/maintenance-companies', data);
+    return res.json();
+  },
+  updateMaintenanceCompany: async (id: string, data: { name?: string; facilityId?: string }) => {
+    const res = await api.put(`/safety-management/elevator-settings/maintenance-companies/${id}`, data);
     return res.json();
   },
   toggleMaintenanceCompany: async (id: string, isActive: boolean) => {
@@ -49,6 +57,10 @@ export const elevatorSettingsService = {
     const res = await api.post('/safety-management/elevator-settings/types', data);
     return res.json();
   },
+  updateType: async (id: string, data: { name?: string; facilityId?: string }) => {
+    const res = await api.put(`/safety-management/elevator-settings/types/${id}`, data);
+    return res.json();
+  },
   toggleType: async (id: string, isActive: boolean) => {
     const res = await api.put(`/safety-management/elevator-settings/types/${id}/toggle`, { isActive });
     return res.json();
@@ -68,6 +80,10 @@ export const elevatorSettingsService = {
     const res = await api.post('/safety-management/elevator-settings/statuses', data);
     return res.json();
   },
+  updateStatus: async (id: string, data: { name?: string; facilityId?: string }) => {
+    const res = await api.put(`/safety-management/elevator-settings/statuses/${id}`, data);
+    return res.json();
+  },
   toggleStatus: async (id: string, isActive: boolean) => {
     const res = await api.put(`/safety-management/elevator-settings/statuses/${id}/toggle`, { isActive });
     return res.json();
@@ -85,6 +101,10 @@ export const elevatorSettingsService = {
   },
   addLabel: async (data: { facilityId: string; name: string; color?: string }) => {
     const res = await api.post('/safety-management/elevator-settings/labels', data);
+    return res.json();
+  },
+  updateLabel: async (id: string, data: { name?: string; color?: string; facilityId?: string }) => {
+    const res = await api.put(`/safety-management/elevator-settings/labels/${id}`, data);
     return res.json();
   },
   toggleLabel: async (id: string, isActive: boolean) => {
