@@ -193,6 +193,419 @@ router.get('/stats', async (req: AuthRequest, res) => {
   }
 });
 
+// 2.1. GET HOSPITAL ENTRY STATS (Only for hospital facilities: entered vs not-entered and counts)
+router.get('/hospital-stats', async (req: AuthRequest, res) => {
+  try {
+    const hospitals = await prisma.facility.findMany({
+      where: {
+        type: 'Hastane',
+        isActive: true
+      },
+      select: {
+        id: true,
+        name: true,
+        shortName: true,
+        city: true,
+        _count: {
+          select: {
+            electricInfrastructureRecords: true
+          }
+        }
+      },
+      orderBy: {
+        name: 'asc'
+      }
+    });
+
+    const statusRecords = await prisma.electricInfrastructureFacilityStatus.findMany();
+    const statusMap = new Map(statusRecords.map(s => [s.facilityId, s]));
+
+    const enteredHospitals = hospitals
+      .filter(h => h._count.electricInfrastructureRecords > 0)
+      .map(h => {
+        const s = statusMap.get(h.id);
+        return {
+          id: h.id,
+          name: h.name,
+          shortName: h.shortName || h.name,
+          city: h.city,
+          recordCount: h._count.electricInfrastructureRecords,
+          isCompleted: s ? s.isCompleted : false,
+          completedAt: s?.completedAt || null,
+          completedBy: s?.completedBy || null
+        };
+      })
+      .sort((a, b) => b.recordCount - a.recordCount);
+
+    const notEnteredHospitals = hospitals
+      .filter(h => h._count.electricInfrastructureRecords === 0)
+      .map(h => {
+        const s = statusMap.get(h.id);
+        return {
+          id: h.id,
+          name: h.name,
+          shortName: h.shortName || h.name,
+          city: h.city,
+          recordCount: 0,
+          isCompleted: s ? s.isCompleted : false,
+          completedAt: s?.completedAt || null,
+          completedBy: s?.completedBy || null
+        };
+      });
+
+    const completedHospitalsCount = enteredHospitals.filter(h => h.isCompleted).length;
+
+    res.json({
+      totalHospitals: hospitals.length,
+      enteredCount: enteredHospitals.length,
+      notEnteredCount: notEnteredHospitals.length,
+      completedHospitalsCount,
+      completionRate: hospitals.length > 0 ? Math.round((enteredHospitals.length / hospitals.length) * 100) : 0,
+      verifiedCompletionRate: hospitals.length > 0 ? Math.round((completedHospitalsCount / hospitals.length) * 100) : 0,
+      enteredHospitals,
+      notEnteredHospitals
+    });
+  } catch (error: any) {
+    console.error('Error fetching hospital stats:', error);
+    res.status(500).json({ error: error.message || 'Hastane istatistikleri alınamadı.' });
+  }
+});
+
+// 2.2. GET FACILITY COMPLETION STATUS
+router.get('/facility-status/:facilityId', async (req: AuthRequest, res) => {
+  try {
+    const { facilityId } = req.params;
+    const status = await prisma.electricInfrastructureFacilityStatus.findUnique({
+      where: { facilityId }
+    });
+
+    const count = await prisma.electricInfrastructureRecord.count({
+      where: { facilityId }
+    });
+
+    res.json({
+      facilityId,
+      recordCount: count,
+      isCompleted: status?.isCompleted || false,
+      completedAt: status?.completedAt || null,
+      completedBy: status?.completedBy || null,
+      notes: status?.notes || null
+    });
+  } catch (error: any) {
+    console.error('Error fetching facility status:', error);
+    res.status(500).json({ error: 'Durum bilgisi alınamadı.' });
+  }
+});
+
+// 2.3. POST TOGGLE FACILITY COMPLETION STATUS ("Tüm Girişlerim Bitti" / "Tekrar Düzenlemeye Aç")
+router.post('/facility-status/:facilityId/toggle', async (req: AuthRequest, res) => {
+  try {
+    const { facilityId } = req.params;
+    const { isCompleted, notes } = req.body;
+
+    if (!facilityId || facilityId === 'all') {
+      return res.status(400).json({ error: 'Geçerli bir tesis seçilmelidir.' });
+    }
+
+    const currentStatus = await prisma.electricInfrastructureFacilityStatus.findUnique({
+      where: { facilityId }
+    });
+
+    const newIsCompleted = isCompleted !== undefined ? Boolean(isCompleted) : !currentStatus?.isCompleted;
+
+    const updated = await prisma.electricInfrastructureFacilityStatus.upsert({
+      where: { facilityId },
+      create: {
+        facilityId,
+        isCompleted: newIsCompleted,
+        completedAt: newIsCompleted ? new Date() : null,
+        completedBy: newIsCompleted ? (req.user?.fullName || req.user?.username || 'Kullanıcı') : null,
+        notes: notes || null
+      },
+      update: {
+        isCompleted: newIsCompleted,
+        completedAt: newIsCompleted ? new Date() : null,
+        completedBy: newIsCompleted ? (req.user?.fullName || req.user?.username || 'Kullanıcı') : null,
+        notes: notes !== undefined ? notes : undefined
+      }
+    });
+
+    res.json({
+      message: newIsCompleted ? 'Tesis veri girişi tamamlandı olarak işaretlendi.' : 'Tesis veri girişi devam ediyor durumuna alındı.',
+      status: updated
+    });
+  } catch (error: any) {
+    console.error('Error toggling facility completion status:', error);
+    res.status(500).json({ error: 'İşlem tamamlanamadı.' });
+  }
+});
+
+// 2.4. GET EXECUTIVE DASHBOARD (C-Level & Central Management Analytics with Filtering)
+router.get('/executive-dashboard', async (req: AuthRequest, res) => {
+  try {
+    const user = req.user;
+    const isAdminOrMgmt = user?.roles?.includes('admin') || user?.roles?.includes('management');
+    if (!isAdminOrMgmt) {
+      return res.status(403).json({ error: 'Bu alana yalnızca yönetici yetkisine sahip kullanıcılar erişebilir.' });
+    }
+
+    const {
+      facilityType,
+      completionFilter,
+      riskFilter,
+      selectedCategory,
+      criteriaKey,
+      criteriaValue
+    } = req.query;
+
+    // 1. Fetch all facilities or filter by type (default to all active facilities, focused on Hastane if specified)
+    const facilityWhere: any = { isActive: true };
+    if (facilityType && facilityType !== 'all') {
+      facilityWhere.type = String(facilityType);
+    }
+
+    const facilities = await prisma.facility.findMany({
+      where: facilityWhere,
+      select: {
+        id: true,
+        name: true,
+        shortName: true,
+        type: true,
+        city: true,
+        dangerClass: true,
+        employeeCount: true,
+        electricInfrastructureRecords: {
+          select: {
+            id: true,
+            equipmentCategory: true,
+            equipmentCodeName: true,
+            locationDescription: true,
+            hasRisk: true,
+            hasMaintenanceRecord: true,
+            lastMaintenanceDate: true,
+            thermalControl: true,
+            overloadHeat: true,
+            cablesBreakers: true,
+            cleanlinessVentilation: true,
+            extinguishingSystem: true,
+            sealingFireStop: true,
+            protectionSystem: true,
+            actionStatus: true,
+            isInspected: true,
+            detectedRisk: true,
+            suggestedAction: true,
+            emergencyActionTaken: true,
+            responsiblePerson: true,
+            deadlineDate: true,
+            inspectorName: true,
+            inspectionDate: true,
+            photoUrls: true,
+            notes: true
+          }
+        },
+        electricInfrastructureStatus: true
+      },
+      orderBy: { name: 'asc' }
+    });
+
+    // 2. Compute C-Level Aggregates
+    let totalFacilitiesCount = facilities.length;
+    let enteredFacilitiesCount = 0;
+    let verifiedCompletedCount = 0;
+    let totalEquipments = 0;
+    let totalRisks = 0;
+    let totalMissingMaintenance = 0;
+    let totalOpenActions = 0;
+    let totalThermalNotSuitable = 0;
+
+    const categoryDistributionMap: Record<string, number> = {};
+    const riskByCategoryMap: Record<string, number> = {};
+    const actionStatusMap: Record<string, number> = { 'Tamamlandı': 0, 'Devam Ediyor': 0, 'Açık': 0 };
+
+    // Criteria breakdown accumulators
+    const criteriaBreakdowns: Record<string, Record<string, number>> = {
+      hasRisk: { 'Var': 0, 'Yok': 0 },
+      hasMaintenanceRecord: { 'Var': 0, 'Yok': 0 },
+      isInspected: { 'Evet': 0, 'Hayır': 0 },
+      thermalControl: { 'Uygun': 0, 'Uygun Değil': 0, 'Yapılmadı': 0 },
+      overloadHeat: { 'Var': 0, 'Yok': 0, 'Kontrol Edilmedi': 0 },
+      cablesBreakers: { 'Uygun': 0, 'Uygun Değil': 0, 'Kontrol Edilmedi': 0 },
+      cleanlinessVentilation: { 'Uygun': 0, 'Uygun Değil': 0, 'Kontrol Edilmedi': 0 },
+      extinguishingSystem: { 'Var ve Uygun': 0, 'Yok': 0, 'Uygun Değil': 0, 'Uygulanamaz': 0 },
+      sealingFireStop: { 'Var ve Uygun': 0, 'Yok': 0, 'Uygun Değil': 0, 'Uygulanamaz': 0 },
+      protectionSystem: { 'Uygun': 0, 'Uygun Değil': 0, 'Kontrol Edilmedi': 0 }
+    };
+
+    const facilityDetails = facilities.map(f => {
+      const allRecords = f.electricInfrastructureRecords || [];
+      const hasRecords = allRecords.length > 0;
+      if (hasRecords) enteredFacilitiesCount++;
+
+      const isCompleted = Boolean(f.electricInfrastructureStatus?.isCompleted);
+      if (isCompleted) verifiedCompletedCount++;
+
+      const facilityRisks = allRecords.filter(r => r.hasRisk === 'Var').length;
+      const facilityNoMaint = allRecords.filter(r => r.hasMaintenanceRecord === 'Yok' || !r.lastMaintenanceDate).length;
+      const facilityOpenAction = allRecords.filter(r => r.actionStatus === 'Açık' || r.actionStatus === 'Devam Ediyor').length;
+      const facilityThermalNotOk = allRecords.filter(r => r.thermalControl === 'Uygun Değil').length;
+
+      totalEquipments += allRecords.length;
+      totalRisks += facilityRisks;
+      totalMissingMaintenance += facilityNoMaint;
+      totalOpenActions += facilityOpenAction;
+      totalThermalNotSuitable += facilityThermalNotOk;
+
+      allRecords.forEach(r => {
+        categoryDistributionMap[r.equipmentCategory] = (categoryDistributionMap[r.equipmentCategory] || 0) + 1;
+        if (r.hasRisk === 'Var') {
+          riskByCategoryMap[r.equipmentCategory] = (riskByCategoryMap[r.equipmentCategory] || 0) + 1;
+        }
+        if (r.actionStatus) {
+          actionStatusMap[r.actionStatus] = (actionStatusMap[r.actionStatus] || 0) + 1;
+        }
+
+        // Tally criteria breakdown
+        Object.keys(criteriaBreakdowns).forEach(key => {
+          const val = (r as any)[key];
+          if (val) {
+            criteriaBreakdowns[key][val] = (criteriaBreakdowns[key][val] || 0) + 1;
+          }
+        });
+      });
+
+      // Filtered equipment list for this facility based on active criteria/category filters
+      let matchingRecords = allRecords;
+      if (selectedCategory && selectedCategory !== 'all') {
+        matchingRecords = matchingRecords.filter(r => r.equipmentCategory === selectedCategory);
+      }
+      if (criteriaKey && criteriaValue && criteriaValue !== 'all') {
+        matchingRecords = matchingRecords.filter(r => (r as any)[criteriaKey] === criteriaValue);
+      }
+
+      // Health / Compliance score per facility (100 - risk and missing penalties)
+      let complianceScore = 100;
+      if (allRecords.length > 0) {
+        const riskPenalty = (facilityRisks / allRecords.length) * 40;
+        const maintPenalty = (facilityNoMaint / allRecords.length) * 35;
+        const actionPenalty = (facilityOpenAction / allRecords.length) * 25;
+        complianceScore = Math.max(0, Math.round(100 - (riskPenalty + maintPenalty + actionPenalty)));
+      } else {
+        complianceScore = 0;
+      }
+
+      return {
+        id: f.id,
+        name: f.name,
+        shortName: f.shortName || f.name,
+        type: f.type,
+        city: f.city,
+        equipmentCount: allRecords.length,
+        matchingEquipmentCount: matchingRecords.length,
+        matchingEquipments: matchingRecords.map(r => ({
+          id: r.id,
+          facilityId: f.id,
+          facilityName: f.name,
+          equipmentCategory: r.equipmentCategory,
+          equipmentCodeName: r.equipmentCodeName,
+          locationDescription: r.locationDescription,
+          isInspected: r.isInspected,
+          hasRisk: r.hasRisk,
+          hasMaintenanceRecord: r.hasMaintenanceRecord,
+          lastMaintenanceDate: r.lastMaintenanceDate,
+          thermalControl: r.thermalControl,
+          overloadHeat: r.overloadHeat,
+          cablesBreakers: r.cablesBreakers,
+          cleanlinessVentilation: r.cleanlinessVentilation,
+          extinguishingSystem: r.extinguishingSystem,
+          sealingFireStop: r.sealingFireStop,
+          protectionSystem: r.protectionSystem,
+          actionStatus: r.actionStatus,
+          detectedRisk: r.detectedRisk,
+          suggestedAction: r.suggestedAction,
+          emergencyActionTaken: r.emergencyActionTaken,
+          responsiblePerson: r.responsiblePerson,
+          deadlineDate: r.deadlineDate,
+          inspectorName: r.inspectorName,
+          inspectionDate: r.inspectionDate,
+          photoUrls: r.photoUrls,
+          notes: r.notes
+        })),
+        hasEntered: hasRecords,
+        isCompleted,
+        completedAt: f.electricInfrastructureStatus?.completedAt || null,
+        completedBy: f.electricInfrastructureStatus?.completedBy || null,
+        riskCount: facilityRisks,
+        noMaintenanceCount: facilityNoMaint,
+        openActionCount: facilityOpenAction,
+        thermalNotSuitableCount: facilityThermalNotOk,
+        complianceScore
+      };
+    });
+
+    // 3. Apply post-filtering on facility details
+    let filteredFacilityDetails = facilityDetails;
+
+    if (completionFilter === 'completed') {
+      filteredFacilityDetails = filteredFacilityDetails.filter(f => f.isCompleted);
+    } else if (completionFilter === 'entered_not_completed') {
+      filteredFacilityDetails = filteredFacilityDetails.filter(f => f.hasEntered && !f.isCompleted);
+    } else if (completionFilter === 'not_entered') {
+      filteredFacilityDetails = filteredFacilityDetails.filter(f => !f.hasEntered);
+    }
+
+    if (riskFilter === 'with_risk') {
+      filteredFacilityDetails = filteredFacilityDetails.filter(f => f.riskCount > 0);
+    } else if (riskFilter === 'no_risk') {
+      filteredFacilityDetails = filteredFacilityDetails.filter(f => f.riskCount === 0 && f.hasEntered);
+    } else if (riskFilter === 'open_actions') {
+      filteredFacilityDetails = filteredFacilityDetails.filter(f => f.openActionCount > 0);
+    }
+
+    // Filter by matching criteria / category if specified
+    if ((selectedCategory && selectedCategory !== 'all') || (criteriaKey && criteriaValue && criteriaValue !== 'all')) {
+      filteredFacilityDetails = filteredFacilityDetails.filter(f => f.matchingEquipmentCount > 0);
+    }
+
+    // Sort: Risk Count descending, then Equipment Count descending
+    filteredFacilityDetails.sort((a, b) => b.riskCount - a.riskCount || b.equipmentCount - a.equipmentCount);
+
+    const categoryBreakdown = Object.entries(categoryDistributionMap)
+      .map(([name, count]) => ({
+        name,
+        count,
+        riskCount: riskByCategoryMap[name] || 0
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    res.json({
+      summary: {
+        totalFacilitiesCount,
+        enteredFacilitiesCount,
+        notEnteredFacilitiesCount: totalFacilitiesCount - enteredFacilitiesCount,
+        verifiedCompletedCount,
+        entryCompletionRate: totalFacilitiesCount > 0 ? Math.round((enteredFacilitiesCount / totalFacilitiesCount) * 100) : 0,
+        verifiedCompletionRate: totalFacilitiesCount > 0 ? Math.round((verifiedCompletedCount / totalFacilitiesCount) * 100) : 0,
+        totalEquipments,
+        totalRisks,
+        totalMissingMaintenance,
+        totalOpenActions,
+        totalThermalNotSuitable
+      },
+      categoryBreakdown,
+      actionStatusBreakdown: [
+        { name: 'Tamamlandı', value: actionStatusMap['Tamamlandı'] || 0, color: '#10b981' },
+        { name: 'Devam Ediyor', value: actionStatusMap['Devam Ediyor'] || 0, color: '#f59e0b' },
+        { name: 'Açık', value: actionStatusMap['Açık'] || 0, color: '#ef4444' }
+      ],
+      criteriaBreakdowns,
+      facilities: filteredFacilityDetails
+    });
+  } catch (error: any) {
+    console.error('Error fetching executive dashboard:', error);
+    res.status(500).json({ error: error.message || 'Yönetici gösterge paneli verileri alınamadı.' });
+  }
+});
+
 // 3. POST INITIALIZE DEFAULT TEMPLATES FOR A FACILITY
 router.post('/init-template', async (req: AuthRequest, res) => {
   try {

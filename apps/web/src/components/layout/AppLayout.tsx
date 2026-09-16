@@ -155,8 +155,12 @@ const elevatorTrackingNavItems = (hasAdminAccess: boolean) => [
   ] : []),
 ];
 
-const electricInfrastructureNavItems = [
-  { label: 'GENEL', type: 'group' },
+const electricInfrastructureNavItems = (hasAdminAccess: boolean) => [
+  ...(hasAdminAccess ? [
+    { label: 'YÖNETİCİ', type: 'group' },
+    { label: 'Yönetici Dashboard', icon: LayoutDashboard, to: '/safety-management/electric-infrastructure/dashboard' },
+  ] : []),
+  { label: 'İŞLEMLER', type: 'group' },
   { label: 'Kontrol Formu Tablosu', icon: Zap, to: '/safety-management/electric-infrastructure' },
 ];
 
@@ -278,7 +282,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     navItems = elevatorTrackingNavItems(!!hasAdminAccess);
     moduleName = 'Asansör Takip Yönetimi';
   } else if (path.startsWith('/safety-management/electric-infrastructure')) {
-    navItems = electricInfrastructureNavItems;
+    navItems = electricInfrastructureNavItems(!!hasAdminAccess);
     moduleName = 'Elektrik Altyapı Kontrol Formu';
   } else if (path.startsWith('/bina-turu')) {
     navItems = binaTuruNavItems;

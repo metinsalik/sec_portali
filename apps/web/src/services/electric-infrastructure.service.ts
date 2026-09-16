@@ -45,6 +45,115 @@ export interface ElectricInfrastructureStats {
   statusColor: 'green' | 'red' | 'gray';
 }
 
+export interface HospitalFacilityItem {
+  id: string;
+  name: string;
+  shortName: string;
+  city?: string | null;
+  recordCount: number;
+  isCompleted?: boolean;
+  completedAt?: string | null;
+  completedBy?: string | null;
+}
+
+export interface HospitalStatsResponse {
+  totalHospitals: number;
+  enteredCount: number;
+  notEnteredCount: number;
+  completedHospitalsCount: number;
+  completionRate: number;
+  verifiedCompletionRate: number;
+  enteredHospitals: HospitalFacilityItem[];
+  notEnteredHospitals: HospitalFacilityItem[];
+}
+
+export interface FacilityStatusResponse {
+  facilityId: string;
+  recordCount: number;
+  isCompleted: boolean;
+  completedAt?: string | null;
+  completedBy?: string | null;
+  notes?: string | null;
+}
+
+export interface MatchingEquipmentItem {
+  id: string;
+  facilityId: string;
+  facilityName: string;
+  equipmentCategory: string;
+  equipmentCodeName: string;
+  locationDescription: string;
+  isInspected?: string | null;
+  hasRisk?: string | null;
+  hasMaintenanceRecord?: string | null;
+  lastMaintenanceDate?: string | null;
+  thermalControl?: string | null;
+  overloadHeat?: string | null;
+  cablesBreakers?: string | null;
+  cleanlinessVentilation?: string | null;
+  extinguishingSystem?: string | null;
+  sealingFireStop?: string | null;
+  protectionSystem?: string | null;
+  actionStatus?: string | null;
+  detectedRisk?: string | null;
+  suggestedAction?: string | null;
+  emergencyActionTaken?: string | null;
+  responsiblePerson?: string | null;
+  deadlineDate?: string | null;
+  inspectorName?: string | null;
+  inspectionDate?: string | null;
+  photoUrls?: any;
+  notes?: string | null;
+}
+
+export interface ExecutiveDashboardFacilityItem {
+  id: string;
+  name: string;
+  shortName: string;
+  type: string;
+  city?: string | null;
+  equipmentCount: number;
+  matchingEquipmentCount?: number;
+  matchingEquipments?: MatchingEquipmentItem[];
+  hasEntered: boolean;
+  isCompleted: boolean;
+  completedAt?: string | null;
+  completedBy?: string | null;
+  riskCount: number;
+  noMaintenanceCount: number;
+  openActionCount: number;
+  thermalNotSuitableCount: number;
+  complianceScore: number;
+}
+
+export interface ExecutiveDashboardResponse {
+  summary: {
+    totalFacilitiesCount: number;
+    enteredFacilitiesCount: number;
+    notEnteredFacilitiesCount: number;
+    verifiedCompletedCount: number;
+    entryCompletionRate: number;
+    verifiedCompletionRate: number;
+    totalEquipments: number;
+    totalRisks: number;
+    totalMissingMaintenance: number;
+    totalOpenActions: number;
+    totalThermalNotSuitable: number;
+  };
+  categoryBreakdown: {
+    name: string;
+    count: number;
+    riskCount: number;
+  }[];
+  actionStatusBreakdown: {
+    name: string;
+    value: number;
+    color: string;
+  }[];
+  criteriaBreakdowns?: Record<string, Record<string, number>>;
+  facilities: ExecutiveDashboardFacilityItem[];
+}
+
 export const electricInfrastructureService = {
   getRecords: async (params?: {
     facilityId?: string;
@@ -67,7 +176,7 @@ export const electricInfrastructureService = {
 
   getRecordById: async (id: string): Promise<ElectricInfrastructureRecord> => {
     const res = await api.get(`/safety-management/electric-infrastructure/${id}`);
-    if (!res.ok) throw new Error('Kayıt detayı yüklenemedi.');
+    if (!res.ok) throw new Error('Kayıt bulunamadı.');
     return res.json();
   },
 
@@ -77,6 +186,57 @@ export const electricInfrastructureService = {
 
     const res = await api.get(`/safety-management/electric-infrastructure/stats?${query.toString()}`);
     if (!res.ok) throw new Error('İstatistikler yüklenemedi.');
+    return res.json();
+  },
+
+  getHospitalStats: async (): Promise<HospitalStatsResponse> => {
+    const res = await api.get('/safety-management/electric-infrastructure/hospital-stats');
+    if (!res.ok) throw new Error('Hastane giriş durumu istatistikleri alınamadı.');
+    return res.json();
+  },
+
+  getFacilityStatus: async (facilityId: string): Promise<FacilityStatusResponse> => {
+    const res = await api.get(`/safety-management/electric-infrastructure/facility-status/${facilityId}`);
+    if (!res.ok) throw new Error('Tesis tamamlama durumu alınamadı.');
+    return res.json();
+  },
+
+  toggleFacilityStatus: async (
+    facilityId: string,
+    data: { isCompleted: boolean; notes?: string }
+  ): Promise<FacilityStatusResponse> => {
+    const res = await api.post(`/safety-management/electric-infrastructure/facility-status/${facilityId}/toggle`, {
+      ...data,
+      facilityId
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Tesis tamamlama durumu güncellenemedi.');
+    }
+    return res.json();
+  },
+
+  getExecutiveDashboard: async (params?: {
+    facilityType?: string;
+    completionFilter?: string;
+    riskFilter?: string;
+    selectedCategory?: string;
+    criteriaKey?: string;
+    criteriaValue?: string;
+  }): Promise<ExecutiveDashboardResponse> => {
+    const query = new URLSearchParams();
+    if (params?.facilityType) query.append('facilityType', params.facilityType);
+    if (params?.completionFilter) query.append('completionFilter', params.completionFilter);
+    if (params?.riskFilter) query.append('riskFilter', params.riskFilter);
+    if (params?.selectedCategory) query.append('selectedCategory', params.selectedCategory);
+    if (params?.criteriaKey) query.append('criteriaKey', params.criteriaKey);
+    if (params?.criteriaValue) query.append('criteriaValue', params.criteriaValue);
+
+    const res = await api.get(`/safety-management/electric-infrastructure/executive-dashboard?${query.toString()}`);
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Yönetici gösterge paneli verileri alınamadı.');
+    }
     return res.json();
   },
 

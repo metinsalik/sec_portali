@@ -12,8 +12,13 @@ import {
   Zap, Plus, FileSpreadsheet, Sparkles, AlertTriangle, CheckCircle2,
   XCircle, Clock, ShieldAlert, Image as ImageIcon, Upload, Trash2,
   Edit2, Eye, RefreshCw, Search, Filter, Camera, Download, ExternalLink,
-  ChevronRight, Building2, MapPin
+  ChevronRight, ChevronLeft, Building2, MapPin, Activity, BarChart3,
+  CheckCircle, Info, ArrowUpRight
 } from 'lucide-react';
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
+  CartesianGrid, PieChart, Pie, Cell, Legend
+} from 'recharts';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -21,7 +26,8 @@ import { useAuth } from '@/context/AuthContext';
 import {
   electricInfrastructureService,
   type ElectricInfrastructureRecord,
-  type ElectricInfrastructureStats
+  type ElectricInfrastructureStats,
+  type FacilityStatusResponse
 } from '@/services/electric-infrastructure.service';
 
 const CATEGORIES = [
@@ -51,11 +57,22 @@ export default function ElectricInfrastructurePage() {
 
   const [records, setRecords] = useState<ElectricInfrastructureRecord[]>([]);
   const [stats, setStats] = useState<ElectricInfrastructureStats | null>(null);
+  const [facilityStatus, setFacilityStatus] = useState<FacilityStatusResponse | null>(null);
+  const [togglingStatus, setTogglingStatus] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [riskFilter, setRiskFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  // Check if user is admin or management
+  const isAdminOrMgmt = useMemo(() => {
+    return user?.roles?.includes('admin') || user?.roles?.includes('management');
+  }, [user]);
 
   // Modal State for New / Edit Record
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -86,7 +103,7 @@ export default function ElectricInfrastructurePage() {
   const fetchData = async (facId = activeFacilityId) => {
     setLoading(true);
     try {
-      const [data, statsData] = await Promise.all([
+      const promises: Promise<any>[] = [
         electricInfrastructureService.getRecords({
           facilityId: facId,
           category: categoryFilter !== 'all' ? categoryFilter : undefined,
@@ -95,9 +112,21 @@ export default function ElectricInfrastructurePage() {
           search: search || undefined
         }),
         electricInfrastructureService.getStats(facId)
-      ]);
+      ];
+
+      if (facId !== 'all') {
+        promises.push(electricInfrastructureService.getFacilityStatus(facId));
+      } else {
+        setFacilityStatus(null);
+      }
+
+      const [data, statsData, statusData] = await Promise.all(promises);
       setRecords(data);
       setStats(statsData);
+      if (facId !== 'all') {
+        setFacilityStatus(statusData as FacilityStatusResponse);
+      }
+      setCurrentPage(1); // Reset page on filter/search change
     } catch (err: any) {
       console.error(err);
       toast.error('Veriler yüklenirken bir hata oluştu.');
@@ -105,6 +134,43 @@ export default function ElectricInfrastructurePage() {
       setLoading(false);
     }
   };
+
+  const handleToggleCompletion = async () => {
+    if (activeFacilityId === 'all') return;
+    const targetStatus = !facilityStatus?.isCompleted;
+    const confirmMessage = targetStatus
+      ? 'Tüm ekipman girişlerinizi tamamladığınızı onaylıyor musunuz? (Yöneticiler tesisinizi Bitti olarak görecektir, gerektiğinde düzenleme yapmaya devam edebilirsiniz.)'
+      : 'Tamamlandı durumunu geri almak ve devam ediyor olarak işaretlemek istiyor musunuz?';
+
+    if (!confirm(confirmMessage)) return;
+
+    setTogglingStatus(true);
+    try {
+      const updated = await electricInfrastructureService.toggleFacilityStatus(activeFacilityId, {
+        isCompleted: targetStatus
+      });
+      setFacilityStatus(updated);
+      toast.success(
+        targetStatus
+          ? 'Tebrikler! Girişleriniz "Tamamlandı" olarak işaretlendi.'
+          : 'Tesis durumu "Devam Ediyor" olarak güncellendi.'
+      );
+    } catch (err: any) {
+      toast.error(err.message || 'Durum güncellenemedi.');
+    } finally {
+      setTogglingStatus(false);
+    }
+  };
+
+  // Rol kontrolü: Yönetici ise ve doğrudan /safety-management/electric-infrastructure sayfasına gelip 'all' seçiliyse Dashboard'a yönlendir
+  useEffect(() => {
+    const hasCheckedRoleRedirect = sessionStorage.getItem('electric_role_redirect_done');
+    if (!hasCheckedRoleRedirect && isAdminOrMgmt) {
+      sessionStorage.setItem('electric_role_redirect_done', 'true');
+      localStorage.setItem('activeFacilityId', 'all');
+      navigate('/safety-management/electric-infrastructure/dashboard');
+    }
+  }, [isAdminOrMgmt, navigate]);
 
   useEffect(() => {
     const handleFacilityChanged = () => {
@@ -120,6 +186,13 @@ export default function ElectricInfrastructurePage() {
       window.removeEventListener('facilityChanged', handleFacilityChanged);
     };
   }, [activeFacilityId, categoryFilter, riskFilter, statusFilter, search]);
+
+  // Paginated records computation
+  const totalPages = Math.max(1, Math.ceil(records.length / pageSize));
+  const paginatedRecords = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return records.slice(start, start + pageSize);
+  }, [records, currentPage, pageSize]);
 
   const handleOpenNewModal = () => {
     if (activeFacilityId === 'all') {
@@ -289,6 +362,45 @@ export default function ElectricInfrastructurePage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Tesis Bazında Tamamlandı / Tüm Girişlerim Bitti Butonu */}
+          {activeFacilityId !== 'all' && (
+            <Button
+              type="button"
+              variant={facilityStatus?.isCompleted ? "outline" : "default"}
+              size="sm"
+              onClick={handleToggleCompletion}
+              disabled={togglingStatus}
+              className={`h-9 px-3.5 font-medium transition-all shadow-sm ${
+                facilityStatus?.isCompleted
+                  ? 'border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              }`}
+              title={facilityStatus?.isCompleted ? 'Girişler tamamlandı olarak işaretli. Tıklayarak tekrar açabilirsiniz.' : 'Tesisinizin tüm ekipman girişlerini tamamladığınızda bu butona basın.'}
+            >
+              {togglingStatus ? (
+                <RefreshCw className="w-4 h-4 mr-1.5 animate-spin" />
+              ) : facilityStatus?.isCompleted ? (
+                <CheckCircle2 className="w-4 h-4 mr-1.5 text-emerald-600 dark:text-emerald-400" />
+              ) : (
+                <CheckCircle className="w-4 h-4 mr-1.5" />
+              )}
+              {facilityStatus?.isCompleted ? 'Girişler Bitti ✓ (Tekrar Aç)' : 'Tüm Girişlerim Bitti'}
+            </Button>
+          )}
+
+          {/* Yönetici Dashboard Butonu (Admin/Management için) */}
+          {isAdminOrMgmt && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/safety-management/electric-infrastructure/dashboard')}
+              className="border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 hover:bg-indigo-100/70 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 h-9 px-3 font-medium"
+            >
+              <BarChart3 className="w-4 h-4 mr-1.5" />
+              Yönetici Dashboard
+            </Button>
+          )}
+
           <Button
             variant="outline"
             size="sm"
@@ -302,7 +414,7 @@ export default function ElectricInfrastructurePage() {
 
           <Button
             onClick={handleOpenNewModal}
-            className="bg-amber-600 hover:bg-amber-700 text-white shadow-sm"
+            className="bg-amber-600 hover:bg-amber-700 text-white shadow-sm h-9"
           >
             <Plus className="w-4 h-4 mr-1.5" />
             Yeni Ekipman / Konum Ekle
@@ -508,9 +620,10 @@ export default function ElectricInfrastructurePage() {
                   </td>
                 </tr>
               ) : (
-                records.map((rec, idx) => {
+                paginatedRecords.map((rec, idx) => {
                   const hasPhotos = Array.isArray(rec.photoUrls) && rec.photoUrls.length > 0;
                   const isRisk = rec.hasRisk === 'Var';
+                  const rowNumber = (currentPage - 1) * pageSize + idx + 1;
 
                   return (
                     <tr
@@ -725,6 +838,92 @@ export default function ElectricInfrastructurePage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {records.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-slate-50/80 dark:bg-slate-900/60 border-t border-slate-200 dark:border-slate-800 text-xs">
+            <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
+              <span>
+                Toplam <span className="font-semibold text-slate-900 dark:text-slate-100">{records.length}</span> kayıttan{' '}
+                <span className="font-semibold text-slate-900 dark:text-slate-100">
+                  {Math.min((currentPage - 1) * pageSize + 1, records.length)}
+                </span>
+                -
+                <span className="font-semibold text-slate-900 dark:text-slate-100">
+                  {Math.min(currentPage * pageSize, records.length)}
+                </span>{' '}
+                arası gösteriliyor
+              </span>
+
+              <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-700">
+                <span className="text-[11px] text-slate-500">Sayfa Başına:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 text-xs font-medium focus:ring-1 focus:ring-amber-500"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="h-8 px-2 text-xs"
+                title="İlk Sayfa"
+              >
+                İlk
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="h-8 px-2 text-xs"
+                title="Önceki Sayfa"
+              >
+                <ChevronLeft className="w-3.5 h-3.5 mr-0.5" />
+                Önceki
+              </Button>
+
+              <div className="px-3 py-1 font-semibold text-xs rounded border bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">
+                {currentPage} / {totalPages}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage >= totalPages}
+                className="h-8 px-2 text-xs"
+                title="Sonraki Sayfa"
+              >
+                Sonraki
+                <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage >= totalPages}
+                className="h-8 px-2 text-xs"
+                title="Son Sayfa"
+              >
+                Son
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modal: Yeni / Düzenle Ekipman Kontrol Kaydı */}
@@ -1091,18 +1290,42 @@ export default function ElectricInfrastructurePage() {
               <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Pano, termal kamera fotoğrafı veya kontrol belgesi yükleyin
               </p>
-              <p className="text-xs text-slate-400 mt-1">PNG, JPG veya PDF (Maks. 20MB)</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploadingPhoto}
-                className="mt-3"
-              >
-                {isUploadingPhoto ? <RefreshCw className="w-4 h-4 animate-spin mr-1.5" /> : <Upload className="w-4 h-4 mr-1.5" />}
-                Dosya Seç
-              </Button>
+              <p className="text-xs text-slate-400 mt-1">Fotoğraf çekebilir veya galeriden/dosyalardan seçebilirsiniz (PNG, JPG, PDF)</p>
+              
+              <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (fileInputRef.current) {
+                      fileInputRef.current.removeAttribute('capture');
+                      fileInputRef.current.click();
+                    }
+                  }}
+                  disabled={isUploadingPhoto}
+                  className="bg-white dark:bg-slate-800"
+                >
+                  {isUploadingPhoto ? <RefreshCw className="w-4 h-4 animate-spin mr-1.5" /> : <Upload className="w-4 h-4 mr-1.5" />}
+                  Dosya / Galeri Seç
+                </Button>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    if (fileInputRef.current) {
+                      fileInputRef.current.setAttribute('capture', 'environment');
+                      fileInputRef.current.click();
+                    }
+                  }}
+                  disabled={isUploadingPhoto}
+                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                >
+                  <Camera className="w-4 h-4 mr-1.5" />
+                  Kamera ile Foto Çek
+                </Button>
+              </div>
             </div>
 
             {/* Photos Grid */}

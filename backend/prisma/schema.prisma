@@ -175,6 +175,7 @@ model Facility {
   ohsBoardDepartments    OhsBoardDepartment[]
   elevators              Elevator[]
   electricInfrastructureRecords ElectricInfrastructureRecord[]
+  electricInfrastructureStatus  ElectricInfrastructureFacilityStatus?
 }
 
 model IncidentCategory {
@@ -2720,5 +2721,18 @@ model ElectricInfrastructureRecord {
   @@index([facilityId])
   @@index([equipmentCategory])
   @@index([actionStatus])
+}
+
+model ElectricInfrastructureFacilityStatus {
+  facilityId             String    @id
+  isCompleted            Boolean   @default(false)
+  completedAt            DateTime?
+  completedBy            String?
+  notes                  String?
+  
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  
+  facility               Facility  @relation(fields: [facilityId], references: [id], onDelete: Cascade)
 }
 
