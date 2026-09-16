@@ -177,6 +177,8 @@ import IsgDefterRecords from './pages/safety-management/isg-defter/IsgDefterReco
 import ElevatorRecords from './pages/safety-management/elevator-tracking/ElevatorRecords';
 import ElevatorDetail from './pages/safety-management/elevator-tracking/ElevatorDetail';
 import ElevatorSettings from './pages/safety-management/elevator-tracking/Settings';
+import ElectricInfrastructurePage from './pages/safety-management/electric-infrastructure/ElectricInfrastructurePage';
+import ElectricInfrastructureDetail from './pages/safety-management/electric-infrastructure/ElectricInfrastructureDetail';
 import IsgDefterSettings from './pages/safety-management/isg-defter/IsgDefterSettings';
 import IsgDefterItemDetail from './pages/safety-management/isg-defter/IsgDefterItemDetail';
 import IsgDefterPageBuilder from './pages/safety-management/isg-defter/IsgDefterPageBuilder';
@@ -313,6 +315,22 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <AppLayout><ElevatorSettings /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/safety-management/electric-infrastructure"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><ElectricInfrastructurePage /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/safety-management/electric-infrastructure/:id"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><ElectricInfrastructureDetail /></AppLayout>
                       </ProtectedRoute>
                     }
                   />

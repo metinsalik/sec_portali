@@ -71,7 +71,8 @@ async function ensureModulesExist() {
       { code: 'CHECKLISTS', name: 'Kontrol Listeleri', description: 'İSG Kontrol ve Denetim Listeleri', icon: 'ClipboardCheck' },
       { code: 'ISG_KURUL', name: 'İSG Kurul Yönetimi', description: 'İSG Kurul Üyeleri ve Toplantı Kararları', icon: 'Users' },
       { code: 'ISG_DEFTER', name: 'İSG Defteri', description: 'İSG Onaylı Defter ve Tespit Kayıtları', icon: 'BookOpen' },
-      { code: 'ELEVATOR_TRACKING', name: 'Asansör Takip Yönetimi', description: 'Asansör kayıt, periyodik kontrol ve takip sistemi', icon: 'ArrowUpDown' }
+      { code: 'ELEVATOR_TRACKING', name: 'Asansör Takip Yönetimi', description: 'Asansör kayıt, periyodik kontrol ve takip sistemi', icon: 'ArrowUpDown' },
+      { code: 'ELECTRIC_INFRASTRUCTURE', name: 'Elektrik Altyapı Sistemleri Kontrol Formu', description: 'Tesis bazında elektrik altyapı ekipmanları ve panoları kontrol formu', icon: 'Zap' }
   ];
   for (const mod of defaultModules) {
     await prisma.module.upsert({

@@ -7,7 +7,7 @@ import {
   ClipboardList, FileText, Settings, Bell, ChevronDown, LogOut,
   User, BarChart3, ChevronRight, LayoutGrid, Database, Users2, Mail,
   BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame, PenTool, Menu, X, ShoppingCart, PieChart, Calendar, AlertCircle, MessageSquare, BookOpen, DoorClosed,
-  PanelLeftClose, PanelLeftOpen, PanelLeft
+  PanelLeftClose, PanelLeftOpen, PanelLeft, Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -155,6 +155,11 @@ const elevatorTrackingNavItems = (hasAdminAccess: boolean) => [
   ] : []),
 ];
 
+const electricInfrastructureNavItems = [
+  { label: 'GENEL', type: 'group' },
+  { label: 'Kontrol Formu Tablosu', icon: Zap, to: '/safety-management/electric-infrastructure' },
+];
+
 const binaTuruNavItems = [
   { label: 'GENEL', type: 'group' },
   { label: 'Dashboard', icon: LayoutDashboard, to: '/bina-turu', end: true },
@@ -272,6 +277,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   } else if (path.startsWith('/safety-management/elevator-tracking')) {
     navItems = elevatorTrackingNavItems(!!hasAdminAccess);
     moduleName = 'Asansör Takip Yönetimi';
+  } else if (path.startsWith('/safety-management/electric-infrastructure')) {
+    navItems = electricInfrastructureNavItems;
+    moduleName = 'Elektrik Altyapı Kontrol Formu';
   } else if (path.startsWith('/bina-turu')) {
     navItems = binaTuruNavItems;
     moduleName = 'Bina Turu Yönetimi';
@@ -391,7 +399,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* Facility Switcher (Show for modules that need it) */}
-        {(path.startsWith('/isg-kurul') || path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management') || path.startsWith('/renovation-report') || path.startsWith('/checklists') || path.startsWith('/safety-management/fire-doors') || path.startsWith('/safety-management/elevator-tracking')) && (
+        {(path.startsWith('/isg-kurul') || path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management') || path.startsWith('/renovation-report') || path.startsWith('/checklists') || path.startsWith('/safety-management/fire-doors') || path.startsWith('/safety-management/elevator-tracking') || path.startsWith('/safety-management/electric-infrastructure')) && (
           <div className="flex-shrink-0">
             <FacilitySwitcher isCollapsed={isCollapsed} />
           </div>

@@ -82,8 +82,11 @@ app.use('/api/locations', require('./routes/locations').default);
 app.use('/api/checklists', checklistRoutes);
 app.use('/api/safety-management/fire-doors', fireDoorsRoutes);
 app.use('/api/safety-management/isg-defter', isgDefterRoutes);
+import electricInfrastructureRoutes from './routes/electric-infrastructure.routes';
+
 app.use('/api/safety-management/elevators', elevatorRoutes);
 app.use('/api/safety-management/elevator-settings', elevatorSettingsRoutes);
+app.use('/api/safety-management/electric-infrastructure', electricInfrastructureRoutes);
 
 // Sağlık kontrolü
 app.get('/health', (req, res) => {

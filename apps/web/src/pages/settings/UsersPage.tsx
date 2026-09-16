@@ -562,23 +562,21 @@ const UsersPage = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">E-posta *</label>
+                <label className="text-sm font-medium">E-posta</label>
                 <Input
                   type="email"
                   placeholder="metin@ornek.com"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  required
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Telefon *</label>
+                <label className="text-sm font-medium">Telefon</label>
                 <Input
                   type="tel"
                   placeholder="0532..."
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  required
                 />
               </div>
             </div>
@@ -603,12 +601,11 @@ const UsersPage = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Ünvan *</label>
+                <label className="text-sm font-medium">Ünvan</label>
                 <Input
                   placeholder="Ör: İş Güvenliği Uzmanı"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  required
                 />
               </div>
             </div>
