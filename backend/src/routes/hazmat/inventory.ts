@@ -403,4 +403,207 @@ router.delete('/:id', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
+// Bulk import inventory matrix with location mapping and deduplication
+router.post('/bulk-import-matrix', authMiddleware, async (req: AuthRequest, res) => {
+  const { facilityId, rows, locationMappings } = req.body;
+
+  if (!facilityId || !Array.isArray(rows) || rows.length === 0) {
+    return res.status(400).json({ error: 'facilityId and a non-empty rows array are required' });
+  }
+
+  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(facilityId)) {
+    return res.status(403).json({ error: 'Access denied to this facility' });
+  }
+
+  try {
+    const username = req.user?.username || 'System';
+
+    // 1. Fetch or create default 'Adet' unit
+    let adetUnit = await prisma.hazmatUnit.findFirst({
+      where: { name: { contains: 'adet', mode: 'insensitive' } }
+    });
+    if (!adetUnit) {
+      adetUnit = await prisma.hazmatUnit.create({ data: { name: 'Adet', symbol: 'ad' } });
+    }
+
+    // 2. Fetch all existing global materials for robust matching
+    const allGlobalMaterials = await prisma.hazmatMaterial.findMany();
+    const normalize = (t: string) => (t || '').toLocaleLowerCase('tr-TR').trim();
+
+    // 3. Resolve location mapping (maps raw department name to locationId)
+    // locationMappings: Record<string, { action: 'existing' | 'new', locationId?: string, newName?: string }>
+    const resolvedLocations: Record<string, string> = {};
+
+    if (locationMappings && typeof locationMappings === 'object') {
+      for (const [rawDept, mapInfo] of Object.entries(locationMappings as Record<string, any>)) {
+        if (!mapInfo) continue;
+        if (mapInfo.action === 'existing' && mapInfo.locationId) {
+          resolvedLocations[rawDept] = mapInfo.locationId;
+        } else if (mapInfo.action === 'new' && (mapInfo.newName || rawDept)) {
+          const locName = (mapInfo.newName || rawDept).trim();
+          let createdLoc = await prisma.facilityLocation.findFirst({
+            where: { facilityId, name: locName }
+          });
+          if (!createdLoc) {
+            createdLoc = await prisma.facilityLocation.create({
+              data: {
+                facilityId,
+                name: locName,
+                department: locName,
+                isActive: true
+              }
+            });
+          }
+          resolvedLocations[rawDept] = createdLoc.id;
+        }
+      }
+    }
+
+    const results = {
+      materialsCreated: 0,
+      materialsReused: 0,
+      inventoryItemsCreated: 0,
+      inventoryItemsUpdated: 0,
+      errors: 0
+    };
+
+    // Keep cache of created materials during this batch
+    const materialCache = new Map<string, any>();
+    allGlobalMaterials.forEach(m => materialCache.set(normalize(m.productName), m));
+
+    for (const row of rows) {
+      const productName = (row.productName || '').trim();
+      if (!productName) {
+        results.errors++;
+        continue;
+      }
+
+      const normName = normalize(productName);
+      let material = materialCache.get(normName);
+
+      // Create material in global pool if not exists
+      if (!material) {
+        material = await prisma.hazmatMaterial.create({
+          data: {
+            productName,
+            brandName: row.brandName || null,
+            usageMethod: row.usageMethod || null,
+            composition: row.composition || null,
+            hazardDescription: row.hazardDescription || null,
+            firstAid: row.firstAid || null,
+            fireFightingMeasures: row.fireFightingMeasures || null,
+            accidentalReleaseMeasures: row.accidentalReleaseMeasures || null,
+            handlingAndStorage: row.handlingAndStorage || null,
+            exposureControlsPpe: row.exposureControlsPpe || null,
+            physicalAndChemicalProperties: row.physicalAndChemicalProperties || null,
+            stabilityAndReactivity: row.stabilityAndReactivity || null,
+            toxicologicalInformation: row.toxicologicalInformation || null,
+            disposalConsiderations: row.disposalConsiderations || null,
+            transportInfo: row.transportInfo || null
+          }
+        });
+
+        await prisma.hazmatAuditLog.create({
+          data: {
+            materialId: material.id,
+            action: 'CREATE',
+            details: 'Excel birim envanteri içe aktarımı ile havuza eklendi.',
+            username
+          }
+        });
+
+        materialCache.set(normName, material);
+        results.materialsCreated++;
+      } else {
+        // Update existing material if it lacks technical details
+        const updateData: any = {};
+        if (!material.brandName && row.brandName) updateData.brandName = row.brandName;
+        if (!material.usageMethod && row.usageMethod) updateData.usageMethod = row.usageMethod;
+        if (!material.composition && row.composition) updateData.composition = row.composition;
+        if (!material.hazardDescription && row.hazardDescription) updateData.hazardDescription = row.hazardDescription;
+        if (!material.firstAid && row.firstAid) updateData.firstAid = row.firstAid;
+        if (!material.fireFightingMeasures && row.fireFightingMeasures) updateData.fireFightingMeasures = row.fireFightingMeasures;
+        if (!material.accidentalReleaseMeasures && row.accidentalReleaseMeasures) updateData.accidentalReleaseMeasures = row.accidentalReleaseMeasures;
+        if (!material.handlingAndStorage && row.handlingAndStorage) updateData.handlingAndStorage = row.handlingAndStorage;
+        if (!material.exposureControlsPpe && row.exposureControlsPpe) updateData.exposureControlsPpe = row.exposureControlsPpe;
+        if (!material.physicalAndChemicalProperties && row.physicalAndChemicalProperties) updateData.physicalAndChemicalProperties = row.physicalAndChemicalProperties;
+        if (!material.stabilityAndReactivity && row.stabilityAndReactivity) updateData.stabilityAndReactivity = row.stabilityAndReactivity;
+        if (!material.toxicologicalInformation && row.toxicologicalInformation) updateData.toxicologicalInformation = row.toxicologicalInformation;
+        if (!material.disposalConsiderations && row.disposalConsiderations) updateData.disposalConsiderations = row.disposalConsiderations;
+        if (!material.transportInfo && row.transportInfo) updateData.transportInfo = row.transportInfo;
+
+        if (Object.keys(updateData).length > 0) {
+          material = await prisma.hazmatMaterial.update({
+            where: { id: material.id },
+            data: updateData
+          });
+          materialCache.set(normName, material);
+        }
+        results.materialsReused++;
+      }
+
+      // Ensure material is linked to facility (FacilityHazmatItem)
+      await prisma.facilityHazmatItem.upsert({
+        where: {
+          facilityId_materialId: { facilityId, materialId: material.id }
+        },
+        update: {},
+        create: {
+          facilityId,
+          materialId: material.id,
+          amountValue: row.maxQuantity || row.minQuantity || 1,
+          unitId: adetUnit.id
+        }
+      });
+
+      // Find target location for this row
+      const rawDept = (row.department || '').trim();
+      const targetLocationId = resolvedLocations[rawDept];
+
+      if (targetLocationId) {
+        const minQ = row.minQuantity !== undefined && row.minQuantity !== null ? Number(row.minQuantity) : null;
+        const maxQ = row.maxQuantity !== undefined && row.maxQuantity !== null ? Number(row.maxQuantity) : null;
+
+        const existingItem = await prisma.hazmatInventoryItem.findFirst({
+          where: {
+            facilityId,
+            locationId: targetLocationId,
+            materialId: material.id
+          }
+        });
+
+        if (existingItem) {
+          await prisma.hazmatInventoryItem.update({
+            where: { id: existingItem.id },
+            data: {
+              minQuantity: minQ !== null ? minQ : existingItem.minQuantity,
+              maxQuantity: maxQ !== null ? maxQ : existingItem.maxQuantity
+            }
+          });
+          results.inventoryItemsUpdated++;
+        } else {
+          await prisma.hazmatInventoryItem.create({
+            data: {
+              facilityId,
+              locationId: targetLocationId,
+              materialId: material.id,
+              minQuantity: minQ,
+              maxQuantity: maxQ
+            }
+          });
+          results.inventoryItemsCreated++;
+        }
+      }
+    }
+
+    res.json({
+      message: 'Envanter ve malzeme aktarımı tamamlandı.',
+      results
+    });
+  } catch (error: any) {
+    console.error('Error during bulk inventory matrix import:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
 export default router;

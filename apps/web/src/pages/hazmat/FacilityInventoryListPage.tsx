@@ -1,19 +1,23 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api, { BASE_URL } from '@/lib/api';
 import { useActiveFacility } from '@/hooks/useActiveFacility';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Filter, Printer, ExternalLink, Download, LayoutGrid } from 'lucide-react';
+import { Plus, Search, Filter, Printer, ExternalLink, Download, LayoutGrid, Upload, Loader2, Layers } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
 import { HazmatMaterialSummaryDialog } from '@/components/hazmat/HazmatMaterialSummaryDialog';
+import { HazmatInventoryImportModal } from '@/components/hazmat/HazmatInventoryImportModal';
+import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
 
 export default function FacilityInventoryListPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const activeFacilityId = useActiveFacility();
 
   const [searchMaterial, setSearchMaterial] = useState('');
@@ -23,6 +27,25 @@ export default function FacilityInventoryListPage() {
   
   // Dialog state
   const [selectedGroup, setSelectedGroup] = useState<any>(null);
+
+  // Import Modal State
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [parsedRowsForImport, setParsedRowsForImport] = useState<any[]>([]);
+  const [isParsingExcel, setIsParsingExcel] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 0. Fetch facility locations for mapping
+  const { data: facilityLocations = [] } = useQuery<any[]>({
+    queryKey: ['facility-locations', activeFacilityId],
+    queryFn: async () => {
+      const facId = activeFacilityId || localStorage.getItem('activeFacilityId');
+      if (!facId) return [];
+      const res = await api.get(`/risks/facilities/${facId}/locations`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!(activeFacilityId || localStorage.getItem('activeFacilityId'))
+  });
 
   // 1. Fetch summary for the list
   const { data: summaryData, isLoading } = useQuery({
@@ -126,6 +149,161 @@ export default function FacilityInventoryListPage() {
     return filtered;
   }, [groupedSummary, searchMaterial, searchDepartment, searchAdrCategory]);
 
+  const handleExcelFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsParsingExcel(true);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+
+        const rowsToImport: any[] = [];
+
+        // Sheet selection preference:
+        // If a sheet contains "TÜM BİRİM" or "FLORYA" or first non-empty sheet
+        let targetSheetName = wb.SheetNames.find(s => s.toUpperCase().includes('TÜM BİRİM')) || wb.SheetNames[0];
+
+        const ws = wb.Sheets[targetSheetName];
+        const data: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+        if (data.length <= 1) {
+          toast.error('Seçilen Excel sayfası boş görünüyor.');
+          return;
+        }
+
+        // Find header row containing department and product name keywords
+        const normalizeText = (text: any) => String(text || '').toLocaleLowerCase('tr-TR').trim();
+        let headerRowIndex = -1;
+        let headerRow: any[] = [];
+
+        for (let i = 0; i < Math.min(data.length, 25); i++) {
+          const row = data[i] || [];
+          const rowStr = row.map(c => normalizeText(c)).join(' ');
+          if (
+            (rowStr.includes('ürün adı') || rowStr.includes('madde') || rowStr.includes('malzeme') || rowStr.includes('productname')) &&
+            (rowStr.includes('bölüm') || rowStr.includes('departman') || rowStr.includes('birim') || rowStr.includes('kullanıldığı'))
+          ) {
+            headerRowIndex = i;
+            headerRow = row;
+            break;
+          }
+        }
+
+        if (headerRowIndex === -1) {
+          // Fallback: search row having >= 4 non-empty values
+          for (let i = 0; i < Math.min(data.length, 10); i++) {
+            const r = (data[i] || []).filter(Boolean);
+            if (r.length >= 4) {
+              headerRowIndex = i;
+              headerRow = data[i];
+              break;
+            }
+          }
+        }
+
+        if (headerRowIndex === -1) {
+          toast.error('Excel başlık satırı tespit edilemedi.');
+          return;
+        }
+
+        const getColIndex = (kw: string[]) =>
+          headerRow.findIndex((h: any) => h && kw.some(k => normalizeText(h).includes(k)));
+
+        const idxDept = getColIndex(['kullanıldığı ve depolandığı', 'bölüm', 'departman', 'birim', 'kullanıldığı']);
+        const idxName = getColIndex(['ürün adı', 'madde adı', 'malzeme adı', 'isim', 'productname']);
+        const idxAmount = getColIndex(['adet/ miktar', 'miktar', 'adedi', 'amountvalue']);
+        const idxBrand = getColIndex(['firma tedarikçi', 'tedarikçi', 'marka', 'brandname']);
+        const idxUsage = getColIndex(['kullanım şekli', 'usagemethod']);
+        const idxComp = getColIndex(['bileşimi', 'içerik', 'composition']);
+        const idxHazard = getColIndex(['tehlike tanımları', 'tehlike', 'hazarddescription']);
+        const idxFirstAid = getColIndex(['ilk yardım', 'ilkyardım', 'firstaid']);
+        const idxFire = getColIndex(['yangınla', 'yangında', 'yangın', 'firefightingmeasures']);
+        const idxRelease = getColIndex(['kaza sonucu', 'serbest kalması', 'accidentalreleasemeasures']);
+        const idxHandling = getColIndex(['kullanım ve depolama', 'depolama', 'handlingandstorage']);
+        const idxExposure = getColIndex(['maruz kalma', 'kişisel korunma', 'exposurecontrolsppe']);
+        const idxPhysical = getColIndex(['fiziksel ve kimyasal', 'fiziksel', 'physicalandchemicalproperties']);
+        const idxStability = getColIndex(['stabilite', 'reaktivite', 'stabilityandreactivity']);
+        const idxTox = getColIndex(['toksikolojik', 'toxicologicalinformation']);
+        const idxDisposal = getColIndex(['temizlik', 'imha', 'disposalconsiderations']);
+        const idxTransport = getColIndex(['taşıma', 'tehlikeli madde sınıfı', 'transportinfo']);
+
+        const parseAmountRange = (val: any) => {
+          if (!val) return { min: 1, max: 1 };
+          const s = String(val).replace(/,/g, '.');
+          const rangeMatch = s.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/);
+          if (rangeMatch) {
+            return {
+              min: parseFloat(rangeMatch[1]) || 1,
+              max: parseFloat(rangeMatch[2]) || 1
+            };
+          }
+          const singleMatch = s.match(/(\d+(?:\.\d+)?)/);
+          if (singleMatch) {
+            const v = parseFloat(singleMatch[1]) || 1;
+            return { min: v, max: v };
+          }
+          return { min: 1, max: 1 };
+        };
+
+        for (let i = headerRowIndex + 1; i < data.length; i++) {
+          const row = data[i];
+          if (!row || row.length === 0) continue;
+
+          let productName = '';
+          if (idxName !== -1 && row[idxName]) productName = String(row[idxName]).trim();
+          else if (idxBrand !== -1 && row[idxBrand]) productName = String(row[idxBrand]).trim();
+
+          if (!productName) continue;
+
+          let department = '';
+          if (idxDept !== -1 && row[idxDept]) department = String(row[idxDept]).trim();
+          if (!department) department = 'Genel';
+
+          const { min, max } = parseAmountRange(idxAmount !== -1 ? row[idxAmount] : null);
+
+          rowsToImport.push({
+            department,
+            productName,
+            brandName: idxBrand !== -1 && row[idxBrand] ? String(row[idxBrand]).trim() : undefined,
+            minQuantity: min,
+            maxQuantity: max,
+            usageMethod: idxUsage !== -1 && row[idxUsage] ? String(row[idxUsage]).trim() : undefined,
+            composition: idxComp !== -1 && row[idxComp] ? String(row[idxComp]).trim() : undefined,
+            hazardDescription: idxHazard !== -1 && row[idxHazard] ? String(row[idxHazard]).trim() : undefined,
+            firstAid: idxFirstAid !== -1 && row[idxFirstAid] ? String(row[idxFirstAid]).trim() : undefined,
+            fireFightingMeasures: idxFire !== -1 && row[idxFire] ? String(row[idxFire]).trim() : undefined,
+            accidentalReleaseMeasures: idxRelease !== -1 && row[idxRelease] ? String(row[idxRelease]).trim() : undefined,
+            handlingAndStorage: idxHandling !== -1 && row[idxHandling] ? String(row[idxHandling]).trim() : undefined,
+            exposureControlsPpe: idxExposure !== -1 && row[idxExposure] ? String(row[idxExposure]).trim() : undefined,
+            physicalAndChemicalProperties: idxPhysical !== -1 && row[idxPhysical] ? String(row[idxPhysical]).trim() : undefined,
+            stabilityAndReactivity: idxStability !== -1 && row[idxStability] ? String(row[idxStability]).trim() : undefined,
+            toxicologicalInformation: idxTox !== -1 && row[idxTox] ? String(row[idxTox]).trim() : undefined,
+            disposalConsiderations: idxDisposal !== -1 && row[idxDisposal] ? String(row[idxDisposal]).trim() : undefined,
+            transportInfo: idxTransport !== -1 && row[idxTransport] ? String(row[idxTransport]).trim() : undefined,
+          });
+        }
+
+        if (rowsToImport.length === 0) {
+          toast.error('Dosyadan okunabilir madde veya envanter kaydı bulunamadı.');
+          return;
+        }
+
+        setParsedRowsForImport(rowsToImport);
+        setIsImportModalOpen(true);
+      } catch (err) {
+        console.error('Excel parse error:', err);
+        toast.error('Excel dosyası okunurken hata oluştu.');
+      } finally {
+        setIsParsingExcel(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
@@ -135,7 +313,23 @@ export default function FacilityInventoryListPage() {
             Tesisteki tehlikeli maddeleri ve atandıkları departmanları listeleyin.
           </p>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex flex-wrap gap-2 shrink-0">
+          <input
+            type="file"
+            accept=".xlsx, .xls"
+            ref={fileInputRef}
+            onChange={handleExcelFileSelected}
+            className="hidden"
+          />
+          <Button
+            onClick={() => fileInputRef.current?.click()}
+            variant="outline"
+            className="shadow-sm gap-2"
+            disabled={isParsingExcel}
+          >
+            {isParsingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4 text-emerald-600" />}
+            {isParsingExcel ? 'Okunuyor...' : "Excel'den Envanter Yükle"}
+          </Button>
           <Button onClick={() => navigate('/hazmat/inventory/new', { state: { returnTo: '/hazmat/inventory' } })} className="shadow-md">
             <Plus className="w-4 h-4 mr-2" />
             Tesise Ekle (Envantere Ekle)
@@ -320,6 +514,19 @@ export default function FacilityInventoryListPage() {
         onNavigateToLocations={() => {
           setSelectedGroup(null);
           navigate(`/hazmat/inventory/material/${selectedGroup?.materialId}`);
+        }}
+      />
+
+      <HazmatInventoryImportModal
+        isOpen={isImportModalOpen}
+        onOpenChange={setIsImportModalOpen}
+        facilityId={activeFacilityId || localStorage.getItem('activeFacilityId') || ''}
+        facilityLocations={facilityLocations}
+        parsedRows={parsedRowsForImport}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['inventory-summary', activeFacilityId] });
+          queryClient.invalidateQueries({ queryKey: ['facility-materials', activeFacilityId] });
+          queryClient.invalidateQueries({ queryKey: ['facility-locations', activeFacilityId] });
         }}
       />
     </div>
