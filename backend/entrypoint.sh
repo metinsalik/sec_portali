@@ -22,6 +22,7 @@ echo "Fixing any orphaned location IDs..."
 npx ts-node prisma/fix-orphaned-locations.ts || true
 npx ts-node prisma/fix-ohs-department-fk.ts || true
 npx ts-node prisma/fix-default-final-scores.ts || true
+npx ts-node prisma/scale-low-risks.ts || true
 # Sync schema to database
 # --accept-data-loss is used here to allow rapid development changes
 npx prisma db push --accept-data-loss
