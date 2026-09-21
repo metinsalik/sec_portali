@@ -281,6 +281,99 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
+// Bulk update inventory for a specific department (assign multiple materials)
+router.post('/department-bulk', authMiddleware, async (req: AuthRequest, res) => {
+  const { facilityId, locationId, items } = req.body;
+
+  if (!facilityId || !locationId || !Array.isArray(items)) {
+    return res.status(400).json({ error: 'facilityId, locationId and items array are required' });
+  }
+
+  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(facilityId)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  try {
+    let actualLocationId = locationId;
+    if (locationId.startsWith('group:')) {
+      const parts = locationId.split(':');
+      let b = '', f = '', d = '';
+      if (['building', 'floor', 'department'].includes(parts[1])) {
+        const level = parts[1];
+        const pathParts = parts.slice(3).join(':').split('|');
+        if (level === 'building') { b = pathParts[0] || ''; }
+        else if (level === 'floor') { b = pathParts[0] || ''; f = pathParts[1] || ''; }
+        else { b = pathParts[0] || ''; f = pathParts[1] || ''; d = pathParts[2] || ''; }
+      }
+      
+      let groupLoc = await prisma.facilityLocation.findFirst({
+        where: { facilityId, building: b || null, floor: f || null, department: d || null, description: null }
+      });
+      
+      if (!groupLoc) {
+        groupLoc = await prisma.facilityLocation.create({
+          data: {
+            facilityId,
+            name: d || f || b || 'Bilinmeyen',
+            building: b || null,
+            floor: f || null,
+            department: d || null,
+            description: null
+          }
+        });
+      }
+      actualLocationId = groupLoc.id;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      for (const item of items) {
+        const { materialId, minQuantity, maxQuantity } = item;
+        if (!materialId) continue;
+
+        if (!minQuantity && !maxQuantity) {
+          // Both null/empty, don't remove existing unless explicitly needed, or delete:
+          // If min and max are empty string, remove it
+          if (minQuantity === '' && maxQuantity === '') {
+            await tx.hazmatInventoryItem.deleteMany({
+              where: { facilityId, locationId: actualLocationId, materialId }
+            });
+          }
+          continue;
+        }
+
+        const existing = await tx.hazmatInventoryItem.findFirst({
+          where: { facilityId, locationId: actualLocationId, materialId }
+        });
+
+        if (existing) {
+          await tx.hazmatInventoryItem.update({
+            where: { id: existing.id },
+            data: {
+              minQuantity: minQuantity ? Number(minQuantity) : null,
+              maxQuantity: maxQuantity ? Number(maxQuantity) : null
+            }
+          });
+        } else {
+          await tx.hazmatInventoryItem.create({
+            data: {
+              facilityId,
+              locationId: actualLocationId,
+              materialId,
+              minQuantity: minQuantity ? Number(minQuantity) : null,
+              maxQuantity: maxQuantity ? Number(maxQuantity) : null
+            }
+          });
+        }
+      }
+    });
+
+    res.json({ message: 'Departman envanteri başarıyla güncellendi' });
+  } catch (error: any) {
+    console.error('Error bulk updating department inventory:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
 // Delete specific inventory item
 router.delete('/:id', authMiddleware, async (req: AuthRequest, res) => {
   const { id } = req.params;

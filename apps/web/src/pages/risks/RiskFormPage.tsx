@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import LocationTreeSelector from '@/components/shared/LocationTreeSelector';
 import LocationCascadingSelector from '@/components/shared/LocationCascadingSelector';
-import { ArrowLeft, Save, Upload, Image as ImageIcon, Loader2, Calendar, AlertTriangle, ShieldCheck, HelpCircle, X } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Image as ImageIcon, Loader2, Calendar, AlertTriangle, ShieldCheck, HelpCircle, X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -105,6 +105,7 @@ const MultiSelectResponsibles = ({
   onChange: (val: string) => void; 
   options: { id: string | number; name: string }[] 
 }) => {
+  const [searchTerm, setSearchTerm] = useState('');
   const selected = value ? value.split(',').map(s => s.trim()).filter(Boolean) : [];
 
   const toggleOption = (opt: string) => {
@@ -115,19 +116,40 @@ const MultiSelectResponsibles = ({
     }
   };
 
+  const filteredOptions = useMemo(() => {
+    if (!searchTerm) return options;
+    const q = searchTerm.toLowerCase();
+    return options.filter(opt => opt.name.toLowerCase().includes(q));
+  }, [options, searchTerm]);
+
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-full justify-start text-left font-normal h-9 px-3 bg-background text-sm flex-nowrap">
-          <span className="block truncate max-w-[calc(100%-10px)] overflow-hidden text-ellipsis whitespace-nowrap">
+        <Button variant="outline" className="w-full justify-between text-left font-normal h-9 px-3 bg-background text-sm flex-nowrap">
+          <span className="block truncate max-w-[calc(100%-20px)] overflow-hidden text-ellipsis whitespace-nowrap">
             {selected.length > 0 ? selected.join(', ') : <span className="text-muted-foreground">Sorumlu seçiniz...</span>}
           </span>
+          <Search className="w-3.5 h-3.5 text-muted-foreground opacity-60 shrink-0 ml-1" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-2" align="start">
-        <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-          {options.map((opt) => (
-            <div key={opt.id} className="flex items-center space-x-2">
+      <PopoverContent className="w-80 p-2" align="start">
+        <div className="relative mb-2">
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
+          <Input 
+            placeholder="Sorumlu veya departman ara..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="h-8 pl-8 text-xs"
+            autoFocus
+          />
+        </div>
+        <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+          {filteredOptions.map((opt) => (
+            <div 
+              key={opt.id} 
+              className="flex items-center space-x-2 p-1 rounded hover:bg-muted/40 cursor-pointer"
+              onClick={() => toggleOption(opt.name)}
+            >
               <Checkbox 
                 id={`resp-${opt.id}`} 
                 checked={selected.includes(opt.name)}
@@ -135,14 +157,18 @@ const MultiSelectResponsibles = ({
               />
               <label 
                 htmlFor={`resp-${opt.id}`} 
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer select-none"
+                className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer select-none flex-1"
+                onClick={(e) => e.stopPropagation()}
               >
                 {opt.name}
               </label>
             </div>
           ))}
+          {filteredOptions.length === 0 && options.length > 0 && (
+            <div className="text-xs text-muted-foreground p-2 text-center">Eşleşen sorumlu bulunamadı.</div>
+          )}
           {options.length === 0 && (
-            <div className="text-sm text-muted-foreground p-2 text-center">Önce ayarlardan departman ekleyin.</div>
+            <div className="text-xs text-muted-foreground p-2 text-center">Önce ayarlardan departman ekleyin.</div>
           )}
         </div>
       </PopoverContent>
@@ -187,11 +213,11 @@ export default function RiskFormPage() {
     actionDate: '',
     actionImage: '',
     actionImages: [],
-    finalProb: '',
-    finalFreq: '',
-    finalSev: '',
-    finalScore: '',
-    finalLevel: '',
+    finalProb: '0.5',
+    finalFreq: '3',
+    finalSev: '7',
+    finalScore: '11',
+    finalLevel: 'Önemsiz Risk',
     postImprovementResponsible: '',
     postImprovementDueDate: '',
     effectivenessMethod: '',
@@ -275,6 +301,13 @@ export default function RiskFormPage() {
   // Initialize form for editing
   useEffect(() => {
     if (existingRisk) {
+      const hasFinalScore = existingRisk.finalScore !== null && existingRisk.finalScore !== undefined && existingRisk.finalScore !== '';
+      const finalProbVal = hasFinalScore ? String(existingRisk.finalProb ?? '0.5') : '0.5';
+      const finalFreqVal = hasFinalScore ? String(existingRisk.finalFreq ?? '3') : '3';
+      const finalSevVal = hasFinalScore ? String(existingRisk.finalSev ?? '7') : '7';
+      const finalScoreVal = hasFinalScore ? String(existingRisk.finalScore) : '11';
+      const finalLevelVal = hasFinalScore ? (existingRisk.finalLevel || 'Önemsiz Risk') : 'Önemsiz Risk';
+
       setForm({
         riskNo: existingRisk.riskNo || '',
         detectionDate: existingRisk.detectionDate ? existingRisk.detectionDate.slice(0, 10) : '',
@@ -305,11 +338,11 @@ export default function RiskFormPage() {
         actionDate: existingRisk.actionDate ? existingRisk.actionDate.slice(0, 10) : '',
         actionImage: existingRisk.actionImage || '',
         actionImages: existingRisk.actionImages || [],
-        finalProb: existingRisk.finalProb !== null ? String(existingRisk.finalProb) : '',
-        finalFreq: existingRisk.finalFreq !== null ? String(existingRisk.finalFreq) : '',
-        finalSev: existingRisk.finalSev !== null ? String(existingRisk.finalSev) : '',
-        finalScore: existingRisk.finalScore !== null ? String(existingRisk.finalScore) : '',
-        finalLevel: existingRisk.finalLevel || '',
+        finalProb: finalProbVal,
+        finalFreq: finalFreqVal,
+        finalSev: finalSevVal,
+        finalScore: finalScoreVal,
+        finalLevel: finalLevelVal,
         postImprovementResponsible: existingRisk.postImprovementResponsible || '',
         postImprovementDueDate: existingRisk.postImprovementDueDate ? existingRisk.postImprovementDueDate.slice(0, 10) : '',
         effectivenessMethod: existingRisk.effectivenessMethod || '',

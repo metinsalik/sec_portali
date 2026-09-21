@@ -132,10 +132,12 @@ export function FacilityRiskPrintModal({
               <head>
                 ${headHtml}
                 <style>
-                  @page { size: landscape; margin: 8mm; }
+                  @page { size: landscape; margin: 4mm; }
                   body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                   .page-break-after { page-break-after: always; }
                   .page-break-after:last-child { page-break-after: auto; }
+                  table { page-break-inside: auto; }
+                  tr { page-break-inside: avoid; page-break-after: auto; }
                 </style>
               </head>
               <body>
@@ -336,8 +338,8 @@ export function FacilityRiskPrintModal({
               <p className="text-xs mt-1">Lütfen filtre kriterlerinizi değiştirin veya tüm tesisi seçin.</p>
             </div>
           ) : (
-            <div className="bg-white text-black shadow-2xl border border-slate-200 overflow-x-auto w-full max-w-6xl rounded-lg" style={{ transform: 'scale(0.88)', transformOrigin: 'top center' }}>
-              <div ref={printRef} className="w-full">
+            <div className="bg-white text-black shadow-2xl border border-slate-200 overflow-x-auto w-full rounded-lg p-2">
+              <div ref={printRef} className="min-w-fit">
                 {filteredDepartments.map((dept) => {
                   const deptRisks = facilityRisks.filter(r => (r.departmentId || r.locationId) === dept.id);
                   return (
