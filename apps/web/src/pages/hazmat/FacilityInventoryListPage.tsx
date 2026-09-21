@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api, { BASE_URL } from '@/lib/api';
+import { useActiveFacility } from '@/hooks/useActiveFacility';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Search, Filter, Printer, ExternalLink, Download, LayoutGrid } from 'lucide-react';
@@ -13,7 +14,7 @@ import { HazmatMaterialSummaryDialog } from '@/components/hazmat/HazmatMaterialS
 
 export default function FacilityInventoryListPage() {
   const navigate = useNavigate();
-  const activeFacilityId = localStorage.getItem('activeFacilityId');
+  const activeFacilityId = useActiveFacility();
 
   const [searchMaterial, setSearchMaterial] = useState('');
   const [searchDepartment, setSearchDepartment] = useState('');
@@ -27,25 +28,29 @@ export default function FacilityInventoryListPage() {
   const { data: summaryData, isLoading } = useQuery({
     queryKey: ['inventory-summary', activeFacilityId],
     queryFn: async () => {
-      if (!activeFacilityId) return [];
-      const res = await api.get(`/hazmat/inventory/summary?facilityId=${activeFacilityId}`);
+      const facId = activeFacilityId || localStorage.getItem('activeFacilityId');
+      if (!facId) return [];
+      const res = await api.get(`/hazmat/inventory/summary?facilityId=${facId}`);
       if (!res.ok) throw new Error('Failed to fetch summary');
       const data = await res.json();
       return data.facilityItems;
     },
-    enabled: !!activeFacilityId
+    refetchOnMount: 'always',
+    enabled: !!(activeFacilityId || localStorage.getItem('activeFacilityId'))
   });
 
   // 2. Fetch facility materials for amount and unit
   const { data: facilityItems = [] } = useQuery({
     queryKey: ['facility-materials', activeFacilityId],
     queryFn: async () => {
-      if (!activeFacilityId) return [];
-      const res = await api.get(`/hazmat/materials?facilityId=${activeFacilityId}`);
+      const facId = activeFacilityId || localStorage.getItem('activeFacilityId');
+      if (!facId) return [];
+      const res = await api.get(`/hazmat/materials?facilityId=${facId}`);
       if (!res.ok) return [];
       return res.json();
     },
-    enabled: !!activeFacilityId
+    refetchOnMount: 'always',
+    enabled: !!(activeFacilityId || localStorage.getItem('activeFacilityId'))
   });
 
   // 3. Fetch ADR categories

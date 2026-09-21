@@ -1,6 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { useActiveFacility } from '@/hooks/useActiveFacility';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,21 +12,23 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export default function HazmatDashboardPage() {
-  const facilityId = localStorage.getItem('activeFacilityId');
+  const facilityId = useActiveFacility();
   const navigate = useNavigate();
 
   const { data: metrics, isLoading, isError } = useQuery({
     queryKey: ['hazmat-dashboard', facilityId],
     queryFn: async () => {
-      if (!facilityId) return null;
-      const res = await api.get(`/hazmat/dashboard?facilityId=${facilityId}`);
+      const facId = facilityId || localStorage.getItem('activeFacilityId');
+      if (!facId) return null;
+      const res = await api.get(`/hazmat/dashboard?facilityId=${facId}`);
       if (!res.ok) throw new Error('Failed to fetch dashboard metrics');
       return res.json();
     },
-    enabled: !!facilityId
+    refetchOnMount: 'always',
+    enabled: !!(facilityId || localStorage.getItem('activeFacilityId'))
   });
 
-  if (!facilityId) {
+  if (!facilityId && !localStorage.getItem('activeFacilityId')) {
     return <div className="p-8 text-center text-muted-foreground">Lütfen bir tesis seçin.</div>;
   }
 
@@ -61,7 +64,8 @@ export default function HazmatDashboardPage() {
           <p className="text-muted-foreground mt-1">Tesisinizdeki tehlikeli madde envanterini, kitleri ve risk analizlerini tek ekrandan takip edin.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => navigate('/hazmat/materials')}>Envanter</Button>
+          <Button variant="outline" onClick={() => navigate('/hazmat/inventory')}>Envanter</Button>
+          <Button variant="outline" onClick={() => navigate('/hazmat/materials')}>Madde Havuzu</Button>
           <Button variant="outline" onClick={() => navigate('/hazmat/spill-kits')}>Dökülme Kitleri</Button>
           <Button variant="outline" onClick={() => navigate('/hazmat/eyewash/risks')}>Göz Duşu Risk</Button>
         </div>

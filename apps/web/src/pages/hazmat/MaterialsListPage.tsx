@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { useActiveFacility } from '@/hooks/useActiveFacility';
 import { Button } from '@/components/ui/button';
 import { Plus, Search, AlertTriangle, Eye, Pencil, Trash2, Upload, Loader2, ArrowUpDown, FileText } from 'lucide-react';
 import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
@@ -15,7 +16,7 @@ import * as XLSX from 'xlsx';
 export default function MaterialsListPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const activeFacilityId = localStorage.getItem('activeFacilityId');
+  const activeFacilityId = useActiveFacility();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterBrand, setFilterBrand] = useState('ALL');
@@ -36,9 +37,9 @@ export default function MaterialsListPage() {
   const { data: items = [], isLoading } = useQuery<any[]>({
     queryKey: ['facility-materials', activeFacilityId],
     queryFn: async () => {
-      if (!activeFacilityId) return [];
-      
-      const res = await api.get(`/hazmat/materials/global?facilityId=${activeFacilityId}`);
+      const facId = activeFacilityId || localStorage.getItem('activeFacilityId') || '';
+      const url = facId ? `/hazmat/materials/global?facilityId=${facId}` : `/hazmat/materials/global`;
+      const res = await api.get(url);
       if (!res.ok) throw new Error('Sunucu hatası');
       
       const data = await res.json();
@@ -50,12 +51,13 @@ export default function MaterialsListPage() {
         facilityUnit: item.facilityUnit,
       }));
     },
-    enabled: !!activeFacilityId
+    refetchOnMount: 'always',
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (materialId: string) => {
-      const res = await api.delete(`/hazmat/materials/facility/${activeFacilityId}/${materialId}`);
+      const facId = activeFacilityId || localStorage.getItem('activeFacilityId');
+      const res = await api.delete(`/hazmat/materials/facility/${facId}/${materialId}`);
       if (!res.ok) throw new Error('Silinemedi');
       return res.json();
     },

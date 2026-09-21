@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { useActiveFacility } from '@/hooks/useActiveFacility';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, ArrowLeft, Building2 } from 'lucide-react';
@@ -12,19 +13,21 @@ import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
 export default function HazmatFacilityMaterialPage() {
   const { id: materialId } = useParams();
   const navigate = useNavigate();
-  const activeFacilityId = localStorage.getItem('activeFacilityId');
+  const activeFacilityId = useActiveFacility();
   const [printMaterial, setPrintMaterial] = useState<any>(null);
 
   const { data: summaryData, isLoading } = useQuery({
     queryKey: ['inventory-summary', activeFacilityId],
     queryFn: async () => {
-      if (!activeFacilityId) return [];
-      const res = await api.get(`/hazmat/inventory/summary?facilityId=${activeFacilityId}`);
+      const facId = activeFacilityId || localStorage.getItem('activeFacilityId');
+      if (!facId) return [];
+      const res = await api.get(`/hazmat/inventory/summary?facilityId=${facId}`);
       if (!res.ok) throw new Error('Hata');
       const data = await res.json();
       return data.facilityItems;
     },
-    enabled: !!activeFacilityId
+    refetchOnMount: 'always',
+    enabled: !!(activeFacilityId || localStorage.getItem('activeFacilityId'))
   });
 
   const facilityItem = useMemo(() => {

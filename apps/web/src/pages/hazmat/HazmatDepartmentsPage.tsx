@@ -10,10 +10,11 @@ import { DepartmentPrintModal } from '@/components/hazmat/DepartmentPrintModal';
 import { HazmatMaterialSummaryDialog } from '@/components/hazmat/HazmatMaterialSummaryDialog';
 import { Badge } from '@/components/ui/badge';
 import { Plus } from 'lucide-react';
+import { useActiveFacility } from '@/hooks/useActiveFacility';
 
 export default function HazmatDepartmentsPage() {
   const navigate = useNavigate();
-  const activeFacilityId = localStorage.getItem('activeFacilityId');
+  const activeFacilityId = useActiveFacility();
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
   
@@ -40,24 +41,28 @@ export default function HazmatDepartmentsPage() {
   const { data: summaryData } = useQuery({
     queryKey: ['inventory-summary', activeFacilityId],
     queryFn: async () => {
-      if (!activeFacilityId) return [];
-      const res = await api.get(`/hazmat/inventory/summary?facilityId=${activeFacilityId}`);
+      const facId = activeFacilityId || localStorage.getItem('activeFacilityId');
+      if (!facId) return [];
+      const res = await api.get(`/hazmat/inventory/summary?facilityId=${facId}`);
       if (!res.ok) throw new Error('Hata');
       const data = await res.json();
       return data.facilityItems;
     },
-    enabled: !!activeFacilityId
+    refetchOnMount: 'always',
+    enabled: !!(activeFacilityId || localStorage.getItem('activeFacilityId'))
   });
 
   const { data: departments = [], isLoading } = useQuery({
     queryKey: ['facility-locations', activeFacilityId],
     queryFn: async () => {
-      if (!activeFacilityId) return [];
-      const res = await api.get(`/risks/facilities/${activeFacilityId}/locations`);
+      const facId = activeFacilityId || localStorage.getItem('activeFacilityId');
+      if (!facId) return [];
+      const res = await api.get(`/risks/facilities/${facId}/locations`);
       if (!res.ok) throw new Error('Hata');
       return res.json();
     },
-    enabled: !!activeFacilityId
+    refetchOnMount: 'always',
+    enabled: !!(activeFacilityId || localStorage.getItem('activeFacilityId'))
   });
 
   // Derived Inventory Items for the current path
