@@ -230,7 +230,10 @@ export default function MaterialFormPage() {
           adrLabels: adrLabelIds,
           ppes: ppeIds
         });
-        if (!res.ok) throw new Error('Sunucu hatası');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Güncelleme sırasında sunucu hatası oluştu.');
+        }
         return res.json();
       }
 
@@ -241,7 +244,10 @@ export default function MaterialFormPage() {
           amountValue: data.amountValue,
           unitId: data.unitId
         });
-        if (!res.ok) throw new Error('Sunucu hatası');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Tesise ekleme sırasında sunucu hatası oluştu.');
+        }
         return res.json();
       } else {
         const res = await api.post('/hazmat/materials', {
@@ -253,7 +259,10 @@ export default function MaterialFormPage() {
           adrLabels: adrLabelIds,
           ppes: ppeIds
         });
-        if (!res.ok) throw new Error('Sunucu hatası');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Yeni madde oluşturma sırasında sunucu hatası oluştu.');
+        }
         return res.json();
       }
     },
@@ -265,7 +274,7 @@ export default function MaterialFormPage() {
       navigate(returnTo);
     },
     onError: (err: any) => {
-      toast.error('Bir hata oluştu. Veritabanı bağlantınızı kontrol edin.');
+      toast.error(err.message || 'Bir hata oluştu. Veritabanı bağlantınızı kontrol edin.');
     }
   });
 

@@ -246,6 +246,14 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
   try {
     const { facilityId, amountValue, unitId, hazardLabels, adrLabels, ppes, ...materialData } = data;
 
+    let parsedExpiryDate: Date | null = null;
+    if (materialData.sdsExpiryDate && String(materialData.sdsExpiryDate).trim() !== '') {
+      const d = new Date(materialData.sdsExpiryDate);
+      if (!isNaN(d.getTime())) {
+        parsedExpiryDate = d;
+      }
+    }
+
     // Create the global material
     const newMaterial = await prisma.hazmatMaterial.create({
       data: {
@@ -269,7 +277,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
         categoryId: materialData.categoryId || null,
         imageUrl: materialData.imageUrl || null,
         sdsUrl: materialData.sdsUrl || null,
-        sdsExpiryDate: materialData.sdsExpiryDate ? new Date(materialData.sdsExpiryDate) : null,
+        sdsExpiryDate: parsedExpiryDate,
         hazardLabels: {
           create: (hazardLabels || []).map((labelId: string) => ({
             label: { connect: { id: labelId } }
@@ -520,16 +528,31 @@ router.put('/:materialId', authMiddleware, async (req: AuthRequest, res) => {
   const data = req.body;
   const username = req.user?.username || 'System';
 
-  if (!data.facilityId) {
-    return res.status(400).json({ error: 'facilityId is required to verify permissions' });
+  // facilityId can be explicitly provided, or taken from user facilities if user is admin or general
+  let targetFacilityId = data.facilityId;
+  if (!targetFacilityId || targetFacilityId === 'all') {
+    if (req.user?.facilities && req.user.facilities.length > 0) {
+      targetFacilityId = req.user.facilities[0];
+    }
   }
 
-  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(data.facilityId)) {
-    return res.status(403).json({ error: 'Access denied' });
+  if (targetFacilityId && targetFacilityId !== 'all') {
+    if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities?.includes(targetFacilityId)) {
+      return res.status(403).json({ error: 'Access denied to this facility' });
+    }
   }
 
   try {
     const { facilityId, amountValue, unitId, hazardLabels, adrLabels, ppes, ...materialData } = data;
+
+    // Safely parse sdsExpiryDate
+    let parsedExpiryDate: Date | null = null;
+    if (materialData.sdsExpiryDate && String(materialData.sdsExpiryDate).trim() !== '') {
+      const d = new Date(materialData.sdsExpiryDate);
+      if (!isNaN(d.getTime())) {
+        parsedExpiryDate = d;
+      }
+    }
 
     // Delete existing relations to recreate them
     await prisma.hazmatMaterialHazardLabel.deleteMany({ where: { materialId } });
@@ -560,7 +583,7 @@ router.put('/:materialId', authMiddleware, async (req: AuthRequest, res) => {
         categoryId: materialData.categoryId || null,
         imageUrl: materialData.imageUrl || null,
         sdsUrl: materialData.sdsUrl || null,
-        sdsExpiryDate: materialData.sdsExpiryDate ? new Date(materialData.sdsExpiryDate) : null,
+        sdsExpiryDate: parsedExpiryDate,
         hazardLabels: {
           create: (hazardLabels || []).map((labelId: string) => ({
             label: { connect: { id: labelId } }
@@ -579,20 +602,22 @@ router.put('/:materialId', authMiddleware, async (req: AuthRequest, res) => {
       }
     });
 
-    // Upsert the facility item to update amount
-    await prisma.facilityHazmatItem.upsert({
-      where: { facilityId_materialId: { facilityId, materialId } },
-      update: {
-        amountValue: amountValue ? Number(amountValue) : null,
-        unitId: unitId || null
-      },
-      create: {
-        facilityId,
-        materialId,
-        amountValue: amountValue ? Number(amountValue) : null,
-        unitId: unitId || null
-      }
-    });
+    // If a valid facilityId is available, upsert the facility item to update amount
+    if (targetFacilityId && targetFacilityId !== 'all') {
+      await prisma.facilityHazmatItem.upsert({
+        where: { facilityId_materialId: { facilityId: targetFacilityId, materialId } },
+        update: {
+          amountValue: amountValue !== undefined && amountValue !== '' && amountValue !== null ? Number(amountValue) : null,
+          unitId: unitId || null
+        },
+        create: {
+          facilityId: targetFacilityId,
+          materialId,
+          amountValue: amountValue !== undefined && amountValue !== '' && amountValue !== null ? Number(amountValue) : null,
+          unitId: unitId || null
+        }
+      });
+    }
 
     // Create Audit Log
     await prisma.hazmatAuditLog.create({
