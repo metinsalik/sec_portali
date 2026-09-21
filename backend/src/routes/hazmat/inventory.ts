@@ -431,7 +431,7 @@ router.post('/bulk-import-matrix', authMiddleware, async (req: AuthRequest, res)
     const normalize = (t: string) => (t || '').toLocaleLowerCase('tr-TR').trim();
 
     // 3. Resolve location mapping (maps raw department name to locationId)
-    // locationMappings: Record<string, { action: 'existing' | 'new', locationId?: string, newName?: string }>
+    // locationMappings: Record<string, { action: 'existing' | 'new', locationId?: string, newName?: string, building?: string, floor?: string, department?: string, description?: string }>
     const resolvedLocations: Record<string, string> = {};
 
     if (locationMappings && typeof locationMappings === 'object') {
@@ -439,17 +439,28 @@ router.post('/bulk-import-matrix', authMiddleware, async (req: AuthRequest, res)
         if (!mapInfo) continue;
         if (mapInfo.action === 'existing' && mapInfo.locationId) {
           resolvedLocations[rawDept] = mapInfo.locationId;
-        } else if (mapInfo.action === 'new' && (mapInfo.newName || rawDept)) {
-          const locName = (mapInfo.newName || rawDept).trim();
+        } else if (mapInfo.action === 'new') {
+          const b = (mapInfo.building || 'Ana Bina').trim();
+          const f = (mapInfo.floor || '').trim();
+          const d = (mapInfo.department || mapInfo.newName || rawDept).trim();
+          const desc = (mapInfo.description || '').trim();
+
+          // Standard formatted name: e.g. "Ana Bina - Zemin Kat - Acil Servis - Kırmızı Alan" or "Ana Bina - Ameliyathane"
+          const nameParts = [b, f, d, desc].filter(Boolean);
+          const fullName = (mapInfo.newName || nameParts.join(' - ')).trim();
+
           let createdLoc = await prisma.facilityLocation.findFirst({
-            where: { facilityId, name: locName }
+            where: { facilityId, name: fullName }
           });
           if (!createdLoc) {
             createdLoc = await prisma.facilityLocation.create({
               data: {
                 facilityId,
-                name: locName,
-                department: locName,
+                name: fullName,
+                building: b || null,
+                floor: f || null,
+                department: d || null,
+                description: desc || null,
                 isActive: true
               }
             });

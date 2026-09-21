@@ -41,6 +41,10 @@ import { toast } from 'sonner';
 export interface LocationMappingInfo {
   action: 'existing' | 'new';
   locationId?: string;
+  building?: string;
+  floor?: string;
+  department?: string;
+  description?: string;
   newName?: string;
 }
 
@@ -87,6 +91,23 @@ export function HazmatInventoryImportModal({
     return Array.from(prods);
   }, [parsedRows]);
 
+  // Build existing buildings and floors from facilityLocations for quick suggestions
+  const existingBuildings = useMemo(() => {
+    const set = new Set<string>();
+    facilityLocations.forEach(loc => {
+      if (loc.building && String(loc.building).trim()) set.add(String(loc.building).trim());
+    });
+    return Array.from(set);
+  }, [facilityLocations]);
+
+  const existingFloors = useMemo(() => {
+    const set = new Set<string>();
+    facilityLocations.forEach(loc => {
+      if (loc.floor && String(loc.floor).trim()) set.add(String(loc.floor).trim());
+    });
+    return Array.from(set);
+  }, [facilityLocations]);
+
   // Initial smart auto-mapping state
   const [mappings, setMappings] = useState<Record<string, LocationMappingInfo>>(() => {
     const initial: Record<string, LocationMappingInfo> = {};
@@ -113,8 +134,15 @@ export function HazmatInventoryImportModal({
       if (matchedLoc) {
         initial[dept] = { action: 'existing', locationId: matchedLoc.id };
       } else {
-        // Default to create new location with that exact department name
-        initial[dept] = { action: 'new', newName: dept };
+        // Default to create new structured location (Bina, Kat, Birim, Mahal)
+        initial[dept] = {
+          action: 'new',
+          building: 'Ana Bina',
+          floor: 'Genel',
+          department: dept,
+          description: '',
+          newName: `Ana Bina - ${dept}`
+        };
       }
     });
 
@@ -123,11 +151,32 @@ export function HazmatInventoryImportModal({
 
   const handleActionChange = (dept: string, action: 'existing' | 'new') => {
     setMappings((prev) => {
-      const current = prev[dept] || { action: 'new', newName: dept };
+      const current = prev[dept] || {
+        action: 'new',
+        building: 'Ana Bina',
+        floor: 'Genel',
+        department: dept,
+        description: '',
+        newName: `Ana Bina - ${dept}`
+      };
+
       if (action === 'new') {
+        const b = current.building || 'Ana Bina';
+        const f = current.floor || 'Genel';
+        const d = current.department || dept;
+        const desc = current.description || '';
+        const nameParts = [b, f !== 'Genel' ? f : '', d, desc].filter(Boolean);
+
         return {
           ...prev,
-          [dept]: { action: 'new', newName: current.newName || dept }
+          [dept]: {
+            action: 'new',
+            building: b,
+            floor: f,
+            department: d,
+            description: desc,
+            newName: nameParts.join(' - ') || `Ana Bina - ${dept}`
+          }
         };
       } else {
         return {
@@ -141,15 +190,41 @@ export function HazmatInventoryImportModal({
   const handleLocationSelect = (dept: string, locationId: string) => {
     setMappings((prev) => ({
       ...prev,
-      [dept]: { action: 'existing', locationId }
+      [dept]: { ...prev[dept], action: 'existing', locationId }
     }));
   };
 
-  const handleNewNameChange = (dept: string, newName: string) => {
-    setMappings((prev) => ({
-      ...prev,
-      [dept]: { action: 'new', newName }
-    }));
+  const handleFieldChange = (
+    dept: string,
+    field: 'building' | 'floor' | 'department' | 'description',
+    val: string
+  ) => {
+    setMappings((prev) => {
+      const current = prev[dept] || {
+        action: 'new',
+        building: 'Ana Bina',
+        floor: 'Genel',
+        department: dept,
+        description: ''
+      };
+
+      const updated = {
+        ...current,
+        [field]: val
+      };
+
+      const b = updated.building || 'Ana Bina';
+      const f = updated.floor || '';
+      const d = updated.department || dept;
+      const desc = updated.description || '';
+      const nameParts = [b, f !== 'Genel' && f ? f : '', d, desc].filter(Boolean);
+      updated.newName = nameParts.join(' - ');
+
+      return {
+        ...prev,
+        [dept]: updated
+      };
+    });
   };
 
   const filteredDepts = useMemo(() => {
@@ -185,7 +260,7 @@ export function HazmatInventoryImportModal({
       const resData = await response.json();
       const r = resData.results || {};
       toast.success(
-        `Aktarım başarıyla tamamlandı! ${r.materialsCreated || 0} yeni madde havuza eklendi, ${r.materialsReused || 0} mevcut madde eşleştirildi, ${r.inventoryItemsCreated + r.inventoryItemsUpdated || 0} envanter kaydı bağlandı.`
+        `Aktarım başarıyla tamamlandı! ${r.materialsCreated || 0} yeni madde havuza eklendi, ${r.materialsReused || 0} mevcut madde eşleştirildi, ${(r.inventoryItemsCreated || 0) + (r.inventoryItemsUpdated || 0)} envanter kaydı bağlandı.`
       );
 
       onSuccess();
@@ -200,7 +275,7 @@ export function HazmatInventoryImportModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-6">
+      <DialogContent className="max-w-5xl max-h-[92vh] flex flex-col p-6">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <Layers className="w-5 h-5 text-primary" />
@@ -262,32 +337,49 @@ export function HazmatInventoryImportModal({
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto min-h-[340px] max-h-[460px] pr-1">
+        <div className="flex-1 overflow-y-auto min-h-[340px] max-h-[490px] pr-1">
           {step === 1 ? (
-            <div className="border rounded-md">
+            <div className="border rounded-md overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50 text-xs">
-                    <TableHead className="w-1/3">Excel'deki Bölüm / Birim</TableHead>
-                    <TableHead className="w-1/4">Eşleştirme Türü</TableHead>
-                    <TableHead>Hedef Lokasyon</TableHead>
+                    <TableHead className="w-1/4">Excel'deki Bölüm / Birim</TableHead>
+                    <TableHead className="w-48">Eşleştirme Türü</TableHead>
+                    <TableHead>Hedef Lokasyon Tanımı</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredDepts.map((dept) => {
-                    const currentMap = mappings[dept] || { action: 'new', newName: dept };
+                    const currentMap = mappings[dept] || {
+                      action: 'new',
+                      building: 'Ana Bina',
+                      floor: 'Genel',
+                      department: dept,
+                      description: '',
+                      newName: `Ana Bina - ${dept}`
+                    };
+
+                    const selectedExistingLoc = facilityLocations.find(l => l.id === currentMap.locationId);
+                    const selectedExistingName = selectedExistingLoc ? (selectedExistingLoc.name || selectedExistingLoc.department) : '';
+
                     return (
                       <TableRow key={dept} className="hover:bg-muted/30">
-                        <TableCell className="font-medium text-xs">
-                          {dept}
+                        <TableCell className="font-medium text-xs align-top pt-3">
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-foreground">{dept}</span>
+                            <span className="text-[10px] text-muted-foreground">Excel Ham Birim</span>
+                          </div>
                         </TableCell>
-                        <TableCell>
+
+                        <TableCell className="align-top pt-2.5">
                           <Select
                             value={currentMap.action}
                             onValueChange={(val: 'existing' | 'new') => handleActionChange(dept, val)}
                           >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue />
+                            <SelectTrigger className="h-8 text-xs w-full">
+                              <SelectValue>
+                                {currentMap.action === 'existing' ? 'Mevcut Lokasyona Bağla' : '+ Yeni Lokasyon Aç'}
+                              </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="existing">Mevcut Lokasyona Bağla</SelectItem>
@@ -295,30 +387,76 @@ export function HazmatInventoryImportModal({
                             </SelectContent>
                           </Select>
                         </TableCell>
-                        <TableCell>
+
+                        <TableCell className="align-top pt-2.5">
                           {currentMap.action === 'existing' ? (
                             <Select
                               value={currentMap.locationId || ''}
                               onValueChange={(val) => handleLocationSelect(dept, val)}
                             >
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue placeholder="Lokasyon seçin..." />
+                              <SelectTrigger className="h-8 text-xs w-full">
+                                <SelectValue placeholder="Lokasyon seçin...">
+                                  {selectedExistingName || 'Lokasyon seçin...'}
+                                </SelectValue>
                               </SelectTrigger>
                               <SelectContent className="max-h-60">
-                                {facilityLocations.map((loc) => (
-                                  <SelectItem key={loc.id} value={loc.id} className="text-xs">
-                                    {loc.name || loc.department}
-                                  </SelectItem>
-                                ))}
+                                {facilityLocations.map((loc) => {
+                                  const displayName = loc.name || loc.department || 'İsimsiz Lokasyon';
+                                  return (
+                                    <SelectItem key={loc.id} value={loc.id} className="text-xs">
+                                      {displayName}
+                                    </SelectItem>
+                                  );
+                                })}
                               </SelectContent>
                             </Select>
                           ) : (
-                            <Input
-                              value={currentMap.newName || dept}
-                              onChange={(e) => handleNewNameChange(dept, e.target.value)}
-                              placeholder="Oluşturulacak lokasyon adı"
-                              className="h-8 text-xs"
-                            />
+                            <div className="space-y-1.5 bg-muted/20 p-2.5 rounded-lg border border-border/60">
+                              <div className="grid grid-cols-4 gap-2">
+                                <div>
+                                  <label className="text-[10px] font-semibold text-muted-foreground block mb-0.5">Bina / Blok</label>
+                                  <Input
+                                    value={currentMap.building ?? 'Ana Bina'}
+                                    onChange={(e) => handleFieldChange(dept, 'building', e.target.value)}
+                                    placeholder="Ana Bina"
+                                    className="h-7 text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] font-semibold text-muted-foreground block mb-0.5">Kat</label>
+                                  <Input
+                                    value={currentMap.floor ?? 'Genel'}
+                                    onChange={(e) => handleFieldChange(dept, 'floor', e.target.value)}
+                                    placeholder="Genel / 1. Kat"
+                                    className="h-7 text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] font-semibold text-muted-foreground block mb-0.5">Birim / Departman</label>
+                                  <Input
+                                    value={currentMap.department ?? dept}
+                                    onChange={(e) => handleFieldChange(dept, 'department', e.target.value)}
+                                    placeholder="Birim Adı"
+                                    className="h-7 text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] font-semibold text-muted-foreground block mb-0.5">Mahal / Alan (İsteğe Bağlı)</label>
+                                  <Input
+                                    value={currentMap.description ?? ''}
+                                    onChange={(e) => handleFieldChange(dept, 'description', e.target.value)}
+                                    placeholder="Depo / Oda vb."
+                                    className="h-7 text-xs"
+                                  />
+                                </div>
+                              </div>
+                              <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-0.5">
+                                <span className="font-semibold text-primary">Kayıt Adı:</span>
+                                <span className="font-mono bg-background px-1.5 py-0.5 rounded border text-[10px] text-foreground">
+                                  {currentMap.newName || [currentMap.building || 'Ana Bina', currentMap.floor !== 'Genel' ? currentMap.floor : '', currentMap.department || dept, currentMap.description].filter(Boolean).join(' - ')}
+                                </span>
+                              </div>
+                            </div>
                           )}
                         </TableCell>
                       </TableRow>

@@ -273,6 +273,100 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
         res.status(500).json({ error: 'Internal server error', details: error.message, stack: error.stack });
     }
 });
+// Bulk update inventory for a specific department (assign multiple materials)
+router.post('/department-bulk', auth_1.authMiddleware, async (req, res) => {
+    const { facilityId, locationId, items } = req.body;
+    if (!facilityId || !locationId || !Array.isArray(items)) {
+        return res.status(400).json({ error: 'facilityId, locationId and items array are required' });
+    }
+    if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(facilityId)) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
+    try {
+        let actualLocationId = locationId;
+        if (locationId.startsWith('group:')) {
+            const parts = locationId.split(':');
+            let b = '', f = '', d = '';
+            if (['building', 'floor', 'department'].includes(parts[1])) {
+                const level = parts[1];
+                const pathParts = parts.slice(3).join(':').split('|');
+                if (level === 'building') {
+                    b = pathParts[0] || '';
+                }
+                else if (level === 'floor') {
+                    b = pathParts[0] || '';
+                    f = pathParts[1] || '';
+                }
+                else {
+                    b = pathParts[0] || '';
+                    f = pathParts[1] || '';
+                    d = pathParts[2] || '';
+                }
+            }
+            let groupLoc = await prisma.facilityLocation.findFirst({
+                where: { facilityId, building: b || null, floor: f || null, department: d || null, description: null }
+            });
+            if (!groupLoc) {
+                groupLoc = await prisma.facilityLocation.create({
+                    data: {
+                        facilityId,
+                        name: d || f || b || 'Bilinmeyen',
+                        building: b || null,
+                        floor: f || null,
+                        department: d || null,
+                        description: null
+                    }
+                });
+            }
+            actualLocationId = groupLoc.id;
+        }
+        await prisma.$transaction(async (tx) => {
+            for (const item of items) {
+                const { materialId, minQuantity, maxQuantity } = item;
+                if (!materialId)
+                    continue;
+                if (!minQuantity && !maxQuantity) {
+                    // Both null/empty, don't remove existing unless explicitly needed, or delete:
+                    // If min and max are empty string, remove it
+                    if (minQuantity === '' && maxQuantity === '') {
+                        await tx.hazmatInventoryItem.deleteMany({
+                            where: { facilityId, locationId: actualLocationId, materialId }
+                        });
+                    }
+                    continue;
+                }
+                const existing = await tx.hazmatInventoryItem.findFirst({
+                    where: { facilityId, locationId: actualLocationId, materialId }
+                });
+                if (existing) {
+                    await tx.hazmatInventoryItem.update({
+                        where: { id: existing.id },
+                        data: {
+                            minQuantity: minQuantity ? Number(minQuantity) : null,
+                            maxQuantity: maxQuantity ? Number(maxQuantity) : null
+                        }
+                    });
+                }
+                else {
+                    await tx.hazmatInventoryItem.create({
+                        data: {
+                            facilityId,
+                            locationId: actualLocationId,
+                            materialId,
+                            minQuantity: minQuantity ? Number(minQuantity) : null,
+                            maxQuantity: maxQuantity ? Number(maxQuantity) : null
+                        }
+                    });
+                }
+            }
+        });
+        res.json({ message: 'Departman envanteri başarıyla güncellendi' });
+    }
+    catch (error) {
+        console.error('Error bulk updating department inventory:', error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+});
 // Delete specific inventory item
 router.delete('/:id', auth_1.authMiddleware, async (req, res) => {
     const { id } = req.params;
@@ -295,6 +389,206 @@ router.delete('/:id', auth_1.authMiddleware, async (req, res) => {
     catch (error) {
         console.error('Error deleting inventory item:', error);
         res.status(500).json({ error: 'Internal server error' });
+    }
+});
+// Bulk import inventory matrix with location mapping and deduplication
+router.post('/bulk-import-matrix', auth_1.authMiddleware, async (req, res) => {
+    const { facilityId, rows, locationMappings } = req.body;
+    if (!facilityId || !Array.isArray(rows) || rows.length === 0) {
+        return res.status(400).json({ error: 'facilityId and a non-empty rows array are required' });
+    }
+    if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(facilityId)) {
+        return res.status(403).json({ error: 'Access denied to this facility' });
+    }
+    try {
+        const username = req.user?.username || 'System';
+        // 1. Fetch or create default 'Adet' unit
+        let adetUnit = await prisma.hazmatUnit.findFirst({
+            where: { name: { contains: 'adet', mode: 'insensitive' } }
+        });
+        if (!adetUnit) {
+            adetUnit = await prisma.hazmatUnit.create({ data: { name: 'Adet', symbol: 'ad' } });
+        }
+        // 2. Fetch all existing global materials for robust matching
+        const allGlobalMaterials = await prisma.hazmatMaterial.findMany();
+        const normalize = (t) => (t || '').toLocaleLowerCase('tr-TR').trim();
+        // 3. Resolve location mapping (maps raw department name to locationId)
+        // locationMappings: Record<string, { action: 'existing' | 'new', locationId?: string, newName?: string }>
+        const resolvedLocations = {};
+        if (locationMappings && typeof locationMappings === 'object') {
+            for (const [rawDept, mapInfo] of Object.entries(locationMappings)) {
+                if (!mapInfo)
+                    continue;
+                if (mapInfo.action === 'existing' && mapInfo.locationId) {
+                    resolvedLocations[rawDept] = mapInfo.locationId;
+                }
+                else if (mapInfo.action === 'new' && (mapInfo.newName || rawDept)) {
+                    const locName = (mapInfo.newName || rawDept).trim();
+                    let createdLoc = await prisma.facilityLocation.findFirst({
+                        where: { facilityId, name: locName }
+                    });
+                    if (!createdLoc) {
+                        createdLoc = await prisma.facilityLocation.create({
+                            data: {
+                                facilityId,
+                                name: locName,
+                                department: locName,
+                                isActive: true
+                            }
+                        });
+                    }
+                    resolvedLocations[rawDept] = createdLoc.id;
+                }
+            }
+        }
+        const results = {
+            materialsCreated: 0,
+            materialsReused: 0,
+            inventoryItemsCreated: 0,
+            inventoryItemsUpdated: 0,
+            errors: 0
+        };
+        // Keep cache of created materials during this batch
+        const materialCache = new Map();
+        allGlobalMaterials.forEach(m => materialCache.set(normalize(m.productName), m));
+        for (const row of rows) {
+            const productName = (row.productName || '').trim();
+            if (!productName) {
+                results.errors++;
+                continue;
+            }
+            const normName = normalize(productName);
+            let material = materialCache.get(normName);
+            // Create material in global pool if not exists
+            if (!material) {
+                material = await prisma.hazmatMaterial.create({
+                    data: {
+                        productName,
+                        brandName: row.brandName || null,
+                        usageMethod: row.usageMethod || null,
+                        composition: row.composition || null,
+                        hazardDescription: row.hazardDescription || null,
+                        firstAid: row.firstAid || null,
+                        fireFightingMeasures: row.fireFightingMeasures || null,
+                        accidentalReleaseMeasures: row.accidentalReleaseMeasures || null,
+                        handlingAndStorage: row.handlingAndStorage || null,
+                        exposureControlsPpe: row.exposureControlsPpe || null,
+                        physicalAndChemicalProperties: row.physicalAndChemicalProperties || null,
+                        stabilityAndReactivity: row.stabilityAndReactivity || null,
+                        toxicologicalInformation: row.toxicologicalInformation || null,
+                        disposalConsiderations: row.disposalConsiderations || null,
+                        transportInfo: row.transportInfo || null
+                    }
+                });
+                await prisma.hazmatAuditLog.create({
+                    data: {
+                        materialId: material.id,
+                        action: 'CREATE',
+                        details: 'Excel birim envanteri içe aktarımı ile havuza eklendi.',
+                        username
+                    }
+                });
+                materialCache.set(normName, material);
+                results.materialsCreated++;
+            }
+            else {
+                // Update existing material if it lacks technical details
+                const updateData = {};
+                if (!material.brandName && row.brandName)
+                    updateData.brandName = row.brandName;
+                if (!material.usageMethod && row.usageMethod)
+                    updateData.usageMethod = row.usageMethod;
+                if (!material.composition && row.composition)
+                    updateData.composition = row.composition;
+                if (!material.hazardDescription && row.hazardDescription)
+                    updateData.hazardDescription = row.hazardDescription;
+                if (!material.firstAid && row.firstAid)
+                    updateData.firstAid = row.firstAid;
+                if (!material.fireFightingMeasures && row.fireFightingMeasures)
+                    updateData.fireFightingMeasures = row.fireFightingMeasures;
+                if (!material.accidentalReleaseMeasures && row.accidentalReleaseMeasures)
+                    updateData.accidentalReleaseMeasures = row.accidentalReleaseMeasures;
+                if (!material.handlingAndStorage && row.handlingAndStorage)
+                    updateData.handlingAndStorage = row.handlingAndStorage;
+                if (!material.exposureControlsPpe && row.exposureControlsPpe)
+                    updateData.exposureControlsPpe = row.exposureControlsPpe;
+                if (!material.physicalAndChemicalProperties && row.physicalAndChemicalProperties)
+                    updateData.physicalAndChemicalProperties = row.physicalAndChemicalProperties;
+                if (!material.stabilityAndReactivity && row.stabilityAndReactivity)
+                    updateData.stabilityAndReactivity = row.stabilityAndReactivity;
+                if (!material.toxicologicalInformation && row.toxicologicalInformation)
+                    updateData.toxicologicalInformation = row.toxicologicalInformation;
+                if (!material.disposalConsiderations && row.disposalConsiderations)
+                    updateData.disposalConsiderations = row.disposalConsiderations;
+                if (!material.transportInfo && row.transportInfo)
+                    updateData.transportInfo = row.transportInfo;
+                if (Object.keys(updateData).length > 0) {
+                    material = await prisma.hazmatMaterial.update({
+                        where: { id: material.id },
+                        data: updateData
+                    });
+                    materialCache.set(normName, material);
+                }
+                results.materialsReused++;
+            }
+            // Ensure material is linked to facility (FacilityHazmatItem)
+            await prisma.facilityHazmatItem.upsert({
+                where: {
+                    facilityId_materialId: { facilityId, materialId: material.id }
+                },
+                update: {},
+                create: {
+                    facilityId,
+                    materialId: material.id,
+                    amountValue: row.maxQuantity || row.minQuantity || 1,
+                    unitId: adetUnit.id
+                }
+            });
+            // Find target location for this row
+            const rawDept = (row.department || '').trim();
+            const targetLocationId = resolvedLocations[rawDept];
+            if (targetLocationId) {
+                const minQ = row.minQuantity !== undefined && row.minQuantity !== null ? Number(row.minQuantity) : null;
+                const maxQ = row.maxQuantity !== undefined && row.maxQuantity !== null ? Number(row.maxQuantity) : null;
+                const existingItem = await prisma.hazmatInventoryItem.findFirst({
+                    where: {
+                        facilityId,
+                        locationId: targetLocationId,
+                        materialId: material.id
+                    }
+                });
+                if (existingItem) {
+                    await prisma.hazmatInventoryItem.update({
+                        where: { id: existingItem.id },
+                        data: {
+                            minQuantity: minQ !== null ? minQ : existingItem.minQuantity,
+                            maxQuantity: maxQ !== null ? maxQ : existingItem.maxQuantity
+                        }
+                    });
+                    results.inventoryItemsUpdated++;
+                }
+                else {
+                    await prisma.hazmatInventoryItem.create({
+                        data: {
+                            facilityId,
+                            locationId: targetLocationId,
+                            materialId: material.id,
+                            minQuantity: minQ,
+                            maxQuantity: maxQ
+                        }
+                    });
+                    results.inventoryItemsCreated++;
+                }
+            }
+        }
+        res.json({
+            message: 'Envanter ve malzeme aktarımı tamamlandı.',
+            results
+        });
+    }
+    catch (error) {
+        console.error('Error during bulk inventory matrix import:', error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 });
 exports.default = router;
