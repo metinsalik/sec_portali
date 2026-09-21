@@ -205,7 +205,12 @@ export default function HazmatDepartmentViewPage() {
                   <Button variant="ghost" size="sm" onClick={() => setPrintMaterial(mat)} className="text-blue-600 hover:text-blue-700" title="Bilgi Kartı">
                     <Printer className="w-4 h-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => navigate(`/hazmat/materials/view/${mat.id}`)} className="text-blue-600 hover:text-blue-700">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => navigate(`/hazmat/materials/view/${mat.id}`, { state: { returnTo: `/hazmat/departments/${id}` } })} 
+                    className="text-blue-600 hover:text-blue-700"
+                  >
                     Detayları Gör
                   </Button>
                 </div>
@@ -280,7 +285,12 @@ export default function HazmatDepartmentViewPage() {
                     <Button variant="ghost" size="sm" onClick={() => setPrintMaterial(mat)} className="text-blue-600 hover:text-blue-700 h-8 w-8 p-0" title="Bilgi Kartı">
                       <Printer className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => navigate(`/hazmat/materials/view/${mat.id}`)} className="text-blue-600 hover:text-blue-700">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => navigate(`/hazmat/materials/view/${mat.id}`, { state: { returnTo: `/hazmat/departments/${id}` } })} 
+                      className="text-blue-600 hover:text-blue-700"
+                    >
                       Detay
                     </Button>
                   </div>

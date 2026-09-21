@@ -423,11 +423,16 @@ router.post('/bulk-import-matrix', authMiddleware, async (req: AuthRequest, res)
     const findUnit = (unitStr?: string) => {
       if (!unitStr) return null;
       const s = unitStr.toLowerCase().trim();
+      if (s === 'ml' || s === 'mililitre' || s === 'milli litre') {
+        return allUnits.find(u => u.symbol?.toLowerCase() === 'ml') ||
+               allUnits.find(u => u.name?.toLowerCase().includes('mililitre'));
+      }
+      if (s === 'mg' || s === 'miligram' || s === 'milli gram') {
+        return allUnits.find(u => u.symbol?.toLowerCase() === 'mg') ||
+               allUnits.find(u => u.name?.toLowerCase().includes('miligram'));
+      }
       if (s === 'litre' || s === 'l' || s === 'lt' || s === 'lt.') {
         return allUnits.find(u => u.symbol?.toLowerCase() === 'l' || u.name?.toLowerCase() === 'litre');
-      }
-      if (s === 'ml' || s === 'mililitre' || s === 'milli litre') {
-        return allUnits.find(u => u.symbol?.toLowerCase() === 'ml' || u.name?.toLowerCase().includes('mili'));
       }
       if (s === 'gr' || s === 'gram' || s === 'g') {
         return allUnits.find(u => u.symbol?.toLowerCase() === 'g' || u.name?.toLowerCase() === 'gram');
@@ -435,16 +440,15 @@ router.post('/bulk-import-matrix', authMiddleware, async (req: AuthRequest, res)
       if (s === 'kg' || s === 'kilogram') {
         return allUnits.find(u => u.symbol?.toLowerCase() === 'kg' || u.name?.toLowerCase() === 'kilogram');
       }
-      if (s === 'mg' || s === 'miligram') {
-        return allUnits.find(u => u.symbol?.toLowerCase() === 'mg' || u.name?.toLowerCase() === 'miligram');
-      }
       if (s === 'm3' || s === 'm³' || s === 'metreküp') {
         return allUnits.find(u => u.symbol?.toLowerCase() === 'm³' || u.name?.toLowerCase().includes('metreküp'));
       }
       if (s === 'adet' || s === 'ad' || s === 'kutu' || s === 'tane') {
         return allUnits.find(u => u.symbol?.toLowerCase() === 'adet' || u.name?.toLowerCase() === 'adet');
       }
-      return allUnits.find(u => u.name?.toLowerCase().includes(s) || u.symbol?.toLowerCase() === s);
+      return allUnits.find(u => u.symbol?.toLowerCase() === s) ||
+             allUnits.find(u => u.name?.toLowerCase() === s) ||
+             allUnits.find(u => u.name?.toLowerCase().includes(s));
     };
 
     let adetUnit = allUnits.find(u => u.name?.toLowerCase() === 'adet' || u.symbol?.toLowerCase() === 'adet');

@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useState } from 'react';
@@ -11,8 +11,22 @@ import { BASE_URL } from '@/lib/api';
 export default function MaterialViewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const activeFacilityId = localStorage.getItem('activeFacilityId');
   const [printModalOpen, setPrintModalOpen] = useState(false);
+
+  // Return to origin (e.g. /hazmat/inventory, /hazmat/departments, or /hazmat/materials)
+  const returnTo = location.state?.returnTo;
+
+  const handleBack = () => {
+    if (returnTo) {
+      navigate(returnTo);
+    } else if (window.history.length > 2) {
+      navigate(-1);
+    } else {
+      navigate('/hazmat/materials');
+    }
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ['material-details', id, activeFacilityId],
@@ -57,7 +71,7 @@ export default function MaterialViewPage() {
       <div className="max-w-5xl mx-auto space-y-6 pb-12">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/hazmat/materials')}>
+            <Button variant="ghost" size="icon" onClick={handleBack}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
@@ -69,7 +83,10 @@ export default function MaterialViewPage() {
             <Button onClick={() => setPrintModalOpen(true)} variant="outline" className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50">
               <FileText className="w-4 h-4" /> Bilgi Kartı Yazdır
             </Button>
-            <Button onClick={() => navigate(`/hazmat/materials/edit/${id}`)} className="gap-2">
+            <Button 
+              onClick={() => navigate(`/hazmat/materials/edit/${id}`, { state: { returnTo: returnTo || `/hazmat/materials/view/${id}` } })} 
+              className="gap-2"
+            >
               <Edit className="w-4 h-4" /> Düzenle
             </Button>
           </div>

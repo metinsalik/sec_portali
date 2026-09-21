@@ -678,11 +678,11 @@ export default function HazmatDepartmentsPage() {
         unitName={selectedMaterial?.unitName}
         onNavigateToPool={() => {
           setSelectedMaterial(null);
-          navigate(`/hazmat/materials/view/${selectedMaterial?.material?.id}`);
+          navigate(`/hazmat/materials/view/${selectedMaterial?.material?.id}`, { state: { returnTo: '/hazmat/departments' } });
         }}
         onNavigateToLocations={() => {
           setSelectedMaterial(null);
-          navigate(`/hazmat/inventory/material/${selectedMaterial?.material?.id}`);
+          navigate(`/hazmat/inventory/material/${selectedMaterial?.material?.id}`, { state: { returnTo: '/hazmat/departments' } });
         }}
       />
 

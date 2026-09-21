@@ -548,11 +548,11 @@ export default function FacilityInventoryListPage() {
         }}
         onNavigateToPool={() => {
           setSelectedGroup(null);
-          navigate(`/hazmat/materials/view/${selectedGroup?.materialId}`);
+          navigate(`/hazmat/materials/view/${selectedGroup?.materialId}`, { state: { returnTo: '/hazmat/inventory' } });
         }}
         onNavigateToLocations={() => {
           setSelectedGroup(null);
-          navigate(`/hazmat/inventory/material/${selectedGroup?.materialId}`);
+          navigate(`/hazmat/inventory/material/${selectedGroup?.materialId}`, { state: { returnTo: '/hazmat/inventory' } });
         }}
       />
 

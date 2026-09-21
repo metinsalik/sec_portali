@@ -313,7 +313,7 @@ export default function MaterialFormPage() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-20">
       <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={() => navigate('/hazmat/materials')}>
+        <Button variant="outline" size="icon" onClick={() => navigate(returnTo)}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
