@@ -214,7 +214,11 @@ export default function FacilityInventoryListPage() {
 
         const idxDept = getColIndex(['kullanıldığı ve depolandığı', 'bölüm', 'departman', 'birim', 'kullanıldığı']);
         const idxName = getColIndex(['ürün adı', 'madde adı', 'malzeme adı', 'isim', 'productname']);
-        const idxAmount = getColIndex(['adet/ miktar', 'miktar', 'adedi', 'amountvalue']);
+        const idxMin = getColIndex(['net miktar min', 'miktar min', 'adet min', 'min miktar']);
+        const idxMax = getColIndex(['net miktar max', 'miktar max', 'adet max', 'maks miktar']);
+        const idxAmountFallback = getColIndex(['adet/ miktar', 'miktar', 'adedi', 'amountvalue']);
+        const idxPkgQty = getColIndex(['ambalaj içi miktar', 'paket içi miktar', 'birim ambalaj']);
+        const idxPkgUnit = getColIndex(['ambalaj içi birim', 'paket birim', 'birim ambalaj içi birim']);
         const idxBrand = getColIndex(['firma tedarikçi', 'tedarikçi', 'marka', 'brandname']);
         const idxUsage = getColIndex(['kullanım şekli', 'usagemethod']);
         const idxComp = getColIndex(['bileşimi', 'içerik', 'composition']);
@@ -230,22 +234,29 @@ export default function FacilityInventoryListPage() {
         const idxDisposal = getColIndex(['temizlik', 'imha', 'disposalconsiderations']);
         const idxTransport = getColIndex(['taşıma', 'tehlikeli madde sınıfı', 'transportinfo']);
 
+        const parseNum = (val: any): number | null => {
+          if (val === undefined || val === null || val === '') return null;
+          const s = String(val).replace(/,/g, '.').trim();
+          const n = parseFloat(s);
+          return isNaN(n) ? null : n;
+        };
+
         const parseAmountRange = (val: any) => {
-          if (!val) return { min: 1, max: 1 };
+          if (!val) return { min: null, max: null };
           const s = String(val).replace(/,/g, '.');
           const rangeMatch = s.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/);
           if (rangeMatch) {
             return {
-              min: parseFloat(rangeMatch[1]) || 1,
-              max: parseFloat(rangeMatch[2]) || 1
+              min: parseFloat(rangeMatch[1]) || null,
+              max: parseFloat(rangeMatch[2]) || null
             };
           }
           const singleMatch = s.match(/(\d+(?:\.\d+)?)/);
           if (singleMatch) {
-            const v = parseFloat(singleMatch[1]) || 1;
+            const v = parseFloat(singleMatch[1]) || null;
             return { min: v, max: v };
           }
-          return { min: 1, max: 1 };
+          return { min: null, max: null };
         };
 
         for (let i = headerRowIndex + 1; i < data.length; i++) {
@@ -262,14 +273,36 @@ export default function FacilityInventoryListPage() {
           if (idxDept !== -1 && row[idxDept]) department = String(row[idxDept]).trim();
           if (!department) department = 'Genel';
 
-          const { min, max } = parseAmountRange(idxAmount !== -1 ? row[idxAmount] : null);
+          // Check if separated Min and Max columns exist (new template)
+          let minVal: number | null = null;
+          let maxVal: number | null = null;
+
+          if (idxMin !== -1 && row[idxMin] !== undefined && row[idxMin] !== '') {
+            minVal = parseNum(row[idxMin]);
+          }
+          if (idxMax !== -1 && row[idxMax] !== undefined && row[idxMax] !== '') {
+            maxVal = parseNum(row[idxMax]);
+          }
+
+          // If neither was provided, fallback to legacy range column
+          if (minVal === null && maxVal === null && idxAmountFallback !== -1) {
+            const range = parseAmountRange(row[idxAmountFallback]);
+            minVal = range.min;
+            maxVal = range.max;
+          }
+
+          // Unit package quantity & unit name (e.g. 400 mL, 1 Litre)
+          const packageQuantity = idxPkgQty !== -1 ? parseNum(row[idxPkgQty]) : null;
+          const packageUnit = idxPkgUnit !== -1 && row[idxPkgUnit] ? String(row[idxPkgUnit]).trim() : undefined;
 
           rowsToImport.push({
             department,
             productName,
             brandName: idxBrand !== -1 && row[idxBrand] ? String(row[idxBrand]).trim() : undefined,
-            minQuantity: min,
-            maxQuantity: max,
+            minQuantity: minVal,
+            maxQuantity: maxVal,
+            packageQuantity,
+            packageUnit,
             usageMethod: idxUsage !== -1 && row[idxUsage] ? String(row[idxUsage]).trim() : undefined,
             composition: idxComp !== -1 && row[idxComp] ? String(row[idxComp]).trim() : undefined,
             hazardDescription: idxHazard !== -1 && row[idxHazard] ? String(row[idxHazard]).trim() : undefined,
