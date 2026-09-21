@@ -150,13 +150,6 @@ export default function FacilityInventoryListPage() {
   }, [groupedSummary, searchMaterial, searchDepartment, searchAdrCategory]);
 
   const handleExcelFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const facId = activeFacilityId || localStorage.getItem('activeFacilityId');
-    if (!facId || facId === 'all') {
-      toast.error('Lütfen Excel aktarımı yapmadan önce yukarıdaki menüden spesifik bir tesis seçin.');
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      return;
-    }
-
     const file = e.target.files?.[0];
     if (!file) return;
 

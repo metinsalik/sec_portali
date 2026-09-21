@@ -38,6 +38,8 @@ import {
 import api from '@/lib/api';
 import { toast } from 'sonner';
 
+import { useQuery } from '@tanstack/react-query';
+
 export interface LocationMappingInfo {
   action: 'existing' | 'new';
   locationId?: string;
@@ -51,8 +53,8 @@ export interface LocationMappingInfo {
 interface HazmatInventoryImportModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  facilityId: string;
-  facilityLocations: any[];
+  facilityId?: string;
+  facilityLocations?: any[];
   parsedRows: any[];
   onSuccess: () => void;
 }
@@ -60,14 +62,54 @@ interface HazmatInventoryImportModalProps {
 export function HazmatInventoryImportModal({
   isOpen,
   onOpenChange,
-  facilityId,
-  facilityLocations,
+  facilityId: initialFacilityId,
   parsedRows,
   onSuccess
 }: HazmatInventoryImportModalProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 1. Fetch accessible facilities so user can select or switch facility directly in modal
+  const { data: facilities = [] } = useQuery<any[]>({
+    queryKey: ['settings-facilities-for-import'],
+    queryFn: async () => {
+      const res = await api.get('/settings/facilities');
+      if (!res.ok) return [];
+      return res.json();
+    }
+  });
+
+  // Selected facility state
+  const [targetFacilityId, setTargetFacilityId] = useState<string>(() => {
+    if (initialFacilityId && initialFacilityId !== 'all') return initialFacilityId;
+    const stored = localStorage.getItem('activeFacilityId');
+    if (stored && stored !== 'all') return stored;
+    return '';
+  });
+
+  // If initialFacilityId changes or becomes available and targetFacilityId isn't set, update it
+  React.useEffect(() => {
+    if (!targetFacilityId && initialFacilityId && initialFacilityId !== 'all') {
+      setTargetFacilityId(initialFacilityId);
+    } else if (!targetFacilityId && facilities.length > 0) {
+      // Default to first facility or VM-MP-FLORYA if present
+      const florya = facilities.find((f: any) => f.id === 'VM-MP-FLORYA');
+      setTargetFacilityId(florya ? florya.id : facilities[0].id);
+    }
+  }, [initialFacilityId, facilities, targetFacilityId]);
+
+  // 2. Fetch locations specifically and ONLY for the selected facility
+  const { data: facilityLocations = [], isLoading: isLoadingLocations } = useQuery<any[]>({
+    queryKey: ['facility-locations-modal', targetFacilityId],
+    queryFn: async () => {
+      if (!targetFacilityId || targetFacilityId === 'all') return [];
+      const res = await api.get(`/risks/facilities/${targetFacilityId}/locations`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!targetFacilityId && targetFacilityId !== 'all'
+  });
 
   // Extract unique departments from parsed rows
   const uniqueDepartments = useMemo(() => {
@@ -108,9 +150,12 @@ export function HazmatInventoryImportModal({
     return Array.from(set);
   }, [facilityLocations]);
 
-  // Initial smart auto-mapping state
-  const [mappings, setMappings] = useState<Record<string, LocationMappingInfo>>(() => {
-    const initial: Record<string, LocationMappingInfo> = {};
+  // Smart auto-mapping state initialized and synchronized when target facility locations load
+  const [mappings, setMappings] = useState<Record<string, LocationMappingInfo>>({});
+
+  React.useEffect(() => {
+    if (uniqueDepartments.length === 0) return;
+
     const clean = (t: string) =>
       t
         .toLowerCase()
@@ -123,31 +168,33 @@ export function HazmatInventoryImportModal({
         .replace(/ç/g, 'c')
         .replace(/[^a-z0-9]/g, '');
 
+    const nextMappings: Record<string, LocationMappingInfo> = {};
+
     uniqueDepartments.forEach((dept) => {
       const deptClean = clean(dept);
-      // Look for a close match in existing locations
-      let matchedLoc = facilityLocations.find((loc) => {
+      // Look for a close match in existing locations of the selected facility
+      const matchedLoc = facilityLocations.find((loc) => {
         const locClean = clean(loc.name || loc.department || '');
         return locClean === deptClean || locClean.endsWith(deptClean) || locClean.includes(deptClean);
       });
 
       if (matchedLoc) {
-        initial[dept] = { action: 'existing', locationId: matchedLoc.id };
+        nextMappings[dept] = { action: 'existing', locationId: matchedLoc.id };
       } else {
-        // Default to create new structured location (Bina, Kat, Birim, Mahal)
-        initial[dept] = {
+        // Default to create new structured location (Bina, Kat, Birim, Mahal) in this facility
+        nextMappings[dept] = {
           action: 'new',
-          building: 'Ana Bina',
+          building: existingBuildings[0] || 'Ana Bina',
           floor: 'Genel',
           department: dept,
           description: '',
-          newName: `Ana Bina - ${dept}`
+          newName: `${existingBuildings[0] || 'Ana Bina'} - ${dept}`
         };
       }
     });
 
-    return initial;
-  });
+    setMappings(nextMappings);
+  }, [targetFacilityId, facilityLocations, uniqueDepartments]);
 
   const handleActionChange = (dept: string, action: 'existing' | 'new') => {
     setMappings((prev) => {
@@ -243,11 +290,16 @@ export function HazmatInventoryImportModal({
   }, [mappings]);
 
   const handleStartImport = async () => {
+    if (!targetFacilityId || targetFacilityId === 'all') {
+      toast.error('Lütfen aktarım yapılacak tesisi seçin.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem('token');
       const response = await api.post(`/hazmat/inventory/bulk-import-matrix?token=${token}`, {
-        facilityId,
+        facilityId: targetFacilityId,
         rows: parsedRows,
         locationMappings: mappings
       });
@@ -273,6 +325,8 @@ export function HazmatInventoryImportModal({
     }
   };
 
+  const selectedFacilityObj = facilities.find((f: any) => f.id === targetFacilityId);
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[92vh] flex flex-col p-6">
@@ -282,6 +336,45 @@ export function HazmatInventoryImportModal({
             Excel'den Tehlikeli Madde & Birim Envanteri Aktarma
           </DialogTitle>
         </DialogHeader>
+
+        {/* Facility Selector Card */}
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary font-bold">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                Aktarım Yapılacak Hedef Tesis
+                <span className="text-red-500">*</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Tüm lokasyon eşleştirmeleri ve açılacak yeni lokasyonlar seçilen bu tesise kaydedilir.
+              </p>
+            </div>
+          </div>
+
+          <div className="w-full sm:w-72">
+            <Select
+              value={targetFacilityId}
+              onValueChange={(val) => setTargetFacilityId(val)}
+              disabled={isSubmitting}
+            >
+              <SelectTrigger className="h-9 bg-background font-medium text-xs">
+                <SelectValue placeholder="Tesis seçiniz...">
+                  {selectedFacilityObj ? selectedFacilityObj.name : 'Tesis seçiniz...'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="max-h-64">
+                {facilities.map((fac: any) => (
+                  <SelectItem key={fac.id} value={fac.id} className="text-xs font-medium">
+                    {fac.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
         {/* Info badges */}
         <div className="grid grid-cols-3 gap-4 py-2">
