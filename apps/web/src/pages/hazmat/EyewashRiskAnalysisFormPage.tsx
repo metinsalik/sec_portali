@@ -12,6 +12,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import LocationCascadingSelector from '@/components/shared/LocationCascadingSelector';
+import { formatLocationName, convertToLiters, classifyChemical } from '@/utils/eyewashRiskHelpers';
 
 const api = {
   get: async (url: string) => {
@@ -133,47 +134,58 @@ export default function EyewashRiskAnalysisFormPage() {
     enabled: !!formData.department && !!facilityId
   });
 
-  // Fetch ADR (Hazard Labels) which acts as categories
-  const { data: adrCategories = [] } = useQuery({
-    queryKey: ['hazmat-hazard-labels'],
-    queryFn: async () => {
-      const res = await api.get(`/hazmat/settings/hazard-labels`);
-      if (!res.ok) return [];
-      return res.json();
-    }
-  });
-
   useEffect(() => {
-    if (inventoryData && inventoryData.inventoryItems && adrCategories.length > 0) {
-      const newDetails: Record<string, number> = {};
-      let total = 0;
-      
-      // Initialize with all ADR labels
-      adrCategories.forEach((cat: any) => {
-        newDetails[cat.name] = 0;
+    if (inventoryData && inventoryData.inventoryItems && inventoryData.inventoryItems.length > 0) {
+      const details = {
+        yanici: 0,
+        asindirici: 0,
+        tahrisEdici: 0,
+        oksitleyici: 0,
+        toksik: 0,
+        kanserojen: 0,
+        bulasici: 0
+      };
+      let totalLiters = 0;
+
+      inventoryData.inventoryItems.forEach((item: any) => {
+        const mat = item.material;
+        const facItem = mat?.facilityItems?.[0];
+        const qty = item.maxQuantity ?? item.minQuantity ?? 1;
+        const amountVal = facItem?.amountValue || 1;
+        const unitName = facItem?.unit?.name || 'Litre';
+        
+        const liters = convertToLiters(qty, amountVal, unitName);
+        totalLiters += liters;
+
+        // Classify using hazardDescription, composition and productName
+        const cat = classifyChemical(mat?.hazardDescription, mat?.composition, mat?.productName);
+        if (cat.yanici) details.yanici += liters;
+        if (cat.asindirici) details.asindirici += liters;
+        if (cat.tahrisEdici) details.tahrisEdici += liters;
+        if (cat.oksitleyici) details.oksitleyici += liters;
+        if (cat.toksik) details.toksik += liters;
+        if (cat.kanserojen) details.kanserojen += liters;
+        if (cat.bulasici) details.bulasici += liters;
       });
 
-      // Sum quantities based on inventory hazardLabels
-      inventoryData.inventoryItems.forEach((item: any) => {
-        const qty = item.maxQuantity || 0;
-        total += qty;
-        if (item.material?.hazardLabels && item.material.hazardLabels.length > 0) {
-          item.material.hazardLabels.forEach((hl: any) => {
-            const catName = hl.label?.name;
-            if (catName) {
-              newDetails[catName] = (newDetails[catName] || 0) + qty;
-            }
-          });
-        }
-      });
+      // Round to 2 decimal places
+      const roundedDetails = {
+        yanici: +details.yanici.toFixed(2),
+        asindirici: +details.asindirici.toFixed(2),
+        tahrisEdici: +details.tahrisEdici.toFixed(2),
+        oksitleyici: +details.oksitleyici.toFixed(2),
+        toksik: +details.toksik.toFixed(2),
+        kanserojen: +details.kanserojen.toFixed(2),
+        bulasici: +details.bulasici.toFixed(2)
+      };
 
       setFormData((prev: any) => ({
         ...prev,
-        chemicalDetails: newDetails,
-        chemicalTotalLiters: total
+        chemicalDetails: roundedDetails,
+        chemicalTotalLiters: +totalLiters.toFixed(2)
       }));
     }
-  }, [inventoryData, adrCategories]);
+  }, [inventoryData]);
 
 
 
@@ -287,26 +299,63 @@ export default function EyewashRiskAnalysisFormPage() {
 
           {/* Kimyasal Madde Türleri */}
           <div className="space-y-4 bg-muted/30 p-6 rounded-xl border border-border/50">
-            <h3 className="font-semibold text-lg">Alanda Bulunan Kimyasal Madde Türleri ve Miktarları (Litre)</h3>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-lg">Alanda Bulunan Kimyasal Madde Türleri ve Miktarları (Litre)</h3>
+                <p className="text-xs text-muted-foreground">Seçilen lokasyondaki kimyasalların envanter toplamları Litre olarak otomatik hesaplanır, dilerseniz güncelleyebilirsiniz.</p>
+              </div>
+              {inventoryData?.inventoryItems && (
+                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+                  {inventoryData.inventoryItems.length} Envanter Kaydı Bulundu
+                </Badge>
+              )}
+            </div>
+            
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {Object.keys(formData.chemicalDetails || {}).length > 0 ? (
-                Object.entries(formData.chemicalDetails).map(([catName, qty]) => (
-                  <div key={catName} className="space-y-2">
-                    <Label className="text-sm">{catName}</Label>
-                    <Input type="number" readOnly className="h-11 bg-slate-50" value={String(qty)} />
+              {[
+                { key: 'yanici', label: 'Yanıcı' },
+                { key: 'asindirici', label: 'Aşındırıcı' },
+                { key: 'tahrisEdici', label: 'Tahriş Edici' },
+                { key: 'oksitleyici', label: 'Oksitleyici' },
+                { key: 'toksik', label: 'Toksik' },
+                { key: 'kanserojen', label: 'Kanserojen' },
+                { key: 'bulasici', label: 'Bulaşıcı' }
+              ].map(({ key, label }) => {
+                const currentVal = formData.chemicalDetails?.[key] ?? 0;
+                return (
+                  <div key={key} className="space-y-2">
+                    <Label className="text-sm font-medium">{label}</Label>
+                    <Input 
+                      type="number" 
+                      step="0.01" 
+                      className="h-11 bg-card" 
+                      value={currentVal} 
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        const updated = {
+                          ...(formData.chemicalDetails || {}),
+                          [key]: val
+                        };
+                        const total = Object.values(updated).reduce((sum: number, v: any) => sum + (parseFloat(v) || 0), 0);
+                        setFormData({
+                          ...formData,
+                          chemicalDetails: updated,
+                          chemicalTotalLiters: +total.toFixed(2)
+                        });
+                      }} 
+                    />
                   </div>
-                ))
-              ) : (
-                <div className="col-span-full text-sm text-muted-foreground p-4 bg-muted/50 rounded-lg text-center">
-                  Seçilen lokasyona ait kimyasal envanter bulunamadı. Lütfen bir lokasyon seçiniz veya envanter girdiğinizden emin olunuz.
-                </div>
-              )}
-              {Object.keys(formData.chemicalDetails || {}).length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-bold text-primary">Toplam (Litre)</Label>
-                  <Input type="number" readOnly className="bg-muted font-bold h-11 border-primary/50 text-primary" value={formData.chemicalTotalLiters || 0} />
-                </div>
-              )}
+                );
+              })}
+              <div className="space-y-2">
+                <Label className="text-sm font-bold text-primary">Toplam (Litre)</Label>
+                <Input 
+                  type="number" 
+                  readOnly 
+                  className="bg-muted font-bold h-11 border-primary/50 text-primary" 
+                  value={formData.chemicalTotalLiters || 0} 
+                />
+              </div>
             </div>
           </div>
 

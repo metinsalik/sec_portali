@@ -402,18 +402,79 @@ router.post('/bulk-import-matrix', auth_1.authMiddleware, async (req, res) => {
     }
     try {
         const username = req.user?.username || 'System';
-        // 1. Fetch or create default 'Adet' unit
-        let adetUnit = await prisma.hazmatUnit.findFirst({
-            where: { name: { contains: 'adet', mode: 'insensitive' } }
-        });
+        // 1. Fetch all HazmatUnits for flexible matching
+        const allUnits = await prisma.hazmatUnit.findMany();
+        const findUnit = (unitStr) => {
+            if (!unitStr)
+                return null;
+            const s = unitStr.toLowerCase().trim();
+            if (s === 'ml' || s === 'mililitre' || s === 'milli litre') {
+                return allUnits.find(u => u.symbol?.toLowerCase() === 'ml') ||
+                    allUnits.find(u => u.name?.toLowerCase().includes('mililitre'));
+            }
+            if (s === 'mg' || s === 'miligram' || s === 'milli gram') {
+                return allUnits.find(u => u.symbol?.toLowerCase() === 'mg') ||
+                    allUnits.find(u => u.name?.toLowerCase().includes('miligram'));
+            }
+            if (s === 'litre' || s === 'l' || s === 'lt' || s === 'lt.') {
+                return allUnits.find(u => u.symbol?.toLowerCase() === 'l' || u.name?.toLowerCase() === 'litre');
+            }
+            if (s === 'gr' || s === 'gram' || s === 'g') {
+                return allUnits.find(u => u.symbol?.toLowerCase() === 'g' || u.name?.toLowerCase() === 'gram');
+            }
+            if (s === 'kg' || s === 'kilogram') {
+                return allUnits.find(u => u.symbol?.toLowerCase() === 'kg' || u.name?.toLowerCase() === 'kilogram');
+            }
+            if (s === 'm3' || s === 'm³' || s === 'metreküp') {
+                return allUnits.find(u => u.symbol?.toLowerCase() === 'm³' || u.name?.toLowerCase().includes('metreküp'));
+            }
+            if (s === 'adet' || s === 'ad' || s === 'kutu' || s === 'tane') {
+                return allUnits.find(u => u.symbol?.toLowerCase() === 'adet' || u.name?.toLowerCase() === 'adet');
+            }
+            return allUnits.find(u => u.symbol?.toLowerCase() === s) ||
+                allUnits.find(u => u.name?.toLowerCase() === s) ||
+                allUnits.find(u => u.name?.toLowerCase().includes(s));
+        };
+        let adetUnit = allUnits.find(u => u.name?.toLowerCase() === 'adet' || u.symbol?.toLowerCase() === 'adet');
         if (!adetUnit) {
-            adetUnit = await prisma.hazmatUnit.create({ data: { name: 'Adet', symbol: 'ad' } });
+            adetUnit = await prisma.hazmatUnit.create({ data: { name: 'Adet', symbol: 'adet' } });
         }
         // 2. Fetch all existing global materials for robust matching
         const allGlobalMaterials = await prisma.hazmatMaterial.findMany();
         const normalize = (t) => (t || '').toLocaleLowerCase('tr-TR').trim();
+        const materialAggMap = new Map();
+        for (const row of rows) {
+            const pName = (row.productName || '').trim();
+            if (!pName)
+                continue;
+            const key = normalize(pName);
+            const minQ = row.minQuantity !== undefined && row.minQuantity !== null && row.minQuantity !== '' ? Number(row.minQuantity) : 0;
+            const maxQ = row.maxQuantity !== undefined && row.maxQuantity !== null && row.maxQuantity !== '' ? Number(row.maxQuantity) : minQ;
+            if (!materialAggMap.has(key)) {
+                materialAggMap.set(key, {
+                    productName: pName,
+                    packageQuantity: row.packageQuantity != null ? Number(row.packageQuantity) : null,
+                    packageUnit: row.packageUnit ? String(row.packageUnit).trim() : null,
+                    totalMaxUnits: maxQ,
+                    totalMinUnits: minQ,
+                    rows: [row]
+                });
+            }
+            else {
+                const agg = materialAggMap.get(key);
+                agg.totalMaxUnits += maxQ;
+                agg.totalMinUnits += minQ;
+                agg.rows.push(row);
+                if (!agg.packageQuantity && row.packageQuantity != null) {
+                    agg.packageQuantity = Number(row.packageQuantity);
+                }
+                if (!agg.packageUnit && row.packageUnit) {
+                    agg.packageUnit = String(row.packageUnit).trim();
+                }
+            }
+        }
         // 3. Resolve location mapping (maps raw department name to locationId)
-        // locationMappings: Record<string, { action: 'existing' | 'new', locationId?: string, newName?: string }>
+        // locationMappings: Record<string, { action: 'existing' | 'new', locationId?: string, newName?: string, building?: string, floor?: string, department?: string, description?: string }>
         const resolvedLocations = {};
         if (locationMappings && typeof locationMappings === 'object') {
             for (const [rawDept, mapInfo] of Object.entries(locationMappings)) {
@@ -422,17 +483,26 @@ router.post('/bulk-import-matrix', auth_1.authMiddleware, async (req, res) => {
                 if (mapInfo.action === 'existing' && mapInfo.locationId) {
                     resolvedLocations[rawDept] = mapInfo.locationId;
                 }
-                else if (mapInfo.action === 'new' && (mapInfo.newName || rawDept)) {
-                    const locName = (mapInfo.newName || rawDept).trim();
+                else if (mapInfo.action === 'new') {
+                    const b = (mapInfo.building || 'Ana Bina').trim();
+                    const f = (mapInfo.floor || '').trim();
+                    const d = (mapInfo.department || mapInfo.newName || rawDept).trim();
+                    const desc = (mapInfo.description || '').trim();
+                    // Standard formatted name: e.g. "Ana Bina - Zemin Kat - Acil Servis - Kırmızı Alan" or "Ana Bina - Ameliyathane"
+                    const nameParts = [b, f, d, desc].filter(Boolean);
+                    const fullName = (mapInfo.newName || nameParts.join(' - ')).trim();
                     let createdLoc = await prisma.facilityLocation.findFirst({
-                        where: { facilityId, name: locName }
+                        where: { facilityId, name: fullName }
                     });
                     if (!createdLoc) {
                         createdLoc = await prisma.facilityLocation.create({
                             data: {
                                 facilityId,
-                                name: locName,
-                                department: locName,
+                                name: fullName,
+                                building: b || null,
+                                floor: f || null,
+                                department: d || null,
+                                description: desc || null,
                                 isActive: true
                             }
                         });
@@ -451,33 +521,28 @@ router.post('/bulk-import-matrix', auth_1.authMiddleware, async (req, res) => {
         // Keep cache of created materials during this batch
         const materialCache = new Map();
         allGlobalMaterials.forEach(m => materialCache.set(normalize(m.productName), m));
-        for (const row of rows) {
-            const productName = (row.productName || '').trim();
-            if (!productName) {
-                results.errors++;
-                continue;
-            }
-            const normName = normalize(productName);
+        for (const [normName, agg] of materialAggMap.entries()) {
             let material = materialCache.get(normName);
+            const firstRow = agg.rows[0];
             // Create material in global pool if not exists
             if (!material) {
                 material = await prisma.hazmatMaterial.create({
                     data: {
-                        productName,
-                        brandName: row.brandName || null,
-                        usageMethod: row.usageMethod || null,
-                        composition: row.composition || null,
-                        hazardDescription: row.hazardDescription || null,
-                        firstAid: row.firstAid || null,
-                        fireFightingMeasures: row.fireFightingMeasures || null,
-                        accidentalReleaseMeasures: row.accidentalReleaseMeasures || null,
-                        handlingAndStorage: row.handlingAndStorage || null,
-                        exposureControlsPpe: row.exposureControlsPpe || null,
-                        physicalAndChemicalProperties: row.physicalAndChemicalProperties || null,
-                        stabilityAndReactivity: row.stabilityAndReactivity || null,
-                        toxicologicalInformation: row.toxicologicalInformation || null,
-                        disposalConsiderations: row.disposalConsiderations || null,
-                        transportInfo: row.transportInfo || null
+                        productName: agg.productName,
+                        brandName: firstRow.brandName || null,
+                        usageMethod: firstRow.usageMethod || null,
+                        composition: firstRow.composition || null,
+                        hazardDescription: firstRow.hazardDescription || null,
+                        firstAid: firstRow.firstAid || null,
+                        fireFightingMeasures: firstRow.fireFightingMeasures || null,
+                        accidentalReleaseMeasures: firstRow.accidentalReleaseMeasures || null,
+                        handlingAndStorage: firstRow.handlingAndStorage || null,
+                        exposureControlsPpe: firstRow.exposureControlsPpe || null,
+                        physicalAndChemicalProperties: firstRow.physicalAndChemicalProperties || null,
+                        stabilityAndReactivity: firstRow.stabilityAndReactivity || null,
+                        toxicologicalInformation: firstRow.toxicologicalInformation || null,
+                        disposalConsiderations: firstRow.disposalConsiderations || null,
+                        transportInfo: firstRow.transportInfo || null
                     }
                 });
                 await prisma.hazmatAuditLog.create({
@@ -494,34 +559,36 @@ router.post('/bulk-import-matrix', auth_1.authMiddleware, async (req, res) => {
             else {
                 // Update existing material if it lacks technical details
                 const updateData = {};
-                if (!material.brandName && row.brandName)
-                    updateData.brandName = row.brandName;
-                if (!material.usageMethod && row.usageMethod)
-                    updateData.usageMethod = row.usageMethod;
-                if (!material.composition && row.composition)
-                    updateData.composition = row.composition;
-                if (!material.hazardDescription && row.hazardDescription)
-                    updateData.hazardDescription = row.hazardDescription;
-                if (!material.firstAid && row.firstAid)
-                    updateData.firstAid = row.firstAid;
-                if (!material.fireFightingMeasures && row.fireFightingMeasures)
-                    updateData.fireFightingMeasures = row.fireFightingMeasures;
-                if (!material.accidentalReleaseMeasures && row.accidentalReleaseMeasures)
-                    updateData.accidentalReleaseMeasures = row.accidentalReleaseMeasures;
-                if (!material.handlingAndStorage && row.handlingAndStorage)
-                    updateData.handlingAndStorage = row.handlingAndStorage;
-                if (!material.exposureControlsPpe && row.exposureControlsPpe)
-                    updateData.exposureControlsPpe = row.exposureControlsPpe;
-                if (!material.physicalAndChemicalProperties && row.physicalAndChemicalProperties)
-                    updateData.physicalAndChemicalProperties = row.physicalAndChemicalProperties;
-                if (!material.stabilityAndReactivity && row.stabilityAndReactivity)
-                    updateData.stabilityAndReactivity = row.stabilityAndReactivity;
-                if (!material.toxicologicalInformation && row.toxicologicalInformation)
-                    updateData.toxicologicalInformation = row.toxicologicalInformation;
-                if (!material.disposalConsiderations && row.disposalConsiderations)
-                    updateData.disposalConsiderations = row.disposalConsiderations;
-                if (!material.transportInfo && row.transportInfo)
-                    updateData.transportInfo = row.transportInfo;
+                for (const row of agg.rows) {
+                    if (!material.brandName && row.brandName)
+                        updateData.brandName = row.brandName;
+                    if (!material.usageMethod && row.usageMethod)
+                        updateData.usageMethod = row.usageMethod;
+                    if (!material.composition && row.composition)
+                        updateData.composition = row.composition;
+                    if (!material.hazardDescription && row.hazardDescription)
+                        updateData.hazardDescription = row.hazardDescription;
+                    if (!material.firstAid && row.firstAid)
+                        updateData.firstAid = row.firstAid;
+                    if (!material.fireFightingMeasures && row.fireFightingMeasures)
+                        updateData.fireFightingMeasures = row.fireFightingMeasures;
+                    if (!material.accidentalReleaseMeasures && row.accidentalReleaseMeasures)
+                        updateData.accidentalReleaseMeasures = row.accidentalReleaseMeasures;
+                    if (!material.handlingAndStorage && row.handlingAndStorage)
+                        updateData.handlingAndStorage = row.handlingAndStorage;
+                    if (!material.exposureControlsPpe && row.exposureControlsPpe)
+                        updateData.exposureControlsPpe = row.exposureControlsPpe;
+                    if (!material.physicalAndChemicalProperties && row.physicalAndChemicalProperties)
+                        updateData.physicalAndChemicalProperties = row.physicalAndChemicalProperties;
+                    if (!material.stabilityAndReactivity && row.stabilityAndReactivity)
+                        updateData.stabilityAndReactivity = row.stabilityAndReactivity;
+                    if (!material.toxicologicalInformation && row.toxicologicalInformation)
+                        updateData.toxicologicalInformation = row.toxicologicalInformation;
+                    if (!material.disposalConsiderations && row.disposalConsiderations)
+                        updateData.disposalConsiderations = row.disposalConsiderations;
+                    if (!material.transportInfo && row.transportInfo)
+                        updateData.transportInfo = row.transportInfo;
+                }
                 if (Object.keys(updateData).length > 0) {
                     material = await prisma.hazmatMaterial.update({
                         where: { id: material.id },
@@ -531,53 +598,77 @@ router.post('/bulk-import-matrix', auth_1.authMiddleware, async (req, res) => {
                 }
                 results.materialsReused++;
             }
-            // Ensure material is linked to facility (FacilityHazmatItem)
+            // Calculate total facility amount and unit:
+            // If packageQuantity (e.g. 400) and packageUnit (e.g. 'ml') are provided:
+            // Total amount across facility = totalMaxUnits * packageQuantity
+            // Unit = matched unit for packageUnit
+            let facilityAmount = null;
+            let facilityUnitId = null;
+            const matchedUnit = findUnit(agg.packageUnit || undefined);
+            if (agg.packageQuantity && agg.packageQuantity > 0) {
+                facilityAmount = +(agg.totalMaxUnits * agg.packageQuantity).toFixed(2);
+                facilityUnitId = matchedUnit ? matchedUnit.id : adetUnit.id;
+            }
+            else if (matchedUnit) {
+                facilityAmount = agg.totalMaxUnits > 0 ? agg.totalMaxUnits : (agg.totalMinUnits > 0 ? agg.totalMinUnits : 1);
+                facilityUnitId = matchedUnit.id;
+            }
+            else {
+                facilityAmount = agg.totalMaxUnits > 0 ? agg.totalMaxUnits : (agg.totalMinUnits > 0 ? agg.totalMinUnits : 1);
+                facilityUnitId = adetUnit.id;
+            }
+            // Upsert FacilityHazmatItem
             await prisma.facilityHazmatItem.upsert({
                 where: {
                     facilityId_materialId: { facilityId, materialId: material.id }
                 },
-                update: {},
+                update: {
+                    amountValue: facilityAmount,
+                    unitId: facilityUnitId
+                },
                 create: {
                     facilityId,
                     materialId: material.id,
-                    amountValue: row.maxQuantity || row.minQuantity || 1,
-                    unitId: adetUnit.id
+                    amountValue: facilityAmount,
+                    unitId: facilityUnitId
                 }
             });
-            // Find target location for this row
-            const rawDept = (row.department || '').trim();
-            const targetLocationId = resolvedLocations[rawDept];
-            if (targetLocationId) {
-                const minQ = row.minQuantity !== undefined && row.minQuantity !== null ? Number(row.minQuantity) : null;
-                const maxQ = row.maxQuantity !== undefined && row.maxQuantity !== null ? Number(row.maxQuantity) : null;
-                const existingItem = await prisma.hazmatInventoryItem.findFirst({
-                    where: {
-                        facilityId,
-                        locationId: targetLocationId,
-                        materialId: material.id
-                    }
-                });
-                if (existingItem) {
-                    await prisma.hazmatInventoryItem.update({
-                        where: { id: existingItem.id },
-                        data: {
-                            minQuantity: minQ !== null ? minQ : existingItem.minQuantity,
-                            maxQuantity: maxQ !== null ? maxQ : existingItem.maxQuantity
-                        }
-                    });
-                    results.inventoryItemsUpdated++;
-                }
-                else {
-                    await prisma.hazmatInventoryItem.create({
-                        data: {
+            // Upsert HazmatInventoryItem for each department row
+            for (const row of agg.rows) {
+                const rawDept = (row.department || '').trim();
+                const targetLocationId = resolvedLocations[rawDept];
+                if (targetLocationId) {
+                    const minQ = row.minQuantity !== undefined && row.minQuantity !== null && row.minQuantity !== '' ? Number(row.minQuantity) : null;
+                    const maxQ = row.maxQuantity !== undefined && row.maxQuantity !== null && row.maxQuantity !== '' ? Number(row.maxQuantity) : null;
+                    const existingItem = await prisma.hazmatInventoryItem.findFirst({
+                        where: {
                             facilityId,
                             locationId: targetLocationId,
-                            materialId: material.id,
-                            minQuantity: minQ,
-                            maxQuantity: maxQ
+                            materialId: material.id
                         }
                     });
-                    results.inventoryItemsCreated++;
+                    if (existingItem) {
+                        await prisma.hazmatInventoryItem.update({
+                            where: { id: existingItem.id },
+                            data: {
+                                minQuantity: minQ !== null ? minQ : existingItem.minQuantity,
+                                maxQuantity: maxQ !== null ? maxQ : existingItem.maxQuantity
+                            }
+                        });
+                        results.inventoryItemsUpdated++;
+                    }
+                    else {
+                        await prisma.hazmatInventoryItem.create({
+                            data: {
+                                facilityId,
+                                locationId: targetLocationId,
+                                materialId: material.id,
+                                minQuantity: minQ,
+                                maxQuantity: maxQ
+                            }
+                        });
+                        results.inventoryItemsCreated++;
+                    }
                 }
             }
         }

@@ -7,6 +7,7 @@ import { Plus, Edit, Trash2, Eye, Printer } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { formatLocationName } from '@/utils/eyewashRiskHelpers';
 
 const api = {
   get: async (url: string) => {
@@ -39,6 +40,17 @@ export default function EyewashRiskAnalysisPage() {
     queryKey: ['eyewash-risk', facilityId],
     queryFn: async () => {
       const res = await api.get(`/hazmat/eyewash-risk?facilityId=${facilityId}`);
+      return res.json();
+    },
+    enabled: !!facilityId
+  });
+
+  const { data: locations = [] } = useQuery({
+    queryKey: ['facility-locations', facilityId],
+    queryFn: async () => {
+      if (!facilityId) return [];
+      const res = await api.get(`/risks/facilities/${facilityId}/locations`);
+      if (!res.ok) return [];
       return res.json();
     },
     enabled: !!facilityId
@@ -133,7 +145,7 @@ export default function EyewashRiskAnalysisPage() {
                     return (
                       <tr key={item.id} className="border-b last:border-0 hover:bg-muted/30">
                         <td className="p-3">{new Date(item.analysisDate).toLocaleDateString('tr-TR')}</td>
-                        <td className="p-3 font-semibold">{item.department}</td>
+                        <td className="p-3 font-semibold">{formatLocationName(item.department, locations)}</td>
                         <td className="p-3">
                           <Badge className={chemRes.color}>{item.chemScore} - {chemRes.label}</Badge>
                         </td>

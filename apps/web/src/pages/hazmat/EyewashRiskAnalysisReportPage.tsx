@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, Download, Loader2 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
+import { formatLocationName } from '@/utils/eyewashRiskHelpers';
 
 const api = {
   get: async (url: string) => {
@@ -31,6 +32,17 @@ export default function EyewashRiskAnalysisReportPage() {
     queryKey: ['eyewash-risk', facilityId],
     queryFn: async () => {
       const res = await api.get(`/hazmat/eyewash-risk?facilityId=${facilityId}`);
+      return res.json();
+    },
+    enabled: !!facilityId
+  });
+
+  const { data: locations = [] } = useQuery({
+    queryKey: ['facility-locations', facilityId],
+    queryFn: async () => {
+      if (!facilityId) return [];
+      const res = await api.get(`/risks/facilities/${facilityId}/locations`);
+      if (!res.ok) return [];
       return res.json();
     },
     enabled: !!facilityId
@@ -242,21 +254,29 @@ export default function EyewashRiskAnalysisReportPage() {
               const exposureSum = (row.chemExposureCount || 0) + (row.bioExposureCount || 0);
               const nearMissSum = (row.chemNearMissCount || 0) + (row.bioNearMissCount || 0);
 
+              const yaniciVal = details.yanici ?? details.Yanici ?? 0;
+              const asindiriciVal = details.asindirici ?? details.Asindirici ?? 0;
+              const tahrisVal = details.tahrisEdici ?? details.tahrisedici ?? details.tahris ?? details.Tahris ?? 0;
+              const oksitleyiciVal = details.oksitleyici ?? details.Oksitleyici ?? 0;
+              const toksikVal = details.toksik ?? details.Toksik ?? 0;
+              const kanserojenVal = details.kanserojen ?? details.Kanserojen ?? 0;
+              const bulasiciVal = details.bulasici ?? details.Bulasici ?? 0;
+
               return (
                 <tr key={row.id}>
                   <td className="border-black border">{i + 1}</td>
                   <td className="border-black border">{new Date(row.analysisDate).toLocaleDateString('tr-TR')}</td>
-                  <td className="border-black border font-bold">{row.department}</td>
+                  <td className="border-black border font-bold">{formatLocationName(row.department, locations)}</td>
                   
                   {/* Chemicals */}
-                  <td className="border-black border">{details.yanici || 0}</td>
-                  <td className="border-black border">{details.asindirici || 0}</td>
-                  <td className="border-black border">{details.tahrisedici || 0}</td>
-                  <td className="border-black border">{details.oksitleyici || 0}</td>
-                  <td className="border-black border">{details.toksik || 0}</td>
-                  <td className="border-black border">{details.kanserojen || 0}</td>
-                  <td className="border-black border">{details.bulasici || 0}</td>
-                  <td className="border-black border font-bold">{totalLiters}</td>
+                  <td className="border-black border">{typeof yaniciVal === 'number' ? +yaniciVal.toFixed(2) : yaniciVal}</td>
+                  <td className="border-black border">{typeof asindiriciVal === 'number' ? +asindiriciVal.toFixed(2) : asindiriciVal}</td>
+                  <td className="border-black border">{typeof tahrisVal === 'number' ? +tahrisVal.toFixed(2) : tahrisVal}</td>
+                  <td className="border-black border">{typeof oksitleyiciVal === 'number' ? +oksitleyiciVal.toFixed(2) : oksitleyiciVal}</td>
+                  <td className="border-black border">{typeof toksikVal === 'number' ? +toksikVal.toFixed(2) : toksikVal}</td>
+                  <td className="border-black border">{typeof kanserojenVal === 'number' ? +kanserojenVal.toFixed(2) : kanserojenVal}</td>
+                  <td className="border-black border">{typeof bulasiciVal === 'number' ? +bulasiciVal.toFixed(2) : bulasiciVal}</td>
+                  <td className="border-black border font-bold">{typeof totalLiters === 'number' ? +totalLiters.toFixed(2) : totalLiters}</td>
                   
                   {/* Accidents */}
                   <td className="border-black border">{exposureSum}</td>

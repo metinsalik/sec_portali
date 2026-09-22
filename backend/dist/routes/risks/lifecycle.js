@@ -288,7 +288,12 @@ router.post('/import', auth_1.authMiddleware, async (req, res) => {
                 }
             }
             const initialScore = Number(row.initialScore) || 0;
-            const finalScore = row.finalScore ? Number(row.finalScore) : null;
+            const rawFinalScore = row.finalScore ? Number(row.finalScore) : null;
+            const finalProb = row.finalProb ? Number(row.finalProb) : (rawFinalScore ? null : 0.5);
+            const finalFreq = row.finalFreq ? Number(row.finalFreq) : (rawFinalScore ? null : 3);
+            const finalSev = row.finalSev ? Number(row.finalSev) : (rawFinalScore ? null : 7);
+            const finalScore = rawFinalScore ?? Math.round(Number(finalProb || 0.5) * Number(finalFreq || 3) * Number(finalSev || 7));
+            const finalLevel = scoreToLevel(finalScore);
             const status = deriveStatus(row);
             try {
                 await prisma.riskLifecycle.create({
@@ -314,11 +319,11 @@ router.post('/import', auth_1.authMiddleware, async (req, res) => {
                         actionBy: row.actionBy || null,
                         followUpMeasure: row.followUpMeasure || null,
                         extraImprovement: row.extraImprovement || null,
-                        finalProb: row.finalProb ? Number(row.finalProb) : null,
-                        finalFreq: row.finalFreq ? Number(row.finalFreq) : null,
-                        finalSev: row.finalSev ? Number(row.finalSev) : null,
+                        finalProb,
+                        finalFreq,
+                        finalSev,
                         finalScore,
-                        finalLevel: finalScore ? scoreToLevel(finalScore) : null,
+                        finalLevel,
                         status,
                         createdBy: req.user?.username || 'Sistem',
                         // Yeni alanlar
@@ -558,11 +563,15 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
                 // Follow up / final score fields
                 followUpMeasure: req.body.followUpMeasure || null,
                 extraImprovement: req.body.extraImprovement || null,
-                finalProb: finalProb ? Number(finalProb) : null,
-                finalFreq: finalFreq ? Number(finalFreq) : null,
-                finalSev: finalSev ? Number(finalSev) : null,
-                finalScore: finalScore ? Number(finalScore) : null,
-                finalLevel: finalScore ? scoreToLevel(Number(finalScore)) : null,
+                finalProb: finalProb !== undefined && finalProb !== null && finalProb !== '' ? Number(finalProb) : 0.5,
+                finalFreq: finalFreq !== undefined && finalFreq !== null && finalFreq !== '' ? Number(finalFreq) : 3,
+                finalSev: finalSev !== undefined && finalSev !== null && finalSev !== '' ? Number(finalSev) : 7,
+                finalScore: finalScore !== undefined && finalScore !== null && finalScore !== ''
+                    ? Number(finalScore)
+                    : Math.round((Number(finalProb) || 0.5) * (Number(finalFreq) || 3) * (Number(finalSev) || 7)),
+                finalLevel: scoreToLevel(finalScore !== undefined && finalScore !== null && finalScore !== ''
+                    ? Number(finalScore)
+                    : Math.round((Number(finalProb) || 0.5) * (Number(finalFreq) || 3) * (Number(finalSev) || 7))),
                 // New fields (Page Transition)
                 detectionDate: parseDate(detectionDate),
                 impactDamage: impactDamage || null,

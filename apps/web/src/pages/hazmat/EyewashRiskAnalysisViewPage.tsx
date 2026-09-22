@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Printer } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
+import { formatLocationName } from '@/utils/eyewashRiskHelpers';
 
 const api = {
   get: async (url: string) => {
@@ -35,6 +36,17 @@ export default function EyewashRiskAnalysisViewPage() {
       return res.json();
     },
     enabled: !!facilityId && !!id,
+  });
+
+  const { data: locations = [] } = useQuery({
+    queryKey: ['facility-locations', facilityId],
+    queryFn: async () => {
+      if (!facilityId) return [];
+      const res = await api.get(`/risks/facilities/${facilityId}/locations`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!facilityId
   });
 
   const data = analyses?.find((x: any) => x.id === id);
@@ -75,7 +87,7 @@ export default function EyewashRiskAnalysisViewPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Risk Analizi Detayları</h1>
-            <p className="text-muted-foreground">{data.department} Departmanı Göz Duşu İhtiyacı Analiz Raporu</p>
+            <p className="text-muted-foreground">{formatLocationName(data.department, locations)} Departmanı Göz Duşu İhtiyacı Analiz Raporu</p>
           </div>
         </div>
         <Button variant="outline" onClick={() => window.print()} className="hidden md:flex">
@@ -87,7 +99,7 @@ export default function EyewashRiskAnalysisViewPage() {
       <Card>
         <CardContent className="space-y-8 pt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/30 p-6 rounded-xl border border-border/50">
-            <div><span className="font-semibold text-muted-foreground block text-sm mb-1">Departman</span> <div className="text-lg font-medium">{data.department || '-'}</div></div>
+            <div><span className="font-semibold text-muted-foreground block text-sm mb-1">Departman</span> <div className="text-lg font-medium">{formatLocationName(data.department, locations)}</div></div>
             <div><span className="font-semibold text-muted-foreground block text-sm mb-1">Analiz Tarihi</span> <div className="text-lg font-medium">{new Date(data.analysisDate).toLocaleDateString('tr-TR')}</div></div>
             <div><span className="font-semibold text-muted-foreground block text-sm mb-1">Alan Yüz Ölçümü (m²)</span> <div className="text-lg font-medium">{data.areaSquareMeters || '-'}</div></div>
             <div><span className="font-semibold text-muted-foreground block text-sm mb-1">Personel Sayısı (Maks)</span> <div className="text-lg font-medium">{data.maxPersonnel || '-'}</div></div>
