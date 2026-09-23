@@ -84,7 +84,7 @@ export default function MaterialViewPage() {
               <FileText className="w-4 h-4" /> Bilgi Kartı Yazdır
             </Button>
             <Button 
-              onClick={() => navigate(`/hazmat/materials/edit/${id}`, { state: { returnTo: returnTo || `/hazmat/materials/view/${id}` } })} 
+              onClick={() => navigate(`/hazmat/materials/edit/${id}`, { state: { returnTo: returnTo || '/hazmat/inventory' } })} 
               className="gap-2"
             >
               <Edit className="w-4 h-4" /> Düzenle

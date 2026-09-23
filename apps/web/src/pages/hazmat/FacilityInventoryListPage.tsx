@@ -1,13 +1,14 @@
-import { useState, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api, { BASE_URL } from '@/lib/api';
 import { useActiveFacility } from '@/hooks/useActiveFacility';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Filter, Printer, ExternalLink, Download, LayoutGrid, Upload, Loader2, Layers } from 'lucide-react';
+import { Plus, Search, Filter, Printer, ExternalLink, Download, LayoutGrid, Upload, Loader2, Layers, Sparkles, Clock, Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
 import { HazmatMaterialSummaryDialog } from '@/components/hazmat/HazmatMaterialSummaryDialog';
@@ -17,14 +18,27 @@ import * as XLSX from 'xlsx';
 
 export default function FacilityInventoryListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const activeFacilityId = useActiveFacility();
 
   const [searchMaterial, setSearchMaterial] = useState('');
   const [searchDepartment, setSearchDepartment] = useState('');
   const [searchAdrCategory, setSearchAdrCategory] = useState('all');
+  const [filterEditStatus, setFilterEditStatus] = useState<'ALL' | 'WITHIN_3H' | 'WITHIN_6H' | 'NOT_UPDATED'>('ALL');
   const [printMaterial, setPrintMaterial] = useState<any>(null);
   
+  const [justUpdatedId, setJustUpdatedId] = useState<string | null>(location.state?.justUpdatedMaterialId || null);
+
+  useEffect(() => {
+    if (justUpdatedId) {
+      const timer = setTimeout(() => {
+        setJustUpdatedId(null);
+      }, 15000);
+      return () => clearTimeout(timer);
+    }
+  }, [justUpdatedId]);
+
   // Dialog state
   const [selectedGroup, setSelectedGroup] = useState<any>(null);
 
@@ -113,12 +127,40 @@ export default function FacilityInventoryListPage() {
         sdsUrl: mat.sdsUrl,
         departments,
         material: mat,
+        updatedAt: mat.updatedAt,
+        createdAt: mat.createdAt,
         amountValue: facItem.amountValue,
         unitName: facItem.unit?.name,
         unitSymbol: facItem.unit?.symbol
       };
     });
   }, [summaryData]);
+
+  const getUpdateStatus = (item: any) => {
+    const isInstant = justUpdatedId === item.materialId;
+    if (!item.updatedAt) return { isInstant, type: 'NONE', label: null };
+
+    const updateTime = new Date(item.updatedAt).getTime();
+    const createTime = item.createdAt ? new Date(item.createdAt).getTime() : 0;
+    const diffMs = Date.now() - updateTime;
+    const isActuallyUpdated = Math.abs(updateTime - createTime) > 2000;
+
+    if (!isActuallyUpdated && !isInstant) return { isInstant: false, type: 'NONE', label: null };
+
+    const hoursAgo = diffMs / (1000 * 60 * 60);
+
+    if (hoursAgo <= 3) {
+      const minutesAgo = Math.max(1, Math.round(diffMs / (1000 * 60)));
+      const timeText = minutesAgo < 60 ? `${minutesAgo} dk önce` : `${Math.floor(hoursAgo)} saat önce`;
+      return { isInstant, type: '3H', label: `Son 3 Saat (${timeText})` };
+    }
+
+    if (hoursAgo <= 6) {
+      return { isInstant, type: '6H', label: `Son 6 Saat (${Math.floor(hoursAgo)} sa önce)` };
+    }
+
+    return { isInstant, type: 'OLD', label: null };
+  };
 
   // Apply filters
   const filteredGroups = useMemo(() => {
@@ -146,8 +188,18 @@ export default function FacilityInventoryListPage() {
       );
     }
 
+    if (filterEditStatus !== 'ALL') {
+      filtered = filtered.filter((g: any) => {
+        const status = getUpdateStatus(g);
+        if (filterEditStatus === 'WITHIN_3H') return status.type === '3H' || status.isInstant;
+        if (filterEditStatus === 'WITHIN_6H') return status.type === '3H' || status.type === '6H' || status.isInstant;
+        if (filterEditStatus === 'NOT_UPDATED') return status.type !== '3H' && status.type !== '6H' && !status.isInstant;
+        return true;
+      });
+    }
+
     return filtered;
-  }, [groupedSummary, searchMaterial, searchDepartment, searchAdrCategory]);
+  }, [groupedSummary, searchMaterial, searchDepartment, searchAdrCategory, filterEditStatus, justUpdatedId]);
 
   const handleExcelFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -400,6 +452,19 @@ export default function FacilityInventoryListPage() {
           />
         </div>
         <div className="relative flex-1">
+          <Select value={filterEditStatus} onValueChange={(val: any) => setFilterEditStatus(val)}>
+            <SelectTrigger className="w-full bg-background">
+              <SelectValue placeholder="İşlem / Güncelleme" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Tüm Durumlar</SelectItem>
+              <SelectItem value="WITHIN_3H">⚡ Son 3 Saatte Düzenlenen</SelectItem>
+              <SelectItem value="WITHIN_6H">🕒 Son 6 Saatte Düzenlenen</SelectItem>
+              <SelectItem value="NOT_UPDATED">İşlem Görmemişler</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="relative flex-1">
           <select 
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             value={searchAdrCategory}
@@ -448,10 +513,16 @@ export default function FacilityInventoryListPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredGroups.map((item: any, i: number) => (
+                  filteredGroups.map((item: any, i: number) => {
+                    const updateStatus = getUpdateStatus(item);
+                    return (
                     <tr 
                       key={i} 
-                      className="hover:bg-muted/30 transition-colors cursor-pointer group"
+                      className={`cursor-pointer group transition-all duration-700 ${
+                        updateStatus.isInstant 
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 ring-2 ring-emerald-500 ring-inset' 
+                          : 'hover:bg-muted/30'
+                      }`}
                       onClick={() => setSelectedGroup(item)}
                     >
                       <td className="px-4 py-3 font-medium text-foreground">
@@ -468,7 +539,30 @@ export default function FacilityInventoryListPage() {
                             ))}
                           </div>
                           <div>
-                            <span className="group-hover:text-primary transition-colors">{item.productName}</span>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="group-hover:text-primary transition-colors">{item.productName}</span>
+
+                              {updateStatus.isInstant && (
+                                <span className="inline-flex items-center gap-1 bg-emerald-600 text-white font-semibold text-xs px-2.5 py-0.5 rounded-full shadow-sm animate-pulse">
+                                  <Sparkles className="w-3 h-3" />
+                                  Şimdi Düzenlendi
+                                </span>
+                              )}
+
+                              {!updateStatus.isInstant && updateStatus.type === '3H' && (
+                                <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200 border border-amber-300 dark:border-amber-700 text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium" title={item.updatedAt ? new Date(item.updatedAt).toLocaleString('tr-TR') : ''}>
+                                  <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                                  {updateStatus.label}
+                                </span>
+                              )}
+
+                              {!updateStatus.isInstant && updateStatus.type === '6H' && (
+                                <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-200 border border-blue-300 dark:border-blue-700 text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium" title={item.updatedAt ? new Date(item.updatedAt).toLocaleString('tr-TR') : ''}>
+                                  <Clock className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                                  {updateStatus.label}
+                                </span>
+                              )}
+                            </div>
                             <div className="text-xs text-muted-foreground font-normal">
                               {item.brandName || 'Marka Belirtilmemiş'}
                             </div>
@@ -506,21 +600,36 @@ export default function FacilityInventoryListPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0 z-10 relative"
-                          title="Bilgi Kartı Oluştur"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPrintMaterial(item.material);
-                          }}
-                        >
-                          <Printer className="h-4 w-4 text-blue-600" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0 z-10 relative text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            title="Maddeyi Düzenle"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/hazmat/materials/edit/${item.materialId}`, { state: { returnTo: '/hazmat/inventory' } });
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0 z-10 relative"
+                            title="Bilgi Kartı Oluştur"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPrintMaterial(item.material);
+                            }}
+                          >
+                            <Printer className="h-4 w-4 text-emerald-600" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
                 </tbody>
               </table>
