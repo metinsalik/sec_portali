@@ -150,8 +150,8 @@ export default function PortalPage() {
         {/* Bento Grid layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-          {/* Card 1: Operasyon Yönetim Sistemi (Only shown to admin/management) */}
-          {(hasAdminAccess || user?.modules?.includes('PANEL') || user?.modules?.includes('RENOVATION_REPORT')) && (
+          {/* Card 1: Operasyon Yönetim Sistemi */}
+          {(hasAdminAccess || user?.modules?.includes('PANEL') || user?.modules?.includes('RENOVATION_REPORT') || user?.modules?.includes('FIRE_SAFETY_CONTROL')) && (
             <div
               onClick={() => navigate('/operations-management')}
               className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"

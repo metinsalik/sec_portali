@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api, { API_URL, BASE_URL } from '@/lib/api';
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Search, Check, Save, AlertTriangle, Info } from 'lucide-react';
+import { ArrowLeft, Search, Check, Save, AlertTriangle, Info, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function MaterialFormPage() {
@@ -17,9 +17,12 @@ export default function MaterialFormPage() {
   const isEditMode = !!id;
   const queryClient = useQueryClient();
   const activeFacilityId = localStorage.getItem('activeFacilityId');
+  const draftKey = `hazmat_edit_draft_${id || 'new'}_${activeFacilityId || 'global'}`;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGlobalMaterial, setSelectedGlobalMaterial] = useState<any>(null);
+  const [isDataLoaded, setIsDataLoaded] = useState(!isEditMode);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   // Miktar Cinsleri
   const { data: units = [] } = useQuery<any[]>({
@@ -108,7 +111,7 @@ export default function MaterialFormPage() {
       const data = await res.json();
       const mat = data.material;
       const fac = data.facilityItem;
-      setFormData({
+      const serverFormData = {
         productName: mat.productName || '',
         brandName: mat.brandName || '',
         amountValue: fac?.amountValue || '',
@@ -135,11 +138,47 @@ export default function MaterialFormPage() {
         imageUrl: mat.imageUrl || '',
         sdsUrl: mat.sdsUrl || '',
         sdsExpiryDate: mat.sdsExpiryDate ? new Date(mat.sdsExpiryDate).toISOString().split('T')[0] : ''
-      });
+      };
+
+      // Check if there is an unsaved local draft
+      const savedDraft = localStorage.getItem(draftKey);
+      if (savedDraft) {
+        try {
+          const parsed = JSON.parse(savedDraft);
+          if (parsed && typeof parsed === 'object') {
+            setFormData({ ...serverFormData, ...parsed });
+            toast.info('Kaydedilmemiş değişiklikleriniz yerel taslaktan otomatik geri yüklendi.');
+            setIsDataLoaded(true);
+            return data;
+          }
+        } catch (e) {
+          console.error('Failed to parse draft:', e);
+        }
+      }
+
+      setFormData(serverFormData);
+      setIsDataLoaded(true);
       return data;
     },
     enabled: isEditMode && !!activeFacilityId
   });
+
+  // Auto-save to localStorage whenever formData changes (with 500ms debounce)
+  useEffect(() => {
+    if (!isDataLoaded) return;
+
+    setAutoSaveStatus('saving');
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(draftKey, JSON.stringify(formData));
+        setAutoSaveStatus('saved');
+      } catch (err) {
+        console.error('Draft auto-save error:', err);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [formData, isDataLoaded, draftKey]);
 
   const handleSelectGlobal = (mat: any) => {
     setSelectedGlobalMaterial(mat);
@@ -267,6 +306,7 @@ export default function MaterialFormPage() {
       }
     },
     onSuccess: async () => {
+      localStorage.removeItem(draftKey);
       await queryClient.invalidateQueries({ queryKey: ['facility-materials'] });
       await queryClient.invalidateQueries({ queryKey: ['material-details'] });
       await queryClient.invalidateQueries({ queryKey: ['global-materials'] });
@@ -312,13 +352,29 @@ export default function MaterialFormPage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-20">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={() => navigate(returnTo)}>
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{isEditMode ? 'Maddeyi Düzenle' : 'Yeni Madde Ekle'}</h1>
-          <p className="text-muted-foreground">{isEditMode ? 'Bu maddedeki içerik güncellemeleri tüm tesisleri etkiler.' : 'Kütüphanede arama yapın veya yeni oluşturun.'}</p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={() => navigate(returnTo)}>
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight">{isEditMode ? 'Maddeyi Düzenle' : 'Yeni Madde Ekle'}</h1>
+              {autoSaveStatus === 'saving' && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Taslak kaydediliyor...
+                </span>
+              )}
+              {autoSaveStatus === 'saved' && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Değişiklikler otomatik kaydedildi
+                </span>
+              )}
+            </div>
+            <p className="text-muted-foreground">{isEditMode ? 'Bu maddedeki içerik güncellemeleri tüm tesisleri etkiler.' : 'Kütüphanede arama yapın veya yeni oluşturun.'}</p>
+          </div>
         </div>
       </div>
 

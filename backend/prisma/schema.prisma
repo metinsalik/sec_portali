@@ -176,6 +176,7 @@ model Facility {
   elevators              Elevator[]
   electricInfrastructureRecords ElectricInfrastructureRecord[]
   electricInfrastructureStatus  ElectricInfrastructureFacilityStatus?
+  fireSafetyAudits       FireSafetyAudit[]
 }
 
 model IncidentCategory {
@@ -2736,3 +2737,90 @@ model ElectricInfrastructureFacilityStatus {
   facility               Facility  @relation(fields: [facilityId], references: [id], onDelete: Cascade)
 }
 
+// ─────────────────────────────────────────────────────────
+// YANGIN GÜVENLİĞİ KONTROL SİSTEMİ MODELLERİ
+// ─────────────────────────────────────────────────────────
+
+model FireSafetyAudit {
+  id           String   @id @default(cuid())
+  facilityId   String
+  title        String   @default("TOPLANTI TUTANAĞI")
+  subtitle     String?  @default("Teknik Hizmetler, Yangın Güvenliği ve Fiziki Alan Değerlendirme Toplantısı")
+  auditDate    DateTime @default(now())
+  topic        String?
+  purpose      String?
+  status       String   @default("DEVAM_EDIYOR") // DRAFT, DEVAM_EDIYOR, TAMAMLANDI, ARSIV
+  
+  preparedBy   String?  // Hazırlayan
+  reviewedBy   String?  // Kontrol Eden
+  approvedBy   String?  // Onaylayan
+  
+  createdBy    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  facility     Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  items        FireSafetyItem[]
+
+  @@index([facilityId])
+  @@index([auditDate])
+}
+
+model FireSafetyItem {
+  id            String   @id @default(cuid())
+  auditId       String
+  orderNo       Int      @default(1)
+  
+  topic         String   // Konu / Tespit / Açıklama
+  source        String?  // Kaynak (İtfaiye Denetim Raporu, İç Süreç, SEGEM, vb.)
+  category      String?  // Kategori
+  
+  action        String   // Karar / Aksiyon
+  responsible   String   // Sorumlu (Departman veya Kişi)
+  deadlineDate  DateTime? // Termin Tarihi
+  status        String   @default("ACIK") // ACIK, DEVAM_EDIYOR, TAMAMLANDI, IPTAL
+  riskLevel     String?  @default("Orta") // Yüksek, Orta, Düşük
+  
+  // Tespit anındaki fotoğraflar ve dokümanlar: [{ url, name, type, uploadedAt }]
+  findingPhotos Json     @default("[]")
+  notes         String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  audit         FireSafetyAudit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  actions       FireSafetyItemAction[]
+
+  @@index([auditId])
+  @@index([status])
+  @@index([responsible])
+}
+
+model FireSafetyItemAction {
+  id             String   @id @default(cuid())
+  itemId         String
+  
+  performedBy    String   // İşi yapan / işlemi giren kullanıcı
+  actionDate     DateTime @default(now())
+  status         String   @default("Devam Ediyor") // Başlamadı, Devam Ediyor, Tamamlandı, İptal Edildi
+  explanation    String   // Yapılan işlem açıklaması
+  
+  // Aksiyon tamamlanma / işlem kanıt fotoğrafları ve belgeleri: [{ url, name, type, uploadedAt }]
+  evidencePhotos Json     @default("[]")
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  item           FireSafetyItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+}
+
+model FireSafetySetting {
+  id           String   @id @default("default")
+  categories   Json     @default("[]") // [{ id, name }]
+  sources      Json     @default("[]") // [{ id, name }]
+  responsibles Json     @default("[]") // [{ id, name }]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

@@ -184,6 +184,11 @@ import IsgDefterSettings from './pages/safety-management/isg-defter/IsgDefterSet
 import IsgDefterItemDetail from './pages/safety-management/isg-defter/IsgDefterItemDetail';
 import IsgDefterPageBuilder from './pages/safety-management/isg-defter/IsgDefterPageBuilder';
 
+// Yangın Güvenliği Kontrol Sistemi
+import FireSafetyDashboard from './pages/fire_safety_control/FireSafetyDashboard';
+import FireSafetyAuditPage from './pages/fire_safety_control/FireSafetyAuditPage';
+import FireSafetySettingsPage from './pages/fire_safety_control/FireSafetySettingsPage';
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -1335,8 +1340,11 @@ function App() {
                   <Route path="/checklists/submissions/new" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><SubmissionFormPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/checklists/submissions/:id" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><SubmissionFormPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/checklists/reports" element={<ProtectedRoute allowedRoles={['admin','management']}><AppLayout><ReportsPage /></AppLayout></ProtectedRoute>} />
-                  <Route path="/checklists/settings" element={<ProtectedRoute allowedRoles={['admin','management']}><AppLayout><ChecklistSettingsPage /></AppLayout></ProtectedRoute>} />
-
+                  {/* ── YANGIN GÜVENLİĞİ KONTROL SİSTEMİ ──────────── */}
+                  <Route path="/fire-safety-control" element={<ProtectedRoute><AppLayout><FireSafetyDashboard /></AppLayout></ProtectedRoute>} />
+                  <Route path="/fire-safety-control/audit/new" element={<ProtectedRoute><AppLayout><FireSafetyAuditPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/fire-safety-control/audit/:id" element={<ProtectedRoute><AppLayout><FireSafetyAuditPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/fire-safety-control/settings" element={<ProtectedRoute><AppLayout><FireSafetySettingsPage /></AppLayout></ProtectedRoute>} />
 
                   {/* ── Redirects ──────────────────────────────────── */}
                   <Route path="/" element={<Navigate to="/portal" replace />} />

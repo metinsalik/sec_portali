@@ -220,6 +220,15 @@ const isgKurulNavItems = [
   { label: 'Modül Ayarları', icon: Settings, to: '/isg-kurul/settings' },
 ];
 
+const fireSafetyControlNavItems = (hasAdminAccess: boolean) => [
+  { label: 'GENEL', type: 'group' },
+  { label: 'Dashboard', icon: LayoutDashboard, to: '/fire-safety-control', end: true },
+  { label: 'TUTANAKLAR & DENETİM', type: 'group' },
+  { label: 'Yeni Tutanak / Tespit', icon: FileText, to: '/fire-safety-control/audit/new' },
+  { label: 'AYARLAR', type: 'group' },
+  { label: 'Modül Ayarları', icon: Settings, to: '/fire-safety-control/settings' },
+];
+
 const profileNavItems = (hasAdminAccess: boolean) => [
   { label: 'UYGULAMALAR', type: 'group' },
   ...(hasAdminAccess ? [{ label: 'Operasyon Yönetim Sistemi', icon: LayoutDashboard, to: '/operations-management' }] : []),
@@ -302,6 +311,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   } else if (path.startsWith('/isg-kurul')) {
     navItems = isgKurulNavItems;
     moduleName = 'İSG Kurul Yönetimi';
+  } else if (path.startsWith('/fire-safety-control')) {
+    navItems = fireSafetyControlNavItems(!!hasAdminAccess);
+    moduleName = 'Yangın Güvenliği Kontrol Sistemi';
   } else if (path.startsWith('/profile') || path.startsWith('/notifications')) {
     navItems = profileNavItems(!!hasAdminAccess);
     moduleName = path.startsWith('/profile') ? 'Kullanıcı Profili' : 'Bildirim Merkezi';
@@ -325,7 +337,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
     }
     if (
       path.startsWith('/panel') ||
-      path.startsWith('/renovation-report')
+      path.startsWith('/renovation-report') ||
+      path.startsWith('/fire-safety-control')
     ) {
       return '/operations-management';
     }
@@ -403,7 +416,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* Facility Switcher (Show for modules that need it) */}
-        {(path.startsWith('/isg-kurul') || path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management') || path.startsWith('/renovation-report') || path.startsWith('/checklists') || path.startsWith('/safety-management/fire-doors') || path.startsWith('/safety-management/elevator-tracking') || path.startsWith('/safety-management/electric-infrastructure')) && (
+        {(path.startsWith('/isg-kurul') || path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management') || path.startsWith('/renovation-report') || path.startsWith('/checklists') || path.startsWith('/safety-management/fire-doors') || path.startsWith('/safety-management/elevator-tracking') || path.startsWith('/safety-management/electric-infrastructure') || path.startsWith('/fire-safety-control')) && (
           <div className="flex-shrink-0">
             <FacilitySwitcher isCollapsed={isCollapsed} />
           </div>
