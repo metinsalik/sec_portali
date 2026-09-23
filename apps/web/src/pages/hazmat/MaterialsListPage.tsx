@@ -1,11 +1,11 @@
-import { useState, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useActiveFacility } from '@/hooks/useActiveFacility';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, AlertTriangle, Eye, Pencil, Trash2, Upload, Loader2, ArrowUpDown, FileText } from 'lucide-react';
+import { Plus, Search, AlertTriangle, Eye, Pencil, Trash2, Upload, Loader2, ArrowUpDown, FileText, Sparkles, Clock, CheckCircle2 } from 'lucide-react';
 import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,12 +15,14 @@ import * as XLSX from 'xlsx';
 
 export default function MaterialsListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const activeFacilityId = useActiveFacility();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterBrand, setFilterBrand] = useState('ALL');
   const [filterCategory, setFilterCategory] = useState('ALL');
+  const [filterEditStatus, setFilterEditStatus] = useState<'ALL' | 'JUST_UPDATED' | 'WITHIN_3H' | 'WITHIN_6H' | 'NOT_UPDATED'>('ALL');
   const [sortField, setSortField] = useState<'name' | 'category'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -29,6 +31,18 @@ export default function MaterialsListPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const isGlobalAdmin = user?.isAdmin || user?.isManagement;
+
+  const [justUpdatedId, setJustUpdatedId] = useState<string | null>(location.state?.justUpdatedMaterialId || null);
+
+  // Clear justUpdatedId from location state after 15 seconds of glow
+  useEffect(() => {
+    if (justUpdatedId) {
+      const timer = setTimeout(() => {
+        setJustUpdatedId(null);
+      }, 15000);
+      return () => clearTimeout(timer);
+    }
+  }, [justUpdatedId]);
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [globalDeleteId, setGlobalDeleteId] = useState<string | null>(null);
@@ -341,6 +355,32 @@ export default function MaterialsListPage() {
     return Array.from(categories);
   }, [items]);
 
+  const getUpdateStatus = (item: any) => {
+    const isInstant = justUpdatedId === item.id;
+    if (!item.updatedAt) return { isInstant, type: 'NONE', label: null };
+
+    const updateTime = new Date(item.updatedAt).getTime();
+    const createTime = item.createdAt ? new Date(item.createdAt).getTime() : 0;
+    const diffMs = Date.now() - updateTime;
+    const isActuallyUpdated = Math.abs(updateTime - createTime) > 2000; // creation and update differ
+
+    if (!isActuallyUpdated && !isInstant) return { isInstant: false, type: 'NONE', label: null };
+
+    const hoursAgo = diffMs / (1000 * 60 * 60);
+
+    if (hoursAgo <= 3) {
+      const minutesAgo = Math.max(1, Math.round(diffMs / (1000 * 60)));
+      const timeText = minutesAgo < 60 ? `${minutesAgo} dk önce` : `${Math.floor(hoursAgo)} saat önce`;
+      return { isInstant, type: '3H', label: `Son 3 Saat (${timeText})` };
+    }
+
+    if (hoursAgo <= 6) {
+      return { isInstant, type: '6H', label: `Son 6 Saat (${Math.floor(hoursAgo)} sa önce)` };
+    }
+
+    return { isInstant, type: 'OLD', label: null };
+  };
+
   const filteredItems = useMemo(() => {
     const result = items.filter(item => {
       const matchesSearch = 
@@ -349,6 +389,14 @@ export default function MaterialsListPage() {
       
       const matchesBrand = filterBrand === 'ALL' || item.brandName === filterBrand;
       const matchesCategory = filterCategory === 'ALL' || item.category?.name === filterCategory;
+
+      if (filterEditStatus !== 'ALL') {
+        const status = getUpdateStatus(item);
+        if (filterEditStatus === 'JUST_UPDATED' && !status.isInstant) return false;
+        if (filterEditStatus === 'WITHIN_3H' && status.type !== '3H' && !status.isInstant) return false;
+        if (filterEditStatus === 'WITHIN_6H' && status.type !== '3H' && status.type !== '6H' && !status.isInstant) return false;
+        if (filterEditStatus === 'NOT_UPDATED' && (status.type === '3H' || status.type === '6H' || status.isInstant)) return false;
+      }
       
       return matchesSearch && matchesBrand && matchesCategory;
     });
@@ -367,7 +415,7 @@ export default function MaterialsListPage() {
     });
 
     return result;
-  }, [items, searchQuery, filterBrand, filterCategory, sortField, sortOrder]);
+  }, [items, searchQuery, filterBrand, filterCategory, filterEditStatus, sortField, sortOrder, justUpdatedId]);
 
   return (
     <div className="space-y-6">
@@ -410,8 +458,19 @@ export default function MaterialsListPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Select value={filterCategory} onValueChange={setFilterCategory}>
+        <Select value={filterEditStatus} onValueChange={(val: any) => setFilterEditStatus(val)}>
           <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="İşlem / Güncelleme" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Tüm Durumlar</SelectItem>
+            <SelectItem value="WITHIN_3H">⚡ Son 3 Saatte Düzenlenen</SelectItem>
+            <SelectItem value="WITHIN_6H">🕒 Son 6 Saatte Düzenlenen</SelectItem>
+            <SelectItem value="NOT_UPDATED">İşlem Görmemişler</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Kategori Filtresi" />
           </SelectTrigger>
           <SelectContent>
@@ -422,7 +481,7 @@ export default function MaterialsListPage() {
           </SelectContent>
         </Select>
         <Select value={filterBrand} onValueChange={setFilterBrand}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Marka Filtresi" />
           </SelectTrigger>
           <SelectContent>
@@ -530,31 +589,64 @@ export default function MaterialsListPage() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {filteredItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3">
-                      <input 
-                        type="checkbox" 
-                        className="rounded border-muted-foreground/30 text-primary focus:ring-primary cursor-pointer"
-                        checked={selectedIds.includes(item.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) setSelectedIds(prev => [...prev, item.id]);
-                          else setSelectedIds(prev => prev.filter(id => id !== item.id));
-                        }}
-                      />
-                    </td>
-                    <td className="px-4 py-3 font-medium text-foreground flex items-center gap-2">
-                      {item.brandName ? `${item.brandName} - ` : ''}{item.productName}
-                      {item.isInFacility ? (
-                        <span className="bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
-                          Tesisimde Var
-                        </span>
-                      ) : (
-                        <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
-                          Havuzda
-                        </span>
-                      )}
-                    </td>
+                {filteredItems.map((item) => {
+                  const updateStatus = getUpdateStatus(item);
+                  return (
+                    <tr 
+                      key={item.id} 
+                      className={`transition-all duration-700 ${
+                        updateStatus.isInstant 
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 ring-2 ring-emerald-500 ring-inset' 
+                          : 'hover:bg-muted/30'
+                      }`}
+                    >
+                      <td className="px-4 py-3">
+                        <input 
+                          type="checkbox" 
+                          className="rounded border-muted-foreground/30 text-primary focus:ring-primary cursor-pointer"
+                          checked={selectedIds.includes(item.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) setSelectedIds(prev => [...prev, item.id]);
+                            else setSelectedIds(prev => prev.filter(id => id !== item.id));
+                          }}
+                        />
+                      </td>
+                      <td className="px-4 py-3 font-medium text-foreground">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span>{item.brandName ? `${item.brandName} - ` : ''}{item.productName}</span>
+
+                          {updateStatus.isInstant && (
+                            <span className="inline-flex items-center gap-1 bg-emerald-600 text-white font-semibold text-xs px-2.5 py-0.5 rounded-full shadow-sm animate-pulse">
+                              <Sparkles className="w-3 h-3" />
+                              Şimdi Düzenlendi
+                            </span>
+                          )}
+
+                          {!updateStatus.isInstant && updateStatus.type === '3H' && (
+                            <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200 border border-amber-300 dark:border-amber-700 text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium" title={item.updatedAt ? new Date(item.updatedAt).toLocaleString('tr-TR') : ''}>
+                              <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                              {updateStatus.label}
+                            </span>
+                          )}
+
+                          {!updateStatus.isInstant && updateStatus.type === '6H' && (
+                            <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-200 border border-blue-300 dark:border-blue-700 text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium" title={item.updatedAt ? new Date(item.updatedAt).toLocaleString('tr-TR') : ''}>
+                              <Clock className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                              {updateStatus.label}
+                            </span>
+                          )}
+
+                          {item.isInFacility ? (
+                            <span className="bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
+                              Tesisimde Var
+                            </span>
+                          ) : (
+                            <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
+                              Havuzda
+                            </span>
+                          )}
+                        </div>
+                      </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {item.category?.name || '-'}
                     </td>
@@ -625,7 +717,8 @@ export default function MaterialsListPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                );
+              })}
               </tbody>
             </table>
           </div>

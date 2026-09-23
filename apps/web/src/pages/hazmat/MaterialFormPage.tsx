@@ -305,13 +305,14 @@ export default function MaterialFormPage() {
         return res.json();
       }
     },
-    onSuccess: async () => {
+    onSuccess: async (data: any) => {
       localStorage.removeItem(draftKey);
       await queryClient.invalidateQueries({ queryKey: ['facility-materials'] });
       await queryClient.invalidateQueries({ queryKey: ['material-details'] });
       await queryClient.invalidateQueries({ queryKey: ['global-materials'] });
       toast.success(isEditMode ? 'Tehlikeli Madde güncellendi!' : 'Tehlikeli Madde başarıyla tesise eklendi!');
-      navigate(returnTo);
+      const targetId = id || data?.id || data?.materialId || selectedGlobalMaterial?.id;
+      navigate(returnTo, { state: { justUpdatedMaterialId: targetId } });
     },
     onError: (err: any) => {
       toast.error(err.message || 'Bir hata oluştu. Veritabanı bağlantınızı kontrol edin.');
