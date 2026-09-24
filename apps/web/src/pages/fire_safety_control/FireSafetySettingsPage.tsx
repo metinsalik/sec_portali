@@ -302,12 +302,6 @@ export default function FireSafetySettingsPage() {
             </CardContent>
           </div>
         </Card>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </div>
-        </Card>
 
         {/* 2. Kategoriler */}
         <Card className="border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
