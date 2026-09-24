@@ -389,14 +389,16 @@ export default function FireSafetyDashboard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/fire-safety-control/settings')}
-            className="bg-white/10 hover:bg-white/20 text-white border-white/30 backdrop-blur-sm shadow-sm"
-          >
-            <Settings className="w-4 h-4 mr-2" />
-            Modül Ayarları
-          </Button>
+          {isManager && (
+            <Button
+              variant="outline"
+              onClick={() => navigate('/fire-safety-control/settings')}
+              className="bg-white/10 hover:bg-white/20 text-white border-white/30 backdrop-blur-sm shadow-sm"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Modül Ayarları
+            </Button>
+          )}
 
           <Button
             onClick={() => navigate('/fire-safety-control/audit/new')}

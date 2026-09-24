@@ -225,8 +225,10 @@ const fireSafetyControlNavItems = (hasAdminAccess: boolean) => [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/fire-safety-control', end: true },
   { label: 'TUTANAKLAR & DENETİM', type: 'group' },
   { label: 'Yeni Tutanak / Tespit', icon: FileText, to: '/fire-safety-control/audit/new' },
-  { label: 'AYARLAR', type: 'group' },
-  { label: 'Modül Ayarları', icon: Settings, to: '/fire-safety-control/settings' },
+  ...(hasAdminAccess ? [
+    { label: 'AYARLAR', type: 'group' },
+    { label: 'Modül Ayarları', icon: Settings, to: '/fire-safety-control/settings' },
+  ] : []),
 ];
 
 const profileNavItems = (hasAdminAccess: boolean) => [

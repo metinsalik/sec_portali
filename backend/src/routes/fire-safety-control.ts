@@ -135,22 +135,36 @@ router.get('/settings/all', authMiddleware, async (req: AuthRequest, res: Respon
   }
 });
 
-// Modül ayarlarını güncelle
+// Modül ayarlarını güncelle (Sadece Yöneticiler)
 router.post('/settings/all', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
+    const user = req.user!;
+    const isManager = user.isAdmin || user.isManagement || user.roles?.includes('admin') || user.roles?.includes('management');
+    if (!isManager) {
+      return res.status(403).json({ error: 'Bu işlem için yetkiniz bulunmamaktadır. Sadece yöneticiler ayarları düzenleyebilir.' });
+    }
+
     const { sources, categories, responsibles } = req.body;
+
+    // Mevcut ayarları alarak gönderilmeyen listeleri koru
+    const current = await prisma.fireSafetySetting.findUnique({ where: { id: 'default' } });
+
+    const finalSources = sources !== undefined ? sources : (current?.sources || []);
+    const finalCategories = categories !== undefined ? categories : (current?.categories || []);
+    const finalResponsibles = responsibles !== undefined ? responsibles : (current?.responsibles || []);
+
     const updated = await prisma.fireSafetySetting.upsert({
       where: { id: 'default' },
       update: {
-        sources: sources || [],
-        categories: categories || [],
-        responsibles: responsibles || []
+        sources: finalSources,
+        categories: finalCategories,
+        responsibles: finalResponsibles
       },
       create: {
         id: 'default',
-        sources: sources || [],
-        categories: categories || [],
-        responsibles: responsibles || []
+        sources: finalSources,
+        categories: finalCategories,
+        responsibles: finalResponsibles
       }
     });
     res.json(updated);
