@@ -89,12 +89,8 @@ export default function FireSafetyDashboard() {
   );
 
   const globalFacId = facilityId || localStorage.getItem('activeFacilityId') || '';
-  // Yönetici ise ve seçili tesis yoksa varsayılan 'all', normal kullanıcı ise seçili tesis
-  const [selectedFacilityId, setSelectedFacilityId] = useState<string>(() => {
-    if (globalFacId) return globalFacId;
-    if (isManager) return 'all';
-    return '';
-  });
+  const userFacilityIds = user?.facilities || [];
+  const hasMultipleFacilities = isManager || userFacilityIds.length > 1;
 
   // Settings
   const { data: settingsData } = useQuery({
@@ -133,8 +129,22 @@ export default function FireSafetyDashboard() {
     }
   });
 
+  // Kullanıcının görebileceği tesisler listesi (Yönetici ise hepsi, değilse kullanıcının tanımlı tesisleri)
+  const accessibleFacilities = React.useMemo(() => {
+    if (isManager) return facilities;
+    if (userFacilityIds.length === 0) return facilities;
+    return facilities.filter((f: any) => userFacilityIds.includes(f.id));
+  }, [facilities, userFacilityIds, isManager]);
+
+  // Çoklu tesise sahipse (veya yönetici ise) varsayılan olarak 'all' (konsolide) başlar veya seçili olanı korur
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string>(() => {
+    if (hasMultipleFacilities) return 'all';
+    if (globalFacId) return globalFacId;
+    return 'all';
+  });
+
   // Etkin sorgu tesis parametresi
-  const effectiveFacId = selectedFacilityId || (isManager ? 'all' : globalFacId);
+  const effectiveFacId = selectedFacilityId || (hasMultipleFacilities ? 'all' : (globalFacId || 'all'));
 
   // Tutanakları getir
   const { data: audits = [], isLoading } = useQuery({
@@ -410,17 +420,22 @@ export default function FireSafetyDashboard() {
         </div>
       </div>
 
-      {/* Yönetici Tesis Filtre Çubuğu (Yöneticiler için Tüm Tesisler ve Tekil Tesis Seçimi) */}
-      {isManager && (
+      {/* Çoklu Tesis veya Yönetici Tesis Filtre Çubuğu */}
+      {hasMultipleFacilities && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950/50 text-red-600 flex items-center justify-center shrink-0">
               <Building2 className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Yönetici Görünümü</div>
+              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                {isManager ? 'Yönetici Görünümü' : 'Yetkili Tesisler Görünümü'}
+              </div>
               <div className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                {isAllFacilities ? 'Tüm Tesislerin Konsolide Durumu' : `${currentFacility?.name} Denetim Durumu`}
+                {isAllFacilities 
+                  ? (isManager ? 'Tüm Tesislerin Konsolide Durumu' : 'Sorumlu Olduğum Tesislerin Konsolide Durumu')
+                  : `${currentFacility?.name || 'Seçili Tesis'} Denetim Durumu`
+                }
               </div>
             </div>
           </div>
@@ -433,8 +448,13 @@ export default function FireSafetyDashboard() {
               onChange={e => setSelectedFacilityId(e.target.value)}
               className="text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-red-500 outline-hidden"
             >
-              <option value="all">🏢 Tüm Tesisler (Konsolide Yönetici Özeti)</option>
-              {facilities.map((f: any) => (
+              <option value="all">
+                {isManager 
+                  ? '🏢 Tüm Tesisler (Konsolide Yönetici Özeti)' 
+                  : `🏢 Sorumlu Olduğum Tesisler (Konsolide Özet - ${accessibleFacilities.length} Tesis)`
+                }
+              </option>
+              {accessibleFacilities.map((f: any) => (
                 <option key={f.id} value={f.id}>
                   {f.name}
                 </option>
@@ -562,17 +582,20 @@ export default function FireSafetyDashboard() {
         </Card>
       )}
 
-      {/* YÖNETİCİ GÖRÜNÜMÜ: TÜM TESİSLERİN DURUMLARI (TESİS BAZINDA KARŞILAŞTIRMA) */}
-      {(isAllFacilities || isManager) && facilityStats.length > 0 && (
+      {/* TESİS BAZINDA KARŞILAŞTIRMA VE DURUMLAR (YÖNETİCİ VEYA ÇOKLU TESİS KULLANICISI) */}
+      {(isAllFacilities || hasMultipleFacilities) && facilityStats.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-red-600" />
-                Tüm Tesislerin Yangın Güvenliği Durumları
+                {isManager 
+                  ? 'Tüm Tesislerin Yangın Güvenliği Durumları' 
+                  : 'Sorumlu Olduğum Tesislerin Yangın Güvenliği Durumları'
+                }
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Tesis bazında kayıtlı tutanak sayısı, tespitler, tamamlanan / devam eden / bekleyen dağılımı ve başarı yüzdeleri
+                Tesis bazında kayıtlı tutanak sayısı, tespitler, tamamlanan / devam eden / bekleyen dağılımı ve başarı yüzdeleri (Tesis detayına gitmek için karta tıklayabilirsiniz)
               </p>
             </div>
           </div>

@@ -64,9 +64,18 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     const whereClause: any = {};
     if (facilityId && facilityId !== 'all') {
+      // Belirli bir tesis istendiğinde, yetkisiz kullanıcının bu tesise erişimi olup olmadığını doğrula
+      if (!isManager && user.facilities && !user.facilities.includes(facilityId)) {
+        return res.status(403).json({ error: 'Bu tesisin verilerine erişim yetkiniz bulunmamaktadır.' });
+      }
       whereClause.facilityId = facilityId;
-    } else if (!isManager && user.facilities && user.facilities.length > 0) {
-      whereClause.facilityId = { in: user.facilities };
+    } else if (!isManager) {
+      // Konsolide / Tümü istendiğinde standart kullanıcı yalnızca kendi tesislerini görebilir
+      if (user.facilities && user.facilities.length > 0) {
+        whereClause.facilityId = { in: user.facilities };
+      } else {
+        return res.json([]);
+      }
     }
 
     const audits = await prisma.fireSafetyAudit.findMany({
