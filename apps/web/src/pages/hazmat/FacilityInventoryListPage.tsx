@@ -127,6 +127,7 @@ export default function FacilityInventoryListPage() {
         sdsUrl: mat.sdsUrl,
         departments,
         material: mat,
+        auditLogs: mat.auditLogs || [],
         updatedAt: mat.updatedAt,
         createdAt: mat.createdAt,
         amountValue: facItem.amountValue,
@@ -138,28 +139,31 @@ export default function FacilityInventoryListPage() {
 
   const getUpdateStatus = (item: any) => {
     const isInstant = justUpdatedId === item.materialId;
-    if (!item.updatedAt) return { isInstant, type: 'NONE', label: null };
-
-    const updateTime = new Date(item.updatedAt).getTime();
+    // An item is considered ever updated if it has an UPDATE audit log or its updatedAt differs from createdAt significantly
+    const updateTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
     const createTime = item.createdAt ? new Date(item.createdAt).getTime() : 0;
+    const hasAuditUpdate = Boolean(item.auditLogs && item.auditLogs.length > 0);
+    const hasTimestampDiff = Boolean(item.updatedAt && Math.abs(updateTime - createTime) > 5000);
+    const hasEverBeenUpdated = hasAuditUpdate || hasTimestampDiff;
+
+    if (!item.updatedAt || (!hasEverBeenUpdated && !isInstant)) {
+      return { isInstant: false, hasEverBeenUpdated: false, type: 'NONE', label: null };
+    }
+
     const diffMs = Date.now() - updateTime;
-    const isActuallyUpdated = Math.abs(updateTime - createTime) > 2000;
-
-    if (!isActuallyUpdated && !isInstant) return { isInstant: false, type: 'NONE', label: null };
-
     const hoursAgo = diffMs / (1000 * 60 * 60);
 
     if (hoursAgo <= 3) {
       const minutesAgo = Math.max(1, Math.round(diffMs / (1000 * 60)));
       const timeText = minutesAgo < 60 ? `${minutesAgo} dk önce` : `${Math.floor(hoursAgo)} saat önce`;
-      return { isInstant, type: '3H', label: `Son 3 Saat (${timeText})` };
+      return { isInstant, hasEverBeenUpdated: true, type: '3H', label: `Son 3 Saat (${timeText})` };
     }
 
     if (hoursAgo <= 6) {
-      return { isInstant, type: '6H', label: `Son 6 Saat (${Math.floor(hoursAgo)} sa önce)` };
+      return { isInstant, hasEverBeenUpdated: true, type: '6H', label: `Son 6 Saat (${Math.floor(hoursAgo)} sa önce)` };
     }
 
-    return { isInstant, type: 'OLD', label: null };
+    return { isInstant, hasEverBeenUpdated: true, type: 'OLD', label: null };
   };
 
   // Apply filters
@@ -193,7 +197,7 @@ export default function FacilityInventoryListPage() {
         const status = getUpdateStatus(g);
         if (filterEditStatus === 'WITHIN_3H') return status.type === '3H' || status.isInstant;
         if (filterEditStatus === 'WITHIN_6H') return status.type === '3H' || status.type === '6H' || status.isInstant;
-        if (filterEditStatus === 'NOT_UPDATED') return status.type !== '3H' && status.type !== '6H' && !status.isInstant;
+        if (filterEditStatus === 'NOT_UPDATED') return !status.hasEverBeenUpdated && !status.isInstant;
         return true;
       });
     }
@@ -454,7 +458,9 @@ export default function FacilityInventoryListPage() {
         <div className="relative flex-1">
           <Select value={filterEditStatus} onValueChange={(val: any) => setFilterEditStatus(val)}>
             <SelectTrigger className="w-full bg-background">
-              <SelectValue placeholder="İşlem / Güncelleme" />
+              <SelectValue placeholder="İşlem / Güncelleme">
+                {filterEditStatus === 'ALL' ? 'Tüm Durumlar' : undefined}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">Tüm Durumlar</SelectItem>

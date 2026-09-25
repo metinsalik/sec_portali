@@ -62,6 +62,11 @@ router.get('/summary', authMiddleware, async (req: AuthRequest, res) => {
             hazardLabels: { include: { label: true } },
             adrLabels: { include: { label: true } },
             ppes: { include: { ppe: true } },
+            auditLogs: {
+              where: { action: 'UPDATE' },
+              select: { id: true, createdAt: true },
+              take: 1
+            },
             inventory: {
               where: { facilityId: String(facilityId) },
               include: { location: true }

@@ -44,7 +44,12 @@ router.get('/global', auth_1.authMiddleware, async (req, res) => {
                 category: true,
                 hazardLabels: { include: { label: true } },
                 adrLabels: { include: { label: true } },
-                ppes: { include: { ppe: true } }
+                ppes: { include: { ppe: true } },
+                auditLogs: {
+                    where: { action: 'UPDATE' },
+                    select: { id: true, createdAt: true },
+                    take: 1
+                }
             },
             orderBy: { productName: 'asc' }
         });
@@ -154,7 +159,12 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
                         hazardLabels: { include: { label: true } },
                         adrLabels: { include: { label: true } },
                         ppes: { include: { ppe: true } },
-                        category: true
+                        category: true,
+                        auditLogs: {
+                            where: { action: 'UPDATE' },
+                            select: { id: true, createdAt: true },
+                            take: 1
+                        }
                     }
                 }
             },
