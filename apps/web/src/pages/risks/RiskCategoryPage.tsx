@@ -140,21 +140,43 @@ export default function RiskCategoryPage() {
 
   // Kategoriye Göre Filtrele
   const categoryRisks = useMemo(() => {
-    const mainCatLower = mainCat.trim().toLocaleLowerCase('tr');
-    const subCatLower = subCat.trim().toLocaleLowerCase('tr');
+    // Normalizasyon fonksiyonu: Türkçe karakter ve case duyarsızlaştırma
+    const normalize = (str: string) => 
+      (str || '')
+        .trim()
+        .replace(/İ/g, 'i')
+        .replace(/I/g, 'ı')
+        .toLocaleLowerCase('tr')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const mainCatNorm = normalize(mainCat);
+    const subCatNorm = normalize(subCat);
+    const isSubCatDiger = subCatNorm === 'diger' || subCatNorm === 'digeri' || subCatNorm === 'digerleri';
     
     return allRisks.filter((r: any) => {
-      const rCat = (r.riskCategory || 'Genel').trim().toLocaleLowerCase('tr');
-      const rSub = (r.subCategory || '').trim().toLocaleLowerCase('tr');
+      const rawCat = (r.riskCategory || '').trim();
+      const rCatNorm = normalize(rawCat || 'Genel');
+      const rawSub = (r.subCategory || '').trim();
+      const rSubNorm = normalize(rawSub);
 
-      if (mainCatLower && rCat !== mainCatLower) return false;
-      
-      if (subCatLower) {
-        if (subCatLower === 'diğer' || subCatLower === 'diger') {
-          // 'Diğer' can match records where subCategory is 'Diğer', empty, or null
-          if (rSub && rSub !== 'diğer' && rSub !== 'diger') return false;
+      // Ana kategori kontrolü:
+      // Eğer ana kategori 'Genel' aranıyorsa, kategorisi boş olanlar da 'Genel' kabul edilir
+      if (mainCatNorm) {
+        if (mainCatNorm === 'genel') {
+          if (rCatNorm && rCatNorm !== 'genel') return false;
         } else {
-          if (rSub !== subCatLower) return false;
+          if (rCatNorm !== mainCatNorm) return false;
+        }
+      }
+      
+      // Alt kategori kontrolü:
+      if (subCatNorm) {
+        if (isSubCatDiger) {
+          // Alt kategori 'Diğer' seçilmişse; alt kategorisi boş, null, 'Diğer' veya 'diger' olanları getir
+          if (rSubNorm && rSubNorm !== 'diger' && rSubNorm !== 'digeri') return false;
+        } else {
+          if (rSubNorm !== subCatNorm) return false;
         }
       }
       return true;
@@ -191,7 +213,7 @@ export default function RiskCategoryPage() {
   };
 
   const uniqueDepartments = useMemo(() => {
-    const ids = Array.from(new Set(categoryRisks.map((r: any) => r.departmentId).filter(Boolean))) as string[];
+    const ids = Array.from(new Set(categoryRisks.map((r: any) => r.locationId || r.departmentId).filter(Boolean))) as string[];
     return ids.map(id => ({ id, name: departmentMap[id]?.name || 'Bilinmeyen Lokasyon' }));
   }, [categoryRisks, departmentMap]);
 
@@ -203,7 +225,7 @@ export default function RiskCategoryPage() {
       sortableRisks = sortableRisks.filter(r => r.status === filterStatus);
     }
     if (filterDepartment) {
-      sortableRisks = sortableRisks.filter(r => r.departmentId === filterDepartment);
+      sortableRisks = sortableRisks.filter(r => (r.locationId || r.departmentId) === filterDepartment);
     }
     if (filterResponsible) {
       sortableRisks = sortableRisks.filter(r => r.improvementResponsible === filterResponsible);
@@ -302,8 +324,22 @@ export default function RiskCategoryPage() {
       {!isLoading && categoryRisks.length > 0 && (() => {
         const total = sortedRisks.length;
         const acikCount = sortedRisks.filter(r => r.status === 'ACIK_TEHLIKE').length;
-        const kapaliCount = total - acikCount;
-        const acikPercent = total > 0 ? Math.round((acikCount / total) * 100) : 0;
+        const mudahaleCount = sortedRisks.filter(r => r.status === 'ILK_MUDAHALE_EDILDI').length;
+        const takipCount = sortedRisks.filter(r => r.status === 'TAKIP_SURECINDE').length;
+        const kapaliCount = sortedRisks.filter(r => r.status === 'KAPATILDI_GUVENLI').length;
+        
+        const acikPercent = total > 0 ? (acikCount / total) * 100 : 0;
+        const mudahalePercent = total > 0 ? (mudahaleCount / total) * 100 : 0;
+        const takipPercent = total > 0 ? (takipCount / total) * 100 : 0;
+        const kapaliPercent = total > 0 ? (kapaliCount / total) * 100 : 0;
+
+        const stop1 = acikPercent;
+        const stop2 = stop1 + mudahalePercent;
+        const stop3 = stop2 + takipPercent;
+
+        const donutGradient = total > 0 
+          ? `conic-gradient(#dc2626 0% ${stop1}%, #f97316 ${stop1}% ${stop2}%, #2563eb ${stop2}% ${stop3}%, #16a34a ${stop3}% 100%)`
+          : `conic-gradient(var(--color-surface-container-high) 0% 100%)`;
         
         const getInitCount = (lvlName: string) => initialLevelCounts[lvlName] || 0;
         const getFinalCount = (lvlName: string) => finalLevelCounts[lvlName] || 0;
@@ -332,21 +368,29 @@ export default function RiskCategoryPage() {
               <div className="flex-1 flex flex-col items-center justify-center relative">
                 <div 
                   className="donut-chart w-48 h-48 flex items-center justify-center"
-                  style={{ background: `conic-gradient(var(--color-error) 0% ${acikPercent}%, var(--color-surface-container-high) ${acikPercent}% 100%)` }}
+                  style={{ background: donutGradient }}
                 >
                   <div className="z-10 text-center flex flex-col items-center">
-                    <span className="text-3xl font-bold text-error block leading-none">{acikPercent}%</span>
+                    <span className="text-3xl font-bold text-error block leading-none">{Math.round(acikPercent)}%</span>
                     <span className="text-xs font-medium text-muted-foreground dark:text-slate-400 mt-1">Açık Tehlike</span>
                   </div>
                 </div>
                 <div className="mt-8 grid grid-cols-2 gap-4 w-full px-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-error"></div>
+                    <div className="w-3 h-3 rounded-full bg-red-600"></div>
                     <span className="text-xs font-medium text-muted-foreground dark:text-slate-400">Açık ({acikCount})</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-muted dark:bg-slate-800"></div>
-                    <span className="text-xs font-medium text-muted-foreground dark:text-slate-400">Kapalı ({kapaliCount})</span>
+                    <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                    <span className="text-xs font-medium text-muted-foreground dark:text-slate-400">Müdahale ({mudahaleCount})</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                    <span className="text-xs font-medium text-muted-foreground dark:text-slate-400">Takipte ({takipCount})</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-emerald-600"></div>
+                    <span className="text-xs font-medium text-muted-foreground dark:text-slate-400">Kapatıldı ({kapaliCount})</span>
                   </div>
                 </div>
               </div>

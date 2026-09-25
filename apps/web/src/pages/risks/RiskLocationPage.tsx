@@ -317,8 +317,22 @@ export default function RiskLocationPage() {
       {!isLoading && risks.length > 0 && (() => {
         const total = sortedRisks.length;
         const acikCount = sortedRisks.filter(r => r.status === 'ACIK_TEHLIKE').length;
-        const kapaliCount = total - acikCount;
-        const acikPercent = total > 0 ? Math.round((acikCount / total) * 100) : 0;
+        const mudahaleCount = sortedRisks.filter(r => r.status === 'ILK_MUDAHALE_EDILDI').length;
+        const takipCount = sortedRisks.filter(r => r.status === 'TAKIP_SURECINDE').length;
+        const kapaliCount = sortedRisks.filter(r => r.status === 'KAPATILDI_GUVENLI').length;
+        
+        const acikPercent = total > 0 ? (acikCount / total) * 100 : 0;
+        const mudahalePercent = total > 0 ? (mudahaleCount / total) * 100 : 0;
+        const takipPercent = total > 0 ? (takipCount / total) * 100 : 0;
+        const kapaliPercent = total > 0 ? (kapaliCount / total) * 100 : 0;
+
+        const stop1 = acikPercent;
+        const stop2 = stop1 + mudahalePercent;
+        const stop3 = stop2 + takipPercent;
+
+        const donutGradient = total > 0 
+          ? `conic-gradient(#dc2626 0% ${stop1}%, #f97316 ${stop1}% ${stop2}%, #2563eb ${stop2}% ${stop3}%, #16a34a ${stop3}% 100%)`
+          : `conic-gradient(var(--color-surface-container-high) 0% 100%)`;
         
         const getInitCount = (lvlName: string) => initialLevelCounts[lvlName] || 0;
         const getFinalCount = (lvlName: string) => finalLevelCounts[lvlName] || 0;
@@ -347,21 +361,29 @@ export default function RiskLocationPage() {
               <div className="flex-1 flex flex-col items-center justify-center relative">
                 <div 
                   className="donut-chart w-48 h-48 flex items-center justify-center"
-                  style={{ background: `conic-gradient(var(--color-error) 0% ${acikPercent}%, var(--color-surface-container-high) ${acikPercent}% 100%)` }}
+                  style={{ background: donutGradient }}
                 >
                   <div className="z-10 text-center flex flex-col items-center">
-                    <span className="text-3xl font-bold text-error block leading-none">{acikPercent}%</span>
+                    <span className="text-3xl font-bold text-error block leading-none">{Math.round(acikPercent)}%</span>
                     <span className="text-xs font-medium text-muted-foreground dark:text-slate-400 mt-1">Açık Tehlike</span>
                   </div>
                 </div>
                 <div className="mt-8 grid grid-cols-2 gap-4 w-full px-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-error"></div>
+                    <div className="w-3 h-3 rounded-full bg-red-600"></div>
                     <span className="text-xs font-medium text-muted-foreground dark:text-slate-400">Açık ({acikCount})</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-muted dark:bg-slate-800"></div>
-                    <span className="text-xs font-medium text-muted-foreground dark:text-slate-400">Kapalı ({kapaliCount})</span>
+                    <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                    <span className="text-xs font-medium text-muted-foreground dark:text-slate-400">Müdahale ({mudahaleCount})</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                    <span className="text-xs font-medium text-muted-foreground dark:text-slate-400">Takipte ({takipCount})</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-emerald-600"></div>
+                    <span className="text-xs font-medium text-muted-foreground dark:text-slate-400">Kapatıldı ({kapaliCount})</span>
                   </div>
                 </div>
               </div>
