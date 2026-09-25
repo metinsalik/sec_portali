@@ -7,9 +7,11 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { CheckCircle2, AlertCircle, Loader2, Search, Info } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, Search, Info, Upload, Image as ImageIcon, Trash2, X, Paperclip } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
+
+const API = import.meta.env.VITE_API_URL || '';
 
 const DenetimYap = () => {
   const { id } = useParams();
@@ -41,14 +43,14 @@ const DenetimYap = () => {
           initialCevaplar[ts.id] = {
             sonuc: ts.cevap.sonuc,
             aciklama: ts.cevap.aciklama || '',
-            file: null,
+            fotograflar: ts.cevap.fotograflar || [],
             isSaved: true
           };
         } else {
           initialCevaplar[ts.id] = {
             sonuc: null,
             aciklama: '',
-            file: null,
+            fotograflar: [],
             isSaved: false
           };
         }
@@ -81,10 +83,6 @@ const DenetimYap = () => {
       const formData = new FormData();
       formData.append('sonuc', dataToSave.sonuc);
       if (dataToSave.aciklama) formData.append('aciklama', dataToSave.aciklama);
-      
-      if (dataToSave.file) {
-        formData.append('fotograflar', dataToSave.file);
-      }
 
       await api.customFetch(`/bina-turu/denetim/${turSorusuId}/cevap`, {
         method: 'POST',
@@ -98,6 +96,95 @@ const DenetimYap = () => {
       
     } catch (err) {
       toast.error('Otomatik kayıt başarısız oldu.');
+    } finally {
+      setSavingIds(prev => ({ ...prev, [turSorusuId]: false }));
+    }
+  };
+
+  // Çoklu Dosya Yükleme (Dosya Seçici, Drag & Drop veya Panodan Yapıştırma)
+  const uploadFilesToBackend = async (turSorusuId: number, files: File[]) => {
+    if (!files || files.length === 0) return;
+
+    setSavingIds(prev => ({ ...prev, [turSorusuId]: true }));
+    try {
+      const current = cevaplar[turSorusuId] || {};
+      const formData = new FormData();
+      formData.append('sonuc', current.sonuc || 'UYGUN_DEGIL');
+      if (current.aciklama) formData.append('aciklama', current.aciklama);
+      
+      files.forEach(file => {
+        formData.append('fotograflar', file);
+      });
+
+      const res = await api.customFetch(`/bina-turu/denetim/${turSorusuId}/cevap`, {
+        method: 'POST',
+        body: formData
+      });
+      const updatedCevap = await res.json();
+
+      setCevaplar(prev => ({
+        ...prev,
+        [turSorusuId]: { 
+          ...prev[turSorusuId], 
+          sonuc: updatedCevap.sonuc || 'UYGUN_DEGIL',
+          fotograflar: updatedCevap.fotograflar || [],
+          isSaved: true 
+        }
+      }));
+
+      // Tur verisini de senkronize et
+      setTur((prev: any) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          turSorulari: prev.turSorulari.map((ts: any) => 
+            ts.id === turSorusuId 
+              ? { ...ts, cevap: { ...ts.cevap, ...updatedCevap } } 
+              : ts
+          )
+        };
+      });
+
+      toast.success(`${files.length} görsel yüklendi`);
+    } catch (err) {
+      toast.error('Fotoğraf yükleme başarısız oldu.');
+    } finally {
+      setSavingIds(prev => ({ ...prev, [turSorusuId]: false }));
+    }
+  };
+
+  // Fotoğraf Silme
+  const deletePhotoFromBackend = async (turSorusuId: number, filename: string) => {
+    setSavingIds(prev => ({ ...prev, [turSorusuId]: true }));
+    try {
+      const res = await api.customFetch(`/bina-turu/denetim/${turSorusuId}/fotograf/${encodeURIComponent(filename)}`, {
+        method: 'DELETE'
+      });
+      const updatedCevap = await res.json();
+
+      setCevaplar(prev => ({
+        ...prev,
+        [turSorusuId]: { 
+          ...prev[turSorusuId], 
+          fotograflar: updatedCevap.fotograflar || [] 
+        }
+      }));
+
+      setTur((prev: any) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          turSorulari: prev.turSorulari.map((ts: any) => 
+            ts.id === turSorusuId 
+              ? { ...ts, cevap: { ...ts.cevap, fotograflar: updatedCevap.fotograflar || [] } } 
+              : ts
+          )
+        };
+      });
+
+      toast.success('Görsel silindi');
+    } catch (err) {
+      toast.error('Görsel silinemedi.');
     } finally {
       setSavingIds(prev => ({ ...prev, [turSorusuId]: false }));
     }
@@ -420,8 +507,8 @@ const DenetimYap = () => {
 
                           {/* Minimal DÖF Section (Açıklama / Foto) */}
                           {showDofBox && (
-                            <div className="mt-3 pt-3 pl-3 border-l-2 border-red-200 animate-in fade-in space-y-2">
-                              <p className="text-xs font-medium text-slate-500 mb-1">Opsiyonel Açıklama ve Kanıt</p>
+                            <div className="mt-3 pt-3 pl-3 border-l-2 border-red-200 animate-in fade-in space-y-3">
+                              <p className="text-xs font-medium text-slate-500 mb-1">Açıklama ve Kanıt Fotoğrafları</p>
                               <div>
                                 <Textarea 
                                   placeholder="Açıklama veya not girebilirsiniz (Opsiyonel)..." 
@@ -431,22 +518,122 @@ const DenetimYap = () => {
                                   className="h-14 text-xs bg-white resize-none"
                                 />
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Input 
+
+                              {/* Gelişmiş Sürükle-Bırak & Excel/Panodan Resim Yapıştırma Alanı */}
+                              <div
+                                onDragOver={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  e.currentTarget.classList.add('border-blue-500', 'bg-blue-50/50');
+                                }}
+                                onDragLeave={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50/50');
+                                }}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50/50');
+                                  
+                                  const droppedFiles = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+                                  if (droppedFiles.length > 0) {
+                                    uploadFilesToBackend(ts.id, droppedFiles);
+                                  } else {
+                                    toast.error('Lütfen geçerli bir görsel dosyası sürükleyin.');
+                                  }
+                                }}
+                                onPaste={(e) => {
+                                  // Excel'den veya panodan kopyalanan resimleri yakalama
+                                  const items = e.clipboardData?.items;
+                                  if (items) {
+                                    const files: File[] = [];
+                                    for (let i = 0; i < items.length; i++) {
+                                      if (items[i].type.indexOf('image') !== -1) {
+                                        const file = items[i].getAsFile();
+                                        if (file) {
+                                          files.push(file);
+                                        }
+                                      }
+                                    }
+                                    if (files.length > 0) {
+                                      e.preventDefault();
+                                      uploadFilesToBackend(ts.id, files);
+                                    }
+                                  }
+                                }}
+                                tabIndex={0}
+                                className="group relative border-2 border-dashed border-slate-200 hover:border-blue-400 focus:border-blue-500 rounded-xl p-3 bg-slate-50/50 hover:bg-blue-50/20 transition-all cursor-pointer outline-none"
+                              >
+                                <div className="flex flex-col items-center justify-center text-center py-2">
+                                  <div className="w-8 h-8 rounded-full bg-blue-100/60 text-blue-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
+                                    <Upload className="w-4 h-4" />
+                                  </div>
+                                  <p className="text-xs font-semibold text-slate-700">
+                                    Excel'den veya bilgisayardan resmi buraya <span className="text-blue-600 underline">sürükleyip bırakın</span>
+                                  </p>
+                                  <p className="text-[11px] text-slate-400 mt-0.5">
+                                    veya panodan yapıştırın (<kbd className="px-1 py-0.5 bg-slate-200/60 rounded text-[10px] font-mono">Ctrl+V</kbd> / <kbd className="px-1 py-0.5 bg-slate-200/60 rounded text-[10px] font-mono">⌘+V</kbd>) ya da tıklayarak seçin
+                                  </p>
+                                </div>
+
+                                <input 
                                   type="file" 
+                                  multiple
+                                  accept="image/*"
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                   onChange={(e) => {
-                                    handleCevapChange(ts.id, 'file', e.target.files?.[0] || null);
-                                    const updatedData = { ...localState, file: e.target.files?.[0] || null };
-                                    autoSaveToBackend(ts.id, updatedData);
+                                    if (e.target.files && e.target.files.length > 0) {
+                                      uploadFilesToBackend(ts.id, Array.from(e.target.files));
+                                      e.target.value = '';
+                                    }
                                   }}
-                                  className="h-7 text-[10px] w-48 bg-white cursor-pointer file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[10px] file:bg-slate-100 file:text-slate-600"
                                 />
-                                {ts.cevap?.fotograflar && ts.cevap.fotograflar.length > 0 && (
-                                  <span className="text-[10px] text-green-600 font-medium flex items-center">
-                                    <CheckCircle2 className="w-3 h-3 mr-1" /> Dosya yüklü
-                                  </span>
-                                )}
                               </div>
+
+                              {/* Yüklenmiş Fotoğraflar Galerisi */}
+                              {((localState.fotograflar && localState.fotograflar.length > 0) || (ts.cevap?.fotograflar && ts.cevap.fotograflar.length > 0)) && (() => {
+                                const photos: string[] = localState.fotograflar || ts.cevap?.fotograflar || [];
+                                return (
+                                  <div className="space-y-1.5 pt-1">
+                                    <span className="text-[11px] font-medium text-slate-600 flex items-center gap-1">
+                                      <Paperclip className="w-3 h-3 text-slate-400" />
+                                      Eklenmiş Fotoğraflar ({photos.length}):
+                                    </span>
+                                    <div className="flex flex-wrap gap-2.5">
+                                      {photos.map((fotoName: string, fIdx: number) => {
+                                        const imgUrl = `${API}/uploads/${fotoName}`;
+                                        return (
+                                          <div 
+                                            key={`${fotoName}-${fIdx}`} 
+                                            className="relative group/thumb w-16 h-16 rounded-lg border border-slate-200 overflow-hidden bg-slate-100 shadow-2xs"
+                                          >
+                                            <img 
+                                              src={imgUrl} 
+                                              alt={`Ek ${fIdx + 1}`}
+                                              className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                              onClick={() => window.open(imgUrl, '_blank')}
+                                              title="Büyük boyutta aç"
+                                            />
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                deletePhotoFromBackend(ts.id, fotoName);
+                                              }}
+                                              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 hover:bg-red-700 transition-all shadow-sm"
+                                              title="Fotoğrafı Kaldır"
+                                            >
+                                              <X className="w-3 h-3" />
+                                            </button>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+
                             </div>
                           )}
 

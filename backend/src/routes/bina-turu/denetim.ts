@@ -180,4 +180,33 @@ router.post('/:turSorusuId/cevap', upload.array('fotograflar'), async (req: Requ
   }
 });
 
+// Cevaptan fotoğraf silme endpointi
+router.delete('/:turSorusuId/fotograf/:filename', async (req: Request, res: Response): Promise<void> => {
+  const { turSorusuId, filename } = req.params;
+
+  try {
+    const existingCevap = await prisma.bTCevap.findUnique({
+      where: { turSorusuId: Number(turSorusuId) }
+    });
+
+    if (!existingCevap) {
+      res.status(404).json({ error: 'Cevap bulunamadı.' });
+      return;
+    }
+
+    const updatedFotograflar = (existingCevap.fotograflar || []).filter(f => f !== filename);
+
+    const updated = await prisma.bTCevap.update({
+      where: { id: existingCevap.id },
+      data: {
+        fotograflar: updatedFotograflar
+      }
+    });
+
+    res.json(updated);
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
 export default router;

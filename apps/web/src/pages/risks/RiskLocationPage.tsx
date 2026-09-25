@@ -62,8 +62,21 @@ function LevelBadge({ level }: { level: string }) {
   );
 }
 
-export default function RiskLocationPage() {
-  const { locationId } = useParams<{ locationId: string }>();
+interface RiskLocationPageProps {
+  locationIdOverride?: string;
+  titleOverride?: string;
+  isEmbedded?: boolean;
+  onBack?: () => void;
+}
+
+export default function RiskLocationPage({
+  locationIdOverride,
+  titleOverride,
+  isEmbedded = false,
+  onBack
+}: RiskLocationPageProps = {}) {
+  const { locationId: paramLocationId } = useParams<{ locationId: string }>();
+  const locationId = locationIdOverride || paramLocationId;
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -105,13 +118,14 @@ export default function RiskLocationPage() {
   const { data: locationDetails } = useQuery({
     queryKey: ['risk-location-details', locationId],
     queryFn: async () => {
+      if (!locationId || locationId.startsWith('group:')) return null;
       const res = await fetch(`${API}/api/risks/locations/${locationId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Lokasyon detayları alınamadı');
       return res.json();
     },
-    enabled: !!locationId
+    enabled: !!locationId && !locationId.startsWith('group:')
   });
 
   const { data: risks = [], isLoading } = useQuery({
@@ -266,7 +280,7 @@ export default function RiskLocationPage() {
     }, {});
   }, [sortedRisks]);
 
-  const deptName = locationDetails?.name || 'Lokasyon';
+  const deptName = titleOverride || locationDetails?.name || (locationId?.startsWith('group:') ? locationId.split(':').pop() : 'Lokasyon');
   const deptCode = locationDetails?.name ? locationDetails.name.replace(/i/g, 'İ').replace(/ı/g, 'I').toUpperCase().substring(0, 3) : 'GEN';
   const facilityId = locationDetails?.facilityId;
 
@@ -287,8 +301,19 @@ export default function RiskLocationPage() {
       {/* Başlık ve Aksiyonlar */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate(facilityId ? `/risks/facility/${facilityId}` : '/risks')} className="h-8 px-2">
-            <ArrowLeft className="w-4 h-4 mr-1" /> Lokasyonlar
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => {
+              if (onBack) {
+                onBack();
+              } else {
+                navigate(facilityId ? `/risks/facility/${facilityId}` : '/risks');
+              }
+            }} 
+            className="h-8 px-2"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" /> {isEmbedded ? 'Hiyerarşiye Dön' : 'Lokasyonlar'}
           </Button>
           <div className="h-5 w-px bg-border" />
           <div>
@@ -299,6 +324,16 @@ export default function RiskLocationPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          {isEmbedded && locationId && !locationId.startsWith('group:') && (
+            <Button 
+              size="sm" 
+              variant="secondary" 
+              onClick={() => navigate(`/risks/location/${locationId}`)}
+              className="shadow-xs text-xs font-semibold"
+            >
+              Tam Sayfada Aç ↗
+            </Button>
+          )}
           <Button size="sm" variant="outline" onClick={() => setShowPrintModal(true)} className="shadow-sm border-blue-200 text-blue-700 hover:bg-blue-50">
             <Printer className="w-4 h-4 mr-1.5" /> Çıktı Önizleme
           </Button>
@@ -598,49 +633,52 @@ export default function RiskLocationPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {sortedRisks.map((risk) => (
-                  <tr 
-                    key={risk.id} 
-                    className="hover:bg-muted/50 cursor-pointer transition-colors group"
-                    onClick={() => navigate(`/risks/location/${locationId}/view/${risk.id}`, { state: { from: location.pathname + location.search } })}
-                  >
-                    <td className="px-4 py-3 font-mono font-medium text-muted-foreground">
-                      {deptCode}-{String(risk.riskNo).padStart(3, '0')}
-                    </td>
-                    <td className="px-4 py-3 min-w-[120px] font-medium text-foreground">
-                      {risk.area || locationDetails?.name}
-                    </td>
-                    <td className="px-4 py-3 min-w-[200px]">
-                      <div className="font-medium text-foreground">{risk.riskCategory}</div>
-                      {risk.subCategory && <div className="text-xs text-muted-foreground">{risk.subCategory}</div>}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {risk.improvementResponsible || '-'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <LevelBadge level={risk.initialLevel || 'Bilinmiyor'} />
-                    </td>
-                    <td className="px-4 py-3">
-                      {risk.finalLevel ? <LevelBadge level={risk.finalLevel} /> : <span className="text-muted-foreground ml-4">-</span>}
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={risk.status} />
-                    </td>
-                    <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-blue-600" onClick={() => navigate(`/risks/location/${locationId}/view/${risk.id}`, { state: { from: location.pathname + location.search } })}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-orange-600" onClick={() => navigate(`/risks/location/${locationId}/edit/${risk.id}`, { state: { from: location.pathname + location.search } })}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(risk.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {sortedRisks.map((risk) => {
+                  const locId = risk.locationId || risk.departmentId || locationId;
+                  return (
+                    <tr 
+                      key={risk.id} 
+                      className="hover:bg-muted/50 cursor-pointer transition-colors group"
+                      onClick={() => navigate(`/risks/location/${locId}/view/${risk.id}`, { state: { from: location.pathname + location.search } })}
+                    >
+                      <td className="px-4 py-3 font-mono font-medium text-muted-foreground">
+                        {deptCode}-{String(risk.riskNo).padStart(3, '0')}
+                      </td>
+                      <td className="px-4 py-3 min-w-[120px] font-medium text-foreground">
+                        {risk.area || locationDetails?.name}
+                      </td>
+                      <td className="px-4 py-3 min-w-[200px]">
+                        <div className="font-medium text-foreground">{risk.riskCategory}</div>
+                        {risk.subCategory && <div className="text-xs text-muted-foreground">{risk.subCategory}</div>}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {risk.improvementResponsible || '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <LevelBadge level={risk.initialLevel || 'Bilinmiyor'} />
+                      </td>
+                      <td className="px-4 py-3">
+                        {risk.finalLevel ? <LevelBadge level={risk.finalLevel} /> : <span className="text-muted-foreground ml-4">-</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={risk.status} />
+                      </td>
+                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-blue-600" onClick={() => navigate(`/risks/location/${locId}/view/${risk.id}`, { state: { from: location.pathname + location.search } })}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-orange-600" onClick={() => navigate(`/risks/location/${locId}/edit/${risk.id}`, { state: { from: location.pathname + location.search } })}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(risk.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

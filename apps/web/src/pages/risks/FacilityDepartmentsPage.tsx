@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import RiskExcelImport from './RiskExcelImport';
 import { FacilityRiskPrintModal } from '@/components/risks/FacilityRiskPrintModal';
+import RiskLocationPage from './RiskLocationPage';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -124,6 +125,7 @@ export default function FacilityDepartmentsPage() {
   const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<{ id: string; name: string } | null>(null);
+  const [viewMode, setViewMode] = useState<'overview' | 'location'>('location');
 
   // Table filters & sorting
   const [riskSearch, setRiskSearch] = useState('');
@@ -202,6 +204,25 @@ export default function FacilityDepartmentsPage() {
     }
     return { level: 'all', path: '', label: 'Tüm Tesis' };
   }, [selectedBuilding, selectedFloor, selectedDept, selectedUnit]);
+
+  // Belirli bir lokasyon (mahal veya birim) seçildiğinde kullanılacak lokasyon bilgisi
+  const activeLocationInfo = useMemo(() => {
+    if (selectedUnit?.id) {
+      return {
+        id: selectedUnit.id,
+        name: selectedUnit.name,
+        type: 'unit' as const,
+      };
+    }
+    if (selectedDept && activeDeptNode?.units?.[0]?.id) {
+      return {
+        id: activeDeptNode.units[0].id,
+        name: selectedDept,
+        type: 'department' as const,
+      };
+    }
+    return null;
+  }, [selectedUnit, selectedDept, activeDeptNode]);
 
   // 3. Fetch Risks for Active Scope
   const { data: scopedRisks = [], isLoading: isLoadingRisks, refetch: refetchRisks } = useQuery({
@@ -598,6 +619,58 @@ export default function FacilityDepartmentsPage() {
         </div>
       </div>
 
+      {/* ─── GÖRÜNÜM MODU SEÇİCİ & AKTİF KAPSAM GEÇİŞİ ─────────────────────── */}
+      {activeLocationInfo && (
+        <div className="flex items-center justify-between bg-muted/40 p-2.5 px-4 rounded-xl border border-border">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-muted-foreground">Aktif Seçim:</span>
+            <Badge variant="secondary" className="font-semibold text-xs py-0.5">
+              📍 {activeLocationInfo.name}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-1.5 bg-background p-1 rounded-lg border border-border">
+            <button
+              onClick={() => setViewMode('location')}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                viewMode === 'location'
+                  ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Lokasyon Detay Görünümü
+            </button>
+            <button
+              onClick={() => setViewMode('overview')}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                viewMode === 'overview'
+                  ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Kapsam Genel Tablosu
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── 1. SEÇENEK: DOĞRUDAN LOKASYON GÖRÜNÜMÜ (RiskLocationPage) ──────── */}
+      {activeLocationInfo && viewMode === 'location' ? (
+        <div className="bg-card border rounded-2xl p-6 shadow-xs animate-in fade-in duration-200">
+          <RiskLocationPage 
+            locationIdOverride={activeLocationInfo.id} 
+            titleOverride={activeLocationInfo.name}
+            isEmbedded={true}
+            onBack={() => {
+              if (selectedUnit) {
+                setSelectedUnit(null);
+              } else if (selectedDept) {
+                setSelectedDept(null);
+              }
+            }}
+          />
+        </div>
+      ) : (
+        <>
       {/* ─── KAPSAM DASHBOARD'U: DURUM DAĞILIMI & RİSK SEVİYESİ DAĞILIMI ────── */}
       {scopedRisks.length > 0 && (() => {
         const total = scopedRisks.length;
@@ -1058,6 +1131,8 @@ export default function FacilityDepartmentsPage() {
           )}
         </CardContent>
       </Card>
+      </>
+      )}
 
       {/* ─── Modal: Excel İçe Aktarım ──────────────────────────────────── */}
       {showImport && (
