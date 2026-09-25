@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import LocationTreeSelector from '@/components/shared/LocationTreeSelector';
 import LocationCascadingSelector from '@/components/shared/LocationCascadingSelector';
-import { ArrowLeft, Save, Upload, Image as ImageIcon, Loader2, Calendar, AlertTriangle, ShieldCheck, HelpCircle, X, Search } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Image as ImageIcon, Loader2, Calendar, AlertTriangle, ShieldCheck, HelpCircle, X, Search, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -92,8 +92,11 @@ interface FormState {
   effectivenessMethod: string;
   controlResponsible: string;
   controlResult: string;
+  effectivenessImages: string[];
+  documents: { name: string; url: string; size?: number }[];
   
   status: string;
+  statusDate: string;
 }
 
 const MultiSelectResponsibles = ({ 
@@ -223,7 +226,10 @@ export default function RiskFormPage() {
     effectivenessMethod: '',
     controlResponsible: '',
     controlResult: '',
+    effectivenessImages: [],
+    documents: [],
     status: 'ACIK_TEHLIKE',
+    statusDate: '',
   });
 
   const [uploadingField, setUploadingField] = useState<string | null>(null);
@@ -348,7 +354,10 @@ export default function RiskFormPage() {
         effectivenessMethod: existingRisk.effectivenessMethod || '',
         controlResponsible: existingRisk.controlResponsible || '',
         controlResult: existingRisk.controlResult || '',
+        effectivenessImages: existingRisk.effectivenessImages || [],
+        documents: existingRisk.documents || [],
         status: existingRisk.status || 'ACIK_TEHLIKE',
+        statusDate: existingRisk.statusDate ? existingRisk.statusDate.slice(0, 10) : '',
       });
     }
   }, [existingRisk]);
@@ -429,8 +438,8 @@ export default function RiskFormPage() {
   };
 
   // Image upload
-  const uploadImage = async (field: 'initialImage' | 'actionImage', file: File) => {
-    const arrayField = field === 'initialImage' ? 'initialImages' : 'actionImages';
+  const uploadImage = async (field: 'initialImage' | 'actionImage' | 'effectivenessImage', file: File) => {
+    const arrayField = field === 'initialImage' ? 'initialImages' : field === 'actionImage' ? 'actionImages' : 'effectivenessImages';
     if (form[arrayField].length >= 5) {
       toast.error('En fazla 5 fotoğraf yükleyebilirsiniz.');
       return;
@@ -456,7 +465,7 @@ export default function RiskFormPage() {
         return {
           ...prev,
           [arrayField]: newArray,
-          [field]: newArray[0] || '', // Always keep the first one in the scalar field
+          ...(field !== 'effectivenessImage' ? { [field]: newArray[0] || '' } : {}),
         };
       });
       toast.success('Fotoğraf başarıyla yüklendi.');
@@ -467,17 +476,61 @@ export default function RiskFormPage() {
     }
   };
 
-  const removeImage = (field: 'initialImage' | 'actionImage', index: number) => {
-    const arrayField = field === 'initialImage' ? 'initialImages' : 'actionImages';
+  const removeImage = (field: 'initialImage' | 'actionImage' | 'effectivenessImage', index: number) => {
+    const arrayField = field === 'initialImage' ? 'initialImages' : field === 'actionImage' ? 'actionImages' : 'effectivenessImages';
     setForm((prev) => {
       const newArray = prev[arrayField].filter((_, i) => i !== index);
       return {
         ...prev,
         [arrayField]: newArray,
-        [field]: newArray[0] || '',
+        ...(field !== 'effectivenessImage' ? { [field]: newArray[0] || '' } : {}),
       };
     });
   };
+
+  const uploadDocument = async (file: File) => {
+    setUploadingField('document');
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const uploadUrl = facilityId 
+        ? `${API}/api/risks/upload?facilityId=${encodeURIComponent(facilityId)}` 
+        : `${API}/api/risks/upload`;
+      const res = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      
+      const newDoc = {
+        name: file.name,
+        url: data.url,
+        size: file.size,
+      };
+
+      setForm((prev) => ({
+        ...prev,
+        documents: [...(prev.documents || []), newDoc],
+      }));
+      toast.success('Belge başarıyla yüklendi.');
+    } catch {
+      toast.error('Belge yüklenemedi.');
+    } finally {
+      setUploadingField(null);
+    }
+  };
+
+  const removeDocument = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      documents: (prev.documents || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const location = useLocation();
+  const returnUrl = (location.state as any)?.from || `/risks/location/${locationId}`;
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -500,14 +553,29 @@ export default function RiskFormPage() {
       queryClient.invalidateQueries({ queryKey: ['risks', locationId] });
       queryClient.invalidateQueries({ queryKey: ['facility-risks'] });
       queryClient.invalidateQueries({ queryKey: ['risk-departments'] });
-      navigate(`/risks/location/${locationId}`);
+      navigate(returnUrl);
     },
     onError: (e: any) => toast.error(e.message),
   });
 
-  const categoryOptions = globalCategories.filter((c) => !c.parentId);
+  const categoryOptions = useMemo(() => {
+    const list = globalCategories.filter((c) => !c.parentId);
+    if (form.riskCategory && !list.some((c) => c.name === form.riskCategory)) {
+      return [{ id: -1, name: form.riskCategory, parentId: null }, ...list];
+    }
+    return list;
+  }, [globalCategories, form.riskCategory]);
+
   const selectedCatObj = categoryOptions.find((c) => c.name === form.riskCategory);
-  const subCategoryOptions = selectedCatObj ? globalCategories.filter((c) => c.parentId === selectedCatObj.id) : [];
+  
+  const subCategoryOptions = useMemo(() => {
+    const list = selectedCatObj ? globalCategories.filter((c) => c.parentId === selectedCatObj.id) : [];
+    if (form.subCategory && !list.some((sc) => sc.name === form.subCategory)) {
+      return [{ id: -2, name: form.subCategory, parentId: selectedCatObj?.id || null }, ...list];
+    }
+    return list;
+  }, [globalCategories, selectedCatObj, form.subCategory]);
+
   const settingsDepartments = settingsData?.departments || [];
 
   const isFormValid =
@@ -549,7 +617,7 @@ export default function RiskFormPage() {
             variant="outline"
             size="icon"
             className="rounded-full shrink-0"
-            onClick={() => navigate(`/risks/location/${locationId}`)}
+            onClick={() => navigate(returnUrl)}
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
@@ -567,7 +635,7 @@ export default function RiskFormPage() {
         <div className="flex gap-2">
           <Button
             variant="ghost"
-            onClick={() => navigate(`/risks/location/${locationId}`)}
+            onClick={() => navigate(returnUrl)}
           >
             Vazgeç
           </Button>
@@ -881,33 +949,135 @@ export default function RiskFormPage() {
               <Textarea value={form.controlResult} onChange={(e) => updateField('controlResult', e.target.value)} placeholder="Örn: Yapılan denetimlerde sorun görülmedi." rows={2} />
             </div>
 
-            <div className="space-y-1.5 pt-4 border-t border-border mt-4">
-              <label className="text-xs font-semibold text-muted-foreground">Risk Durumu ve Tarihi</label>
-              <div className="flex gap-4 items-center">
-                <Button 
-                  type="button"
-                  variant={form.status === 'KAPATILDI_GUVENLI' ? 'default' : 'outline'}
-                  onClick={() => updateField('status', 'KAPATILDI_GUVENLI')}
-                  className={form.status === 'KAPATILDI_GUVENLI' ? 'bg-green-600 hover:bg-green-700 text-white' : ''}
-                >
-                  Kapatıldı
-                </Button>
-                <Button 
-                  type="button"
-                  variant={form.status === 'TAKIP_SURECINDE' ? 'default' : 'outline'}
-                  onClick={() => updateField('status', 'TAKIP_SURECINDE')}
-                  className={form.status === 'TAKIP_SURECINDE' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}
-                >
-                  Takip Sürecinde
-                </Button>
-                {(form.status === 'KAPATILDI_GUVENLI' || form.status === 'TAKIP_SURECINDE') && (
+            <div className="space-y-3 pt-4 border-t border-border mt-4">
+              <label className="text-xs font-semibold text-muted-foreground block">Risk Yaşam Döngüsü Durumu ve Tarihi</label>
+              <div className="flex flex-wrap gap-2 items-center">
+                {[
+                  { id: 'ACIK_TEHLIKE', label: 'Açık Tehlike' },
+                  { id: 'ILK_MUDAHALE_EDILDI', label: 'İlk Müdahale' },
+                  { id: 'TAKIP_SURECINDE', label: 'Takip Sürecinde' },
+                  { id: 'KAPATILDI_GUVENLI', label: 'Kapatıldı ✓' },
+                ].map((st) => (
+                  <Button 
+                    key={st.id}
+                    type="button"
+                    variant={form.status === st.id ? 'default' : 'outline'}
+                    onClick={() => updateField('status', st.id)}
+                    className={
+                      form.status === st.id 
+                        ? st.id === 'KAPATILDI_GUVENLI' 
+                          ? 'bg-green-600 hover:bg-green-700 text-white' 
+                          : st.id === 'TAKIP_SURECINDE' 
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                            : ''
+                        : ''
+                    }
+                  >
+                    {st.label}
+                  </Button>
+                ))}
+                
+                <div className="flex items-center gap-2 ml-auto">
+                  <span className="text-xs text-muted-foreground font-medium">İşlem / Durum Tarihi:</span>
                   <Input 
                     type="date" 
-                    className="w-40 h-10"
-                    value={form.statusDate ? new Date(form.statusDate).toISOString().split('T')[0] : ''} 
+                    className="w-40 h-9"
+                    value={form.statusDate ? form.statusDate.slice(0, 10) : ''} 
                     onChange={(e) => updateField('statusDate', e.target.value)} 
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Etkinlik Kanıt Fotoğrafları */}
+            <div className="space-y-2 pt-4 border-t border-border mt-4">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                  <ImageIcon className="w-3.5 h-3.5 text-primary" />
+                  Etkinlik / Doğrulama Fotoğrafları (Maks 5)
+                </label>
+                {uploadingField === 'effectivenessImage' && (
+                  <span className="text-xs text-primary flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Yükleniyor...
+                  </span>
                 )}
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                {(form.effectivenessImages || []).map((img, idx) => (
+                  <div key={idx} className="relative group w-20 h-16 rounded-lg border overflow-hidden shrink-0 bg-muted/40">
+                    <img src={img} alt={`Etkinlik ${idx + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage('effectivenessImage', idx)}
+                      className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                {(form.effectivenessImages || []).length < 5 && (
+                  <label className="flex flex-col items-center justify-center w-20 h-16 rounded-lg border border-dashed border-border hover:border-primary/60 cursor-pointer bg-muted/20 hover:bg-muted/40 transition-colors text-[11px] text-muted-foreground">
+                    <Upload className="w-4 h-4 mb-0.5 text-primary" />
+                    <span>Yükle</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={uploadingField === 'effectivenessImage'}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) uploadImage('effectivenessImage', file);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+
+            {/* Ekli Dokümanlar (Tutanak, Rapor vb.) */}
+            <div className="space-y-2 pt-4 border-t border-border mt-4">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                  <Paperclip className="w-3.5 h-3.5 text-primary" />
+                  Ekli Belgeler ve Denetim Tutanakları
+                </label>
+                {uploadingField === 'document' && (
+                  <span className="text-xs text-primary flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Yükleniyor...
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {(form.documents || []).map((doc, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-muted/40 text-xs font-medium">
+                    <Paperclip className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <a href={doc.url} target="_blank" rel="noreferrer" className="truncate max-w-[180px] hover:underline text-foreground">
+                      {doc.name}
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => removeDocument(idx)}
+                      className="text-muted-foreground hover:text-destructive transition-colors ml-1"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+                <label className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-dashed border-border hover:border-primary/60 cursor-pointer bg-muted/20 hover:bg-muted/40 text-xs text-muted-foreground transition-colors">
+                  <Upload className="w-3.5 h-3.5 text-primary" />
+                  <span>Belge Ekle (PDF, Doc)</span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    disabled={uploadingField === 'document'}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) uploadDocument(file);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
               </div>
             </div>
           </CardContent>

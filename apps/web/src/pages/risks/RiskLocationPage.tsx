@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft, Plus, Upload, Pencil, X, Check, AlertTriangle,
@@ -65,6 +65,7 @@ function LevelBadge({ level }: { level: string }) {
 export default function RiskLocationPage() {
   const { locationId } = useParams<{ locationId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const token = localStorage.getItem('token');
   const { user } = useAuth();
@@ -101,7 +102,7 @@ export default function RiskLocationPage() {
     }));
   }, [filterStatus, filterCategory, filterResponsible, filterArea, filterInitialLevel, filterFinalLevel, searchTerm, sortConfig, storageKey]);
 
-  const { data: location } = useQuery({
+  const { data: locationDetails } = useQuery({
     queryKey: ['risk-location-details', locationId],
     queryFn: async () => {
       const res = await fetch(`${API}/api/risks/locations/${locationId}`, {
@@ -265,9 +266,9 @@ export default function RiskLocationPage() {
     }, {});
   }, [sortedRisks]);
 
-  const deptName = location?.name || 'Lokasyon';
-  const deptCode = location?.name ? location.name.replace(/i/g, 'İ').replace(/ı/g, 'I').toUpperCase().substring(0, 3) : 'GEN';
-  const facilityId = location?.facilityId;
+  const deptName = locationDetails?.name || 'Lokasyon';
+  const deptCode = locationDetails?.name ? locationDetails.name.replace(/i/g, 'İ').replace(/ı/g, 'I').toUpperCase().substring(0, 3) : 'GEN';
+  const facilityId = locationDetails?.facilityId;
 
   // Dinamik Filtre Metni
   const activeFiltersText = [
@@ -579,13 +580,13 @@ export default function RiskLocationPage() {
                   <tr 
                     key={risk.id} 
                     className="hover:bg-muted/50 cursor-pointer transition-colors group"
-                    onClick={() => navigate(`/risks/location/${locationId}/view/${risk.id}`)}
+                    onClick={() => navigate(`/risks/location/${locationId}/view/${risk.id}`, { state: { from: location.pathname + location.search } })}
                   >
                     <td className="px-4 py-3 font-mono font-medium text-muted-foreground">
                       {deptCode}-{String(risk.riskNo).padStart(3, '0')}
                     </td>
                     <td className="px-4 py-3 min-w-[120px] font-medium text-foreground">
-                      {risk.area || location?.name}
+                      {risk.area || locationDetails?.name}
                     </td>
                     <td className="px-4 py-3 min-w-[200px]">
                       <div className="font-medium text-foreground">{risk.riskCategory}</div>
@@ -605,10 +606,10 @@ export default function RiskLocationPage() {
                     </td>
                     <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-blue-600" onClick={() => navigate(`/risks/location/${locationId}/view/${risk.id}`)}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-blue-600" onClick={() => navigate(`/risks/location/${locationId}/view/${risk.id}`, { state: { from: location.pathname + location.search } })}>
                           <Eye className="w-4 h-4" />
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-orange-600" onClick={() => navigate(`/risks/location/${locationId}/edit/${risk.id}`)}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-orange-600" onClick={() => navigate(`/risks/location/${locationId}/edit/${risk.id}`, { state: { from: location.pathname + location.search } })}>
                           <Pencil className="w-4 h-4" />
                         </Button>
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(risk.id)}>

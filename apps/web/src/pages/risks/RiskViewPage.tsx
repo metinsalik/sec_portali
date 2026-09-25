@@ -365,10 +365,12 @@ export default function RiskViewPage() {
             variant="outline" 
             size="sm" 
             onClick={() => {
-              if (window.history.state && window.history.state.idx > 0) {
+              if (location.state?.from) {
+                navigate(location.state.from);
+              } else if (window.history.state && window.history.state.idx > 0) {
                 navigate(-1);
               } else {
-                navigate(location.state?.from || `/risks/location/${locationId}`);
+                navigate(`/risks/location/${locationId}`);
               }
             }} 
             className="h-8 text-xs font-medium"
@@ -415,7 +417,7 @@ export default function RiskViewPage() {
           <Button 
             size="sm" 
             variant="outline"
-            onClick={() => navigate(`/risks/location/${locationId}/edit/${risk.id}`)}
+            onClick={() => navigate(`/risks/location/${locationId}/edit/${risk.id}`, { state: { from: location.state?.from || location.pathname } })}
             className="shadow-xs font-semibold"
           >
             <Pencil className="w-3.5 h-3.5 mr-1.5" /> Düzenle

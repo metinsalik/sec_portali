@@ -80,9 +80,11 @@ app.use('/api/checklists', checklists_1.default);
 app.use('/api/safety-management/fire-doors', fire_doors_1.default);
 app.use('/api/safety-management/isg-defter', isgDefter_routes_1.default);
 const electric_infrastructure_routes_1 = __importDefault(require("./routes/electric-infrastructure.routes"));
+const fire_safety_control_1 = __importDefault(require("./routes/fire-safety-control"));
 app.use('/api/safety-management/elevators', elevator_routes_1.default);
 app.use('/api/safety-management/elevator-settings', elevator_settings_routes_1.default);
 app.use('/api/safety-management/electric-infrastructure', electric_infrastructure_routes_1.default);
+app.use('/api/fire-safety-control', fire_safety_control_1.default);
 // Sağlık kontrolü
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

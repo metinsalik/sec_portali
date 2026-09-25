@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { 
   Building2, ArrowLeft, Search, ChevronRight, MapPin, 
   Layers, ShieldAlert, Eye, Pencil, Trash2, ArrowUpDown, RefreshCw, FileSpreadsheet,
@@ -112,6 +112,7 @@ function buildHierarchyTree(locations: any[]) {
 export default function FacilityDepartmentsPage() {
   const { facilityId } = useParams<{ facilityId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const token = localStorage.getItem('token');
 
@@ -941,7 +942,7 @@ export default function FacilityDepartmentsPage() {
                       <tr 
                         key={risk.id}
                         className="cursor-pointer hover:bg-muted/40 transition-colors group"
-                        onClick={() => navigate(`/risks/location/${locId}/view/${risk.id}`)}
+                        onClick={() => navigate(`/risks/location/${locId}/view/${risk.id}`, { state: { from: location.pathname + location.search } })}
                       >
                         {/* No */}
                         <td className="p-3 text-center font-mono font-bold text-foreground text-xs align-top whitespace-normal">
@@ -1024,7 +1025,7 @@ export default function FacilityDepartmentsPage() {
                               variant="ghost"
                               className="h-8 w-8 rounded-lg hover:text-blue-600 transition-colors"
                               title="Detayı Görüntüle"
-                              onClick={() => navigate(`/risks/location/${locId}/view/${risk.id}`)}
+                              onClick={() => navigate(`/risks/location/${locId}/view/${risk.id}`, { state: { from: location.pathname + location.search } })}
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
@@ -1033,7 +1034,7 @@ export default function FacilityDepartmentsPage() {
                               variant="ghost"
                               className="h-8 w-8 rounded-lg hover:text-orange-600 transition-colors"
                               title="Düzenle"
-                              onClick={() => navigate(`/risks/location/${locId}/edit/${risk.id}`)}
+                              onClick={() => navigate(`/risks/location/${locId}/edit/${risk.id}`, { state: { from: location.pathname + location.search } })}
                             >
                               <Pencil className="w-4 h-4" />
                             </Button>

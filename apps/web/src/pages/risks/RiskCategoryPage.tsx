@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft, Search, Eye, Pencil, Trash2, ArrowUpDown, AlertTriangle, Building2
@@ -61,6 +61,7 @@ export default function RiskCategoryPage() {
   const subCat = searchParams.get('subCat') || '';
   
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const token = localStorage.getItem('token');
 
@@ -143,8 +144,19 @@ export default function RiskCategoryPage() {
     const subCatLower = subCat.trim().toLocaleLowerCase('tr');
     
     return allRisks.filter((r: any) => {
-      if (mainCatLower && (r.riskCategory || '').trim().toLocaleLowerCase('tr') !== mainCatLower) return false;
-      if (subCatLower && (r.subCategory || '').trim().toLocaleLowerCase('tr') !== subCatLower) return false;
+      const rCat = (r.riskCategory || 'Genel').trim().toLocaleLowerCase('tr');
+      const rSub = (r.subCategory || '').trim().toLocaleLowerCase('tr');
+
+      if (mainCatLower && rCat !== mainCatLower) return false;
+      
+      if (subCatLower) {
+        if (subCatLower === 'diğer' || subCatLower === 'diger') {
+          // 'Diğer' can match records where subCategory is 'Diğer', empty, or null
+          if (rSub && rSub !== 'diğer' && rSub !== 'diger') return false;
+        } else {
+          if (rSub !== subCatLower) return false;
+        }
+      }
       return true;
     });
   }, [allRisks, mainCat, subCat]);
@@ -536,7 +548,7 @@ export default function RiskCategoryPage() {
                     <tr 
                       key={risk.id} 
                       className="hover:bg-muted/50 cursor-pointer transition-colors group"
-                      onClick={() => navigate(`/risks/location/${locId}/view/${risk.id}`)}
+                      onClick={() => navigate(`/risks/location/${locId}/view/${risk.id}`, { state: { from: location.pathname + location.search } })}
                     >
                       <td className="px-4 py-3 font-mono font-medium text-muted-foreground">
                         {dCode}-{String(risk.riskNo).padStart(3, '0')}
@@ -564,10 +576,10 @@ export default function RiskCategoryPage() {
                       </td>
                       <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-blue-600" onClick={() => navigate(`/risks/location/${locId}/view/${risk.id}`)}>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-blue-600" onClick={() => navigate(`/risks/location/${locId}/view/${risk.id}`, { state: { from: location.pathname + location.search } })}>
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-orange-600" onClick={() => navigate(`/risks/location/${locId}/edit/${risk.id}`)}>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-orange-600" onClick={() => navigate(`/risks/location/${locId}/edit/${risk.id}`, { state: { from: location.pathname + location.search } })}>
                             <Pencil className="w-4 h-4" />
                           </Button>
                           <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(risk.id)}>
