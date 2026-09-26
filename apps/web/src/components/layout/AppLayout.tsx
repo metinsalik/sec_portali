@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -7,7 +7,7 @@ import {
   ClipboardList, FileText, Settings, Bell, ChevronDown, LogOut,
   User, BarChart3, ChevronRight, LayoutGrid, Database, Users2, Mail,
   BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame, PenTool, Menu, X, ShoppingCart, PieChart, Calendar, AlertCircle, MessageSquare, BookOpen, DoorClosed,
-  PanelLeftClose, PanelLeftOpen, PanelLeft, Zap
+  PanelLeftClose, PanelLeftOpen, PanelLeft, Zap, Camera
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -161,7 +161,8 @@ const electricInfrastructureNavItems = (hasAdminAccess: boolean) => [
     { label: 'Yönetici Dashboard', icon: LayoutDashboard, to: '/safety-management/electric-infrastructure/dashboard' },
   ] : []),
   { label: 'İŞLEMLER', type: 'group' },
-  { label: 'Kontrol Formu Tablosu', icon: Zap, to: '/safety-management/electric-infrastructure' },
+  { label: 'Altyapı Kontrol Formu', icon: Zap, to: '/safety-management/electric-infrastructure' },
+  { label: 'Termal Kamera Kontrolü', icon: Camera, to: '/safety-management/electric-infrastructure?tab=thermal' },
 ];
 
 const binaTuruNavItems = [
@@ -252,6 +253,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
     }
   });
   const { openChat, hasUnread } = useChat();
+  const mainRef = useRef<HTMLElement | null>(null);
+
+  // Sayfa değişimlerinde (veya sayfa içi gezinmelerde) sayfa başını en yukarıya kaydır
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0;
+    }
+    window.scrollTo(0, 0);
+  }, [location.pathname, location.search]);
 
   const toggleCollapse = () => {
     setIsCollapsed(prev => {
@@ -613,7 +623,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6 print:p-0 print:overflow-visible print:block">
+        <main ref={mainRef} className="flex-1 overflow-y-auto p-6 print:p-0 print:overflow-visible print:block">
           <div className="max-w-[1600px] w-full mx-auto">
             {children}
           </div>

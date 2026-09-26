@@ -12,6 +12,8 @@ frontend/.env
 # Build outputs
 frontend/dist/
 frontend/build/
+apps/web/dist/
+backend/dist/
 
 # IDE and OS files
 .DS_Store

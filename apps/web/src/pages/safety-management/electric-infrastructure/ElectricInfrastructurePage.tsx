@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +29,7 @@ import {
   type ElectricInfrastructureStats,
   type FacilityStatusResponse
 } from '@/services/electric-infrastructure.service';
+import { ThermalInspectionTab } from './ThermalInspectionTab';
 
 const CATEGORIES = [
   'Ana Dağıtım Panosu (ADP)',
@@ -50,10 +51,38 @@ const CATEGORIES = [
 
 export default function ElectricInfrastructurePage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
-  const [activeFacilityId, setActiveFacilityId] = useState<string>(
-    localStorage.getItem('activeFacilityId') || 'all'
-  );
+  const [activeFacilityId, setActiveFacilityId] = useState<string>(() => {
+    const saved = localStorage.getItem('activeFacilityId');
+    if (saved && saved !== 'all') return saved;
+    const isStandard = user && !user.roles?.includes('admin') && !user.roles?.includes('management');
+    if (isStandard && user.facilities && user.facilities.length > 0) {
+      return user.facilities[0];
+    }
+    return saved || 'all';
+  });
+
+  const initialTab = searchParams.get('tab') === 'thermal' ? 'THERMAL' : 'GENERAL';
+  const [activeTab, setActiveTab] = useState<'GENERAL' | 'THERMAL'>(initialTab);
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'thermal' && activeTab !== 'THERMAL') {
+      setActiveTab('THERMAL');
+    } else if (!tabParam && activeTab !== 'GENERAL') {
+      setActiveTab('GENERAL');
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (tab: 'GENERAL' | 'THERMAL') => {
+    setActiveTab(tab);
+    if (tab === 'THERMAL') {
+      setSearchParams({ tab: 'thermal' });
+    } else {
+      setSearchParams({});
+    }
+  };
 
   const [records, setRecords] = useState<ElectricInfrastructureRecord[]>([]);
   const [stats, setStats] = useState<ElectricInfrastructureStats | null>(null);
@@ -162,15 +191,16 @@ export default function ElectricInfrastructurePage() {
     }
   };
 
-  // Rol kontrolü: Yönetici ise ve doğrudan /safety-management/electric-infrastructure sayfasına gelip 'all' seçiliyse Dashboard'a yönlendir
+  // Rol kontrolü: Yönetici ise ve doğrudan /safety-management/electric-infrastructure sayfasına gelip 'all' seçiliyse Dashboard'a yönlendir (Termal sekmesinde değilse!)
   useEffect(() => {
+    const isThermal = searchParams.get('tab') === 'thermal';
     const hasCheckedRoleRedirect = sessionStorage.getItem('electric_role_redirect_done');
-    if (!hasCheckedRoleRedirect && isAdminOrMgmt) {
+    if (!hasCheckedRoleRedirect && isAdminOrMgmt && !isThermal) {
       sessionStorage.setItem('electric_role_redirect_done', 'true');
       localStorage.setItem('activeFacilityId', 'all');
       navigate('/safety-management/electric-infrastructure/dashboard');
     }
-  }, [isAdminOrMgmt, navigate]);
+  }, [isAdminOrMgmt, navigate, searchParams]);
 
   useEffect(() => {
     const handleFacilityChanged = () => {
@@ -343,85 +373,134 @@ export default function ElectricInfrastructurePage() {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Header Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-[#1a1f24] p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
-              <Zap className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-                Elektrik Altyapı Sistemleri Kontrol Formu
-              </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Tesis bazında elektrik panoları, jeneratörler, UPS ve altyapı ekipmanlarının eşzamanlı denetimi.
-              </p>
+      {/* Header Bar - Yalnızca Genel Altyapı sekmesinde gösterilir */}
+      {activeTab === 'GENERAL' && (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-[#1a1f24] p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+                <Zap className="w-6 h-6" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                  Elektrik Altyapı Sistemleri Kontrol Formu
+                </h1>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Tesis bazında elektrik panoları, jeneratörler, UPS ve altyapı ekipmanlarının eşzamanlı denetimi.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Tesis Bazında Tamamlandı / Tüm Girişlerim Bitti Butonu */}
-          {activeFacilityId !== 'all' && (
-            <Button
-              type="button"
-              variant={facilityStatus?.isCompleted ? "outline" : "default"}
-              size="sm"
-              onClick={handleToggleCompletion}
-              disabled={togglingStatus}
-              className={`h-9 px-3.5 font-medium transition-all shadow-sm ${
-                facilityStatus?.isCompleted
-                  ? 'border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-              }`}
-              title={facilityStatus?.isCompleted ? 'Girişler tamamlandı olarak işaretli. Tıklayarak tekrar açabilirsiniz.' : 'Tesisinizin tüm ekipman girişlerini tamamladığınızda bu butona basın.'}
-            >
-              {togglingStatus ? (
-                <RefreshCw className="w-4 h-4 mr-1.5 animate-spin" />
-              ) : facilityStatus?.isCompleted ? (
-                <CheckCircle2 className="w-4 h-4 mr-1.5 text-emerald-600 dark:text-emerald-400" />
-              ) : (
-                <CheckCircle className="w-4 h-4 mr-1.5" />
-              )}
-              {facilityStatus?.isCompleted ? 'Girişler Bitti ✓ (Tekrar Aç)' : 'Tüm Girişlerim Bitti'}
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Tesis Bazında Tamamlandı / Tüm Girişlerim Bitti Butonu */}
+            {activeFacilityId !== 'all' && (
+              <Button
+                type="button"
+                variant={facilityStatus?.isCompleted ? "outline" : "default"}
+                size="sm"
+                onClick={handleToggleCompletion}
+                disabled={togglingStatus}
+                className={`h-9 px-3.5 font-medium transition-all shadow-sm ${
+                  facilityStatus?.isCompleted
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                }`}
+                title={facilityStatus?.isCompleted ? 'Girişler tamamlandı olarak işaretli. Tıklayarak tekrar açabilirsiniz.' : 'Tesisinizin tüm ekipman girişlerini tamamladığınızda bu butona basın.'}
+              >
+                {togglingStatus ? (
+                  <RefreshCw className="w-4 h-4 mr-1.5 animate-spin" />
+                ) : facilityStatus?.isCompleted ? (
+                  <CheckCircle2 className="w-4 h-4 mr-1.5 text-emerald-600 dark:text-emerald-400" />
+                ) : (
+                  <CheckCircle className="w-4 h-4 mr-1.5" />
+                )}
+                {facilityStatus?.isCompleted ? 'Girişler Bitti ✓ (Tekrar Aç)' : 'Tüm Girişlerim Bitti'}
+              </Button>
+            )}
 
-          {/* Yönetici Dashboard Butonu (Admin/Management için) */}
-          {isAdminOrMgmt && (
+            {/* Yönetici Dashboard Butonu (Admin/Management için) */}
+            {isAdminOrMgmt && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/safety-management/electric-infrastructure/dashboard')}
+                className="border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 hover:bg-indigo-100/70 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 h-9 px-3 font-medium"
+              >
+                <BarChart3 className="w-4 h-4 mr-1.5" />
+                Yönetici Dashboard
+              </Button>
+            )}
+
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate('/safety-management/electric-infrastructure/dashboard')}
-              className="border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 hover:bg-indigo-100/70 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 h-9 px-3 font-medium"
+              onClick={handleExportExcel}
+              disabled={isExporting}
+              className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 h-9 px-3 text-emerald-600 dark:text-emerald-400 font-medium"
             >
-              <BarChart3 className="w-4 h-4 mr-1.5" />
-              Yönetici Dashboard
+              {isExporting ? <RefreshCw className="w-4 h-4 mr-1.5 animate-spin" /> : <FileSpreadsheet className="w-4 h-4 mr-1.5" />}
+              Excel'e Aktar
             </Button>
-          )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportExcel}
-            disabled={isExporting}
-            className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 h-9 px-3 text-emerald-600 dark:text-emerald-400 font-medium"
-          >
-            {isExporting ? <RefreshCw className="w-4 h-4 mr-1.5 animate-spin" /> : <FileSpreadsheet className="w-4 h-4 mr-1.5" />}
-            Excel'e Aktar
-          </Button>
-
-          <Button
-            onClick={handleOpenNewModal}
-            className="bg-amber-600 hover:bg-amber-700 text-white shadow-sm h-9"
-          >
-            <Plus className="w-4 h-4 mr-1.5" />
-            Yeni Ekipman / Konum Ekle
-          </Button>
+            <Button
+              onClick={handleOpenNewModal}
+              className="bg-amber-600 hover:bg-amber-700 text-white shadow-sm h-9"
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
+              Yeni Ekipman / Konum Ekle
+            </Button>
+          </div>
         </div>
+      )}
+
+      {/* Ana Sekme Seçici (Genel Altyapı vs Termal Kamera Kontrolü) */}
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+        <button
+          type="button"
+          onClick={() => handleTabChange('GENERAL')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+            activeTab === 'GENERAL'
+              ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30 shadow-sm'
+              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Zap className="w-4 h-4" />
+          Genel Elektrik Altyapı Denetimi
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange('THERMAL')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+            activeTab === 'THERMAL'
+              ? 'bg-indigo-600 text-white shadow-md'
+              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Camera className="w-4 h-4" />
+          Termal Kamera Pano Kontrolü
+          <span className="ml-1 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-white/20">
+            Yeni
+          </span>
+        </button>
       </div>
 
+      {/* TERMAL KAMERA PANO KONTROLÜ SEKMESİ */}
+      {activeTab === 'THERMAL' && (
+        <ThermalInspectionTab
+          activeFacilityId={activeFacilityId}
+          isAdminOrMgmt={isAdminOrMgmt}
+          onFacilityChange={(facId) => {
+            setActiveFacilityId(facId);
+            localStorage.setItem('activeFacilityId', facId);
+          }}
+        />
+      )}
+
+      {/* GENEL ELEKTRİK ALTYAPI SEKMESİ (Mevcut Görünüm) */}
+      {activeTab === 'GENERAL' && (
+        <div className="space-y-6">
       {/* Excel Row 6 Summary Indicators */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* Toplam Kayıt */}
@@ -925,6 +1004,8 @@ export default function ElectricInfrastructurePage() {
           </div>
         )}
       </div>
+      </div>
+      )}
 
       {/* Modal: Yeni / Düzenle Ekipman Kontrol Kaydı */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

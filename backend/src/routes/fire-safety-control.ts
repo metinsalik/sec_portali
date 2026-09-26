@@ -8,17 +8,54 @@ import fs from 'fs';
 const router = Router();
 const prisma = new PrismaClient();
 
-// Dynamic Multer Storage with folder: uploads/fire_safety_control/<facilityId>/
+// Dynamic Multer Storage with folder: uploads/fire_safety_control/<facilitySlug>/
+// Tesis adını veya kodunu güvenli ve temiz bir klasör ismine dönüştürür (örn: LIV VADİ -> LIV_VADI)
+const sanitizeFolderName = (str: string): string => {
+  const trMap: Record<string, string> = {
+    'ç': 'c', 'Ç': 'C', 'ğ': 'g', 'Ğ': 'G', 'ı': 'i', 'I': 'I', 'İ': 'I',
+    'ö': 'o', 'Ö': 'O', 'ş': 's', 'Ş': 'S', 'ü': 'u', 'Ü': 'U'
+  };
+  let clean = String(str || '').replace(/[çÇğĞıIİöÖşŞüÜ]/g, (m) => trMap[m] || m);
+  clean = clean.replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  return clean || 'general';
+};
+
 const storage = multer.diskStorage({
-  destination: (req: any, file, cb) => {
-    // Sanitize facilityId or fallback to 'general'
-    const rawFacId = req.query.facilityId || req.body.facilityId || 'general';
-    const cleanFacId = String(rawFacId).replace(/[^a-zA-Z0-9_-]/g, '_');
-    const targetDir = path.join(process.cwd(), 'uploads', 'fire_safety_control', cleanFacId);
-    if (!fs.existsSync(targetDir)) {
-      fs.mkdirSync(targetDir, { recursive: true });
+  destination: async (req: any, file, cb) => {
+    try {
+      let folderName = 'general';
+      const rawFac = req.query.facilityName || req.body.facilityName;
+      const rawFacId = req.query.facilityId || req.body.facilityId;
+
+      if (rawFac && typeof rawFac === 'string' && rawFac.trim() !== '' && rawFac !== 'undefined') {
+        folderName = sanitizeFolderName(rawFac);
+      } else if (rawFacId && rawFacId !== 'all' && rawFacId !== 'general') {
+        // Tesis ID'sinden ismi sorgula
+        const fac = await prisma.facility.findUnique({
+          where: { id: String(rawFacId) },
+          select: { name: true, shortName: true }
+        });
+        if (fac) {
+          folderName = sanitizeFolderName(fac.shortName || fac.name || String(rawFacId));
+        } else {
+          folderName = sanitizeFolderName(String(rawFacId));
+        }
+      }
+
+      req.targetFacilityFolder = folderName;
+      const targetDir = path.join(process.cwd(), 'uploads', 'fire_safety_control', folderName);
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+      cb(null, targetDir);
+    } catch (err: any) {
+      const fallbackDir = path.join(process.cwd(), 'uploads', 'fire_safety_control', 'general');
+      if (!fs.existsSync(fallbackDir)) {
+        fs.mkdirSync(fallbackDir, { recursive: true });
+      }
+      req.targetFacilityFolder = 'general';
+      cb(null, fallbackDir);
     }
-    cb(null, targetDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -29,20 +66,19 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Dosya / Fotoğraf yükleme endpoint'i (tesise özel alt klasörde saklanır)
-router.post('/upload', authMiddleware, upload.array('files', 20), async (req: AuthRequest, res: Response) => {
+// Dosya / Fotoğraf yükleme endpoint'i (tesise özel alt klasörde saklanır: /uploads/fire_safety_control/<facilitySlug>/...)
+router.post('/upload', authMiddleware, upload.array('files', 20), async (req: any, res: Response) => {
   try {
     if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
       return res.status(400).json({ error: 'Dosya yüklenmedi.' });
     }
 
-    const rawFacId = req.query.facilityId || req.body.facilityId || 'general';
-    const cleanFacId = String(rawFacId).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const folderName = req.targetFacilityFolder || 'general';
     const files = req.files as Express.Multer.File[];
 
     const uploadedFiles = files.map(file => ({
       name: file.originalname,
-      url: `/uploads/fire_safety_control/${cleanFacId}/${file.filename}`,
+      url: `/uploads/fire_safety_control/${folderName}/${file.filename}`,
       type: file.mimetype,
       size: file.size,
       uploadedAt: new Date().toISOString()
@@ -316,6 +352,7 @@ router.post('/save', authMiddleware, async (req: AuthRequest, res: Response) => 
             deadlineDate: item.deadlineDate ? new Date(item.deadlineDate) : null,
             status: item.status || 'ACIK',
             riskLevel: item.riskLevel || 'Orta',
+            progressPercent: item.progressPercent !== undefined ? Number(item.progressPercent) : 0,
             findingPhotos: item.findingPhotos || [],
             notes: item.notes || null
           };
@@ -356,7 +393,7 @@ router.post('/save', authMiddleware, async (req: AuthRequest, res: Response) => 
 router.post('/items/:itemId/actions', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { itemId } = req.params;
-    const { explanation, status, actionDate, evidencePhotos } = req.body;
+    const { explanation, status, actionDate, evidencePhotos, progressPercent } = req.body;
 
     if (!explanation) {
       return res.status(400).json({ error: 'Aksiyon açıklaması zorunludur.' });
@@ -367,6 +404,16 @@ router.post('/items/:itemId/actions', authMiddleware, async (req: AuthRequest, r
       return res.status(404).json({ error: 'Tespit maddesi bulunamadı.' });
     }
 
+    // İlerleme yüzdesi hesapla veya gelen değeri al
+    let numericPercent = 100;
+    if (progressPercent !== undefined && progressPercent !== null) {
+      numericPercent = Math.min(100, Math.max(0, Number(progressPercent) || 0));
+    } else {
+      if (status === 'Tamamlandı') numericPercent = 100;
+      else if (status === 'Devam Ediyor') numericPercent = Math.max(item.progressPercent || 0, 50);
+      else if (status === 'Başlamadı') numericPercent = 0;
+    }
+
     const action = await prisma.fireSafetyItemAction.create({
       data: {
         itemId,
@@ -374,19 +421,27 @@ router.post('/items/:itemId/actions', authMiddleware, async (req: AuthRequest, r
         actionDate: actionDate ? new Date(actionDate) : new Date(),
         status: status || 'Devam Ediyor',
         explanation,
+        progressPercent: numericPercent,
         evidencePhotos: evidencePhotos || []
       }
     });
 
-    // Ana maddenin durumunu güncelle
+    // Ana maddenin durumunu ve progressPercent değerini güncelle
     let newStatus = item.status;
-    if (status === 'Tamamlandı') newStatus = 'TAMAMLANDI';
-    else if (status === 'Devam Ediyor') newStatus = 'DEVAM_EDIYOR';
-    else if (status === 'İptal Edildi') newStatus = 'IPTAL';
+    if (numericPercent >= 100 || status === 'Tamamlandı') {
+      newStatus = 'TAMAMLANDI';
+    } else if (numericPercent > 0 || status === 'Devam Ediyor') {
+      newStatus = 'DEVAM_EDIYOR';
+    } else if (status === 'İptal Edildi') {
+      newStatus = 'IPTAL';
+    }
 
     await prisma.fireSafetyItem.update({
       where: { id: itemId },
-      data: { status: newStatus }
+      data: { 
+        status: newStatus,
+        progressPercent: numericPercent
+      }
     });
 
     res.json(action);
@@ -399,10 +454,15 @@ router.post('/items/:itemId/actions', authMiddleware, async (req: AuthRequest, r
 // Tekil madde kaydet / güncelle
 router.post('/items/save', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { id, auditId, orderNo, topic, source, category, action, responsible, deadlineDate, status, riskLevel, findingPhotos, notes } = req.body;
+    const { id, auditId, orderNo, topic, source, category, action, responsible, deadlineDate, status, riskLevel, progressPercent, findingPhotos, notes } = req.body;
 
     if (!auditId) {
       return res.status(400).json({ error: 'auditId zorunludur.' });
+    }
+
+    let numericPercent = progressPercent !== undefined ? Math.min(100, Math.max(0, Number(progressPercent) || 0)) : undefined;
+    if (numericPercent === undefined) {
+      if (status === 'TAMAMLANDI') numericPercent = 100;
     }
 
     const itemPayload: any = {
@@ -416,6 +476,7 @@ router.post('/items/save', authMiddleware, async (req: AuthRequest, res: Respons
       deadlineDate: deadlineDate ? new Date(deadlineDate) : null,
       status: status || 'ACIK',
       riskLevel: riskLevel || 'Orta',
+      progressPercent: numericPercent !== undefined ? numericPercent : 0,
       findingPhotos: findingPhotos || [],
       notes: notes || null
     };

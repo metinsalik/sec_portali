@@ -370,11 +370,15 @@ export const ElectricInfrastructureRecordScalarFieldEnumSchema = z.enum(['id','f
 
 export const ElectricInfrastructureFacilityStatusScalarFieldEnumSchema = z.enum(['facilityId','isCompleted','completedAt','completedBy','notes','createdAt','updatedAt']);
 
+export const ThermalInspectionSessionScalarFieldEnumSchema = z.enum(['id','facilityId','reportDate','status','completedAt','completedBy','notes','uploadedBy','createdAt','updatedAt']);
+
+export const ThermalInspectionItemScalarFieldEnumSchema = z.enum(['id','sessionId','orderIndex','buildingLocation','floorSection','measurementDate','controlTime','panelName','measurementPoint','equipmentConnection','measuredTemp','ambientTemp','deltaTemp','status','priority','detectedRisk','actionTaken','photoUrls','createdAt','updatedAt']);
+
 export const FireSafetyAuditScalarFieldEnumSchema = z.enum(['id','facilityId','title','subtitle','auditDate','topic','purpose','status','preparedBy','reviewedBy','approvedBy','createdBy','createdAt','updatedAt']);
 
-export const FireSafetyItemScalarFieldEnumSchema = z.enum(['id','auditId','orderNo','topic','source','category','action','responsible','deadlineDate','status','riskLevel','findingPhotos','notes','createdAt','updatedAt']);
+export const FireSafetyItemScalarFieldEnumSchema = z.enum(['id','auditId','orderNo','topic','source','category','action','responsible','deadlineDate','status','riskLevel','progressPercent','findingPhotos','notes','createdAt','updatedAt']);
 
-export const FireSafetyItemActionScalarFieldEnumSchema = z.enum(['id','itemId','performedBy','actionDate','status','explanation','evidencePhotos','createdAt','updatedAt']);
+export const FireSafetyItemActionScalarFieldEnumSchema = z.enum(['id','itemId','performedBy','actionDate','status','explanation','progressPercent','evidencePhotos','createdAt','updatedAt']);
 
 export const FireSafetySettingScalarFieldEnumSchema = z.enum(['id','categories','sources','responsibles','createdAt','updatedAt']);
 
@@ -741,6 +745,7 @@ export type FacilityRelations = {
   elevators: ElevatorWithRelations[];
   electricInfrastructureRecords: ElectricInfrastructureRecordWithRelations[];
   electricInfrastructureStatus?: ElectricInfrastructureFacilityStatusWithRelations | null;
+  thermalInspectionSessions: ThermalInspectionSessionWithRelations[];
   fireSafetyAudits: FireSafetyAuditWithRelations[];
 };
 
@@ -792,6 +797,7 @@ export const FacilityWithRelationsSchema: z.ZodType<FacilityWithRelations> = Fac
   elevators: z.lazy(() => ElevatorWithRelationsSchema).array(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordWithRelationsSchema).array(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusWithRelationsSchema).nullable(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionWithRelationsSchema).array(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditWithRelationsSchema).array(),
 }))
 
@@ -5710,6 +5716,82 @@ export const ElectricInfrastructureFacilityStatusWithRelationsSchema: z.ZodType<
 }))
 
 /////////////////////////////////////////
+// THERMAL INSPECTION SESSION SCHEMA
+/////////////////////////////////////////
+
+export const ThermalInspectionSessionSchema = z.object({
+  id: z.string(),
+  facilityId: z.string(),
+  reportDate: z.coerce.date().nullable(),
+  status: z.string(),
+  completedAt: z.coerce.date().nullable(),
+  completedBy: z.string().nullable(),
+  notes: z.string().nullable(),
+  uploadedBy: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type ThermalInspectionSession = z.infer<typeof ThermalInspectionSessionSchema>
+
+// THERMAL INSPECTION SESSION RELATION SCHEMA
+//------------------------------------------------------
+
+export type ThermalInspectionSessionRelations = {
+  items: ThermalInspectionItemWithRelations[];
+  facility: FacilityWithRelations;
+};
+
+export type ThermalInspectionSessionWithRelations = z.infer<typeof ThermalInspectionSessionSchema> & ThermalInspectionSessionRelations
+
+export const ThermalInspectionSessionWithRelationsSchema: z.ZodType<ThermalInspectionSessionWithRelations> = ThermalInspectionSessionSchema.merge(z.object({
+  items: z.lazy(() => ThermalInspectionItemWithRelationsSchema).array(),
+  facility: z.lazy(() => FacilityWithRelationsSchema),
+}))
+
+/////////////////////////////////////////
+// THERMAL INSPECTION ITEM SCHEMA
+/////////////////////////////////////////
+
+export const ThermalInspectionItemSchema = z.object({
+  id: z.string(),
+  sessionId: z.string(),
+  orderIndex: z.number().int(),
+  buildingLocation: z.string().nullable(),
+  floorSection: z.string().nullable(),
+  measurementDate: z.coerce.date().nullable(),
+  controlTime: z.string().nullable(),
+  panelName: z.string(),
+  measurementPoint: z.string().nullable(),
+  equipmentConnection: z.string().nullable(),
+  measuredTemp: z.number().nullable(),
+  ambientTemp: z.number().nullable(),
+  deltaTemp: z.number().nullable(),
+  status: z.string().nullable(),
+  priority: z.string().nullable(),
+  detectedRisk: z.string().nullable(),
+  actionTaken: z.string().nullable(),
+  photoUrls: JsonValueSchema,
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type ThermalInspectionItem = z.infer<typeof ThermalInspectionItemSchema>
+
+// THERMAL INSPECTION ITEM RELATION SCHEMA
+//------------------------------------------------------
+
+export type ThermalInspectionItemRelations = {
+  session: ThermalInspectionSessionWithRelations;
+};
+
+export type ThermalInspectionItemWithRelations = z.infer<typeof ThermalInspectionItemSchema> & ThermalInspectionItemRelations
+
+export const ThermalInspectionItemWithRelationsSchema: z.ZodType<ThermalInspectionItemWithRelations> = ThermalInspectionItemSchema.merge(z.object({
+  session: z.lazy(() => ThermalInspectionSessionWithRelationsSchema),
+}))
+
+/////////////////////////////////////////
 // FIRE SAFETY AUDIT SCHEMA
 /////////////////////////////////////////
 
@@ -5763,6 +5845,7 @@ export const FireSafetyItemSchema = z.object({
   deadlineDate: z.coerce.date().nullable(),
   status: z.string(),
   riskLevel: z.string().nullable(),
+  progressPercent: z.number().int(),
   findingPhotos: JsonValueSchema,
   notes: z.string().nullable(),
   createdAt: z.coerce.date(),
@@ -5797,6 +5880,7 @@ export const FireSafetyItemActionSchema = z.object({
   actionDate: z.coerce.date(),
   status: z.string(),
   explanation: z.string(),
+  progressPercent: z.number().int(),
   evidencePhotos: JsonValueSchema,
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
@@ -6142,6 +6226,7 @@ export const FacilityIncludeSchema: z.ZodType<Prisma.FacilityInclude> = z.object
   elevators: z.union([z.boolean(),z.lazy(() => ElevatorFindManyArgsSchema)]).optional(),
   electricInfrastructureRecords: z.union([z.boolean(),z.lazy(() => ElectricInfrastructureRecordFindManyArgsSchema)]).optional(),
   electricInfrastructureStatus: z.union([z.boolean(),z.lazy(() => ElectricInfrastructureFacilityStatusArgsSchema)]).optional(),
+  thermalInspectionSessions: z.union([z.boolean(),z.lazy(() => ThermalInspectionSessionFindManyArgsSchema)]).optional(),
   fireSafetyAudits: z.union([z.boolean(),z.lazy(() => FireSafetyAuditFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => FacilityCountOutputTypeArgsSchema)]).optional(),
 }).strict();
@@ -6200,6 +6285,7 @@ export const FacilityCountOutputTypeSelectSchema: z.ZodType<Prisma.FacilityCount
   ohsBoardDepartments: z.boolean().optional(),
   elevators: z.boolean().optional(),
   electricInfrastructureRecords: z.boolean().optional(),
+  thermalInspectionSessions: z.boolean().optional(),
   fireSafetyAudits: z.boolean().optional(),
 }).strict();
 
@@ -6270,6 +6356,7 @@ export const FacilitySelectSchema: z.ZodType<Prisma.FacilitySelect> = z.object({
   elevators: z.union([z.boolean(),z.lazy(() => ElevatorFindManyArgsSchema)]).optional(),
   electricInfrastructureRecords: z.union([z.boolean(),z.lazy(() => ElectricInfrastructureRecordFindManyArgsSchema)]).optional(),
   electricInfrastructureStatus: z.union([z.boolean(),z.lazy(() => ElectricInfrastructureFacilityStatusArgsSchema)]).optional(),
+  thermalInspectionSessions: z.union([z.boolean(),z.lazy(() => ThermalInspectionSessionFindManyArgsSchema)]).optional(),
   fireSafetyAudits: z.union([z.boolean(),z.lazy(() => FireSafetyAuditFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => FacilityCountOutputTypeArgsSchema)]).optional(),
 }).strict()
@@ -11070,6 +11157,80 @@ export const ElectricInfrastructureFacilityStatusSelectSchema: z.ZodType<Prisma.
   facility: z.union([z.boolean(),z.lazy(() => FacilityArgsSchema)]).optional(),
 }).strict()
 
+// THERMAL INSPECTION SESSION
+//------------------------------------------------------
+
+export const ThermalInspectionSessionIncludeSchema: z.ZodType<Prisma.ThermalInspectionSessionInclude> = z.object({
+  items: z.union([z.boolean(),z.lazy(() => ThermalInspectionItemFindManyArgsSchema)]).optional(),
+  facility: z.union([z.boolean(),z.lazy(() => FacilityArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => ThermalInspectionSessionCountOutputTypeArgsSchema)]).optional(),
+}).strict();
+
+export const ThermalInspectionSessionArgsSchema: z.ZodType<Prisma.ThermalInspectionSessionDefaultArgs> = z.object({
+  select: z.lazy(() => ThermalInspectionSessionSelectSchema).optional(),
+  include: z.lazy(() => ThermalInspectionSessionIncludeSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionCountOutputTypeArgsSchema: z.ZodType<Prisma.ThermalInspectionSessionCountOutputTypeDefaultArgs> = z.object({
+  select: z.lazy(() => ThermalInspectionSessionCountOutputTypeSelectSchema).nullish(),
+}).strict();
+
+export const ThermalInspectionSessionCountOutputTypeSelectSchema: z.ZodType<Prisma.ThermalInspectionSessionCountOutputTypeSelect> = z.object({
+  items: z.boolean().optional(),
+}).strict();
+
+export const ThermalInspectionSessionSelectSchema: z.ZodType<Prisma.ThermalInspectionSessionSelect> = z.object({
+  id: z.boolean().optional(),
+  facilityId: z.boolean().optional(),
+  reportDate: z.boolean().optional(),
+  status: z.boolean().optional(),
+  completedAt: z.boolean().optional(),
+  completedBy: z.boolean().optional(),
+  notes: z.boolean().optional(),
+  uploadedBy: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  items: z.union([z.boolean(),z.lazy(() => ThermalInspectionItemFindManyArgsSchema)]).optional(),
+  facility: z.union([z.boolean(),z.lazy(() => FacilityArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => ThermalInspectionSessionCountOutputTypeArgsSchema)]).optional(),
+}).strict()
+
+// THERMAL INSPECTION ITEM
+//------------------------------------------------------
+
+export const ThermalInspectionItemIncludeSchema: z.ZodType<Prisma.ThermalInspectionItemInclude> = z.object({
+  session: z.union([z.boolean(),z.lazy(() => ThermalInspectionSessionArgsSchema)]).optional(),
+}).strict();
+
+export const ThermalInspectionItemArgsSchema: z.ZodType<Prisma.ThermalInspectionItemDefaultArgs> = z.object({
+  select: z.lazy(() => ThermalInspectionItemSelectSchema).optional(),
+  include: z.lazy(() => ThermalInspectionItemIncludeSchema).optional(),
+}).strict();
+
+export const ThermalInspectionItemSelectSchema: z.ZodType<Prisma.ThermalInspectionItemSelect> = z.object({
+  id: z.boolean().optional(),
+  sessionId: z.boolean().optional(),
+  orderIndex: z.boolean().optional(),
+  buildingLocation: z.boolean().optional(),
+  floorSection: z.boolean().optional(),
+  measurementDate: z.boolean().optional(),
+  controlTime: z.boolean().optional(),
+  panelName: z.boolean().optional(),
+  measurementPoint: z.boolean().optional(),
+  equipmentConnection: z.boolean().optional(),
+  measuredTemp: z.boolean().optional(),
+  ambientTemp: z.boolean().optional(),
+  deltaTemp: z.boolean().optional(),
+  status: z.boolean().optional(),
+  priority: z.boolean().optional(),
+  detectedRisk: z.boolean().optional(),
+  actionTaken: z.boolean().optional(),
+  photoUrls: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  session: z.union([z.boolean(),z.lazy(() => ThermalInspectionSessionArgsSchema)]).optional(),
+}).strict()
+
 // FIRE SAFETY AUDIT
 //------------------------------------------------------
 
@@ -11146,6 +11307,7 @@ export const FireSafetyItemSelectSchema: z.ZodType<Prisma.FireSafetyItemSelect> 
   deadlineDate: z.boolean().optional(),
   status: z.boolean().optional(),
   riskLevel: z.boolean().optional(),
+  progressPercent: z.boolean().optional(),
   findingPhotos: z.boolean().optional(),
   notes: z.boolean().optional(),
   createdAt: z.boolean().optional(),
@@ -11174,6 +11336,7 @@ export const FireSafetyItemActionSelectSchema: z.ZodType<Prisma.FireSafetyItemAc
   actionDate: z.boolean().optional(),
   status: z.boolean().optional(),
   explanation: z.boolean().optional(),
+  progressPercent: z.boolean().optional(),
   evidencePhotos: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
@@ -11801,6 +11964,7 @@ export const FacilityWhereInputSchema: z.ZodType<Prisma.FacilityWhereInput> = z.
   elevators: z.lazy(() => ElevatorListRelationFilterSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordListRelationFilterSchema).optional(),
   electricInfrastructureStatus: z.union([ z.lazy(() => ElectricInfrastructureFacilityStatusNullableRelationFilterSchema), z.lazy(() => ElectricInfrastructureFacilityStatusWhereInputSchema) ]).optional().nullable(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionListRelationFilterSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditListRelationFilterSchema).optional(),
 }).strict();
 
@@ -11871,6 +12035,7 @@ export const FacilityOrderByWithRelationInputSchema: z.ZodType<Prisma.FacilityOr
   elevators: z.lazy(() => ElevatorOrderByRelationAggregateInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordOrderByRelationAggregateInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusOrderByWithRelationInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionOrderByRelationAggregateInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditOrderByRelationAggregateInputSchema).optional(),
 }).strict();
 
@@ -11947,6 +12112,7 @@ export const FacilityWhereUniqueInputSchema: z.ZodType<Prisma.FacilityWhereUniqu
   elevators: z.lazy(() => ElevatorListRelationFilterSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordListRelationFilterSchema).optional(),
   electricInfrastructureStatus: z.union([ z.lazy(() => ElectricInfrastructureFacilityStatusNullableRelationFilterSchema), z.lazy(() => ElectricInfrastructureFacilityStatusWhereInputSchema) ]).optional().nullable(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionListRelationFilterSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditListRelationFilterSchema).optional(),
 }).strict());
 
@@ -25349,6 +25515,227 @@ export const ElectricInfrastructureFacilityStatusScalarWhereWithAggregatesInputS
   updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
 }).strict();
 
+export const ThermalInspectionSessionWhereInputSchema: z.ZodType<Prisma.ThermalInspectionSessionWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => ThermalInspectionSessionWhereInputSchema), z.lazy(() => ThermalInspectionSessionWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => ThermalInspectionSessionWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => ThermalInspectionSessionWhereInputSchema), z.lazy(() => ThermalInspectionSessionWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  facilityId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  reportDate: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  completedAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  completedBy: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  uploadedBy: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  items: z.lazy(() => ThermalInspectionItemListRelationFilterSchema).optional(),
+  facility: z.union([ z.lazy(() => FacilityRelationFilterSchema), z.lazy(() => FacilityWhereInputSchema) ]).optional(),
+}).strict();
+
+export const ThermalInspectionSessionOrderByWithRelationInputSchema: z.ZodType<Prisma.ThermalInspectionSessionOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  reportDate: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  completedAt: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  completedBy: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  uploadedBy: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  items: z.lazy(() => ThermalInspectionItemOrderByRelationAggregateInputSchema).optional(),
+  facility: z.lazy(() => FacilityOrderByWithRelationInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionWhereUniqueInputSchema: z.ZodType<Prisma.ThermalInspectionSessionWhereUniqueInput> = z.object({
+  id: z.string(),
+})
+.and(z.object({
+  id: z.string().optional(),
+  AND: z.union([ z.lazy(() => ThermalInspectionSessionWhereInputSchema), z.lazy(() => ThermalInspectionSessionWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => ThermalInspectionSessionWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => ThermalInspectionSessionWhereInputSchema), z.lazy(() => ThermalInspectionSessionWhereInputSchema).array() ]).optional(),
+  facilityId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  reportDate: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  completedAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  completedBy: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  uploadedBy: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  items: z.lazy(() => ThermalInspectionItemListRelationFilterSchema).optional(),
+  facility: z.union([ z.lazy(() => FacilityRelationFilterSchema), z.lazy(() => FacilityWhereInputSchema) ]).optional(),
+}).strict());
+
+export const ThermalInspectionSessionOrderByWithAggregationInputSchema: z.ZodType<Prisma.ThermalInspectionSessionOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  reportDate: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  completedAt: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  completedBy: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  uploadedBy: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => ThermalInspectionSessionCountOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => ThermalInspectionSessionMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => ThermalInspectionSessionMinOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.ThermalInspectionSessionScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => ThermalInspectionSessionScalarWhereWithAggregatesInputSchema), z.lazy(() => ThermalInspectionSessionScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => ThermalInspectionSessionScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => ThermalInspectionSessionScalarWhereWithAggregatesInputSchema), z.lazy(() => ThermalInspectionSessionScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  facilityId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  reportDate: z.union([ z.lazy(() => DateTimeNullableWithAggregatesFilterSchema), z.coerce.date() ]).optional().nullable(),
+  status: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  completedAt: z.union([ z.lazy(() => DateTimeNullableWithAggregatesFilterSchema), z.coerce.date() ]).optional().nullable(),
+  completedBy: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  uploadedBy: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const ThermalInspectionItemWhereInputSchema: z.ZodType<Prisma.ThermalInspectionItemWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => ThermalInspectionItemWhereInputSchema), z.lazy(() => ThermalInspectionItemWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => ThermalInspectionItemWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => ThermalInspectionItemWhereInputSchema), z.lazy(() => ThermalInspectionItemWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  sessionId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  orderIndex: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  buildingLocation: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  floorSection: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  measurementDate: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  controlTime: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  panelName: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  measurementPoint: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  equipmentConnection: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  measuredTemp: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  ambientTemp: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  deltaTemp: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  status: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  priority: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  detectedRisk: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  actionTaken: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  photoUrls: z.lazy(() => JsonFilterSchema).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  session: z.union([ z.lazy(() => ThermalInspectionSessionRelationFilterSchema), z.lazy(() => ThermalInspectionSessionWhereInputSchema) ]).optional(),
+}).strict();
+
+export const ThermalInspectionItemOrderByWithRelationInputSchema: z.ZodType<Prisma.ThermalInspectionItemOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  sessionId: z.lazy(() => SortOrderSchema).optional(),
+  orderIndex: z.lazy(() => SortOrderSchema).optional(),
+  buildingLocation: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  floorSection: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  measurementDate: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  controlTime: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  panelName: z.lazy(() => SortOrderSchema).optional(),
+  measurementPoint: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  equipmentConnection: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  measuredTemp: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  ambientTemp: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  deltaTemp: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  status: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  priority: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  detectedRisk: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  actionTaken: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  photoUrls: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  session: z.lazy(() => ThermalInspectionSessionOrderByWithRelationInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionItemWhereUniqueInputSchema: z.ZodType<Prisma.ThermalInspectionItemWhereUniqueInput> = z.object({
+  id: z.string(),
+})
+.and(z.object({
+  id: z.string().optional(),
+  AND: z.union([ z.lazy(() => ThermalInspectionItemWhereInputSchema), z.lazy(() => ThermalInspectionItemWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => ThermalInspectionItemWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => ThermalInspectionItemWhereInputSchema), z.lazy(() => ThermalInspectionItemWhereInputSchema).array() ]).optional(),
+  sessionId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  orderIndex: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
+  buildingLocation: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  floorSection: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  measurementDate: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  controlTime: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  panelName: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  measurementPoint: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  equipmentConnection: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  measuredTemp: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  ambientTemp: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  deltaTemp: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  status: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  priority: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  detectedRisk: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  actionTaken: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  photoUrls: z.lazy(() => JsonFilterSchema).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  session: z.union([ z.lazy(() => ThermalInspectionSessionRelationFilterSchema), z.lazy(() => ThermalInspectionSessionWhereInputSchema) ]).optional(),
+}).strict());
+
+export const ThermalInspectionItemOrderByWithAggregationInputSchema: z.ZodType<Prisma.ThermalInspectionItemOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  sessionId: z.lazy(() => SortOrderSchema).optional(),
+  orderIndex: z.lazy(() => SortOrderSchema).optional(),
+  buildingLocation: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  floorSection: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  measurementDate: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  controlTime: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  panelName: z.lazy(() => SortOrderSchema).optional(),
+  measurementPoint: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  equipmentConnection: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  measuredTemp: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  ambientTemp: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  deltaTemp: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  status: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  priority: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  detectedRisk: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  actionTaken: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  photoUrls: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => ThermalInspectionItemCountOrderByAggregateInputSchema).optional(),
+  _avg: z.lazy(() => ThermalInspectionItemAvgOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => ThermalInspectionItemMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => ThermalInspectionItemMinOrderByAggregateInputSchema).optional(),
+  _sum: z.lazy(() => ThermalInspectionItemSumOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionItemScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.ThermalInspectionItemScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => ThermalInspectionItemScalarWhereWithAggregatesInputSchema), z.lazy(() => ThermalInspectionItemScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => ThermalInspectionItemScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => ThermalInspectionItemScalarWhereWithAggregatesInputSchema), z.lazy(() => ThermalInspectionItemScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  sessionId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  orderIndex: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  buildingLocation: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  floorSection: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  measurementDate: z.union([ z.lazy(() => DateTimeNullableWithAggregatesFilterSchema), z.coerce.date() ]).optional().nullable(),
+  controlTime: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  panelName: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  measurementPoint: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  equipmentConnection: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  measuredTemp: z.union([ z.lazy(() => FloatNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
+  ambientTemp: z.union([ z.lazy(() => FloatNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
+  deltaTemp: z.union([ z.lazy(() => FloatNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
+  status: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  priority: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  detectedRisk: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  actionTaken: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  photoUrls: z.lazy(() => JsonWithAggregatesFilterSchema).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
 export const FireSafetyAuditWhereInputSchema: z.ZodType<Prisma.FireSafetyAuditWhereInput> = z.object({
   AND: z.union([ z.lazy(() => FireSafetyAuditWhereInputSchema), z.lazy(() => FireSafetyAuditWhereInputSchema).array() ]).optional(),
   OR: z.lazy(() => FireSafetyAuditWhereInputSchema).array().optional(),
@@ -25470,6 +25857,7 @@ export const FireSafetyItemWhereInputSchema: z.ZodType<Prisma.FireSafetyItemWher
   deadlineDate: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
   status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   riskLevel: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  progressPercent: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
   findingPhotos: z.lazy(() => JsonFilterSchema).optional(),
   notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
@@ -25490,6 +25878,7 @@ export const FireSafetyItemOrderByWithRelationInputSchema: z.ZodType<Prisma.Fire
   deadlineDate: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   status: z.lazy(() => SortOrderSchema).optional(),
   riskLevel: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  progressPercent: z.lazy(() => SortOrderSchema).optional(),
   findingPhotos: z.lazy(() => SortOrderSchema).optional(),
   notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
@@ -25516,6 +25905,7 @@ export const FireSafetyItemWhereUniqueInputSchema: z.ZodType<Prisma.FireSafetyIt
   deadlineDate: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
   status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   riskLevel: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  progressPercent: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
   findingPhotos: z.lazy(() => JsonFilterSchema).optional(),
   notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
@@ -25536,6 +25926,7 @@ export const FireSafetyItemOrderByWithAggregationInputSchema: z.ZodType<Prisma.F
   deadlineDate: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   status: z.lazy(() => SortOrderSchema).optional(),
   riskLevel: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  progressPercent: z.lazy(() => SortOrderSchema).optional(),
   findingPhotos: z.lazy(() => SortOrderSchema).optional(),
   notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
@@ -25562,6 +25953,7 @@ export const FireSafetyItemScalarWhereWithAggregatesInputSchema: z.ZodType<Prism
   deadlineDate: z.union([ z.lazy(() => DateTimeNullableWithAggregatesFilterSchema), z.coerce.date() ]).optional().nullable(),
   status: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
   riskLevel: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  progressPercent: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
   findingPhotos: z.lazy(() => JsonWithAggregatesFilterSchema).optional(),
   notes: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
@@ -25578,6 +25970,7 @@ export const FireSafetyItemActionWhereInputSchema: z.ZodType<Prisma.FireSafetyIt
   actionDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   explanation: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  progressPercent: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
   evidencePhotos: z.lazy(() => JsonFilterSchema).optional(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
@@ -25591,6 +25984,7 @@ export const FireSafetyItemActionOrderByWithRelationInputSchema: z.ZodType<Prism
   actionDate: z.lazy(() => SortOrderSchema).optional(),
   status: z.lazy(() => SortOrderSchema).optional(),
   explanation: z.lazy(() => SortOrderSchema).optional(),
+  progressPercent: z.lazy(() => SortOrderSchema).optional(),
   evidencePhotos: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
@@ -25610,6 +26004,7 @@ export const FireSafetyItemActionWhereUniqueInputSchema: z.ZodType<Prisma.FireSa
   actionDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   explanation: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  progressPercent: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
   evidencePhotos: z.lazy(() => JsonFilterSchema).optional(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
@@ -25623,12 +26018,15 @@ export const FireSafetyItemActionOrderByWithAggregationInputSchema: z.ZodType<Pr
   actionDate: z.lazy(() => SortOrderSchema).optional(),
   status: z.lazy(() => SortOrderSchema).optional(),
   explanation: z.lazy(() => SortOrderSchema).optional(),
+  progressPercent: z.lazy(() => SortOrderSchema).optional(),
   evidencePhotos: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
   _count: z.lazy(() => FireSafetyItemActionCountOrderByAggregateInputSchema).optional(),
+  _avg: z.lazy(() => FireSafetyItemActionAvgOrderByAggregateInputSchema).optional(),
   _max: z.lazy(() => FireSafetyItemActionMaxOrderByAggregateInputSchema).optional(),
   _min: z.lazy(() => FireSafetyItemActionMinOrderByAggregateInputSchema).optional(),
+  _sum: z.lazy(() => FireSafetyItemActionSumOrderByAggregateInputSchema).optional(),
 }).strict();
 
 export const FireSafetyItemActionScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.FireSafetyItemActionScalarWhereWithAggregatesInput> = z.object({
@@ -25641,6 +26039,7 @@ export const FireSafetyItemActionScalarWhereWithAggregatesInputSchema: z.ZodType
   actionDate: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
   status: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
   explanation: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  progressPercent: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
   evidencePhotos: z.lazy(() => JsonWithAggregatesFilterSchema).optional(),
   createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
@@ -26247,6 +26646,7 @@ export const FacilityCreateInputSchema: z.ZodType<Prisma.FacilityCreateInput> = 
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -26317,6 +26717,7 @@ export const FacilityUncheckedCreateInputSchema: z.ZodType<Prisma.FacilityUnchec
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -26387,6 +26788,7 @@ export const FacilityUpdateInputSchema: z.ZodType<Prisma.FacilityUpdateInput> = 
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -26457,6 +26859,7 @@ export const FacilityUncheckedUpdateInputSchema: z.ZodType<Prisma.FacilityUnchec
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -40007,6 +40410,260 @@ export const ElectricInfrastructureFacilityStatusUncheckedUpdateManyInputSchema:
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
+export const ThermalInspectionSessionCreateInputSchema: z.ZodType<Prisma.ThermalInspectionSessionCreateInput> = z.object({
+  id: z.string().optional(),
+  reportDate: z.coerce.date().optional().nullable(),
+  status: z.string().optional(),
+  completedAt: z.coerce.date().optional().nullable(),
+  completedBy: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  uploadedBy: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  items: z.lazy(() => ThermalInspectionItemCreateNestedManyWithoutSessionInputSchema).optional(),
+  facility: z.lazy(() => FacilityCreateNestedOneWithoutThermalInspectionSessionsInputSchema),
+}).strict();
+
+export const ThermalInspectionSessionUncheckedCreateInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUncheckedCreateInput> = z.object({
+  id: z.string().optional(),
+  facilityId: z.string(),
+  reportDate: z.coerce.date().optional().nullable(),
+  status: z.string().optional(),
+  completedAt: z.coerce.date().optional().nullable(),
+  completedBy: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  uploadedBy: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  items: z.lazy(() => ThermalInspectionItemUncheckedCreateNestedManyWithoutSessionInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionUpdateInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  reportDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  completedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  completedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  uploadedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  items: z.lazy(() => ThermalInspectionItemUpdateManyWithoutSessionNestedInputSchema).optional(),
+  facility: z.lazy(() => FacilityUpdateOneRequiredWithoutThermalInspectionSessionsNestedInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionUncheckedUpdateInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUncheckedUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  reportDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  completedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  completedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  uploadedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  items: z.lazy(() => ThermalInspectionItemUncheckedUpdateManyWithoutSessionNestedInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionCreateManyInputSchema: z.ZodType<Prisma.ThermalInspectionSessionCreateManyInput> = z.object({
+  id: z.string().optional(),
+  facilityId: z.string(),
+  reportDate: z.coerce.date().optional().nullable(),
+  status: z.string().optional(),
+  completedAt: z.coerce.date().optional().nullable(),
+  completedBy: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  uploadedBy: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const ThermalInspectionSessionUpdateManyMutationInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUpdateManyMutationInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  reportDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  completedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  completedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  uploadedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const ThermalInspectionSessionUncheckedUpdateManyInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  reportDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  completedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  completedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  uploadedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const ThermalInspectionItemCreateInputSchema: z.ZodType<Prisma.ThermalInspectionItemCreateInput> = z.object({
+  id: z.string().optional(),
+  orderIndex: z.number().int().optional(),
+  buildingLocation: z.string().optional().nullable(),
+  floorSection: z.string().optional().nullable(),
+  measurementDate: z.coerce.date().optional().nullable(),
+  controlTime: z.string().optional().nullable(),
+  panelName: z.string(),
+  measurementPoint: z.string().optional().nullable(),
+  equipmentConnection: z.string().optional().nullable(),
+  measuredTemp: z.number().optional().nullable(),
+  ambientTemp: z.number().optional().nullable(),
+  deltaTemp: z.number().optional().nullable(),
+  status: z.string().optional().nullable(),
+  priority: z.string().optional().nullable(),
+  detectedRisk: z.string().optional().nullable(),
+  actionTaken: z.string().optional().nullable(),
+  photoUrls: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  session: z.lazy(() => ThermalInspectionSessionCreateNestedOneWithoutItemsInputSchema),
+}).strict();
+
+export const ThermalInspectionItemUncheckedCreateInputSchema: z.ZodType<Prisma.ThermalInspectionItemUncheckedCreateInput> = z.object({
+  id: z.string().optional(),
+  sessionId: z.string(),
+  orderIndex: z.number().int().optional(),
+  buildingLocation: z.string().optional().nullable(),
+  floorSection: z.string().optional().nullable(),
+  measurementDate: z.coerce.date().optional().nullable(),
+  controlTime: z.string().optional().nullable(),
+  panelName: z.string(),
+  measurementPoint: z.string().optional().nullable(),
+  equipmentConnection: z.string().optional().nullable(),
+  measuredTemp: z.number().optional().nullable(),
+  ambientTemp: z.number().optional().nullable(),
+  deltaTemp: z.number().optional().nullable(),
+  status: z.string().optional().nullable(),
+  priority: z.string().optional().nullable(),
+  detectedRisk: z.string().optional().nullable(),
+  actionTaken: z.string().optional().nullable(),
+  photoUrls: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const ThermalInspectionItemUpdateInputSchema: z.ZodType<Prisma.ThermalInspectionItemUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  orderIndex: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  buildingLocation: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floorSection: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measurementDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  controlTime: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  panelName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  measurementPoint: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  equipmentConnection: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measuredTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  ambientTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  deltaTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  priority: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  detectedRisk: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  actionTaken: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photoUrls: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  session: z.lazy(() => ThermalInspectionSessionUpdateOneRequiredWithoutItemsNestedInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionItemUncheckedUpdateInputSchema: z.ZodType<Prisma.ThermalInspectionItemUncheckedUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sessionId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  orderIndex: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  buildingLocation: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floorSection: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measurementDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  controlTime: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  panelName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  measurementPoint: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  equipmentConnection: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measuredTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  ambientTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  deltaTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  priority: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  detectedRisk: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  actionTaken: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photoUrls: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const ThermalInspectionItemCreateManyInputSchema: z.ZodType<Prisma.ThermalInspectionItemCreateManyInput> = z.object({
+  id: z.string().optional(),
+  sessionId: z.string(),
+  orderIndex: z.number().int().optional(),
+  buildingLocation: z.string().optional().nullable(),
+  floorSection: z.string().optional().nullable(),
+  measurementDate: z.coerce.date().optional().nullable(),
+  controlTime: z.string().optional().nullable(),
+  panelName: z.string(),
+  measurementPoint: z.string().optional().nullable(),
+  equipmentConnection: z.string().optional().nullable(),
+  measuredTemp: z.number().optional().nullable(),
+  ambientTemp: z.number().optional().nullable(),
+  deltaTemp: z.number().optional().nullable(),
+  status: z.string().optional().nullable(),
+  priority: z.string().optional().nullable(),
+  detectedRisk: z.string().optional().nullable(),
+  actionTaken: z.string().optional().nullable(),
+  photoUrls: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const ThermalInspectionItemUpdateManyMutationInputSchema: z.ZodType<Prisma.ThermalInspectionItemUpdateManyMutationInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  orderIndex: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  buildingLocation: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floorSection: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measurementDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  controlTime: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  panelName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  measurementPoint: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  equipmentConnection: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measuredTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  ambientTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  deltaTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  priority: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  detectedRisk: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  actionTaken: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photoUrls: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const ThermalInspectionItemUncheckedUpdateManyInputSchema: z.ZodType<Prisma.ThermalInspectionItemUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sessionId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  orderIndex: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  buildingLocation: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floorSection: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measurementDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  controlTime: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  panelName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  measurementPoint: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  equipmentConnection: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measuredTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  ambientTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  deltaTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  priority: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  detectedRisk: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  actionTaken: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photoUrls: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
 export const FireSafetyAuditCreateInputSchema: z.ZodType<Prisma.FireSafetyAuditCreateInput> = z.object({
   id: z.cuid().optional(),
   title: z.string().optional(),
@@ -40140,6 +40797,7 @@ export const FireSafetyItemCreateInputSchema: z.ZodType<Prisma.FireSafetyItemCre
   deadlineDate: z.coerce.date().optional().nullable(),
   status: z.string().optional(),
   riskLevel: z.string().optional().nullable(),
+  progressPercent: z.number().int().optional(),
   findingPhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   notes: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
@@ -40160,6 +40818,7 @@ export const FireSafetyItemUncheckedCreateInputSchema: z.ZodType<Prisma.FireSafe
   deadlineDate: z.coerce.date().optional().nullable(),
   status: z.string().optional(),
   riskLevel: z.string().optional().nullable(),
+  progressPercent: z.number().int().optional(),
   findingPhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   notes: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
@@ -40178,6 +40837,7 @@ export const FireSafetyItemUpdateInputSchema: z.ZodType<Prisma.FireSafetyItemUpd
   deadlineDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   riskLevel: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  progressPercent: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   findingPhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -40198,6 +40858,7 @@ export const FireSafetyItemUncheckedUpdateInputSchema: z.ZodType<Prisma.FireSafe
   deadlineDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   riskLevel: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  progressPercent: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   findingPhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -40217,6 +40878,7 @@ export const FireSafetyItemCreateManyInputSchema: z.ZodType<Prisma.FireSafetyIte
   deadlineDate: z.coerce.date().optional().nullable(),
   status: z.string().optional(),
   riskLevel: z.string().optional().nullable(),
+  progressPercent: z.number().int().optional(),
   findingPhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   notes: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
@@ -40234,6 +40896,7 @@ export const FireSafetyItemUpdateManyMutationInputSchema: z.ZodType<Prisma.FireS
   deadlineDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   riskLevel: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  progressPercent: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   findingPhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -40252,6 +40915,7 @@ export const FireSafetyItemUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Fire
   deadlineDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   riskLevel: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  progressPercent: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   findingPhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -40264,6 +40928,7 @@ export const FireSafetyItemActionCreateInputSchema: z.ZodType<Prisma.FireSafetyI
   actionDate: z.coerce.date().optional(),
   status: z.string().optional(),
   explanation: z.string(),
+  progressPercent: z.number().int().optional(),
   evidencePhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -40277,6 +40942,7 @@ export const FireSafetyItemActionUncheckedCreateInputSchema: z.ZodType<Prisma.Fi
   actionDate: z.coerce.date().optional(),
   status: z.string().optional(),
   explanation: z.string(),
+  progressPercent: z.number().int().optional(),
   evidencePhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -40288,6 +40954,7 @@ export const FireSafetyItemActionUpdateInputSchema: z.ZodType<Prisma.FireSafetyI
   actionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   explanation: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  progressPercent: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   evidencePhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -40301,6 +40968,7 @@ export const FireSafetyItemActionUncheckedUpdateInputSchema: z.ZodType<Prisma.Fi
   actionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   explanation: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  progressPercent: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   evidencePhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -40313,6 +40981,7 @@ export const FireSafetyItemActionCreateManyInputSchema: z.ZodType<Prisma.FireSaf
   actionDate: z.coerce.date().optional(),
   status: z.string().optional(),
   explanation: z.string(),
+  progressPercent: z.number().int().optional(),
   evidencePhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -40324,6 +40993,7 @@ export const FireSafetyItemActionUpdateManyMutationInputSchema: z.ZodType<Prisma
   actionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   explanation: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  progressPercent: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   evidencePhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -40336,6 +41006,7 @@ export const FireSafetyItemActionUncheckedUpdateManyInputSchema: z.ZodType<Prism
   actionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   explanation: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  progressPercent: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   evidencePhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -41231,6 +41902,12 @@ export const ElectricInfrastructureFacilityStatusNullableRelationFilterSchema: z
   isNot: z.lazy(() => ElectricInfrastructureFacilityStatusWhereInputSchema).optional().nullable(),
 }).strict();
 
+export const ThermalInspectionSessionListRelationFilterSchema: z.ZodType<Prisma.ThermalInspectionSessionListRelationFilter> = z.object({
+  every: z.lazy(() => ThermalInspectionSessionWhereInputSchema).optional(),
+  some: z.lazy(() => ThermalInspectionSessionWhereInputSchema).optional(),
+  none: z.lazy(() => ThermalInspectionSessionWhereInputSchema).optional(),
+}).strict();
+
 export const FireSafetyAuditListRelationFilterSchema: z.ZodType<Prisma.FireSafetyAuditListRelationFilter> = z.object({
   every: z.lazy(() => FireSafetyAuditWhereInputSchema).optional(),
   some: z.lazy(() => FireSafetyAuditWhereInputSchema).optional(),
@@ -41394,6 +42071,10 @@ export const ElevatorOrderByRelationAggregateInputSchema: z.ZodType<Prisma.Eleva
 }).strict();
 
 export const ElectricInfrastructureRecordOrderByRelationAggregateInputSchema: z.ZodType<Prisma.ElectricInfrastructureRecordOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionOrderByRelationAggregateInputSchema: z.ZodType<Prisma.ThermalInspectionSessionOrderByRelationAggregateInput> = z.object({
   _count: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
@@ -49239,6 +49920,141 @@ export const ElectricInfrastructureFacilityStatusMinOrderByAggregateInputSchema:
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
+export const ThermalInspectionItemListRelationFilterSchema: z.ZodType<Prisma.ThermalInspectionItemListRelationFilter> = z.object({
+  every: z.lazy(() => ThermalInspectionItemWhereInputSchema).optional(),
+  some: z.lazy(() => ThermalInspectionItemWhereInputSchema).optional(),
+  none: z.lazy(() => ThermalInspectionItemWhereInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionItemOrderByRelationAggregateInputSchema: z.ZodType<Prisma.ThermalInspectionItemOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionCountOrderByAggregateInputSchema: z.ZodType<Prisma.ThermalInspectionSessionCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  reportDate: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  completedAt: z.lazy(() => SortOrderSchema).optional(),
+  completedBy: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  uploadedBy: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionMaxOrderByAggregateInputSchema: z.ZodType<Prisma.ThermalInspectionSessionMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  reportDate: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  completedAt: z.lazy(() => SortOrderSchema).optional(),
+  completedBy: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  uploadedBy: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionMinOrderByAggregateInputSchema: z.ZodType<Prisma.ThermalInspectionSessionMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  reportDate: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  completedAt: z.lazy(() => SortOrderSchema).optional(),
+  completedBy: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  uploadedBy: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionRelationFilterSchema: z.ZodType<Prisma.ThermalInspectionSessionRelationFilter> = z.object({
+  is: z.lazy(() => ThermalInspectionSessionWhereInputSchema).optional(),
+  isNot: z.lazy(() => ThermalInspectionSessionWhereInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionItemCountOrderByAggregateInputSchema: z.ZodType<Prisma.ThermalInspectionItemCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  sessionId: z.lazy(() => SortOrderSchema).optional(),
+  orderIndex: z.lazy(() => SortOrderSchema).optional(),
+  buildingLocation: z.lazy(() => SortOrderSchema).optional(),
+  floorSection: z.lazy(() => SortOrderSchema).optional(),
+  measurementDate: z.lazy(() => SortOrderSchema).optional(),
+  controlTime: z.lazy(() => SortOrderSchema).optional(),
+  panelName: z.lazy(() => SortOrderSchema).optional(),
+  measurementPoint: z.lazy(() => SortOrderSchema).optional(),
+  equipmentConnection: z.lazy(() => SortOrderSchema).optional(),
+  measuredTemp: z.lazy(() => SortOrderSchema).optional(),
+  ambientTemp: z.lazy(() => SortOrderSchema).optional(),
+  deltaTemp: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  priority: z.lazy(() => SortOrderSchema).optional(),
+  detectedRisk: z.lazy(() => SortOrderSchema).optional(),
+  actionTaken: z.lazy(() => SortOrderSchema).optional(),
+  photoUrls: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const ThermalInspectionItemAvgOrderByAggregateInputSchema: z.ZodType<Prisma.ThermalInspectionItemAvgOrderByAggregateInput> = z.object({
+  orderIndex: z.lazy(() => SortOrderSchema).optional(),
+  measuredTemp: z.lazy(() => SortOrderSchema).optional(),
+  ambientTemp: z.lazy(() => SortOrderSchema).optional(),
+  deltaTemp: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const ThermalInspectionItemMaxOrderByAggregateInputSchema: z.ZodType<Prisma.ThermalInspectionItemMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  sessionId: z.lazy(() => SortOrderSchema).optional(),
+  orderIndex: z.lazy(() => SortOrderSchema).optional(),
+  buildingLocation: z.lazy(() => SortOrderSchema).optional(),
+  floorSection: z.lazy(() => SortOrderSchema).optional(),
+  measurementDate: z.lazy(() => SortOrderSchema).optional(),
+  controlTime: z.lazy(() => SortOrderSchema).optional(),
+  panelName: z.lazy(() => SortOrderSchema).optional(),
+  measurementPoint: z.lazy(() => SortOrderSchema).optional(),
+  equipmentConnection: z.lazy(() => SortOrderSchema).optional(),
+  measuredTemp: z.lazy(() => SortOrderSchema).optional(),
+  ambientTemp: z.lazy(() => SortOrderSchema).optional(),
+  deltaTemp: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  priority: z.lazy(() => SortOrderSchema).optional(),
+  detectedRisk: z.lazy(() => SortOrderSchema).optional(),
+  actionTaken: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const ThermalInspectionItemMinOrderByAggregateInputSchema: z.ZodType<Prisma.ThermalInspectionItemMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  sessionId: z.lazy(() => SortOrderSchema).optional(),
+  orderIndex: z.lazy(() => SortOrderSchema).optional(),
+  buildingLocation: z.lazy(() => SortOrderSchema).optional(),
+  floorSection: z.lazy(() => SortOrderSchema).optional(),
+  measurementDate: z.lazy(() => SortOrderSchema).optional(),
+  controlTime: z.lazy(() => SortOrderSchema).optional(),
+  panelName: z.lazy(() => SortOrderSchema).optional(),
+  measurementPoint: z.lazy(() => SortOrderSchema).optional(),
+  equipmentConnection: z.lazy(() => SortOrderSchema).optional(),
+  measuredTemp: z.lazy(() => SortOrderSchema).optional(),
+  ambientTemp: z.lazy(() => SortOrderSchema).optional(),
+  deltaTemp: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  priority: z.lazy(() => SortOrderSchema).optional(),
+  detectedRisk: z.lazy(() => SortOrderSchema).optional(),
+  actionTaken: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const ThermalInspectionItemSumOrderByAggregateInputSchema: z.ZodType<Prisma.ThermalInspectionItemSumOrderByAggregateInput> = z.object({
+  orderIndex: z.lazy(() => SortOrderSchema).optional(),
+  measuredTemp: z.lazy(() => SortOrderSchema).optional(),
+  ambientTemp: z.lazy(() => SortOrderSchema).optional(),
+  deltaTemp: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
 export const FireSafetyItemListRelationFilterSchema: z.ZodType<Prisma.FireSafetyItemListRelationFilter> = z.object({
   every: z.lazy(() => FireSafetyItemWhereInputSchema).optional(),
   some: z.lazy(() => FireSafetyItemWhereInputSchema).optional(),
@@ -49327,6 +50143,7 @@ export const FireSafetyItemCountOrderByAggregateInputSchema: z.ZodType<Prisma.Fi
   deadlineDate: z.lazy(() => SortOrderSchema).optional(),
   status: z.lazy(() => SortOrderSchema).optional(),
   riskLevel: z.lazy(() => SortOrderSchema).optional(),
+  progressPercent: z.lazy(() => SortOrderSchema).optional(),
   findingPhotos: z.lazy(() => SortOrderSchema).optional(),
   notes: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
@@ -49335,6 +50152,7 @@ export const FireSafetyItemCountOrderByAggregateInputSchema: z.ZodType<Prisma.Fi
 
 export const FireSafetyItemAvgOrderByAggregateInputSchema: z.ZodType<Prisma.FireSafetyItemAvgOrderByAggregateInput> = z.object({
   orderNo: z.lazy(() => SortOrderSchema).optional(),
+  progressPercent: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const FireSafetyItemMaxOrderByAggregateInputSchema: z.ZodType<Prisma.FireSafetyItemMaxOrderByAggregateInput> = z.object({
@@ -49349,6 +50167,7 @@ export const FireSafetyItemMaxOrderByAggregateInputSchema: z.ZodType<Prisma.Fire
   deadlineDate: z.lazy(() => SortOrderSchema).optional(),
   status: z.lazy(() => SortOrderSchema).optional(),
   riskLevel: z.lazy(() => SortOrderSchema).optional(),
+  progressPercent: z.lazy(() => SortOrderSchema).optional(),
   notes: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
@@ -49366,6 +50185,7 @@ export const FireSafetyItemMinOrderByAggregateInputSchema: z.ZodType<Prisma.Fire
   deadlineDate: z.lazy(() => SortOrderSchema).optional(),
   status: z.lazy(() => SortOrderSchema).optional(),
   riskLevel: z.lazy(() => SortOrderSchema).optional(),
+  progressPercent: z.lazy(() => SortOrderSchema).optional(),
   notes: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
@@ -49373,6 +50193,7 @@ export const FireSafetyItemMinOrderByAggregateInputSchema: z.ZodType<Prisma.Fire
 
 export const FireSafetyItemSumOrderByAggregateInputSchema: z.ZodType<Prisma.FireSafetyItemSumOrderByAggregateInput> = z.object({
   orderNo: z.lazy(() => SortOrderSchema).optional(),
+  progressPercent: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const FireSafetyItemRelationFilterSchema: z.ZodType<Prisma.FireSafetyItemRelationFilter> = z.object({
@@ -49387,9 +50208,14 @@ export const FireSafetyItemActionCountOrderByAggregateInputSchema: z.ZodType<Pri
   actionDate: z.lazy(() => SortOrderSchema).optional(),
   status: z.lazy(() => SortOrderSchema).optional(),
   explanation: z.lazy(() => SortOrderSchema).optional(),
+  progressPercent: z.lazy(() => SortOrderSchema).optional(),
   evidencePhotos: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireSafetyItemActionAvgOrderByAggregateInputSchema: z.ZodType<Prisma.FireSafetyItemActionAvgOrderByAggregateInput> = z.object({
+  progressPercent: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const FireSafetyItemActionMaxOrderByAggregateInputSchema: z.ZodType<Prisma.FireSafetyItemActionMaxOrderByAggregateInput> = z.object({
@@ -49399,6 +50225,7 @@ export const FireSafetyItemActionMaxOrderByAggregateInputSchema: z.ZodType<Prism
   actionDate: z.lazy(() => SortOrderSchema).optional(),
   status: z.lazy(() => SortOrderSchema).optional(),
   explanation: z.lazy(() => SortOrderSchema).optional(),
+  progressPercent: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
@@ -49410,8 +50237,13 @@ export const FireSafetyItemActionMinOrderByAggregateInputSchema: z.ZodType<Prism
   actionDate: z.lazy(() => SortOrderSchema).optional(),
   status: z.lazy(() => SortOrderSchema).optional(),
   explanation: z.lazy(() => SortOrderSchema).optional(),
+  progressPercent: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const FireSafetyItemActionSumOrderByAggregateInputSchema: z.ZodType<Prisma.FireSafetyItemActionSumOrderByAggregateInput> = z.object({
+  progressPercent: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const FireSafetySettingCountOrderByAggregateInputSchema: z.ZodType<Prisma.FireSafetySettingCountOrderByAggregateInput> = z.object({
@@ -51079,6 +51911,13 @@ export const ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityI
   connect: z.lazy(() => ElectricInfrastructureFacilityStatusWhereUniqueInputSchema).optional(),
 }).strict();
 
+export const ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema: z.ZodType<Prisma.ThermalInspectionSessionCreateNestedManyWithoutFacilityInput> = z.object({
+  create: z.union([ z.lazy(() => ThermalInspectionSessionCreateWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionCreateWithoutFacilityInputSchema).array(), z.lazy(() => ThermalInspectionSessionUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => ThermalInspectionSessionCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => ThermalInspectionSessionCreateManyFacilityInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema), z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
 export const FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema: z.ZodType<Prisma.FireSafetyAuditCreateNestedManyWithoutFacilityInput> = z.object({
   create: z.union([ z.lazy(() => FireSafetyAuditCreateWithoutFacilityInputSchema), z.lazy(() => FireSafetyAuditCreateWithoutFacilityInputSchema).array(), z.lazy(() => FireSafetyAuditUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => FireSafetyAuditUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => FireSafetyAuditCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => FireSafetyAuditCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
@@ -51398,6 +52237,13 @@ export const ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithout
   create: z.union([ z.lazy(() => ElectricInfrastructureFacilityStatusCreateWithoutFacilityInputSchema), z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateWithoutFacilityInputSchema) ]).optional(),
   connectOrCreate: z.lazy(() => ElectricInfrastructureFacilityStatusCreateOrConnectWithoutFacilityInputSchema).optional(),
   connect: z.lazy(() => ElectricInfrastructureFacilityStatusWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInput> = z.object({
+  create: z.union([ z.lazy(() => ThermalInspectionSessionCreateWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionCreateWithoutFacilityInputSchema).array(), z.lazy(() => ThermalInspectionSessionUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => ThermalInspectionSessionCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => ThermalInspectionSessionCreateManyFacilityInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema), z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
 export const FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema: z.ZodType<Prisma.FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInput> = z.object({
@@ -52031,6 +52877,20 @@ export const ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedI
   delete: z.union([ z.boolean(),z.lazy(() => ElectricInfrastructureFacilityStatusWhereInputSchema) ]).optional(),
   connect: z.lazy(() => ElectricInfrastructureFacilityStatusWhereUniqueInputSchema).optional(),
   update: z.union([ z.lazy(() => ElectricInfrastructureFacilityStatusUpdateToOneWithWhereWithoutFacilityInputSchema), z.lazy(() => ElectricInfrastructureFacilityStatusUpdateWithoutFacilityInputSchema), z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateWithoutFacilityInputSchema) ]).optional(),
+}).strict();
+
+export const ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUpdateManyWithoutFacilityNestedInput> = z.object({
+  create: z.union([ z.lazy(() => ThermalInspectionSessionCreateWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionCreateWithoutFacilityInputSchema).array(), z.lazy(() => ThermalInspectionSessionUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => ThermalInspectionSessionCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => ThermalInspectionSessionUpsertWithWhereUniqueWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionUpsertWithWhereUniqueWithoutFacilityInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => ThermalInspectionSessionCreateManyFacilityInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema), z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema), z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema), z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema), z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => ThermalInspectionSessionUpdateWithWhereUniqueWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionUpdateWithWhereUniqueWithoutFacilityInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => ThermalInspectionSessionUpdateManyWithWhereWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionUpdateManyWithWhereWithoutFacilityInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => ThermalInspectionSessionScalarWhereInputSchema), z.lazy(() => ThermalInspectionSessionScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
 export const FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema: z.ZodType<Prisma.FireSafetyAuditUpdateManyWithoutFacilityNestedInput> = z.object({
@@ -52671,6 +53531,20 @@ export const ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacili
   delete: z.union([ z.boolean(),z.lazy(() => ElectricInfrastructureFacilityStatusWhereInputSchema) ]).optional(),
   connect: z.lazy(() => ElectricInfrastructureFacilityStatusWhereUniqueInputSchema).optional(),
   update: z.union([ z.lazy(() => ElectricInfrastructureFacilityStatusUpdateToOneWithWhereWithoutFacilityInputSchema), z.lazy(() => ElectricInfrastructureFacilityStatusUpdateWithoutFacilityInputSchema), z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateWithoutFacilityInputSchema) ]).optional(),
+}).strict();
+
+export const ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInput> = z.object({
+  create: z.union([ z.lazy(() => ThermalInspectionSessionCreateWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionCreateWithoutFacilityInputSchema).array(), z.lazy(() => ThermalInspectionSessionUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => ThermalInspectionSessionCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => ThermalInspectionSessionUpsertWithWhereUniqueWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionUpsertWithWhereUniqueWithoutFacilityInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => ThermalInspectionSessionCreateManyFacilityInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema), z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema), z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema), z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema), z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => ThermalInspectionSessionUpdateWithWhereUniqueWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionUpdateWithWhereUniqueWithoutFacilityInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => ThermalInspectionSessionUpdateManyWithWhereWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionUpdateManyWithWhereWithoutFacilityInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => ThermalInspectionSessionScalarWhereInputSchema), z.lazy(() => ThermalInspectionSessionScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
 export const FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema: z.ZodType<Prisma.FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInput> = z.object({
@@ -61566,6 +62440,76 @@ export const FacilityUpdateOneRequiredWithoutElectricInfrastructureStatusNestedI
   update: z.union([ z.lazy(() => FacilityUpdateToOneWithWhereWithoutElectricInfrastructureStatusInputSchema), z.lazy(() => FacilityUpdateWithoutElectricInfrastructureStatusInputSchema), z.lazy(() => FacilityUncheckedUpdateWithoutElectricInfrastructureStatusInputSchema) ]).optional(),
 }).strict();
 
+export const ThermalInspectionItemCreateNestedManyWithoutSessionInputSchema: z.ZodType<Prisma.ThermalInspectionItemCreateNestedManyWithoutSessionInput> = z.object({
+  create: z.union([ z.lazy(() => ThermalInspectionItemCreateWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemCreateWithoutSessionInputSchema).array(), z.lazy(() => ThermalInspectionItemUncheckedCreateWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemUncheckedCreateWithoutSessionInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => ThermalInspectionItemCreateOrConnectWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemCreateOrConnectWithoutSessionInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => ThermalInspectionItemCreateManySessionInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema), z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const FacilityCreateNestedOneWithoutThermalInspectionSessionsInputSchema: z.ZodType<Prisma.FacilityCreateNestedOneWithoutThermalInspectionSessionsInput> = z.object({
+  create: z.union([ z.lazy(() => FacilityCreateWithoutThermalInspectionSessionsInputSchema), z.lazy(() => FacilityUncheckedCreateWithoutThermalInspectionSessionsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => FacilityCreateOrConnectWithoutThermalInspectionSessionsInputSchema).optional(),
+  connect: z.lazy(() => FacilityWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionItemUncheckedCreateNestedManyWithoutSessionInputSchema: z.ZodType<Prisma.ThermalInspectionItemUncheckedCreateNestedManyWithoutSessionInput> = z.object({
+  create: z.union([ z.lazy(() => ThermalInspectionItemCreateWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemCreateWithoutSessionInputSchema).array(), z.lazy(() => ThermalInspectionItemUncheckedCreateWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemUncheckedCreateWithoutSessionInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => ThermalInspectionItemCreateOrConnectWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemCreateOrConnectWithoutSessionInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => ThermalInspectionItemCreateManySessionInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema), z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const ThermalInspectionItemUpdateManyWithoutSessionNestedInputSchema: z.ZodType<Prisma.ThermalInspectionItemUpdateManyWithoutSessionNestedInput> = z.object({
+  create: z.union([ z.lazy(() => ThermalInspectionItemCreateWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemCreateWithoutSessionInputSchema).array(), z.lazy(() => ThermalInspectionItemUncheckedCreateWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemUncheckedCreateWithoutSessionInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => ThermalInspectionItemCreateOrConnectWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemCreateOrConnectWithoutSessionInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => ThermalInspectionItemUpsertWithWhereUniqueWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemUpsertWithWhereUniqueWithoutSessionInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => ThermalInspectionItemCreateManySessionInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema), z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema), z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema), z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema), z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => ThermalInspectionItemUpdateWithWhereUniqueWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemUpdateWithWhereUniqueWithoutSessionInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => ThermalInspectionItemUpdateManyWithWhereWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemUpdateManyWithWhereWithoutSessionInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => ThermalInspectionItemScalarWhereInputSchema), z.lazy(() => ThermalInspectionItemScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const FacilityUpdateOneRequiredWithoutThermalInspectionSessionsNestedInputSchema: z.ZodType<Prisma.FacilityUpdateOneRequiredWithoutThermalInspectionSessionsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FacilityCreateWithoutThermalInspectionSessionsInputSchema), z.lazy(() => FacilityUncheckedCreateWithoutThermalInspectionSessionsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => FacilityCreateOrConnectWithoutThermalInspectionSessionsInputSchema).optional(),
+  upsert: z.lazy(() => FacilityUpsertWithoutThermalInspectionSessionsInputSchema).optional(),
+  connect: z.lazy(() => FacilityWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => FacilityUpdateToOneWithWhereWithoutThermalInspectionSessionsInputSchema), z.lazy(() => FacilityUpdateWithoutThermalInspectionSessionsInputSchema), z.lazy(() => FacilityUncheckedUpdateWithoutThermalInspectionSessionsInputSchema) ]).optional(),
+}).strict();
+
+export const ThermalInspectionItemUncheckedUpdateManyWithoutSessionNestedInputSchema: z.ZodType<Prisma.ThermalInspectionItemUncheckedUpdateManyWithoutSessionNestedInput> = z.object({
+  create: z.union([ z.lazy(() => ThermalInspectionItemCreateWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemCreateWithoutSessionInputSchema).array(), z.lazy(() => ThermalInspectionItemUncheckedCreateWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemUncheckedCreateWithoutSessionInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => ThermalInspectionItemCreateOrConnectWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemCreateOrConnectWithoutSessionInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => ThermalInspectionItemUpsertWithWhereUniqueWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemUpsertWithWhereUniqueWithoutSessionInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => ThermalInspectionItemCreateManySessionInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema), z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema), z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema), z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema), z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => ThermalInspectionItemUpdateWithWhereUniqueWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemUpdateWithWhereUniqueWithoutSessionInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => ThermalInspectionItemUpdateManyWithWhereWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemUpdateManyWithWhereWithoutSessionInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => ThermalInspectionItemScalarWhereInputSchema), z.lazy(() => ThermalInspectionItemScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const ThermalInspectionSessionCreateNestedOneWithoutItemsInputSchema: z.ZodType<Prisma.ThermalInspectionSessionCreateNestedOneWithoutItemsInput> = z.object({
+  create: z.union([ z.lazy(() => ThermalInspectionSessionCreateWithoutItemsInputSchema), z.lazy(() => ThermalInspectionSessionUncheckedCreateWithoutItemsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => ThermalInspectionSessionCreateOrConnectWithoutItemsInputSchema).optional(),
+  connect: z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionUpdateOneRequiredWithoutItemsNestedInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUpdateOneRequiredWithoutItemsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => ThermalInspectionSessionCreateWithoutItemsInputSchema), z.lazy(() => ThermalInspectionSessionUncheckedCreateWithoutItemsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => ThermalInspectionSessionCreateOrConnectWithoutItemsInputSchema).optional(),
+  upsert: z.lazy(() => ThermalInspectionSessionUpsertWithoutItemsInputSchema).optional(),
+  connect: z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => ThermalInspectionSessionUpdateToOneWithWhereWithoutItemsInputSchema), z.lazy(() => ThermalInspectionSessionUpdateWithoutItemsInputSchema), z.lazy(() => ThermalInspectionSessionUncheckedUpdateWithoutItemsInputSchema) ]).optional(),
+}).strict();
+
 export const FacilityCreateNestedOneWithoutFireSafetyAuditsInputSchema: z.ZodType<Prisma.FacilityCreateNestedOneWithoutFireSafetyAuditsInput> = z.object({
   create: z.union([ z.lazy(() => FacilityCreateWithoutFireSafetyAuditsInputSchema), z.lazy(() => FacilityUncheckedCreateWithoutFireSafetyAuditsInputSchema) ]).optional(),
   connectOrCreate: z.lazy(() => FacilityCreateOrConnectWithoutFireSafetyAuditsInputSchema).optional(),
@@ -66407,6 +67351,42 @@ export const ElectricInfrastructureFacilityStatusCreateOrConnectWithoutFacilityI
   create: z.union([ z.lazy(() => ElectricInfrastructureFacilityStatusCreateWithoutFacilityInputSchema), z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateWithoutFacilityInputSchema) ]),
 }).strict();
 
+export const ThermalInspectionSessionCreateWithoutFacilityInputSchema: z.ZodType<Prisma.ThermalInspectionSessionCreateWithoutFacilityInput> = z.object({
+  id: z.string().optional(),
+  reportDate: z.coerce.date().optional().nullable(),
+  status: z.string().optional(),
+  completedAt: z.coerce.date().optional().nullable(),
+  completedBy: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  uploadedBy: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  items: z.lazy(() => ThermalInspectionItemCreateNestedManyWithoutSessionInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionUncheckedCreateWithoutFacilityInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUncheckedCreateWithoutFacilityInput> = z.object({
+  id: z.string().optional(),
+  reportDate: z.coerce.date().optional().nullable(),
+  status: z.string().optional(),
+  completedAt: z.coerce.date().optional().nullable(),
+  completedBy: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  uploadedBy: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  items: z.lazy(() => ThermalInspectionItemUncheckedCreateNestedManyWithoutSessionInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionCreateOrConnectWithoutFacilityInputSchema: z.ZodType<Prisma.ThermalInspectionSessionCreateOrConnectWithoutFacilityInput> = z.object({
+  where: z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => ThermalInspectionSessionCreateWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionUncheckedCreateWithoutFacilityInputSchema) ]),
+}).strict();
+
+export const ThermalInspectionSessionCreateManyFacilityInputEnvelopeSchema: z.ZodType<Prisma.ThermalInspectionSessionCreateManyFacilityInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => ThermalInspectionSessionCreateManyFacilityInputSchema), z.lazy(() => ThermalInspectionSessionCreateManyFacilityInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
 export const FireSafetyAuditCreateWithoutFacilityInputSchema: z.ZodType<Prisma.FireSafetyAuditCreateWithoutFacilityInput> = z.object({
   id: z.cuid().optional(),
   title: z.string().optional(),
@@ -67865,6 +68845,38 @@ export const ElectricInfrastructureFacilityStatusUncheckedUpdateWithoutFacilityI
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
+export const ThermalInspectionSessionUpsertWithWhereUniqueWithoutFacilityInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUpsertWithWhereUniqueWithoutFacilityInput> = z.object({
+  where: z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => ThermalInspectionSessionUpdateWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionUncheckedUpdateWithoutFacilityInputSchema) ]),
+  create: z.union([ z.lazy(() => ThermalInspectionSessionCreateWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionUncheckedCreateWithoutFacilityInputSchema) ]),
+}).strict();
+
+export const ThermalInspectionSessionUpdateWithWhereUniqueWithoutFacilityInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUpdateWithWhereUniqueWithoutFacilityInput> = z.object({
+  where: z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => ThermalInspectionSessionUpdateWithoutFacilityInputSchema), z.lazy(() => ThermalInspectionSessionUncheckedUpdateWithoutFacilityInputSchema) ]),
+}).strict();
+
+export const ThermalInspectionSessionUpdateManyWithWhereWithoutFacilityInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUpdateManyWithWhereWithoutFacilityInput> = z.object({
+  where: z.lazy(() => ThermalInspectionSessionScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => ThermalInspectionSessionUpdateManyMutationInputSchema), z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityInputSchema) ]),
+}).strict();
+
+export const ThermalInspectionSessionScalarWhereInputSchema: z.ZodType<Prisma.ThermalInspectionSessionScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => ThermalInspectionSessionScalarWhereInputSchema), z.lazy(() => ThermalInspectionSessionScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => ThermalInspectionSessionScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => ThermalInspectionSessionScalarWhereInputSchema), z.lazy(() => ThermalInspectionSessionScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  facilityId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  reportDate: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  completedAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  completedBy: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  uploadedBy: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
 export const FireSafetyAuditUpsertWithWhereUniqueWithoutFacilityInputSchema: z.ZodType<Prisma.FireSafetyAuditUpsertWithWhereUniqueWithoutFacilityInput> = z.object({
   where: z.lazy(() => FireSafetyAuditWhereUniqueInputSchema),
   update: z.union([ z.lazy(() => FireSafetyAuditUpdateWithoutFacilityInputSchema), z.lazy(() => FireSafetyAuditUncheckedUpdateWithoutFacilityInputSchema) ]),
@@ -68628,6 +69640,7 @@ export const FacilityCreateWithoutIncidentsInputSchema: z.ZodType<Prisma.Facilit
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -68697,6 +69710,7 @@ export const FacilityUncheckedCreateWithoutIncidentsInputSchema: z.ZodType<Prism
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -68953,6 +69967,7 @@ export const FacilityUpdateWithoutIncidentsInputSchema: z.ZodType<Prisma.Facilit
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -69022,6 +70037,7 @@ export const FacilityUncheckedUpdateWithoutIncidentsInputSchema: z.ZodType<Prism
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -69141,6 +70157,7 @@ export const FacilityCreateWithoutActivityLogsInputSchema: z.ZodType<Prisma.Faci
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -69210,6 +70227,7 @@ export const FacilityUncheckedCreateWithoutActivityLogsInputSchema: z.ZodType<Pr
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -69335,6 +70353,7 @@ export const FacilityUpdateWithoutActivityLogsInputSchema: z.ZodType<Prisma.Faci
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -69404,6 +70423,7 @@ export const FacilityUncheckedUpdateWithoutActivityLogsInputSchema: z.ZodType<Pr
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -69519,6 +70539,7 @@ export const FacilityCreateWithoutEmployeeCountHistoryInputSchema: z.ZodType<Pri
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -69588,6 +70609,7 @@ export const FacilityUncheckedCreateWithoutEmployeeCountHistoryInputSchema: z.Zo
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -69673,6 +70695,7 @@ export const FacilityUpdateWithoutEmployeeCountHistoryInputSchema: z.ZodType<Pri
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -69742,6 +70765,7 @@ export const FacilityUncheckedUpdateWithoutEmployeeCountHistoryInputSchema: z.Zo
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -69811,6 +70835,7 @@ export const FacilityCreateWithoutBuildingsInputSchema: z.ZodType<Prisma.Facilit
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -69880,6 +70905,7 @@ export const FacilityUncheckedCreateWithoutBuildingsInputSchema: z.ZodType<Prism
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -70021,6 +71047,7 @@ export const FacilityUpdateWithoutBuildingsInputSchema: z.ZodType<Prisma.Facilit
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -70090,6 +71117,7 @@ export const FacilityUncheckedUpdateWithoutBuildingsInputSchema: z.ZodType<Prism
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -70175,6 +71203,7 @@ export const FacilityCreateWithoutUsersInputSchema: z.ZodType<Prisma.FacilityCre
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -70244,6 +71273,7 @@ export const FacilityUncheckedCreateWithoutUsersInputSchema: z.ZodType<Prisma.Fa
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -70414,6 +71444,7 @@ export const FacilityUpdateWithoutUsersInputSchema: z.ZodType<Prisma.FacilityUpd
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -70483,6 +71514,7 @@ export const FacilityUncheckedUpdateWithoutUsersInputSchema: z.ZodType<Prisma.Fa
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -70859,6 +71891,7 @@ export const FacilityCreateWithoutReconciliationsInputSchema: z.ZodType<Prisma.F
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -70928,6 +71961,7 @@ export const FacilityUncheckedCreateWithoutReconciliationsInputSchema: z.ZodType
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -71043,6 +72077,7 @@ export const FacilityUpdateWithoutReconciliationsInputSchema: z.ZodType<Prisma.F
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -71112,6 +72147,7 @@ export const FacilityUncheckedUpdateWithoutReconciliationsInputSchema: z.ZodType
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -71217,6 +72253,7 @@ export const FacilityCreateWithoutOhsBoardDepartmentsInputSchema: z.ZodType<Pris
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -71286,6 +72323,7 @@ export const FacilityUncheckedCreateWithoutOhsBoardDepartmentsInputSchema: z.Zod
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -71468,6 +72506,7 @@ export const FacilityUpdateWithoutOhsBoardDepartmentsInputSchema: z.ZodType<Pris
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -71537,6 +72576,7 @@ export const FacilityUncheckedUpdateWithoutOhsBoardDepartmentsInputSchema: z.Zod
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -71692,6 +72732,7 @@ export const FacilityCreateWithoutAssignmentsInputSchema: z.ZodType<Prisma.Facil
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -71761,6 +72802,7 @@ export const FacilityUncheckedCreateWithoutAssignmentsInputSchema: z.ZodType<Pri
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -71948,6 +72990,7 @@ export const FacilityUpdateWithoutAssignmentsInputSchema: z.ZodType<Prisma.Facil
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -72017,6 +73060,7 @@ export const FacilityUncheckedUpdateWithoutAssignmentsInputSchema: z.ZodType<Pri
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -72243,6 +73287,7 @@ export const FacilityCreateWithoutMonthlyHrDataInputSchema: z.ZodType<Prisma.Fac
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -72312,6 +73357,7 @@ export const FacilityUncheckedCreateWithoutMonthlyHrDataInputSchema: z.ZodType<P
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -72397,6 +73443,7 @@ export const FacilityUpdateWithoutMonthlyHrDataInputSchema: z.ZodType<Prisma.Fac
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -72466,6 +73513,7 @@ export const FacilityUncheckedUpdateWithoutMonthlyHrDataInputSchema: z.ZodType<P
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -72535,6 +73583,7 @@ export const FacilityCreateWithoutMonthlyAccidentInputSchema: z.ZodType<Prisma.F
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -72604,6 +73653,7 @@ export const FacilityUncheckedCreateWithoutMonthlyAccidentInputSchema: z.ZodType
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -72689,6 +73739,7 @@ export const FacilityUpdateWithoutMonthlyAccidentInputSchema: z.ZodType<Prisma.F
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -72758,6 +73809,7 @@ export const FacilityUncheckedUpdateWithoutMonthlyAccidentInputSchema: z.ZodType
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -73756,6 +74808,7 @@ export const FacilityCreateWithoutNotebookPagesInputSchema: z.ZodType<Prisma.Fac
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -73825,6 +74878,7 @@ export const FacilityUncheckedCreateWithoutNotebookPagesInputSchema: z.ZodType<P
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -73926,6 +74980,7 @@ export const FacilityUpdateWithoutNotebookPagesInputSchema: z.ZodType<Prisma.Fac
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -73995,6 +75050,7 @@ export const FacilityUncheckedUpdateWithoutNotebookPagesInputSchema: z.ZodType<P
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -74720,6 +75776,7 @@ export const FacilityCreateWithoutRiskExpertFacilitiesInputSchema: z.ZodType<Pri
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -74789,6 +75846,7 @@ export const FacilityUncheckedCreateWithoutRiskExpertFacilitiesInputSchema: z.Zo
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -74874,6 +75932,7 @@ export const FacilityUpdateWithoutRiskExpertFacilitiesInputSchema: z.ZodType<Pri
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -74943,6 +76002,7 @@ export const FacilityUncheckedUpdateWithoutRiskExpertFacilitiesInputSchema: z.Zo
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -75570,6 +76630,7 @@ export const FacilityCreateWithoutRiskDepartmentSettingsInputSchema: z.ZodType<P
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -75639,6 +76700,7 @@ export const FacilityUncheckedCreateWithoutRiskDepartmentSettingsInputSchema: z.
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -75724,6 +76786,7 @@ export const FacilityUpdateWithoutRiskDepartmentSettingsInputSchema: z.ZodType<P
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -75793,6 +76856,7 @@ export const FacilityUncheckedUpdateWithoutRiskDepartmentSettingsInputSchema: z.
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -75862,6 +76926,7 @@ export const FacilityCreateWithoutRiskCategorySettingsInputSchema: z.ZodType<Pri
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -75931,6 +76996,7 @@ export const FacilityUncheckedCreateWithoutRiskCategorySettingsInputSchema: z.Zo
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -76039,6 +77105,7 @@ export const FacilityUpdateWithoutRiskCategorySettingsInputSchema: z.ZodType<Pri
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -76108,6 +77175,7 @@ export const FacilityUncheckedUpdateWithoutRiskCategorySettingsInputSchema: z.Zo
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -77780,6 +78848,7 @@ export const FacilityCreateWithoutFacilityHazmatItemsInputSchema: z.ZodType<Pris
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -77849,6 +78918,7 @@ export const FacilityUncheckedCreateWithoutFacilityHazmatItemsInputSchema: z.Zod
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -78030,6 +79100,7 @@ export const FacilityUpdateWithoutFacilityHazmatItemsInputSchema: z.ZodType<Pris
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -78099,6 +79170,7 @@ export const FacilityUncheckedUpdateWithoutFacilityHazmatItemsInputSchema: z.Zod
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -78276,6 +79348,7 @@ export const FacilityCreateWithoutHazmatInventoryItemsInputSchema: z.ZodType<Pri
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -78345,6 +79418,7 @@ export const FacilityUncheckedCreateWithoutHazmatInventoryItemsInputSchema: z.Zo
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -78579,6 +79653,7 @@ export const FacilityUpdateWithoutHazmatInventoryItemsInputSchema: z.ZodType<Pri
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -78648,6 +79723,7 @@ export const FacilityUncheckedUpdateWithoutHazmatInventoryItemsInputSchema: z.Zo
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -79118,6 +80194,7 @@ export const FacilityCreateWithoutSpillKitsInputSchema: z.ZodType<Prisma.Facilit
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -79187,6 +80264,7 @@ export const FacilityUncheckedCreateWithoutSpillKitsInputSchema: z.ZodType<Prism
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -79340,6 +80418,7 @@ export const FacilityUpdateWithoutSpillKitsInputSchema: z.ZodType<Prisma.Facilit
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -79409,6 +80488,7 @@ export const FacilityUncheckedUpdateWithoutSpillKitsInputSchema: z.ZodType<Prism
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -80125,6 +81205,7 @@ export const FacilityCreateWithoutSpillKitMasterItemsInputSchema: z.ZodType<Pris
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -80194,6 +81275,7 @@ export const FacilityUncheckedCreateWithoutSpillKitMasterItemsInputSchema: z.Zod
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -80279,6 +81361,7 @@ export const FacilityUpdateWithoutSpillKitMasterItemsInputSchema: z.ZodType<Pris
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -80348,6 +81431,7 @@ export const FacilityUncheckedUpdateWithoutSpillKitMasterItemsInputSchema: z.Zod
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -80417,6 +81501,7 @@ export const FacilityCreateWithoutHazmatEyewashAnalysesInputSchema: z.ZodType<Pr
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -80486,6 +81571,7 @@ export const FacilityUncheckedCreateWithoutHazmatEyewashAnalysesInputSchema: z.Z
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -80571,6 +81657,7 @@ export const FacilityUpdateWithoutHazmatEyewashAnalysesInputSchema: z.ZodType<Pr
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -80640,6 +81727,7 @@ export const FacilityUncheckedUpdateWithoutHazmatEyewashAnalysesInputSchema: z.Z
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -80797,6 +81885,7 @@ export const FacilityCreateWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.F
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -80866,6 +81955,7 @@ export const FacilityUncheckedCreateWithoutHazmatIncidentsInputSchema: z.ZodType
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -81272,6 +82362,7 @@ export const FacilityUpdateWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.F
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -81341,6 +82432,7 @@ export const FacilityUncheckedUpdateWithoutHazmatIncidentsInputSchema: z.ZodType
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -81794,6 +82886,7 @@ export const FacilityCreateWithoutFireResponsiblesInputSchema: z.ZodType<Prisma.
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -81863,6 +82956,7 @@ export const FacilityUncheckedCreateWithoutFireResponsiblesInputSchema: z.ZodTyp
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -82010,6 +83104,7 @@ export const FacilityUpdateWithoutFireResponsiblesInputSchema: z.ZodType<Prisma.
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -82079,6 +83174,7 @@ export const FacilityUncheckedUpdateWithoutFireResponsiblesInputSchema: z.ZodTyp
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -82164,6 +83260,7 @@ export const FacilityCreateWithoutFireEquipmentCompaniesInputSchema: z.ZodType<P
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -82233,6 +83330,7 @@ export const FacilityUncheckedCreateWithoutFireEquipmentCompaniesInputSchema: z.
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -82418,6 +83516,7 @@ export const FacilityUpdateWithoutFireEquipmentCompaniesInputSchema: z.ZodType<P
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -82487,6 +83586,7 @@ export const FacilityUncheckedUpdateWithoutFireEquipmentCompaniesInputSchema: z.
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -82690,6 +83790,7 @@ export const FacilityCreateWithoutFireEquipmentsInputSchema: z.ZodType<Prisma.Fa
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -82759,6 +83860,7 @@ export const FacilityUncheckedCreateWithoutFireEquipmentsInputSchema: z.ZodType<
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -83058,6 +84160,7 @@ export const FacilityUpdateWithoutFireEquipmentsInputSchema: z.ZodType<Prisma.Fa
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -83127,6 +84230,7 @@ export const FacilityUncheckedUpdateWithoutFireEquipmentsInputSchema: z.ZodType<
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -83600,6 +84704,7 @@ export const FacilityCreateWithoutBuildContractorInputSchema: z.ZodType<Prisma.F
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -83669,6 +84774,7 @@ export const FacilityUncheckedCreateWithoutBuildContractorInputSchema: z.ZodType
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -83828,6 +84934,7 @@ export const FacilityUpdateWithoutBuildContractorInputSchema: z.ZodType<Prisma.F
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -83897,6 +85004,7 @@ export const FacilityUncheckedUpdateWithoutBuildContractorInputSchema: z.ZodType
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -83982,6 +85090,7 @@ export const FacilityCreateWithoutBuildWorkTypeInputSchema: z.ZodType<Prisma.Fac
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -84051,6 +85160,7 @@ export const FacilityUncheckedCreateWithoutBuildWorkTypeInputSchema: z.ZodType<P
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -84210,6 +85320,7 @@ export const FacilityUpdateWithoutBuildWorkTypeInputSchema: z.ZodType<Prisma.Fac
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -84279,6 +85390,7 @@ export const FacilityUncheckedUpdateWithoutBuildWorkTypeInputSchema: z.ZodType<P
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -84364,6 +85476,7 @@ export const FacilityCreateWithoutBuildProjectInputSchema: z.ZodType<Prisma.Faci
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -84433,6 +85546,7 @@ export const FacilityUncheckedCreateWithoutBuildProjectInputSchema: z.ZodType<Pr
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -85172,6 +86286,7 @@ export const FacilityUpdateWithoutBuildProjectInputSchema: z.ZodType<Prisma.Faci
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -85241,6 +86356,7 @@ export const FacilityUncheckedUpdateWithoutBuildProjectInputSchema: z.ZodType<Pr
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -88674,6 +89790,7 @@ export const FacilityCreateWithoutBtAnaGruplarInputSchema: z.ZodType<Prisma.Faci
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -88743,6 +89860,7 @@ export const FacilityUncheckedCreateWithoutBtAnaGruplarInputSchema: z.ZodType<Pr
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -88844,6 +89962,7 @@ export const FacilityUpdateWithoutBtAnaGruplarInputSchema: z.ZodType<Prisma.Faci
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -88913,6 +90032,7 @@ export const FacilityUncheckedUpdateWithoutBtAnaGruplarInputSchema: z.ZodType<Pr
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -89013,6 +90133,7 @@ export const FacilityCreateWithoutBtDenetlenenAlanlarInputSchema: z.ZodType<Pris
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -89082,6 +90203,7 @@ export const FacilityUncheckedCreateWithoutBtDenetlenenAlanlarInputSchema: z.Zod
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -89183,6 +90305,7 @@ export const FacilityUpdateWithoutBtDenetlenenAlanlarInputSchema: z.ZodType<Pris
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -89252,6 +90375,7 @@ export const FacilityUncheckedUpdateWithoutBtDenetlenenAlanlarInputSchema: z.Zod
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -89352,6 +90476,7 @@ export const FacilityCreateWithoutBtKategorilerInputSchema: z.ZodType<Prisma.Fac
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -89421,6 +90546,7 @@ export const FacilityUncheckedCreateWithoutBtKategorilerInputSchema: z.ZodType<P
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -89522,6 +90648,7 @@ export const FacilityUpdateWithoutBtKategorilerInputSchema: z.ZodType<Prisma.Fac
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -89591,6 +90718,7 @@ export const FacilityUncheckedUpdateWithoutBtKategorilerInputSchema: z.ZodType<P
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -89786,6 +90914,7 @@ export const FacilityCreateWithoutBtSoruBankasiInputSchema: z.ZodType<Prisma.Fac
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -89855,6 +90984,7 @@ export const FacilityUncheckedCreateWithoutBtSoruBankasiInputSchema: z.ZodType<P
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -90094,6 +91224,7 @@ export const FacilityUpdateWithoutBtSoruBankasiInputSchema: z.ZodType<Prisma.Fac
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -90163,6 +91294,7 @@ export const FacilityUncheckedUpdateWithoutBtSoruBankasiInputSchema: z.ZodType<P
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -90335,6 +91467,7 @@ export const FacilityCreateWithoutBtSorumluBirimlerInputSchema: z.ZodType<Prisma
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -90404,6 +91537,7 @@ export const FacilityUncheckedCreateWithoutBtSorumluBirimlerInputSchema: z.ZodTy
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -90537,6 +91671,7 @@ export const FacilityUpdateWithoutBtSorumluBirimlerInputSchema: z.ZodType<Prisma
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -90606,6 +91741,7 @@ export const FacilityUncheckedUpdateWithoutBtSorumluBirimlerInputSchema: z.ZodTy
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -90773,6 +91909,7 @@ export const FacilityCreateWithoutBtSorumluKisilerInputSchema: z.ZodType<Prisma.
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -90842,6 +91979,7 @@ export const FacilityUncheckedCreateWithoutBtSorumluKisilerInputSchema: z.ZodTyp
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -90987,6 +92125,7 @@ export const FacilityUpdateWithoutBtSorumluKisilerInputSchema: z.ZodType<Prisma.
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -91056,6 +92195,7 @@ export const FacilityUncheckedUpdateWithoutBtSorumluKisilerInputSchema: z.ZodTyp
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -91256,6 +92396,7 @@ export const FacilityCreateWithoutBtTurlerInputSchema: z.ZodType<Prisma.Facility
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -91325,6 +92466,7 @@ export const FacilityUncheckedCreateWithoutBtTurlerInputSchema: z.ZodType<Prisma
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -91499,6 +92641,7 @@ export const FacilityUpdateWithoutBtTurlerInputSchema: z.ZodType<Prisma.Facility
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -91568,6 +92711,7 @@ export const FacilityUncheckedUpdateWithoutBtTurlerInputSchema: z.ZodType<Prisma
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -92178,6 +93322,7 @@ export const FacilityCreateWithoutBtUygunsuzluklarInputSchema: z.ZodType<Prisma.
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -92247,6 +93392,7 @@ export const FacilityUncheckedCreateWithoutBtUygunsuzluklarInputSchema: z.ZodTyp
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -92491,6 +93637,7 @@ export const FacilityUpdateWithoutBtUygunsuzluklarInputSchema: z.ZodType<Prisma.
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -92560,6 +93707,7 @@ export const FacilityUncheckedUpdateWithoutBtUygunsuzluklarInputSchema: z.ZodTyp
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -92629,6 +93777,7 @@ export const FacilityCreateWithoutLocationsInputSchema: z.ZodType<Prisma.Facilit
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -92698,6 +93847,7 @@ export const FacilityUncheckedCreateWithoutLocationsInputSchema: z.ZodType<Prism
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -93376,6 +94526,7 @@ export const FacilityUpdateWithoutLocationsInputSchema: z.ZodType<Prisma.Facilit
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -93445,6 +94596,7 @@ export const FacilityUncheckedUpdateWithoutLocationsInputSchema: z.ZodType<Prism
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -93758,6 +94910,7 @@ export const FacilityCreateWithoutHazmatVehicleInputSchema: z.ZodType<Prisma.Fac
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -93827,6 +94980,7 @@ export const FacilityUncheckedCreateWithoutHazmatVehicleInputSchema: z.ZodType<P
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -93944,6 +95098,7 @@ export const FacilityUpdateWithoutHazmatVehicleInputSchema: z.ZodType<Prisma.Fac
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -94013,6 +95168,7 @@ export const FacilityUncheckedUpdateWithoutHazmatVehicleInputSchema: z.ZodType<P
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -97826,6 +98982,7 @@ export const FacilityCreateWithoutIntegratedAuditsInputSchema: z.ZodType<Prisma.
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -97895,6 +99052,7 @@ export const FacilityUncheckedCreateWithoutIntegratedAuditsInputSchema: z.ZodTyp
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -98034,6 +99192,7 @@ export const FacilityUpdateWithoutIntegratedAuditsInputSchema: z.ZodType<Prisma.
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -98103,6 +99262,7 @@ export const FacilityUncheckedUpdateWithoutIntegratedAuditsInputSchema: z.ZodTyp
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -99965,6 +101125,7 @@ export const FacilityCreateWithoutChecklistSubmissionsInputSchema: z.ZodType<Pri
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -100034,6 +101195,7 @@ export const FacilityUncheckedCreateWithoutChecklistSubmissionsInputSchema: z.Zo
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -100313,6 +101475,7 @@ export const FacilityUpdateWithoutChecklistSubmissionsInputSchema: z.ZodType<Pri
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -100382,6 +101545,7 @@ export const FacilityUncheckedUpdateWithoutChecklistSubmissionsInputSchema: z.Zo
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -101020,6 +102184,7 @@ export const FacilityCreateWithoutOhsBoardPeriodInputSchema: z.ZodType<Prisma.Fa
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -101089,6 +102254,7 @@ export const FacilityUncheckedCreateWithoutOhsBoardPeriodInputSchema: z.ZodType<
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -101253,6 +102419,7 @@ export const FacilityUpdateWithoutOhsBoardPeriodInputSchema: z.ZodType<Prisma.Fa
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -101322,6 +102489,7 @@ export const FacilityUncheckedUpdateWithoutOhsBoardPeriodInputSchema: z.ZodType<
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -101423,6 +102591,7 @@ export const FacilityCreateWithoutOhsBoardMeetingsInputSchema: z.ZodType<Prisma.
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -101492,6 +102661,7 @@ export const FacilityUncheckedCreateWithoutOhsBoardMeetingsInputSchema: z.ZodTyp
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -101730,6 +102900,7 @@ export const FacilityUpdateWithoutOhsBoardMeetingsInputSchema: z.ZodType<Prisma.
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -101799,6 +102970,7 @@ export const FacilityUncheckedUpdateWithoutOhsBoardMeetingsInputSchema: z.ZodTyp
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -103234,6 +104406,7 @@ export const FacilityCreateWithoutOhsBoardMembersInputSchema: z.ZodType<Prisma.F
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -103303,6 +104476,7 @@ export const FacilityUncheckedCreateWithoutOhsBoardMembersInputSchema: z.ZodType
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -103468,6 +104642,7 @@ export const FacilityUpdateWithoutOhsBoardMembersInputSchema: z.ZodType<Prisma.F
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -103537,6 +104712,7 @@ export const FacilityUncheckedUpdateWithoutOhsBoardMembersInputSchema: z.ZodType
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -103786,6 +104962,7 @@ export const FacilityCreateWithoutFireDoorInputSchema: z.ZodType<Prisma.Facility
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -103855,6 +105032,7 @@ export const FacilityUncheckedCreateWithoutFireDoorInputSchema: z.ZodType<Prisma
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -104027,6 +105205,7 @@ export const FacilityUpdateWithoutFireDoorInputSchema: z.ZodType<Prisma.Facility
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -104096,6 +105275,7 @@ export const FacilityUncheckedUpdateWithoutFireDoorInputSchema: z.ZodType<Prisma
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -104512,6 +105692,7 @@ export const FacilityCreateWithoutElevatorsInputSchema: z.ZodType<Prisma.Facilit
   ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -104581,6 +105762,7 @@ export const FacilityUncheckedCreateWithoutElevatorsInputSchema: z.ZodType<Prism
   ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -104698,6 +105880,7 @@ export const FacilityUpdateWithoutElevatorsInputSchema: z.ZodType<Prisma.Facilit
   ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -104767,6 +105950,7 @@ export const FacilityUncheckedUpdateWithoutElevatorsInputSchema: z.ZodType<Prism
   ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -105007,6 +106191,7 @@ export const FacilityCreateWithoutElectricInfrastructureRecordsInputSchema: z.Zo
   ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentCreateNestedManyWithoutFacilityInputSchema).optional(),
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -105076,6 +106261,7 @@ export const FacilityUncheckedCreateWithoutElectricInfrastructureRecordsInputSch
   ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -105161,6 +106347,7 @@ export const FacilityUpdateWithoutElectricInfrastructureRecordsInputSchema: z.Zo
   ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUpdateManyWithoutFacilityNestedInputSchema).optional(),
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -105230,6 +106417,7 @@ export const FacilityUncheckedUpdateWithoutElectricInfrastructureRecordsInputSch
   ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -105299,6 +106487,7 @@ export const FacilityCreateWithoutElectricInfrastructureStatusInputSchema: z.Zod
   ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentCreateNestedManyWithoutFacilityInputSchema).optional(),
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -105368,6 +106557,7 @@ export const FacilityUncheckedCreateWithoutElectricInfrastructureStatusInputSche
   ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
@@ -105453,6 +106643,7 @@ export const FacilityUpdateWithoutElectricInfrastructureStatusInputSchema: z.Zod
   ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUpdateManyWithoutFacilityNestedInputSchema).optional(),
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
@@ -105522,7 +106713,468 @@ export const FacilityUncheckedUpdateWithoutElectricInfrastructureStatusInputSche
   ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionItemCreateWithoutSessionInputSchema: z.ZodType<Prisma.ThermalInspectionItemCreateWithoutSessionInput> = z.object({
+  id: z.string().optional(),
+  orderIndex: z.number().int().optional(),
+  buildingLocation: z.string().optional().nullable(),
+  floorSection: z.string().optional().nullable(),
+  measurementDate: z.coerce.date().optional().nullable(),
+  controlTime: z.string().optional().nullable(),
+  panelName: z.string(),
+  measurementPoint: z.string().optional().nullable(),
+  equipmentConnection: z.string().optional().nullable(),
+  measuredTemp: z.number().optional().nullable(),
+  ambientTemp: z.number().optional().nullable(),
+  deltaTemp: z.number().optional().nullable(),
+  status: z.string().optional().nullable(),
+  priority: z.string().optional().nullable(),
+  detectedRisk: z.string().optional().nullable(),
+  actionTaken: z.string().optional().nullable(),
+  photoUrls: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const ThermalInspectionItemUncheckedCreateWithoutSessionInputSchema: z.ZodType<Prisma.ThermalInspectionItemUncheckedCreateWithoutSessionInput> = z.object({
+  id: z.string().optional(),
+  orderIndex: z.number().int().optional(),
+  buildingLocation: z.string().optional().nullable(),
+  floorSection: z.string().optional().nullable(),
+  measurementDate: z.coerce.date().optional().nullable(),
+  controlTime: z.string().optional().nullable(),
+  panelName: z.string(),
+  measurementPoint: z.string().optional().nullable(),
+  equipmentConnection: z.string().optional().nullable(),
+  measuredTemp: z.number().optional().nullable(),
+  ambientTemp: z.number().optional().nullable(),
+  deltaTemp: z.number().optional().nullable(),
+  status: z.string().optional().nullable(),
+  priority: z.string().optional().nullable(),
+  detectedRisk: z.string().optional().nullable(),
+  actionTaken: z.string().optional().nullable(),
+  photoUrls: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const ThermalInspectionItemCreateOrConnectWithoutSessionInputSchema: z.ZodType<Prisma.ThermalInspectionItemCreateOrConnectWithoutSessionInput> = z.object({
+  where: z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => ThermalInspectionItemCreateWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemUncheckedCreateWithoutSessionInputSchema) ]),
+}).strict();
+
+export const ThermalInspectionItemCreateManySessionInputEnvelopeSchema: z.ZodType<Prisma.ThermalInspectionItemCreateManySessionInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => ThermalInspectionItemCreateManySessionInputSchema), z.lazy(() => ThermalInspectionItemCreateManySessionInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FacilityCreateWithoutThermalInspectionSessionsInputSchema: z.ZodType<Prisma.FacilityCreateWithoutThermalInspectionSessionsInput> = z.object({
+  id: z.string(),
+  name: z.string(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  city: z.string().optional().nullable(),
+  commercialTitle: z.string().optional().nullable(),
+  dangerClass: z.string().optional(),
+  district: z.string().optional().nullable(),
+  email: z.string().optional().nullable(),
+  employeeCount: z.number().int().optional(),
+  fullAddress: z.string().optional().nullable(),
+  naceCode: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  sgkNumber: z.string().optional().nullable(),
+  shortName: z.string().optional().nullable(),
+  taxNumber: z.string().optional().nullable(),
+  taxOffice: z.string().optional().nullable(),
+  type: z.string().optional().nullable(),
+  website: z.string().optional().nullable(),
+  logoUrl: z.string().optional().nullable(),
+  activityLogs: z.lazy(() => ActivityLogCreateNestedManyWithoutFacilityInputSchema).optional(),
+  assignments: z.lazy(() => AssignmentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  employeeCountHistory: z.lazy(() => EmployeeCountHistoryCreateNestedManyWithoutFacilityInputSchema).optional(),
+  incidents: z.lazy(() => ExtraordinaryIncidentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  buildings: z.lazy(() => FacilityBuildingCreateNestedManyWithoutFacilityInputSchema).optional(),
+  monthlyAccident: z.lazy(() => MonthlyAccidentDataCreateNestedManyWithoutFacilityInputSchema).optional(),
+  monthlyHrData: z.lazy(() => MonthlyHRDataCreateNestedManyWithoutFacilityInputSchema).optional(),
+  notebookPages: z.lazy(() => NotebookPageCreateNestedManyWithoutFacilityInputSchema).optional(),
+  reconciliations: z.lazy(() => ReconciliationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskCategorySettings: z.lazy(() => RiskCategorySettingCreateNestedManyWithoutFacilityInputSchema).optional(),
+  locations: z.lazy(() => FacilityLocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskDepartmentSettings: z.lazy(() => RiskDepartmentSettingCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskExpertFacilities: z.lazy(() => RiskExpertFacilityCreateNestedManyWithoutFacilityInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutFacilityInputSchema).optional(),
+  users: z.lazy(() => UserFacilityCreateNestedManyWithoutFacilityInputSchema).optional(),
+  facilityHazmatItems: z.lazy(() => FacilityHazmatItemCreateNestedManyWithoutFacilityInputSchema).optional(),
+  spillKits: z.lazy(() => HazmatSpillKitCreateNestedManyWithoutFacilityInputSchema).optional(),
+  spillKitMasterItems: z.lazy(() => HazmatSpillKitMasterItemCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatInventoryItems: z.lazy(() => HazmatInventoryItemCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatEyewashAnalyses: z.lazy(() => HazmatEyewashRiskAnalysisCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireResponsibles: z.lazy(() => FireEquipmentResponsibleCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireEquipmentCompanies: z.lazy(() => FireEquipmentCompanyCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildContractor: z.lazy(() => BuildContractorCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildWorkType: z.lazy(() => BuildWorkTypeCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btAnaGruplar: z.lazy(() => BTAnaGrupCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btDenetlenenAlanlar: z.lazy(() => BTDenetlenenAlanCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btKategoriler: z.lazy(() => BTKategoriCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSorumluBirimler: z.lazy(() => BTSorumluBirimCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSorumluKisiler: z.lazy(() => BTSorumluKisiCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btTurler: z.lazy(() => BTTurCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukCreateNestedManyWithoutFacilityInputSchema).optional(),
+  HazmatVehicle: z.lazy(() => HazmatVehicleCreateNestedManyWithoutFacilityInputSchema).optional(),
+  integratedAudits: z.lazy(() => IntegratedAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
+  OhsBoardPeriod: z.lazy(() => OhsBoardPeriodCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
+  electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
+  electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+}).strict();
+
+export const FacilityUncheckedCreateWithoutThermalInspectionSessionsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutThermalInspectionSessionsInput> = z.object({
+  id: z.string(),
+  name: z.string(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  city: z.string().optional().nullable(),
+  commercialTitle: z.string().optional().nullable(),
+  dangerClass: z.string().optional(),
+  district: z.string().optional().nullable(),
+  email: z.string().optional().nullable(),
+  employeeCount: z.number().int().optional(),
+  fullAddress: z.string().optional().nullable(),
+  naceCode: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  sgkNumber: z.string().optional().nullable(),
+  shortName: z.string().optional().nullable(),
+  taxNumber: z.string().optional().nullable(),
+  taxOffice: z.string().optional().nullable(),
+  type: z.string().optional().nullable(),
+  website: z.string().optional().nullable(),
+  logoUrl: z.string().optional().nullable(),
+  activityLogs: z.lazy(() => ActivityLogUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  assignments: z.lazy(() => AssignmentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  employeeCountHistory: z.lazy(() => EmployeeCountHistoryUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  incidents: z.lazy(() => ExtraordinaryIncidentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  buildings: z.lazy(() => FacilityBuildingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  monthlyAccident: z.lazy(() => MonthlyAccidentDataUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  monthlyHrData: z.lazy(() => MonthlyHRDataUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  notebookPages: z.lazy(() => NotebookPageUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  reconciliations: z.lazy(() => ReconciliationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskCategorySettings: z.lazy(() => RiskCategorySettingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  locations: z.lazy(() => FacilityLocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskDepartmentSettings: z.lazy(() => RiskDepartmentSettingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskExpertFacilities: z.lazy(() => RiskExpertFacilityUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  users: z.lazy(() => UserFacilityUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  facilityHazmatItems: z.lazy(() => FacilityHazmatItemUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  spillKits: z.lazy(() => HazmatSpillKitUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  spillKitMasterItems: z.lazy(() => HazmatSpillKitMasterItemUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatInventoryItems: z.lazy(() => HazmatInventoryItemUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatEyewashAnalyses: z.lazy(() => HazmatEyewashRiskAnalysisUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireResponsibles: z.lazy(() => FireEquipmentResponsibleUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireEquipmentCompanies: z.lazy(() => FireEquipmentCompanyUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildContractor: z.lazy(() => BuildContractorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildWorkType: z.lazy(() => BuildWorkTypeUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btAnaGruplar: z.lazy(() => BTAnaGrupUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btDenetlenenAlanlar: z.lazy(() => BTDenetlenenAlanUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btKategoriler: z.lazy(() => BTKategoriUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSorumluBirimler: z.lazy(() => BTSorumluBirimUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSorumluKisiler: z.lazy(() => BTSorumluKisiUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btTurler: z.lazy(() => BTTurUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  HazmatVehicle: z.lazy(() => HazmatVehicleUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  integratedAudits: z.lazy(() => IntegratedAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  OhsBoardPeriod: z.lazy(() => OhsBoardPeriodUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+}).strict();
+
+export const FacilityCreateOrConnectWithoutThermalInspectionSessionsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutThermalInspectionSessionsInput> = z.object({
+  where: z.lazy(() => FacilityWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => FacilityCreateWithoutThermalInspectionSessionsInputSchema), z.lazy(() => FacilityUncheckedCreateWithoutThermalInspectionSessionsInputSchema) ]),
+}).strict();
+
+export const ThermalInspectionItemUpsertWithWhereUniqueWithoutSessionInputSchema: z.ZodType<Prisma.ThermalInspectionItemUpsertWithWhereUniqueWithoutSessionInput> = z.object({
+  where: z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => ThermalInspectionItemUpdateWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemUncheckedUpdateWithoutSessionInputSchema) ]),
+  create: z.union([ z.lazy(() => ThermalInspectionItemCreateWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemUncheckedCreateWithoutSessionInputSchema) ]),
+}).strict();
+
+export const ThermalInspectionItemUpdateWithWhereUniqueWithoutSessionInputSchema: z.ZodType<Prisma.ThermalInspectionItemUpdateWithWhereUniqueWithoutSessionInput> = z.object({
+  where: z.lazy(() => ThermalInspectionItemWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => ThermalInspectionItemUpdateWithoutSessionInputSchema), z.lazy(() => ThermalInspectionItemUncheckedUpdateWithoutSessionInputSchema) ]),
+}).strict();
+
+export const ThermalInspectionItemUpdateManyWithWhereWithoutSessionInputSchema: z.ZodType<Prisma.ThermalInspectionItemUpdateManyWithWhereWithoutSessionInput> = z.object({
+  where: z.lazy(() => ThermalInspectionItemScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => ThermalInspectionItemUpdateManyMutationInputSchema), z.lazy(() => ThermalInspectionItemUncheckedUpdateManyWithoutSessionInputSchema) ]),
+}).strict();
+
+export const ThermalInspectionItemScalarWhereInputSchema: z.ZodType<Prisma.ThermalInspectionItemScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => ThermalInspectionItemScalarWhereInputSchema), z.lazy(() => ThermalInspectionItemScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => ThermalInspectionItemScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => ThermalInspectionItemScalarWhereInputSchema), z.lazy(() => ThermalInspectionItemScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  sessionId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  orderIndex: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  buildingLocation: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  floorSection: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  measurementDate: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  controlTime: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  panelName: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  measurementPoint: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  equipmentConnection: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  measuredTemp: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  ambientTemp: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  deltaTemp: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  status: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  priority: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  detectedRisk: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  actionTaken: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  photoUrls: z.lazy(() => JsonFilterSchema).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const FacilityUpsertWithoutThermalInspectionSessionsInputSchema: z.ZodType<Prisma.FacilityUpsertWithoutThermalInspectionSessionsInput> = z.object({
+  update: z.union([ z.lazy(() => FacilityUpdateWithoutThermalInspectionSessionsInputSchema), z.lazy(() => FacilityUncheckedUpdateWithoutThermalInspectionSessionsInputSchema) ]),
+  create: z.union([ z.lazy(() => FacilityCreateWithoutThermalInspectionSessionsInputSchema), z.lazy(() => FacilityUncheckedCreateWithoutThermalInspectionSessionsInputSchema) ]),
+  where: z.lazy(() => FacilityWhereInputSchema).optional(),
+}).strict();
+
+export const FacilityUpdateToOneWithWhereWithoutThermalInspectionSessionsInputSchema: z.ZodType<Prisma.FacilityUpdateToOneWithWhereWithoutThermalInspectionSessionsInput> = z.object({
+  where: z.lazy(() => FacilityWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => FacilityUpdateWithoutThermalInspectionSessionsInputSchema), z.lazy(() => FacilityUncheckedUpdateWithoutThermalInspectionSessionsInputSchema) ]),
+}).strict();
+
+export const FacilityUpdateWithoutThermalInspectionSessionsInputSchema: z.ZodType<Prisma.FacilityUpdateWithoutThermalInspectionSessionsInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  city: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  commercialTitle: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  dangerClass: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  district: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  email: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  employeeCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  fullAddress: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  naceCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  phone: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sgkNumber: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  shortName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  taxNumber: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  taxOffice: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  type: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  website: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  logoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  activityLogs: z.lazy(() => ActivityLogUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  assignments: z.lazy(() => AssignmentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  employeeCountHistory: z.lazy(() => EmployeeCountHistoryUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  incidents: z.lazy(() => ExtraordinaryIncidentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  buildings: z.lazy(() => FacilityBuildingUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  monthlyAccident: z.lazy(() => MonthlyAccidentDataUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  monthlyHrData: z.lazy(() => MonthlyHRDataUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  notebookPages: z.lazy(() => NotebookPageUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  reconciliations: z.lazy(() => ReconciliationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskCategorySettings: z.lazy(() => RiskCategorySettingUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  locations: z.lazy(() => FacilityLocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskDepartmentSettings: z.lazy(() => RiskDepartmentSettingUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskExpertFacilities: z.lazy(() => RiskExpertFacilityUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  users: z.lazy(() => UserFacilityUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  facilityHazmatItems: z.lazy(() => FacilityHazmatItemUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  spillKits: z.lazy(() => HazmatSpillKitUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  spillKitMasterItems: z.lazy(() => HazmatSpillKitMasterItemUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatInventoryItems: z.lazy(() => HazmatInventoryItemUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatEyewashAnalyses: z.lazy(() => HazmatEyewashRiskAnalysisUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireResponsibles: z.lazy(() => FireEquipmentResponsibleUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireEquipmentCompanies: z.lazy(() => FireEquipmentCompanyUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildContractor: z.lazy(() => BuildContractorUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildWorkType: z.lazy(() => BuildWorkTypeUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btAnaGruplar: z.lazy(() => BTAnaGrupUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btDenetlenenAlanlar: z.lazy(() => BTDenetlenenAlanUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btKategoriler: z.lazy(() => BTKategoriUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSorumluBirimler: z.lazy(() => BTSorumluBirimUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSorumluKisiler: z.lazy(() => BTSorumluKisiUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btTurler: z.lazy(() => BTTurUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  HazmatVehicle: z.lazy(() => HazmatVehicleUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  integratedAudits: z.lazy(() => IntegratedAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  OhsBoardPeriod: z.lazy(() => OhsBoardPeriodUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+}).strict();
+
+export const FacilityUncheckedUpdateWithoutThermalInspectionSessionsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutThermalInspectionSessionsInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  city: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  commercialTitle: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  dangerClass: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  district: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  email: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  employeeCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  fullAddress: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  naceCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  phone: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sgkNumber: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  shortName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  taxNumber: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  taxOffice: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  type: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  website: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  logoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  activityLogs: z.lazy(() => ActivityLogUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  assignments: z.lazy(() => AssignmentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  employeeCountHistory: z.lazy(() => EmployeeCountHistoryUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  incidents: z.lazy(() => ExtraordinaryIncidentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  buildings: z.lazy(() => FacilityBuildingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  monthlyAccident: z.lazy(() => MonthlyAccidentDataUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  monthlyHrData: z.lazy(() => MonthlyHRDataUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  notebookPages: z.lazy(() => NotebookPageUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  reconciliations: z.lazy(() => ReconciliationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskCategorySettings: z.lazy(() => RiskCategorySettingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  locations: z.lazy(() => FacilityLocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskDepartmentSettings: z.lazy(() => RiskDepartmentSettingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskExpertFacilities: z.lazy(() => RiskExpertFacilityUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  users: z.lazy(() => UserFacilityUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  facilityHazmatItems: z.lazy(() => FacilityHazmatItemUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  spillKits: z.lazy(() => HazmatSpillKitUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  spillKitMasterItems: z.lazy(() => HazmatSpillKitMasterItemUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatInventoryItems: z.lazy(() => HazmatInventoryItemUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatEyewashAnalyses: z.lazy(() => HazmatEyewashRiskAnalysisUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireResponsibles: z.lazy(() => FireEquipmentResponsibleUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireEquipmentCompanies: z.lazy(() => FireEquipmentCompanyUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildContractor: z.lazy(() => BuildContractorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildWorkType: z.lazy(() => BuildWorkTypeUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btAnaGruplar: z.lazy(() => BTAnaGrupUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btDenetlenenAlanlar: z.lazy(() => BTDenetlenenAlanUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btKategoriler: z.lazy(() => BTKategoriUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSorumluBirimler: z.lazy(() => BTSorumluBirimUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSorumluKisiler: z.lazy(() => BTSorumluKisiUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btTurler: z.lazy(() => BTTurUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  HazmatVehicle: z.lazy(() => HazmatVehicleUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  integratedAudits: z.lazy(() => IntegratedAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  OhsBoardPeriod: z.lazy(() => OhsBoardPeriodUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionCreateWithoutItemsInputSchema: z.ZodType<Prisma.ThermalInspectionSessionCreateWithoutItemsInput> = z.object({
+  id: z.string().optional(),
+  reportDate: z.coerce.date().optional().nullable(),
+  status: z.string().optional(),
+  completedAt: z.coerce.date().optional().nullable(),
+  completedBy: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  uploadedBy: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  facility: z.lazy(() => FacilityCreateNestedOneWithoutThermalInspectionSessionsInputSchema),
+}).strict();
+
+export const ThermalInspectionSessionUncheckedCreateWithoutItemsInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUncheckedCreateWithoutItemsInput> = z.object({
+  id: z.string().optional(),
+  facilityId: z.string(),
+  reportDate: z.coerce.date().optional().nullable(),
+  status: z.string().optional(),
+  completedAt: z.coerce.date().optional().nullable(),
+  completedBy: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  uploadedBy: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const ThermalInspectionSessionCreateOrConnectWithoutItemsInputSchema: z.ZodType<Prisma.ThermalInspectionSessionCreateOrConnectWithoutItemsInput> = z.object({
+  where: z.lazy(() => ThermalInspectionSessionWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => ThermalInspectionSessionCreateWithoutItemsInputSchema), z.lazy(() => ThermalInspectionSessionUncheckedCreateWithoutItemsInputSchema) ]),
+}).strict();
+
+export const ThermalInspectionSessionUpsertWithoutItemsInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUpsertWithoutItemsInput> = z.object({
+  update: z.union([ z.lazy(() => ThermalInspectionSessionUpdateWithoutItemsInputSchema), z.lazy(() => ThermalInspectionSessionUncheckedUpdateWithoutItemsInputSchema) ]),
+  create: z.union([ z.lazy(() => ThermalInspectionSessionCreateWithoutItemsInputSchema), z.lazy(() => ThermalInspectionSessionUncheckedCreateWithoutItemsInputSchema) ]),
+  where: z.lazy(() => ThermalInspectionSessionWhereInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionUpdateToOneWithWhereWithoutItemsInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUpdateToOneWithWhereWithoutItemsInput> = z.object({
+  where: z.lazy(() => ThermalInspectionSessionWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => ThermalInspectionSessionUpdateWithoutItemsInputSchema), z.lazy(() => ThermalInspectionSessionUncheckedUpdateWithoutItemsInputSchema) ]),
+}).strict();
+
+export const ThermalInspectionSessionUpdateWithoutItemsInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUpdateWithoutItemsInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  reportDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  completedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  completedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  uploadedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  facility: z.lazy(() => FacilityUpdateOneRequiredWithoutThermalInspectionSessionsNestedInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionUncheckedUpdateWithoutItemsInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUncheckedUpdateWithoutItemsInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  reportDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  completedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  completedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  uploadedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
 export const FacilityCreateWithoutFireSafetyAuditsInputSchema: z.ZodType<Prisma.FacilityCreateWithoutFireSafetyAuditsInput> = z.object({
@@ -105592,6 +107244,7 @@ export const FacilityCreateWithoutFireSafetyAuditsInputSchema: z.ZodType<Prisma.
   elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutFireSafetyAuditsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutFireSafetyAuditsInput> = z.object({
@@ -105661,6 +107314,7 @@ export const FacilityUncheckedCreateWithoutFireSafetyAuditsInputSchema: z.ZodTyp
   elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutFireSafetyAuditsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutFireSafetyAuditsInput> = z.object({
@@ -105679,6 +107333,7 @@ export const FireSafetyItemCreateWithoutAuditInputSchema: z.ZodType<Prisma.FireS
   deadlineDate: z.coerce.date().optional().nullable(),
   status: z.string().optional(),
   riskLevel: z.string().optional().nullable(),
+  progressPercent: z.number().int().optional(),
   findingPhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   notes: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
@@ -105697,6 +107352,7 @@ export const FireSafetyItemUncheckedCreateWithoutAuditInputSchema: z.ZodType<Pri
   deadlineDate: z.coerce.date().optional().nullable(),
   status: z.string().optional(),
   riskLevel: z.string().optional().nullable(),
+  progressPercent: z.number().int().optional(),
   findingPhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   notes: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
@@ -105792,6 +107448,7 @@ export const FacilityUpdateWithoutFireSafetyAuditsInputSchema: z.ZodType<Prisma.
   elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutFireSafetyAuditsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutFireSafetyAuditsInput> = z.object({
@@ -105861,6 +107518,7 @@ export const FacilityUncheckedUpdateWithoutFireSafetyAuditsInputSchema: z.ZodTyp
   elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FireSafetyItemUpsertWithWhereUniqueWithoutAuditInputSchema: z.ZodType<Prisma.FireSafetyItemUpsertWithWhereUniqueWithoutAuditInput> = z.object({
@@ -105894,6 +107552,7 @@ export const FireSafetyItemScalarWhereInputSchema: z.ZodType<Prisma.FireSafetyIt
   deadlineDate: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
   status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   riskLevel: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  progressPercent: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
   findingPhotos: z.lazy(() => JsonFilterSchema).optional(),
   notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
@@ -105945,6 +107604,7 @@ export const FireSafetyItemActionCreateWithoutItemInputSchema: z.ZodType<Prisma.
   actionDate: z.coerce.date().optional(),
   status: z.string().optional(),
   explanation: z.string(),
+  progressPercent: z.number().int().optional(),
   evidencePhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -105956,6 +107616,7 @@ export const FireSafetyItemActionUncheckedCreateWithoutItemInputSchema: z.ZodTyp
   actionDate: z.coerce.date().optional(),
   status: z.string().optional(),
   explanation: z.string(),
+  progressPercent: z.number().int().optional(),
   evidencePhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -106042,6 +107703,7 @@ export const FireSafetyItemActionScalarWhereInputSchema: z.ZodType<Prisma.FireSa
   actionDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   explanation: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  progressPercent: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
   evidencePhotos: z.lazy(() => JsonFilterSchema).optional(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
@@ -106058,6 +107720,7 @@ export const FireSafetyItemCreateWithoutActionsInputSchema: z.ZodType<Prisma.Fir
   deadlineDate: z.coerce.date().optional().nullable(),
   status: z.string().optional(),
   riskLevel: z.string().optional().nullable(),
+  progressPercent: z.number().int().optional(),
   findingPhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   notes: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
@@ -106077,6 +107740,7 @@ export const FireSafetyItemUncheckedCreateWithoutActionsInputSchema: z.ZodType<P
   deadlineDate: z.coerce.date().optional().nullable(),
   status: z.string().optional(),
   riskLevel: z.string().optional().nullable(),
+  progressPercent: z.number().int().optional(),
   findingPhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   notes: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
@@ -106110,6 +107774,7 @@ export const FireSafetyItemUpdateWithoutActionsInputSchema: z.ZodType<Prisma.Fir
   deadlineDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   riskLevel: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  progressPercent: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   findingPhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -106129,6 +107794,7 @@ export const FireSafetyItemUncheckedUpdateWithoutActionsInputSchema: z.ZodType<P
   deadlineDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   riskLevel: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  progressPercent: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   findingPhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -108135,6 +109801,18 @@ export const ElectricInfrastructureRecordCreateManyFacilityInputSchema: z.ZodTyp
   createdBy: z.string().optional().nullable(),
 }).strict();
 
+export const ThermalInspectionSessionCreateManyFacilityInputSchema: z.ZodType<Prisma.ThermalInspectionSessionCreateManyFacilityInput> = z.object({
+  id: z.string().optional(),
+  reportDate: z.coerce.date().optional().nullable(),
+  status: z.string().optional(),
+  completedAt: z.coerce.date().optional().nullable(),
+  completedBy: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  uploadedBy: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
 export const FireSafetyAuditCreateManyFacilityInputSchema: z.ZodType<Prisma.FireSafetyAuditCreateManyFacilityInput> = z.object({
   id: z.cuid().optional(),
   title: z.string().optional(),
@@ -110043,6 +111721,44 @@ export const ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityInput
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+}).strict();
+
+export const ThermalInspectionSessionUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUpdateWithoutFacilityInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  reportDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  completedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  completedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  uploadedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  items: z.lazy(() => ThermalInspectionItemUpdateManyWithoutSessionNestedInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionUncheckedUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUncheckedUpdateWithoutFacilityInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  reportDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  completedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  completedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  uploadedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  items: z.lazy(() => ThermalInspectionItemUncheckedUpdateManyWithoutSessionNestedInputSchema).optional(),
+}).strict();
+
+export const ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityInputSchema: z.ZodType<Prisma.ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  reportDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  completedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  completedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  uploadedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
 export const FireSafetyAuditUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.FireSafetyAuditUpdateWithoutFacilityInput> = z.object({
@@ -118168,6 +119884,94 @@ export const ElevatorInspectionUncheckedUpdateManyWithoutElevatorInputSchema: z.
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
+export const ThermalInspectionItemCreateManySessionInputSchema: z.ZodType<Prisma.ThermalInspectionItemCreateManySessionInput> = z.object({
+  id: z.string().optional(),
+  orderIndex: z.number().int().optional(),
+  buildingLocation: z.string().optional().nullable(),
+  floorSection: z.string().optional().nullable(),
+  measurementDate: z.coerce.date().optional().nullable(),
+  controlTime: z.string().optional().nullable(),
+  panelName: z.string(),
+  measurementPoint: z.string().optional().nullable(),
+  equipmentConnection: z.string().optional().nullable(),
+  measuredTemp: z.number().optional().nullable(),
+  ambientTemp: z.number().optional().nullable(),
+  deltaTemp: z.number().optional().nullable(),
+  status: z.string().optional().nullable(),
+  priority: z.string().optional().nullable(),
+  detectedRisk: z.string().optional().nullable(),
+  actionTaken: z.string().optional().nullable(),
+  photoUrls: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const ThermalInspectionItemUpdateWithoutSessionInputSchema: z.ZodType<Prisma.ThermalInspectionItemUpdateWithoutSessionInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  orderIndex: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  buildingLocation: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floorSection: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measurementDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  controlTime: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  panelName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  measurementPoint: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  equipmentConnection: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measuredTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  ambientTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  deltaTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  priority: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  detectedRisk: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  actionTaken: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photoUrls: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const ThermalInspectionItemUncheckedUpdateWithoutSessionInputSchema: z.ZodType<Prisma.ThermalInspectionItemUncheckedUpdateWithoutSessionInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  orderIndex: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  buildingLocation: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floorSection: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measurementDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  controlTime: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  panelName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  measurementPoint: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  equipmentConnection: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measuredTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  ambientTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  deltaTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  priority: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  detectedRisk: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  actionTaken: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photoUrls: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const ThermalInspectionItemUncheckedUpdateManyWithoutSessionInputSchema: z.ZodType<Prisma.ThermalInspectionItemUncheckedUpdateManyWithoutSessionInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  orderIndex: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  buildingLocation: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floorSection: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measurementDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  controlTime: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  panelName: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  measurementPoint: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  equipmentConnection: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measuredTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  ambientTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  deltaTemp: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  status: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  priority: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  detectedRisk: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  actionTaken: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photoUrls: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
 export const FireSafetyItemCreateManyAuditInputSchema: z.ZodType<Prisma.FireSafetyItemCreateManyAuditInput> = z.object({
   id: z.cuid().optional(),
   orderNo: z.number().int().optional(),
@@ -118179,6 +119983,7 @@ export const FireSafetyItemCreateManyAuditInputSchema: z.ZodType<Prisma.FireSafe
   deadlineDate: z.coerce.date().optional().nullable(),
   status: z.string().optional(),
   riskLevel: z.string().optional().nullable(),
+  progressPercent: z.number().int().optional(),
   findingPhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   notes: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
@@ -118196,6 +120001,7 @@ export const FireSafetyItemUpdateWithoutAuditInputSchema: z.ZodType<Prisma.FireS
   deadlineDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   riskLevel: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  progressPercent: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   findingPhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -118214,6 +120020,7 @@ export const FireSafetyItemUncheckedUpdateWithoutAuditInputSchema: z.ZodType<Pri
   deadlineDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   riskLevel: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  progressPercent: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   findingPhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -118232,6 +120039,7 @@ export const FireSafetyItemUncheckedUpdateManyWithoutAuditInputSchema: z.ZodType
   deadlineDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   riskLevel: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  progressPercent: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   findingPhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -118244,6 +120052,7 @@ export const FireSafetyItemActionCreateManyItemInputSchema: z.ZodType<Prisma.Fir
   actionDate: z.coerce.date().optional(),
   status: z.string().optional(),
   explanation: z.string(),
+  progressPercent: z.number().int().optional(),
   evidencePhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
@@ -118255,6 +120064,7 @@ export const FireSafetyItemActionUpdateWithoutItemInputSchema: z.ZodType<Prisma.
   actionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   explanation: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  progressPercent: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   evidencePhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -118266,6 +120076,7 @@ export const FireSafetyItemActionUncheckedUpdateWithoutItemInputSchema: z.ZodTyp
   actionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   explanation: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  progressPercent: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   evidencePhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -118277,6 +120088,7 @@ export const FireSafetyItemActionUncheckedUpdateManyWithoutItemInputSchema: z.Zo
   actionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   explanation: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  progressPercent: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   evidencePhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -127920,6 +129732,130 @@ export const ElectricInfrastructureFacilityStatusFindUniqueOrThrowArgsSchema: z.
   where: ElectricInfrastructureFacilityStatusWhereUniqueInputSchema, 
 }).strict();
 
+export const ThermalInspectionSessionFindFirstArgsSchema: z.ZodType<Prisma.ThermalInspectionSessionFindFirstArgs> = z.object({
+  select: ThermalInspectionSessionSelectSchema.optional(),
+  include: ThermalInspectionSessionIncludeSchema.optional(),
+  where: ThermalInspectionSessionWhereInputSchema.optional(), 
+  orderBy: z.union([ ThermalInspectionSessionOrderByWithRelationInputSchema.array(), ThermalInspectionSessionOrderByWithRelationInputSchema ]).optional(),
+  cursor: ThermalInspectionSessionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ ThermalInspectionSessionScalarFieldEnumSchema, ThermalInspectionSessionScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const ThermalInspectionSessionFindFirstOrThrowArgsSchema: z.ZodType<Prisma.ThermalInspectionSessionFindFirstOrThrowArgs> = z.object({
+  select: ThermalInspectionSessionSelectSchema.optional(),
+  include: ThermalInspectionSessionIncludeSchema.optional(),
+  where: ThermalInspectionSessionWhereInputSchema.optional(), 
+  orderBy: z.union([ ThermalInspectionSessionOrderByWithRelationInputSchema.array(), ThermalInspectionSessionOrderByWithRelationInputSchema ]).optional(),
+  cursor: ThermalInspectionSessionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ ThermalInspectionSessionScalarFieldEnumSchema, ThermalInspectionSessionScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const ThermalInspectionSessionFindManyArgsSchema: z.ZodType<Prisma.ThermalInspectionSessionFindManyArgs> = z.object({
+  select: ThermalInspectionSessionSelectSchema.optional(),
+  include: ThermalInspectionSessionIncludeSchema.optional(),
+  where: ThermalInspectionSessionWhereInputSchema.optional(), 
+  orderBy: z.union([ ThermalInspectionSessionOrderByWithRelationInputSchema.array(), ThermalInspectionSessionOrderByWithRelationInputSchema ]).optional(),
+  cursor: ThermalInspectionSessionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ ThermalInspectionSessionScalarFieldEnumSchema, ThermalInspectionSessionScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const ThermalInspectionSessionAggregateArgsSchema: z.ZodType<Prisma.ThermalInspectionSessionAggregateArgs> = z.object({
+  where: ThermalInspectionSessionWhereInputSchema.optional(), 
+  orderBy: z.union([ ThermalInspectionSessionOrderByWithRelationInputSchema.array(), ThermalInspectionSessionOrderByWithRelationInputSchema ]).optional(),
+  cursor: ThermalInspectionSessionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const ThermalInspectionSessionGroupByArgsSchema: z.ZodType<Prisma.ThermalInspectionSessionGroupByArgs> = z.object({
+  where: ThermalInspectionSessionWhereInputSchema.optional(), 
+  orderBy: z.union([ ThermalInspectionSessionOrderByWithAggregationInputSchema.array(), ThermalInspectionSessionOrderByWithAggregationInputSchema ]).optional(),
+  by: ThermalInspectionSessionScalarFieldEnumSchema.array(), 
+  having: ThermalInspectionSessionScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const ThermalInspectionSessionFindUniqueArgsSchema: z.ZodType<Prisma.ThermalInspectionSessionFindUniqueArgs> = z.object({
+  select: ThermalInspectionSessionSelectSchema.optional(),
+  include: ThermalInspectionSessionIncludeSchema.optional(),
+  where: ThermalInspectionSessionWhereUniqueInputSchema, 
+}).strict();
+
+export const ThermalInspectionSessionFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.ThermalInspectionSessionFindUniqueOrThrowArgs> = z.object({
+  select: ThermalInspectionSessionSelectSchema.optional(),
+  include: ThermalInspectionSessionIncludeSchema.optional(),
+  where: ThermalInspectionSessionWhereUniqueInputSchema, 
+}).strict();
+
+export const ThermalInspectionItemFindFirstArgsSchema: z.ZodType<Prisma.ThermalInspectionItemFindFirstArgs> = z.object({
+  select: ThermalInspectionItemSelectSchema.optional(),
+  include: ThermalInspectionItemIncludeSchema.optional(),
+  where: ThermalInspectionItemWhereInputSchema.optional(), 
+  orderBy: z.union([ ThermalInspectionItemOrderByWithRelationInputSchema.array(), ThermalInspectionItemOrderByWithRelationInputSchema ]).optional(),
+  cursor: ThermalInspectionItemWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ ThermalInspectionItemScalarFieldEnumSchema, ThermalInspectionItemScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const ThermalInspectionItemFindFirstOrThrowArgsSchema: z.ZodType<Prisma.ThermalInspectionItemFindFirstOrThrowArgs> = z.object({
+  select: ThermalInspectionItemSelectSchema.optional(),
+  include: ThermalInspectionItemIncludeSchema.optional(),
+  where: ThermalInspectionItemWhereInputSchema.optional(), 
+  orderBy: z.union([ ThermalInspectionItemOrderByWithRelationInputSchema.array(), ThermalInspectionItemOrderByWithRelationInputSchema ]).optional(),
+  cursor: ThermalInspectionItemWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ ThermalInspectionItemScalarFieldEnumSchema, ThermalInspectionItemScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const ThermalInspectionItemFindManyArgsSchema: z.ZodType<Prisma.ThermalInspectionItemFindManyArgs> = z.object({
+  select: ThermalInspectionItemSelectSchema.optional(),
+  include: ThermalInspectionItemIncludeSchema.optional(),
+  where: ThermalInspectionItemWhereInputSchema.optional(), 
+  orderBy: z.union([ ThermalInspectionItemOrderByWithRelationInputSchema.array(), ThermalInspectionItemOrderByWithRelationInputSchema ]).optional(),
+  cursor: ThermalInspectionItemWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ ThermalInspectionItemScalarFieldEnumSchema, ThermalInspectionItemScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const ThermalInspectionItemAggregateArgsSchema: z.ZodType<Prisma.ThermalInspectionItemAggregateArgs> = z.object({
+  where: ThermalInspectionItemWhereInputSchema.optional(), 
+  orderBy: z.union([ ThermalInspectionItemOrderByWithRelationInputSchema.array(), ThermalInspectionItemOrderByWithRelationInputSchema ]).optional(),
+  cursor: ThermalInspectionItemWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const ThermalInspectionItemGroupByArgsSchema: z.ZodType<Prisma.ThermalInspectionItemGroupByArgs> = z.object({
+  where: ThermalInspectionItemWhereInputSchema.optional(), 
+  orderBy: z.union([ ThermalInspectionItemOrderByWithAggregationInputSchema.array(), ThermalInspectionItemOrderByWithAggregationInputSchema ]).optional(),
+  by: ThermalInspectionItemScalarFieldEnumSchema.array(), 
+  having: ThermalInspectionItemScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const ThermalInspectionItemFindUniqueArgsSchema: z.ZodType<Prisma.ThermalInspectionItemFindUniqueArgs> = z.object({
+  select: ThermalInspectionItemSelectSchema.optional(),
+  include: ThermalInspectionItemIncludeSchema.optional(),
+  where: ThermalInspectionItemWhereUniqueInputSchema, 
+}).strict();
+
+export const ThermalInspectionItemFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.ThermalInspectionItemFindUniqueOrThrowArgs> = z.object({
+  select: ThermalInspectionItemSelectSchema.optional(),
+  include: ThermalInspectionItemIncludeSchema.optional(),
+  where: ThermalInspectionItemWhereUniqueInputSchema, 
+}).strict();
+
 export const FireSafetyAuditFindFirstArgsSchema: z.ZodType<Prisma.FireSafetyAuditFindFirstArgs> = z.object({
   select: FireSafetyAuditSelectSchema.optional(),
   include: FireSafetyAuditIncludeSchema.optional(),
@@ -135303,6 +137239,98 @@ export const ElectricInfrastructureFacilityStatusUpdateManyArgsSchema: z.ZodType
 
 export const ElectricInfrastructureFacilityStatusDeleteManyArgsSchema: z.ZodType<Prisma.ElectricInfrastructureFacilityStatusDeleteManyArgs> = z.object({
   where: ElectricInfrastructureFacilityStatusWhereInputSchema.optional(), 
+}).strict();
+
+export const ThermalInspectionSessionCreateArgsSchema: z.ZodType<Prisma.ThermalInspectionSessionCreateArgs> = z.object({
+  select: ThermalInspectionSessionSelectSchema.optional(),
+  include: ThermalInspectionSessionIncludeSchema.optional(),
+  data: z.union([ ThermalInspectionSessionCreateInputSchema, ThermalInspectionSessionUncheckedCreateInputSchema ]),
+}).strict();
+
+export const ThermalInspectionSessionUpsertArgsSchema: z.ZodType<Prisma.ThermalInspectionSessionUpsertArgs> = z.object({
+  select: ThermalInspectionSessionSelectSchema.optional(),
+  include: ThermalInspectionSessionIncludeSchema.optional(),
+  where: ThermalInspectionSessionWhereUniqueInputSchema, 
+  create: z.union([ ThermalInspectionSessionCreateInputSchema, ThermalInspectionSessionUncheckedCreateInputSchema ]),
+  update: z.union([ ThermalInspectionSessionUpdateInputSchema, ThermalInspectionSessionUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const ThermalInspectionSessionCreateManyArgsSchema: z.ZodType<Prisma.ThermalInspectionSessionCreateManyArgs> = z.object({
+  data: z.union([ ThermalInspectionSessionCreateManyInputSchema, ThermalInspectionSessionCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const ThermalInspectionSessionCreateManyAndReturnArgsSchema: z.ZodType<Prisma.ThermalInspectionSessionCreateManyAndReturnArgs> = z.object({
+  data: z.union([ ThermalInspectionSessionCreateManyInputSchema, ThermalInspectionSessionCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const ThermalInspectionSessionDeleteArgsSchema: z.ZodType<Prisma.ThermalInspectionSessionDeleteArgs> = z.object({
+  select: ThermalInspectionSessionSelectSchema.optional(),
+  include: ThermalInspectionSessionIncludeSchema.optional(),
+  where: ThermalInspectionSessionWhereUniqueInputSchema, 
+}).strict();
+
+export const ThermalInspectionSessionUpdateArgsSchema: z.ZodType<Prisma.ThermalInspectionSessionUpdateArgs> = z.object({
+  select: ThermalInspectionSessionSelectSchema.optional(),
+  include: ThermalInspectionSessionIncludeSchema.optional(),
+  data: z.union([ ThermalInspectionSessionUpdateInputSchema, ThermalInspectionSessionUncheckedUpdateInputSchema ]),
+  where: ThermalInspectionSessionWhereUniqueInputSchema, 
+}).strict();
+
+export const ThermalInspectionSessionUpdateManyArgsSchema: z.ZodType<Prisma.ThermalInspectionSessionUpdateManyArgs> = z.object({
+  data: z.union([ ThermalInspectionSessionUpdateManyMutationInputSchema, ThermalInspectionSessionUncheckedUpdateManyInputSchema ]),
+  where: ThermalInspectionSessionWhereInputSchema.optional(), 
+}).strict();
+
+export const ThermalInspectionSessionDeleteManyArgsSchema: z.ZodType<Prisma.ThermalInspectionSessionDeleteManyArgs> = z.object({
+  where: ThermalInspectionSessionWhereInputSchema.optional(), 
+}).strict();
+
+export const ThermalInspectionItemCreateArgsSchema: z.ZodType<Prisma.ThermalInspectionItemCreateArgs> = z.object({
+  select: ThermalInspectionItemSelectSchema.optional(),
+  include: ThermalInspectionItemIncludeSchema.optional(),
+  data: z.union([ ThermalInspectionItemCreateInputSchema, ThermalInspectionItemUncheckedCreateInputSchema ]),
+}).strict();
+
+export const ThermalInspectionItemUpsertArgsSchema: z.ZodType<Prisma.ThermalInspectionItemUpsertArgs> = z.object({
+  select: ThermalInspectionItemSelectSchema.optional(),
+  include: ThermalInspectionItemIncludeSchema.optional(),
+  where: ThermalInspectionItemWhereUniqueInputSchema, 
+  create: z.union([ ThermalInspectionItemCreateInputSchema, ThermalInspectionItemUncheckedCreateInputSchema ]),
+  update: z.union([ ThermalInspectionItemUpdateInputSchema, ThermalInspectionItemUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const ThermalInspectionItemCreateManyArgsSchema: z.ZodType<Prisma.ThermalInspectionItemCreateManyArgs> = z.object({
+  data: z.union([ ThermalInspectionItemCreateManyInputSchema, ThermalInspectionItemCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const ThermalInspectionItemCreateManyAndReturnArgsSchema: z.ZodType<Prisma.ThermalInspectionItemCreateManyAndReturnArgs> = z.object({
+  data: z.union([ ThermalInspectionItemCreateManyInputSchema, ThermalInspectionItemCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const ThermalInspectionItemDeleteArgsSchema: z.ZodType<Prisma.ThermalInspectionItemDeleteArgs> = z.object({
+  select: ThermalInspectionItemSelectSchema.optional(),
+  include: ThermalInspectionItemIncludeSchema.optional(),
+  where: ThermalInspectionItemWhereUniqueInputSchema, 
+}).strict();
+
+export const ThermalInspectionItemUpdateArgsSchema: z.ZodType<Prisma.ThermalInspectionItemUpdateArgs> = z.object({
+  select: ThermalInspectionItemSelectSchema.optional(),
+  include: ThermalInspectionItemIncludeSchema.optional(),
+  data: z.union([ ThermalInspectionItemUpdateInputSchema, ThermalInspectionItemUncheckedUpdateInputSchema ]),
+  where: ThermalInspectionItemWhereUniqueInputSchema, 
+}).strict();
+
+export const ThermalInspectionItemUpdateManyArgsSchema: z.ZodType<Prisma.ThermalInspectionItemUpdateManyArgs> = z.object({
+  data: z.union([ ThermalInspectionItemUpdateManyMutationInputSchema, ThermalInspectionItemUncheckedUpdateManyInputSchema ]),
+  where: ThermalInspectionItemWhereInputSchema.optional(), 
+}).strict();
+
+export const ThermalInspectionItemDeleteManyArgsSchema: z.ZodType<Prisma.ThermalInspectionItemDeleteManyArgs> = z.object({
+  where: ThermalInspectionItemWhereInputSchema.optional(), 
 }).strict();
 
 export const FireSafetyAuditCreateArgsSchema: z.ZodType<Prisma.FireSafetyAuditCreateArgs> = z.object({

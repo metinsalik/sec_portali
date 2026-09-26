@@ -41,7 +41,8 @@ import {
   ChevronRight,
   Maximize2,
   TrendingUp,
-  BarChart3
+  BarChart3,
+  Camera
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -56,13 +57,24 @@ export const calculateItemProgress = (item: any): { percent: number; completedAc
     return { percent: 100, completedActions, totalActions };
   }
 
+  // Eğer maddenin doğrudan kaydedilmiş bir progressPercent değeri varsa ve 0'dan büyükse onu dikkate al
+  if (item.progressPercent !== undefined && item.progressPercent !== null && item.progressPercent > 0) {
+    return { percent: Number(item.progressPercent), completedActions, totalActions };
+  }
+
   if (totalActions > 0) {
+    // Son girilen aksiyonda progressPercent tanımlıysa onu al
+    const latestActionWithPct = actions.find((a: any) => a.progressPercent !== undefined && a.progressPercent !== null);
+    if (latestActionWithPct && latestActionWithPct.progressPercent !== undefined) {
+      return { percent: Number(latestActionWithPct.progressPercent), completedActions, totalActions };
+    }
+
     const actRatio = Math.round((completedActions / totalActions) * 100);
     // Eğer aksiyonların hepsi tamamlandıysa ama madde durumu henüz güncellenmediyse %90
     if (actRatio === 100 && s !== 'TAMAMLANDI') {
       return { percent: 90, completedActions, totalActions };
     }
-    // Eğer devam ediyorsa en az %25 göster
+    // Eğer devam ediyorsa en az %35 göster
     if (s === 'DEVAM_EDIYOR' || s === 'IN_PROGRESS' || s === 'DEVAM EDIYOR') {
       return { percent: Math.max(actRatio, 35), completedActions, totalActions };
     }
@@ -113,6 +125,7 @@ export default function FireSafetyAuditPage() {
   const [actionDoneBy, setActionDoneBy] = useState('');
   const [actionDepartment, setActionDepartment] = useState('');
   const [actionStatus, setActionStatus] = useState('Tamamlandı');
+  const [actionProgressPercent, setActionProgressPercent] = useState<number>(100);
   const [actionFiles, setActionFiles] = useState<string[]>([]);
   const [uploadingActionFile, setUploadingActionFile] = useState(false);
 
@@ -135,6 +148,7 @@ export default function FireSafetyAuditPage() {
   // Filter state
   const [filterSource, setFilterSource] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('ALL');
 
   // Facilities
   const { data: facilities = [] } = useQuery<any[]>({
@@ -284,9 +298,8 @@ export default function FireSafetyAuditPage() {
     }
   };
 
-  // Dinamik Klasörlü Upload (uploads/fire_safety_control/<facilityId>/)
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'ITEM' | 'ACTION', itemIndex?: number) => {
-    const files = e.target.files;
+  // Genel dosya yükleme fonksiyonu (Sürükle-bırak, Panodan Yapıştır ve Dosya Seçici için)
+  const uploadFilesGeneric = async (files: File[], target: 'ITEM' | 'ACTION', itemIndex?: number) => {
     if (!files || files.length === 0) return;
 
     if (!activeFacId) {
@@ -303,7 +316,8 @@ export default function FireSafetyAuditPage() {
       if (target === 'ITEM') setUploadingItemIndex(itemIndex ?? null);
       else setUploadingActionFile(true);
 
-      const res = await api.post(`/fire-safety-control/upload?facilityId=${activeFacId}`, formData);
+      const facNameParam = encodeURIComponent(currentFacility?.shortName || currentFacility?.name || '');
+      const res = await api.post(`/fire-safety-control/upload?facilityId=${activeFacId}&facilityName=${facNameParam}`, formData);
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Yükleme başarısız');
 
@@ -326,8 +340,15 @@ export default function FireSafetyAuditPage() {
     } finally {
       setUploadingItemIndex(null);
       setUploadingActionFile(false);
-      e.target.value = '';
     }
+  };
+
+  // Dinamik Klasörlü Upload (uploads/fire_safety_control/<facilityId>/)
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'ITEM' | 'ACTION', itemIndex?: number) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    await uploadFilesGeneric(Array.from(files), target, itemIndex);
+    e.target.value = '';
   };
 
   // Madde ekle
@@ -511,6 +532,7 @@ export default function FireSafetyAuditPage() {
     setActionDepartment(firstResp);
 
     setActionStatus('Tamamlandı');
+    setActionProgressPercent(100);
     setActionFiles([]);
   };
 
@@ -533,6 +555,7 @@ export default function FireSafetyAuditPage() {
         department: actionDepartment,
         evidencePhotos: actionFiles,
         status: actionStatus,
+        progressPercent: actionProgressPercent,
         actionDate: new Date().toISOString()
       });
       const newAction = await res.json();
@@ -545,7 +568,12 @@ export default function FireSafetyAuditPage() {
         if (targetIdx !== -1) {
           const curActions = next[targetIdx].actions || [];
           next[targetIdx].actions = [newAction, ...curActions];
-          next[targetIdx].status = actionStatus === 'Tamamlandı' ? 'TAMAMLANDI' : 'DEVAM_EDIYOR';
+          next[targetIdx].progressPercent = actionProgressPercent;
+          if (actionProgressPercent >= 100 || actionStatus === 'Tamamlandı') {
+            next[targetIdx].status = 'TAMAMLANDI';
+          } else if (actionProgressPercent > 0 || actionStatus === 'Devam Ediyor') {
+            next[targetIdx].status = 'DEVAM_EDIYOR';
+          }
         }
         return next;
       });
@@ -602,10 +630,39 @@ export default function FireSafetyAuditPage() {
     return <Badge className="bg-red-500 hover:bg-red-600 text-white font-semibold">Bekliyor</Badge>;
   };
 
+  // Kategori bazlı istatistik sayaçları (tıklanabilir kategori hapları için)
+  const categoryItemCounts = React.useMemo(() => {
+    const map: Record<string, { total: number; completed: number; inProgress: number; open: number }> = {};
+    items.forEach(item => {
+      const cats = (item.category || 'Diğer')
+        .split(',')
+        .map((c: string) => c.trim())
+        .filter(Boolean);
+      const s = (item.status || '').toUpperCase();
+      const isComp = s === 'TAMAMLANDI' || s === 'COMPLETED';
+      const isProg = s === 'DEVAM_EDIYOR' || s === 'IN_PROGRESS' || s === 'DEVAM EDIYOR';
+
+      cats.forEach((cat: string) => {
+        if (!map[cat]) {
+          map[cat] = { total: 0, completed: 0, inProgress: 0, open: 0 };
+        }
+        map[cat].total += 1;
+        if (isComp) map[cat].completed += 1;
+        else if (isProg) map[cat].inProgress += 1;
+        else map[cat].open += 1;
+      });
+    });
+    return map;
+  }, [items]);
+
   // Filtrelenmiş maddeler
   const filteredItems = items.filter(item => {
     if (filterSource !== 'ALL' && item.source !== filterSource) return false;
     if (filterStatus !== 'ALL' && item.status !== filterStatus) return false;
+    if (selectedCategoryFilter !== 'ALL') {
+      const itemCats = (item.category || '').split(',').map((c: string) => c.trim()).filter(Boolean);
+      if (!itemCats.includes(selectedCategoryFilter)) return false;
+    }
     return true;
   });
 
@@ -1116,6 +1173,82 @@ export default function FireSafetyAuditPage() {
             </CardContent>
           </Card>
 
+          {/* Kategori Bazlı İnteraktif Seçim ve İlerleme Hapları */}
+          <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <BarChart3 className="w-4 h-4 text-amber-500" />
+                Kategoriye Göre Maddeleri Filtrele ve Sırala:
+              </span>
+              {selectedCategoryFilter !== 'ALL' && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategoryFilter('ALL')}
+                  className="text-[11px] font-semibold text-red-600 hover:text-red-700 underline"
+                >
+                  Filtreyi Temizle (Tümünü Göster)
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setSelectedCategoryFilter('ALL')}
+                className={`text-xs px-3 py-1.5 rounded-lg border font-semibold transition-all flex items-center gap-1.5 ${
+                  selectedCategoryFilter === 'ALL'
+                    ? 'bg-slate-900 text-white border-slate-900 dark:bg-slate-100 dark:text-slate-900 shadow-xs'
+                    : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <span>Tüm Kategoriler</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                  selectedCategoryFilter === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                }`}>
+                  {items.length}
+                </span>
+              </button>
+
+              {categoriesList.map((cat: string) => {
+                const countInfo = categoryItemCounts[cat] || { total: 0, completed: 0, inProgress: 0, open: 0 };
+                const isSelected = selectedCategoryFilter === cat;
+
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setSelectedCategoryFilter(isSelected ? 'ALL' : cat)}
+                    className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-red-600 text-white border-red-600 shadow-sm font-bold scale-[1.02]'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <span>{cat}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      isSelected
+                        ? 'bg-white/30 text-white'
+                        : countInfo.total > 0
+                        ? 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
+                        : 'bg-slate-100/50 text-slate-400'
+                    }`}>
+                      {countInfo.total}
+                    </span>
+                    {countInfo.total > 0 && (
+                      <span className={`w-2 h-2 rounded-full ${
+                        countInfo.completed === countInfo.total
+                          ? 'bg-emerald-400'
+                          : countInfo.inProgress > 0
+                          ? 'bg-amber-400'
+                          : 'bg-red-400'
+                      }`} title={`${countInfo.completed} Tamamlandı, ${countInfo.inProgress} Devam Ediyor`} />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Filtre ve Yeni Madde Ekle Barı */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
             <div className="flex flex-wrap items-center gap-2">
@@ -1142,6 +1275,10 @@ export default function FireSafetyAuditPage() {
                 <option value="DEVAM_EDIYOR">Devam Ediyor</option>
                 <option value="TAMAMLANDI">Tamamlandı</option>
               </select>
+
+              <span className="text-xs text-slate-500 font-medium ml-1">
+                (Görüntülenen: <strong>{filteredItems.length}</strong> / {items.length})
+              </span>
             </div>
 
             <Button
@@ -1312,29 +1449,82 @@ export default function FireSafetyAuditPage() {
                         />
                       </div>
 
-                      {/* Tespit Fotoğrafları Yükleme ve Önizleme */}
+                      {/* Tespit Fotoğrafları Yükleme ve Önizleme (Sürükle-bırak, Yapıştır, Kamera) */}
                       <div className="space-y-1.5 pt-0.5">
                         <div className="flex items-center justify-between">
                           <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                             <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
                             Tespit Fotoğrafları ({photos.length})
                           </label>
-                          <label className="cursor-pointer text-xs font-semibold text-red-600 hover:text-red-700 inline-flex items-center gap-1">
-                            <Upload className="w-3.5 h-3.5" />
-                            {uploadingItemIndex === originalIndex ? 'Yükleniyor...' : 'Fotoğraf Seç / Ekle'}
-                            <input
-                              type="file"
-                              multiple
-                              accept="image/*"
-                              className="hidden"
-                              onChange={e => handleFileUpload(e, 'ITEM', originalIndex)}
-                              disabled={uploadingItemIndex === originalIndex}
-                            />
-                          </label>
+                        </div>
+
+                        {/* Drag and Drop / Paste Dropzone */}
+                        <div
+                          tabIndex={0}
+                          onDrop={e => {
+                            e.preventDefault();
+                            const dropped = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+                            if (dropped.length > 0) uploadFilesGeneric(dropped, 'ITEM', originalIndex);
+                            else toast.error('Lütfen geçerli görsel dosyaları sürükleyin');
+                          }}
+                          onDragOver={e => e.preventDefault()}
+                          onPaste={e => {
+                            const clipItems = e.clipboardData?.items;
+                            if (clipItems) {
+                              const files: File[] = [];
+                              for (let i = 0; i < clipItems.length; i++) {
+                                if (clipItems[i].type.indexOf('image') !== -1) {
+                                  const file = clipItems[i].getAsFile();
+                                  if (file) files.push(file);
+                                }
+                              }
+                              if (files.length > 0) {
+                                e.preventDefault();
+                                uploadFilesGeneric(files, 'ITEM', originalIndex);
+                              }
+                            }
+                          }}
+                          className="border border-dashed border-slate-300 dark:border-slate-700 hover:border-red-400 rounded-lg p-2 bg-slate-50/60 dark:bg-slate-900/40 text-center transition-colors outline-hidden"
+                        >
+                          <div className="flex items-center justify-between gap-2 text-xs">
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                              Görseli sürükleyin, <kbd className="px-1 py-0.2 bg-slate-200 dark:bg-slate-700 rounded text-[9px] font-mono">Ctrl+V</kbd> yapıştırın veya:
+                            </span>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {/* Kamera ile Çek */}
+                              <label className="cursor-pointer inline-flex items-center gap-1 px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] shadow-2xs">
+                                <Camera className="w-3 h-3" />
+                                <span>Kamera</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  capture="environment"
+                                  className="hidden"
+                                  onChange={e => handleFileUpload(e, 'ITEM', originalIndex)}
+                                  disabled={uploadingItemIndex === originalIndex}
+                                />
+                              </label>
+
+                              {/* Dosya / Galeri */}
+                              <label className="cursor-pointer inline-flex items-center gap-1 px-2 py-1 rounded bg-red-600 hover:bg-red-700 text-white font-bold text-[10px] shadow-2xs">
+                                <Upload className="w-3 h-3" />
+                                <span>{uploadingItemIndex === originalIndex ? '...' : 'Dosya'}</span>
+                                <input
+                                  type="file"
+                                  multiple
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={e => handleFileUpload(e, 'ITEM', originalIndex)}
+                                  disabled={uploadingItemIndex === originalIndex}
+                                />
+                              </label>
+                            </div>
+                          </div>
                         </div>
 
                         {photos.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-2 pt-1">
                             {photos.map((photoUrl: string, pIdx: number) => (
                               <div key={pIdx} className="relative group w-14 h-14 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 shadow-2xs bg-slate-100">
                                 <img 
@@ -1353,7 +1543,7 @@ export default function FireSafetyAuditPage() {
                                 <button
                                   type="button"
                                   onClick={() => removeFindingPhoto(originalIndex, pIdx)}
-                                  className="absolute top-0.5 right-0.5 bg-red-600 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                  className="absolute top-0.5 right-0.5 bg-red-600 text-white rounded-full p-0.5 opacity-90 hover:opacity-100 transition-opacity z-10"
                                   title="Fotoğrafı Kaldır"
                                 >
                                   <X className="w-2.5 h-2.5" />
@@ -1643,7 +1833,13 @@ export default function FireSafetyAuditPage() {
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300">İşlem Sonrası Maddenin Yeni Durumu</label>
               <select
                 value={actionStatus}
-                onChange={e => setActionStatus(e.target.value)}
+                onChange={e => {
+                  const s = e.target.value;
+                  setActionStatus(s);
+                  if (s === 'Tamamlandı') setActionProgressPercent(100);
+                  else if (s === 'Devam Ediyor' && actionProgressPercent === 100) setActionProgressPercent(50);
+                  else if (s === 'Başlamadı') setActionProgressPercent(0);
+                }}
                 className="mt-1 w-full text-xs rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 font-bold h-8"
               >
                 <option value="Tamamlandı">Tamamlandı (Eksiklik Giderildi - Yeşil)</option>
@@ -1652,25 +1848,135 @@ export default function FireSafetyAuditPage() {
               </select>
             </div>
 
-            {/* Kanıt Belgeleri / Fotoğrafları Yükleme ve Küçük Önizlemeleri */}
+            {/* İLERLEME YÜZDESİ (PROGRESS BAR & HIZLI SEÇİM BUTONLARI) */}
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                  Bu Aksiyon İşin Yüzde Kaçını Tamamladı?
+                </span>
+                <span className={`font-black text-sm ${actionProgressPercent === 100 ? 'text-emerald-600' : actionProgressPercent > 0 ? 'text-amber-600' : 'text-red-500'}`}>
+                  %{actionProgressPercent}
+                </span>
+              </div>
+
+              {/* Progress Slider */}
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={actionProgressPercent}
+                onChange={e => {
+                  const val = Number(e.target.value);
+                  setActionProgressPercent(val);
+                  if (val === 100) setActionStatus('Tamamlandı');
+                  else if (val > 0) setActionStatus('Devam Ediyor');
+                  else setActionStatus('Başlamadı');
+                }}
+                className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+              />
+
+              {/* Hızlı Seçim Butonları */}
+              <div className="grid grid-cols-5 gap-1 pt-1">
+                {[0, 25, 50, 75, 100].map(pct => (
+                  <button
+                    key={pct}
+                    type="button"
+                    onClick={() => {
+                      setActionProgressPercent(pct);
+                      if (pct === 100) setActionStatus('Tamamlandı');
+                      else if (pct > 0) setActionStatus('Devam Ediyor');
+                      else setActionStatus('Başlamadı');
+                    }}
+                    className={`py-1 text-[11px] rounded font-bold border transition-colors ${
+                      actionProgressPercent === pct
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    %{pct}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Kanıt Belgeleri / Fotoğrafları Yükleme (Sürükle-bırak, Yapıştır, Kamera ve Dosya Seçici) */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Kanıt Fotoğrafları / Belgeler</label>
-                <label className="cursor-pointer text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
-                  <Upload className="w-3.5 h-3.5" />
-                  {uploadingActionFile ? 'Yükleniyor...' : 'Kanıt Seç / Yükle'}
-                  <input
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={e => handleFileUpload(e, 'ACTION')}
-                    disabled={uploadingActionFile}
-                  />
-                </label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Kanıt Fotoğrafları / Belgeler</label>
+              
+              <div
+                tabIndex={0}
+                onDrop={e => {
+                  e.preventDefault();
+                  const dropped = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+                  if (dropped.length > 0) uploadFilesGeneric(dropped, 'ACTION');
+                  else toast.error('Lütfen geçerli görsel dosyaları sürükleyin');
+                }}
+                onDragOver={e => e.preventDefault()}
+                onPaste={e => {
+                  const clipItems = e.clipboardData?.items;
+                  if (clipItems) {
+                    const files: File[] = [];
+                    for (let i = 0; i < clipItems.length; i++) {
+                      if (clipItems[i].type.indexOf('image') !== -1) {
+                        const file = clipItems[i].getAsFile();
+                        if (file) files.push(file);
+                      }
+                    }
+                    if (files.length > 0) {
+                      e.preventDefault();
+                      uploadFilesGeneric(files, 'ACTION');
+                    }
+                  }
+                }}
+                className="group relative border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 rounded-xl p-3 bg-slate-50/70 dark:bg-slate-800/40 text-center transition-all outline-hidden cursor-pointer"
+              >
+                <div className="flex flex-col items-center justify-center py-1">
+                  <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center mb-1">
+                    <Upload className="w-4 h-4" />
+                  </div>
+                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    Görselleri buraya <span className="text-blue-600 underline">sürükleyip bırakın</span>
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    veya panodan yapıştırın (<kbd className="px-1 py-0.2 bg-slate-200 dark:bg-slate-700 rounded text-[10px] font-mono">Ctrl+V</kbd> / <kbd className="px-1 py-0.2 bg-slate-200 dark:bg-slate-700 rounded text-[10px] font-mono">⌘+V</kbd>)
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-center gap-2 mt-2 pt-2 border-t border-slate-200/80 dark:border-slate-700">
+                  {/* Mobil Kamera ile Çek */}
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs">
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Kamera</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={e => handleFileUpload(e, 'ACTION')}
+                      disabled={uploadingActionFile}
+                    />
+                  </label>
+
+                  {/* Dosya / Galeri Seç */}
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs">
+                    <ImageIcon className="w-3.5 h-3.5" />
+                    <span>{uploadingActionFile ? 'Yükleniyor...' : 'Galeri / Dosya'}</span>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="hidden"
+                      onChange={e => handleFileUpload(e, 'ACTION')}
+                      disabled={uploadingActionFile}
+                    />
+                  </label>
+                </div>
               </div>
 
               {actionFiles.length > 0 ? (
-                <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto p-1 border rounded-lg bg-slate-50 dark:bg-slate-800/40">
+                <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto p-1.5 border rounded-lg bg-slate-50 dark:bg-slate-800/40">
                   {actionFiles.map((fileUrl, fIdx) => (
                     <div key={fIdx} className="relative group w-14 h-14 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 shadow-2xs">
                       <img 
@@ -1682,7 +1988,7 @@ export default function FireSafetyAuditPage() {
                       <button
                         type="button"
                         onClick={() => setActionFiles(prev => prev.filter((_, i) => i !== fIdx))}
-                        className="absolute top-0.5 right-0.5 bg-red-600 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        className="absolute top-0.5 right-0.5 bg-red-600 text-white rounded-full p-0.5 opacity-90 hover:opacity-100 transition-opacity z-10"
                         title="Kaldır"
                       >
                         <X className="w-2.5 h-2.5" />
@@ -1691,7 +1997,7 @@ export default function FireSafetyAuditPage() {
                   ))}
                 </div>
               ) : (
-                <div className="p-3 text-center border border-dashed rounded-lg text-xs text-slate-400">
+                <div className="p-2.5 text-center border border-dashed rounded-lg text-xs text-slate-400">
                   Henüz kanıt belgesi eklenmedi. (Görsel veya belge seçebilirsiniz)
                 </div>
               )}

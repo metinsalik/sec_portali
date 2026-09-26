@@ -213,11 +213,21 @@ export default function ElectricInfrastructureDashboard() {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => navigate('/safety-management/electric-infrastructure?tab=thermal')}
+            className="border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 h-9 px-3 font-medium"
+          >
+            <Camera className="w-4 h-4 mr-1.5 text-indigo-600" />
+            Termal Kamera Pano Kontrolü
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => navigate('/safety-management/electric-infrastructure')}
             className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 h-9 px-3 text-slate-700 dark:text-slate-200 font-medium"
           >
             <Zap className="w-4 h-4 mr-1.5 text-amber-500" />
-            Kontrol Formu Tablosuna Git
+            Genel Altyapı Tablosu
           </Button>
 
           <Button

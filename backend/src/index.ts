@@ -83,10 +83,12 @@ app.use('/api/checklists', checklistRoutes);
 app.use('/api/safety-management/fire-doors', fireDoorsRoutes);
 app.use('/api/safety-management/isg-defter', isgDefterRoutes);
 import electricInfrastructureRoutes from './routes/electric-infrastructure.routes';
+import thermalInspectionRoutes from './routes/thermal-inspection.routes';
 import fireSafetyControlRoutes from './routes/fire-safety-control';
 
 app.use('/api/safety-management/elevators', elevatorRoutes);
 app.use('/api/safety-management/elevator-settings', elevatorSettingsRoutes);
+app.use('/api/safety-management/electric-infrastructure/thermal', thermalInspectionRoutes);
 app.use('/api/safety-management/electric-infrastructure', electricInfrastructureRoutes);
 app.use('/api/fire-safety-control', fireSafetyControlRoutes);
 

@@ -176,6 +176,7 @@ model Facility {
   elevators              Elevator[]
   electricInfrastructureRecords ElectricInfrastructureRecord[]
   electricInfrastructureStatus  ElectricInfrastructureFacilityStatus?
+  thermalInspectionSessions     ThermalInspectionSession[]
   fireSafetyAudits       FireSafetyAudit[]
 }
 
@@ -2738,6 +2739,65 @@ model ElectricInfrastructureFacilityStatus {
 }
 
 // ─────────────────────────────────────────────────────────
+// TERMAL KAMERA İLE ELEKTRİK PANO KONTROL MODELLERİ
+// ─────────────────────────────────────────────────────────
+
+model ThermalInspectionSession {
+  id             String                  @id @default(uuid())
+  facilityId     String
+  reportDate     DateTime?               @default(now())
+  status         String                  @default("DEVAM_EDIYOR") // DEVAM_EDIYOR, TAMAMLANDI
+  completedAt    DateTime?
+  completedBy    String?
+  notes          String?
+  uploadedBy     String?
+
+  items          ThermalInspectionItem[]
+
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  facility       Facility                @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@index([facilityId])
+  @@index([status])
+}
+
+model ThermalInspectionItem {
+  id                  String                   @id @default(uuid())
+  sessionId           String
+  orderIndex          Int                      @default(1)
+  
+  buildingLocation    String?                  // Lokasyon / Bina
+  floorSection        String?                  // Kat / Bölüm
+  measurementDate     DateTime?                // Tarih
+  controlTime         String?                  // Kontrol Saati
+  panelName           String                   // Pano No / Adı
+  measurementPoint    String?                  // Ölçüm Noktası
+  equipmentConnection String?                  // Ekipman / Bağlantı
+  
+  measuredTemp        Float?                   // Ölçülen Sıcaklık (°C)
+  ambientTemp         Float?                   // Ortam Sıcaklığı (°C)
+  deltaTemp           Float?                   // Fark (Ölçülen - Ortam)
+  
+  status              String?                  @default("Normal") // Normal, Dikkat, Kritik
+  priority            String?                  @default("Düşük")  // Düşük, Orta, Yüksek, Acil
+  detectedRisk        String?                  // Tespit / Açıklama
+  actionTaken         String?                  // Aksiyon
+  
+  photoUrls           Json                     @default("[]") // Max 5 fotoğraf yolu
+  
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  session             ThermalInspectionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([status])
+  @@index([priority])
+}
+
+// ─────────────────────────────────────────────────────────
 // YANGIN GÜVENLİĞİ KONTROL SİSTEMİ MODELLERİ
 // ─────────────────────────────────────────────────────────
 
@@ -2781,6 +2841,8 @@ model FireSafetyItem {
   status        String   @default("ACIK") // ACIK, DEVAM_EDIYOR, TAMAMLANDI, IPTAL
   riskLevel     String?  @default("Orta") // Yüksek, Orta, Düşük
   
+  progressPercent Int      @default(0) // 0-100 arası anlık ilerleme yüzdesi
+  
   // Tespit anındaki fotoğraflar ve dokümanlar: [{ url, name, type, uploadedAt }]
   findingPhotos Json     @default("[]")
   notes         String?
@@ -2804,6 +2866,7 @@ model FireSafetyItemAction {
   actionDate     DateTime @default(now())
   status         String   @default("Devam Ediyor") // Başlamadı, Devam Ediyor, Tamamlandı, İptal Edildi
   explanation    String   // Yapılan işlem açıklaması
+  progressPercent Int     @default(100) // Bu işlem yapıldığında işin yüzde kaçına ulaşıldığı (0 - 100)
   
   // Aksiyon tamamlanma / işlem kanıt fotoğrafları ve belgeleri: [{ url, name, type, uploadedAt }]
   evidencePhotos Json     @default("[]")
