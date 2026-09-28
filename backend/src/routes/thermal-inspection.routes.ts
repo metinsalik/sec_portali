@@ -15,9 +15,23 @@ const tempUpload = multer({
   limits: { fileSize: 25 * 1024 * 1024 }
 });
 
-// Helper: Sanitize folder name
+// Helper: Sanitize folder name to safe ASCII filesystem name
 function sanitizeFolderName(name: string): string {
   return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/İ/g, 'I')
+    .replace(/ı/g, 'i')
+    .replace(/Ğ/g, 'G')
+    .replace(/ğ/g, 'g')
+    .replace(/Ü/g, 'U')
+    .replace(/ü/g, 'u')
+    .replace(/Ş/g, 'S')
+    .replace(/ş/g, 's')
+    .replace(/Ö/g, 'O')
+    .replace(/ö/g, 'o')
+    .replace(/Ç/g, 'C')
+    .replace(/ç/g, 'c')
     .replace(/[\\/*?:"<>|]/g, '')
     .replace(/\s+/g, '_')
     .trim() || 'facility';
@@ -82,9 +96,20 @@ async function resolveFacilityId(rawId?: string | null): Promise<string | null> 
 const photoStorage = multer.diskStorage({
   destination: async (req: any, _file, cb) => {
     try {
-      const facilityId = req.body.facilityId || req.query.facilityId;
+      let facilityId = req.body?.facilityId || req.query?.facilityId;
+
+      // If facilityId was not directly provided in form body, look up via item id from route params
+      if ((!facilityId || facilityId === 'all') && req.params?.id) {
+        const itemRecord = await prisma.thermalInspectionItem.findUnique({
+          where: { id: req.params.id },
+          include: { session: { select: { facilityId: true } } }
+        });
+        if (itemRecord?.session?.facilityId) {
+          facilityId = itemRecord.session.facilityId;
+        }
+      }
+
       let folderSub = 'Genel';
-      
       if (facilityId && facilityId !== 'all') {
         const fac = await prisma.facility.findUnique({
           where: { id: facilityId },
@@ -690,6 +715,174 @@ router.delete('/items/:id', async (req: AuthRequest, res) => {
 });
 
 // ─────────────────────────────────────────────────────────
+// AKSİYON AL / GÜNCELLE VE TAKİP ENDPOINTLERİ
+// ─────────────────────────────────────────────────────────
+
+// Update Action for Item (Plan, Termin, Sorumlu, Durum, Tamamlama Notu ve Fotoğrafları)
+router.patch('/items/:id/action', async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      actionPlan,
+      actionDueDate,
+      actionAssignee,
+      actionStatus,
+      actionCompletedDate,
+      actionNotes,
+      actionPhotos,
+      status,
+      priority
+    } = req.body;
+
+    const existing = await prisma.thermalInspectionItem.findUnique({
+      where: { id }
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'Ölçüm kaydı bulunamadı.' });
+    }
+
+    // If actionStatus is TAMAMLANDI and user hasn't explicitly set status, transition to Normal
+    let resolvedStatus = status !== undefined ? status : undefined;
+    let resolvedPriority = priority !== undefined ? priority : undefined;
+    if (actionStatus === 'TAMAMLANDI' && status === undefined) {
+      resolvedStatus = 'Normal';
+      resolvedPriority = 'Düşük';
+    }
+
+    const updated = await prisma.thermalInspectionItem.update({
+      where: { id },
+      data: {
+        actionPlan: actionPlan !== undefined ? actionPlan : undefined,
+        actionDueDate: actionDueDate ? new Date(actionDueDate) : (actionDueDate === null ? null : undefined),
+        actionAssignee: actionAssignee !== undefined ? actionAssignee : undefined,
+        actionStatus: actionStatus !== undefined ? actionStatus : undefined,
+        actionCompletedDate: actionCompletedDate ? new Date(actionCompletedDate) : (actionStatus === 'TAMAMLANDI' && !existing.actionCompletedDate ? new Date() : (actionCompletedDate === null ? null : undefined)),
+        actionNotes: actionNotes !== undefined ? actionNotes : undefined,
+        actionPhotos: actionPhotos !== undefined ? actionPhotos : undefined,
+        status: resolvedStatus,
+        priority: resolvedPriority,
+        // Sync with legacy actionTaken if updated
+        actionTaken: actionPlan || actionNotes || existing.actionTaken
+      }
+    });
+
+    res.json(updated);
+  } catch (error: any) {
+    console.error('Error updating item action:', error);
+    res.status(500).json({ error: error.message || 'Aksiyon güncellenemedi.' });
+  }
+});
+
+// Sıkı Takipteki Panolar ve Açık Aksiyonlar Listesi (Watchlist)
+router.get('/watchlist', async (req: AuthRequest, res) => {
+  try {
+    const { facilityId } = req.query;
+    const canonicalFacId = await resolveFacilityId(facilityId as string);
+
+    const whereClause: any = {};
+    if (canonicalFacId) {
+      whereClause.session = { facilityId: canonicalFacId };
+    }
+
+    // Filter items that need action/attention:
+    // (status is Dikkat/Kritik OR priority is Acil/Yüksek OR actionStatus != TAMAMLANDI)
+    const items = await prisma.thermalInspectionItem.findMany({
+      where: {
+        ...whereClause,
+        OR: [
+          { priority: { in: ['Acil', 'Yüksek', 'Orta'] } },
+          { status: { in: ['Kritik', 'Dikkat', 'Uygunsuz', 'Takip'] } },
+          { actionStatus: { in: ['BEKLIYOR', 'DEVAM_EDIYOR', 'GECIKTI'] } },
+          { deltaTemp: { gte: 10 } },
+          { measuredTemp: { gte: 45 } }
+        ]
+      },
+      include: {
+        session: {
+          select: {
+            id: true,
+            facilityId: true,
+            reportDate: true,
+            facility: {
+              select: {
+                id: true,
+                name: true,
+                shortName: true,
+                city: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: [
+        { actionDueDate: 'asc' },
+        { measuredTemp: 'desc' },
+        { createdAt: 'desc' }
+      ]
+    });
+
+    // Categorize for quick dashboard consumption
+    const now = new Date();
+    const categorized = items.map(it => {
+      const isOverdue = it.actionDueDate && new Date(it.actionDueDate) < now && it.actionStatus !== 'TAMAMLANDI';
+      const isUrgent = it.priority === 'Acil' || (it.measuredTemp && it.measuredTemp >= 60);
+      return {
+        ...it,
+        isOverdue: Boolean(isOverdue),
+        isUrgent: Boolean(isUrgent)
+      };
+    });
+
+    res.json(categorized);
+  } catch (error: any) {
+    console.error('Error fetching thermal watchlist:', error);
+    res.status(500).json({ error: error.message || 'Takip listesi alınamadı.' });
+  }
+});
+
+// Belirli bir panonun geçmiş ölçüm tarihçesi (Panel Measurement History / Trend)
+router.get('/panel-history', async (req: AuthRequest, res) => {
+  try {
+    const { panelName, facilityId } = req.query;
+    if (!panelName) {
+      return res.status(400).json({ error: 'Pano adı (panelName) gereklidir.' });
+    }
+
+    const canonicalFacId = await resolveFacilityId(facilityId as string);
+    const whereClause: any = {
+      panelName: {
+        equals: String(panelName).trim(),
+        mode: 'insensitive'
+      }
+    };
+
+    if (canonicalFacId) {
+      whereClause.session = { facilityId: canonicalFacId };
+    }
+
+    const history = await prisma.thermalInspectionItem.findMany({
+      where: whereClause,
+      include: {
+        session: {
+          select: {
+            id: true,
+            reportDate: true,
+            createdAt: true,
+            facility: { select: { id: true, name: true, shortName: true } }
+          }
+        }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    res.json(history);
+  } catch (error: any) {
+    console.error('Error fetching panel history:', error);
+    res.status(500).json({ error: error.message || 'Pano geçmişi alınamadı.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────
 // 8. MULTI-PHOTO UPLOAD (Max 5 photos per item, mobile / drag / paste)
 // ─────────────────────────────────────────────────────────
 router.post('/items/:id/photos', uploadPhotos.array('photos', 5), async (req: AuthRequest, res) => {
@@ -725,10 +918,12 @@ router.post('/items/:id/photos', uploadPhotos.array('photos', 5), async (req: Au
       });
     }
 
-    const fac = item.session?.facility;
-    const folderSub = sanitizeFolderName(fac?.shortName || fac?.name || 'facility');
-
-    const newUrls = files.map(f => `/uploads/electric-infrastructure/${folderSub}/thermal/${f.filename}`);
+    const newUrls = files.map(f => {
+      // Derive path accurately from where multer actually saved the file
+      const parts = f.destination.split('uploads');
+      const relDest = parts.length > 1 ? parts[1] : '/electric-infrastructure/Genel/thermal';
+      return `/uploads${relDest.startsWith('/') ? '' : '/'}${relDest}/${f.filename}`.replace(/\\/g, '/').replace(/\/+/g, '/');
+    });
     const updatedPhotos = [...currentPhotos, ...newUrls];
 
     const updated = await prisma.thermalInspectionItem.update({
@@ -740,6 +935,7 @@ router.post('/items/:id/photos', uploadPhotos.array('photos', 5), async (req: Au
 
     res.json({
       message: `${files.length} adet fotoğraf başarıyla eklendi.`,
+      newUrls,
       photoUrls: updated.photoUrls,
       item: updated
     });

@@ -136,4 +136,8 @@ httpServer.listen(Number(PORT), '0.0.0.0', () => {
   
   const { startChecklistCronJobs } = require('./jobs/checklistCron');
   startChecklistCronJobs();
+
+  // Sistem açıldığında/güncellendiğinde mükerrer açılmış yangın denetim raporlarını otomatik konsolide et
+  const { consolidateFireSafetyAudits } = require('./scripts/consolidate_fire_audits');
+  consolidateFireSafetyAudits();
 });

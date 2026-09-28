@@ -162,7 +162,15 @@ const electricInfrastructureNavItems = (hasAdminAccess: boolean) => [
   ] : []),
   { label: 'İŞLEMLER', type: 'group' },
   { label: 'Altyapı Kontrol Formu', icon: Zap, to: '/safety-management/electric-infrastructure' },
-  { label: 'Termal Kamera Kontrolü', icon: Camera, to: '/safety-management/electric-infrastructure?tab=thermal' },
+];
+
+const thermalCameraNavItems = (hasAdminAccess: boolean) => [
+  ...(hasAdminAccess ? [
+    { label: 'YÖNETİCİ', type: 'group' },
+    { label: 'Yönetici Dashboard', icon: LayoutDashboard, to: '/safety-management/thermal-camera/dashboard' },
+  ] : []),
+  { label: 'İŞLEMLER', type: 'group' },
+  { label: 'Termal Kamera Kontrolü', icon: Camera, to: '/safety-management/thermal-camera' },
 ];
 
 const binaTuruNavItems = [
@@ -305,6 +313,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   } else if (path.startsWith('/safety-management/electric-infrastructure')) {
     navItems = electricInfrastructureNavItems(!!hasAdminAccess);
     moduleName = 'Elektrik Altyapı Kontrol Formu';
+  } else if (path.startsWith('/safety-management/thermal-camera')) {
+    navItems = thermalCameraNavItems(!!hasAdminAccess);
+    moduleName = 'Termal Kamera Kontrolü';
   } else if (path.startsWith('/bina-turu')) {
     navItems = binaTuruNavItems;
     moduleName = 'Bina Turu Yönetimi';
@@ -343,7 +354,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
       path.startsWith('/risks') ||
       path.startsWith('/checklists') ||
       path.startsWith('/safety-management/fire-doors') ||
-      path.startsWith('/safety-management/elevator-tracking')
+      path.startsWith('/safety-management/elevator-tracking') ||
+      path.startsWith('/safety-management/thermal-camera')
     ) {
       return '/safety-management';
     }
@@ -428,7 +440,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* Facility Switcher (Show for modules that need it) */}
-        {(path.startsWith('/isg-kurul') || path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management') || path.startsWith('/renovation-report') || path.startsWith('/checklists') || path.startsWith('/safety-management/fire-doors') || path.startsWith('/safety-management/elevator-tracking') || path.startsWith('/safety-management/electric-infrastructure') || path.startsWith('/fire-safety-control')) && (
+        {(path.startsWith('/isg-kurul') || path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management') || path.startsWith('/renovation-report') || path.startsWith('/checklists') || path.startsWith('/safety-management/fire-doors') || path.startsWith('/safety-management/elevator-tracking') || path.startsWith('/safety-management/electric-infrastructure') || path.startsWith('/safety-management/thermal-camera') || path.startsWith('/fire-safety-control')) && (
           <div className="flex-shrink-0">
             <FacilitySwitcher isCollapsed={isCollapsed} />
           </div>

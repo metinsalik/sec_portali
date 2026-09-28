@@ -18,9 +18,30 @@ export interface ThermalInspectionItem {
   priority?: string | null;
   detectedRisk?: string | null;
   actionTaken?: string | null;
+  // Gelişmiş Aksiyon & Termin Takibi
+  actionPlan?: string | null;
+  actionDueDate?: string | null;
+  actionAssignee?: string | null;
+  actionStatus?: 'BEKLIYOR' | 'DEVAM_EDIYOR' | 'TAMAMLANDI' | 'IPTAL' | string | null;
+  actionCompletedDate?: string | null;
+  actionNotes?: string | null;
+  actionPhotos?: string[];
   photoUrls: string[];
   createdAt: string;
   updatedAt: string;
+  isOverdue?: boolean;
+  isUrgent?: boolean;
+  session?: {
+    id: string;
+    facilityId?: string;
+    reportDate?: string | null;
+    facility?: {
+      id: string;
+      name: string;
+      shortName?: string | null;
+      city?: string | null;
+    };
+  };
 }
 
 export interface ThermalInspectionSession {
@@ -88,30 +109,42 @@ export const thermalInspectionService = {
       ? `/safety-management/electric-infrastructure/thermal/sessions?facilityId=${facilityId}`
       : '/safety-management/electric-infrastructure/thermal/sessions';
     const res = await api.get(url);
-    return res.data;
+    if (!res.ok) throw new Error('Oturumlar getirilemedi.');
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
   },
 
   // Tek oturum detayını ve maddelerini getir
   async getSessionDetail(sessionId: string): Promise<ThermalInspectionSession> {
     const res = await api.get(`/safety-management/electric-infrastructure/thermal/sessions/${sessionId}`);
-    return res.data;
+    if (!res.ok) throw new Error('Oturum detayı getirilemedi.');
+    return await res.json();
   },
 
   // Manuel yeni oturum aç
   async createSession(data: { facilityId: string; reportDate?: string; notes?: string }): Promise<ThermalInspectionSession> {
     const res = await api.post('/safety-management/electric-infrastructure/thermal/sessions', data);
-    return res.data;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Oturum oluşturulamadı.');
+    }
+    return await res.json();
   },
 
   // Oturumu tamamla veya devam ediyora çevir
   async updateSessionStatus(sessionId: string, status: 'TAMAMLANDI' | 'DEVAM_EDIYOR'): Promise<ThermalInspectionSession> {
     const res = await api.patch(`/safety-management/electric-infrastructure/thermal/sessions/${sessionId}/status`, { status });
-    return res.data;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Oturum durumu güncellenemedi.');
+    }
+    return await res.json();
   },
 
   // Oturum sil
   async deleteSession(sessionId: string): Promise<void> {
-    await api.delete(`/safety-management/electric-infrastructure/thermal/sessions/${sessionId}`);
+    const res = await api.delete(`/safety-management/electric-infrastructure/thermal/sessions/${sessionId}`);
+    if (!res.ok) throw new Error('Oturum silinemedi.');
   },
 
   // Excel yükle
@@ -119,53 +152,114 @@ export const thermalInspectionService = {
     const formData = new FormData();
     formData.append('facilityId', facilityId);
     formData.append('file', file);
-    const res = await api.post('/safety-management/electric-infrastructure/thermal/import-excel', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return res.data;
+    const res = await api.post('/safety-management/electric-infrastructure/thermal/import-excel', formData);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Excel yüklenemedi.');
+    }
+    return await res.json();
   },
 
   // Ölçüm maddesi oluştur (Manuel satır ekleme)
   async createItem(data: Partial<ThermalInspectionItem> & { sessionId: string }): Promise<ThermalInspectionItem> {
     const res = await api.post('/safety-management/electric-infrastructure/thermal/items', data);
-    return res.data;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Ölçüm kaydı oluşturulamadı.');
+    }
+    return await res.json();
   },
 
   // Ölçüm maddesi güncelle
   async updateItem(itemId: string, data: Partial<ThermalInspectionItem>): Promise<ThermalInspectionItem> {
     const res = await api.put(`/safety-management/electric-infrastructure/thermal/items/${itemId}`, data);
-    return res.data;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Ölçüm kaydı güncellenemedi.');
+    }
+    return await res.json();
   },
 
   // Ölçüm maddesi sil
   async deleteItem(itemId: string): Promise<void> {
-    await api.delete(`/safety-management/electric-infrastructure/thermal/items/${itemId}`);
+    const res = await api.delete(`/safety-management/electric-infrastructure/thermal/items/${itemId}`);
+    if (!res.ok) throw new Error('Ölçüm kaydı silinemedi.');
   },
 
   // Maddeye çoklu fotoğraf yükle (Dosyalar + Tesis ID)
-  async uploadPhotos(itemId: string, facilityId: string, files: File[]): Promise<{ message: string; photoUrls: string[]; item: ThermalInspectionItem }> {
+  async uploadPhotos(itemId: string, facilityId: string, files: File[]): Promise<{ message: string; newUrls?: string[]; photoUrls: string[]; item: ThermalInspectionItem }> {
     const formData = new FormData();
     formData.append('facilityId', facilityId);
     files.forEach(f => {
       formData.append('photos', f);
     });
-    const res = await api.post(`/safety-management/electric-infrastructure/thermal/items/${itemId}/photos`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return res.data;
+    const res = await api.post(`/safety-management/electric-infrastructure/thermal/items/${itemId}/photos`, formData);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Fotoğraf yüklenemedi.');
+    }
+    return await res.json();
   },
 
   // Maddeden tek bir fotoğraf sil
   async removePhoto(itemId: string, photoUrl: string): Promise<{ message: string; photoUrls: string[] }> {
     const res = await api.delete(`/safety-management/electric-infrastructure/thermal/items/${itemId}/photos`, {
-      data: { photoUrl }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ photoUrl })
     });
-    return res.data;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Fotoğraf silinemedi.');
+    }
+    return await res.json();
   },
 
   // Yönetici Paneli & Tesis Durum İstatistikleri
   async getDashboardStats(): Promise<ThermalDashboardResponse> {
     const res = await api.get('/safety-management/electric-infrastructure/thermal/dashboard-stats');
-    return res.data;
+    if (!res.ok) throw new Error('İstatistikler getirilemedi.');
+    return await res.json();
+  },
+
+  // Aksiyon Planla / Güncelle
+  async updateItemAction(
+    itemId: string,
+    data: {
+      actionPlan?: string;
+      actionDueDate?: string | null;
+      actionAssignee?: string;
+      actionStatus?: string;
+      actionCompletedDate?: string | null;
+      actionNotes?: string;
+      actionPhotos?: string[];
+      status?: string;
+      priority?: string;
+    }
+  ): Promise<ThermalInspectionItem> {
+    const res = await api.patch(`/safety-management/electric-infrastructure/thermal/items/${itemId}/action`, data);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Aksiyon güncellenemedi.');
+    }
+    return await res.json();
+  },
+
+  // Sıkı Takipteki Panolar ve Açık Aksiyonlar Listesi (Watchlist)
+  async getWatchlist(facilityId?: string): Promise<ThermalInspectionItem[]> {
+    const query = facilityId && facilityId !== 'all' ? `?facilityId=${encodeURIComponent(facilityId)}` : '';
+    const res = await api.get(`/safety-management/electric-infrastructure/thermal/watchlist${query}`);
+    if (!res.ok) throw new Error('Takip listesi getirilemedi.');
+    return await res.json();
+  },
+
+  // Pano Tarihçesi / Sıcaklık Eğilimi
+  async getPanelHistory(panelName: string, facilityId?: string): Promise<ThermalInspectionItem[]> {
+    const params = new URLSearchParams({ panelName });
+    if (facilityId && facilityId !== 'all') {
+      params.append('facilityId', facilityId);
+    }
+    const res = await api.get(`/safety-management/electric-infrastructure/thermal/panel-history?${params.toString()}`);
+    if (!res.ok) throw new Error('Pano geçmişi getirilemedi.');
+    return await res.json();
   }
 };

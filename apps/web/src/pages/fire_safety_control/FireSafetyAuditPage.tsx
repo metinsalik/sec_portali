@@ -197,16 +197,22 @@ export default function FireSafetyAuditPage() {
     'Merkez Satın Alma & Mimar'
   ]);
 
-  // Fetch Existing Audit
+  // Fetch Existing Audit or Active Facility Master Audit
   const { data: auditData, isLoading: loadingAudit } = useQuery({
-    queryKey: ['fire-safety-audit', id],
+    queryKey: ['fire-safety-audit', id, activeFacId],
     queryFn: async () => {
-      if (isNew) return null;
+      if (isNew) {
+        if (!activeFacId || activeFacId === 'all') return null;
+        // Tesisin tekil aktif raporunu getir / otomatik oluştur
+        const res = await api.get(`/fire-safety-control/facilities/${activeFacId}/active-audit`);
+        if (!res.ok) return null;
+        return res.json();
+      }
       const res = await api.get(`/fire-safety-control/${id}`);
       if (!res.ok) throw new Error('Tutanak yüklenemedi');
       return res.json();
     },
-    enabled: !isNew
+    enabled: isNew ? (!!activeFacId && activeFacId !== 'all') : !isNew
   });
 
   useEffect(() => {
@@ -220,8 +226,33 @@ export default function FireSafetyAuditPage() {
       setPreparedBy(auditData.preparedBy || '');
       setReviewedBy(auditData.reviewedBy || '');
       setApprovedBy(auditData.approvedBy || '');
-      setItems(auditData.items || []);
-    } else if (isNew) {
+      
+      if (isNew && auditData.id) {
+        // Tek rapora yeni tespit eklemek için id'ye yönlendir ve en alta yeni boş madde ekle
+        const existingItems = auditData.items || [];
+        const nextOrder = existingItems.length > 0
+          ? Math.max(...existingItems.map((i: any) => i.orderNo || 0)) + 1
+          : 1;
+        const newItem = {
+          orderNo: nextOrder,
+          topic: '',
+          source: sourcesList[0] || 'İtfaiye Denetim Raporu',
+          category: categoriesList[0] || 'Yangın Kompartımanı & İzolasyon',
+          action: '',
+          responsible: responsiblesList[0] || 'Teknik Hizmetler – Hastane',
+          deadlineDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          status: 'ACIK',
+          riskLevel: 'Orta',
+          findingPhotos: [],
+          actions: []
+        };
+        setItems([...existingItems, newItem]);
+        navigate(`/fire-safety-control/audit/${auditData.id}?mode=edit`, { replace: true });
+        toast.info(`Tesisin mevcut ana raporu açıldı. #${nextOrder} numaralı yeni tespit maddesi eklendi.`);
+      } else {
+        setItems(auditData.items || []);
+      }
+    } else if (isNew && (!activeFacId || activeFacId === 'all')) {
       setMode('edit');
       setItems([
         {
@@ -239,7 +270,7 @@ export default function FireSafetyAuditPage() {
         }
       ]);
     }
-  }, [auditData, isNew]);
+  }, [auditData, isNew, activeFacId]);
 
   // State for active tab in each item's action panel
   const [activeActionTabs, setActiveActionTabs] = useState<Record<number, number>>({});

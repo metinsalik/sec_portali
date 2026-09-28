@@ -22,28 +22,85 @@ import { ThermalPhotoModal } from './ThermalPhotoModal';
 import { ThermalItemFormModal } from './ThermalItemFormModal';
 import { ThermalExecutiveDashboard } from './ThermalExecutiveDashboard';
 import { ThermalOriginalDashboard } from './ThermalOriginalDashboard';
-import { ThermalDateCardsView } from '../thermal-camera/ThermalDateCardsView';
+import { ThermalDateCardsView } from './ThermalDateCardsView';
+import { ThermalWatchlistView } from './ThermalWatchlistView';
+import { ThermalPanelDetailPage } from './ThermalPanelDetailPage';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from 'recharts';
+import { useAuth } from '@/context/AuthContext';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
-interface Props {
-  activeFacilityId: string;
-  onFacilityChange?: (facilityId: string) => void;
-  isAdminOrMgmt: boolean;
-}
+export default function ThermalCameraPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isAdminOrMgmt = user?.roles?.includes('admin') || user?.roles?.includes('management') || user?.isAdmin || user?.isManagement;
 
-export const ThermalInspectionTab: React.FC<Props> = ({
-  activeFacilityId,
-  onFacilityChange,
-  isAdminOrMgmt
-}) => {
+  // Read initial states from URL query parameters (URL takibi & hatırlama)
+  const urlFacility = searchParams.get('facilityId');
+  const urlSession = searchParams.get('sessionId');
+  const urlView = searchParams.get('view');
+
+  const [activeFacilityId, setActiveFacilityId] = useState<string>(() => {
+    if (urlFacility && urlFacility !== 'all') return urlFacility;
+    const saved = localStorage.getItem('activeFacilityId');
+    if (saved && saved !== 'all') return saved;
+    const isStandard = user && !isAdminOrMgmt;
+    if (isStandard && user.facilities && user.facilities.length > 0) {
+      return user.facilities[0];
+    }
+    return saved || 'all';
+  });
+
+  const onFacilityChange = (facId: string) => {
+    setActiveFacilityId(facId);
+    localStorage.setItem('activeFacilityId', facId);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (facId && facId !== 'all') next.set('facilityId', facId);
+      else next.delete('facilityId');
+      return next;
+    });
+  };
   const [sessions, setSessions] = useState<ThermalInspectionSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<ThermalInspectionSession | null>(null);
   const [loading, setLoading] = useState(false);
   const [dashboardData, setDashboardData] = useState<ThermalDashboardResponse | null>(null);
   const [dashboardLoading, setDashboardLoading] = useState(false);
 
-  // Sub-view: 'DATE_CARDS' | 'SESSION_DETAIL' | 'EXECUTIVE'
-  const [viewMode, setViewMode] = useState<'DATE_CARDS' | 'SESSION_DETAIL' | 'EXECUTIVE'>('DATE_CARDS');
+  // Sub-view: 'DATE_CARDS' | 'SESSION_DETAIL' | 'EXECUTIVE' | 'WATCHLIST' | 'PANEL_DETAIL'
+  const [selectedPanelName, setSelectedPanelName] = useState<string | null>(searchParams.get('panelName'));
+  const [viewMode, setViewModeState] = useState<'DATE_CARDS' | 'SESSION_DETAIL' | 'EXECUTIVE' | 'WATCHLIST' | 'PANEL_DETAIL'>(() => {
+    if (searchParams.get('panelName')) return 'PANEL_DETAIL';
+    if (urlView === 'watchlist') return 'WATCHLIST';
+    if (urlView === 'executive') return 'EXECUTIVE';
+    if (urlSession || urlView === 'detail') return 'SESSION_DETAIL';
+    return 'DATE_CARDS';
+  });
+
+  const setViewMode = (mode: 'DATE_CARDS' | 'SESSION_DETAIL' | 'EXECUTIVE' | 'WATCHLIST' | 'PANEL_DETAIL', panel?: string) => {
+    setViewModeState(mode);
+    if (panel) setSelectedPanelName(panel);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (mode === 'DATE_CARDS') {
+        next.delete('view');
+        next.delete('panelName');
+      } else if (mode === 'WATCHLIST') {
+        next.set('view', 'watchlist');
+        next.delete('panelName');
+      } else if (mode === 'EXECUTIVE') {
+        next.set('view', 'executive');
+        next.delete('panelName');
+      } else if (mode === 'SESSION_DETAIL') {
+        next.set('view', 'detail');
+        next.delete('panelName');
+      } else if (mode === 'PANEL_DETAIL') {
+        next.set('view', 'panel_detail');
+        if (panel) next.set('panelName', panel);
+      }
+      return next;
+    });
+  };
 
   // Excel Upload State
   const [isUploadingExcel, setIsUploadingExcel] = useState(false);
@@ -92,7 +149,6 @@ export const ThermalInspectionTab: React.FC<Props> = ({
           if (detail && detail.id) {
             setSelectedSession(detail);
             setViewMode('SESSION_DETAIL');
-            // If the session facility differs from current active facility, inform parent
             if (detail.facilityId && onFacilityChange && normalizeId(detail.facilityId) !== normalizeId(currentFacId)) {
               onFacilityChange(detail.facilityId);
             }
@@ -102,46 +158,6 @@ export const ThermalInspectionTab: React.FC<Props> = ({
           console.error('Failed to load preferred session detail', e);
         }
         pendingPreferredSessionIdRef.current = null;
-      }
-
-      // If a specific facility is selected, load its session
-      if (currentFacId !== 'all') {
-        const curFacNormalized = normalizeId(currentFacId);
-        const currentFacilityObj = dashRes?.facilities?.find((f: any) => normalizeId(f.id) === curFacNormalized);
-        const currentFacilityName = currentFacilityObj ? normalizeId(currentFacilityObj.name) : '';
-
-        const facSessions = sessionList.filter(s => {
-          if (normalizeId(s.facilityId) === curFacNormalized) return true;
-          if (currentFacilityName && s.facility?.name && normalizeId(s.facility.name) === currentFacilityName) return true;
-          return false;
-        });
-        
-        // Pick session with items first, or the latest one
-        const withItems = facSessions.find(s => (s._count?.items || 0) > 0);
-        const targetSessionId = withItems ? withItems.id : facSessions[0]?.id;
-
-        if (targetSessionId) {
-          const detail = await thermalInspectionService.getSessionDetail(targetSessionId);
-          if (detail && detail.id) {
-            setSelectedSession(detail);
-            setViewMode('SESSION_DETAIL');
-          }
-        } else {
-          // If existing selectedSession belongs to this facility and has items, keep it
-          setSelectedSession(prev => {
-            if (prev && normalizeId(prev.facilityId) === curFacNormalized && prev.items && prev.items.length > 0) {
-              return prev;
-            }
-            return null;
-          });
-          setViewMode('SESSION_DETAIL');
-        }
-      } else {
-        // 'all' facilities — if we have a selected session with items, keep it, otherwise show dashboard
-        setSelectedSession((prev) => {
-          if (!prev) setViewMode('DASHBOARD');
-          return prev;
-        });
       }
     } catch (err: any) {
       console.error(err);
@@ -172,6 +188,12 @@ export const ThermalInspectionTab: React.FC<Props> = ({
       pendingPreferredSessionIdRef.current = detail.id;
       setSelectedSession(detail);
       setViewMode('SESSION_DETAIL');
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev);
+        next.set('sessionId', detail.id);
+        next.set('view', 'detail');
+        return next;
+      });
       if (detail.facilityId && onFacilityChange && normalizeId(detail.facilityId) !== normalizeId(activeFacilityId)) {
         onFacilityChange(detail.facilityId);
       }
@@ -209,27 +231,30 @@ export const ThermalInspectionTab: React.FC<Props> = ({
       const res = await thermalInspectionService.importExcel(targetFacility, file);
       toast.success(res?.message || 'Excel başarıyla aktarıldı.');
 
-      const uploadedSession = res?.session;
+      let uploadedSession = res?.session;
       if (uploadedSession?.id) {
-        // Reset table filters so all uploaded rows are immediately visible
+        try {
+          const fullSession = await thermalInspectionService.getSessionDetail(uploadedSession.id);
+          if (fullSession && fullSession.id) {
+            uploadedSession = fullSession;
+          }
+        } catch (e) {
+          console.warn('Could not re-fetch session detail:', e);
+        }
+
         setSearch('');
         setStatusFilter('ALL');
         setPriorityFilter('ALL');
 
-        // Store preferred session ID
         pendingPreferredSessionIdRef.current = uploadedSession.id;
-
-        // Set session and lock directly into detail view
         setSelectedSession(uploadedSession);
         setViewMode('SESSION_DETAIL');
 
-        // Sync facility with parent if needed
         const uploadedFacId = uploadedSession.facilityId || targetFacility;
         if (onFacilityChange && normalizeId(uploadedFacId) !== normalizeId(activeFacilityId)) {
           onFacilityChange(uploadedFacId);
         }
 
-        // Refresh stats and session list in background
         thermalInspectionService.getDashboardStats().then(d => { if (d) setDashboardData(d); }).catch(() => {});
         thermalInspectionService.getSessions(uploadedFacId).then(s => { if (Array.isArray(s)) setSessions(s); }).catch(() => {});
       } else {
@@ -246,15 +271,13 @@ export const ThermalInspectionTab: React.FC<Props> = ({
 
   // Create Manual Session or Open Form
   const handleCreateManualSession = async () => {
-    // If a session is already selected, open the modal for it immediately!
-    if (selectedSession && selectedSession.id) {
+    if (selectedSession && selectedSession.id && viewMode === 'SESSION_DETAIL') {
       setFormItem(null);
       setModalSessionId(selectedSession.id);
       setIsFormModalOpen(true);
       return;
     }
 
-    // Determine target facility
     let targetFacility = activeFacilityId;
     if (targetFacility === 'all') {
       const stored = localStorage.getItem('activeFacilityId');
@@ -267,25 +290,6 @@ export const ThermalInspectionTab: React.FC<Props> = ({
 
     if (!targetFacility || targetFacility === 'all') {
       toast.error('Lütfen önce bir tesis seçiniz.');
-      return;
-    }
-
-    // Check if an existing session for this facility already exists in sessions state
-    const curFacNormalized = normalizeId(targetFacility);
-    const existing = sessions.find(s => normalizeId(s.facilityId) === curFacNormalized);
-    if (existing) {
-      pendingPreferredSessionIdRef.current = existing.id;
-      setModalSessionId(existing.id);
-      setFormItem(null);
-      setIsFormModalOpen(true);
-      setViewMode('SESSION_DETAIL');
-      // Load full session detail
-      thermalInspectionService.getSessionDetail(existing.id).then(det => {
-        if (det) setSelectedSession(det);
-      }).catch(() => {});
-      if (targetFacility !== activeFacilityId && onFacilityChange) {
-        onFacilityChange(targetFacility);
-      }
       return;
     }
 
@@ -306,6 +310,7 @@ export const ThermalInspectionTab: React.FC<Props> = ({
         onFacilityChange(targetFacility);
       }
       toast.success('Yeni termal ölçüm formu başlatıldı. Şimdi pano kaydınızı ekleyebilirsiniz.');
+      fetchData(session.id, targetFacility);
     } catch (err: any) {
       toast.error('Oturum oluşturulamadı: ' + (err.response?.data?.error || err.message));
     } finally {
@@ -367,30 +372,47 @@ export const ThermalInspectionTab: React.FC<Props> = ({
     });
   };
 
-  // Filtered Items
-  const filteredItems = (selectedSession?.items || []).filter(item => {
-    if (statusFilter !== 'ALL' && item.status !== statusFilter) return false;
-    if (priorityFilter !== 'ALL' && item.priority !== priorityFilter) return false;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      return (
-        item.panelName.toLowerCase().includes(q) ||
-        (item.buildingLocation && item.buildingLocation.toLowerCase().includes(q)) ||
-        (item.floorSection && item.floorSection.toLowerCase().includes(q)) ||
-        (item.measurementPoint && item.measurementPoint.toLowerCase().includes(q)) ||
-        (item.detectedRisk && item.detectedRisk.toLowerCase().includes(q))
-      );
-    }
-    return true;
-  });
+  const activeFacilityObj = dashboardData?.facilities?.find(f => normalizeId(f.id) === normalizeId(activeFacilityId));
+  const activeFacilityDisplayName = activeFacilityObj ? activeFacilityObj.name : (activeFacilityId === 'all' ? 'Tüm Tesisler' : 'Seçili Tesis');
 
   return (
     <div className="space-y-6">
+      {/* Hidden Excel Input */}
+      <input
+        type="file"
+        ref={excelInputRef}
+        onChange={handleExcelUpload}
+        accept=".xlsx, .xls"
+        className="hidden"
+      />
+
+      {/* 1. VIEW: DATE CARDS VIEW (Clean view without redundant header) */}
+      {viewMode === 'DATE_CARDS' && (
+        <ThermalDateCardsView
+          sessions={sessions}
+          activeFacilityName={activeFacilityDisplayName}
+          onSelectSession={handleSelectSession}
+          onUploadExcelClick={() => excelInputRef.current?.click()}
+          onNewSessionClick={handleCreateManualSession}
+          onViewExecutiveDashboard={isAdminOrMgmt ? () => setViewMode('EXECUTIVE') : undefined}
+          onViewWatchlist={() => setViewMode('WATCHLIST')}
+          isLoading={loading}
+        />
+      )}
+
       {/* 2. VIEW: DYNAMIC SESSION DETAIL & MEASUREMENTS TABLE */}
       {viewMode === 'SESSION_DETAIL' && selectedSession && (
         <ThermalOriginalDashboard
           session={selectedSession}
-          onBack={() => setViewMode('DATE_CARDS')}
+          onBack={() => {
+            setViewMode('DATE_CARDS');
+            setSearchParams(prev => {
+              const next = new URLSearchParams(prev);
+              next.delete('sessionId');
+              next.delete('view');
+              return next;
+            });
+          }}
           onAddPhoto={(it) => {
             setPhotoItem(it);
             setIsPhotoModalOpen(true);
@@ -401,10 +423,49 @@ export const ThermalInspectionTab: React.FC<Props> = ({
             setIsFormModalOpen(true);
           }}
           onDeleteItem={handleDeleteItem}
+          onItemUpdated={handleItemUpdated}
+          onOpenPanelDetail={(panel) => setViewMode('PANEL_DETAIL', panel)}
         />
       )}
 
-      {/* 3. VIEW: EXECUTIVE DASHBOARD */}
+      {/* 3. VIEW: SIKI TAKİPTEKİ PANOLAR & TERMİN MERKEZİ (WATCHLIST) */}
+      {viewMode === 'WATCHLIST' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between pb-1 border-b border-slate-200 dark:border-slate-800">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode('DATE_CARDS')}
+              className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold gap-1.5 h-8"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Kontrol Tarihlerine Dön
+            </Button>
+          </div>
+          <ThermalWatchlistView
+            facilityId={activeFacilityId !== 'all' ? activeFacilityId : undefined}
+            facilityName={activeFacilityDisplayName}
+            onSelectSession={handleSelectSession}
+            onInspectItem={(item) => {
+              setPhotoItem(item);
+              setIsPhotoModalOpen(true);
+            }}
+            onOpenPanelDetail={(panel) => setViewMode('PANEL_DETAIL', panel)}
+          />
+        </div>
+      )}
+
+      {/* 4. VIEW: TEKİL PANO DETAY & GEÇMİŞ DENETİM VE ISI HARİTASI (PANEL_DETAIL) */}
+      {viewMode === 'PANEL_DETAIL' && selectedPanelName && (
+        <ThermalPanelDetailPage
+          panelName={selectedPanelName}
+          facilityId={activeFacilityId !== 'all' ? activeFacilityId : undefined}
+          facilityName={activeFacilityDisplayName}
+          onBack={() => setViewMode('DATE_CARDS')}
+        />
+      )}
+
+      {/* 5. VIEW: EXECUTIVE DASHBOARD */}
       {viewMode === 'EXECUTIVE' && (
         <ThermalExecutiveDashboard
           data={dashboardData}

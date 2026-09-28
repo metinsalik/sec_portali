@@ -73,6 +73,7 @@ async function ensureModulesExist() {
       { code: 'ISG_DEFTER', name: 'İSG Defteri', description: 'İSG Onaylı Defter ve Tespit Kayıtları', icon: 'BookOpen' },
       { code: 'ELEVATOR_TRACKING', name: 'Asansör Takip Yönetimi', description: 'Asansör kayıt, periyodik kontrol ve takip sistemi', icon: 'ArrowUpDown' },
       { code: 'ELECTRIC_INFRASTRUCTURE', name: 'Elektrik Altyapı Sistemleri Kontrol Formu', description: 'Tesis bazında elektrik altyapı ekipmanları ve panoları kontrol formu', icon: 'Zap' },
+      { code: 'ELECTRIC_PANEL_INSPECTION', name: 'Elektrik Pano Kontrolü', description: 'Termal kamera ile elektrik panoları sıcaklık ölçümü ve denetim formu', icon: 'photo_camera' },
       { code: 'FIRE_SAFETY_CONTROL', name: 'Yangın Güvenliği Kontrol Sistemi', description: 'Yangın güvenliği denetimleri, saha tespitleri ve aksiyon takip sistemi', icon: 'local_fire_department' }
   ];
   for (const mod of defaultModules) {

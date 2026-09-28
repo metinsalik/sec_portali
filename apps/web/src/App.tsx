@@ -184,6 +184,9 @@ import IsgDefterSettings from './pages/safety-management/isg-defter/IsgDefterSet
 import IsgDefterItemDetail from './pages/safety-management/isg-defter/IsgDefterItemDetail';
 import IsgDefterPageBuilder from './pages/safety-management/isg-defter/IsgDefterPageBuilder';
 
+import ThermalCameraPage from './pages/safety-management/thermal-camera/ThermalCameraPage';
+import ThermalCameraDashboard from './pages/safety-management/thermal-camera/ThermalCameraDashboard';
+
 // Yangın Güvenliği Kontrol Sistemi
 import FireSafetyDashboard from './pages/fire_safety_control/FireSafetyDashboard';
 import FireSafetyAuditPage from './pages/fire_safety_control/FireSafetyAuditPage';
@@ -345,6 +348,24 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <AppLayout><ElectricInfrastructureDetail /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* ── TERMAL KAMERA KONTROLÜ ─────────────────────── */}
+                  <Route
+                    path="/safety-management/thermal-camera"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><ThermalCameraPage /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/safety-management/thermal-camera/dashboard"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><ThermalCameraDashboard /></AppLayout>
                       </ProtectedRoute>
                     }
                   />

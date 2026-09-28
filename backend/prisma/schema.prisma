@@ -2783,7 +2783,16 @@ model ThermalInspectionItem {
   status              String?                  @default("Normal") // Normal, Dikkat, Kritik
   priority            String?                  @default("Düşük")  // Düşük, Orta, Yüksek, Acil
   detectedRisk        String?                  // Tespit / Açıklama
-  actionTaken         String?                  // Aksiyon
+  actionTaken         String?                  // Aksiyon (eski alan ile geriye uyumluluk)
+
+  // Gelişmiş Aksiyon & Termin Takibi
+  actionPlan          String?                  // Planlanan aksiyon açıklaması
+  actionDueDate       DateTime?                // Termin / Hedef Tarih
+  actionAssignee      String?                  // Sorumlu Kişi / Birim
+  actionStatus        String?                  @default("BEKLIYOR") // BEKLIYOR, DEVAM_EDIYOR, TAMAMLANDI, IPTAL
+  actionCompletedDate DateTime?                // Aksiyon Tamamlanma Tarihi
+  actionNotes         String?                  // Tamamlama / Çözüm Detayları
+  actionPhotos        Json                     @default("[]") // Düzeltme sonrası çekilen fotoğraflar (Termal/Görsel)
   
   photoUrls           Json                     @default("[]") // Max 5 fotoğraf yolu
   
@@ -2795,6 +2804,8 @@ model ThermalInspectionItem {
   @@index([sessionId])
   @@index([status])
   @@index([priority])
+  @@index([actionStatus])
+  @@index([actionDueDate])
 }
 
 // ─────────────────────────────────────────────────────────

@@ -505,6 +505,48 @@ export default function SafetyManagementPage() {
           </div>
           )}
 
+          {/* Card: Elektrik Pano Kontrolü */}
+          {(hasAdminAccess || user?.modules?.includes('ELECTRIC_PANEL_INSPECTION') || user?.modules?.includes('THERMAL_CAMERA') || user?.modules?.includes('ELECTRIC_INFRASTRUCTURE')) && (
+          <div
+            onClick={() => navigate('/safety-management/thermal-camera')}
+            className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
+          >
+            {/* Mobile Card Layout */}
+            <div className="flex md:hidden items-start gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-indigo-50 dark:bg-indigo-950/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                <span className="material-symbols-outlined text-[28px]">photo_camera</span>
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">Elektrik Pano Kontrolü</h2>
+                <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
+                  Termal kamera ile elektrik panoları sıcaklık ölçümü, Excel aktarımı ve denetim formu.
+                </p>
+                <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-sm font-medium group-hover:underline">
+                  Uygulamaya Git
+                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop Card Layout */}
+            <div className="hidden md:flex flex-col justify-between h-full">
+              <div>
+                <div className="w-14 h-14 rounded-xl bg-indigo-50 dark:bg-indigo-950/20 flex items-center justify-center mb-6 text-indigo-600 dark:text-indigo-400 transition-transform group-hover:scale-110">
+                  <span className="material-symbols-outlined text-[32px]">photo_camera</span>
+                </div>
+                <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">Elektrik Pano Kontrolü</h3>
+                <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
+                  Tesislerdeki panoların termal kamera ile ısınma ölçümleri, Excel aktarımı ve risk analizi.
+                </p>
+              </div>
+              <div className="inline-flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-sm font-medium group-hover:gap-4 transition-all">
+                Uygulamaya Git
+                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+              </div>
+            </div>
+          </div>
+          )}
+
         </div>
       </main>
 

@@ -132,10 +132,113 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       orderBy: { auditDate: 'desc' }
     });
 
-    res.json(audits);
+    // Canlıda / veritabanında geçmişte açılmış mükerrer raporlar varsa tesis bazında tekil ana raporda konsolide et
+    const facilityMap = new Map<string, any[]>();
+    for (const audit of audits) {
+      if (!facilityMap.has(audit.facilityId)) {
+        facilityMap.set(audit.facilityId, []);
+      }
+      facilityMap.get(audit.facilityId)!.push(audit);
+    }
+
+    let hasConsolidated = false;
+    for (const [fId, fAudits] of facilityMap.entries()) {
+      if (fAudits.length > 1) {
+        hasConsolidated = true;
+        // En eski veya en çok maddesi olanı ana audit yap
+        const sorted = [...fAudits].sort((a, b) => (b.items?.length || 0) - (a.items?.length || 0));
+        const master = sorted[0];
+        let maxOrder = (master.items || []).reduce((max: number, it: any) => Math.max(max, it.orderNo || 0), 0);
+
+        for (let i = 1; i < sorted.length; i++) {
+          const duplicate = sorted[i];
+          for (const item of duplicate.items || []) {
+            maxOrder += 1;
+            await prisma.fireSafetyItem.update({
+              where: { id: item.id },
+              data: { auditId: master.id, orderNo: maxOrder }
+            });
+          }
+          await prisma.fireSafetyAudit.delete({
+            where: { id: duplicate.id }
+          });
+        }
+      }
+    }
+
+    // Eğer konsolidasyon yapıldıysa güncel listeyi yeniden çek
+    const finalAudits = hasConsolidated
+      ? await prisma.fireSafetyAudit.findMany({
+          where: whereClause,
+          include: {
+            facility: {
+              select: { id: true, name: true }
+            },
+            items: {
+              include: {
+                actions: {
+                  orderBy: { createdAt: 'desc' }
+                }
+              },
+              orderBy: { orderNo: 'asc' }
+            }
+          },
+          orderBy: { auditDate: 'desc' }
+        })
+      : audits;
+
+    res.json(finalAudits);
   } catch (error) {
     console.error('Error fetching fire safety audits:', error);
     res.status(500).json({ error: 'Denetimler getirilemedi.' });
+  }
+});
+
+// Canlıdaki tüm hastane raporlarını tek tıkla zorunlu birleştirme endpoint'i (Yönetici)
+router.post('/consolidate-all', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const allAudits = await prisma.fireSafetyAudit.findMany({
+      include: {
+        items: true
+      },
+      orderBy: { auditDate: 'asc' }
+    });
+
+    const facilityGroups: Record<string, typeof allAudits> = {};
+    for (const a of allAudits) {
+      if (!facilityGroups[a.facilityId]) facilityGroups[a.facilityId] = [];
+      facilityGroups[a.facilityId].push(a);
+    }
+
+    let mergedCount = 0;
+    for (const [facId, group] of Object.entries(facilityGroups)) {
+      if (group.length > 1) {
+        // En çok maddesi olanı veya ilkini master seç
+        const sorted = [...group].sort((a, b) => b.items.length - a.items.length);
+        const master = sorted[0];
+        let maxOrder = master.items.reduce((max, it) => Math.max(max, it.orderNo || 0), 0);
+
+        for (let i = 1; i < sorted.length; i++) {
+          const dup = sorted[i];
+          for (const it of dup.items) {
+            maxOrder += 1;
+            await prisma.fireSafetyItem.update({
+              where: { id: it.id },
+              data: { auditId: master.id, orderNo: maxOrder }
+            });
+          }
+          await prisma.fireSafetyAudit.delete({
+            where: { id: dup.id }
+          });
+          mergedCount += 1;
+        }
+      }
+    }
+
+    res.json({ success: true, message: `${mergedCount} adet mükerrer rapor ana raporlarla birleştirildi.` });
+  } catch (error) {
+    console.error('Error consolidating audits:', error);
+    res.status(500).json({ error: 'Raporlar birleştirilemedi.' });
   }
 });
 
@@ -269,6 +372,104 @@ router.get('/facilities/:facilityId/latest-items', authMiddleware, async (req: A
   }
 });
 
+// Tesise ait TEKİL aktif denetim tutanağını getir (veya yoksa otomatik oluştur)
+router.get('/facilities/:facilityId/active-audit', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { facilityId } = req.params;
+
+    // Tesisin mevcut tüm denetimlerini bul
+    const audits = await prisma.fireSafetyAudit.findMany({
+      where: { facilityId },
+      include: {
+        facility: {
+          select: { id: true, name: true, logoUrl: true }
+        },
+        items: {
+          include: {
+            actions: {
+              orderBy: { createdAt: 'desc' }
+            }
+          },
+          orderBy: { orderNo: 'asc' }
+        }
+      },
+      orderBy: { auditDate: 'asc' }
+    });
+
+    if (audits.length === 0) {
+      // Tesis için henüz tutanak yoksa tekil ana rapor oluştur
+      const created = await prisma.fireSafetyAudit.create({
+        data: {
+          facilityId,
+          title: 'YANGIN GÜVENLİĞİ VE FİZİKİ ALAN DENETİM RAPORU',
+          subtitle: 'Teknik Hizmetler, Yangın Güvenliği ve Fiziki Alan Sürekli Değerlendirme Tutanak ve Takip Kaydı',
+          auditDate: new Date(),
+          topic: 'Yangın güvenliği, teknik altyapı, fiziki alanlar, bakım-onarım ihtiyaçları ve ilgili aksiyonların takibi',
+          purpose: 'Hastane bünyesinde tespit edilen tüm yangın güvenliği, teknik altyapı, bakım-onarım ve fiziki alan ihtiyaçlarını tekil ana raporda değerlendirmek; alınan kararları, oluşturulacak talepleri ve sorumlulukları kayıt altına almak.',
+          status: 'DEVAM_EDIYOR',
+          preparedBy: 'Teknik Hizmetler',
+          reviewedBy: 'İSG Yöneticisi',
+          approvedBy: 'Genel Müdürlük',
+          createdBy: req.user?.username || req.user?.fullName || 'system'
+        },
+        include: {
+          facility: {
+            select: { id: true, name: true, logoUrl: true }
+          },
+          items: {
+            include: { actions: true },
+            orderBy: { orderNo: 'asc' }
+          }
+        }
+      });
+      return res.json(created);
+    }
+
+    // Birden fazla tutanak varsa hepsini ilk ana tutanakta birleştir (Otomatik konsolidasyon)
+    const masterAudit = audits[0];
+    if (audits.length > 1) {
+      let maxOrder = masterAudit.items.reduce((max, it) => Math.max(max, it.orderNo || 0), 0);
+      for (let i = 1; i < audits.length; i++) {
+        const auditToMerge = audits[i];
+        for (const item of auditToMerge.items) {
+          maxOrder += 1;
+          await prisma.fireSafetyItem.update({
+            where: { id: item.id },
+            data: { auditId: masterAudit.id, orderNo: maxOrder }
+          });
+        }
+        await prisma.fireSafetyAudit.delete({
+          where: { id: auditToMerge.id }
+        });
+      }
+
+      // Güncellenmiş ana tutanağı getir
+      const refreshedMaster = await prisma.fireSafetyAudit.findUnique({
+        where: { id: masterAudit.id },
+        include: {
+          facility: {
+            select: { id: true, name: true, logoUrl: true }
+          },
+          items: {
+            include: {
+              actions: {
+                orderBy: { createdAt: 'desc' }
+              }
+            },
+            orderBy: { orderNo: 'asc' }
+          }
+        }
+      });
+      return res.json(refreshedMaster);
+    }
+
+    return res.json(masterAudit);
+  } catch (error) {
+    console.error('Error fetching/creating active audit:', error);
+    res.status(500).json({ error: 'Aktif denetim tutanağı alınamadı.' });
+  }
+});
+
 // Tekil denetim detayı getir
 router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
@@ -326,13 +527,24 @@ router.post('/save', authMiddleware, async (req: AuthRequest, res: Response) => 
 
     let targetAuditId = id;
 
+    // Eğer id yoksa veya geçici ise, bu tesis için önceden açılmış aktif bir ana tutanak var mı kontrol et (Tek rapordan devam etsin)
+    if (!targetAuditId || targetAuditId.startsWith('temp_')) {
+      const existingAudit = await prisma.fireSafetyAudit.findFirst({
+        where: { facilityId },
+        orderBy: { auditDate: 'asc' }
+      });
+      if (existingAudit) {
+        targetAuditId = existingAudit.id;
+      }
+    }
+
     await prisma.$transaction(async (tx) => {
-      if (!id || id.startsWith('temp_')) {
+      if (!targetAuditId || targetAuditId.startsWith('temp_')) {
         const created = await tx.fireSafetyAudit.create({ data: auditData });
         targetAuditId = created.id;
       } else {
         await tx.fireSafetyAudit.update({
-          where: { id },
+          where: { id: targetAuditId },
           data: auditData
         });
       }
