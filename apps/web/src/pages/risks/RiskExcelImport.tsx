@@ -11,6 +11,18 @@ import toast from 'react-hot-toast';
 
 const API = import.meta.env.VITE_API_URL || '';
 
+function formatCell(val: any): string {
+  if (val === undefined || val === null) return '-';
+  if (val instanceof Date) {
+    return isNaN(val.getTime()) ? '-' : val.toISOString().split('T')[0];
+  }
+  if (typeof val === 'object') {
+    return JSON.stringify(val);
+  }
+  const str = String(val).trim();
+  return str === '' ? '-' : str;
+}
+
 interface Props {
   facilityId: string;
   departmentName?: string;
@@ -398,8 +410,18 @@ export default function RiskExcelImport({ facilityId, onClose, onSuccess }: Prop
         let hasData = false;
 
         Object.entries(colMap).forEach(([cIdx, field]) => {
-          const val = row[Number(cIdx)];
+          let val = row[Number(cIdx)];
           if (val !== undefined && val !== null && String(val).trim() !== '') {
+            // Excel cellDates: true olduğunda Date objesi gelebilir. React Date objelerini render edemez (#31 hatası)
+            if (val instanceof Date) {
+              if (!isNaN(val.getTime())) {
+                val = val.toISOString().split('T')[0];
+              } else {
+                val = '';
+              }
+            } else if (typeof val === 'object') {
+              val = String(val);
+            }
             rowObj[field] = val;
             hasData = true;
           }
@@ -768,28 +790,28 @@ export default function RiskExcelImport({ facilityId, onClose, onSuccess }: Prop
                     <tbody className="divide-y divide-border/60">
                       {rows.slice(0, 10).map((row, idx) => (
                         <tr key={idx} className="hover:bg-muted/40 transition-colors">
-                          <td className="p-2.5 font-mono font-bold text-center text-primary">#{row.riskNo || idx + 1}</td>
-                          <td className="p-2.5 font-semibold text-foreground">{row.department || selectedDept || '-'}</td>
-                          <td className="p-2.5 text-muted-foreground">{row.area || '-'}</td>
+                          <td className="p-2.5 font-mono font-bold text-center text-primary">#{formatCell(row.riskNo || idx + 1)}</td>
+                          <td className="p-2.5 font-semibold text-foreground">{formatCell(row.department || selectedDept)}</td>
+                          <td className="p-2.5 text-muted-foreground">{formatCell(row.area)}</td>
                           <td className="p-2.5 text-muted-foreground">
-                            {row.riskCategory || '-'} {row.subCategory ? `› ${row.subCategory}` : ''}
+                            {formatCell(row.riskCategory)} {row.subCategory ? `› ${formatCell(row.subCategory)}` : ''}
                           </td>
-                          <td className="p-2.5 font-medium max-w-[200px] truncate" title={row.hazard}>{row.hazard || '-'}</td>
-                          <td className="p-2.5 max-w-[220px] truncate" title={row.riskDescription}>{row.riskDescription || '-'}</td>
-                          <td className="p-2.5 max-w-[180px] truncate" title={row.initialCondition}>{row.initialCondition || '-'}</td>
+                          <td className="p-2.5 font-medium max-w-[200px] truncate" title={formatCell(row.hazard)}>{formatCell(row.hazard)}</td>
+                          <td className="p-2.5 max-w-[220px] truncate" title={formatCell(row.riskDescription)}>{formatCell(row.riskDescription)}</td>
+                          <td className="p-2.5 max-w-[180px] truncate" title={formatCell(row.initialCondition)}>{formatCell(row.initialCondition)}</td>
                           <td className="p-2.5 text-center font-mono text-muted-foreground">
-                            {row.initialProb ?? '-'}/{row.initialFreq ?? '-'}/{row.initialSev ?? '-'}
+                            {formatCell(row.initialProb)}/{formatCell(row.initialFreq)}/{formatCell(row.initialSev)}
                           </td>
                           <td className="p-2.5 text-center font-mono font-black text-rose-600">
-                            {row.initialScore || '-'} {row.initialLevel ? `(${row.initialLevel})` : ''}
+                            {formatCell(row.initialScore)} {row.initialLevel ? `(${formatCell(row.initialLevel)})` : ''}
                           </td>
-                          <td className="p-2.5 max-w-[200px] truncate" title={row.firstActionPlan}>{row.firstActionPlan || '-'}</td>
-                          <td className="p-2.5 font-medium">{row.improvementResponsible || '-'}</td>
-                          <td className="p-2.5 text-muted-foreground">{row.dueDate || row.dueDatePeriod || '-'}</td>
-                          <td className="p-2.5 max-w-[200px] truncate" title={row.actionsTaken}>{row.actionsTaken || '-'}</td>
-                          <td className="p-2.5 text-center font-mono font-bold text-emerald-600">{row.finalScore ?? '-'}</td>
-                          <td className="p-2.5 max-w-[160px] truncate" title={row.effectivenessMethod}>{row.effectivenessMethod || '-'}</td>
-                          <td className="p-2.5 max-w-[160px] truncate" title={row.controlResult}>{row.controlResult || '-'}</td>
+                          <td className="p-2.5 max-w-[200px] truncate" title={formatCell(row.firstActionPlan)}>{formatCell(row.firstActionPlan)}</td>
+                          <td className="p-2.5 font-medium">{formatCell(row.improvementResponsible)}</td>
+                          <td className="p-2.5 text-muted-foreground">{formatCell(row.dueDate || row.dueDatePeriod)}</td>
+                          <td className="p-2.5 max-w-[200px] truncate" title={formatCell(row.actionsTaken)}>{formatCell(row.actionsTaken)}</td>
+                          <td className="p-2.5 text-center font-mono font-bold text-emerald-600">{formatCell(row.finalScore)}</td>
+                          <td className="p-2.5 max-w-[160px] truncate" title={formatCell(row.effectivenessMethod)}>{formatCell(row.effectivenessMethod)}</td>
+                          <td className="p-2.5 max-w-[160px] truncate" title={formatCell(row.controlResult)}>{formatCell(row.controlResult)}</td>
                         </tr>
                       ))}
                     </tbody>
