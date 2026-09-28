@@ -63,6 +63,39 @@ import {
 import { toast } from 'sonner';
 import { calculateItemProgress } from './FireSafetyAuditPage';
 
+// Uzun tespit metinlerini kısa özet başlık ve detay gövdesi olarak ayıran akıllı yardımcı fonksiyon
+export const splitItemTopic = (rawTopic: string = '', maxTitleLen: number = 80): { title: string; detail: string } => {
+  const text = (rawTopic || '').trim();
+  if (!text) return { title: 'Tespit Maddesi', detail: '' };
+
+  // Eğer ilk satırda başlık gibi kısa bir metin veya noktalama varsa
+  const firstLine = text.split('\n')[0].trim();
+  if (firstLine && firstLine.length <= maxTitleLen && text.includes('\n')) {
+    const detail = text.slice(firstLine.length).trim();
+    return { title: firstLine, detail };
+  }
+
+  // İlk cümlenin sonunu (. veya : veya -) bul
+  const sentenceEnd = text.search(/[.:;]\s/);
+  if (sentenceEnd !== -1 && sentenceEnd <= maxTitleLen && sentenceEnd > 15) {
+    const title = text.slice(0, sentenceEnd + 1).trim();
+    const detail = text.slice(sentenceEnd + 1).trim();
+    return { title, detail };
+  }
+
+  // Eğer metin kısa ise doğrudan başlık olarak ver
+  if (text.length <= maxTitleLen) {
+    return { title: text, detail: '' };
+  }
+
+  // Kelime sınırından böl
+  const cut = text.lastIndexOf(' ', maxTitleLen);
+  const splitIndex = cut > 20 ? cut : maxTitleLen;
+  const title = text.slice(0, splitIndex).trim() + '...';
+  const detail = text.slice(splitIndex).trim();
+  return { title, detail };
+};
+
 export default function FireSafetyDashboard() {
   const facilityId = useActiveFacility();
   const { user } = useAuth();
@@ -1234,14 +1267,26 @@ export default function FireSafetyDashboard() {
                                   <span>{itemFacilityName}</span>
                                 </Badge>
 
-                                <span className="font-bold text-xs md:text-sm text-slate-900 dark:text-slate-100">
-                                  {item.topic}
-                                </span>
+                                {(() => {
+                                  const { title: itemTitle, detail: itemDetail } = splitItemTopic(item.topic, 90);
+                                  return (
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-bold text-xs md:text-sm text-slate-900 dark:text-slate-100 leading-snug">
+                                        {itemTitle}
+                                      </div>
+                                      {itemDetail && (
+                                        <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mt-1 font-normal leading-relaxed">
+                                          {itemDetail}
+                                        </p>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
                                 {itemAudit && (
                                   <button
                                     type="button"
                                     onClick={() => navigate(`/fire-safety-control/audit/${itemAudit.id}?mode=view`)}
-                                    className="text-[11px] font-semibold text-blue-600 hover:underline flex items-center gap-1 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-900"
+                                    className="text-[11px] font-semibold text-blue-600 hover:underline flex items-center gap-1 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-900 shrink-0 self-start"
                                     title="Raporu görüntüle"
                                   >
                                     <FileText className="w-3 h-3" />
@@ -1250,13 +1295,13 @@ export default function FireSafetyDashboard() {
                                 )}
                               </div>
 
-                          <div className="text-xs text-slate-600 dark:text-slate-400 pl-7 space-y-0.5">
+                          <div className="text-xs text-slate-600 dark:text-slate-400 pl-7 space-y-1">
                             {item.action && (
-                              <p className="line-clamp-2">
-                                <strong className="text-slate-700 dark:text-slate-300">Karar / Plan:</strong> {item.action}
+                              <p className="line-clamp-2 bg-amber-50/50 dark:bg-amber-950/20 px-2.5 py-1.5 rounded-md border border-amber-200/60 dark:border-amber-800/40 text-amber-900 dark:text-amber-200 text-[11px]">
+                                <strong className="font-bold text-amber-800 dark:text-amber-300">Karar / Plan:</strong> {item.action}
                               </p>
                             )}
-                            <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
+                            <div className="flex flex-wrap items-center gap-2 pt-0.5 text-[11px]">
                               {item.responsible && (
                                 <span className="text-teal-700 dark:text-teal-400 font-semibold px-2 py-0.5 rounded bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800">
                                   {item.responsible}
@@ -1521,9 +1566,21 @@ export default function FireSafetyDashboard() {
                                             {itm.orderNo}
                                           </span>
                                           <div className="min-w-0">
-                                            <p className="font-bold text-xs text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors truncate">
-                                              {itm.topic}
-                                            </p>
+                                            {(() => {
+                                              const { title: itmTitle, detail: itmDetail } = splitItemTopic(itm.topic, 75);
+                                              return (
+                                                <>
+                                                  <p className="font-bold text-xs text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors truncate">
+                                                    {itmTitle}
+                                                  </p>
+                                                  {itmDetail && (
+                                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                                                      {itmDetail}
+                                                    </p>
+                                                  )}
+                                                </>
+                                              );
+                                            })()}
                                             <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
                                               <span>{itm.actions?.length || 0} aksiyon</span>
                                               {itm.responsible && <span>· {itm.responsible}</span>}
@@ -2470,9 +2527,14 @@ export default function FireSafetyDashboard() {
               })()}
             </div>
 
-            <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 pt-2 leading-snug">
-              {viewItemDetail?.item?.topic}
-            </DialogTitle>
+            {(() => {
+              const { title: dlgTitle } = splitItemTopic(viewItemDetail?.item?.topic, 85);
+              return (
+                <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 pt-2 leading-snug">
+                  {dlgTitle}
+                </DialogTitle>
+              );
+            })()}
             <DialogDescription className="text-xs text-slate-500">
               {viewItemDetail?.auditTitle} kapsamındaki tespit maddesi ve aksiyon süreci
             </DialogDescription>
@@ -2480,10 +2542,11 @@ export default function FireSafetyDashboard() {
 
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
             {/* 1. Tespit Bilgileri & Karar */}
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 space-y-3">
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 space-y-3.5">
               <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-700 pb-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Tespit & Karar Detayı
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-red-600" />
+                  Tespit & Madde Açıklaması
                 </span>
                 {viewItemDetail?.item?.deadlineDate && (
                   <span className="text-xs font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1">
@@ -2493,12 +2556,24 @@ export default function FireSafetyDashboard() {
                 )}
               </div>
 
+              {/* Saha Tespiti / İtfaiye Maddesi Tam Metni */}
+              <div className="bg-white dark:bg-slate-900 p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-2xs">
+                <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <span>Saha Tespit Detayı:</span>
+                  <span className="font-normal lowercase text-[10px] text-slate-400">tam metin</span>
+                </div>
+                <p className="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
+                  {viewItemDetail?.item?.topic}
+                </p>
+              </div>
+
+              {/* Alınan Karar / Aksiyon Planı */}
               {viewItemDetail?.item?.action ? (
-                <div>
-                  <div className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <div className="bg-amber-50/50 dark:bg-amber-950/20 p-3.5 rounded-lg border border-amber-200 dark:border-amber-800/50">
+                  <div className="text-[11px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider mb-1">
                     Alınan Karar / Yapılması Gereken Plan:
                   </div>
-                  <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
+                  <p className="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
                     {viewItemDetail.item.action}
                   </p>
                 </div>

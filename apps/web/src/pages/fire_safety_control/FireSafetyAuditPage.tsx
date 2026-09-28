@@ -963,9 +963,35 @@ export default function FireSafetyAuditPage() {
                         
                         {/* Konu + Kaynak + Kategori + Tespit Fotoğrafları */}
                         <td className="p-3 border-r border-slate-200 dark:border-slate-800 align-top space-y-2">
-                          <div className="font-semibold text-slate-900 dark:text-slate-100 leading-relaxed">
-                            {item.topic}
-                          </div>
+                          {(() => {
+                            const raw = (item.topic || '').trim();
+                            // İlk cümle veya ilk 90 karakteri başlık yap
+                            const sentenceEnd = raw.search(/[.:;]\s/);
+                            let title = raw;
+                            let detail = '';
+                            if (sentenceEnd !== -1 && sentenceEnd <= 90 && sentenceEnd > 15) {
+                              title = raw.slice(0, sentenceEnd + 1).trim();
+                              detail = raw.slice(sentenceEnd + 1).trim();
+                            } else if (raw.length > 90) {
+                              const cut = raw.lastIndexOf(' ', 90);
+                              const splitIndex = cut > 20 ? cut : 90;
+                              title = raw.slice(0, splitIndex).trim() + '...';
+                              detail = raw.slice(splitIndex).trim();
+                            }
+
+                            return (
+                              <div className="space-y-1">
+                                <div className="font-bold text-slate-900 dark:text-slate-100 text-xs md:text-sm leading-snug">
+                                  {title}
+                                </div>
+                                {detail && (
+                                  <p className="text-xs text-slate-600 dark:text-slate-400 font-normal leading-relaxed whitespace-pre-wrap">
+                                    {detail}
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })()}
                           
                           <div className="flex flex-wrap items-center gap-1.5 pt-1">
                             {item.source && (
