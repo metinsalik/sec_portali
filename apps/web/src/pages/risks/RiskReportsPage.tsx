@@ -188,10 +188,14 @@ export function RiskReportsPage() {
   };
 
   const handleSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
+    // Skorlar için ilk tıklamada yüksekten düşüğe (desc) sıralanması daha mantıklı
+    let defaultDirection: 'asc' | 'desc' = (key === 'initialScore' || key === 'finalScore') ? 'desc' : 'asc';
+    let direction: 'asc' | 'desc' = defaultDirection;
+
+    if (sortConfig && sortConfig.key === key) {
+      direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
     }
+    
     setSortConfig({ key, direction });
   };
 
@@ -954,8 +958,12 @@ export function RiskReportsPage() {
                           <th className="px-3.5 py-2.5 cursor-pointer hover:bg-muted" onClick={() => handleSort('hazard')}>
                             <div className="flex items-center gap-1">Tehlike ve Risk Tanımı <ArrowUpDown className="w-3 h-3"/></div>
                           </th>
-                          <th className="px-3.5 py-2.5 text-center">İlk Skor</th>
-                          <th className="px-3.5 py-2.5 text-center">Son Skor</th>
+                          <th className="px-3.5 py-2.5 cursor-pointer hover:bg-muted text-center" onClick={() => handleSort('initialScore')}>
+                            <div className="flex items-center justify-center gap-1">İlk Skor <ArrowUpDown className="w-3 h-3"/></div>
+                          </th>
+                          <th className="px-3.5 py-2.5 cursor-pointer hover:bg-muted text-center" onClick={() => handleSort('finalScore')}>
+                            <div className="flex items-center justify-center gap-1">Son Skor <ArrowUpDown className="w-3 h-3"/></div>
+                          </th>
                           <th className="px-3.5 py-2.5 cursor-pointer hover:bg-muted" onClick={() => handleSort('status')}>
                             <div className="flex items-center gap-1">Statü <ArrowUpDown className="w-3 h-3"/></div>
                           </th>
