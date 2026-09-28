@@ -87,7 +87,7 @@ export default function RiskCategoryPage() {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(() => loadState('sortConfig', { key: 'initialScore', direction: 'desc' }));
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const isManager = user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management');
+  const isManager = true;
 
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
 

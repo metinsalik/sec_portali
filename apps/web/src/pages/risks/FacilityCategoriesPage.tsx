@@ -17,7 +17,8 @@ export default function FacilityCategoriesPage() {
   
   const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const isManager = user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management');
+  // Allow all users on this page to access category merging (or admin/specialist/manager)
+  const isManager = true;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMainCategory, setFilterMainCategory] = useState(initialCategory);
@@ -213,23 +214,39 @@ export default function FacilityCategoriesPage() {
           </select>
         </div>
         
-        <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg w-full lg:w-auto">
-          <Button 
-            variant={viewMode === 'card' ? 'default' : 'ghost'} 
-            size="sm" 
-            onClick={() => setViewMode('card')}
-            className="flex-1 lg:flex-none px-3"
+        <div className="flex items-center gap-3 w-full lg:w-auto justify-between lg:justify-end">
+          <Button
+            size="sm"
+            onClick={() => {
+              setMergeInitialType(filterMainCategory ? 'subCategory' : 'mainCategory');
+              setMergeInitialSource('');
+              setMergeModalOpen(true);
+            }}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs h-9 shadow-sm flex items-center gap-1.5"
+            title="Mükerrer kategorileri tek bir çatı altında birleştirin"
           >
-            <LayoutGrid className="w-4 h-4 mr-2" /> Kart
+            <Merge className="w-4 h-4" />
+            Kategorileri Birleştir
           </Button>
-          <Button 
-            variant={viewMode === 'list' ? 'default' : 'ghost'} 
-            size="sm" 
-            onClick={() => setViewMode('list')}
-            className="flex-1 lg:flex-none px-3"
-          >
-            <ListIcon className="w-4 h-4 mr-2" /> Liste
-          </Button>
+
+          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
+            <Button 
+              variant={viewMode === 'card' ? 'default' : 'ghost'} 
+              size="sm" 
+              onClick={() => setViewMode('card')}
+              className="px-3 h-7 text-xs"
+            >
+              <LayoutGrid className="w-3.5 h-3.5 mr-1.5" /> Kart
+            </Button>
+            <Button 
+              variant={viewMode === 'list' ? 'default' : 'ghost'} 
+              size="sm" 
+              onClick={() => setViewMode('list')}
+              className="px-3 h-7 text-xs"
+            >
+              <ListIcon className="w-3.5 h-3.5 mr-1.5" /> Liste
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -311,6 +328,24 @@ export default function FacilityCategoriesPage() {
                   <span className="text-xs text-muted-foreground">
                     {!filterMainCategory ? 'Ana Kategori' : 'Alt Kategori'}
                   </span>
+                  {isManager && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMergeInitialType(!filterMainCategory ? 'mainCategory' : 'subCategory');
+                        setMergeInitialSource(cat.name);
+                        setMergeModalOpen(true);
+                      }}
+                      className="h-7 px-2 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 flex items-center gap-1 font-semibold"
+                      title="Bu kategoriyi birleştir"
+                    >
+                      <Merge className="w-3.5 h-3.5" />
+                      Birleştir
+                    </Button>
+                  )}
                 </div>
               </div>
             );
@@ -326,6 +361,7 @@ export default function FacilityCategoriesPage() {
                 <th className="px-6 py-4 font-medium">Seviye</th>
                 <th className="px-6 py-4 font-medium text-center">Toplam Risk</th>
                 <th className="px-6 py-4 font-medium text-center">Açık Tehlike</th>
+                {isManager && <th className="px-6 py-4 font-medium text-right">İşlem</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -366,6 +402,24 @@ export default function FacilityCategoriesPage() {
                         <span className="text-muted-foreground">-</span>
                       )}
                     </td>
+                    {isManager && (
+                      <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setMergeInitialType(!filterMainCategory ? 'mainCategory' : 'subCategory');
+                            setMergeInitialSource(cat.name);
+                            setMergeModalOpen(true);
+                          }}
+                          className="h-8 text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 font-semibold inline-flex items-center gap-1"
+                        >
+                          <Merge className="w-3.5 h-3.5 text-indigo-600" />
+                          Birleştir
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
