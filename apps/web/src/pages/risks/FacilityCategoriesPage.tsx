@@ -1,23 +1,31 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Search, LayoutGrid, List as ListIcon, ChevronRight, FolderTree } from 'lucide-react';
+import { ArrowLeft, Search, LayoutGrid, List as ListIcon, ChevronRight, FolderTree, Merge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import CategoryMergeModal from './CategoryMergeModal';
 
 const API = import.meta.env.VITE_API_URL || '';
 
 export default function FacilityCategoriesPage() {
   const { facilityId } = useParams<{ facilityId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const initialCategory = searchParams.get('category') || '';
   
   const token = localStorage.getItem('token');
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isManager = user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management');
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMainCategory, setFilterMainCategory] = useState(initialCategory);
   const [filterSubCategory, setFilterSubCategory] = useState('');
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+  const [mergeModalOpen, setMergeModalOpen] = useState(false);
+  const [mergeInitialSource, setMergeInitialSource] = useState('');
+  const [mergeInitialType, setMergeInitialType] = useState<'mainCategory' | 'subCategory'>('subCategory');
 
   useEffect(() => {
     setFilterMainCategory(searchParams.get('category') || '');
@@ -138,15 +146,33 @@ export default function FacilityCategoriesPage() {
   return (
     <div className="space-y-6">
       {/* Başlık */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/risks/facility/${facilityId}`)} className="h-8 px-2">
-          <ArrowLeft className="w-4 h-4 mr-1" /> {facility?.name || 'Tesis'}
-        </Button>
-        <div className="h-5 w-px bg-border" />
-        <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold truncate">Tüm Kategoriler</h1>
-          <p className="text-xs text-muted-foreground">{facility?.name} kapsamındaki tüm risk kategorileri</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => navigate(`/risks/facility/${facilityId}`)} className="h-8 px-2">
+            <ArrowLeft className="w-4 h-4 mr-1" /> {facility?.name || 'Tesis'}
+          </Button>
+          <div className="h-5 w-px bg-border" />
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold truncate">Tüm Kategoriler</h1>
+            <p className="text-xs text-muted-foreground">{facility?.name} kapsamındaki tüm risk kategorileri</p>
+          </div>
         </div>
+
+        {isManager && (
+          <Button
+            size="sm"
+            onClick={() => {
+              setMergeInitialType(filterMainCategory ? 'subCategory' : 'subCategory');
+              setMergeInitialSource('');
+              setMergeModalOpen(true);
+            }}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-9 shadow-xs flex items-center gap-1.5 self-start sm:self-auto"
+            title="Excel yüklemelerinde farklı yazılmış mükerrer kategorileri tek bir çatı altında birleştirin"
+          >
+            <Merge className="w-4 h-4" />
+            Kategorileri Birleştir
+          </Button>
+        )}
       </div>
 
       {/* Arama ve Görünüm Modu */}
@@ -346,6 +372,23 @@ export default function FacilityCategoriesPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Yönetici Kategori Birleştirme Modalı */}
+      {isManager && (
+        <CategoryMergeModal
+          open={mergeModalOpen}
+          onOpenChange={setMergeModalOpen}
+          facilityId={facilityId || ''}
+          facilityRisks={facilityRisks}
+          initialMergeType={mergeInitialType}
+          initialSourceCategory={mergeInitialSource}
+          initialSourceMainCategory={filterMainCategory}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['facility-risks', facilityId] });
+            queryClient.invalidateQueries({ queryKey: ['risk-settings'] });
+          }}
+        />
       )}
     </div>
   );

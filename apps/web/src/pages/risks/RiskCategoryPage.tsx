@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import { useState, useMemo, useEffect } from 'react';
 import {
-  ArrowLeft, Search, Eye, Pencil, Trash2, ArrowUpDown, AlertTriangle, Building2
+  ArrowLeft, Search, Eye, Pencil, Trash2, ArrowUpDown, AlertTriangle, Building2, Merge
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import RiskExcelImport from './RiskExcelImport';
 import FacilityAdvancedDashboard from '@/components/risks/FacilityAdvancedDashboard';
+import CategoryMergeModal from './CategoryMergeModal';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -83,8 +84,12 @@ export default function RiskCategoryPage() {
   const [filterInitialLevel, setFilterInitialLevel] = useState<string>(() => loadState('filterInitialLevel', ''));
   const [filterFinalLevel, setFilterFinalLevel] = useState<string>(() => loadState('filterFinalLevel', ''));
   const [searchTerm, setSearchTerm] = useState<string>(() => loadState('searchTerm', ''));
-
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(() => loadState('sortConfig', { key: 'initialScore', direction: 'desc' }));
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isManager = user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management');
+
+  const [mergeModalOpen, setMergeModalOpen] = useState(false);
 
   useEffect(() => {
     sessionStorage.setItem(storageKey, JSON.stringify({
@@ -318,6 +323,18 @@ export default function RiskCategoryPage() {
             <p className="text-xs text-muted-foreground font-mono mt-0.5">{facility?.name || 'Tesis'} Kapsamında</p>
           </div>
         </div>
+
+        {isManager && (
+          <Button
+            size="sm"
+            onClick={() => setMergeModalOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-9 shadow-xs flex items-center gap-1.5"
+            title="Bu kategoriyi başka bir ana veya alt kategoriyle birleştirin"
+          >
+            <Merge className="w-4 h-4" />
+            Bu Kategoriyi Birleştir
+          </Button>
+        )}
       </div>
 
       {/* DASHBOARD KISMI */}
@@ -639,6 +656,25 @@ export default function RiskCategoryPage() {
           </div>
         )}
       </Card>
+
+      {/* Yönetici Kategori Birleştirme Modalı */}
+      {isManager && (
+        <CategoryMergeModal
+          open={mergeModalOpen}
+          onOpenChange={setMergeModalOpen}
+          facilityId={facilityId || ''}
+          facilityRisks={allRisks}
+          initialMergeType={subCat ? 'subCategory' : 'mainCategory'}
+          initialSourceCategory={subCat || mainCat}
+          initialSourceMainCategory={mainCat}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['facility-risks', facilityId] });
+            queryClient.invalidateQueries({ queryKey: ['risk-settings'] });
+            // Eğer birleştirilen kategori mevcut sayfadaki kategori ise kategoriler listesine dön
+            navigate(`/risks/facility/${facilityId}/categories`);
+          }}
+        />
+      )}
     </div>
   );
 }

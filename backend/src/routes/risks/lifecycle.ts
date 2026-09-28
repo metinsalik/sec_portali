@@ -872,4 +872,167 @@ router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) =>
   }
 });
 
+// POST /api/risks/lifecycle/merge-categories — Yöneticiler için Kategori Birleştirme
+router.post('/merge-categories', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ error: 'Yetkilendirme gerekli.' });
+
+    const isManager = user.isAdmin || user.isManagement || user.roles?.includes('admin') || user.roles?.includes('management');
+    if (!isManager) {
+      return res.status(403).json({ error: 'Bu işlem yalnızca yöneticiler tarafından gerçekleştirilebilir.' });
+    }
+
+    const {
+      facilityId,
+      mergeType = 'subCategory', // 'mainCategory' | 'subCategory'
+      sourceName,      // Birleştirilecek eski isim (Örn: "İnşaat ve Renovasyon ile ilgili riskler")
+      targetName,      // Hedef birleşik isim (Örn: "İnşaat Renovasyon")
+      sourceMainCategory, // Alt kategori birleştiriliyorsa kaynak ana kategori (opsiyonel)
+      targetMainCategory  // Alt kategori taşınıyorsa hedef ana kategori (opsiyonel)
+    } = req.body;
+
+    if (!facilityId) {
+      return res.status(400).json({ error: 'facilityId zorunludur.' });
+    }
+
+    if (!sourceName || !targetName) {
+      return res.status(400).json({ error: 'Kaynak (sourceName) ve Hedef (targetName) kategori adları zorunludur.' });
+    }
+
+    const trimmedSource = String(sourceName).trim();
+    const trimmedTarget = String(targetName).trim();
+
+    if (trimmedSource.toLocaleLowerCase('tr') === trimmedTarget.toLocaleLowerCase('tr') &&
+        (!sourceMainCategory || !targetMainCategory || sourceMainCategory.trim().toLocaleLowerCase('tr') === targetMainCategory.trim().toLocaleLowerCase('tr'))) {
+      return res.status(400).json({ error: 'Kaynak ve hedef kategori aynı olamaz.' });
+    }
+
+    // Tesis erişim kontrolü
+    const hasAccess = await checkFacilityAccess(req, facilityId);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
+    }
+
+    // Tesisin lokasyon ID'lerini topla
+    const facilityLocations = await prisma.facilityLocation.findMany({
+      where: { facilityId },
+      select: { id: true }
+    });
+    const locationIds = facilityLocations.map(l => l.id);
+
+    let updatedCount = 0;
+
+    await prisma.$transaction(async (tx) => {
+      if (mergeType === 'mainCategory') {
+        // Ana kategori birleştirme: riskCategory = trimmedSource olan tüm riskleri trimmedTarget yap
+        const result = await tx.riskLifecycle.updateMany({
+          where: {
+            locationId: { in: locationIds },
+            riskCategory: {
+              equals: trimmedSource,
+              mode: 'insensitive'
+            }
+          },
+          data: {
+            riskCategory: trimmedTarget
+          }
+        });
+        updatedCount = result.count;
+
+        // RiskCategorySetting tablosunda da varsa güncelle/birleştir
+        const sourceSetting = await tx.riskCategorySetting.findFirst({
+          where: {
+            facilityId,
+            name: { equals: trimmedSource, mode: 'insensitive' }
+          },
+          include: { subCategories: true }
+        });
+
+        if (sourceSetting) {
+          let targetSetting = await tx.riskCategorySetting.findFirst({
+            where: {
+              facilityId,
+              name: { equals: trimmedTarget, mode: 'insensitive' }
+            }
+          });
+
+          if (!targetSetting) {
+            targetSetting = await tx.riskCategorySetting.create({
+              data: {
+                facilityId,
+                name: trimmedTarget
+              }
+            });
+          }
+
+          // Kaynak alt kategorilerini hedef kategoriye aktar
+          for (const sub of sourceSetting.subCategories) {
+            const existingSub = await tx.riskSubCategorySetting.findFirst({
+              where: {
+                categoryId: targetSetting.id,
+                name: { equals: sub.name, mode: 'insensitive' }
+              }
+            });
+            if (!existingSub) {
+              await tx.riskSubCategorySetting.update({
+                where: { id: sub.id },
+                data: { categoryId: targetSetting.id }
+              });
+            } else {
+              await tx.riskSubCategorySetting.delete({
+                where: { id: sub.id }
+              });
+            }
+          }
+
+          // Boşalan kaynak ayar kaydını sil
+          await tx.riskCategorySetting.delete({
+            where: { id: sourceSetting.id }
+          });
+        }
+      } else {
+        // Alt kategori birleştirme:
+        const whereClause: any = {
+          locationId: { in: locationIds },
+          subCategory: {
+            equals: trimmedSource,
+            mode: 'insensitive'
+          }
+        };
+
+        if (sourceMainCategory) {
+          whereClause.riskCategory = {
+            equals: String(sourceMainCategory).trim(),
+            mode: 'insensitive'
+          };
+        }
+
+        const dataUpdate: any = {
+          subCategory: trimmedTarget
+        };
+
+        if (targetMainCategory) {
+          dataUpdate.riskCategory = String(targetMainCategory).trim();
+        }
+
+        const result = await tx.riskLifecycle.updateMany({
+          where: whereClause,
+          data: dataUpdate
+        });
+        updatedCount = result.count;
+      }
+    });
+
+    res.json({
+      success: true,
+      message: `"${trimmedSource}" kategorisine ait ${updatedCount} adet risk kaydı başarıyla "${trimmedTarget}" ile birleştirildi.`,
+      updatedCount
+    });
+  } catch (error) {
+    console.error('Error merging categories:', error);
+    res.status(500).json({ error: 'Kategoriler birleştirilirken hata oluştu.' });
+  }
+});
+
 export default router;
