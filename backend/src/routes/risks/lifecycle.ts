@@ -1,7 +1,8 @@
 import express, { Request, Response } from 'express';
-import { AuthRequest } from "../../middleware/auth";
 import { PrismaClient } from '@prisma/client';
+import { AuthRequest } from "../../middleware/auth";
 import { authMiddleware } from '../../middleware/auth';
+import { suggestFmsProgram } from './settings';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -319,6 +320,8 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res: Response) =
       const finalLevel = scoreToLevel(finalScore);
       const status = deriveStatus(row);
 
+      const fmsProgramValue = row.fmsProgram || suggestFmsProgram(row.riskCategory || 'Genel', row.subCategory);
+
       try {
         await prisma.riskLifecycle.create({
           data: {
@@ -326,6 +329,7 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res: Response) =
             riskNo:           parseInt(row.riskNo) || 1,
             riskCategory:     row.riskCategory || 'Genel',
             subCategory:      row.subCategory || null,
+            fmsProgram:       fmsProgramValue,
             area:             row.area || deptName,
             method:           row.method || 'Fine Kinney',
             activity:         row.activity || '',
@@ -472,12 +476,19 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     if (status) where.status = status as string;
 
+    const { fmsProgram } = req.query as Record<string, any>;
+    if (fmsProgram && fmsProgram !== 'ALL') {
+      where.fmsProgram = fmsProgram;
+    }
+
     if (search) {
       where.OR = [
         { hazard: { contains: search as string, mode: 'insensitive' } },
         { riskDescription: { contains: search as string, mode: 'insensitive' } },
         { area: { contains: search as string, mode: 'insensitive' } },
         { riskCategory: { contains: search as string, mode: 'insensitive' } },
+        { subCategory: { contains: search as string, mode: 'insensitive' } },
+        { fmsProgram: { contains: search as string, mode: 'insensitive' } },
       ];
     }
 
@@ -586,6 +597,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
         riskNo:          nextRiskNo,
         riskCategory:    riskCategory || 'Genel',
         subCategory:     subCategory || null,
+        fmsProgram:      req.body.fmsProgram || suggestFmsProgram(riskCategory || 'Genel', subCategory),
         area:            area || '',
         method:          method || 'Fine Kinney',
         activity:        activity || '',

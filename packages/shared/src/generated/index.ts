@@ -138,13 +138,13 @@ export const ReportTemplateScalarFieldEnumSchema = z.enum(['id','code','name','v
 
 export const RiskExpertFacilityScalarFieldEnumSchema = z.enum(['expertUsername','facilityId']);
 
-export const RiskLifecycleScalarFieldEnumSchema = z.enum(['id','locationId','riskNo','riskCategory','subCategory','area','method','activity','hazard','riskDescription','initialCondition','initialImage','initialImages','initialProb','initialFreq','initialSev','initialScore','initialLevel','firstActionPlan','actionsTaken','actionDate','actionBy','actionImage','actionImages','followUpMeasure','extraImprovement','finalProb','finalFreq','finalSev','finalScore','finalLevel','status','statusDate','createdBy','createdAt','updatedAt','affectedPeople','controlResponsible','controlResult','detectionDate','dueDate','effectivenessMethod','impactDamage','improvementResponsible','legislation','postImprovementDueDate','dueDatePeriod','postImprovementResponsible','effectivenessImages','documents']);
+export const RiskLifecycleScalarFieldEnumSchema = z.enum(['id','locationId','riskNo','riskCategory','subCategory','area','method','activity','hazard','riskDescription','initialCondition','initialImage','initialImages','initialProb','initialFreq','initialSev','initialScore','initialLevel','firstActionPlan','actionsTaken','actionDate','actionBy','actionImage','actionImages','followUpMeasure','extraImprovement','finalProb','finalFreq','finalSev','finalScore','finalLevel','status','statusDate','createdBy','createdAt','updatedAt','affectedPeople','controlResponsible','controlResult','detectionDate','dueDate','effectivenessMethod','impactDamage','improvementResponsible','legislation','postImprovementDueDate','dueDatePeriod','postImprovementResponsible','effectivenessImages','documents','fmsProgram']);
 
 export const RiskAuditLogScalarFieldEnumSchema = z.enum(['id','riskId','action','details','changedFields','username','userFullName','createdAt']);
 
 export const RiskDepartmentSettingScalarFieldEnumSchema = z.enum(['id','facilityId','name','createdAt','updatedAt']);
 
-export const RiskCategorySettingScalarFieldEnumSchema = z.enum(['id','facilityId','name','createdAt','updatedAt']);
+export const RiskCategorySettingScalarFieldEnumSchema = z.enum(['id','facilityId','name','fmsProgram','createdAt','updatedAt']);
 
 export const RiskSubCategorySettingScalarFieldEnumSchema = z.enum(['id','name','categoryId','createdAt','updatedAt']);
 
@@ -1847,6 +1847,7 @@ export const RiskLifecycleSchema = z.object({
   postImprovementResponsible: z.string().nullable(),
   effectivenessImages: z.string().array(),
   documents: JsonValueSchema.nullable(),
+  fmsProgram: z.string().nullable(),
 })
 
 export type RiskLifecycle = z.infer<typeof RiskLifecycleSchema>
@@ -1937,6 +1938,7 @@ export const RiskCategorySettingSchema = z.object({
   id: z.number().int(),
   facilityId: z.string(),
   name: z.string(),
+  fmsProgram: z.string().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 })
@@ -7409,6 +7411,7 @@ export const RiskLifecycleSelectSchema: z.ZodType<Prisma.RiskLifecycleSelect> = 
   postImprovementResponsible: z.boolean().optional(),
   effectivenessImages: z.boolean().optional(),
   documents: z.boolean().optional(),
+  fmsProgram: z.boolean().optional(),
   auditLogs: z.union([z.boolean(),z.lazy(() => RiskAuditLogFindManyArgsSchema)]).optional(),
   location: z.union([z.boolean(),z.lazy(() => FacilityLocationArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => RiskLifecycleCountOutputTypeArgsSchema)]).optional(),
@@ -7487,6 +7490,7 @@ export const RiskCategorySettingSelectSchema: z.ZodType<Prisma.RiskCategorySetti
   id: z.boolean().optional(),
   facilityId: z.boolean().optional(),
   name: z.boolean().optional(),
+  fmsProgram: z.boolean().optional(),
   createdAt: z.boolean().optional(),
   updatedAt: z.boolean().optional(),
   facility: z.union([z.boolean(),z.lazy(() => FacilityArgsSchema)]).optional(),
@@ -15071,6 +15075,7 @@ export const RiskLifecycleWhereInputSchema: z.ZodType<Prisma.RiskLifecycleWhereI
   postImprovementResponsible: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   effectivenessImages: z.lazy(() => StringNullableListFilterSchema).optional(),
   documents: z.lazy(() => JsonNullableFilterSchema).optional(),
+  fmsProgram: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   auditLogs: z.lazy(() => RiskAuditLogListRelationFilterSchema).optional(),
   location: z.union([ z.lazy(() => FacilityLocationNullableRelationFilterSchema), z.lazy(() => FacilityLocationWhereInputSchema) ]).optional().nullable(),
 }).strict();
@@ -15126,6 +15131,7 @@ export const RiskLifecycleOrderByWithRelationInputSchema: z.ZodType<Prisma.RiskL
   postImprovementResponsible: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   effectivenessImages: z.lazy(() => SortOrderSchema).optional(),
   documents: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  fmsProgram: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   auditLogs: z.lazy(() => RiskAuditLogOrderByRelationAggregateInputSchema).optional(),
   location: z.lazy(() => FacilityLocationOrderByWithRelationInputSchema).optional(),
 }).strict();
@@ -15187,6 +15193,7 @@ export const RiskLifecycleWhereUniqueInputSchema: z.ZodType<Prisma.RiskLifecycle
   postImprovementResponsible: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   effectivenessImages: z.lazy(() => StringNullableListFilterSchema).optional(),
   documents: z.lazy(() => JsonNullableFilterSchema).optional(),
+  fmsProgram: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   auditLogs: z.lazy(() => RiskAuditLogListRelationFilterSchema).optional(),
   location: z.union([ z.lazy(() => FacilityLocationNullableRelationFilterSchema), z.lazy(() => FacilityLocationWhereInputSchema) ]).optional().nullable(),
 }).strict());
@@ -15242,6 +15249,7 @@ export const RiskLifecycleOrderByWithAggregationInputSchema: z.ZodType<Prisma.Ri
   postImprovementResponsible: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   effectivenessImages: z.lazy(() => SortOrderSchema).optional(),
   documents: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  fmsProgram: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   _count: z.lazy(() => RiskLifecycleCountOrderByAggregateInputSchema).optional(),
   _avg: z.lazy(() => RiskLifecycleAvgOrderByAggregateInputSchema).optional(),
   _max: z.lazy(() => RiskLifecycleMaxOrderByAggregateInputSchema).optional(),
@@ -15303,6 +15311,7 @@ export const RiskLifecycleScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma
   postImprovementResponsible: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   effectivenessImages: z.lazy(() => StringNullableListFilterSchema).optional(),
   documents: z.lazy(() => JsonNullableWithAggregatesFilterSchema).optional(),
+  fmsProgram: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
 }).strict();
 
 export const RiskAuditLogWhereInputSchema: z.ZodType<Prisma.RiskAuditLogWhereInput> = z.object({
@@ -15458,6 +15467,7 @@ export const RiskCategorySettingWhereInputSchema: z.ZodType<Prisma.RiskCategoryS
   id: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
   facilityId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   name: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  fmsProgram: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   facility: z.union([ z.lazy(() => FacilityRelationFilterSchema), z.lazy(() => FacilityWhereInputSchema) ]).optional(),
@@ -15468,6 +15478,7 @@ export const RiskCategorySettingOrderByWithRelationInputSchema: z.ZodType<Prisma
   id: z.lazy(() => SortOrderSchema).optional(),
   facilityId: z.lazy(() => SortOrderSchema).optional(),
   name: z.lazy(() => SortOrderSchema).optional(),
+  fmsProgram: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
   facility: z.lazy(() => FacilityOrderByWithRelationInputSchema).optional(),
@@ -15494,6 +15505,7 @@ export const RiskCategorySettingWhereUniqueInputSchema: z.ZodType<Prisma.RiskCat
   NOT: z.union([ z.lazy(() => RiskCategorySettingWhereInputSchema), z.lazy(() => RiskCategorySettingWhereInputSchema).array() ]).optional(),
   facilityId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   name: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  fmsProgram: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   facility: z.union([ z.lazy(() => FacilityRelationFilterSchema), z.lazy(() => FacilityWhereInputSchema) ]).optional(),
@@ -15504,6 +15516,7 @@ export const RiskCategorySettingOrderByWithAggregationInputSchema: z.ZodType<Pri
   id: z.lazy(() => SortOrderSchema).optional(),
   facilityId: z.lazy(() => SortOrderSchema).optional(),
   name: z.lazy(() => SortOrderSchema).optional(),
+  fmsProgram: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
   _count: z.lazy(() => RiskCategorySettingCountOrderByAggregateInputSchema).optional(),
@@ -15520,6 +15533,7 @@ export const RiskCategorySettingScalarWhereWithAggregatesInputSchema: z.ZodType<
   id: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
   facilityId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
   name: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  fmsProgram: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
 }).strict();
@@ -29778,6 +29792,7 @@ export const RiskLifecycleCreateInputSchema: z.ZodType<Prisma.RiskLifecycleCreat
   postImprovementResponsible: z.string().optional().nullable(),
   effectivenessImages: z.union([ z.lazy(() => RiskLifecycleCreateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
   documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  fmsProgram: z.string().optional().nullable(),
   auditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutRiskInputSchema).optional(),
   location: z.lazy(() => FacilityLocationCreateNestedOneWithoutRisksInputSchema).optional(),
 }).strict();
@@ -29833,6 +29848,7 @@ export const RiskLifecycleUncheckedCreateInputSchema: z.ZodType<Prisma.RiskLifec
   postImprovementResponsible: z.string().optional().nullable(),
   effectivenessImages: z.union([ z.lazy(() => RiskLifecycleCreateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
   documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  fmsProgram: z.string().optional().nullable(),
   auditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutRiskInputSchema).optional(),
 }).strict();
 
@@ -29886,6 +29902,7 @@ export const RiskLifecycleUpdateInputSchema: z.ZodType<Prisma.RiskLifecycleUpdat
   postImprovementResponsible: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   effectivenessImages: z.union([ z.lazy(() => RiskLifecycleUpdateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
   documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  fmsProgram: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   auditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutRiskNestedInputSchema).optional(),
   location: z.lazy(() => FacilityLocationUpdateOneWithoutRisksNestedInputSchema).optional(),
 }).strict();
@@ -29941,6 +29958,7 @@ export const RiskLifecycleUncheckedUpdateInputSchema: z.ZodType<Prisma.RiskLifec
   postImprovementResponsible: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   effectivenessImages: z.union([ z.lazy(() => RiskLifecycleUpdateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
   documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  fmsProgram: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   auditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutRiskNestedInputSchema).optional(),
 }).strict();
 
@@ -29995,6 +30013,7 @@ export const RiskLifecycleCreateManyInputSchema: z.ZodType<Prisma.RiskLifecycleC
   postImprovementResponsible: z.string().optional().nullable(),
   effectivenessImages: z.union([ z.lazy(() => RiskLifecycleCreateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
   documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  fmsProgram: z.string().optional().nullable(),
 }).strict();
 
 export const RiskLifecycleUpdateManyMutationInputSchema: z.ZodType<Prisma.RiskLifecycleUpdateManyMutationInput> = z.object({
@@ -30047,6 +30066,7 @@ export const RiskLifecycleUpdateManyMutationInputSchema: z.ZodType<Prisma.RiskLi
   postImprovementResponsible: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   effectivenessImages: z.union([ z.lazy(() => RiskLifecycleUpdateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
   documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  fmsProgram: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
 }).strict();
 
 export const RiskLifecycleUncheckedUpdateManyInputSchema: z.ZodType<Prisma.RiskLifecycleUncheckedUpdateManyInput> = z.object({
@@ -30100,6 +30120,7 @@ export const RiskLifecycleUncheckedUpdateManyInputSchema: z.ZodType<Prisma.RiskL
   postImprovementResponsible: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   effectivenessImages: z.union([ z.lazy(() => RiskLifecycleUpdateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
   documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  fmsProgram: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
 }).strict();
 
 export const RiskAuditLogCreateInputSchema: z.ZodType<Prisma.RiskAuditLogCreateInput> = z.object({
@@ -30231,6 +30252,7 @@ export const RiskDepartmentSettingUncheckedUpdateManyInputSchema: z.ZodType<Pris
 
 export const RiskCategorySettingCreateInputSchema: z.ZodType<Prisma.RiskCategorySettingCreateInput> = z.object({
   name: z.string(),
+  fmsProgram: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   facility: z.lazy(() => FacilityCreateNestedOneWithoutRiskCategorySettingsInputSchema),
@@ -30241,6 +30263,7 @@ export const RiskCategorySettingUncheckedCreateInputSchema: z.ZodType<Prisma.Ris
   id: z.number().int().optional(),
   facilityId: z.string(),
   name: z.string(),
+  fmsProgram: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   subCategories: z.lazy(() => RiskSubCategorySettingUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
@@ -30248,6 +30271,7 @@ export const RiskCategorySettingUncheckedCreateInputSchema: z.ZodType<Prisma.Ris
 
 export const RiskCategorySettingUpdateInputSchema: z.ZodType<Prisma.RiskCategorySettingUpdateInput> = z.object({
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fmsProgram: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   facility: z.lazy(() => FacilityUpdateOneRequiredWithoutRiskCategorySettingsNestedInputSchema).optional(),
@@ -30258,6 +30282,7 @@ export const RiskCategorySettingUncheckedUpdateInputSchema: z.ZodType<Prisma.Ris
   id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fmsProgram: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   subCategories: z.lazy(() => RiskSubCategorySettingUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
@@ -30267,12 +30292,14 @@ export const RiskCategorySettingCreateManyInputSchema: z.ZodType<Prisma.RiskCate
   id: z.number().int().optional(),
   facilityId: z.string(),
   name: z.string(),
+  fmsProgram: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
 }).strict();
 
 export const RiskCategorySettingUpdateManyMutationInputSchema: z.ZodType<Prisma.RiskCategorySettingUpdateManyMutationInput> = z.object({
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fmsProgram: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
@@ -30281,6 +30308,7 @@ export const RiskCategorySettingUncheckedUpdateManyInputSchema: z.ZodType<Prisma
   id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fmsProgram: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
@@ -44180,6 +44208,7 @@ export const RiskLifecycleCountOrderByAggregateInputSchema: z.ZodType<Prisma.Ris
   postImprovementResponsible: z.lazy(() => SortOrderSchema).optional(),
   effectivenessImages: z.lazy(() => SortOrderSchema).optional(),
   documents: z.lazy(() => SortOrderSchema).optional(),
+  fmsProgram: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const RiskLifecycleAvgOrderByAggregateInputSchema: z.ZodType<Prisma.RiskLifecycleAvgOrderByAggregateInput> = z.object({
@@ -44241,6 +44270,7 @@ export const RiskLifecycleMaxOrderByAggregateInputSchema: z.ZodType<Prisma.RiskL
   postImprovementDueDate: z.lazy(() => SortOrderSchema).optional(),
   dueDatePeriod: z.lazy(() => SortOrderSchema).optional(),
   postImprovementResponsible: z.lazy(() => SortOrderSchema).optional(),
+  fmsProgram: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const RiskLifecycleMinOrderByAggregateInputSchema: z.ZodType<Prisma.RiskLifecycleMinOrderByAggregateInput> = z.object({
@@ -44290,6 +44320,7 @@ export const RiskLifecycleMinOrderByAggregateInputSchema: z.ZodType<Prisma.RiskL
   postImprovementDueDate: z.lazy(() => SortOrderSchema).optional(),
   dueDatePeriod: z.lazy(() => SortOrderSchema).optional(),
   postImprovementResponsible: z.lazy(() => SortOrderSchema).optional(),
+  fmsProgram: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
 export const RiskLifecycleSumOrderByAggregateInputSchema: z.ZodType<Prisma.RiskLifecycleSumOrderByAggregateInput> = z.object({
@@ -44401,6 +44432,7 @@ export const RiskCategorySettingCountOrderByAggregateInputSchema: z.ZodType<Pris
   id: z.lazy(() => SortOrderSchema).optional(),
   facilityId: z.lazy(() => SortOrderSchema).optional(),
   name: z.lazy(() => SortOrderSchema).optional(),
+  fmsProgram: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
@@ -44413,6 +44445,7 @@ export const RiskCategorySettingMaxOrderByAggregateInputSchema: z.ZodType<Prisma
   id: z.lazy(() => SortOrderSchema).optional(),
   facilityId: z.lazy(() => SortOrderSchema).optional(),
   name: z.lazy(() => SortOrderSchema).optional(),
+  fmsProgram: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
@@ -44421,6 +44454,7 @@ export const RiskCategorySettingMinOrderByAggregateInputSchema: z.ZodType<Prisma
   id: z.lazy(() => SortOrderSchema).optional(),
   facilityId: z.lazy(() => SortOrderSchema).optional(),
   name: z.lazy(() => SortOrderSchema).optional(),
+  fmsProgram: z.lazy(() => SortOrderSchema).optional(),
   createdAt: z.lazy(() => SortOrderSchema).optional(),
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
@@ -66060,6 +66094,7 @@ export const ReconciliationCreateManyFacilityInputEnvelopeSchema: z.ZodType<Pris
 
 export const RiskCategorySettingCreateWithoutFacilityInputSchema: z.ZodType<Prisma.RiskCategorySettingCreateWithoutFacilityInput> = z.object({
   name: z.string(),
+  fmsProgram: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   subCategories: z.lazy(() => RiskSubCategorySettingCreateNestedManyWithoutCategoryInputSchema).optional(),
@@ -66068,6 +66103,7 @@ export const RiskCategorySettingCreateWithoutFacilityInputSchema: z.ZodType<Pris
 export const RiskCategorySettingUncheckedCreateWithoutFacilityInputSchema: z.ZodType<Prisma.RiskCategorySettingUncheckedCreateWithoutFacilityInput> = z.object({
   id: z.number().int().optional(),
   name: z.string(),
+  fmsProgram: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   subCategories: z.lazy(() => RiskSubCategorySettingUncheckedCreateNestedManyWithoutCategoryInputSchema).optional(),
@@ -67884,6 +67920,7 @@ export const RiskCategorySettingScalarWhereInputSchema: z.ZodType<Prisma.RiskCat
   id: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
   facilityId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
   name: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  fmsProgram: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
 }).strict();
@@ -76327,6 +76364,7 @@ export const RiskLifecycleCreateWithoutAuditLogsInputSchema: z.ZodType<Prisma.Ri
   postImprovementResponsible: z.string().optional().nullable(),
   effectivenessImages: z.union([ z.lazy(() => RiskLifecycleCreateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
   documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  fmsProgram: z.string().optional().nullable(),
   location: z.lazy(() => FacilityLocationCreateNestedOneWithoutRisksInputSchema).optional(),
 }).strict();
 
@@ -76381,6 +76419,7 @@ export const RiskLifecycleUncheckedCreateWithoutAuditLogsInputSchema: z.ZodType<
   postImprovementResponsible: z.string().optional().nullable(),
   effectivenessImages: z.union([ z.lazy(() => RiskLifecycleCreateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
   documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  fmsProgram: z.string().optional().nullable(),
 }).strict();
 
 export const RiskLifecycleCreateOrConnectWithoutAuditLogsInputSchema: z.ZodType<Prisma.RiskLifecycleCreateOrConnectWithoutAuditLogsInput> = z.object({
@@ -76534,6 +76573,7 @@ export const RiskLifecycleUpdateWithoutAuditLogsInputSchema: z.ZodType<Prisma.Ri
   postImprovementResponsible: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   effectivenessImages: z.union([ z.lazy(() => RiskLifecycleUpdateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
   documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  fmsProgram: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   location: z.lazy(() => FacilityLocationUpdateOneWithoutRisksNestedInputSchema).optional(),
 }).strict();
 
@@ -76588,6 +76628,7 @@ export const RiskLifecycleUncheckedUpdateWithoutAuditLogsInputSchema: z.ZodType<
   postImprovementResponsible: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   effectivenessImages: z.union([ z.lazy(() => RiskLifecycleUpdateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
   documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  fmsProgram: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
 }).strict();
 
 export const UserUpsertWithoutRiskAuditLogsInputSchema: z.ZodType<Prisma.UserUpsertWithoutRiskAuditLogsInput> = z.object({
@@ -77325,6 +77366,7 @@ export const RiskSubCategorySettingScalarWhereInputSchema: z.ZodType<Prisma.Risk
 
 export const RiskCategorySettingCreateWithoutSubCategoriesInputSchema: z.ZodType<Prisma.RiskCategorySettingCreateWithoutSubCategoriesInput> = z.object({
   name: z.string(),
+  fmsProgram: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   facility: z.lazy(() => FacilityCreateNestedOneWithoutRiskCategorySettingsInputSchema),
@@ -77334,6 +77376,7 @@ export const RiskCategorySettingUncheckedCreateWithoutSubCategoriesInputSchema: 
   id: z.number().int().optional(),
   facilityId: z.string(),
   name: z.string(),
+  fmsProgram: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
 }).strict();
@@ -77356,6 +77399,7 @@ export const RiskCategorySettingUpdateToOneWithWhereWithoutSubCategoriesInputSch
 
 export const RiskCategorySettingUpdateWithoutSubCategoriesInputSchema: z.ZodType<Prisma.RiskCategorySettingUpdateWithoutSubCategoriesInput> = z.object({
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fmsProgram: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   facility: z.lazy(() => FacilityUpdateOneRequiredWithoutRiskCategorySettingsNestedInputSchema).optional(),
@@ -77365,6 +77409,7 @@ export const RiskCategorySettingUncheckedUpdateWithoutSubCategoriesInputSchema: 
   id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fmsProgram: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
@@ -94155,6 +94200,7 @@ export const RiskLifecycleCreateWithoutLocationInputSchema: z.ZodType<Prisma.Ris
   postImprovementResponsible: z.string().optional().nullable(),
   effectivenessImages: z.union([ z.lazy(() => RiskLifecycleCreateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
   documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  fmsProgram: z.string().optional().nullable(),
   auditLogs: z.lazy(() => RiskAuditLogCreateNestedManyWithoutRiskInputSchema).optional(),
 }).strict();
 
@@ -94208,6 +94254,7 @@ export const RiskLifecycleUncheckedCreateWithoutLocationInputSchema: z.ZodType<P
   postImprovementResponsible: z.string().optional().nullable(),
   effectivenessImages: z.union([ z.lazy(() => RiskLifecycleCreateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
   documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  fmsProgram: z.string().optional().nullable(),
   auditLogs: z.lazy(() => RiskAuditLogUncheckedCreateNestedManyWithoutRiskInputSchema).optional(),
 }).strict();
 
@@ -94863,6 +94910,7 @@ export const RiskLifecycleScalarWhereInputSchema: z.ZodType<Prisma.RiskLifecycle
   postImprovementResponsible: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
   effectivenessImages: z.lazy(() => StringNullableListFilterSchema).optional(),
   documents: z.lazy(() => JsonNullableFilterSchema).optional(),
+  fmsProgram: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
 }).strict();
 
 export const HazmatIncidentUpsertWithWhereUniqueWithoutLocationInputSchema: z.ZodType<Prisma.HazmatIncidentUpsertWithWhereUniqueWithoutLocationInput> = z.object({
@@ -109481,6 +109529,7 @@ export const ReconciliationCreateManyFacilityInputSchema: z.ZodType<Prisma.Recon
 export const RiskCategorySettingCreateManyFacilityInputSchema: z.ZodType<Prisma.RiskCategorySettingCreateManyFacilityInput> = z.object({
   id: z.number().int().optional(),
   name: z.string(),
+  fmsProgram: z.string().optional().nullable(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
 }).strict();
@@ -110365,6 +110414,7 @@ export const ReconciliationUncheckedUpdateManyWithoutFacilityInputSchema: z.ZodT
 
 export const RiskCategorySettingUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.RiskCategorySettingUpdateWithoutFacilityInput> = z.object({
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fmsProgram: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   subCategories: z.lazy(() => RiskSubCategorySettingUpdateManyWithoutCategoryNestedInputSchema).optional(),
@@ -110373,6 +110423,7 @@ export const RiskCategorySettingUpdateWithoutFacilityInputSchema: z.ZodType<Pris
 export const RiskCategorySettingUncheckedUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.RiskCategorySettingUncheckedUpdateWithoutFacilityInput> = z.object({
   id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fmsProgram: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   subCategories: z.lazy(() => RiskSubCategorySettingUncheckedUpdateManyWithoutCategoryNestedInputSchema).optional(),
@@ -110381,6 +110432,7 @@ export const RiskCategorySettingUncheckedUpdateWithoutFacilityInputSchema: z.Zod
 export const RiskCategorySettingUncheckedUpdateManyWithoutFacilityInputSchema: z.ZodType<Prisma.RiskCategorySettingUncheckedUpdateManyWithoutFacilityInput> = z.object({
   id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fmsProgram: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
@@ -117253,6 +117305,7 @@ export const RiskLifecycleCreateManyLocationInputSchema: z.ZodType<Prisma.RiskLi
   postImprovementResponsible: z.string().optional().nullable(),
   effectivenessImages: z.union([ z.lazy(() => RiskLifecycleCreateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
   documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  fmsProgram: z.string().optional().nullable(),
 }).strict();
 
 export const HazmatIncidentCreateManyLocationInputSchema: z.ZodType<Prisma.HazmatIncidentCreateManyLocationInput> = z.object({
@@ -117540,6 +117593,7 @@ export const RiskLifecycleUpdateWithoutLocationInputSchema: z.ZodType<Prisma.Ris
   postImprovementResponsible: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   effectivenessImages: z.union([ z.lazy(() => RiskLifecycleUpdateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
   documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  fmsProgram: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   auditLogs: z.lazy(() => RiskAuditLogUpdateManyWithoutRiskNestedInputSchema).optional(),
 }).strict();
 
@@ -117593,6 +117647,7 @@ export const RiskLifecycleUncheckedUpdateWithoutLocationInputSchema: z.ZodType<P
   postImprovementResponsible: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   effectivenessImages: z.union([ z.lazy(() => RiskLifecycleUpdateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
   documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  fmsProgram: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   auditLogs: z.lazy(() => RiskAuditLogUncheckedUpdateManyWithoutRiskNestedInputSchema).optional(),
 }).strict();
 
@@ -117646,6 +117701,7 @@ export const RiskLifecycleUncheckedUpdateManyWithoutLocationInputSchema: z.ZodTy
   postImprovementResponsible: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   effectivenessImages: z.union([ z.lazy(() => RiskLifecycleUpdateeffectivenessImagesInputSchema), z.string().array() ]).optional(),
   documents: z.union([ z.lazy(() => NullableJsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  fmsProgram: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
 }).strict();
 
 export const HazmatIncidentUpdateWithoutLocationInputSchema: z.ZodType<Prisma.HazmatIncidentUpdateWithoutLocationInput> = z.object({

@@ -79,6 +79,11 @@ const COLUMN_MAPPINGS: Record<string, string> = {
   'ana kategori': 'riskCategory',
   'alt kategori': 'subCategory',
   'alt risk kategorisi': 'subCategory',
+  'fms': 'fmsProgram',
+  'fms programı': 'fmsProgram',
+  'fms programi': 'fmsProgram',
+  'fms standardı': 'fmsProgram',
+  'tesis güvenlik programı': 'fmsProgram',
 
   // Mevcut Durum Açıklaması
   'mevcut durum': 'initialCondition',

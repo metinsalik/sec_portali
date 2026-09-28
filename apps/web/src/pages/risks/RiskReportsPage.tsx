@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Loader2, 
   Printer, 
@@ -21,6 +21,10 @@ import {
   Building2,
   PieChart as PieChartIcon,
   ShieldAlert,
+  ShieldCheck,
+  Shield,
+  Flame,
+  Layers,
   Activity,
   UserCheck,
   Calendar
@@ -78,14 +82,35 @@ export function RiskReportsPage() {
     };
   }, []);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlFms = searchParams.get('fmsProgram') || '';
+  const urlType = searchParams.get('type') || '';
+
   const [startDate, setStartDate] = useState(sessionStorage.getItem('reports_startDate') || '');
   const [endDate, setEndDate] = useState(sessionStorage.getItem('reports_endDate') || '');
   const [status, setStatus] = useState(sessionStorage.getItem('reports_status') || 'ALL');
   const [categoryFilter, setCategoryFilter] = useState(sessionStorage.getItem('reports_category') || 'ALL');
+  const [fmsProgramFilter, setFmsProgramFilter] = useState<string>(urlFms || sessionStorage.getItem('reports_fmsProgram') || 'ALL');
   const [searchTerm, setSearchTerm] = useState(sessionStorage.getItem('reports_searchTerm') || '');
   
-  // Aktif sekme: 'dashboard' | 'comparison' | 'timeline' | 'responsibles' | 'table'
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'comparison' | 'timeline' | 'responsibles' | 'table'>('dashboard');
+  // Tablo İçi Hızlı Statü Filtresi
+  const [tableStatusFilter, setTableStatusFilter] = useState<string>('ALL');
+
+  // Aktif sekme: 'fms' | 'dashboard'
+  const [activeTab, setActiveTab] = useState<'fms' | 'dashboard'>(
+    urlType === 'dashboard' ? 'dashboard' : 'fms'
+  );
+
+  useEffect(() => {
+    if (urlFms) {
+      setFmsProgramFilter(urlFms);
+    }
+    if (urlType === 'dashboard') {
+      setActiveTab('dashboard');
+    } else {
+      setActiveTab('fms');
+    }
+  }, [urlFms, urlType]);
 
   // Çapraz Filtreleme (Cross-filter: Grafiğe tıklayınca tabloyu o seviyeye filtrele)
   const [levelDrilldown, setLevelDrilldown] = useState<string | null>(null);
@@ -100,9 +125,10 @@ export function RiskReportsPage() {
     sessionStorage.setItem('reports_endDate', endDate);
     sessionStorage.setItem('reports_status', status);
     sessionStorage.setItem('reports_category', categoryFilter);
+    sessionStorage.setItem('reports_fmsProgram', fmsProgramFilter);
     sessionStorage.setItem('reports_searchTerm', searchTerm);
     sessionStorage.setItem('reports_sortConfig', JSON.stringify(sortConfig));
-  }, [startDate, endDate, status, categoryFilter, searchTerm, sortConfig]);
+  }, [startDate, endDate, status, categoryFilter, fmsProgramFilter, searchTerm, sortConfig]);
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -119,6 +145,7 @@ export function RiskReportsPage() {
       if (endDate) params.append('endDate', endDate);
       if (status !== 'ALL') params.append('statuses', status);
       if (categoryFilter !== 'ALL') params.append('category', categoryFilter);
+      if (fmsProgramFilter !== 'ALL') params.append('fmsProgram', fmsProgramFilter);
 
       const response = await fetch(`${API}/api/risks/reports?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -138,7 +165,7 @@ export function RiskReportsPage() {
     if (selectedFacility) {
       fetchReport();
     }
-  }, [selectedFacility]);
+  }, [selectedFacility, fmsProgramFilter]);
 
   const handlePrint = () => {
     window.print();
@@ -178,6 +205,10 @@ export function RiskReportsPage() {
       result = result.filter(r => (r.initialLevel === levelDrilldown) || (r.finalLevel === levelDrilldown));
     }
 
+    if (tableStatusFilter !== 'ALL') {
+      result = result.filter(r => r.status === tableStatusFilter);
+    }
+
     if (searchTerm) {
       const lower = searchTerm.toLowerCase();
       result = result.filter(r => 
@@ -186,7 +217,7 @@ export function RiskReportsPage() {
         r.area?.toLowerCase().includes(lower) ||
         r.hazard?.toLowerCase().includes(lower) ||
         r.riskDescription?.toLowerCase().includes(lower) ||
-        r.improvementResponsible?.toLowerCase().includes(lower)
+        (r.fmsProgram && r.fmsProgram.toLowerCase().includes(lower))
       );
     }
 
@@ -198,12 +229,6 @@ export function RiskReportsPage() {
         if (sortConfig.key === 'department') {
           aVal = a.department?.name || '';
           bVal = b.department?.name || '';
-        } else if (sortConfig.key === 'detectionDate') {
-          aVal = a.detectionDate || '';
-          bVal = b.detectionDate || '';
-        } else if (sortConfig.key === 'statusDate') {
-          aVal = a.statusDate || a.actionDate || '';
-          bVal = b.statusDate || b.actionDate || '';
         } else if (sortConfig.key === 'riskScore') {
           aVal = a.finalScore || a.initialScore || 0;
           bVal = b.finalScore || b.initialScore || 0;
@@ -216,13 +241,14 @@ export function RiskReportsPage() {
     }
 
     return result;
-  }, [data?.risks, searchTerm, sortConfig, levelDrilldown]);
+  }, [data?.risks, searchTerm, sortConfig, levelDrilldown, tableStatusFilter]);
 
   // Excel Olarak İndir
   const handleExportExcel = () => {
     if (!filteredAndSortedRisks.length) return;
     const exportRows = filteredAndSortedRisks.map(r => ({
       'Risk No': r.riskNo,
+      'FMS Programı': r.fmsProgram || 'Genel',
       'Birim': r.department?.name || '-',
       'Alan / Mahal': r.area || '-',
       'Kategori': r.riskCategory || '-',
@@ -232,11 +258,9 @@ export function RiskReportsPage() {
       'İlk Skor': r.initialScore,
       'İlk Seviye': r.initialLevel,
       'Alınan Önlemler / İyileştirme': r.actionsTaken || r.firstActionPlan || '-',
-      'İyileştirme Sorumlusu': r.improvementResponsible || '-',
       'Son Skor': r.finalScore ?? '-',
       'Son Seviye': r.finalLevel ?? '-',
       'Statü': STATUS_CONFIG[r.status]?.label || r.status,
-      'Tespit Tarihi': r.detectionDate ? new Date(r.detectionDate).toLocaleDateString('tr-TR') : '-'
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportRows);
@@ -265,6 +289,14 @@ export function RiskReportsPage() {
     avgFinalScore: 0,
     riskReductionRate: 0
   };
+
+  // Müdahale edilmiş / aksiyon sürecindeki riskler sayısı (her riskin puanı kendine özgüdür kuralına uygun)
+  const intervenedCount = useMemo(() => {
+    if (!data?.risks) return 0;
+    return data.risks.filter((r: any) => r.status === 'ILK_MUDAHALE_EDILDI' || r.status === 'TAKIP_SURECINDE' || r.status === 'KAPATILDI_GUVENLI').length;
+  }, [data?.risks]);
+
+  const intervenedRate = summary.totalRisks > 0 ? Math.round((intervenedCount / summary.totalRisks) * 100) : 0;
 
   // Mevcut kategoriler listesi
   const availableCategories = useMemo(() => {
@@ -352,7 +384,7 @@ export function RiskReportsPage() {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-3xl font-black tracking-tight text-emerald-600">%{summary.resolutionRate}</span>
-            <span className="text-xs font-medium text-muted-foreground">({summary.closedRisks} Çözüldü)</span>
+            <span className="text-xs font-medium text-muted-foreground">({summary.closedRisks} Risk Güvenli)</span>
           </div>
           <div className="mt-2 pt-2 border-t">
             <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
@@ -364,116 +396,40 @@ export function RiskReportsPage() {
           </div>
         </div>
 
-        {/* Risk İyileştirme Etkinliği */}
+        {/* Aksiyon ve Müdahale Kapsamı (Ortalama Puan Yerine) */}
         <div className="rounded-2xl p-4 bg-card border shadow-2xs flex flex-col justify-between hover:border-amber-500/40 transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">İyileştirme Etkinliği</span>
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Aksiyon Kapsamı</span>
             <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600">
               <TrendingDown className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black tracking-tight text-amber-600">-%{summary.riskReductionRate}</span>
-            <span className="text-xs text-muted-foreground">Puan İyileşmesi</span>
+            <span className="text-3xl font-black tracking-tight text-amber-600">%{intervenedRate}</span>
+            <span className="text-xs text-muted-foreground">Müdahale Oranı</span>
           </div>
           <div className="mt-2 pt-2 border-t text-[11px] text-muted-foreground flex items-center justify-between">
-            <span>İlk Ort: <strong className="text-foreground">{summary.avgInitialScore}P</strong></span>
-            <span>Son Ort: <strong className="text-emerald-600">{summary.avgFinalScore}P</strong></span>
+            <span>Aksiyon Alınan: <strong className="text-foreground">{intervenedCount} Adet</strong></span>
+            <span>Kalan Açık: <strong className="text-rose-600">{summary.activeHazards} Adet</strong></span>
           </div>
         </div>
       </div>
 
-      {/* Şık Filtre Barı (Glassmorphism & Hızlı Butonlar) */}
-      <Card className="print:hidden border-border/80 shadow-xs">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-3 pb-3 border-b">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
-              <Filter className="w-3.5 h-3.5 text-primary" />
-              <span>Dinamik Filtreler</span>
-            </div>
 
-            {/* Hızlı Zaman Butonları */}
-            <div className="flex items-center gap-1.5 text-xs">
-              <span className="text-[11px] text-muted-foreground mr-1">Zaman Aralığı:</span>
-              <button
-                type="button"
-                onClick={() => handleQuickDate('30days')}
-                className="px-2.5 py-1 rounded-lg border bg-muted/30 hover:bg-muted font-medium transition-colors text-[11px]"
-              >
-                Son 30 Gün
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickDate('thisYear')}
-                className="px-2.5 py-1 rounded-lg border bg-muted/30 hover:bg-muted font-medium transition-colors text-[11px]"
-              >
-                Bu Yıl
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickDate('all')}
-                className="px-2.5 py-1 rounded-lg border bg-muted/30 hover:bg-muted font-medium transition-colors text-[11px]"
-              >
-                Tümü
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-                <Calendar className="w-3 h-3 text-primary" /> Başlangıç Tarihi
-              </label>
-              <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="h-9 text-xs" />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-                <Calendar className="w-3 h-3 text-primary" /> Bitiş Tarihi
-              </label>
-              <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-9 text-xs" />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-muted-foreground">Yaşam Döngüsü Statüsü</label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Tümü" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Tüm Statüler</SelectItem>
-                  <SelectItem value="ACIK_TEHLIKE">Açık Tehlike</SelectItem>
-                  <SelectItem value="ILK_MUDAHALE_EDILDI">İlk Müdahale Edildi</SelectItem>
-                  <SelectItem value="TAKIP_SURECINDE">Takip Sürecinde</SelectItem>
-                  <SelectItem value="KAPATILDI_GUVENLI">Kapatıldı (Güvenli)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-muted-foreground">Risk Kategorisi</label>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Tüm Kategoriler" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Tüm Kategoriler</SelectItem>
-                  {availableCategories.map((c: string) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button onClick={fetchReport} disabled={loading} className="h-9 w-full text-xs font-bold shadow-xs">
-                {loading ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-1.5" />}
-                Raporu Güncelle
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Rapor Sekme Seçimi */}
       <div className="flex items-center justify-between border-b pb-1">
         <div className="inline-flex rounded-xl bg-muted/40 p-1 text-xs font-bold">
+          <button
+            type="button"
+            onClick={() => setActiveTab('fms')}
+            className={`px-4 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+              activeTab === 'fms' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            FMS.02 Tesis Yönetimi ve Güvenlik Programları
+          </button>
           <button
             type="button"
             onClick={() => setActiveTab('dashboard')}
@@ -482,33 +438,6 @@ export function RiskReportsPage() {
             }`}
           >
             Genel Kokpit & Mukayese
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('timeline')}
-            className={`px-4 py-1.5 rounded-lg transition-all ${
-              activeTab === 'timeline' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Aylık Trend & Gelişim
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('responsibles')}
-            className={`px-4 py-1.5 rounded-lg transition-all ${
-              activeTab === 'responsibles' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Departman & Sorumlu Başarısı
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('table')}
-            className={`px-4 py-1.5 rounded-lg transition-all ${
-              activeTab === 'table' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Detaylı Tablo ({filteredAndSortedRisks.length})
           </button>
         </div>
 
@@ -752,210 +681,349 @@ export function RiskReportsPage() {
             </div>
           )}
 
-          {/* SEKME 3: DEPARTMAN & SORUMLU BAŞARISI */}
-          {activeTab === 'responsibles' && (
+          {/* SEKME: FMS.02 PROGRAMLARI (JCI) */}
+          {activeTab === 'fms' && (
             <div className="space-y-6">
+              {/* JCI FMS.02.00 4 Ölçülebilir Element Bilgi Kartı */}
+              <div className="bg-gradient-to-r from-emerald-950/20 via-card to-card border border-emerald-500/30 p-5 rounded-2xl shadow-xs">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-emerald-600 text-white text-[11px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                        JCI FMS Standardı
+                      </span>
+                      <h2 className="text-lg font-bold text-foreground">FMS.02.00 Tesis Yönetimi ve Güvenlik Programları</h2>
+                    </div>
+                    <p className="text-xs text-muted-foreground max-w-3xl">
+                      Hastane, 8 ana programı kapsayan yıllık bir risk değerlendirmesi yürütmeli (ÖE 1), riskleri önceliklendirip KPI iyileştirmelerini belirlemeli (ÖE 2), etkinlik ölçümü yapmalı (ÖE 3) ve yıllık raporu yönetişim mercine sunmalıdır (ÖE 4).
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={handleExportExcel} 
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shrink-0 h-9"
+                  >
+                    <Download className="w-3.5 h-3.5 mr-1.5" /> FMS.02 Yıllık Raporu İndir
+                  </Button>
+                </div>
+              </div>
+
+              {/* 8 Program İlerleme ve Dağılım Kartları */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                  { name: 'Güvenlik', desc: 'FMS.03.00 ÖE 2 - Tesis & Şahıs Güvenliği', icon: Shield },
+                  { name: 'Emniyet', desc: 'Çalışan, Hasta ve Tesis Emniyeti', icon: CheckCircle2 },
+                  { name: 'Tehlikeli maddeler ve atıklar', desc: 'Kimyasal, Tıbbi & Radyolojik Atık', icon: AlertTriangle },
+                  { name: 'Yangın Güvenliği', desc: 'FMS.06.00 ÖE 3 - Yangın Koruma & Tahliye', icon: Flame },
+                  { name: 'Tıbbi Cihazlar', desc: 'Kritik Tıbbi Cihaz Envanteri & Kalibrasyon', icon: Activity },
+                  { name: 'Altyapı Sistemleri', desc: 'Elektrik, HVAC, Tesisat & Su', icon: Building2 },
+                  { name: 'Acil durum ve afet yönetimi', desc: 'GHI.05.00 ÖE 4 - Afet & Tatbikat', icon: ShieldAlert },
+                  { name: 'İnşaat ve renovasyon', desc: 'FMS.10.00 ÖE 1 - PCRA & Toz Bariyeri', icon: Layers }
+                ].map((item, idx) => {
+                  const progData = (data?.analysis?.fmsPrograms || []).find(
+                    (p: any) => p.name?.toLowerCase().trim() === item.name.toLowerCase().trim()
+                  ) || {
+                    total: 0,
+                    closed: 0,
+                    critical: 0,
+                    active: 0,
+                    firstIntervention: 0,
+                    inProgress: 0,
+                    rate: 0,
+                    efficiency: 0
+                  };
+                  const IconComp = item.icon;
+                  const isSelected = fmsProgramFilter?.toLowerCase().trim() === item.name.toLowerCase().trim();
+
+                  return (
+                    <div 
+                      key={item.name}
+                      onClick={() => {
+                        if (fmsProgramFilter?.toLowerCase().trim() === item.name.toLowerCase().trim()) {
+                          setFmsProgramFilter('ALL');
+                        } else {
+                          setFmsProgramFilter(item.name);
+                        }
+                      }}
+                      className={`cursor-pointer rounded-2xl p-4 border transition-all hover:scale-[1.01] ${
+                        isSelected 
+                          ? 'border-emerald-500 bg-emerald-500/10 shadow-sm ring-2 ring-emerald-500/30' 
+                          : 'bg-card border-border/80 hover:border-emerald-500/40'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-muted-foreground uppercase">
+                          Program {idx + 1}
+                        </span>
+                        <div className={`p-2 rounded-xl ${isSelected ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground'}`}>
+                          <IconComp className="w-4 h-4" />
+                        </div>
+                      </div>
+                      
+                      <h3 className="font-bold text-sm text-foreground mt-2 line-clamp-1">{item.name}</h3>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">{item.desc}</p>
+                      
+                      <div className="mt-4 flex items-baseline justify-between border-t pt-2.5">
+                        <div>
+                          <span className="text-2xl font-black text-foreground">{progData.total}</span>
+                          <span className="text-[11px] text-muted-foreground ml-1">Risk</span>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-xs font-bold ${progData.critical > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            {progData.critical} Kritik
+                          </span>
+                          <div className="text-[10px] text-muted-foreground">%{progData.rate || 0} Çözüm</div>
+                        </div>
+                      </div>
+
+                      {/* Statü Dağılım Mini Özeti */}
+                      <div className="mt-2 pt-2 border-t flex items-center justify-between text-[10px] text-muted-foreground">
+                        <span title="Açık Tehlike" className="flex items-center gap-1 font-semibold text-rose-600">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" /> {progData.active || 0} Açık
+                        </span>
+                        <span title="İlk Müdahale" className="flex items-center gap-1 font-semibold text-amber-600">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" /> {progData.firstIntervention || 0} İlk Müd.
+                        </span>
+                        <span title="Takipte" className="flex items-center gap-1 font-semibold text-blue-600">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block" /> {progData.inProgress || 0} Takip
+                        </span>
+                        <span title="Kapatıldı" className="flex items-center gap-1 font-semibold text-emerald-600">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" /> {progData.closed || 0} Kapalı
+                        </span>
+                      </div>
+
+                      <div className="mt-2 w-full bg-muted/60 rounded-full h-1.5 overflow-hidden">
+                        <div 
+                          className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
+                          style={{ width: `${Math.min(100, progData.rate || 0)}%` }} 
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* FMS Program Dağılımı ve Önceliklendirme Grafiği */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Departman Risk Yükü */}
                 <Card className="shadow-xs border-border/80">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-bold flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-primary" />
-                      Departman Risk Yükü ve Kritiklik
+                      <BarChart3 className="w-4 h-4 text-emerald-600" />
+                      8 Güvenlik Programı Risk Dağılımı (Statüye Göre)
                     </CardTitle>
-                    <p className="text-xs text-muted-foreground">En yüksek risk taşıyan birimler</p>
+                    <p className="text-xs text-muted-foreground">Açık tehlike, ilk müdahale, takip ve kapatılan risk dağılımı</p>
                   </CardHeader>
                   <CardContent className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={data?.analysis?.departments?.slice(0, 8) || []} margin={{ top: 20, right: 20, left: 10, bottom: 10 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.15} />
-                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                        <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                      <BarChart 
+                        data={data?.analysis?.fmsPrograms || []} 
+                        layout="vertical"
+                        margin={{ top: 10, right: 30, left: 10, bottom: 5 }}
+                      >
+                        <XAxis type="number" tick={{ fontSize: 11 }} />
+                        <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 10 }} />
                         <Tooltip contentStyle={{ borderRadius: '12px', fontSize: '12px' }} />
-                        <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                        <Bar dataKey="total" name="Toplam Risk" fill="#64748b" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="critical" name="Kritik Risk" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="closed" name="Kapatılan" fill="#10b981" radius={[4, 4, 0, 0]} />
+                        <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
+                        <Bar dataKey="active" name="Açık Tehlike" stackId="status" fill="#ef4444" radius={[0, 0, 0, 0]} />
+                        <Bar dataKey="firstIntervention" name="İlk Müdahale" stackId="status" fill="#f59e0b" radius={[0, 0, 0, 0]} />
+                        <Bar dataKey="inProgress" name="Takipte" stackId="status" fill="#3b82f6" radius={[0, 0, 0, 0]} />
+                        <Bar dataKey="closed" name="Kapatıldı" stackId="status" fill="#10b981" radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </CardContent>
                 </Card>
 
-                {/* Sorumlu Performansı */}
                 <Card className="shadow-xs border-border/80">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-bold flex items-center gap-2">
-                      <UserCheck className="w-4 h-4 text-emerald-600" />
-                      İyileştirme Sorumluları Çözüm Oranları
+                      <TrendingDown className="w-4 h-4 text-emerald-600" />
+                      FMS.02 ÖE 3: İyileştirme Etkinliği ve Başarı (%)
                     </CardTitle>
-                    <p className="text-xs text-muted-foreground">Sorumluların aksiyonları tamamlama oranı (%)</p>
+                    <p className="text-xs text-muted-foreground">Program bazında risk puanı düşüş verimliliği</p>
                   </CardHeader>
                   <CardContent className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart 
-                        data={data?.analysis?.responsibles || []} 
+                        data={data?.analysis?.fmsPrograms || []} 
                         layout="vertical"
-                        margin={{ top: 10, right: 40, left: 20, bottom: 5 }}
+                        margin={{ top: 10, right: 40, left: 10, bottom: 5 }}
                       >
-                        <XAxis type="number" domain={[0, 100]} hide />
-                        <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 10 }} />
-                        <Tooltip formatter={(v) => [`%${v}`, 'Kapatma Oranı']} contentStyle={{ borderRadius: '12px', fontSize: '12px' }} />
-                        <Bar dataKey="rate" name="Kapatma Oranı %" fill="#0ea5e9" radius={[0, 6, 6, 0]}>
-                          <LabelList dataKey="rate" position="right" formatter={(v: any) => `%${v}`} fontSize={11} fontWeight="bold" />
+                        <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
+                        <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 10 }} />
+                        <Tooltip formatter={(v) => [`%${v}`, 'Etkinlik Oranı']} contentStyle={{ borderRadius: '12px', fontSize: '12px' }} />
+                        <Bar dataKey="efficiency" name="Risk Azaltım Etkinliği %" fill="#059669" radius={[0, 6, 6, 0]}>
+                          <LabelList dataKey="efficiency" position="right" formatter={(v: any) => `%${v}`} fontSize={10} fontWeight="bold" />
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </CardContent>
                 </Card>
               </div>
+              {/* FMS.02.00 ALTINDA ENTEGRE RİSK TABLOSU */}
+              <Card className="shadow-xs border-border/80 print:shadow-none print:border-none">
+                <CardHeader className="print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-base font-bold">
+                        {fmsProgramFilter !== 'ALL' ? `${fmsProgramFilter} Risk Listesi` : 'Tüm FMS Programları Risk Envanteri'}
+                      </CardTitle>
+                      <span className="text-xs bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
+                        {filteredAndSortedRisks.length} Kayıt
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {fmsProgramFilter !== 'ALL' 
+                        ? `Seçili program: "${fmsProgramFilter}". Yukarıdaki kartlardan başka bir programa tıklayarak veya filtreyi sıfırlayarak değiştirebilirsiniz.` 
+                        : 'Yukarıdaki 8 program kartından birine tıklayarak doğrudan o programın risklerini süzebilirsiniz.'}
+                    </p>
+                  </div>
 
-              {/* Departman Detay İstatistik Tablosu */}
-              <Card className="shadow-xs border-border/80">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-bold">Birim / Lokasyon Kapsamlı Başarı Tablosu</CardTitle>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Statü Hızlı Filtre Butonları */}
+                    <div className="inline-flex rounded-lg bg-muted/60 p-0.5 text-xs font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => setTableStatusFilter('ALL')}
+                        className={`px-2.5 py-1 rounded-md transition-all ${
+                          tableStatusFilter === 'ALL' ? 'bg-background text-foreground shadow-2xs font-bold' : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        Tümü
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTableStatusFilter('ACIK_TEHLIKE')}
+                        className={`px-2.5 py-1 rounded-md transition-all ${
+                          tableStatusFilter === 'ACIK_TEHLIKE' ? 'bg-rose-500 text-white font-bold' : 'text-muted-foreground hover:text-rose-600'
+                        }`}
+                      >
+                        Açık Tehlike
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTableStatusFilter('ILK_MUDAHALE_EDILDI')}
+                        className={`px-2.5 py-1 rounded-md transition-all ${
+                          tableStatusFilter === 'ILK_MUDAHALE_EDILDI' ? 'bg-amber-500 text-white font-bold' : 'text-muted-foreground hover:text-amber-600'
+                        }`}
+                      >
+                        İlk Müdahale
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTableStatusFilter('TAKIP_SURECINDE')}
+                        className={`px-2.5 py-1 rounded-md transition-all ${
+                          tableStatusFilter === 'TAKIP_SURECINDE' ? 'bg-blue-500 text-white font-bold' : 'text-muted-foreground hover:text-blue-600'
+                        }`}
+                      >
+                        Takipte
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTableStatusFilter('KAPATILDI_GUVENLI')}
+                        className={`px-2.5 py-1 rounded-md transition-all ${
+                          tableStatusFilter === 'KAPATILDI_GUVENLI' ? 'bg-emerald-600 text-white font-bold' : 'text-muted-foreground hover:text-emerald-600'
+                        }`}
+                      >
+                        Kapatıldı
+                      </button>
+                    </div>
+
+                    {/* Arama Kutusu */}
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <Input 
+                        placeholder="Risk no, birim, tehlike ara..." 
+                        value={searchTerm} 
+                        onChange={e => setSearchTerm(e.target.value)} 
+                        className="w-56 h-8 pl-8 text-xs"
+                      />
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left">
-                      <thead className="bg-muted/60 text-muted-foreground font-bold border-b">
+                      <thead className="bg-muted/70 text-muted-foreground uppercase text-[11px] font-bold border-b">
                         <tr>
-                          <th className="p-3">Birim / Bölüm</th>
-                          <th className="p-3 text-center">Toplam Risk</th>
-                          <th className="p-3 text-center">Kritik Risk</th>
-                          <th className="p-3 text-center">Kapatılan</th>
-                          <th className="p-3 text-center">Ort. Risk Puanı</th>
-                          <th className="p-3 text-right">Başarı Oranı</th>
+                          <th className="px-3.5 py-2.5 cursor-pointer hover:bg-muted" onClick={() => handleSort('riskNo')}>
+                            <div className="flex items-center gap-1">No <ArrowUpDown className="w-3 h-3"/></div>
+                          </th>
+                          <th className="px-3.5 py-2.5 cursor-pointer hover:bg-muted" onClick={() => handleSort('department')}>
+                            <div className="flex items-center gap-1">Birim / Mahal <ArrowUpDown className="w-3 h-3"/></div>
+                          </th>
+                          <th className="px-3.5 py-2.5">FMS Programı</th>
+                          <th className="px-3.5 py-2.5 cursor-pointer hover:bg-muted" onClick={() => handleSort('hazard')}>
+                            <div className="flex items-center gap-1">Tehlike ve Risk Tanımı <ArrowUpDown className="w-3 h-3"/></div>
+                          </th>
+                          <th className="px-3.5 py-2.5 text-center">İlk Skor</th>
+                          <th className="px-3.5 py-2.5 text-center">Son Skor</th>
+                          <th className="px-3.5 py-2.5 cursor-pointer hover:bg-muted" onClick={() => handleSort('status')}>
+                            <div className="flex items-center gap-1">Statü <ArrowUpDown className="w-3 h-3"/></div>
+                          </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y">
-                        {(data?.analysis?.departments || []).map((dept: any) => (
-                          <tr key={dept.name} className="hover:bg-muted/30">
-                            <td className="p-3 font-semibold text-foreground">{dept.name}</td>
-                            <td className="p-3 text-center font-mono font-bold">{dept.total}</td>
-                            <td className="p-3 text-center font-mono font-bold text-rose-600">{dept.critical}</td>
-                            <td className="p-3 text-center font-mono font-bold text-emerald-600">{dept.closed}</td>
-                            <td className="p-3 text-center font-mono">{dept.avgScore}P</td>
-                            <td className="p-3 text-right font-bold">
-                              <span className={`px-2 py-0.5 rounded-md ${dept.rate >= 75 ? 'bg-emerald-500/10 text-emerald-600' : dept.rate >= 40 ? 'bg-amber-500/10 text-amber-600' : 'bg-rose-500/10 text-rose-600'}`}>
-                                %{dept.rate}
-                              </span>
+                      <tbody className="divide-y divide-border/60">
+                        {filteredAndSortedRisks.map((risk: any) => {
+                          const statusConf = STATUS_CONFIG[risk.status] || { label: risk.status, badge: 'bg-muted text-muted-foreground' };
+                          const initLevelConf = LEVEL_PALETTE[risk.initialLevel] || { bg: 'bg-muted text-muted-foreground' };
+                          const finalLevelConf = risk.finalLevel ? (LEVEL_PALETTE[risk.finalLevel] || { bg: 'bg-muted text-muted-foreground' }) : null;
+
+                          return (
+                            <tr 
+                              key={risk.id} 
+                              className="hover:bg-muted/40 cursor-pointer transition-colors"
+                              onClick={() => navigate(`/risks/location/${risk.locationId || risk.departmentId}/view/${risk.id}`, { state: { from: '/risks/reports' } })}
+                            >
+                              <td className="px-3.5 py-2.5 font-mono font-bold text-primary">#{risk.riskNo}</td>
+                              <td className="px-3.5 py-2.5">
+                                <div className="font-semibold text-foreground">{risk.department?.name || '-'}</div>
+                                {risk.area && <div className="text-[10px] text-muted-foreground">{risk.area}</div>}
+                              </td>
+                              <td className="px-3.5 py-2.5">
+                                <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] font-bold">
+                                  {risk.fmsProgram || 'Genel'}
+                                </span>
+                              </td>
+                              <td className="px-3.5 py-2.5 max-w-sm">
+                                <div className="font-semibold text-foreground truncate">{risk.hazard}</div>
+                                <div className="text-[11px] text-muted-foreground truncate">{risk.riskDescription}</div>
+                              </td>
+                              <td className="px-3.5 py-2.5 text-center">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${initLevelConf.bg}`}>
+                                  {risk.initialScore} ({risk.initialLevel ? risk.initialLevel.replace(' Risk', '') : '-'})
+                                </span>
+                              </td>
+                              <td className="px-3.5 py-2.5 text-center">
+                                {risk.finalScore !== null && risk.finalScore !== undefined ? (
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${finalLevelConf?.bg || 'bg-emerald-500/15 text-emerald-600'}`}>
+                                    {risk.finalScore} ({risk.finalLevel ? risk.finalLevel.replace(' Risk', '') : 'Önemsiz'})
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground text-[10px]">-</span>
+                                )}
+                              </td>
+                              <td className="px-3.5 py-2.5">
+                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusConf.badge}`}>
+                                  {statusConf.label}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {filteredAndSortedRisks.length === 0 && (
+                          <tr>
+                            <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                              {fmsProgramFilter !== 'ALL' 
+                                ? `"${fmsProgramFilter}" programında seçili statü kriterine uygun risk kaydı bulunamadı.` 
+                                : 'Filtrelere uygun risk kaydı bulunamadı.'}
                             </td>
                           </tr>
-                        ))}
+                        )}
                       </tbody>
                     </table>
                   </div>
                 </CardContent>
               </Card>
             </div>
-          )}
-
-          {/* SEKME 4: DETAYLI TABLO */}
-          {activeTab === 'table' && (
-            <Card className="shadow-xs border-border/80 print:shadow-none print:border-none">
-              <CardHeader className="print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3">
-                <div>
-                  <CardTitle className="text-base font-bold">
-                    Risk Envanteri ({filteredAndSortedRisks.length} Kayıt)
-                  </CardTitle>
-                  <p className="text-xs text-muted-foreground">İlgili satıra tıklayarak riskin yaşam döngüsü sayfasına gidebilirsiniz</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Search className="w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Tabloda ara (No, Birim, Tehlike, Sorumlu)..." 
-                    value={searchTerm} 
-                    onChange={e => setSearchTerm(e.target.value)} 
-                    className="w-72 h-8 text-xs"
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left">
-                    <thead className="bg-muted/70 text-muted-foreground uppercase text-[11px] font-bold border-b">
-                      <tr>
-                        <th className="px-3.5 py-2.5 cursor-pointer hover:bg-muted" onClick={() => handleSort('riskNo')}>
-                          <div className="flex items-center gap-1">No <ArrowUpDown className="w-3 h-3"/></div>
-                        </th>
-                        <th className="px-3.5 py-2.5 cursor-pointer hover:bg-muted" onClick={() => handleSort('department')}>
-                          <div className="flex items-center gap-1">Birim / Mahal <ArrowUpDown className="w-3 h-3"/></div>
-                        </th>
-                        <th className="px-3.5 py-2.5 cursor-pointer hover:bg-muted" onClick={() => handleSort('hazard')}>
-                          <div className="flex items-center gap-1">Tehlike ve Risk Tanımı <ArrowUpDown className="w-3 h-3"/></div>
-                        </th>
-                        <th className="px-3.5 py-2.5 text-center">İlk Skor</th>
-                        <th className="px-3.5 py-2.5 text-center">Son Skor</th>
-                        <th className="px-3.5 py-2.5 cursor-pointer hover:bg-muted" onClick={() => handleSort('status')}>
-                          <div className="flex items-center gap-1">Statü <ArrowUpDown className="w-3 h-3"/></div>
-                        </th>
-                        <th className="px-3.5 py-2.5">Sorumlu</th>
-                        <th className="px-3.5 py-2.5 cursor-pointer hover:bg-muted" onClick={() => handleSort('detectionDate')}>
-                          <div className="flex items-center gap-1">Tespit Tarihi <ArrowUpDown className="w-3 h-3"/></div>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/60">
-                      {filteredAndSortedRisks.map((risk: any) => {
-                        const statusConf = STATUS_CONFIG[risk.status] || { label: risk.status, badge: 'bg-muted text-muted-foreground' };
-                        const initLevelConf = LEVEL_PALETTE[risk.initialLevel] || { bg: 'bg-muted text-muted-foreground' };
-                        const finalLevelConf = risk.finalLevel ? (LEVEL_PALETTE[risk.finalLevel] || { bg: 'bg-muted text-muted-foreground' }) : null;
-
-                        return (
-                          <tr 
-                            key={risk.id} 
-                            className="hover:bg-muted/40 cursor-pointer transition-colors"
-                            onClick={() => navigate(`/risks/location/${risk.locationId || risk.departmentId}/view/${risk.id}`, { state: { from: '/risks/reports' } })}
-                          >
-                            <td className="px-3.5 py-2.5 font-mono font-bold text-primary">#{risk.riskNo}</td>
-                            <td className="px-3.5 py-2.5">
-                              <div className="font-semibold text-foreground">{risk.department?.name || '-'}</div>
-                              {risk.area && <div className="text-[10px] text-muted-foreground">{risk.area}</div>}
-                            </td>
-                            <td className="px-3.5 py-2.5 max-w-xs">
-                              <div className="font-semibold text-foreground truncate">{risk.hazard}</div>
-                              <div className="text-[11px] text-muted-foreground truncate">{risk.riskDescription}</div>
-                            </td>
-                            <td className="px-3.5 py-2.5 text-center">
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${initLevelConf.bg}`}>
-                                {risk.initialScore} ({risk.initialLevel ? risk.initialLevel.replace(' Risk', '') : '-'})
-                              </span>
-                            </td>
-                            <td className="px-3.5 py-2.5 text-center">
-                              {risk.finalScore !== null && risk.finalScore !== undefined ? (
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${finalLevelConf?.bg || 'bg-emerald-500/15 text-emerald-600'}`}>
-                                  {risk.finalScore} ({risk.finalLevel ? risk.finalLevel.replace(' Risk', '') : 'Önemsiz'})
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground text-[10px]">-</span>
-                              )}
-                            </td>
-                            <td className="px-3.5 py-2.5">
-                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusConf.badge}`}>
-                                {statusConf.label}
-                              </span>
-                            </td>
-                            <td className="px-3.5 py-2.5 text-muted-foreground max-w-[140px] truncate" title={risk.improvementResponsible}>
-                              {risk.improvementResponsible || '-'}
-                            </td>
-                            <td className="px-3.5 py-2.5 text-muted-foreground whitespace-nowrap">
-                              {risk.detectionDate ? new Date(risk.detectionDate).toLocaleDateString('tr-TR') : '-'}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      {filteredAndSortedRisks.length === 0 && (
-                        <tr>
-                          <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
-                            Filtrelere uygun risk kaydı bulunamadı.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
           )}
         </div>
       )}

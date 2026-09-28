@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const client_1 = require("@prisma/client");
 const auth_1 = require("../../middleware/auth");
+const settings_1 = require("./settings");
 const router = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
 // Helper to check facility access
@@ -295,6 +296,7 @@ router.post('/import', auth_1.authMiddleware, async (req, res) => {
             const finalScore = rawFinalScore ?? Math.round(Number(finalProb || 0.5) * Number(finalFreq || 3) * Number(finalSev || 7));
             const finalLevel = scoreToLevel(finalScore);
             const status = deriveStatus(row);
+            const fmsProgramValue = row.fmsProgram || (0, settings_1.suggestFmsProgram)(row.riskCategory || 'Genel', row.subCategory);
             try {
                 await prisma.riskLifecycle.create({
                     data: {
@@ -302,6 +304,7 @@ router.post('/import', auth_1.authMiddleware, async (req, res) => {
                         riskNo: parseInt(row.riskNo) || 1,
                         riskCategory: row.riskCategory || 'Genel',
                         subCategory: row.subCategory || null,
+                        fmsProgram: fmsProgramValue,
                         area: row.area || deptName,
                         method: row.method || 'Fine Kinney',
                         activity: row.activity || '',
@@ -440,12 +443,18 @@ router.get('/', auth_1.authMiddleware, async (req, res) => {
         }
         if (status)
             where.status = status;
+        const { fmsProgram } = req.query;
+        if (fmsProgram && fmsProgram !== 'ALL') {
+            where.fmsProgram = fmsProgram;
+        }
         if (search) {
             where.OR = [
                 { hazard: { contains: search, mode: 'insensitive' } },
                 { riskDescription: { contains: search, mode: 'insensitive' } },
                 { area: { contains: search, mode: 'insensitive' } },
                 { riskCategory: { contains: search, mode: 'insensitive' } },
+                { subCategory: { contains: search, mode: 'insensitive' } },
+                { fmsProgram: { contains: search, mode: 'insensitive' } },
             ];
         }
         const risks = await prisma.riskLifecycle.findMany({
@@ -538,6 +547,7 @@ router.post('/', auth_1.authMiddleware, async (req, res) => {
                 riskNo: nextRiskNo,
                 riskCategory: riskCategory || 'Genel',
                 subCategory: subCategory || null,
+                fmsProgram: req.body.fmsProgram || (0, settings_1.suggestFmsProgram)(riskCategory || 'Genel', subCategory),
                 area: area || '',
                 method: method || 'Fine Kinney',
                 activity: activity || '',

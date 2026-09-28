@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import { useState, useMemo, useEffect } from 'react';
 import {
-  ArrowLeft, Search, Eye, Pencil, Trash2, ArrowUpDown, AlertTriangle, Building2, Merge
+  ArrowLeft, Search, Eye, Pencil, Trash2, ArrowUpDown, AlertTriangle, Building2, Merge, X
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -552,8 +552,17 @@ export default function RiskCategoryPage() {
               placeholder="Ara (Tehlike, Risk, Bölge)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="text-xs bg-transparent border-none outline-none focus:ring-0 w-48"
+              className="text-xs bg-transparent border-none outline-none focus:ring-0 w-44"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="text-muted-foreground hover:text-foreground text-xs"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </div>

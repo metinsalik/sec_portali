@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Search, LayoutGrid, List as ListIcon, ChevronRight, FolderTree, Merge } from 'lucide-react';
+import { ArrowLeft, Search, LayoutGrid, List as ListIcon, ChevronRight, FolderTree, Merge, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import CategoryMergeModal from './CategoryMergeModal';
@@ -17,20 +17,43 @@ export default function FacilityCategoriesPage() {
   
   const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  // Allow all users on this page to access category merging (or admin/specialist/manager)
   const isManager = true;
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterMainCategory, setFilterMainCategory] = useState(initialCategory);
-  const [filterSubCategory, setFilterSubCategory] = useState('');
-  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+  const storageKey = `facility_cat_filters_${facilityId}`;
+  const loadStored = (k: string, def: any) => {
+    try {
+      const s = sessionStorage.getItem(storageKey);
+      if (s) {
+        const p = JSON.parse(s);
+        if (p[k] !== undefined) return p[k];
+      }
+    } catch (e) {}
+    return def;
+  };
+
+  const [searchQuery, setSearchQuery] = useState<string>(() => loadStored('searchQuery', ''));
+  const [filterMainCategory, setFilterMainCategory] = useState<string>(() => initialCategory || loadStored('filterMainCategory', ''));
+  const [filterSubCategory, setFilterSubCategory] = useState<string>(() => loadStored('filterSubCategory', ''));
+  const [viewMode, setViewMode] = useState<'card' | 'list'>(() => loadStored('viewMode', 'card'));
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
   const [mergeInitialSource, setMergeInitialSource] = useState('');
   const [mergeInitialType, setMergeInitialType] = useState<'mainCategory' | 'subCategory'>('subCategory');
 
   useEffect(() => {
-    setFilterMainCategory(searchParams.get('category') || '');
+    const fromUrl = searchParams.get('category');
+    if (fromUrl !== null) {
+      setFilterMainCategory(fromUrl);
+    }
   }, [searchParams]);
+
+  useEffect(() => {
+    sessionStorage.setItem(storageKey, JSON.stringify({
+      searchQuery,
+      filterMainCategory,
+      filterSubCategory,
+      viewMode
+    }));
+  }, [searchQuery, filterMainCategory, filterSubCategory, viewMode, storageKey]);
 
   // Tesis Bilgisi
   const { data: facilities = [] } = useQuery({
@@ -179,15 +202,24 @@ export default function FacilityCategoriesPage() {
       {/* Arama ve Görünüm Modu */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-card dark:bg-slate-900 p-4 rounded-xl border border-border form-shadow">
         <div className="flex flex-col sm:flex-row flex-1 gap-4 w-full">
-          <div className="relative flex-1 sm:max-w-xs">
+          <div className="relative flex-1 sm:max-w-xs flex items-center">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input 
               type="text"
               placeholder="Kategori ara..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-primary/20 focus:outline-none text-sm"
+              className="w-full pl-10 pr-8 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-primary/20 focus:outline-none text-sm"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
           
           <select 

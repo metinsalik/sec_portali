@@ -1,6 +1,7 @@
 import express, { Response } from 'express';
 import { AuthRequest, authMiddleware } from '../../middleware/auth';
 import { PrismaClient } from '@prisma/client';
+import { suggestFmsProgram, FMS_PROGRAMS } from './settings';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -243,7 +244,7 @@ router.get('/executive/all-facilities', authMiddleware, async (req: AuthRequest,
 // GET /api/risks/reports
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { facilityId, startDate, endDate, statuses, category, department } = req.query as Record<string, string>;
+    const { facilityId, startDate, endDate, statuses, category, department, fmsProgram } = req.query as Record<string, string>;
 
     if (!facilityId) {
       return res.status(400).json({ error: 'facilityId zorunludur.' });
@@ -286,13 +287,21 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       };
     }
 
-    const risks = await prisma.riskLifecycle.findMany({
+    let risks = await prisma.riskLifecycle.findMany({
       where: whereClause,
       include: {
         location: true,
       },
       orderBy: { detectionDate: 'desc' }
     });
+
+    // Eğer fmsProgram filtresi varsa hem kayıtlı hem otomatik hesaplananı kontrol et
+    if (fmsProgram && fmsProgram !== 'ALL') {
+      risks = risks.filter((r: any) => {
+        const prog = r.fmsProgram || suggestFmsProgram(r.riskCategory || 'Genel', r.subCategory);
+        return prog.toLowerCase().trim() === fmsProgram.toLowerCase().trim();
+      });
+    }
 
     // 1. Statü Gruplaması
     const byStatusMap: Record<string, number> = {
@@ -315,6 +324,18 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     // 4. Kategori Bazlı Dağılım
     const byCategoryMap: Record<string, { total: number, closed: number, initialScoreSum: number, finalScoreSum: number }> = {};
+
+    // 4.1 FMS Programı Bazlı Dağılım
+    const byFmsProgramMap: Record<string, { 
+      total: number, 
+      closed: number, 
+      critical: number, 
+      active: number, 
+      firstIntervention: number, 
+      inProgress: number, 
+      initialScoreSum: number, 
+      finalScoreSum: number 
+    }> = {};
 
     // 5. Tarihsel Trend (Aylık Tespit vs Kapatma)
     const monthlyTrendMap: Record<string, { month: string, detected: number, closed: number }> = {};
@@ -377,6 +398,36 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       if (st === 'KAPATILDI_GUVENLI') {
         byCategoryMap[cat].closed += 1;
       }
+
+      // FMS Programı
+      const fms = risk.fmsProgram || suggestFmsProgram(risk.riskCategory || 'Genel', risk.subCategory);
+      if (!byFmsProgramMap[fms]) {
+        byFmsProgramMap[fms] = { 
+          total: 0, 
+          closed: 0, 
+          critical: 0, 
+          active: 0,
+          firstIntervention: 0,
+          inProgress: 0,
+          initialScoreSum: 0, 
+          finalScoreSum: 0 
+        };
+      }
+      byFmsProgramMap[fms].total += 1;
+      byFmsProgramMap[fms].initialScoreSum += initScore;
+      byFmsProgramMap[fms].finalScoreSum += (risk.finalScore ? Number(risk.finalScore) : initScore);
+
+      if (st === 'ACIK_TEHLIKE') {
+        byFmsProgramMap[fms].active += 1;
+      } else if (st === 'ILK_MUDAHALE_EDILDI') {
+        byFmsProgramMap[fms].firstIntervention += 1;
+      } else if (st === 'TAKIP_SURECINDE') {
+        byFmsProgramMap[fms].inProgress += 1;
+      } else if (st === 'KAPATILDI_GUVENLI') {
+        byFmsProgramMap[fms].closed += 1;
+      }
+
+      if (initLvl === 'Tolere Gösterilmez Risk' || initLvl === 'Yüksek Risk') byFmsProgramMap[fms].critical += 1;
 
       // Tarihsel Trend (Tespit Tarihi)
       if (risk.detectionDate) {
@@ -472,6 +523,21 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       rate: Math.round((responsibleMap[resp].closed / responsibleMap[resp].total) * 100)
     })).sort((a, b) => b.total - a.total).slice(0, 10);
 
+    // FMS Program Dağılım Listesi
+    const fmsProgramsList = Object.keys(byFmsProgramMap).map(fms => ({
+      name: fms,
+      total: byFmsProgramMap[fms].total,
+      closed: byFmsProgramMap[fms].closed,
+      critical: byFmsProgramMap[fms].critical,
+      active: byFmsProgramMap[fms].active,
+      firstIntervention: byFmsProgramMap[fms].firstIntervention,
+      inProgress: byFmsProgramMap[fms].inProgress,
+      rate: Math.round((byFmsProgramMap[fms].closed / byFmsProgramMap[fms].total) * 100),
+      efficiency: byFmsProgramMap[fms].initialScoreSum > 0 
+        ? Math.round(((byFmsProgramMap[fms].initialScoreSum - byFmsProgramMap[fms].finalScoreSum) / byFmsProgramMap[fms].initialScoreSum) * 100) 
+        : 0
+    })).sort((a, b) => b.total - a.total);
+
     const mappedRisks = risks.map(r => ({
       ...r,
       departmentId: r.locationId,
@@ -497,6 +563,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
         monthlyTrend,
         departments: departmentsList,
         categories: categoriesList,
+        fmsPrograms: fmsProgramsList,
         responsibles: responsiblesList
       }
     });

@@ -7,7 +7,7 @@ import {
   ClipboardList, FileText, Settings, Bell, ChevronDown, LogOut,
   User, BarChart3, ChevronRight, LayoutGrid, Database, Users2, Mail,
   BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame, PenTool, Menu, X, ShoppingCart, PieChart, Calendar, AlertCircle, MessageSquare, BookOpen, DoorClosed,
-  PanelLeftClose, PanelLeftOpen, PanelLeft, Zap, Camera
+  PanelLeftClose, PanelLeftOpen, PanelLeft, Zap, Camera, ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -90,6 +90,21 @@ const riskNavItems = (hasAdminAccess: boolean) => [
   { label: 'GENEL', type: 'group' },
   { label: 'Tesisler', icon: LayoutDashboard, to: '/risks', end: true },
   ...(hasAdminAccess ? [{ label: '🏢 Tüm Tesisler Kokpiti', icon: Building2, to: '/risks/facility/all' }] : []),
+  {
+    label: 'FMS.02 Programları',
+    icon: ShieldCheck,
+    to: '/risks/reports?type=fms',
+    children: [
+      { label: '1. Güvenlik', icon: ChevronRight, to: '/risks/reports?fmsProgram=Güvenlik' },
+      { label: '2. Emniyet', icon: ChevronRight, to: '/risks/reports?fmsProgram=Emniyet' },
+      { label: '3. Tehlikeli Maddeler', icon: ChevronRight, to: '/risks/reports?fmsProgram=Tehlikeli maddeler ve atıklar' },
+      { label: '4. Yangın Güvenliği', icon: ChevronRight, to: '/risks/reports?fmsProgram=Yangın Güvenliği' },
+      { label: '5. Tıbbi Cihazlar', icon: ChevronRight, to: '/risks/reports?fmsProgram=Tıbbi Cihazlar' },
+      { label: '6. Altyapı Sistemleri', icon: ChevronRight, to: '/risks/reports?fmsProgram=Altyapı Sistemleri' },
+      { label: '7. Acil Durum & Afet', icon: ChevronRight, to: '/risks/reports?fmsProgram=Acil durum ve afet yönetimi' },
+      { label: '8. İnşaat & Renovasyon', icon: ChevronRight, to: '/risks/reports?fmsProgram=İnşaat ve renovasyon' },
+    ]
+  },
   { label: 'RAPORLAR', type: 'group' },
   { label: 'Analiz ve Raporlar', icon: PieChart, to: '/risks/reports' },
   { label: 'AYARLAR', type: 'group' },
@@ -262,6 +277,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
   });
   const { openChat, hasUnread } = useChat();
   const mainRef = useRef<HTMLElement | null>(null);
+
+  // Açılır/kapanır alt menü state'i (Varsayılan olarak FMS.02 açıktır)
+  const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>(() => {
+    return { 'FMS.02 Programları': true };
+  });
+
+  const toggleSubmenu = (menuLabel: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setOpenSubmenus(prev => ({
+      ...prev,
+      [menuLabel]: !prev[menuLabel]
+    }));
+  };
 
   // Sayfa değişimlerinde (veya sayfa içi gezinmelerde) sayfa başını en yukarıya kaydır
   useEffect(() => {
@@ -476,6 +504,102 @@ export default function AppLayout({ children }: AppLayoutProps) {
               if ((item as any).end && location.pathname !== item.to) {
                 customIsActive = false;
               }
+            }
+
+            // Alt menüsü (children) olan öğe (Örn: FMS.02 Programları)
+            if ((item as any).children && (item as any).children.length > 0) {
+              const children = (item as any).children;
+              const isSubmenuOpen = !!openSubmenus[item.label];
+              const isParentActive = location.pathname.startsWith('/risks/reports');
+
+              if (isCollapsed) {
+                return (
+                  <NavLink
+                    key={item.label + '-' + i}
+                    to={item.to!}
+                    onClick={() => setIsSidebarOpen(false)}
+                    title={item.label}
+                    className={cn(
+                      'flex items-center rounded-lg text-sm font-medium transition-colors justify-center h-10 w-full px-0',
+                      isParentActive
+                        ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                  >
+                    <Icon className="w-5 h-5 shrink-0" />
+                  </NavLink>
+                );
+              }
+
+              return (
+                <div key={item.label + '-' + i} className="space-y-1">
+                  <div
+                    onClick={(e) => {
+                      toggleSubmenu(item.label, e);
+                    }}
+                    className={cn(
+                      'flex items-center justify-between rounded-lg text-sm font-medium transition-colors px-3 py-2 cursor-pointer select-none group',
+                      isParentActive
+                        ? 'bg-muted/80 text-foreground font-semibold'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                  >
+                    <NavLink
+                      to={item.to!}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsSidebarOpen(false);
+                      }}
+                      className="flex items-center gap-3 flex-1 min-w-0"
+                    >
+                      <Icon className="w-4 h-4 shrink-0 text-emerald-600" />
+                      <span className="truncate">{item.label}</span>
+                    </NavLink>
+
+                    <button
+                      type="button"
+                      onClick={(e) => toggleSubmenu(item.label, e)}
+                      className="p-1 hover:bg-background/80 rounded transition-transform duration-200"
+                    >
+                      <ChevronDown
+                        className={cn(
+                          "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                          isSubmenuOpen ? "rotate-0" : "-rotate-90"
+                        )}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Açılır / Kapanır Alt Menü Elemanları */}
+                  {isSubmenuOpen && (
+                    <div className="pl-4 pr-1 space-y-0.5 border-l-2 border-emerald-500/30 ml-4 animate-in slide-in-from-top-1 duration-200">
+                      {children.map((child: any, cIdx: number) => {
+                        const ChildIcon = child.icon || ChevronRight;
+                        const childDecodedSearch = decodeURIComponent(location.search);
+                        const isChildActive = location.pathname === child.to?.split('?')[0] && 
+                          childDecodedSearch.includes(child.to?.split('?')[1] || '---');
+
+                        return (
+                          <NavLink
+                            key={child.label + '-' + cIdx}
+                            to={child.to!}
+                            onClick={() => setIsSidebarOpen(false)}
+                            className={cn(
+                              'flex items-center gap-2 rounded-md text-xs font-medium px-2.5 py-1.5 transition-colors',
+                              isChildActive
+                                ? 'bg-emerald-600 text-white shadow-2xs font-bold'
+                                : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                            )}
+                          >
+                            <ChildIcon className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                            <span className="truncate">{child.label}</span>
+                          </NavLink>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
             }
 
             return (

@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, ChevronRight, Loader2, Tag, Building2, Trash2, Settings, Landmark, RefreshCw } from 'lucide-react';
+import { Plus, Edit, ChevronRight, Loader2, Tag, Building2, Trash2, Settings, Landmark, RefreshCw, ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -212,6 +212,64 @@ export default function RiskSettings() {
 
   const openDeptEdit = (d: Department) => { setDeptName(d.name); setDeptModal({ open: true, edit: d }); };
 
+  // ── FMS.02.00 Program Eşleme State & Queries ────────────────
+  const { data: fmsData = { categories: [], fmsPrograms: [] }, isLoading: fmsLoading, refetch: refetchFms } = useQuery<{
+    categories: Array<{
+      category: string;
+      riskCount: number;
+      currentFmsProgram: string | null;
+      suggestedFmsProgram: string;
+    }>;
+    fmsPrograms: string[];
+  }>({
+    queryKey: ['risk-fms-categories', selectedFacilityId],
+    queryFn: async () => {
+      const res = await fetch(`${API}/api/risks/settings/fms-categories?facilityId=${selectedFacilityId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error();
+      return res.json();
+    },
+    enabled: !!selectedFacilityId,
+  });
+
+  const [fmsMappings, setFmsMappings] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (fmsData?.categories?.length > 0) {
+      const initial: Record<string, string> = {};
+      fmsData.categories.forEach(c => {
+        initial[c.category] = c.currentFmsProgram || c.suggestedFmsProgram;
+      });
+      setFmsMappings(initial);
+    }
+  }, [fmsData]);
+
+  const saveFmsMapMutation = useMutation({
+    mutationFn: async () => {
+      const mappings = Object.entries(fmsMappings).map(([category, fmsProgram]) => ({
+        category,
+        fmsProgram
+      }));
+      const res = await fetch(`${API}/api/risks/settings/fms-map`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ facilityId: selectedFacilityId, mappings })
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Eşleştirme kaydedilemedi.');
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['facility-risks', selectedFacilityId] });
+      queryClient.invalidateQueries({ queryKey: ['risk-fms-categories', selectedFacilityId] });
+      toast.success(data.message || 'FMS Programları başarıyla güncellendi.');
+    },
+    onError: (err: any) => toast.error(err.message || 'FMS eşleştirmesi kaydedilemedi.')
+  });
+
   return (
     <div className="space-y-6">
       {/* Üst Başlık ve Tesis Seçici */}
@@ -221,7 +279,7 @@ export default function RiskSettings() {
             <Settings className="w-6 h-6 text-primary" /> Risk Yaşam Döngüsü Ayarları
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Seçili tesis için Hastane Bölümleri, Departmanlar ve Kategori tanımlarını özelleştirin.
+            Seçili tesis için Departmanlar ve JCI FMS.02.00 Program Eşleştirmelerini özelleştirin.
           </p>
         </div>
       </div>
@@ -234,15 +292,129 @@ export default function RiskSettings() {
           </CardContent>
         </Card>
       ) : (
-        <Tabs defaultValue="departments" className="w-full">
-          <TabsList className="grid w-full grid-cols-1 md:w-[200px] bg-muted/50 p-1 rounded-xl">
-            {/* <TabsTrigger value="hosp-depts" className="gap-2 rounded-lg">
-              <Building2 className="w-4 h-4" /> Hastane Bölümleri
-            </TabsTrigger> */}
-            <TabsTrigger value="departments" className="gap-2 rounded-lg">
+        <Tabs defaultValue="fms-mapping" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 md:w-[420px] bg-muted/50 p-1 rounded-xl">
+            <TabsTrigger value="fms-mapping" className="gap-2 rounded-lg font-medium">
+              <ShieldCheck className="w-4 h-4 text-emerald-500" /> FMS.02 Program Eşleştirme
+            </TabsTrigger>
+            <TabsTrigger value="departments" className="gap-2 rounded-lg font-medium">
               <Building2 className="w-4 h-4" /> Departmanlar / Sorumlular
             </TabsTrigger>
           </TabsList>
+
+          {/* ── 0. FMS.02.00 PROGRAM EŞLEŞTİRME ─────────────────────────────────── */}
+          <TabsContent value="fms-mapping" className="pt-4 space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card border px-4 py-3.5 rounded-xl shadow-xs">
+              <div>
+                <h3 className="text-sm font-semibold flex items-center gap-1.5 text-foreground">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" /> JCI FMS.02.00 Yıllık Risk Programı Eşleştirmesi
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Tesisinizde açılmış olan tüm mevcut kategorileri, JCI FMS standardının 8 ana güvenlik programına tek tıkla bağlayın.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => refetchFms()}
+                  className="h-9 text-xs"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Yenile
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={() => saveFmsMapMutation.mutate()} 
+                  disabled={saveFmsMapMutation.isPending || (fmsData?.categories?.length || 0) === 0}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white h-9 text-xs font-semibold px-4"
+                >
+                  {saveFmsMapMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                  )}
+                  Tüm Riskleri Eşleştir ve Kaydet
+                </Button>
+              </div>
+            </div>
+
+            {fmsLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map(i => <div key={i} className="h-14 bg-muted rounded-xl animate-pulse" />)}
+              </div>
+            ) : fmsData?.categories?.length === 0 ? (
+              <div className="text-center py-16 bg-background rounded-xl border border-dashed">
+                <ShieldCheck className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-muted-foreground text-sm font-medium">Bu tesiste henüz girilmiş bir risk kaydı veya kategori bulunamadı.</p>
+              </div>
+            ) : (
+              <div className="bg-card border rounded-xl overflow-hidden shadow-xs">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-muted/60 text-muted-foreground uppercase text-[11px] font-semibold border-b">
+                      <tr>
+                        <th className="px-4 py-3">Mevcut Kategori</th>
+                        <th className="px-4 py-3 text-center w-28">Kayıtlı Risk</th>
+                        <th className="px-4 py-3">Eşleşen FMS.02 Programı (8 Program)</th>
+                        <th className="px-4 py-3 text-right">Durum</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {fmsData.categories.map((c) => {
+                        const selectedVal = fmsMappings[c.category] || c.currentFmsProgram || c.suggestedFmsProgram;
+                        const isAutoSuggested = !c.currentFmsProgram;
+                        return (
+                          <tr key={c.category} className="hover:bg-muted/30 transition-colors">
+                            <td className="px-4 py-3.5 font-medium text-foreground">
+                              <div className="flex items-center gap-2">
+                                <Tag className="w-3.5 h-3.5 text-muted-foreground" />
+                                <span>{c.category}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3.5 text-center">
+                              <Badge variant="secondary" className="font-mono text-xs">
+                                {c.riskCount} risk
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3.5 min-w-[260px]">
+                              <Select
+                                value={selectedVal}
+                                onValueChange={(val) => {
+                                  setFmsMappings(prev => ({ ...prev, [c.category]: val }));
+                                }}
+                              >
+                                <SelectTrigger className="h-8 text-xs bg-background">
+                                  <SelectValue placeholder="FMS Programı Seçiniz..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {fmsData.fmsPrograms.map((prog) => (
+                                    <SelectItem key={prog} value={prog} className="text-xs">
+                                      {prog}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                              {c.currentFmsProgram ? (
+                                <span className="inline-flex items-center text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400 px-2 py-0.5 rounded text-[11px] font-medium border border-emerald-200 dark:border-emerald-800">
+                                  <CheckCircle2 className="w-3 h-3 mr-1" /> Eşleşmiş
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center text-amber-600 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-400 px-2 py-0.5 rounded text-[11px] font-medium border border-amber-200 dark:border-amber-800">
+                                  <Sparkles className="w-3 h-3 mr-1" /> Öneri Hazır
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </TabsContent>
 
           {/* ── 1. HASTANE BÖLÜMLERİ ────────────────────────────────────────── */}
           <TabsContent value="hosp-depts" className="pt-4 space-y-4">
