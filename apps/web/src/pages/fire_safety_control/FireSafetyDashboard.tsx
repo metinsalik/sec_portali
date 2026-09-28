@@ -78,6 +78,27 @@ export default function FireSafetyDashboard() {
     item: any;
     auditTitle: string;
   } | null>(null);
+
+  // Madde ve Aksiyonlarını İnceleme Dialog State'i
+  const [viewItemDetail, setViewItemDetail] = useState<{
+    item: any;
+    auditTitle: string;
+    facilityName: string;
+  } | null>(null);
+
+  // Fotoğraf Büyütme / Önizleme Modalı
+  const [previewPhoto, setPreviewPhoto] = useState<{
+    isOpen: boolean;
+    title: string;
+    currentIndex: number;
+    photos: string[];
+  }>({
+    isOpen: false,
+    title: '',
+    currentIndex: 0,
+    photos: []
+  });
+
   const [quickDesc, setQuickDesc] = useState('');
   const [quickDoneBy, setQuickDoneBy] = useState('');
   const [quickDepartment, setQuickDepartment] = useState('');
@@ -1272,14 +1293,31 @@ export default function FireSafetyDashboard() {
                             {isCompleted ? 'Tamamlandı' : isInProgress ? 'Devam Ediyor' : 'Bekliyor'}
                           </Badge>
 
-                          <Button
-                            size="sm"
-                            onClick={() => handleOpenQuickAction(item, itemAudit?.title || 'Yangın Denetimi')}
-                            className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 text-white text-xs h-8 px-3 shadow-sm flex items-center gap-1.5"
-                          >
-                            <MessageSquarePlus className="w-3.5 h-3.5 text-emerald-400" />
-                            + Aksiyon Yaz
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setViewItemDetail({
+                                item,
+                                auditTitle: itemAudit?.title || 'Yangın Denetimi',
+                                facilityName: itemFacilityName
+                              })}
+                              className="text-xs h-8 px-2.5 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold flex items-center gap-1.5"
+                              title="Bu maddenin tespitini, fotoğraflarını ve girilen tüm aksiyon süreçlerini incele"
+                            >
+                              <Eye className="w-3.5 h-3.5 text-blue-600" />
+                              <span>Maddenin Detayı & Aksiyonlar</span>
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              onClick={() => handleOpenQuickAction(item, itemAudit?.title || 'Yangın Denetimi')}
+                              className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 text-white text-xs h-8 px-3 shadow-sm flex items-center gap-1.5 font-bold"
+                            >
+                              <MessageSquarePlus className="w-3.5 h-3.5 text-emerald-400" />
+                              + Aksiyon Yaz
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -1366,82 +1404,164 @@ export default function FireSafetyDashboard() {
                       : 0;
 
                     return (
-                      <tr key={a.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
-                        <td className="p-3 font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">
-                          {new Date(a.auditDate).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </td>
-                        <td className="p-3 font-medium text-slate-600 dark:text-slate-400">
-                          {a.facility?.name || currentFacility?.name || 'Tesis'}
-                        </td>
-                        <td className="p-3">
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/fire-safety-control/audit/${a.id}?mode=view`)}
-                            className="font-bold text-slate-900 dark:text-slate-100 hover:text-red-600 text-left transition-colors line-clamp-1"
-                          >
-                            {a.title}
-                          </button>
-                          {a.subtitle && (
-                            <span className="text-[11px] text-slate-400 block line-clamp-1 mt-0.5">
-                              {a.subtitle}
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-3 text-center">
-                          <span className="inline-block px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 font-bold text-slate-700 dark:text-slate-300 text-[11px]">
-                            {auditItems.length}
-                          </span>
-                        </td>
-                        <td className="p-3 space-y-1">
-                          <div className="flex items-center justify-between text-[10px] font-bold">
-                            <span className="text-slate-500">Tamamlanma</span>
-                            <span className={weightedProgress >= 80 ? 'text-emerald-600' : weightedProgress >= 40 ? 'text-amber-600' : 'text-red-500'}>
-                              %{weightedProgress}
-                            </span>
-                          </div>
-                          <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden flex">
-                            <div className="bg-emerald-500 h-full" style={{ width: `${completedPct}%` }} title={`Tamamlandı: ${completed}`} />
-                            <div className="bg-amber-500 h-full" style={{ width: `${inProgressPct}%` }} title={`Devam Eden: ${inProgress}`} />
-                            <div className="bg-red-500 h-full" style={{ width: `${openPct}%` }} title={`Bekleyen: ${open}`} />
-                          </div>
-                        </td>
-                        <td className="p-3 text-center">
-                          {getStatusBadge(a.status)}
-                        </td>
-                        <td className="p-3 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Button
-                              size="sm"
-                              variant="outline"
+                      <React.Fragment key={a.id}>
+                        <tr className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
+                          <td className="p-3 font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                            {new Date(a.auditDate).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </td>
+                          <td className="p-3 font-medium text-slate-600 dark:text-slate-400">
+                            {a.facility?.name || currentFacility?.name || 'Tesis'}
+                          </td>
+                          <td className="p-3">
+                            <button
+                              type="button"
                               onClick={() => navigate(`/fire-safety-control/audit/${a.id}?mode=view`)}
-                              className="text-xs h-7 px-2 text-blue-600 hover:bg-blue-50"
-                              title="Raporu ve Baskı Görünümünü İncele"
+                              className="font-bold text-slate-900 dark:text-slate-100 hover:text-red-600 text-left transition-colors line-clamp-1"
                             >
-                              <Eye className="w-3.5 h-3.5 mr-1" />
-                              Rapor
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => navigate(`/fire-safety-control/audit/${a.id}?mode=edit`)}
-                              className="text-xs h-7 px-2 text-amber-600 hover:bg-amber-50"
-                              title="Tutanak ve Maddeleri Düzenle"
-                            >
-                              <Pencil className="w-3.5 h-3.5 mr-1" />
-                              Düzenle
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => setDeleteAuditId(a.id)}
-                              className="text-xs h-7 px-2 text-slate-400 hover:text-red-600 hover:bg-red-50"
-                              title="Tutanağı Sil"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
+                              {a.title}
+                            </button>
+                            {a.subtitle && (
+                              <span className="text-[11px] text-slate-400 block line-clamp-1 mt-0.5">
+                                {a.subtitle}
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3 text-center">
+                            <span className="inline-block px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 font-bold text-slate-700 dark:text-slate-300 text-[11px]">
+                              {auditItems.length}
+                            </span>
+                          </td>
+                          <td className="p-3 space-y-1">
+                            <div className="flex items-center justify-between text-[10px] font-bold">
+                              <span className="text-slate-500">Tamamlanma</span>
+                              <span className={weightedProgress >= 80 ? 'text-emerald-600' : weightedProgress >= 40 ? 'text-amber-600' : 'text-red-500'}>
+                                %{weightedProgress}
+                              </span>
+                            </div>
+                            <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden flex">
+                              <div className="bg-emerald-500 h-full" style={{ width: `${completedPct}%` }} title={`Tamamlandı: ${completed}`} />
+                              <div className="bg-amber-500 h-full" style={{ width: `${inProgressPct}%` }} title={`Devam Eden: ${inProgress}`} />
+                              <div className="bg-red-500 h-full" style={{ width: `${openPct}%` }} title={`Bekleyen: ${open}`} />
+                            </div>
+                          </td>
+                          <td className="p-3 text-center">
+                            {getStatusBadge(a.status)}
+                          </td>
+                          <td className="p-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {auditItems.length > 0 && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => toggleExpandAudit(a.id)}
+                                  className={`text-xs h-7 px-2 font-semibold ${expandedAuditIds[a.id] ? 'bg-slate-200 dark:bg-slate-700 text-slate-900' : 'text-slate-600 hover:bg-slate-100'}`}
+                                  title={expandedAuditIds[a.id] ? 'Maddeleri Gizle' : 'Maddeleri Listele'}
+                                >
+                                  {expandedAuditIds[a.id] ? <ChevronUp className="w-3.5 h-3.5 mr-1" /> : <ChevronDown className="w-3.5 h-3.5 mr-1" />}
+                                  Maddeler ({auditItems.length})
+                                </Button>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => navigate(`/fire-safety-control/audit/${a.id}?mode=view`)}
+                                className="text-xs h-7 px-2 text-blue-600 hover:bg-blue-50"
+                                title="Raporu ve Baskı Görünümünü İncele"
+                              >
+                                <Eye className="w-3.5 h-3.5 mr-1" />
+                                Rapor
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => navigate(`/fire-safety-control/audit/${a.id}?mode=edit`)}
+                                className="text-xs h-7 px-2 text-amber-600 hover:bg-amber-50"
+                                title="Tutanak ve Maddeleri Düzenle"
+                              >
+                                <Pencil className="w-3.5 h-3.5 mr-1" />
+                                Düzenle
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setDeleteAuditId(a.id)}
+                                className="text-xs h-7 px-2 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                title="Tutanağı Sil"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                        {expandedAuditIds[a.id] && auditItems.length > 0 && (
+                          <tr className="bg-slate-50/90 dark:bg-slate-950/60">
+                            <td colSpan={7} className="p-4 border-b border-slate-200 dark:border-slate-800">
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                                  <span>Raporun Tespit Maddeleri ({auditItems.length})</span>
+                                  <span className="text-[11px] text-slate-400">Detay ve aksiyonları incelemek için maddeye veya butona tıklayabilirsiniz</span>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                  {auditItems.map((itm: any) => {
+                                    const { percent } = calculateItemProgress(itm);
+                                    const isComp = itm.status === 'TAMAMLANDI' || itm.status === 'COMPLETED';
+                                    const isProg = itm.status === 'DEVAM_EDIYOR' || itm.status === 'IN_PROGRESS';
+                                    return (
+                                      <div
+                                        key={itm.id}
+                                        onClick={() => setViewItemDetail({
+                                          item: itm,
+                                          auditTitle: a.title,
+                                          facilityName: a.facility?.name || currentFacility?.name || 'Tesis'
+                                        })}
+                                        className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-400 transition-all cursor-pointer shadow-2xs flex items-center justify-between gap-3 group"
+                                      >
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                          <span className="w-6 h-6 rounded-md bg-red-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0">
+                                            {itm.orderNo}
+                                          </span>
+                                          <div className="min-w-0">
+                                            <p className="font-bold text-xs text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors truncate">
+                                              {itm.topic}
+                                            </p>
+                                            <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
+                                              <span>{itm.actions?.length || 0} aksiyon</span>
+                                              {itm.responsible && <span>· {itm.responsible}</span>}
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 shrink-0">
+                                          <span className={`text-[11px] font-black ${percent === 100 ? 'text-emerald-600' : percent > 0 ? 'text-amber-600' : 'text-red-500'}`}>
+                                            %{percent}
+                                          </span>
+                                          <Badge className={
+                                            isComp
+                                              ? 'bg-emerald-600 text-white text-[10px]'
+                                              : isProg
+                                              ? 'bg-amber-500 text-white text-[10px]'
+                                              : 'bg-red-500 text-white text-[10px]'
+                                          }>
+                                            {isComp ? 'Tamamlandı' : isProg ? 'Devam' : 'Bekliyor'}
+                                          </Badge>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-6 w-6 p-0 text-blue-600 hover:bg-blue-50"
+                                            title="Detay & Aksiyon Dialogunu Aç"
+                                          >
+                                            <Eye className="w-3.5 h-3.5" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -2297,6 +2417,369 @@ export default function FireSafetyDashboard() {
               {deleteMutation.isPending ? 'Siliniyor...' : 'Evet, Kalıcı Olarak Sil'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* TESPİT MADDESİ VE AKSİYONLARI İNCELEME DIALOG PENCERESİ         */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      <Dialog open={!!viewItemDetail} onOpenChange={open => !open && setViewItemDetail(null)}>
+        <DialogContent className="max-w-3xl max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+          <DialogHeader className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 shrink-0">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-lg bg-red-600 text-white font-extrabold flex items-center justify-center text-xs shrink-0 shadow-xs">
+                  {viewItemDetail?.item?.orderNo}
+                </span>
+                <Badge className="bg-indigo-600 text-white font-bold text-xs flex items-center gap-1 shadow-2xs">
+                  <Building2 className="w-3.5 h-3.5 text-indigo-200" />
+                  <span>{viewItemDetail?.facilityName}</span>
+                </Badge>
+                {viewItemDetail?.item?.source && (
+                  <Badge variant="outline" className="bg-sky-50 text-sky-800 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 text-xs font-semibold">
+                    {viewItemDetail.item.source}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Durum & İlerleme Rozeti */}
+              {viewItemDetail?.item && (() => {
+                const s = (viewItemDetail.item.status || '').toUpperCase();
+                const isCompleted = s === 'TAMAMLANDI' || s === 'COMPLETED';
+                const isInProgress = s === 'DEVAM_EDIYOR' || s === 'IN_PROGRESS';
+                const { percent } = calculateItemProgress(viewItemDetail.item);
+                return (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                      <span className="text-[11px] text-slate-500 font-bold">İlerleme:</span>
+                      <span className={`text-xs font-black ${percent === 100 ? 'text-emerald-600' : percent > 0 ? 'text-amber-600' : 'text-red-500'}`}>
+                        %{percent}
+                      </span>
+                    </div>
+                    <Badge className={
+                      isCompleted
+                        ? 'bg-emerald-600 text-white text-xs font-bold'
+                        : isInProgress
+                        ? 'bg-amber-500 text-white text-xs font-bold'
+                        : 'bg-red-500 text-white text-xs font-bold'
+                    }>
+                      {isCompleted ? 'Tamamlandı' : isInProgress ? 'Devam Ediyor' : 'Bekliyor'}
+                    </Badge>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 pt-2 leading-snug">
+              {viewItemDetail?.item?.topic}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              {viewItemDetail?.auditTitle} kapsamındaki tespit maddesi ve aksiyon süreci
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+            {/* 1. Tespit Bilgileri & Karar */}
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-700 pb-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Tespit & Karar Detayı
+                </span>
+                {viewItemDetail?.item?.deadlineDate && (
+                  <span className="text-xs font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    Hedef: <strong>{new Date(viewItemDetail.item.deadlineDate).toLocaleDateString('tr-TR')}</strong>
+                  </span>
+                )}
+              </div>
+
+              {viewItemDetail?.item?.action ? (
+                <div>
+                  <div className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Alınan Karar / Yapılması Gereken Plan:
+                  </div>
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
+                    {viewItemDetail.item.action}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs italic text-slate-400">Bu tespit için karar/plan metni henüz girilmemiş.</p>
+              )}
+
+              {/* Kategori ve Sorumlular */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs">
+                <div>
+                  <span className="text-slate-400 font-medium block mb-1">Kategori:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {viewItemDetail?.item?.category ? (
+                      viewItemDetail.item.category.split(',').map((c: string) => c.trim()).filter(Boolean).map((cat: string, idx: number) => (
+                        <span key={idx} className="px-2 py-0.5 rounded bg-white dark:bg-slate-900 border text-slate-700 dark:text-slate-300 font-semibold text-[11px]">
+                          {cat}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-slate-400">Genel</span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-slate-400 font-medium block mb-1">Sorumlu Birim / Kişi:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {viewItemDetail?.item?.responsible ? (
+                      viewItemDetail.item.responsible.split(',').map((r: string) => r.trim()).filter(Boolean).map((resp: string, idx: number) => (
+                        <span key={idx} className="px-2 py-0.5 rounded bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 text-teal-800 dark:text-teal-300 font-bold text-[11px]">
+                          {resp}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-slate-400">Belirtilmedi</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Tespit Sırasında Çekilen Fotoğraflar */}
+              {viewItemDetail?.item?.findingPhotos && viewItemDetail.item.findingPhotos.length > 0 && (
+                <div className="pt-3 border-t border-slate-200/80 dark:border-slate-700">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+                    <Camera className="w-3.5 h-3.5 text-red-600" />
+                    <span>Tespit Fotoğrafları ({viewItemDetail.item.findingPhotos.length})</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {viewItemDetail.item.findingPhotos.map((photoUrl: string, pIdx: number) => (
+                      <div
+                        key={pIdx}
+                        onClick={() => setPreviewPhoto({
+                          isOpen: true,
+                          title: `Madde #${viewItemDetail.item.orderNo} Tespit Fotoğrafı #${pIdx + 1}`,
+                          currentIndex: pIdx,
+                          photos: viewItemDetail.item.findingPhotos
+                        })}
+                        className="w-20 h-20 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700 relative group cursor-pointer bg-white shadow-2xs hover:opacity-90 transition-opacity"
+                        title="Büyük boyutta incelemek için tıklayın"
+                      >
+                        <img src={photoUrl} alt="Tespit" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity">
+                          <Maximize2 className="w-4 h-4" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 2. Girilen Aksiyonlar & Sahadaki Müdahaleler Listesi */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 flex items-center justify-center font-bold">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    Girilen Aksiyonlar & Saha Kanıtları ({viewItemDetail?.item?.actions?.length || 0})
+                  </h4>
+                </div>
+
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const itm = viewItemDetail?.item;
+                    const audTitle = viewItemDetail?.auditTitle || 'Yangın Denetimi';
+                    setViewItemDetail(null);
+                    handleOpenQuickAction(itm, audTitle);
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-7 px-2.5 font-bold shadow-xs flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Yeni Aksiyon / Kanıt Ekle
+                </Button>
+              </div>
+
+              {!viewItemDetail?.item?.actions || viewItemDetail.item.actions.length === 0 ? (
+                <div className="p-8 text-center border-2 border-dashed rounded-xl bg-slate-50/50 dark:bg-slate-900/30 text-xs text-slate-400 space-y-2">
+                  <Clock className="w-8 h-8 text-slate-300 mx-auto" />
+                  <p className="font-semibold text-slate-600 dark:text-slate-400">Bu madde için henüz saha aksiyonu veya müdahale girilmemiş.</p>
+                  <p className="text-[11px]">Sağ üstteki "Yeni Aksiyon / Kanıt Ekle" butonu ile yapılan müdahaleyi sisteme kaydedebilirsiniz.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {viewItemDetail.item.actions.map((act: any, actIdx: number) => {
+                    const isActCompleted = act.status === 'Tamamlandı';
+                    const actPhotos = act.evidencePhotos || [];
+                    return (
+                      <div
+                        key={act.id || actIdx}
+                        className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs space-y-3"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-2 border-b border-slate-100 dark:border-slate-800">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[11px] flex items-center justify-center">
+                              #{actIdx + 1}
+                            </span>
+                            <Badge className={
+                              isActCompleted
+                                ? 'bg-emerald-600 text-white text-[10px] font-bold'
+                                : 'bg-amber-500 text-white text-[10px] font-bold'
+                            }>
+                              {act.status || 'Tamamlandı'}
+                            </Badge>
+                            {act.progressPercent !== undefined && act.progressPercent !== null && (
+                              <span className="text-[11px] font-extrabold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                                %{act.progressPercent} İlerleme
+                              </span>
+                            )}
+                          </div>
+
+                          <span className="text-[11px] font-semibold text-slate-400">
+                            {new Date(act.createdAt || act.actionDate).toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                          </span>
+                        </div>
+
+                        {/* Açıklama */}
+                        <div>
+                          <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-medium leading-relaxed whitespace-pre-wrap">
+                            {act.explanation}
+                          </p>
+                        </div>
+
+                        {/* Yapan Kişi / Departman */}
+                        <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                          <span>
+                            İşlemi Yapan: <strong className="text-slate-700 dark:text-slate-300">{act.performedBy || 'Yetkili'}</strong>
+                          </span>
+                          {act.department && (
+                            <span className="text-teal-700 dark:text-teal-400 font-semibold">
+                              Departman: {act.department}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Aksiyon Kanıt Fotoğrafları */}
+                        {actPhotos.length > 0 && (
+                          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
+                            <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                              <Paperclip className="w-3 h-3 text-blue-600" />
+                              Yüklenen Kanıt Görselleri ({actPhotos.length})
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                              {actPhotos.map((photoUrl: string, pIdx: number) => (
+                                <div
+                                  key={pIdx}
+                                  onClick={() => setPreviewPhoto({
+                                    isOpen: true,
+                                    title: `Aksiyon #${actIdx + 1} Kanıt Fotoğrafı #${pIdx + 1}`,
+                                    currentIndex: pIdx,
+                                    photos: actPhotos
+                                  })}
+                                  className="w-16 h-16 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 relative group cursor-pointer bg-slate-50 shadow-2xs hover:opacity-90 transition-opacity"
+                                  title="Fotoğrafı büyütmek için tıklayın"
+                                >
+                                  <img src={photoUrl} alt="Kanıt" className="w-full h-full object-cover" />
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity">
+                                    <Maximize2 className="w-3.5 h-3.5" />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="p-3.5 sm:px-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 shrink-0 flex flex-row items-center justify-between m-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setViewItemDetail(null)}
+              className="text-xs"
+            >
+              Kapat
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                const itm = viewItemDetail?.item;
+                const audTitle = viewItemDetail?.auditTitle || 'Yangın Denetimi';
+                setViewItemDetail(null);
+                handleOpenQuickAction(itm, audTitle);
+              }}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5"
+            >
+              <MessageSquarePlus className="w-3.5 h-3.5" />
+              Bu Maddeye Aksiyon Gir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* FOTOĞRAF TAM BOY ÖNİZLEME MODALI (LIGHTBOX)                    */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      <Dialog open={previewPhoto.isOpen} onOpenChange={open => !open && setPreviewPhoto(prev => ({ ...prev, isOpen: false }))}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black/95 text-white border-0 shadow-2xl flex flex-col max-h-[95vh]">
+          <div className="p-3 px-4 flex items-center justify-between border-b border-white/10 shrink-0">
+            <span className="font-semibold text-xs sm:text-sm text-slate-200">
+              {previewPhoto.title} {previewPhoto.photos.length > 1 ? `(${previewPhoto.currentIndex + 1} / ${previewPhoto.photos.length})` : ''}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPreviewPhoto(prev => ({ ...prev, isOpen: false }))}
+              className="text-white hover:bg-white/20 h-7 w-7 p-0"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <div className="flex-1 flex items-center justify-center p-4 min-h-[300px] overflow-hidden relative">
+            {previewPhoto.photos[previewPhoto.currentIndex] && (
+              <img
+                src={previewPhoto.photos[previewPhoto.currentIndex]}
+                alt="Önizleme"
+                className="max-h-[75vh] max-w-full object-contain rounded-md shadow-2xl"
+              />
+            )}
+
+            {previewPhoto.photos.length > 1 && (
+              <div className="absolute inset-y-0 inset-x-2 flex items-center justify-between pointer-events-none">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewPhoto(prev => ({
+                      ...prev,
+                      currentIndex: prev.currentIndex > 0 ? prev.currentIndex - 1 : prev.photos.length - 1
+                    }));
+                  }}
+                  className="pointer-events-auto bg-black/50 hover:bg-black/80 text-white rounded-full h-9 w-9 p-0"
+                >
+                  <ArrowRight className="w-5 h-5 rotate-180" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewPhoto(prev => ({
+                      ...prev,
+                      currentIndex: prev.currentIndex < prev.photos.length - 1 ? prev.currentIndex + 1 : 0
+                    }));
+                  }}
+                  className="pointer-events-auto bg-black/50 hover:bg-black/80 text-white rounded-full h-9 w-9 p-0"
+                >
+                  <ArrowRight className="w-5 h-5" />
+                </Button>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
