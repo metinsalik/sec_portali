@@ -140,4 +140,8 @@ httpServer.listen(Number(PORT), '0.0.0.0', () => {
   // Sistem açıldığında/güncellendiğinde mükerrer açılmış yangın denetim raporlarını otomatik konsolide et
   const { consolidateFireSafetyAudits } = require('./scripts/consolidate_fire_audits');
   consolidateFireSafetyAudits();
+
+  // Sistem açıldığında/güncellendiğinde (canlıda dahil) boş ve anlamsız termal ölçüm satırlarını otomatik temizle
+  const { cleanupEmptyThermalItems } = require('./scripts/cleanup_thermal_empty');
+  cleanupEmptyThermalItems();
 });
