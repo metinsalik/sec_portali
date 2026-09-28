@@ -261,5 +261,18 @@ export const thermalInspectionService = {
     const res = await api.get(`/safety-management/electric-infrastructure/thermal/panel-history?${params.toString()}`);
     if (!res.ok) throw new Error('Pano geçmişi getirilemedi.');
     return await res.json();
+  },
+
+  // Boş / anlamsız ölçüm satırlarını temizleme
+  async cleanupEmptyItems(facilityId?: string, sessionId?: string): Promise<{ message: string; deletedCount: number }> {
+    const res = await api.post('/safety-management/electric-infrastructure/thermal/cleanup-empty', {
+      facilityId,
+      sessionId
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Boş satırlar temizlenemedi.');
+    }
+    return await res.json();
   }
 };

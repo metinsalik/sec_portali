@@ -444,10 +444,18 @@ router.post('/import-excel', tempUpload.single('file'), async (req: AuthRequest,
       const panelVal = colPanel !== -1 && row[colPanel] != null ? String(row[colPanel]).trim() : '';
       const pointVal = colPoint !== -1 && row[colPoint] != null ? String(row[colPoint]).trim() : '';
       const measVal = colMeasTemp !== -1 && row[colMeasTemp] != null ? String(row[colMeasTemp]).trim() : '';
+      const ambVal = colAmbTemp !== -1 && row[colAmbTemp] != null ? String(row[colAmbTemp]).trim() : '';
+      const descVal = colDesc !== -1 && row[colDesc] != null ? String(row[colDesc]).trim() : '';
       const orderNoVal = colNo !== -1 && row[colNo] != null && !isNaN(parseInt(String(row[colNo]), 10)) ? parseInt(String(row[colNo]), 10) : null;
 
-      // Skip row if completely empty (no orderNo, no panel, no point, no measurement)
-      if (!orderNoVal && !panelVal && !pointVal && !measVal) {
+      // Skip row if it has no meaningful content (no panel name, no measurement point, no measured temp, no finding/risk)
+      // Having only an order number (e.g. 1, 2, 3 in column A) without actual data is an empty row and must be ignored!
+      if (!panelVal && !pointVal && !measVal && !descVal) {
+        continue;
+      }
+
+      // If panelVal looks like just an order index (e.g. "1", "2") and no temp/point/desc, skip it as empty
+      if (/^\d+$/.test(panelVal) && !pointVal && !measVal && !descVal) {
         continue;
       }
 
@@ -711,6 +719,77 @@ router.delete('/items/:id', async (req: AuthRequest, res) => {
   } catch (error: any) {
     console.error('Error deleting thermal item:', error);
     res.status(500).json({ error: error.message || 'Ölçüm kaydı silinemedi.' });
+  }
+});
+
+// Boş ve anlamsız ölçüm satırlarını toplu temizleme endpoint'i
+router.post('/cleanup-empty', async (req: AuthRequest, res) => {
+  try {
+    const { facilityId, sessionId } = req.body;
+
+    // Filter to inspect
+    const sessionWhere: any = {};
+    if (sessionId) {
+      sessionWhere.id = sessionId;
+    } else if (facilityId && facilityId !== 'all') {
+      const targetFacilityId = (await resolveFacilityId(facilityId)) || facilityId;
+      sessionWhere.facilityId = targetFacilityId;
+    }
+
+    const items = await prisma.thermalInspectionItem.findMany({
+      where: Object.keys(sessionWhere).length > 0 ? { session: sessionWhere } : {},
+      select: {
+        id: true,
+        panelName: true,
+        measuredTemp: true,
+        ambientTemp: true,
+        measurementPoint: true,
+        equipmentConnection: true,
+        detectedRisk: true,
+        actionTaken: true,
+        actionPlan: true,
+        photoUrls: true,
+        sessionId: true
+      }
+    });
+
+    const idsToDelete: string[] = [];
+
+    for (const it of items) {
+      const hasTemp = it.measuredTemp !== null && it.measuredTemp !== undefined;
+      const hasAmb = it.ambientTemp !== null && it.ambientTemp !== undefined;
+      const hasPoint = it.measurementPoint && it.measurementPoint.trim() !== '';
+      const hasRisk = it.detectedRisk && it.detectedRisk.trim() !== '';
+      const hasAction = it.actionTaken && it.actionTaken.trim() !== '';
+      const hasEquip = it.equipmentConnection && it.equipmentConnection.trim() !== '';
+      const hasPlan = it.actionPlan && it.actionPlan.trim() !== '';
+      let photos: any[] = [];
+      try {
+        photos = typeof it.photoUrls === 'string' ? JSON.parse(it.photoUrls) : (it.photoUrls || []);
+      } catch (e) {}
+      const hasPhotos = Array.isArray(photos) && photos.length > 0;
+
+      // An item is completely empty/meaningless if it has no measurement, no point, no finding, no equipment, no plan, no photos
+      if (!hasTemp && !hasAmb && !hasPoint && !hasRisk && !hasAction && !hasEquip && !hasPlan && !hasPhotos) {
+        idsToDelete.push(it.id);
+      }
+    }
+
+    let deletedCount = 0;
+    if (idsToDelete.length > 0) {
+      const result = await prisma.thermalInspectionItem.deleteMany({
+        where: { id: { in: idsToDelete } }
+      });
+      deletedCount = result.count;
+    }
+
+    res.json({
+      message: `Temizlik tamamlandı. Toplam ${deletedCount} adet boş/anlamsız satır silindi.`,
+      deletedCount
+    });
+  } catch (error: any) {
+    console.error('Error cleaning up empty thermal items:', error);
+    res.status(500).json({ error: error.message || 'Boş satırlar temizlenirken bir hata oluştu.' });
   }
 });
 

@@ -23,7 +23,8 @@ import {
   ShieldAlert,
   Info,
   Calendar,
-  ChevronLeft
+  ChevronLeft,
+  Sparkles
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -51,6 +52,7 @@ interface Props {
   onDeleteItem?: (itemId: string) => void;
   onItemUpdated?: (updatedItem: ThermalInspectionItem) => void;
   onOpenPanelDetail?: (panelName: string) => void;
+  onCleanupEmptyClick?: () => void;
 }
 
 export const ThermalDashboardView: React.FC<Props> = ({
@@ -62,7 +64,8 @@ export const ThermalDashboardView: React.FC<Props> = ({
   onEditItem,
   onDeleteItem,
   onItemUpdated,
-  onOpenPanelDetail
+  onOpenPanelDetail,
+  onCleanupEmptyClick
 }) => {
   const items = Array.isArray(rawItems) ? rawItems : [];
 
@@ -327,6 +330,17 @@ export const ThermalDashboardView: React.FC<Props> = ({
             <Download className="w-4 h-4" />
             CSV İndir
           </Button>
+          {onCleanupEmptyClick && (
+            <Button
+              onClick={onCleanupEmptyClick}
+              variant="outline"
+              className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-200 border-rose-400/30 backdrop-blur-sm gap-2 text-xs h-10 px-3.5 font-semibold transition-colors"
+              title="Bu oturumdaki ve genel kayıtlar arasındaki boş / anlamsız satırları temizler"
+            >
+              <Sparkles className="w-4 h-4 text-rose-400" />
+              Boş Satırları Temizle
+            </Button>
+          )}
         </div>
       </div>
 

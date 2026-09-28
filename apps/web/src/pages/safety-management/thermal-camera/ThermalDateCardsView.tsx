@@ -19,7 +19,8 @@ import {
   Search,
   Filter,
   BarChart3,
-  Layers
+  Layers,
+  Sparkles
 } from 'lucide-react';
 import type { ThermalInspectionSession } from '@/services/thermal-inspection.service';
 
@@ -29,6 +30,7 @@ interface Props {
   onSelectSession: (sessionId: string) => void;
   onUploadExcelClick: () => void;
   onNewSessionClick: () => void;
+  onCleanupEmptyClick?: () => void;
   onViewExecutiveDashboard?: () => void;
   onViewWatchlist?: () => void;
   isLoading?: boolean;
@@ -40,6 +42,7 @@ export const ThermalDateCardsView: React.FC<Props> = ({
   onSelectSession,
   onUploadExcelClick,
   onNewSessionClick,
+  onCleanupEmptyClick,
   onViewExecutiveDashboard,
   onViewWatchlist,
   isLoading
@@ -157,6 +160,17 @@ export const ThermalDateCardsView: React.FC<Props> = ({
             <Upload className="w-4 h-4" />
             Excelden Aktar
           </Button>
+          {onCleanupEmptyClick && (
+            <Button
+              onClick={onCleanupEmptyClick}
+              variant="outline"
+              className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-200 border-rose-400/30 backdrop-blur-sm gap-2 text-xs h-10 px-3.5 font-semibold transition-colors"
+              title="Excel aktarımından veya boş satırlardan kalan verisiz hayalet kayıtları temizler"
+            >
+              <Sparkles className="w-4 h-4 text-rose-400" />
+              Boş Satırları Temizle
+            </Button>
+          )}
           <Button
             onClick={onNewSessionClick}
             className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2 text-xs h-10 px-4 font-semibold shadow-md shadow-indigo-600/30"

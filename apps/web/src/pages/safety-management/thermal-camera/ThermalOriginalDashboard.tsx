@@ -10,9 +10,10 @@ interface Props {
   onDeleteItem?: (itemId: string) => void;
   onItemUpdated?: (updatedItem: any) => void;
   onOpenPanelDetail?: (panelName: string) => void;
+  onCleanupEmptyClick?: () => void;
 }
 
-export const ThermalOriginalDashboard: React.FC<Props> = ({ session, onBack, onAddPhoto, onEditItem, onDeleteItem, onItemUpdated, onOpenPanelDetail }) => {
+export const ThermalOriginalDashboard: React.FC<Props> = ({ session, onBack, onAddPhoto, onEditItem, onDeleteItem, onItemUpdated, onOpenPanelDetail, onCleanupEmptyClick }) => {
   const items = session.items || [];
   
   const hospitalName = session.facility?.name || 'Bilinmeyen Tesis';
@@ -35,6 +36,7 @@ export const ThermalOriginalDashboard: React.FC<Props> = ({ session, onBack, onA
         onDeleteItem={onDeleteItem}
         onItemUpdated={onItemUpdated}
         onOpenPanelDetail={onOpenPanelDetail}
+        onCleanupEmptyClick={onCleanupEmptyClick}
       />
     </div>
   );

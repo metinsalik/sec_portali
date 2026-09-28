@@ -372,6 +372,35 @@ export default function ThermalCameraPage() {
     });
   };
 
+  // Cleanup completely empty / meaningless rows
+  const handleCleanupEmpty = async () => {
+    const isTargetingSession = viewMode === 'SESSION_DETAIL' && selectedSession;
+    const confirmMsg = isTargetingSession
+      ? 'Bu denetim oturumundaki tüm boş ve verisiz satırlar silinecektir. Onaylıyor musunuz?'
+      : 'Sistemdeki (veya seçili tesisteki) verisiz ve boş satırlar taranıp silinecektir. Onaylıyor musunuz?';
+
+    if (!confirm(confirmMsg)) return;
+
+    setLoading(true);
+    try {
+      const res = await thermalInspectionService.cleanupEmptyItems(
+        activeFacilityId,
+        isTargetingSession ? selectedSession?.id : undefined
+      );
+      toast.success(res.message || 'Boş satırlar başarıyla temizlendi.');
+
+      // Refresh data
+      if (isTargetingSession && selectedSession) {
+        handleSelectSession(selectedSession.id);
+      }
+      fetchData(selectedSession?.id);
+    } catch (err: any) {
+      toast.error(err.message || 'Boş satırlar temizlenirken hata oluştu.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const activeFacilityObj = dashboardData?.facilities?.find(f => normalizeId(f.id) === normalizeId(activeFacilityId));
   const activeFacilityDisplayName = activeFacilityObj ? activeFacilityObj.name : (activeFacilityId === 'all' ? 'Tüm Tesisler' : 'Seçili Tesis');
 
@@ -394,6 +423,7 @@ export default function ThermalCameraPage() {
           onSelectSession={handleSelectSession}
           onUploadExcelClick={() => excelInputRef.current?.click()}
           onNewSessionClick={handleCreateManualSession}
+          onCleanupEmptyClick={handleCleanupEmpty}
           onViewExecutiveDashboard={isAdminOrMgmt ? () => setViewMode('EXECUTIVE') : undefined}
           onViewWatchlist={() => setViewMode('WATCHLIST')}
           isLoading={loading}
@@ -425,6 +455,7 @@ export default function ThermalCameraPage() {
           onDeleteItem={handleDeleteItem}
           onItemUpdated={handleItemUpdated}
           onOpenPanelDetail={(panel) => setViewMode('PANEL_DETAIL', panel)}
+          onCleanupEmptyClick={handleCleanupEmpty}
         />
       )}
 
