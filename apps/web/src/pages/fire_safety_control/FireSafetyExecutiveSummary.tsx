@@ -614,9 +614,9 @@ export default function FireSafetyExecutiveSummary() {
     }
   };
 
-  // Kategori Bazlı İstatistik Hesaplamaları
+  // Kategori Bazlı İstatistik Hesaplamaları (Tamamlanan %100, Süreçteki İşler Ağırlıklı Katkı Sağlar)
   const categoryStats = React.useMemo(() => {
-    const map: Record<string, { total: number; completed: number; inProgress: number; open: number }> = {};
+    const map: Record<string, { total: number; completed: number; inProgress: number; open: number; totalProgressSum: number }> = {};
 
     allItems.forEach((item: any) => {
       const cats = (item.category || 'Genel Yangın Güvenliği')
@@ -628,11 +628,17 @@ export default function FireSafetyExecutiveSummary() {
       const isComp = status === 'TAMAMLANDI' || status === 'COMPLETED';
       const isProg = status === 'DEVAM_EDIYOR' || status === 'IN_PROGRESS';
 
+      // Madde bazında gerçek/ağırlıklı ilerleme yüzdesi
+      const itemProgress = calculateItemProgress(item).percent;
+      const progressWeight = isComp ? 100 : isProg ? Math.max(itemProgress, 50) : 0;
+
       cats.forEach((cat: string) => {
         if (!map[cat]) {
-          map[cat] = { total: 0, completed: 0, inProgress: 0, open: 0 };
+          map[cat] = { total: 0, completed: 0, inProgress: 0, open: 0, totalProgressSum: 0 };
         }
         map[cat].total += 1;
+        map[cat].totalProgressSum += progressWeight;
+
         if (isComp) {
           map[cat].completed += 1;
         } else if (isProg) {
@@ -644,17 +650,19 @@ export default function FireSafetyExecutiveSummary() {
     });
 
     return Object.entries(map).map(([name, stat]) => {
-      const pct = stat.total > 0 ? Math.round((stat.completed / stat.total) * 100) : 0;
+      // Uyum Skoru: Kapatılanlar %100 + Süreçteki işlerin ilerleme katkısı
+      const pct = stat.total > 0 ? Math.round(stat.totalProgressSum / stat.total) : 0;
+      const rawCompletedPct = stat.total > 0 ? Math.round((stat.completed / stat.total) * 100) : 0;
       const inProgPct = stat.total > 0 ? Math.round((stat.inProgress / stat.total) * 100) : 0;
       const openPct = stat.total > 0 ? Math.round((stat.open / stat.total) * 100) : 0;
-      return { name, ...stat, pct, inProgPct, openPct };
+      return { name, ...stat, pct, rawCompletedPct, inProgPct, openPct };
     }).sort((a, b) => b.total - a.total);
   }, [allItems]);
 
   // Tesis Bazlı İstatistik Hesaplamaları (Tüm Tesisler veya Filtrelenmiş Tesisler görünümü için)
   // drilldownFacilityId olsa bile kullanıcının localStorage'da kayıtlı olan tesis kartları korunur
   const facilityStats = React.useMemo(() => {
-    const map: Record<string, { name: string; auditsCount: number; total: number; completed: number; inProgress: number; open: number }> = {};
+    const map: Record<string, { name: string; auditsCount: number; total: number; completed: number; inProgress: number; open: number; totalProgressSum: number }> = {};
     const sourceAudits = allGlobalAudits.length > 0 ? allGlobalAudits : audits;
 
     // Kullanıcının seçtiği tesisler (veya tümü)
@@ -671,7 +679,7 @@ export default function FireSafetyExecutiveSummary() {
       const fName = audit.facility?.name || facilities.find((f: any) => f.id === fId)?.name || 'Bilinmeyen Tesis';
 
       if (!map[fId]) {
-        map[fId] = { name: fName, auditsCount: 0, total: 0, completed: 0, inProgress: 0, open: 0 };
+        map[fId] = { name: fName, auditsCount: 0, total: 0, completed: 0, inProgress: 0, open: 0, totalProgressSum: 0 };
       }
       map[fId].auditsCount += 1;
 
@@ -679,9 +687,16 @@ export default function FireSafetyExecutiveSummary() {
       items.forEach((item: any) => {
         map[fId].total += 1;
         const status = (item.status || '').toUpperCase();
-        if (status === 'TAMAMLANDI' || status === 'COMPLETED') {
+        const isComp = status === 'TAMAMLANDI' || status === 'COMPLETED';
+        const isProg = status === 'DEVAM_EDIYOR' || status === 'IN_PROGRESS';
+
+        const itemProgress = calculateItemProgress(item).percent;
+        const progressWeight = isComp ? 100 : isProg ? Math.max(itemProgress, 50) : 0;
+        map[fId].totalProgressSum += progressWeight;
+
+        if (isComp) {
           map[fId].completed += 1;
-        } else if (status === 'DEVAM_EDIYOR' || status === 'IN_PROGRESS') {
+        } else if (isProg) {
           map[fId].inProgress += 1;
         } else {
           map[fId].open += 1;
@@ -690,24 +705,26 @@ export default function FireSafetyExecutiveSummary() {
     });
 
     return Object.entries(map).map(([id, stat]) => {
-      const pct = stat.total > 0 ? Math.round((stat.completed / stat.total) * 100) : 0;
+      // Uyum Skoru: Süreçteki işlerin sahada başlama ve ilerleme payı dahil
+      const pct = stat.total > 0 ? Math.round(stat.totalProgressSum / stat.total) : 0;
+      const rawCompletedPct = stat.total > 0 ? Math.round((stat.completed / stat.total) * 100) : 0;
       const inProgPct = stat.total > 0 ? Math.round((stat.inProgress / stat.total) * 100) : 0;
       const openPct = stat.total > 0 ? Math.round((stat.open / stat.total) * 100) : 0;
-      return { id, ...stat, pct, inProgPct, openPct };
+      return { id, ...stat, pct, rawCompletedPct, inProgPct, openPct };
     }).sort((a, b) => b.total - a.total);
   }, [allGlobalAudits, audits, facilities, selectedFacilityIds]);
 
   // Sol Yönetici Menüsü için Tüm Tesislerin Güncel Global Durumları
   const globalFacilityStats = React.useMemo(() => {
     const listToProcess = allGlobalAudits.length > 0 ? allGlobalAudits : audits;
-    const map: Record<string, { name: string; auditsCount: number; total: number; completed: number; inProgress: number; open: number }> = {};
+    const map: Record<string, { name: string; auditsCount: number; total: number; completed: number; inProgress: number; open: number; totalProgressSum: number }> = {};
 
     listToProcess.forEach((audit: any) => {
       const fId = audit.facilityId || 'unknown';
       const fName = audit.facility?.name || facilities.find((f: any) => f.id === fId)?.name || 'Bilinmeyen Tesis';
 
       if (!map[fId]) {
-        map[fId] = { name: fName, auditsCount: 0, total: 0, completed: 0, inProgress: 0, open: 0 };
+        map[fId] = { name: fName, auditsCount: 0, total: 0, completed: 0, inProgress: 0, open: 0, totalProgressSum: 0 };
       }
       map[fId].auditsCount += 1;
 
@@ -715,9 +732,16 @@ export default function FireSafetyExecutiveSummary() {
       items.forEach((item: any) => {
         map[fId].total += 1;
         const status = (item.status || '').toUpperCase();
-        if (status === 'TAMAMLANDI' || status === 'COMPLETED') {
+        const isComp = status === 'TAMAMLANDI' || status === 'COMPLETED';
+        const isProg = status === 'DEVAM_EDIYOR' || status === 'IN_PROGRESS';
+
+        const itemProgress = calculateItemProgress(item).percent;
+        const progressWeight = isComp ? 100 : isProg ? Math.max(itemProgress, 50) : 0;
+        map[fId].totalProgressSum += progressWeight;
+
+        if (isComp) {
           map[fId].completed += 1;
-        } else if (status === 'DEVAM_EDIYOR' || status === 'IN_PROGRESS') {
+        } else if (isProg) {
           map[fId].inProgress += 1;
         } else {
           map[fId].open += 1;
@@ -726,7 +750,7 @@ export default function FireSafetyExecutiveSummary() {
     });
 
     return Object.entries(map).map(([id, stat]) => {
-      const pct = stat.total > 0 ? Math.round((stat.completed / stat.total) * 100) : 0;
+      const pct = stat.total > 0 ? Math.round(stat.totalProgressSum / stat.total) : 0;
       return { id, ...stat, pct };
     }).sort((a, b) => b.total - a.total);
   }, [allGlobalAudits, audits, facilities]);
@@ -901,9 +925,26 @@ export default function FireSafetyExecutiveSummary() {
   }
 
   const isAllFacilities = effectiveFacId === 'all';
-  const overallSuccessRate = totalFindings > 0 ? Math.round((completedCount / totalFindings) * 100) : 0;
+  // Doğrudan kapananlar
+  const rawCompletedRate = totalFindings > 0 ? Math.round((completedCount / totalFindings) * 100) : 0;
   const overallInProgressRate = totalFindings > 0 ? Math.round((inProgressCount / totalFindings) * 100) : 0;
   const overallOpenRate = totalFindings > 0 ? Math.round((openCount / totalFindings) * 100) : 0;
+
+  // YÖNETİCİ KONSOLİDE UYUM & AKSİYON BAŞARI SKORU:
+  // Kapatılan maddeler %100, sahada süreci başlatılmış/montajda olan maddeler ağırlıklı katkı sağlar.
+  const overallSuccessRate = React.useMemo(() => {
+    if (totalFindings === 0) return 0;
+    const totalWeightSum = allItems.reduce((acc: number, item: any) => {
+      const s = (item.status || '').toUpperCase();
+      if (s === 'TAMAMLANDI' || s === 'COMPLETED') return acc + 100;
+      if (s === 'DEVAM_EDIYOR' || s === 'IN_PROGRESS') {
+        const itemPct = calculateItemProgress(item).percent;
+        return acc + Math.max(itemPct, 50); // Süreçte olan her işe en az %50 başarı/ilerleme katkısı
+      }
+      return acc;
+    }, 0);
+    return Math.round(totalWeightSum / totalFindings);
+  }, [allItems, totalFindings]);
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
@@ -1363,7 +1404,7 @@ export default function FireSafetyExecutiveSummary() {
                     : 'Yüksek Müdahale Önceliği'}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed">
-                  Toplam {totalFindings} kayıtlı maddenin {completedCount}'si standartlara uygun olarak giderildi.
+                  Kapatılan bulgular ve sahada yürütülen aktif aksiyon süreçleri ağırlıklı olarak hesaplanmıştır.
                 </p>
               </div>
             </div>
@@ -1385,18 +1426,18 @@ export default function FireSafetyExecutiveSummary() {
                       {completedCount}
                     </span>
                     <span className="text-xs font-bold text-emerald-600">
-                      (%{overallSuccessRate})
+                      (%{rawCompletedRate})
                     </span>
                   </div>
                   <div className="w-full bg-emerald-200/60 dark:bg-emerald-900/40 h-2 rounded-full overflow-hidden mt-2">
                     <div 
                       className="bg-emerald-500 h-full rounded-full transition-all duration-700" 
-                      style={{ width: `${overallSuccessRate}%` }} 
+                      style={{ width: `${rawCompletedRate}%` }} 
                     />
                   </div>
                 </div>
                 <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
-                  Risk ortadan kaldırıldı
+                  Risk tamamen giderildi
                 </p>
               </div>
 
