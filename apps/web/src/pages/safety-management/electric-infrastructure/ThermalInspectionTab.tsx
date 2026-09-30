@@ -331,6 +331,24 @@ export const ThermalInspectionTab: React.FC<Props> = ({
     }
   };
 
+  // Delete session
+  const handleDeleteSession = async (sessionId: string) => {
+    try {
+      setLoading(true);
+      await thermalInspectionService.deleteSession(sessionId);
+      toast.success('Termal kontrol oturumu silindi.');
+      if (selectedSession?.id === sessionId) {
+        setSelectedSession(null);
+        setViewMode('DATE_CARDS');
+      }
+      fetchData();
+    } catch (err: any) {
+      toast.error('Oturum silinemedi: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Delete item
   const handleDeleteItem = async (itemId: string) => {
     if (!confirm('Bu ölçüm satırını silmek istediğinize emin misiniz?')) return;
@@ -386,6 +404,21 @@ export const ThermalInspectionTab: React.FC<Props> = ({
 
   return (
     <div className="space-y-6">
+      {/* 1. VIEW: DATE CARDS VIEW */}
+      {viewMode === 'DATE_CARDS' && (
+        <ThermalDateCardsView
+          sessions={sessions}
+          activeFacilityName={activeFacilityDisplayName}
+          onSelectSession={handleSelectSession}
+          onUploadExcelClick={() => excelInputRef.current?.click()}
+          onNewSessionClick={handleCreateManualSession}
+          onCleanupEmptyClick={handleCleanupEmpty}
+          onViewExecutiveDashboard={() => setViewMode('EXECUTIVE')}
+          onDeleteSession={handleDeleteSession}
+          isLoading={loading}
+        />
+      )}
+
       {/* 2. VIEW: DYNAMIC SESSION DETAIL & MEASUREMENTS TABLE */}
       {viewMode === 'SESSION_DETAIL' && selectedSession && (
         <ThermalOriginalDashboard
@@ -401,6 +434,7 @@ export const ThermalInspectionTab: React.FC<Props> = ({
             setIsFormModalOpen(true);
           }}
           onDeleteItem={handleDeleteItem}
+          onDeleteSession={() => handleDeleteSession(selectedSession.id)}
         />
       )}
 

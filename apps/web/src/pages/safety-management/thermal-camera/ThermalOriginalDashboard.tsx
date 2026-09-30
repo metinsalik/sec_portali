@@ -11,12 +11,14 @@ interface Props {
   onItemUpdated?: (updatedItem: any) => void;
   onOpenPanelDetail?: (panelName: string) => void;
   onCleanupEmptyClick?: () => void;
+  onDeleteSession?: () => void;
 }
 
-export const ThermalOriginalDashboard: React.FC<Props> = ({ session, onBack, onAddPhoto, onEditItem, onDeleteItem, onItemUpdated, onOpenPanelDetail, onCleanupEmptyClick }) => {
+export const ThermalOriginalDashboard: React.FC<Props> = ({ session, onBack, onAddPhoto, onEditItem, onDeleteItem, onItemUpdated, onOpenPanelDetail, onCleanupEmptyClick, onDeleteSession }) => {
   const items = session.items || [];
   
   const hospitalName = session.facility?.name || 'Bilinmeyen Tesis';
+  const facilityId = session.facilityId || session.facility?.id;
   const dates = [...new Set(items.map(it => {
     if(it.measurementDate) return new Date(it.measurementDate).toLocaleDateString('tr-TR');
     if(it.createdAt) return new Date(it.createdAt).toLocaleDateString('tr-TR');
@@ -28,7 +30,8 @@ export const ThermalOriginalDashboard: React.FC<Props> = ({ session, onBack, onA
     <div className="relative">
       <ThermalDashboardView 
         items={items} 
-        facilityName={hospitalName} 
+        facilityName={hospitalName}
+        facilityId={facilityId}
         dateRange={dateRange} 
         onBack={onBack}
         onAddPhoto={onAddPhoto}
@@ -37,6 +40,7 @@ export const ThermalOriginalDashboard: React.FC<Props> = ({ session, onBack, onA
         onItemUpdated={onItemUpdated}
         onOpenPanelDetail={onOpenPanelDetail}
         onCleanupEmptyClick={onCleanupEmptyClick}
+        onDeleteSession={onDeleteSession}
       />
     </div>
   );

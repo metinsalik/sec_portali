@@ -249,6 +249,46 @@ export default function OperationsManagementPage() {
             </div>
           )}
 
+          {/* Card 4: FM-200 Kontrol ve Sızdırmazlık Durum Kontrolü */}
+          {(hasAdminAccess || user?.modules?.includes('FM200_TRACKING')) && (
+            <div
+              onClick={() => navigate('/fm200')}
+              className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
+            >
+              <div className="flex md:hidden items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#e0f2fe] dark:bg-[#0284c7]/20 flex items-center justify-center text-[#0284c7] dark:text-cyan-400">
+                  <span className="material-symbols-outlined text-[28px]">propane_tank</span>
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">FM-200 & Gazlı Söndürme</h2>
+                  <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
+                    4 fazlı denetim sihirbazı, tüp envanteri, sızdırmazlık (door-fan) testi ve iş emri takip sistemi.
+                  </p>
+                  <div className="flex items-center gap-2 text-[#0284c7] dark:text-cyan-400 text-sm font-medium group-hover:underline">
+                    Uygulamaya Git
+                    <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="hidden md:flex flex-col justify-between h-full">
+                <div>
+                  <div className="w-14 h-14 rounded-xl bg-cyan-50 dark:bg-cyan-950/20 flex items-center justify-center mb-6 text-[#0284c7] dark:text-cyan-400 transition-transform group-hover:scale-110">
+                    <span className="material-symbols-outlined text-[32px]">propane_tank</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">FM-200 & Gazlı Söndürme</h3>
+                  <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
+                    4 fazlı adım adım denetim sihirbazı, mahal tüp envanteri, sızdırmazlık testi ve kanıtlı iş emri yönetimi.
+                  </p>
+                </div>
+                <div className="inline-flex items-center gap-2 text-[#0284c7] dark:text-cyan-400 text-sm font-medium group-hover:gap-4 transition-all">
+                  Uygulamaya Git
+                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       </main>
 

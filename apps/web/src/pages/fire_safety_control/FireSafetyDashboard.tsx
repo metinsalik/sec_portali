@@ -58,7 +58,9 @@ import {
   Copy,
   Check,
   Activity,
-  History
+  History,
+  CheckSquare,
+  RotateCcw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { calculateItemProgress } from './FireSafetyAuditPage';
@@ -234,29 +236,98 @@ export default function FireSafetyDashboard() {
     return facilities.filter((f: any) => userFacilityIds.includes(f.id));
   }, [facilities, userFacilityIds, isManager]);
 
-  // Çoklu tesise sahipse (veya yönetici ise) varsayılan olarak 'all' (konsolide) başlar veya seçili olanı korur
-  const [selectedFacilityId, setSelectedFacilityId] = useState<string>(() => {
-    if (hasMultipleFacilities) return 'all';
-    if (globalFacId) return globalFacId;
-    return 'all';
+  // Seçili tesis(ler) state'i ve localStorage ile aklında tutma
+  const STORAGE_KEY = 'fsc_selected_facility_ids';
+  const [selectedFacilityIds, setSelectedFacilityIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      // ignore JSON parse error
+    }
+    return ['all'];
   });
 
-  // Etkin sorgu tesis parametresi
-  const effectiveFacId = selectedFacilityId || (hasMultipleFacilities ? 'all' : (globalFacId || 'all'));
+  const [facilitySearchText, setFacilitySearchText] = useState('');
+
+  // Tesis seçimini güncelleme ve kalıcı olarak kaydetme
+  const updateSelectedFacilities = (newSelection: string[]) => {
+    const finalSelection = newSelection.length === 0 ? ['all'] : newSelection;
+    setSelectedFacilityIds(finalSelection);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(finalSelection));
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const toggleFacilitySelection = (fId: string) => {
+    if (fId === 'all') {
+      updateSelectedFacilities(['all']);
+      return;
+    }
+
+    let next = selectedFacilityIds.filter(id => id !== 'all');
+    if (next.includes(fId)) {
+      next = next.filter(id => id !== fId);
+    } else {
+      next.push(fId);
+    }
+
+    if (next.length === 0) {
+      next = ['all'];
+    }
+    updateSelectedFacilities(next);
+  };
+
+  const selectSingleFacility = (fId: string) => {
+    updateSelectedFacilities([fId]);
+  };
+
+  const selectAllFacilities = () => {
+    updateSelectedFacilities(['all']);
+  };
+
+  const isAllSelected = selectedFacilityIds.includes('all');
+
+  // Query anahtarı ve URL parametresi
+  const queryParam = React.useMemo(() => {
+    if (isAllSelected) {
+      return 'facilityId=all';
+    }
+    if (selectedFacilityIds.length === 1) {
+      return `facilityId=${selectedFacilityIds[0]}`;
+    }
+    return `facilityIds=${selectedFacilityIds.join(',')}`;
+  }, [selectedFacilityIds, isAllSelected]);
 
   // Tutanakları getir
   const { data: audits = [], isLoading } = useQuery({
-    queryKey: ['fire-safety-audits', effectiveFacId],
+    queryKey: ['fire-safety-audits', queryParam],
     queryFn: async () => {
-      if (!effectiveFacId) return [];
-      const res = await api.get(`/fire-safety-control?facilityId=${effectiveFacId}`);
+      const res = await api.get(`/fire-safety-control?${queryParam}`);
       if (!res.ok) throw new Error('Tutanaklar yüklenemedi');
       return res.json();
-    },
-    enabled: !!effectiveFacId
+    }
   });
 
-  const currentFacility = facilities.find((f: any) => f.id === effectiveFacId);
+  // Tesis listesindeki tüm tutanakları (genel sol bar istatistikleri için) opsiyonel arka planda getir
+  const { data: allGlobalAudits = [] } = useQuery({
+    queryKey: ['fire-safety-audits-global-all'],
+    queryFn: async () => {
+      const res = await api.get('/fire-safety-control?facilityId=all');
+      if (!res.ok) return [];
+      return res.json();
+    }
+  });
+
+  const effectiveFacId = isAllSelected ? 'all' : (selectedFacilityIds[0] || 'all');
+  const currentFacility = !isAllSelected && selectedFacilityIds.length === 1
+    ? facilities.find((f: any) => f.id === selectedFacilityIds[0])
+    : null;
 
   // Silme mutasyonu
   const deleteMutation = useMutation({
@@ -560,6 +631,40 @@ export default function FireSafetyDashboard() {
     }).sort((a, b) => b.total - a.total);
   }, [audits, facilities]);
 
+  // Sol Yönetici Menüsü için Tüm Tesislerin Güncel Global Durumları
+  const globalFacilityStats = React.useMemo(() => {
+    const listToProcess = allGlobalAudits.length > 0 ? allGlobalAudits : audits;
+    const map: Record<string, { name: string; auditsCount: number; total: number; completed: number; inProgress: number; open: number }> = {};
+
+    listToProcess.forEach((audit: any) => {
+      const fId = audit.facilityId || 'unknown';
+      const fName = audit.facility?.name || facilities.find((f: any) => f.id === fId)?.name || 'Bilinmeyen Tesis';
+
+      if (!map[fId]) {
+        map[fId] = { name: fName, auditsCount: 0, total: 0, completed: 0, inProgress: 0, open: 0 };
+      }
+      map[fId].auditsCount += 1;
+
+      const items = audit.items || [];
+      items.forEach((item: any) => {
+        map[fId].total += 1;
+        const status = (item.status || '').toUpperCase();
+        if (status === 'TAMAMLANDI' || status === 'COMPLETED') {
+          map[fId].completed += 1;
+        } else if (status === 'DEVAM_EDIYOR' || status === 'IN_PROGRESS') {
+          map[fId].inProgress += 1;
+        } else {
+          map[fId].open += 1;
+        }
+      });
+    });
+
+    return Object.entries(map).map(([id, stat]) => {
+      const pct = stat.total > 0 ? Math.round((stat.completed / stat.total) * 100) : 0;
+      return { id, ...stat, pct };
+    }).sort((a, b) => b.total - a.total);
+  }, [allGlobalAudits, audits, facilities]);
+
   // Rapor Yaşam Döngüsü ve Olay Logları (Tarih bazlı kronolojik akış)
   const auditTimelineLogs = React.useMemo(() => {
     const logs: Array<{
@@ -661,8 +766,10 @@ export default function FireSafetyDashboard() {
             Yangın Güvenliği Kontrol Sistemi
           </h1>
           <p className="text-red-100 max-w-2xl text-sm md:text-base">
-            {isAllFacilities 
-              ? 'Tüm tesisler genelinde yangın güvenliği denetimleri, kategori durumları, tamamlanma oranları ve aksiyon takibi.'
+            {isAllSelected 
+              ? 'Tüm tesisler genelinde konsolide yangın güvenliği denetimleri, kategori durumları, tamamlanma oranları ve aksiyon takibi.'
+              : selectedFacilityIds.length > 1
+              ? `Seçilen ${selectedFacilityIds.length} tesisin konsolide yangın güvenliği denetimleri, durumları ve aksiyon takibi.`
               : `${currentFacility?.name || 'Seçili Tesis'} bünyesindeki yangın güvenliği denetimleri, itfaiye kontrolleri, tespitler ve aksiyon takibi.`
             }
           </p>
@@ -700,48 +807,151 @@ export default function FireSafetyDashboard() {
         </div>
       </div>
 
-      {/* Çoklu Tesis veya Yönetici Tesis Filtre Çubuğu */}
+      {/* YÖNETİCİ KONSOLİDE TESİS SEÇİCİ & YÖNETİM PANELİ (AKILDA TUTMA VE ÇOKLU SEÇİM) */}
       {hasMultipleFacilities && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950/50 text-red-600 flex items-center justify-center shrink-0">
-              <Building2 className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                {isManager ? 'Yönetici Görünümü' : 'Yetkili Tesisler Görünümü'}
+        <Card className="border border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 overflow-hidden">
+          <CardHeader className="p-4 pb-3 bg-slate-50/80 dark:bg-slate-850 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-red-600 text-white flex items-center justify-center shadow-xs">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-sm md:text-base font-bold text-slate-900 dark:text-slate-100">
+                      Yönetici Tesis Özeti & Konsolidasyon Seçimi
+                    </CardTitle>
+                    <Badge variant="secondary" className="text-[11px] font-semibold">
+                      {isAllSelected 
+                        ? `Tüm Tesisler (${accessibleFacilities.length})` 
+                        : `${selectedFacilityIds.length} Tesis Seçili`}
+                    </Badge>
+                  </div>
+                  <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+                    İstediğiniz tesisleri seçerek dashboard verilerini, tespitleri ve başarı durumlarını bu tesisler özelinde konsolide görüntüleyin. Seçimleriniz tarayıcınızda otomatik hatırlanır.
+                  </CardDescription>
+                </div>
               </div>
-              <div className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                {isAllFacilities 
-                  ? (isManager ? 'Tüm Tesislerin Konsolide Durumu' : 'Sorumlu Olduğum Tesislerin Konsolide Durumu')
-                  : `${currentFacility?.name || 'Seçili Tesis'} Denetim Durumu`
-                }
-              </div>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-400 shrink-0" />
-            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Tesis Filtresi:</span>
-            <select
-              value={effectiveFacId}
-              onChange={e => setSelectedFacilityId(e.target.value)}
-              className="text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-red-500 outline-hidden"
-            >
-              <option value="all">
-                {isManager 
-                  ? '🏢 Tüm Tesisler (Konsolide Yönetici Özeti)' 
-                  : `🏢 Sorumlu Olduğum Tesisler (Konsolide Özet - ${accessibleFacilities.length} Tesis)`
-                }
-              </option>
-              {accessibleFacilities.map((f: any) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+              {/* Hızlı Eylemler (Tümünü Seç / Temizle) */}
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant={isAllSelected ? "default" : "outline"}
+                  size="sm"
+                  onClick={selectAllFacilities}
+                  className={`text-xs h-8 px-3 font-semibold ${
+                    isAllSelected 
+                      ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' 
+                      : 'border-slate-300 dark:border-slate-700'
+                  }`}
+                >
+                  <CheckSquare className="w-3.5 h-3.5 mr-1.5" />
+                  Tümünü Seç (Konsolide)
+                </Button>
+
+                {!isAllSelected && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={selectAllFacilities}
+                    className="text-xs h-8 text-slate-500 hover:text-red-600 font-medium"
+                    title="Seçimi sıfırla ve tüm tesisleri getir"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                    Sıfırla
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-4 space-y-3">
+            {/* Tesis Arama ve Filtreleme */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 max-w-xs">
+                <Input
+                  type="text"
+                  placeholder="Tesis ara..."
+                  value={facilitySearchText}
+                  onChange={e => setFacilitySearchText(e.target.value)}
+                  className="h-8 text-xs pl-8 pr-3"
+                />
+                <Filter className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+              </div>
+              <span className="text-[11px] text-slate-400">
+                Birden fazla tesise tıklayarak birleştirebilir veya yanındaki "Yalnızca Bu" butonuna basarak tek tesise odaklanabilirsiniz.
+              </span>
+            </div>
+
+            {/* Tesis Kart / Buton Izgarası */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 pt-1">
+              {accessibleFacilities
+                .filter((f: any) => !facilitySearchText || f.name.toLowerCase().includes(facilitySearchText.toLowerCase()))
+                .map((fac: any) => {
+                  const isChecked = isAllSelected || selectedFacilityIds.includes(fac.id);
+                  const isStrictChecked = !isAllSelected && selectedFacilityIds.includes(fac.id);
+                  const stat = globalFacilityStats.find((s: any) => s.id === fac.id);
+
+                  return (
+                    <div
+                      key={fac.id}
+                      onClick={() => toggleFacilitySelection(fac.id)}
+                      className={`group relative p-2.5 rounded-xl border text-left cursor-pointer transition-all duration-150 flex items-center justify-between gap-2 ${
+                        isStrictChecked
+                          ? 'border-red-600 bg-red-50/60 dark:bg-red-950/30 shadow-xs ring-1 ring-red-500/30'
+                          : isAllSelected
+                          ? 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:border-slate-300'
+                          : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 opacity-60 hover:opacity-100 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {/* Checkbox Kutusu */}
+                        <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 transition-colors ${
+                          isStrictChecked
+                            ? 'bg-red-600 text-white'
+                            : isAllSelected
+                            ? 'bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
+                            : 'border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
+                        }`}>
+                          {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className={`text-xs font-bold truncate ${
+                            isStrictChecked ? 'text-red-700 dark:text-red-300' : 'text-slate-800 dark:text-slate-200'
+                          }`}>
+                            {fac.name}
+                          </p>
+                          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
+                            <span>{stat?.total || 0} Tespit</span>
+                            <span>•</span>
+                            <span className="text-emerald-600 font-semibold">%{stat?.pct || 0} Başarı</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Yalnızca Bu Butonu */}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          selectSingleFacility(fac.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] h-6 px-1.5 text-slate-500 hover:text-red-600 hover:bg-white dark:hover:bg-slate-800 shrink-0 font-semibold"
+                        title="Sadece bu tesisi seç ve konsolide et"
+                      >
+                        Tek Seç
+                      </Button>
+                    </div>
+                  );
+                })}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* KPI Cards */}
@@ -881,16 +1091,18 @@ export default function FireSafetyDashboard() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {facilityStats.map(stat => (
-              <Card
-                key={stat.id}
-                onClick={() => setSelectedFacilityId(stat.id)}
-                className={`cursor-pointer transition-all duration-200 hover:shadow-md border ${
-                  effectiveFacId === stat.id 
-                    ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/10' 
-                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'
-                }`}
-              >
+            {facilityStats.map(stat => {
+              const isSelected = !isAllSelected && selectedFacilityIds.includes(stat.id);
+              return (
+                <Card
+                  key={stat.id}
+                  onClick={() => selectSingleFacility(stat.id)}
+                  className={`cursor-pointer transition-all duration-200 hover:shadow-md border ${
+                    isSelected 
+                      ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/10' 
+                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'
+                  }`}
+                >
                 <CardHeader className="p-4 pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-bold text-slate-900 dark:text-slate-100 line-clamp-1 flex items-center gap-1.5">
@@ -940,7 +1152,8 @@ export default function FireSafetyDashboard() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            );
+          })}
           </div>
         </div>
       )}

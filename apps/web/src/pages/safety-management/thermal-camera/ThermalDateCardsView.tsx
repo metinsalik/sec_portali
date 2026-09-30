@@ -20,8 +20,17 @@ import {
   Filter,
   BarChart3,
   Layers,
-  Sparkles
+  Sparkles,
+  Trash2
 } from 'lucide-react';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, 
+  DialogFooter 
+} from '@/components/ui/dialog';
 import type { ThermalInspectionSession } from '@/services/thermal-inspection.service';
 
 interface Props {
@@ -33,6 +42,7 @@ interface Props {
   onCleanupEmptyClick?: () => void;
   onViewExecutiveDashboard?: () => void;
   onViewWatchlist?: () => void;
+  onDeleteSession?: (sessionId: string) => Promise<void> | void;
   isLoading?: boolean;
 }
 
@@ -45,10 +55,24 @@ export const ThermalDateCardsView: React.FC<Props> = ({
   onCleanupEmptyClick,
   onViewExecutiveDashboard,
   onViewWatchlist,
+  onDeleteSession,
   isLoading
 }) => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'COMPLETED' | 'IN_PROGRESS'>('ALL');
+  const [deletingSession, setDeletingSession] = useState<{ id: string; label: string; panelCount: number } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!deletingSession || !onDeleteSession) return;
+    setIsDeleting(true);
+    try {
+      await onDeleteSession(deletingSession.id);
+      setDeletingSession(null);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Sort sessions descending by reportDate / createdAt
   const sortedSessions = [...sessions].sort((a, b) => {
@@ -410,18 +434,38 @@ export const ThermalDateCardsView: React.FC<Props> = ({
                       </td>
 
                       <td className="px-4 py-3.5 text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 text-xs font-semibold text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-all gap-1 rounded-lg"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectSession(session.id);
-                          }}
-                        >
-                          Pano Sıcaklıklarını Gör
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 text-xs font-semibold text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-all gap-1 rounded-lg"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectSession(session.id);
+                            }}
+                          >
+                            Pano Sıcaklıklarını Gör
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </Button>
+                          {onDeleteSession && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
+                              title="Bu Kontrol Oturumunu Sil"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeletingSession({
+                                  id: session.id,
+                                  label,
+                                  panelCount
+                                });
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 text-rose-500" />
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -431,6 +475,52 @@ export const ThermalDateCardsView: React.FC<Props> = ({
           </div>
         )}
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deletingSession} onOpenChange={(open) => !open && !isDeleting && setDeletingSession(null)}>
+        <DialogContent className="max-w-md bg-white dark:bg-slate-900 border dark:border-slate-800 p-6">
+          <DialogHeader>
+            <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950/50 text-rose-600 flex items-center justify-center mb-2 mx-auto sm:mx-0">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
+              Kontrol Oturumunu Sil
+            </DialogTitle>
+            <DialogDescription className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+              <strong className="text-slate-900 dark:text-white">{deletingSession?.label}</strong> tarihli kontrol oturumunu silmek istediğinize emin misiniz?
+              {deletingSession && deletingSession.panelCount > 0 ? (
+                <span className="block mt-2 font-medium text-rose-600 dark:text-rose-400">
+                  Bu oturuma ait {deletingSession.panelCount} adet pano ölçüm kaydı ve fotoğrafları da kalıcı olarak silinecektir.
+                </span>
+              ) : (
+                <span className="block mt-1 text-slate-500">
+                  Bu oturumda kayıtlı pano bulunmamaktadır.
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="mt-4 flex flex-row justify-end gap-2 border-t pt-4 dark:border-slate-800">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeletingSession(null)}
+              disabled={isDeleting}
+            >
+              Vazgeç
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="bg-rose-600 hover:bg-rose-700 text-white font-medium"
+              onClick={confirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Siliniyor...' : 'Evet, Oturumu Sil'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

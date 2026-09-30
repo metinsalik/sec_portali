@@ -247,12 +247,23 @@ const isgKurulNavItems = [
 const fireSafetyControlNavItems = (hasAdminAccess: boolean) => [
   { label: 'GENEL', type: 'group' },
   { label: 'Dashboard', icon: LayoutDashboard, to: '/fire-safety-control', end: true },
+  { label: 'Yönetici Özeti', icon: Building2, to: '/fire-safety-control/executive-summary', end: true },
   { label: 'TUTANAKLAR & DENETİM', type: 'group' },
   { label: 'Yeni Tutanak / Tespit', icon: FileText, to: '/fire-safety-control/audit/new' },
   ...(hasAdminAccess ? [
     { label: 'AYARLAR', type: 'group' },
     { label: 'Modül Ayarları', icon: Settings, to: '/fire-safety-control/settings' },
   ] : []),
+];
+
+const fm200NavItems = (hasAdminAccess: boolean) => [
+  { label: 'GENEL', type: 'group' },
+  { label: 'Dashboard', icon: LayoutDashboard, to: '/fm200', end: true },
+  { label: 'DENETİM & İŞLEMLER', type: 'group' },
+  { label: 'Denetim Sihirbazı (Wizard)', icon: Flame, to: '/fm200/wizard' },
+  { label: 'İş Emirleri & Aksiyonlar', icon: ClipboardList, to: '/fm200/work-orders' },
+  { label: 'AYARLAR & ENVANTER', type: 'group' },
+  { label: 'Konum & Tüp Ayarları', icon: Settings, to: '/fm200/settings' },
 ];
 
 const profileNavItems = (hasAdminAccess: boolean) => [
@@ -365,6 +376,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   } else if (path.startsWith('/fire-safety-control')) {
     navItems = fireSafetyControlNavItems(!!hasAdminAccess);
     moduleName = 'Yangın Güvenliği Kontrol Sistemi';
+  } else if (path.startsWith('/fm200')) {
+    navItems = fm200NavItems(!!hasAdminAccess);
+    moduleName = 'FM-200 Kontrol ve Sızdırmazlık';
   } else if (path.startsWith('/profile') || path.startsWith('/notifications')) {
     navItems = profileNavItems(!!hasAdminAccess);
     moduleName = path.startsWith('/profile') ? 'Kullanıcı Profili' : 'Bildirim Merkezi';

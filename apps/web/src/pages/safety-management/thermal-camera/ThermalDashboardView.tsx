@@ -41,10 +41,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, 
+  DialogFooter 
+} from '@/components/ui/dialog';
 
 interface Props {
   items: ThermalInspectionItem[];
   facilityName?: string;
+  facilityId?: string;
   dateRange?: string;
   onBack?: () => void;
   onAddPhoto?: (item: ThermalInspectionItem) => void;
@@ -53,11 +62,13 @@ interface Props {
   onItemUpdated?: (updatedItem: ThermalInspectionItem) => void;
   onOpenPanelDetail?: (panelName: string) => void;
   onCleanupEmptyClick?: () => void;
+  onDeleteSession?: () => void;
 }
 
 export const ThermalDashboardView: React.FC<Props> = ({
   items: rawItems,
   facilityName = 'Tesis',
+  facilityId,
   dateRange = '—',
   onBack,
   onAddPhoto,
@@ -65,7 +76,8 @@ export const ThermalDashboardView: React.FC<Props> = ({
   onDeleteItem,
   onItemUpdated,
   onOpenPanelDetail,
-  onCleanupEmptyClick
+  onCleanupEmptyClick,
+  onDeleteSession
 }) => {
   const items = Array.isArray(rawItems) ? rawItems : [];
 
@@ -77,6 +89,19 @@ export const ThermalDashboardView: React.FC<Props> = ({
   // Modal / Preview states
   const [selectedDetailItem, setSelectedDetailItem] = useState<ThermalInspectionItem | null>(null);
   const [selectedActionItem, setSelectedActionItem] = useState<ThermalInspectionItem | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeletingSession, setIsDeletingSession] = useState(false);
+
+  const confirmDeleteSession = async () => {
+    if (!onDeleteSession) return;
+    setIsDeletingSession(true);
+    try {
+      await onDeleteSession();
+      setIsDeleteDialogOpen(false);
+    } finally {
+      setIsDeletingSession(false);
+    }
+  };
 
   const nval = (x: any) => {
     if (x === null || x === undefined) return null;
@@ -86,25 +111,45 @@ export const ThermalDashboardView: React.FC<Props> = ({
   const fmt = (n: number) => new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 1 }).format(n);
 
   // Helper to map item into 4 status categories:
-  // ACIL: priority == 'Acil' OR measuredTemp >= 60°C OR deltaTemp >= 25°C OR status contains 'acil'
-  // UYGUNSUZ: status == 'Uygunsuz' OR measuredTemp >= 50°C OR deltaTemp >= 15°C OR priority == 'Yüksek'
-  // TAKIP: status == 'Takip' OR (measuredTemp >= 40°C AND < 50°C) OR priority == 'Orta'
-  // NORMAL: status == 'Normal'
+  // 1. ÖNCELİKLE Formdaki / Excel'deki uzman değerlendirmesi (Ground Truth) esas alınır:
+  //    - Durum "Normal" veya Öncelik "Rutin" ise -> NORMAL (Sıcaklık veya ΔT yüksek olsa dahi uzman kararı bozulmaz!)
+  //    - Durum "Acil" / "Kritik" veya Öncelik "Acil" -> ACIL
+  //    - Durum "Uygunsuz" / "Dikkat" veya Öncelik "Yüksek" -> UYGUNSUZ
+  //    - Durum "Takip" veya Öncelik "Orta" -> TAKIP
+  // 2. Yalnızca formda durum ve öncelik hiç girilmemişse (boş bırakılmışsa) sıcaklık/fark eşikleriyle tahmini kategori atanır.
   const getItemCategory = (r: ThermalInspectionItem): 'ACIL' | 'UYGUNSUZ' | 'TAKIP' | 'NORMAL' => {
     const st = (r.status || '').toLocaleLowerCase('tr-TR').trim();
     const pr = (r.priority || '').toLocaleLowerCase('tr-TR').trim();
     const mt = nval(r.measuredTemp);
     const dt = nval(r.deltaTemp);
 
-    if (pr.includes('acil') || st.includes('acil') || (mt !== null && mt >= 60) || (dt !== null && dt >= 25)) {
+    // 1. Uzman değerlendirmesi kontrolü (Formda girilen Durum/Öncelik)
+    if (st.includes('normal') || pr.includes('rutin') || pr.includes('düşük') || pr.includes('dusuk')) {
+      return 'NORMAL';
+    }
+    if (pr.includes('acil') || st.includes('acil') || st.includes('kritik')) {
       return 'ACIL';
     }
-    if (st.includes('uygunsuz') || pr.includes('yüksek') || (mt !== null && mt >= 50) || (dt !== null && dt >= 15)) {
+    if (st.includes('uygunsuz') || pr.includes('yüksek') || st.includes('dikkat')) {
       return 'UYGUNSUZ';
     }
-    if (st.includes('takip') || pr.includes('orta') || (mt !== null && mt >= 42)) {
+    if (st.includes('takip') || pr.includes('orta')) {
       return 'TAKIP';
     }
+
+    // 2. Formda Durum/Öncelik belirtilmemişse (boşsa) tahmini eşik kontrolü
+    if (!st && !pr) {
+      if ((mt !== null && mt >= 60) || (dt !== null && dt >= 25)) {
+        return 'ACIL';
+      }
+      if ((mt !== null && mt >= 50) || (dt !== null && dt >= 15)) {
+        return 'UYGUNSUZ';
+      }
+      if ((mt !== null && mt >= 42) || (dt !== null && dt >= 10)) {
+        return 'TAKIP';
+      }
+    }
+
     return 'NORMAL';
   };
 
@@ -339,6 +384,17 @@ export const ThermalDashboardView: React.FC<Props> = ({
             >
               <Sparkles className="w-4 h-4 text-rose-400" />
               Boş Satırları Temizle
+            </Button>
+          )}
+          {onDeleteSession && (
+            <Button
+              onClick={() => setIsDeleteDialogOpen(true)}
+              variant="outline"
+              className="bg-rose-600/20 hover:bg-rose-600/30 text-rose-200 border-rose-500/40 backdrop-blur-sm gap-2 text-xs h-10 px-3.5 font-semibold transition-colors"
+              title="Bu oturumu tamamen sil"
+            >
+              <Trash2 className="w-4 h-4 text-rose-400" />
+              Oturumu Sil
             </Button>
           )}
         </div>
@@ -626,6 +682,7 @@ export const ThermalDashboardView: React.FC<Props> = ({
               {filteredAndSortedItems.map((r, idx) => {
                 const mt = nval(r.measuredTemp);
                 const at = nval(r.ambientTemp);
+                const dt = nval(r.deltaTemp);
                 const cat = getItemCategory(r);
 
                 // Row style based on category
@@ -702,6 +759,11 @@ export const ThermalDashboardView: React.FC<Props> = ({
                       }`}>
                         {mt !== null ? `${fmt(mt)} °C` : '—'}
                       </span>
+                      {dt !== null && (
+                        <span className="block text-[10px] text-slate-400 font-normal">
+                          ΔT: {fmt(dt)} °C
+                        </span>
+                      )}
                     </td>
 
                     <td className="px-3.5 py-3.5 text-right font-mono text-slate-500">
@@ -812,6 +874,26 @@ export const ThermalDashboardView: React.FC<Props> = ({
                             <Edit2 className="w-3.5 h-3.5" />
                           </Button>
                         )}
+
+                        {/* 📷 Fotoğraf Ekle / Yönet */}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDetailItem(r)}
+                          title={`Termal fotoğraf ekle / görüntüle (${r.photoUrls?.length || 0} fotoğraf)`}
+                          className={`relative w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
+                            (r.photoUrls?.length || 0) > 0
+                              ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40'
+                              : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          <Camera className="w-3.5 h-3.5" />
+                          {(r.photoUrls?.length || 0) > 0 && (
+                            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 text-white text-[8px] font-bold flex items-center justify-center leading-none">
+                              {r.photoUrls!.length}
+                            </span>
+                          )}
+                        </button>
+
                         {onDeleteItem && (
                           <Button
                             type="button"
@@ -826,6 +908,7 @@ export const ThermalDashboardView: React.FC<Props> = ({
                         )}
                       </div>
                     </td>
+
                   </tr>
                 );
               })}
@@ -852,10 +935,16 @@ export const ThermalDashboardView: React.FC<Props> = ({
         isOpen={Boolean(selectedDetailItem)}
         onClose={() => setSelectedDetailItem(null)}
         item={selectedDetailItem}
+        facilityId={facilityId}
         onOpenPhotos={(it) => onAddPhoto && onAddPhoto(it)}
         onEdit={(it) => onEditItem && onEditItem(it)}
         onTakeAction={(it) => setSelectedActionItem(it)}
         onOpenPanelPage={(panel) => onOpenPanelDetail && onOpenPanelDetail(panel)}
+        onItemUpdated={(updated) => {
+          // Update local state so re-opening same item shows new photos
+          setSelectedDetailItem(updated);
+          onItemUpdated?.(updated);
+        }}
       />
 
       {/* 6. Action Modal (Aksiyon Al & Termin Takibi) */}
@@ -873,6 +962,48 @@ export const ThermalDashboardView: React.FC<Props> = ({
             }
           }}
         />
+      )}
+
+      {/* 7. Delete Session Confirmation Modal */}
+      {onDeleteSession && (
+        <Dialog open={isDeleteDialogOpen} onOpenChange={(open) => !open && !isDeletingSession && setIsDeleteDialogOpen(false)}>
+          <DialogContent className="max-w-md bg-white dark:bg-slate-900 border dark:border-slate-800 p-6">
+            <DialogHeader>
+              <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950/50 text-rose-600 flex items-center justify-center mb-2 mx-auto sm:mx-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
+                Kontrol Oturumunu Sil
+              </DialogTitle>
+              <DialogDescription className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                <strong className="text-slate-900 dark:text-white">{facilityName} ({dateRange})</strong> kontrol oturumunu silmek istediğinize emin misiniz?
+                <span className="block mt-2 font-medium text-rose-600 dark:text-rose-400">
+                  Bu oturuma ait {items.length} adet pano ölçüm kaydı ve fotoğrafları kalıcı olarak silinecektir. Bu işlem geri alınamaz.
+                </span>
+              </DialogDescription>
+            </DialogHeader>
+
+            <DialogFooter className="mt-4 flex flex-row justify-end gap-2 border-t pt-4 dark:border-slate-800">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDeleteDialogOpen(false)}
+                disabled={isDeletingSession}
+              >
+                Vazgeç
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                className="bg-rose-600 hover:bg-rose-700 text-white font-medium"
+                onClick={confirmDeleteSession}
+                disabled={isDeletingSession}
+              >
+                {isDeletingSession ? 'Siliniyor...' : 'Evet, Oturumu Sil'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

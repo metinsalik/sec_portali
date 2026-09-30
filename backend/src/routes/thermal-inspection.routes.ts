@@ -305,10 +305,44 @@ router.patch('/sessions/:id/status', async (req: AuthRequest, res) => {
 router.delete('/sessions/:id', async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
+
+    // 1. Fetch items to clean up physical photo files from disk
+    const items = await prisma.thermalInspectionItem.findMany({
+      where: { sessionId: id },
+      select: { id: true, photoUrls: true, actionPhotos: true }
+    });
+
+    for (const item of items) {
+      const allUrls = [
+        ...(Array.isArray(item.photoUrls) ? (item.photoUrls as string[]) : []),
+        ...(Array.isArray(item.actionPhotos) ? (item.actionPhotos as string[]) : [])
+      ];
+      for (const pUrl of allUrls) {
+        if (typeof pUrl === 'string' && pUrl) {
+          try {
+            const relPath = pUrl.startsWith('/') ? pUrl.slice(1) : pUrl;
+            const fullDiskPath = path.join(process.cwd(), relPath);
+            if (fs.existsSync(fullDiskPath)) {
+              fs.unlinkSync(fullDiskPath);
+            }
+          } catch (e) {
+            // ignore disk unlink error
+          }
+        }
+      }
+    }
+
+    // 2. Delete items explicitly first to prevent any foreign key constraint issues
+    await prisma.thermalInspectionItem.deleteMany({
+      where: { sessionId: id }
+    });
+
+    // 3. Delete session
     await prisma.thermalInspectionSession.delete({
       where: { id }
     });
-    res.json({ message: 'Termal kontrol oturumu silindi.' });
+
+    res.json({ message: 'Termal kontrol oturumu ve bağlı tüm ölçümler başarıyla silindi.' });
   } catch (error: any) {
     console.error('Error deleting session:', error);
     res.status(500).json({ error: error.message || 'Oturum silinemedi.' });
@@ -538,8 +572,11 @@ router.post('/import-excel', tempUpload.single('file'), async (req: AuthRequest,
         measuredTemp,
         ambientTemp,
         deltaTemp,
-        status: colStatus !== -1 && row[colStatus] ? String(row[colStatus]).trim() : 'Normal',
-        priority: colPriority !== -1 && row[colPriority] ? String(row[colPriority]).trim() : 'Düşük',
+        // Sütun bulunmuşsa ve hücre doluysa değeri oku; yoksa boş bırak.
+        // Boş bırakmak önemlidir: Frontend bu alanlar boşken sıcaklık eşikleriyle otomatik kategori hesaplar.
+        // 'Normal' / 'Düşük' gibi hard-coded default atamak tüm satırları zorla NORMAL yapar!
+        status: colStatus !== -1 && row[colStatus] != null && String(row[colStatus]).trim() !== '' ? String(row[colStatus]).trim() : null,
+        priority: colPriority !== -1 && row[colPriority] != null && String(row[colPriority]).trim() !== '' ? String(row[colPriority]).trim() : null,
         detectedRisk: colDesc !== -1 && row[colDesc] ? String(row[colDesc]).trim() : null,
         actionTaken: colAction !== -1 && row[colAction] ? String(row[colAction]).trim() : null,
         photoUrls: []
@@ -864,16 +901,21 @@ router.get('/watchlist', async (req: AuthRequest, res) => {
     }
 
     // Filter items that need action/attention:
-    // (status is Dikkat/Kritik OR priority is Acil/Yüksek OR actionStatus != TAMAMLANDI)
+    // (status is Dikkat/Kritik/Uygunsuz OR priority is Acil/Yüksek OR actionStatus != TAMAMLANDI, Normal olanlar hariç)
     const items = await prisma.thermalInspectionItem.findMany({
       where: {
         ...whereClause,
+        status: { not: 'Normal' },
         OR: [
           { priority: { in: ['Acil', 'Yüksek', 'Orta'] } },
           { status: { in: ['Kritik', 'Dikkat', 'Uygunsuz', 'Takip'] } },
           { actionStatus: { in: ['BEKLIYOR', 'DEVAM_EDIYOR', 'GECIKTI'] } },
-          { deltaTemp: { gte: 10 } },
-          { measuredTemp: { gte: 45 } }
+          {
+            AND: [
+              { status: null },
+              { OR: [{ deltaTemp: { gte: 15 } }, { measuredTemp: { gte: 50 } }] }
+            ]
+          }
         ]
       },
       include: {
@@ -991,9 +1033,9 @@ router.post('/items/:id/photos', uploadPhotos.array('photos', 5), async (req: Au
     }
 
     const currentPhotos = Array.isArray(item.photoUrls) ? (item.photoUrls as string[]) : [];
-    if (currentPhotos.length + files.length > 5) {
+    if (currentPhotos.length + files.length > 3) {
       return res.status(400).json({
-        error: `Bir satır için en fazla 5 fotoğraf eklenebilir. Şu an ${currentPhotos.length} fotoğraf var, ${files.length} daha eklenemez.`
+        error: `Bir satır için en fazla 3 fotoğraf eklenebilir. Şu an ${currentPhotos.length} fotoğraf var, ${files.length} daha eklenemez.`
       });
     }
 
@@ -1119,12 +1161,25 @@ router.get('/dashboard-stats', async (req: AuthRequest, res) => {
       const isCompleted = sess?.status === 'TAMAMLANDI';
       const itemCount = sess?.items?.length || 0;
 
+      const isNormal = (it: any) =>
+        (it.status && it.status.toLowerCase().includes('normal')) ||
+        (it.priority && (it.priority.toLowerCase().includes('rutin') || it.priority.toLowerCase().includes('düşük')));
+
       const criticalCount = sess?.items?.filter((it: any) =>
-        it.status === 'Kritik' || it.priority === 'Acil' || (it.deltaTemp && it.deltaTemp >= 15)
+        !isNormal(it) && (
+          it.status === 'Kritik' ||
+          it.priority === 'Acil' ||
+          (!it.status && it.deltaTemp && it.deltaTemp >= 25)
+        )
       ).length || 0;
 
       const warningCount = sess?.items?.filter((it: any) =>
-        it.status === 'Dikkat' || it.priority === 'Yüksek' || (it.deltaTemp && it.deltaTemp >= 8 && it.deltaTemp < 15)
+        !isNormal(it) && (
+          it.status === 'Dikkat' ||
+          it.status === 'Uygunsuz' ||
+          it.priority === 'Yüksek' ||
+          (!it.status && it.deltaTemp && it.deltaTemp >= 15)
+        )
       ).length || 0;
 
       return {

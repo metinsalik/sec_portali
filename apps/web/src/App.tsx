@@ -189,8 +189,15 @@ import ThermalCameraDashboard from './pages/safety-management/thermal-camera/The
 
 // Yangın Güvenliği Kontrol Sistemi
 import FireSafetyDashboard from './pages/fire_safety_control/FireSafetyDashboard';
+import FireSafetyExecutiveSummary from './pages/fire_safety_control/FireSafetyExecutiveSummary';
 import FireSafetyAuditPage from './pages/fire_safety_control/FireSafetyAuditPage';
 import FireSafetySettingsPage from './pages/fire_safety_control/FireSafetySettingsPage';
+
+// FM-200 Kontrol ve Sızdırmazlık Durum Kontrolü
+import Fm200DashboardPage from './pages/fm200/Fm200DashboardPage';
+import Fm200WizardPage from './pages/fm200/Fm200WizardPage';
+import Fm200SettingsPage from './pages/fm200/Fm200SettingsPage';
+import Fm200WorkOrdersPage from './pages/fm200/Fm200WorkOrdersPage';
 
 
 const queryClient = new QueryClient({
@@ -1363,9 +1370,16 @@ function App() {
                   <Route path="/checklists/reports" element={<ProtectedRoute allowedRoles={['admin','management']}><AppLayout><ReportsPage /></AppLayout></ProtectedRoute>} />
                   {/* ── YANGIN GÜVENLİĞİ KONTROL SİSTEMİ ──────────── */}
                   <Route path="/fire-safety-control" element={<ProtectedRoute><AppLayout><FireSafetyDashboard /></AppLayout></ProtectedRoute>} />
+                  <Route path="/fire-safety-control/executive-summary" element={<ProtectedRoute><AppLayout><FireSafetyExecutiveSummary /></AppLayout></ProtectedRoute>} />
                   <Route path="/fire-safety-control/audit/new" element={<ProtectedRoute><AppLayout><FireSafetyAuditPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/fire-safety-control/audit/:id" element={<ProtectedRoute><AppLayout><FireSafetyAuditPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/fire-safety-control/settings" element={<ProtectedRoute><AppLayout><FireSafetySettingsPage /></AppLayout></ProtectedRoute>} />
+
+                  {/* ── FM-200 KONTROL VE SIZDIRMAZLIK TAKİP SİSTEMİ ──── */}
+                  <Route path="/fm200" element={<ProtectedRoute><AppLayout><Fm200DashboardPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/fm200/wizard" element={<ProtectedRoute><AppLayout><Fm200WizardPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/fm200/settings" element={<ProtectedRoute><AppLayout><Fm200SettingsPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/fm200/work-orders" element={<ProtectedRoute><AppLayout><Fm200WorkOrdersPage /></AppLayout></ProtectedRoute>} />
 
                   {/* ── Redirects ──────────────────────────────────── */}
                   <Route path="/" element={<Navigate to="/portal" replace />} />

@@ -94,12 +94,22 @@ router.post('/upload', authMiddleware, upload.array('files', 20), async (req: an
 // Tüm denetimleri listele (opsiyonel tesis filtreli)
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { facilityId } = req.query as Record<string, string>;
+    const { facilityId, facilityIds } = req.query as Record<string, string>;
     const user = req.user!;
     const isManager = user.isAdmin || user.isManagement || user.roles?.includes('admin') || user.roles?.includes('management');
 
     const whereClause: any = {};
-    if (facilityId && facilityId !== 'all') {
+    if (facilityIds && facilityIds.trim() !== '') {
+      const parsedIds = facilityIds.split(',').map(id => id.trim()).filter(Boolean);
+      if (parsedIds.length > 0) {
+        if (!isManager) {
+          const allowed = parsedIds.filter(id => (user.facilities || []).includes(id));
+          whereClause.facilityId = { in: allowed.length > 0 ? allowed : ['none'] };
+        } else {
+          whereClause.facilityId = { in: parsedIds };
+        }
+      }
+    } else if (facilityId && facilityId !== 'all') {
       // Belirli bir tesis istendiğinde, yetkisiz kullanıcının bu tesise erişimi olup olmadığını doğrula
       if (!isManager && user.facilities && !user.facilities.includes(facilityId)) {
         return res.status(403).json({ error: 'Bu tesisin verilerine erişim yetkiniz bulunmamaktadır.' });

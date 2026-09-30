@@ -382,6 +382,28 @@ export const FireSafetyItemActionScalarFieldEnumSchema = z.enum(['id','itemId','
 
 export const FireSafetySettingScalarFieldEnumSchema = z.enum(['id','categories','sources','responsibles','createdAt','updatedAt']);
 
+export const Fm200LocationScalarFieldEnumSchema = z.enum(['id','facilityId','building','block','floor','roomType','customRoomName','index','systemUid','systemType','panelType','roomVolumeM3','cylinderCount','isActive','notes','createdAt','updatedAt']);
+
+export const Fm200CylinderScalarFieldEnumSchema = z.enum(['id','locationId','serialNumber','labelCode','capacityKg','tareKg','manufacturingYear','lastHydrostaticTestDate','notes','createdAt','updatedAt']);
+
+export const Fm200Phase1AssessmentScalarFieldEnumSchema = z.enum(['id','locationId','assessedBy','assessedDate','f1_a1','f1_a2','f1_a3','f1_a4','f1_b1','f1_b2','f1_b3','f1_b4','f1_b5','f1_b6','f1_c1','f1_c2','f1_d1','f1_d2','f1_d3','f1_e1','f1_e2','notes','photos','isCompleted','createdAt','updatedAt']);
+
+export const Fm200PeriodicInspectionScalarFieldEnumSchema = z.enum(['id','locationId','inspectedBy','inspectionDate','itemResponses','complianceScore','ratingGrade','isRedFlagged','openWorkOrdersCount','photos','notes','createdAt','updatedAt']);
+
+export const Fm200MaintenanceScalarFieldEnumSchema = z.enum(['id','locationId','performedBy','maintenanceDate','panelControlStatus','panelNotes','notes','photos','createdAt','updatedAt']);
+
+export const Fm200MaintenanceCylinderScalarFieldEnumSchema = z.enum(['id','maintenanceId','cylinderId','govde','muhur','basinc','emniyet','notes']);
+
+export const Fm200TightnessTestScalarFieldEnumSchema = z.enum(['id','locationId','performedBy','testDate','retentionTimeMinutes','measuredValue','result','isUnconditional','overrideReason','reportUrl','nextTestDate','notes','photos','createdAt','updatedAt']);
+
+export const Fm200WorkOrderScalarFieldEnumSchema = z.enum(['id','locationId','cylinderId','sourcePhase','sourceCode','title','workType','responsible','trackLane','status','repeatCount','companyTrackNo','sourceWorkId','revisionNote','correctApproval','closedAt','createdAt','updatedAt']);
+
+export const Fm200WorkOrderEvidenceScalarFieldEnumSchema = z.enum(['id','workOrderId','fileType','fileUrl','fileName','uploadedBy','createdAt']);
+
+export const Fm200SettingScalarFieldEnumSchema = z.enum(['id','roomTypes','systemTypes','createdAt','updatedAt']);
+
+export const Fm200BuildingFloorScalarFieldEnumSchema = z.enum(['id','facilityId','building','block','floor','createdAt','updatedAt']);
+
 export const SortOrderSchema = z.enum(['asc','desc']);
 
 export const NullableJsonNullValueInputSchema: z.ZodType<Prisma.NullableJsonNullValueInput> = z.enum(['DbNull','JsonNull',]).transform((value) => value === 'JsonNull' ? Prisma.JsonNull : value === 'DbNull' ? Prisma.DbNull : value);
@@ -747,6 +769,8 @@ export type FacilityRelations = {
   electricInfrastructureStatus?: ElectricInfrastructureFacilityStatusWithRelations | null;
   thermalInspectionSessions: ThermalInspectionSessionWithRelations[];
   fireSafetyAudits: FireSafetyAuditWithRelations[];
+  fm200Locations: Fm200LocationWithRelations[];
+  fm200BuildingFloors: Fm200BuildingFloorWithRelations[];
 };
 
 export type FacilityWithRelations = z.infer<typeof FacilitySchema> & FacilityRelations
@@ -799,6 +823,8 @@ export const FacilityWithRelationsSchema: z.ZodType<FacilityWithRelations> = Fac
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusWithRelationsSchema).nullable(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionWithRelationsSchema).array(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditWithRelationsSchema).array(),
+  fm200Locations: z.lazy(() => Fm200LocationWithRelationsSchema).array(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorWithRelationsSchema).array(),
 }))
 
 /////////////////////////////////////////
@@ -5926,6 +5952,396 @@ export const FireSafetySettingSchema = z.object({
 export type FireSafetySetting = z.infer<typeof FireSafetySettingSchema>
 
 /////////////////////////////////////////
+// FM 200 LOCATION SCHEMA
+/////////////////////////////////////////
+
+export const Fm200LocationSchema = z.object({
+  id: z.string().cuid(),
+  facilityId: z.string(),
+  building: z.string(),
+  block: z.string().nullable(),
+  floor: z.string(),
+  roomType: z.string(),
+  customRoomName: z.string().nullable(),
+  index: z.number().int(),
+  systemUid: z.string(),
+  systemType: z.string(),
+  panelType: z.string().nullable(),
+  roomVolumeM3: z.number().nullable(),
+  cylinderCount: z.number().int(),
+  isActive: z.boolean(),
+  notes: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type Fm200Location = z.infer<typeof Fm200LocationSchema>
+
+// FM 200 LOCATION RELATION SCHEMA
+//------------------------------------------------------
+
+export type Fm200LocationRelations = {
+  facility: FacilityWithRelations;
+  cylinders: Fm200CylinderWithRelations[];
+  phase1Assessments: Fm200Phase1AssessmentWithRelations[];
+  inspections: Fm200PeriodicInspectionWithRelations[];
+  maintenances: Fm200MaintenanceWithRelations[];
+  tightnessTests: Fm200TightnessTestWithRelations[];
+  workOrders: Fm200WorkOrderWithRelations[];
+};
+
+export type Fm200LocationWithRelations = z.infer<typeof Fm200LocationSchema> & Fm200LocationRelations
+
+export const Fm200LocationWithRelationsSchema: z.ZodType<Fm200LocationWithRelations> = Fm200LocationSchema.merge(z.object({
+  facility: z.lazy(() => FacilityWithRelationsSchema),
+  cylinders: z.lazy(() => Fm200CylinderWithRelationsSchema).array(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentWithRelationsSchema).array(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionWithRelationsSchema).array(),
+  maintenances: z.lazy(() => Fm200MaintenanceWithRelationsSchema).array(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestWithRelationsSchema).array(),
+  workOrders: z.lazy(() => Fm200WorkOrderWithRelationsSchema).array(),
+}))
+
+/////////////////////////////////////////
+// FM 200 CYLINDER SCHEMA
+/////////////////////////////////////////
+
+export const Fm200CylinderSchema = z.object({
+  id: z.string().cuid(),
+  locationId: z.string(),
+  serialNumber: z.string(),
+  labelCode: z.string(),
+  capacityKg: z.number().nullable(),
+  tareKg: z.number().nullable(),
+  manufacturingYear: z.number().int().nullable(),
+  lastHydrostaticTestDate: z.coerce.date().nullable(),
+  notes: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type Fm200Cylinder = z.infer<typeof Fm200CylinderSchema>
+
+// FM 200 CYLINDER RELATION SCHEMA
+//------------------------------------------------------
+
+export type Fm200CylinderRelations = {
+  location: Fm200LocationWithRelations;
+  maintenanceCylinders: Fm200MaintenanceCylinderWithRelations[];
+  workOrders: Fm200WorkOrderWithRelations[];
+};
+
+export type Fm200CylinderWithRelations = z.infer<typeof Fm200CylinderSchema> & Fm200CylinderRelations
+
+export const Fm200CylinderWithRelationsSchema: z.ZodType<Fm200CylinderWithRelations> = Fm200CylinderSchema.merge(z.object({
+  location: z.lazy(() => Fm200LocationWithRelationsSchema),
+  maintenanceCylinders: z.lazy(() => Fm200MaintenanceCylinderWithRelationsSchema).array(),
+  workOrders: z.lazy(() => Fm200WorkOrderWithRelationsSchema).array(),
+}))
+
+/////////////////////////////////////////
+// FM 200 PHASE 1 ASSESSMENT SCHEMA
+/////////////////////////////////////////
+
+export const Fm200Phase1AssessmentSchema = z.object({
+  id: z.string().cuid(),
+  locationId: z.string(),
+  assessedBy: z.string(),
+  assessedDate: z.coerce.date(),
+  f1_a1: z.string().nullable(),
+  f1_a2: z.string().nullable(),
+  f1_a3: z.string().nullable(),
+  f1_a4: z.string().nullable(),
+  f1_b1: z.string().nullable(),
+  f1_b2: z.string().nullable(),
+  f1_b3: z.string().nullable(),
+  f1_b4: z.string().nullable(),
+  f1_b5: z.string().nullable(),
+  f1_b6: z.string().nullable(),
+  f1_c1: z.string().nullable(),
+  f1_c2: z.string().nullable(),
+  f1_d1: z.string().nullable(),
+  f1_d2: z.string().nullable(),
+  f1_d3: z.string().nullable(),
+  f1_e1: z.string().nullable(),
+  f1_e2: z.string().nullable(),
+  notes: z.string().nullable(),
+  photos: JsonValueSchema,
+  isCompleted: z.boolean(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type Fm200Phase1Assessment = z.infer<typeof Fm200Phase1AssessmentSchema>
+
+// FM 200 PHASE 1 ASSESSMENT RELATION SCHEMA
+//------------------------------------------------------
+
+export type Fm200Phase1AssessmentRelations = {
+  location: Fm200LocationWithRelations;
+};
+
+export type Fm200Phase1AssessmentWithRelations = z.infer<typeof Fm200Phase1AssessmentSchema> & Fm200Phase1AssessmentRelations
+
+export const Fm200Phase1AssessmentWithRelationsSchema: z.ZodType<Fm200Phase1AssessmentWithRelations> = Fm200Phase1AssessmentSchema.merge(z.object({
+  location: z.lazy(() => Fm200LocationWithRelationsSchema),
+}))
+
+/////////////////////////////////////////
+// FM 200 PERIODIC INSPECTION SCHEMA
+/////////////////////////////////////////
+
+export const Fm200PeriodicInspectionSchema = z.object({
+  id: z.string().cuid(),
+  locationId: z.string(),
+  inspectedBy: z.string(),
+  inspectionDate: z.coerce.date(),
+  itemResponses: JsonValueSchema,
+  complianceScore: z.number(),
+  ratingGrade: z.string(),
+  isRedFlagged: z.boolean(),
+  openWorkOrdersCount: z.number().int(),
+  photos: JsonValueSchema,
+  notes: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type Fm200PeriodicInspection = z.infer<typeof Fm200PeriodicInspectionSchema>
+
+// FM 200 PERIODIC INSPECTION RELATION SCHEMA
+//------------------------------------------------------
+
+export type Fm200PeriodicInspectionRelations = {
+  location: Fm200LocationWithRelations;
+};
+
+export type Fm200PeriodicInspectionWithRelations = z.infer<typeof Fm200PeriodicInspectionSchema> & Fm200PeriodicInspectionRelations
+
+export const Fm200PeriodicInspectionWithRelationsSchema: z.ZodType<Fm200PeriodicInspectionWithRelations> = Fm200PeriodicInspectionSchema.merge(z.object({
+  location: z.lazy(() => Fm200LocationWithRelationsSchema),
+}))
+
+/////////////////////////////////////////
+// FM 200 MAINTENANCE SCHEMA
+/////////////////////////////////////////
+
+export const Fm200MaintenanceSchema = z.object({
+  id: z.string().cuid(),
+  locationId: z.string(),
+  performedBy: z.string(),
+  maintenanceDate: z.coerce.date(),
+  panelControlStatus: z.string(),
+  panelNotes: z.string().nullable(),
+  notes: z.string().nullable(),
+  photos: JsonValueSchema,
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type Fm200Maintenance = z.infer<typeof Fm200MaintenanceSchema>
+
+// FM 200 MAINTENANCE RELATION SCHEMA
+//------------------------------------------------------
+
+export type Fm200MaintenanceRelations = {
+  location: Fm200LocationWithRelations;
+  cylinders: Fm200MaintenanceCylinderWithRelations[];
+};
+
+export type Fm200MaintenanceWithRelations = z.infer<typeof Fm200MaintenanceSchema> & Fm200MaintenanceRelations
+
+export const Fm200MaintenanceWithRelationsSchema: z.ZodType<Fm200MaintenanceWithRelations> = Fm200MaintenanceSchema.merge(z.object({
+  location: z.lazy(() => Fm200LocationWithRelationsSchema),
+  cylinders: z.lazy(() => Fm200MaintenanceCylinderWithRelationsSchema).array(),
+}))
+
+/////////////////////////////////////////
+// FM 200 MAINTENANCE CYLINDER SCHEMA
+/////////////////////////////////////////
+
+export const Fm200MaintenanceCylinderSchema = z.object({
+  id: z.string().cuid(),
+  maintenanceId: z.string(),
+  cylinderId: z.string(),
+  govde: z.string(),
+  muhur: z.string(),
+  basinc: z.string(),
+  emniyet: z.string(),
+  notes: z.string().nullable(),
+})
+
+export type Fm200MaintenanceCylinder = z.infer<typeof Fm200MaintenanceCylinderSchema>
+
+// FM 200 MAINTENANCE CYLINDER RELATION SCHEMA
+//------------------------------------------------------
+
+export type Fm200MaintenanceCylinderRelations = {
+  maintenance: Fm200MaintenanceWithRelations;
+  cylinder: Fm200CylinderWithRelations;
+};
+
+export type Fm200MaintenanceCylinderWithRelations = z.infer<typeof Fm200MaintenanceCylinderSchema> & Fm200MaintenanceCylinderRelations
+
+export const Fm200MaintenanceCylinderWithRelationsSchema: z.ZodType<Fm200MaintenanceCylinderWithRelations> = Fm200MaintenanceCylinderSchema.merge(z.object({
+  maintenance: z.lazy(() => Fm200MaintenanceWithRelationsSchema),
+  cylinder: z.lazy(() => Fm200CylinderWithRelationsSchema),
+}))
+
+/////////////////////////////////////////
+// FM 200 TIGHTNESS TEST SCHEMA
+/////////////////////////////////////////
+
+export const Fm200TightnessTestSchema = z.object({
+  id: z.string().cuid(),
+  locationId: z.string(),
+  performedBy: z.string(),
+  testDate: z.coerce.date(),
+  retentionTimeMinutes: z.number().nullable(),
+  measuredValue: z.number().nullable(),
+  result: z.string(),
+  isUnconditional: z.boolean(),
+  overrideReason: z.string().nullable(),
+  reportUrl: z.string().nullable(),
+  nextTestDate: z.coerce.date().nullable(),
+  notes: z.string().nullable(),
+  photos: JsonValueSchema,
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type Fm200TightnessTest = z.infer<typeof Fm200TightnessTestSchema>
+
+// FM 200 TIGHTNESS TEST RELATION SCHEMA
+//------------------------------------------------------
+
+export type Fm200TightnessTestRelations = {
+  location: Fm200LocationWithRelations;
+};
+
+export type Fm200TightnessTestWithRelations = z.infer<typeof Fm200TightnessTestSchema> & Fm200TightnessTestRelations
+
+export const Fm200TightnessTestWithRelationsSchema: z.ZodType<Fm200TightnessTestWithRelations> = Fm200TightnessTestSchema.merge(z.object({
+  location: z.lazy(() => Fm200LocationWithRelationsSchema),
+}))
+
+/////////////////////////////////////////
+// FM 200 WORK ORDER SCHEMA
+/////////////////////////////////////////
+
+export const Fm200WorkOrderSchema = z.object({
+  id: z.string().cuid(),
+  locationId: z.string(),
+  cylinderId: z.string().nullable(),
+  sourcePhase: z.string(),
+  sourceCode: z.string(),
+  title: z.string(),
+  workType: z.string(),
+  responsible: z.string(),
+  trackLane: z.string(),
+  status: z.string(),
+  repeatCount: z.number().int(),
+  companyTrackNo: z.string().nullable(),
+  sourceWorkId: z.string().nullable(),
+  revisionNote: z.string().nullable(),
+  correctApproval: z.boolean(),
+  closedAt: z.coerce.date().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type Fm200WorkOrder = z.infer<typeof Fm200WorkOrderSchema>
+
+// FM 200 WORK ORDER RELATION SCHEMA
+//------------------------------------------------------
+
+export type Fm200WorkOrderRelations = {
+  location: Fm200LocationWithRelations;
+  cylinder?: Fm200CylinderWithRelations | null;
+  evidences: Fm200WorkOrderEvidenceWithRelations[];
+};
+
+export type Fm200WorkOrderWithRelations = z.infer<typeof Fm200WorkOrderSchema> & Fm200WorkOrderRelations
+
+export const Fm200WorkOrderWithRelationsSchema: z.ZodType<Fm200WorkOrderWithRelations> = Fm200WorkOrderSchema.merge(z.object({
+  location: z.lazy(() => Fm200LocationWithRelationsSchema),
+  cylinder: z.lazy(() => Fm200CylinderWithRelationsSchema).nullable(),
+  evidences: z.lazy(() => Fm200WorkOrderEvidenceWithRelationsSchema).array(),
+}))
+
+/////////////////////////////////////////
+// FM 200 WORK ORDER EVIDENCE SCHEMA
+/////////////////////////////////////////
+
+export const Fm200WorkOrderEvidenceSchema = z.object({
+  id: z.string().cuid(),
+  workOrderId: z.string(),
+  fileType: z.string(),
+  fileUrl: z.string(),
+  fileName: z.string().nullable(),
+  uploadedBy: z.string(),
+  createdAt: z.coerce.date(),
+})
+
+export type Fm200WorkOrderEvidence = z.infer<typeof Fm200WorkOrderEvidenceSchema>
+
+// FM 200 WORK ORDER EVIDENCE RELATION SCHEMA
+//------------------------------------------------------
+
+export type Fm200WorkOrderEvidenceRelations = {
+  workOrder: Fm200WorkOrderWithRelations;
+};
+
+export type Fm200WorkOrderEvidenceWithRelations = z.infer<typeof Fm200WorkOrderEvidenceSchema> & Fm200WorkOrderEvidenceRelations
+
+export const Fm200WorkOrderEvidenceWithRelationsSchema: z.ZodType<Fm200WorkOrderEvidenceWithRelations> = Fm200WorkOrderEvidenceSchema.merge(z.object({
+  workOrder: z.lazy(() => Fm200WorkOrderWithRelationsSchema),
+}))
+
+/////////////////////////////////////////
+// FM 200 SETTING SCHEMA
+/////////////////////////////////////////
+
+export const Fm200SettingSchema = z.object({
+  id: z.string(),
+  roomTypes: JsonValueSchema,
+  systemTypes: JsonValueSchema,
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type Fm200Setting = z.infer<typeof Fm200SettingSchema>
+
+/////////////////////////////////////////
+// FM 200 BUILDING FLOOR SCHEMA
+/////////////////////////////////////////
+
+export const Fm200BuildingFloorSchema = z.object({
+  id: z.string().cuid(),
+  facilityId: z.string(),
+  building: z.string(),
+  block: z.string().nullable(),
+  floor: z.string(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+export type Fm200BuildingFloor = z.infer<typeof Fm200BuildingFloorSchema>
+
+// FM 200 BUILDING FLOOR RELATION SCHEMA
+//------------------------------------------------------
+
+export type Fm200BuildingFloorRelations = {
+  facility: FacilityWithRelations;
+};
+
+export type Fm200BuildingFloorWithRelations = z.infer<typeof Fm200BuildingFloorSchema> & Fm200BuildingFloorRelations
+
+export const Fm200BuildingFloorWithRelationsSchema: z.ZodType<Fm200BuildingFloorWithRelations> = Fm200BuildingFloorSchema.merge(z.object({
+  facility: z.lazy(() => FacilityWithRelationsSchema),
+}))
+
+/////////////////////////////////////////
 // SELECT & INCLUDE
 /////////////////////////////////////////
 
@@ -6237,6 +6653,8 @@ export const FacilityIncludeSchema: z.ZodType<Prisma.FacilityInclude> = z.object
   electricInfrastructureStatus: z.union([z.boolean(),z.lazy(() => ElectricInfrastructureFacilityStatusArgsSchema)]).optional(),
   thermalInspectionSessions: z.union([z.boolean(),z.lazy(() => ThermalInspectionSessionFindManyArgsSchema)]).optional(),
   fireSafetyAudits: z.union([z.boolean(),z.lazy(() => FireSafetyAuditFindManyArgsSchema)]).optional(),
+  fm200Locations: z.union([z.boolean(),z.lazy(() => Fm200LocationFindManyArgsSchema)]).optional(),
+  fm200BuildingFloors: z.union([z.boolean(),z.lazy(() => Fm200BuildingFloorFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => FacilityCountOutputTypeArgsSchema)]).optional(),
 }).strict();
 
@@ -6296,6 +6714,8 @@ export const FacilityCountOutputTypeSelectSchema: z.ZodType<Prisma.FacilityCount
   electricInfrastructureRecords: z.boolean().optional(),
   thermalInspectionSessions: z.boolean().optional(),
   fireSafetyAudits: z.boolean().optional(),
+  fm200Locations: z.boolean().optional(),
+  fm200BuildingFloors: z.boolean().optional(),
 }).strict();
 
 export const FacilitySelectSchema: z.ZodType<Prisma.FacilitySelect> = z.object({
@@ -6367,6 +6787,8 @@ export const FacilitySelectSchema: z.ZodType<Prisma.FacilitySelect> = z.object({
   electricInfrastructureStatus: z.union([z.boolean(),z.lazy(() => ElectricInfrastructureFacilityStatusArgsSchema)]).optional(),
   thermalInspectionSessions: z.union([z.boolean(),z.lazy(() => ThermalInspectionSessionFindManyArgsSchema)]).optional(),
   fireSafetyAudits: z.union([z.boolean(),z.lazy(() => FireSafetyAuditFindManyArgsSchema)]).optional(),
+  fm200Locations: z.union([z.boolean(),z.lazy(() => Fm200LocationFindManyArgsSchema)]).optional(),
+  fm200BuildingFloors: z.union([z.boolean(),z.lazy(() => Fm200BuildingFloorFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => FacilityCountOutputTypeArgsSchema)]).optional(),
 }).strict()
 
@@ -11373,6 +11795,379 @@ export const FireSafetySettingSelectSchema: z.ZodType<Prisma.FireSafetySettingSe
   updatedAt: z.boolean().optional(),
 }).strict()
 
+// FM 200 LOCATION
+//------------------------------------------------------
+
+export const Fm200LocationIncludeSchema: z.ZodType<Prisma.Fm200LocationInclude> = z.object({
+  facility: z.union([z.boolean(),z.lazy(() => FacilityArgsSchema)]).optional(),
+  cylinders: z.union([z.boolean(),z.lazy(() => Fm200CylinderFindManyArgsSchema)]).optional(),
+  phase1Assessments: z.union([z.boolean(),z.lazy(() => Fm200Phase1AssessmentFindManyArgsSchema)]).optional(),
+  inspections: z.union([z.boolean(),z.lazy(() => Fm200PeriodicInspectionFindManyArgsSchema)]).optional(),
+  maintenances: z.union([z.boolean(),z.lazy(() => Fm200MaintenanceFindManyArgsSchema)]).optional(),
+  tightnessTests: z.union([z.boolean(),z.lazy(() => Fm200TightnessTestFindManyArgsSchema)]).optional(),
+  workOrders: z.union([z.boolean(),z.lazy(() => Fm200WorkOrderFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => Fm200LocationCountOutputTypeArgsSchema)]).optional(),
+}).strict();
+
+export const Fm200LocationArgsSchema: z.ZodType<Prisma.Fm200LocationDefaultArgs> = z.object({
+  select: z.lazy(() => Fm200LocationSelectSchema).optional(),
+  include: z.lazy(() => Fm200LocationIncludeSchema).optional(),
+}).strict();
+
+export const Fm200LocationCountOutputTypeArgsSchema: z.ZodType<Prisma.Fm200LocationCountOutputTypeDefaultArgs> = z.object({
+  select: z.lazy(() => Fm200LocationCountOutputTypeSelectSchema).nullish(),
+}).strict();
+
+export const Fm200LocationCountOutputTypeSelectSchema: z.ZodType<Prisma.Fm200LocationCountOutputTypeSelect> = z.object({
+  cylinders: z.boolean().optional(),
+  phase1Assessments: z.boolean().optional(),
+  inspections: z.boolean().optional(),
+  maintenances: z.boolean().optional(),
+  tightnessTests: z.boolean().optional(),
+  workOrders: z.boolean().optional(),
+}).strict();
+
+export const Fm200LocationSelectSchema: z.ZodType<Prisma.Fm200LocationSelect> = z.object({
+  id: z.boolean().optional(),
+  facilityId: z.boolean().optional(),
+  building: z.boolean().optional(),
+  block: z.boolean().optional(),
+  floor: z.boolean().optional(),
+  roomType: z.boolean().optional(),
+  customRoomName: z.boolean().optional(),
+  index: z.boolean().optional(),
+  systemUid: z.boolean().optional(),
+  systemType: z.boolean().optional(),
+  panelType: z.boolean().optional(),
+  roomVolumeM3: z.boolean().optional(),
+  cylinderCount: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  facility: z.union([z.boolean(),z.lazy(() => FacilityArgsSchema)]).optional(),
+  cylinders: z.union([z.boolean(),z.lazy(() => Fm200CylinderFindManyArgsSchema)]).optional(),
+  phase1Assessments: z.union([z.boolean(),z.lazy(() => Fm200Phase1AssessmentFindManyArgsSchema)]).optional(),
+  inspections: z.union([z.boolean(),z.lazy(() => Fm200PeriodicInspectionFindManyArgsSchema)]).optional(),
+  maintenances: z.union([z.boolean(),z.lazy(() => Fm200MaintenanceFindManyArgsSchema)]).optional(),
+  tightnessTests: z.union([z.boolean(),z.lazy(() => Fm200TightnessTestFindManyArgsSchema)]).optional(),
+  workOrders: z.union([z.boolean(),z.lazy(() => Fm200WorkOrderFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => Fm200LocationCountOutputTypeArgsSchema)]).optional(),
+}).strict()
+
+// FM 200 CYLINDER
+//------------------------------------------------------
+
+export const Fm200CylinderIncludeSchema: z.ZodType<Prisma.Fm200CylinderInclude> = z.object({
+  location: z.union([z.boolean(),z.lazy(() => Fm200LocationArgsSchema)]).optional(),
+  maintenanceCylinders: z.union([z.boolean(),z.lazy(() => Fm200MaintenanceCylinderFindManyArgsSchema)]).optional(),
+  workOrders: z.union([z.boolean(),z.lazy(() => Fm200WorkOrderFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => Fm200CylinderCountOutputTypeArgsSchema)]).optional(),
+}).strict();
+
+export const Fm200CylinderArgsSchema: z.ZodType<Prisma.Fm200CylinderDefaultArgs> = z.object({
+  select: z.lazy(() => Fm200CylinderSelectSchema).optional(),
+  include: z.lazy(() => Fm200CylinderIncludeSchema).optional(),
+}).strict();
+
+export const Fm200CylinderCountOutputTypeArgsSchema: z.ZodType<Prisma.Fm200CylinderCountOutputTypeDefaultArgs> = z.object({
+  select: z.lazy(() => Fm200CylinderCountOutputTypeSelectSchema).nullish(),
+}).strict();
+
+export const Fm200CylinderCountOutputTypeSelectSchema: z.ZodType<Prisma.Fm200CylinderCountOutputTypeSelect> = z.object({
+  maintenanceCylinders: z.boolean().optional(),
+  workOrders: z.boolean().optional(),
+}).strict();
+
+export const Fm200CylinderSelectSchema: z.ZodType<Prisma.Fm200CylinderSelect> = z.object({
+  id: z.boolean().optional(),
+  locationId: z.boolean().optional(),
+  serialNumber: z.boolean().optional(),
+  labelCode: z.boolean().optional(),
+  capacityKg: z.boolean().optional(),
+  tareKg: z.boolean().optional(),
+  manufacturingYear: z.boolean().optional(),
+  lastHydrostaticTestDate: z.boolean().optional(),
+  notes: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  location: z.union([z.boolean(),z.lazy(() => Fm200LocationArgsSchema)]).optional(),
+  maintenanceCylinders: z.union([z.boolean(),z.lazy(() => Fm200MaintenanceCylinderFindManyArgsSchema)]).optional(),
+  workOrders: z.union([z.boolean(),z.lazy(() => Fm200WorkOrderFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => Fm200CylinderCountOutputTypeArgsSchema)]).optional(),
+}).strict()
+
+// FM 200 PHASE 1 ASSESSMENT
+//------------------------------------------------------
+
+export const Fm200Phase1AssessmentIncludeSchema: z.ZodType<Prisma.Fm200Phase1AssessmentInclude> = z.object({
+  location: z.union([z.boolean(),z.lazy(() => Fm200LocationArgsSchema)]).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentArgsSchema: z.ZodType<Prisma.Fm200Phase1AssessmentDefaultArgs> = z.object({
+  select: z.lazy(() => Fm200Phase1AssessmentSelectSchema).optional(),
+  include: z.lazy(() => Fm200Phase1AssessmentIncludeSchema).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentSelectSchema: z.ZodType<Prisma.Fm200Phase1AssessmentSelect> = z.object({
+  id: z.boolean().optional(),
+  locationId: z.boolean().optional(),
+  assessedBy: z.boolean().optional(),
+  assessedDate: z.boolean().optional(),
+  f1_a1: z.boolean().optional(),
+  f1_a2: z.boolean().optional(),
+  f1_a3: z.boolean().optional(),
+  f1_a4: z.boolean().optional(),
+  f1_b1: z.boolean().optional(),
+  f1_b2: z.boolean().optional(),
+  f1_b3: z.boolean().optional(),
+  f1_b4: z.boolean().optional(),
+  f1_b5: z.boolean().optional(),
+  f1_b6: z.boolean().optional(),
+  f1_c1: z.boolean().optional(),
+  f1_c2: z.boolean().optional(),
+  f1_d1: z.boolean().optional(),
+  f1_d2: z.boolean().optional(),
+  f1_d3: z.boolean().optional(),
+  f1_e1: z.boolean().optional(),
+  f1_e2: z.boolean().optional(),
+  notes: z.boolean().optional(),
+  photos: z.boolean().optional(),
+  isCompleted: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  location: z.union([z.boolean(),z.lazy(() => Fm200LocationArgsSchema)]).optional(),
+}).strict()
+
+// FM 200 PERIODIC INSPECTION
+//------------------------------------------------------
+
+export const Fm200PeriodicInspectionIncludeSchema: z.ZodType<Prisma.Fm200PeriodicInspectionInclude> = z.object({
+  location: z.union([z.boolean(),z.lazy(() => Fm200LocationArgsSchema)]).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionArgsSchema: z.ZodType<Prisma.Fm200PeriodicInspectionDefaultArgs> = z.object({
+  select: z.lazy(() => Fm200PeriodicInspectionSelectSchema).optional(),
+  include: z.lazy(() => Fm200PeriodicInspectionIncludeSchema).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionSelectSchema: z.ZodType<Prisma.Fm200PeriodicInspectionSelect> = z.object({
+  id: z.boolean().optional(),
+  locationId: z.boolean().optional(),
+  inspectedBy: z.boolean().optional(),
+  inspectionDate: z.boolean().optional(),
+  itemResponses: z.boolean().optional(),
+  complianceScore: z.boolean().optional(),
+  ratingGrade: z.boolean().optional(),
+  isRedFlagged: z.boolean().optional(),
+  openWorkOrdersCount: z.boolean().optional(),
+  photos: z.boolean().optional(),
+  notes: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  location: z.union([z.boolean(),z.lazy(() => Fm200LocationArgsSchema)]).optional(),
+}).strict()
+
+// FM 200 MAINTENANCE
+//------------------------------------------------------
+
+export const Fm200MaintenanceIncludeSchema: z.ZodType<Prisma.Fm200MaintenanceInclude> = z.object({
+  location: z.union([z.boolean(),z.lazy(() => Fm200LocationArgsSchema)]).optional(),
+  cylinders: z.union([z.boolean(),z.lazy(() => Fm200MaintenanceCylinderFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => Fm200MaintenanceCountOutputTypeArgsSchema)]).optional(),
+}).strict();
+
+export const Fm200MaintenanceArgsSchema: z.ZodType<Prisma.Fm200MaintenanceDefaultArgs> = z.object({
+  select: z.lazy(() => Fm200MaintenanceSelectSchema).optional(),
+  include: z.lazy(() => Fm200MaintenanceIncludeSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCountOutputTypeArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCountOutputTypeDefaultArgs> = z.object({
+  select: z.lazy(() => Fm200MaintenanceCountOutputTypeSelectSchema).nullish(),
+}).strict();
+
+export const Fm200MaintenanceCountOutputTypeSelectSchema: z.ZodType<Prisma.Fm200MaintenanceCountOutputTypeSelect> = z.object({
+  cylinders: z.boolean().optional(),
+}).strict();
+
+export const Fm200MaintenanceSelectSchema: z.ZodType<Prisma.Fm200MaintenanceSelect> = z.object({
+  id: z.boolean().optional(),
+  locationId: z.boolean().optional(),
+  performedBy: z.boolean().optional(),
+  maintenanceDate: z.boolean().optional(),
+  panelControlStatus: z.boolean().optional(),
+  panelNotes: z.boolean().optional(),
+  notes: z.boolean().optional(),
+  photos: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  location: z.union([z.boolean(),z.lazy(() => Fm200LocationArgsSchema)]).optional(),
+  cylinders: z.union([z.boolean(),z.lazy(() => Fm200MaintenanceCylinderFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => Fm200MaintenanceCountOutputTypeArgsSchema)]).optional(),
+}).strict()
+
+// FM 200 MAINTENANCE CYLINDER
+//------------------------------------------------------
+
+export const Fm200MaintenanceCylinderIncludeSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderInclude> = z.object({
+  maintenance: z.union([z.boolean(),z.lazy(() => Fm200MaintenanceArgsSchema)]).optional(),
+  cylinder: z.union([z.boolean(),z.lazy(() => Fm200CylinderArgsSchema)]).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderDefaultArgs> = z.object({
+  select: z.lazy(() => Fm200MaintenanceCylinderSelectSchema).optional(),
+  include: z.lazy(() => Fm200MaintenanceCylinderIncludeSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderSelectSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderSelect> = z.object({
+  id: z.boolean().optional(),
+  maintenanceId: z.boolean().optional(),
+  cylinderId: z.boolean().optional(),
+  govde: z.boolean().optional(),
+  muhur: z.boolean().optional(),
+  basinc: z.boolean().optional(),
+  emniyet: z.boolean().optional(),
+  notes: z.boolean().optional(),
+  maintenance: z.union([z.boolean(),z.lazy(() => Fm200MaintenanceArgsSchema)]).optional(),
+  cylinder: z.union([z.boolean(),z.lazy(() => Fm200CylinderArgsSchema)]).optional(),
+}).strict()
+
+// FM 200 TIGHTNESS TEST
+//------------------------------------------------------
+
+export const Fm200TightnessTestIncludeSchema: z.ZodType<Prisma.Fm200TightnessTestInclude> = z.object({
+  location: z.union([z.boolean(),z.lazy(() => Fm200LocationArgsSchema)]).optional(),
+}).strict();
+
+export const Fm200TightnessTestArgsSchema: z.ZodType<Prisma.Fm200TightnessTestDefaultArgs> = z.object({
+  select: z.lazy(() => Fm200TightnessTestSelectSchema).optional(),
+  include: z.lazy(() => Fm200TightnessTestIncludeSchema).optional(),
+}).strict();
+
+export const Fm200TightnessTestSelectSchema: z.ZodType<Prisma.Fm200TightnessTestSelect> = z.object({
+  id: z.boolean().optional(),
+  locationId: z.boolean().optional(),
+  performedBy: z.boolean().optional(),
+  testDate: z.boolean().optional(),
+  retentionTimeMinutes: z.boolean().optional(),
+  measuredValue: z.boolean().optional(),
+  result: z.boolean().optional(),
+  isUnconditional: z.boolean().optional(),
+  overrideReason: z.boolean().optional(),
+  reportUrl: z.boolean().optional(),
+  nextTestDate: z.boolean().optional(),
+  notes: z.boolean().optional(),
+  photos: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  location: z.union([z.boolean(),z.lazy(() => Fm200LocationArgsSchema)]).optional(),
+}).strict()
+
+// FM 200 WORK ORDER
+//------------------------------------------------------
+
+export const Fm200WorkOrderIncludeSchema: z.ZodType<Prisma.Fm200WorkOrderInclude> = z.object({
+  location: z.union([z.boolean(),z.lazy(() => Fm200LocationArgsSchema)]).optional(),
+  cylinder: z.union([z.boolean(),z.lazy(() => Fm200CylinderArgsSchema)]).optional(),
+  evidences: z.union([z.boolean(),z.lazy(() => Fm200WorkOrderEvidenceFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => Fm200WorkOrderCountOutputTypeArgsSchema)]).optional(),
+}).strict();
+
+export const Fm200WorkOrderArgsSchema: z.ZodType<Prisma.Fm200WorkOrderDefaultArgs> = z.object({
+  select: z.lazy(() => Fm200WorkOrderSelectSchema).optional(),
+  include: z.lazy(() => Fm200WorkOrderIncludeSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderCountOutputTypeArgsSchema: z.ZodType<Prisma.Fm200WorkOrderCountOutputTypeDefaultArgs> = z.object({
+  select: z.lazy(() => Fm200WorkOrderCountOutputTypeSelectSchema).nullish(),
+}).strict();
+
+export const Fm200WorkOrderCountOutputTypeSelectSchema: z.ZodType<Prisma.Fm200WorkOrderCountOutputTypeSelect> = z.object({
+  evidences: z.boolean().optional(),
+}).strict();
+
+export const Fm200WorkOrderSelectSchema: z.ZodType<Prisma.Fm200WorkOrderSelect> = z.object({
+  id: z.boolean().optional(),
+  locationId: z.boolean().optional(),
+  cylinderId: z.boolean().optional(),
+  sourcePhase: z.boolean().optional(),
+  sourceCode: z.boolean().optional(),
+  title: z.boolean().optional(),
+  workType: z.boolean().optional(),
+  responsible: z.boolean().optional(),
+  trackLane: z.boolean().optional(),
+  status: z.boolean().optional(),
+  repeatCount: z.boolean().optional(),
+  companyTrackNo: z.boolean().optional(),
+  sourceWorkId: z.boolean().optional(),
+  revisionNote: z.boolean().optional(),
+  correctApproval: z.boolean().optional(),
+  closedAt: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  location: z.union([z.boolean(),z.lazy(() => Fm200LocationArgsSchema)]).optional(),
+  cylinder: z.union([z.boolean(),z.lazy(() => Fm200CylinderArgsSchema)]).optional(),
+  evidences: z.union([z.boolean(),z.lazy(() => Fm200WorkOrderEvidenceFindManyArgsSchema)]).optional(),
+  _count: z.union([z.boolean(),z.lazy(() => Fm200WorkOrderCountOutputTypeArgsSchema)]).optional(),
+}).strict()
+
+// FM 200 WORK ORDER EVIDENCE
+//------------------------------------------------------
+
+export const Fm200WorkOrderEvidenceIncludeSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceInclude> = z.object({
+  workOrder: z.union([z.boolean(),z.lazy(() => Fm200WorkOrderArgsSchema)]).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceArgsSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceDefaultArgs> = z.object({
+  select: z.lazy(() => Fm200WorkOrderEvidenceSelectSchema).optional(),
+  include: z.lazy(() => Fm200WorkOrderEvidenceIncludeSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceSelectSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceSelect> = z.object({
+  id: z.boolean().optional(),
+  workOrderId: z.boolean().optional(),
+  fileType: z.boolean().optional(),
+  fileUrl: z.boolean().optional(),
+  fileName: z.boolean().optional(),
+  uploadedBy: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  workOrder: z.union([z.boolean(),z.lazy(() => Fm200WorkOrderArgsSchema)]).optional(),
+}).strict()
+
+// FM 200 SETTING
+//------------------------------------------------------
+
+export const Fm200SettingSelectSchema: z.ZodType<Prisma.Fm200SettingSelect> = z.object({
+  id: z.boolean().optional(),
+  roomTypes: z.boolean().optional(),
+  systemTypes: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+}).strict()
+
+// FM 200 BUILDING FLOOR
+//------------------------------------------------------
+
+export const Fm200BuildingFloorIncludeSchema: z.ZodType<Prisma.Fm200BuildingFloorInclude> = z.object({
+  facility: z.union([z.boolean(),z.lazy(() => FacilityArgsSchema)]).optional(),
+}).strict();
+
+export const Fm200BuildingFloorArgsSchema: z.ZodType<Prisma.Fm200BuildingFloorDefaultArgs> = z.object({
+  select: z.lazy(() => Fm200BuildingFloorSelectSchema).optional(),
+  include: z.lazy(() => Fm200BuildingFloorIncludeSchema).optional(),
+}).strict();
+
+export const Fm200BuildingFloorSelectSchema: z.ZodType<Prisma.Fm200BuildingFloorSelect> = z.object({
+  id: z.boolean().optional(),
+  facilityId: z.boolean().optional(),
+  building: z.boolean().optional(),
+  block: z.boolean().optional(),
+  floor: z.boolean().optional(),
+  createdAt: z.boolean().optional(),
+  updatedAt: z.boolean().optional(),
+  facility: z.union([z.boolean(),z.lazy(() => FacilityArgsSchema)]).optional(),
+}).strict()
+
 
 /////////////////////////////////////////
 // INPUT TYPES
@@ -11984,6 +12779,8 @@ export const FacilityWhereInputSchema: z.ZodType<Prisma.FacilityWhereInput> = z.
   electricInfrastructureStatus: z.union([ z.lazy(() => ElectricInfrastructureFacilityStatusNullableRelationFilterSchema), z.lazy(() => ElectricInfrastructureFacilityStatusWhereInputSchema) ]).optional().nullable(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionListRelationFilterSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditListRelationFilterSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationListRelationFilterSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorListRelationFilterSchema).optional(),
 }).strict();
 
 export const FacilityOrderByWithRelationInputSchema: z.ZodType<Prisma.FacilityOrderByWithRelationInput> = z.object({
@@ -12055,6 +12852,8 @@ export const FacilityOrderByWithRelationInputSchema: z.ZodType<Prisma.FacilityOr
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusOrderByWithRelationInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionOrderByRelationAggregateInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditOrderByRelationAggregateInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationOrderByRelationAggregateInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorOrderByRelationAggregateInputSchema).optional(),
 }).strict();
 
 export const FacilityWhereUniqueInputSchema: z.ZodType<Prisma.FacilityWhereUniqueInput> = z.object({
@@ -12132,6 +12931,8 @@ export const FacilityWhereUniqueInputSchema: z.ZodType<Prisma.FacilityWhereUniqu
   electricInfrastructureStatus: z.union([ z.lazy(() => ElectricInfrastructureFacilityStatusNullableRelationFilterSchema), z.lazy(() => ElectricInfrastructureFacilityStatusWhereInputSchema) ]).optional().nullable(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionListRelationFilterSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditListRelationFilterSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationListRelationFilterSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorListRelationFilterSchema).optional(),
 }).strict());
 
 export const FacilityOrderByWithAggregationInputSchema: z.ZodType<Prisma.FacilityOrderByWithAggregationInput> = z.object({
@@ -26168,6 +26969,1117 @@ export const FireSafetySettingScalarWhereWithAggregatesInputSchema: z.ZodType<Pr
   updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
 }).strict();
 
+export const Fm200LocationWhereInputSchema: z.ZodType<Prisma.Fm200LocationWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200LocationWhereInputSchema), z.lazy(() => Fm200LocationWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200LocationWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200LocationWhereInputSchema), z.lazy(() => Fm200LocationWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  facilityId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  building: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  block: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  floor: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  roomType: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  customRoomName: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  index: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  systemUid: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  systemType: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  panelType: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  cylinderCount: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  isActive: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  facility: z.union([ z.lazy(() => FacilityRelationFilterSchema), z.lazy(() => FacilityWhereInputSchema) ]).optional(),
+  cylinders: z.lazy(() => Fm200CylinderListRelationFilterSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentListRelationFilterSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionListRelationFilterSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceListRelationFilterSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestListRelationFilterSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderListRelationFilterSchema).optional(),
+}).strict();
+
+export const Fm200LocationOrderByWithRelationInputSchema: z.ZodType<Prisma.Fm200LocationOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  building: z.lazy(() => SortOrderSchema).optional(),
+  block: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  floor: z.lazy(() => SortOrderSchema).optional(),
+  roomType: z.lazy(() => SortOrderSchema).optional(),
+  customRoomName: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  index: z.lazy(() => SortOrderSchema).optional(),
+  systemUid: z.lazy(() => SortOrderSchema).optional(),
+  systemType: z.lazy(() => SortOrderSchema).optional(),
+  panelType: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  roomVolumeM3: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  cylinderCount: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  facility: z.lazy(() => FacilityOrderByWithRelationInputSchema).optional(),
+  cylinders: z.lazy(() => Fm200CylinderOrderByRelationAggregateInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentOrderByRelationAggregateInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionOrderByRelationAggregateInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceOrderByRelationAggregateInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestOrderByRelationAggregateInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderOrderByRelationAggregateInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationWhereUniqueInputSchema: z.ZodType<Prisma.Fm200LocationWhereUniqueInput> = z.union([
+  z.object({
+    id: z.cuid(),
+    facilityId_systemUid: z.lazy(() => Fm200LocationFacilityIdSystemUidCompoundUniqueInputSchema),
+  }),
+  z.object({
+    id: z.cuid(),
+  }),
+  z.object({
+    facilityId_systemUid: z.lazy(() => Fm200LocationFacilityIdSystemUidCompoundUniqueInputSchema),
+  }),
+])
+.and(z.object({
+  id: z.cuid().optional(),
+  facilityId_systemUid: z.lazy(() => Fm200LocationFacilityIdSystemUidCompoundUniqueInputSchema).optional(),
+  AND: z.union([ z.lazy(() => Fm200LocationWhereInputSchema), z.lazy(() => Fm200LocationWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200LocationWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200LocationWhereInputSchema), z.lazy(() => Fm200LocationWhereInputSchema).array() ]).optional(),
+  facilityId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  building: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  block: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  floor: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  roomType: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  customRoomName: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  index: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
+  systemUid: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  systemType: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  panelType: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  cylinderCount: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
+  isActive: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  facility: z.union([ z.lazy(() => FacilityRelationFilterSchema), z.lazy(() => FacilityWhereInputSchema) ]).optional(),
+  cylinders: z.lazy(() => Fm200CylinderListRelationFilterSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentListRelationFilterSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionListRelationFilterSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceListRelationFilterSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestListRelationFilterSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderListRelationFilterSchema).optional(),
+}).strict());
+
+export const Fm200LocationOrderByWithAggregationInputSchema: z.ZodType<Prisma.Fm200LocationOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  building: z.lazy(() => SortOrderSchema).optional(),
+  block: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  floor: z.lazy(() => SortOrderSchema).optional(),
+  roomType: z.lazy(() => SortOrderSchema).optional(),
+  customRoomName: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  index: z.lazy(() => SortOrderSchema).optional(),
+  systemUid: z.lazy(() => SortOrderSchema).optional(),
+  systemType: z.lazy(() => SortOrderSchema).optional(),
+  panelType: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  roomVolumeM3: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  cylinderCount: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => Fm200LocationCountOrderByAggregateInputSchema).optional(),
+  _avg: z.lazy(() => Fm200LocationAvgOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => Fm200LocationMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => Fm200LocationMinOrderByAggregateInputSchema).optional(),
+  _sum: z.lazy(() => Fm200LocationSumOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Fm200LocationScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200LocationScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200LocationScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200LocationScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200LocationScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200LocationScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  facilityId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  building: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  block: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  floor: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  roomType: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  customRoomName: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  index: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  systemUid: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  systemType: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  panelType: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.lazy(() => FloatNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
+  cylinderCount: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  isActive: z.union([ z.lazy(() => BoolWithAggregatesFilterSchema), z.boolean() ]).optional(),
+  notes: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const Fm200CylinderWhereInputSchema: z.ZodType<Prisma.Fm200CylinderWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200CylinderWhereInputSchema), z.lazy(() => Fm200CylinderWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200CylinderWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200CylinderWhereInputSchema), z.lazy(() => Fm200CylinderWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  serialNumber: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  labelCode: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  capacityKg: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  tareKg: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  manufacturingYear: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
+  lastHydrostaticTestDate: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  location: z.union([ z.lazy(() => Fm200LocationRelationFilterSchema), z.lazy(() => Fm200LocationWhereInputSchema) ]).optional(),
+  maintenanceCylinders: z.lazy(() => Fm200MaintenanceCylinderListRelationFilterSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderListRelationFilterSchema).optional(),
+}).strict();
+
+export const Fm200CylinderOrderByWithRelationInputSchema: z.ZodType<Prisma.Fm200CylinderOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  serialNumber: z.lazy(() => SortOrderSchema).optional(),
+  labelCode: z.lazy(() => SortOrderSchema).optional(),
+  capacityKg: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  tareKg: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  manufacturingYear: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  lastHydrostaticTestDate: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  location: z.lazy(() => Fm200LocationOrderByWithRelationInputSchema).optional(),
+  maintenanceCylinders: z.lazy(() => Fm200MaintenanceCylinderOrderByRelationAggregateInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderOrderByRelationAggregateInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderWhereUniqueInputSchema: z.ZodType<Prisma.Fm200CylinderWhereUniqueInput> = z.object({
+  id: z.cuid(),
+})
+.and(z.object({
+  id: z.cuid().optional(),
+  AND: z.union([ z.lazy(() => Fm200CylinderWhereInputSchema), z.lazy(() => Fm200CylinderWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200CylinderWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200CylinderWhereInputSchema), z.lazy(() => Fm200CylinderWhereInputSchema).array() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  serialNumber: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  labelCode: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  capacityKg: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  tareKg: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  manufacturingYear: z.union([ z.lazy(() => IntNullableFilterSchema), z.number().int() ]).optional().nullable(),
+  lastHydrostaticTestDate: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  location: z.union([ z.lazy(() => Fm200LocationRelationFilterSchema), z.lazy(() => Fm200LocationWhereInputSchema) ]).optional(),
+  maintenanceCylinders: z.lazy(() => Fm200MaintenanceCylinderListRelationFilterSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderListRelationFilterSchema).optional(),
+}).strict());
+
+export const Fm200CylinderOrderByWithAggregationInputSchema: z.ZodType<Prisma.Fm200CylinderOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  serialNumber: z.lazy(() => SortOrderSchema).optional(),
+  labelCode: z.lazy(() => SortOrderSchema).optional(),
+  capacityKg: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  tareKg: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  manufacturingYear: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  lastHydrostaticTestDate: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => Fm200CylinderCountOrderByAggregateInputSchema).optional(),
+  _avg: z.lazy(() => Fm200CylinderAvgOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => Fm200CylinderMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => Fm200CylinderMinOrderByAggregateInputSchema).optional(),
+  _sum: z.lazy(() => Fm200CylinderSumOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Fm200CylinderScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200CylinderScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200CylinderScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200CylinderScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200CylinderScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200CylinderScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  serialNumber: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  labelCode: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  capacityKg: z.union([ z.lazy(() => FloatNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
+  tareKg: z.union([ z.lazy(() => FloatNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
+  manufacturingYear: z.union([ z.lazy(() => IntNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
+  lastHydrostaticTestDate: z.union([ z.lazy(() => DateTimeNullableWithAggregatesFilterSchema), z.coerce.date() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentWhereInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200Phase1AssessmentWhereInputSchema), z.lazy(() => Fm200Phase1AssessmentWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200Phase1AssessmentWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200Phase1AssessmentWhereInputSchema), z.lazy(() => Fm200Phase1AssessmentWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  assessedBy: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  assessedDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  f1_a1: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_a2: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_a3: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_a4: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_b1: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_b2: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_b3: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_b4: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_b5: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_b6: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_c1: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_c2: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_d1: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_d2: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_d3: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_e1: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_e2: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  photos: z.lazy(() => JsonFilterSchema).optional(),
+  isCompleted: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  location: z.union([ z.lazy(() => Fm200LocationRelationFilterSchema), z.lazy(() => Fm200LocationWhereInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentOrderByWithRelationInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  assessedBy: z.lazy(() => SortOrderSchema).optional(),
+  assessedDate: z.lazy(() => SortOrderSchema).optional(),
+  f1_a1: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_a2: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_a3: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_a4: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_b1: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_b2: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_b3: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_b4: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_b5: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_b6: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_c1: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_c2: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_d1: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_d2: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_d3: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_e1: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_e2: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  photos: z.lazy(() => SortOrderSchema).optional(),
+  isCompleted: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  location: z.lazy(() => Fm200LocationOrderByWithRelationInputSchema).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentWhereUniqueInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentWhereUniqueInput> = z.object({
+  id: z.cuid(),
+})
+.and(z.object({
+  id: z.cuid().optional(),
+  AND: z.union([ z.lazy(() => Fm200Phase1AssessmentWhereInputSchema), z.lazy(() => Fm200Phase1AssessmentWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200Phase1AssessmentWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200Phase1AssessmentWhereInputSchema), z.lazy(() => Fm200Phase1AssessmentWhereInputSchema).array() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  assessedBy: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  assessedDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  f1_a1: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_a2: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_a3: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_a4: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_b1: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_b2: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_b3: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_b4: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_b5: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_b6: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_c1: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_c2: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_d1: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_d2: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_d3: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_e1: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_e2: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  photos: z.lazy(() => JsonFilterSchema).optional(),
+  isCompleted: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  location: z.union([ z.lazy(() => Fm200LocationRelationFilterSchema), z.lazy(() => Fm200LocationWhereInputSchema) ]).optional(),
+}).strict());
+
+export const Fm200Phase1AssessmentOrderByWithAggregationInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  assessedBy: z.lazy(() => SortOrderSchema).optional(),
+  assessedDate: z.lazy(() => SortOrderSchema).optional(),
+  f1_a1: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_a2: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_a3: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_a4: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_b1: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_b2: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_b3: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_b4: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_b5: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_b6: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_c1: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_c2: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_d1: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_d2: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_d3: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_e1: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  f1_e2: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  photos: z.lazy(() => SortOrderSchema).optional(),
+  isCompleted: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => Fm200Phase1AssessmentCountOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => Fm200Phase1AssessmentMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => Fm200Phase1AssessmentMinOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200Phase1AssessmentScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200Phase1AssessmentScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200Phase1AssessmentScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200Phase1AssessmentScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200Phase1AssessmentScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  assessedBy: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  assessedDate: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  f1_a1: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  f1_a2: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  f1_a3: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  f1_a4: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  f1_b1: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  f1_b2: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  f1_b3: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  f1_b4: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  f1_b5: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  f1_b6: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  f1_c1: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  f1_c2: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  f1_d1: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  f1_d2: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  f1_d3: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  f1_e1: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  f1_e2: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  photos: z.lazy(() => JsonWithAggregatesFilterSchema).optional(),
+  isCompleted: z.union([ z.lazy(() => BoolWithAggregatesFilterSchema), z.boolean() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionWhereInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200PeriodicInspectionWhereInputSchema), z.lazy(() => Fm200PeriodicInspectionWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200PeriodicInspectionWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200PeriodicInspectionWhereInputSchema), z.lazy(() => Fm200PeriodicInspectionWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  inspectedBy: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  inspectionDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  itemResponses: z.lazy(() => JsonFilterSchema).optional(),
+  complianceScore: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  ratingGrade: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  isRedFlagged: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  openWorkOrdersCount: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  photos: z.lazy(() => JsonFilterSchema).optional(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  location: z.union([ z.lazy(() => Fm200LocationRelationFilterSchema), z.lazy(() => Fm200LocationWhereInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionOrderByWithRelationInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  inspectedBy: z.lazy(() => SortOrderSchema).optional(),
+  inspectionDate: z.lazy(() => SortOrderSchema).optional(),
+  itemResponses: z.lazy(() => SortOrderSchema).optional(),
+  complianceScore: z.lazy(() => SortOrderSchema).optional(),
+  ratingGrade: z.lazy(() => SortOrderSchema).optional(),
+  isRedFlagged: z.lazy(() => SortOrderSchema).optional(),
+  openWorkOrdersCount: z.lazy(() => SortOrderSchema).optional(),
+  photos: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  location: z.lazy(() => Fm200LocationOrderByWithRelationInputSchema).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionWhereUniqueInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionWhereUniqueInput> = z.object({
+  id: z.cuid(),
+})
+.and(z.object({
+  id: z.cuid().optional(),
+  AND: z.union([ z.lazy(() => Fm200PeriodicInspectionWhereInputSchema), z.lazy(() => Fm200PeriodicInspectionWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200PeriodicInspectionWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200PeriodicInspectionWhereInputSchema), z.lazy(() => Fm200PeriodicInspectionWhereInputSchema).array() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  inspectedBy: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  inspectionDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  itemResponses: z.lazy(() => JsonFilterSchema).optional(),
+  complianceScore: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  ratingGrade: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  isRedFlagged: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  openWorkOrdersCount: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
+  photos: z.lazy(() => JsonFilterSchema).optional(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  location: z.union([ z.lazy(() => Fm200LocationRelationFilterSchema), z.lazy(() => Fm200LocationWhereInputSchema) ]).optional(),
+}).strict());
+
+export const Fm200PeriodicInspectionOrderByWithAggregationInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  inspectedBy: z.lazy(() => SortOrderSchema).optional(),
+  inspectionDate: z.lazy(() => SortOrderSchema).optional(),
+  itemResponses: z.lazy(() => SortOrderSchema).optional(),
+  complianceScore: z.lazy(() => SortOrderSchema).optional(),
+  ratingGrade: z.lazy(() => SortOrderSchema).optional(),
+  isRedFlagged: z.lazy(() => SortOrderSchema).optional(),
+  openWorkOrdersCount: z.lazy(() => SortOrderSchema).optional(),
+  photos: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => Fm200PeriodicInspectionCountOrderByAggregateInputSchema).optional(),
+  _avg: z.lazy(() => Fm200PeriodicInspectionAvgOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => Fm200PeriodicInspectionMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => Fm200PeriodicInspectionMinOrderByAggregateInputSchema).optional(),
+  _sum: z.lazy(() => Fm200PeriodicInspectionSumOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200PeriodicInspectionScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200PeriodicInspectionScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200PeriodicInspectionScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200PeriodicInspectionScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200PeriodicInspectionScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  inspectedBy: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  inspectionDate: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  itemResponses: z.lazy(() => JsonWithAggregatesFilterSchema).optional(),
+  complianceScore: z.union([ z.lazy(() => FloatWithAggregatesFilterSchema), z.number() ]).optional(),
+  ratingGrade: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  isRedFlagged: z.union([ z.lazy(() => BoolWithAggregatesFilterSchema), z.boolean() ]).optional(),
+  openWorkOrdersCount: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  photos: z.lazy(() => JsonWithAggregatesFilterSchema).optional(),
+  notes: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceWhereInputSchema: z.ZodType<Prisma.Fm200MaintenanceWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200MaintenanceWhereInputSchema), z.lazy(() => Fm200MaintenanceWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200MaintenanceWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200MaintenanceWhereInputSchema), z.lazy(() => Fm200MaintenanceWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  performedBy: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  maintenanceDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  panelControlStatus: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  panelNotes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  photos: z.lazy(() => JsonFilterSchema).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  location: z.union([ z.lazy(() => Fm200LocationRelationFilterSchema), z.lazy(() => Fm200LocationWhereInputSchema) ]).optional(),
+  cylinders: z.lazy(() => Fm200MaintenanceCylinderListRelationFilterSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceOrderByWithRelationInputSchema: z.ZodType<Prisma.Fm200MaintenanceOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  performedBy: z.lazy(() => SortOrderSchema).optional(),
+  maintenanceDate: z.lazy(() => SortOrderSchema).optional(),
+  panelControlStatus: z.lazy(() => SortOrderSchema).optional(),
+  panelNotes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  photos: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  location: z.lazy(() => Fm200LocationOrderByWithRelationInputSchema).optional(),
+  cylinders: z.lazy(() => Fm200MaintenanceCylinderOrderByRelationAggregateInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceWhereUniqueInputSchema: z.ZodType<Prisma.Fm200MaintenanceWhereUniqueInput> = z.object({
+  id: z.cuid(),
+})
+.and(z.object({
+  id: z.cuid().optional(),
+  AND: z.union([ z.lazy(() => Fm200MaintenanceWhereInputSchema), z.lazy(() => Fm200MaintenanceWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200MaintenanceWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200MaintenanceWhereInputSchema), z.lazy(() => Fm200MaintenanceWhereInputSchema).array() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  performedBy: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  maintenanceDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  panelControlStatus: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  panelNotes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  photos: z.lazy(() => JsonFilterSchema).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  location: z.union([ z.lazy(() => Fm200LocationRelationFilterSchema), z.lazy(() => Fm200LocationWhereInputSchema) ]).optional(),
+  cylinders: z.lazy(() => Fm200MaintenanceCylinderListRelationFilterSchema).optional(),
+}).strict());
+
+export const Fm200MaintenanceOrderByWithAggregationInputSchema: z.ZodType<Prisma.Fm200MaintenanceOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  performedBy: z.lazy(() => SortOrderSchema).optional(),
+  maintenanceDate: z.lazy(() => SortOrderSchema).optional(),
+  panelControlStatus: z.lazy(() => SortOrderSchema).optional(),
+  panelNotes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  photos: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => Fm200MaintenanceCountOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => Fm200MaintenanceMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => Fm200MaintenanceMinOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Fm200MaintenanceScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200MaintenanceScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200MaintenanceScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200MaintenanceScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200MaintenanceScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200MaintenanceScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  performedBy: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  maintenanceDate: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  panelControlStatus: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  panelNotes: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  photos: z.lazy(() => JsonWithAggregatesFilterSchema).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderWhereInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200MaintenanceCylinderWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  maintenanceId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  cylinderId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  govde: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  muhur: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  basinc: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  emniyet: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  maintenance: z.union([ z.lazy(() => Fm200MaintenanceRelationFilterSchema), z.lazy(() => Fm200MaintenanceWhereInputSchema) ]).optional(),
+  cylinder: z.union([ z.lazy(() => Fm200CylinderRelationFilterSchema), z.lazy(() => Fm200CylinderWhereInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderOrderByWithRelationInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  maintenanceId: z.lazy(() => SortOrderSchema).optional(),
+  cylinderId: z.lazy(() => SortOrderSchema).optional(),
+  govde: z.lazy(() => SortOrderSchema).optional(),
+  muhur: z.lazy(() => SortOrderSchema).optional(),
+  basinc: z.lazy(() => SortOrderSchema).optional(),
+  emniyet: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  maintenance: z.lazy(() => Fm200MaintenanceOrderByWithRelationInputSchema).optional(),
+  cylinder: z.lazy(() => Fm200CylinderOrderByWithRelationInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderWhereUniqueInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderWhereUniqueInput> = z.object({
+  id: z.cuid(),
+})
+.and(z.object({
+  id: z.cuid().optional(),
+  AND: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200MaintenanceCylinderWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereInputSchema).array() ]).optional(),
+  maintenanceId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  cylinderId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  govde: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  muhur: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  basinc: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  emniyet: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  maintenance: z.union([ z.lazy(() => Fm200MaintenanceRelationFilterSchema), z.lazy(() => Fm200MaintenanceWhereInputSchema) ]).optional(),
+  cylinder: z.union([ z.lazy(() => Fm200CylinderRelationFilterSchema), z.lazy(() => Fm200CylinderWhereInputSchema) ]).optional(),
+}).strict());
+
+export const Fm200MaintenanceCylinderOrderByWithAggregationInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  maintenanceId: z.lazy(() => SortOrderSchema).optional(),
+  cylinderId: z.lazy(() => SortOrderSchema).optional(),
+  govde: z.lazy(() => SortOrderSchema).optional(),
+  muhur: z.lazy(() => SortOrderSchema).optional(),
+  basinc: z.lazy(() => SortOrderSchema).optional(),
+  emniyet: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  _count: z.lazy(() => Fm200MaintenanceCylinderCountOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => Fm200MaintenanceCylinderMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => Fm200MaintenanceCylinderMinOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200MaintenanceCylinderScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200MaintenanceCylinderScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200MaintenanceCylinderScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200MaintenanceCylinderScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200MaintenanceCylinderScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  maintenanceId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  cylinderId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  govde: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  muhur: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  basinc: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  emniyet: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  notes: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+}).strict();
+
+export const Fm200TightnessTestWhereInputSchema: z.ZodType<Prisma.Fm200TightnessTestWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200TightnessTestWhereInputSchema), z.lazy(() => Fm200TightnessTestWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200TightnessTestWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200TightnessTestWhereInputSchema), z.lazy(() => Fm200TightnessTestWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  performedBy: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  testDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  retentionTimeMinutes: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  measuredValue: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  result: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  isUnconditional: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  overrideReason: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  reportUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  nextTestDate: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  photos: z.lazy(() => JsonFilterSchema).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  location: z.union([ z.lazy(() => Fm200LocationRelationFilterSchema), z.lazy(() => Fm200LocationWhereInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200TightnessTestOrderByWithRelationInputSchema: z.ZodType<Prisma.Fm200TightnessTestOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  performedBy: z.lazy(() => SortOrderSchema).optional(),
+  testDate: z.lazy(() => SortOrderSchema).optional(),
+  retentionTimeMinutes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  measuredValue: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  result: z.lazy(() => SortOrderSchema).optional(),
+  isUnconditional: z.lazy(() => SortOrderSchema).optional(),
+  overrideReason: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  reportUrl: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  nextTestDate: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  photos: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  location: z.lazy(() => Fm200LocationOrderByWithRelationInputSchema).optional(),
+}).strict();
+
+export const Fm200TightnessTestWhereUniqueInputSchema: z.ZodType<Prisma.Fm200TightnessTestWhereUniqueInput> = z.object({
+  id: z.cuid(),
+})
+.and(z.object({
+  id: z.cuid().optional(),
+  AND: z.union([ z.lazy(() => Fm200TightnessTestWhereInputSchema), z.lazy(() => Fm200TightnessTestWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200TightnessTestWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200TightnessTestWhereInputSchema), z.lazy(() => Fm200TightnessTestWhereInputSchema).array() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  performedBy: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  testDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  retentionTimeMinutes: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  measuredValue: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  result: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  isUnconditional: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  overrideReason: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  reportUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  nextTestDate: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  photos: z.lazy(() => JsonFilterSchema).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  location: z.union([ z.lazy(() => Fm200LocationRelationFilterSchema), z.lazy(() => Fm200LocationWhereInputSchema) ]).optional(),
+}).strict());
+
+export const Fm200TightnessTestOrderByWithAggregationInputSchema: z.ZodType<Prisma.Fm200TightnessTestOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  performedBy: z.lazy(() => SortOrderSchema).optional(),
+  testDate: z.lazy(() => SortOrderSchema).optional(),
+  retentionTimeMinutes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  measuredValue: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  result: z.lazy(() => SortOrderSchema).optional(),
+  isUnconditional: z.lazy(() => SortOrderSchema).optional(),
+  overrideReason: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  reportUrl: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  nextTestDate: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  notes: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  photos: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => Fm200TightnessTestCountOrderByAggregateInputSchema).optional(),
+  _avg: z.lazy(() => Fm200TightnessTestAvgOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => Fm200TightnessTestMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => Fm200TightnessTestMinOrderByAggregateInputSchema).optional(),
+  _sum: z.lazy(() => Fm200TightnessTestSumOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const Fm200TightnessTestScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Fm200TightnessTestScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200TightnessTestScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200TightnessTestScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200TightnessTestScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200TightnessTestScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200TightnessTestScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  performedBy: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  testDate: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  retentionTimeMinutes: z.union([ z.lazy(() => FloatNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
+  measuredValue: z.union([ z.lazy(() => FloatNullableWithAggregatesFilterSchema), z.number() ]).optional().nullable(),
+  result: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  isUnconditional: z.union([ z.lazy(() => BoolWithAggregatesFilterSchema), z.boolean() ]).optional(),
+  overrideReason: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  reportUrl: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  nextTestDate: z.union([ z.lazy(() => DateTimeNullableWithAggregatesFilterSchema), z.coerce.date() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  photos: z.lazy(() => JsonWithAggregatesFilterSchema).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderWhereInputSchema: z.ZodType<Prisma.Fm200WorkOrderWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200WorkOrderWhereInputSchema), z.lazy(() => Fm200WorkOrderWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200WorkOrderWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200WorkOrderWhereInputSchema), z.lazy(() => Fm200WorkOrderWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  cylinderId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  sourcePhase: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  sourceCode: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  title: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  workType: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  responsible: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  trackLane: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  repeatCount: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  companyTrackNo: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  sourceWorkId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  revisionNote: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  correctApproval: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  closedAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  location: z.union([ z.lazy(() => Fm200LocationRelationFilterSchema), z.lazy(() => Fm200LocationWhereInputSchema) ]).optional(),
+  cylinder: z.union([ z.lazy(() => Fm200CylinderNullableRelationFilterSchema), z.lazy(() => Fm200CylinderWhereInputSchema) ]).optional().nullable(),
+  evidences: z.lazy(() => Fm200WorkOrderEvidenceListRelationFilterSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderOrderByWithRelationInputSchema: z.ZodType<Prisma.Fm200WorkOrderOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  cylinderId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  sourcePhase: z.lazy(() => SortOrderSchema).optional(),
+  sourceCode: z.lazy(() => SortOrderSchema).optional(),
+  title: z.lazy(() => SortOrderSchema).optional(),
+  workType: z.lazy(() => SortOrderSchema).optional(),
+  responsible: z.lazy(() => SortOrderSchema).optional(),
+  trackLane: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  repeatCount: z.lazy(() => SortOrderSchema).optional(),
+  companyTrackNo: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  sourceWorkId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  revisionNote: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  correctApproval: z.lazy(() => SortOrderSchema).optional(),
+  closedAt: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  location: z.lazy(() => Fm200LocationOrderByWithRelationInputSchema).optional(),
+  cylinder: z.lazy(() => Fm200CylinderOrderByWithRelationInputSchema).optional(),
+  evidences: z.lazy(() => Fm200WorkOrderEvidenceOrderByRelationAggregateInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderWhereUniqueInputSchema: z.ZodType<Prisma.Fm200WorkOrderWhereUniqueInput> = z.object({
+  id: z.cuid(),
+})
+.and(z.object({
+  id: z.cuid().optional(),
+  AND: z.union([ z.lazy(() => Fm200WorkOrderWhereInputSchema), z.lazy(() => Fm200WorkOrderWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200WorkOrderWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200WorkOrderWhereInputSchema), z.lazy(() => Fm200WorkOrderWhereInputSchema).array() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  cylinderId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  sourcePhase: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  sourceCode: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  title: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  workType: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  responsible: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  trackLane: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  repeatCount: z.union([ z.lazy(() => IntFilterSchema), z.number().int() ]).optional(),
+  companyTrackNo: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  sourceWorkId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  revisionNote: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  correctApproval: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  closedAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  location: z.union([ z.lazy(() => Fm200LocationRelationFilterSchema), z.lazy(() => Fm200LocationWhereInputSchema) ]).optional(),
+  cylinder: z.union([ z.lazy(() => Fm200CylinderNullableRelationFilterSchema), z.lazy(() => Fm200CylinderWhereInputSchema) ]).optional().nullable(),
+  evidences: z.lazy(() => Fm200WorkOrderEvidenceListRelationFilterSchema).optional(),
+}).strict());
+
+export const Fm200WorkOrderOrderByWithAggregationInputSchema: z.ZodType<Prisma.Fm200WorkOrderOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  cylinderId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  sourcePhase: z.lazy(() => SortOrderSchema).optional(),
+  sourceCode: z.lazy(() => SortOrderSchema).optional(),
+  title: z.lazy(() => SortOrderSchema).optional(),
+  workType: z.lazy(() => SortOrderSchema).optional(),
+  responsible: z.lazy(() => SortOrderSchema).optional(),
+  trackLane: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  repeatCount: z.lazy(() => SortOrderSchema).optional(),
+  companyTrackNo: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  sourceWorkId: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  revisionNote: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  correctApproval: z.lazy(() => SortOrderSchema).optional(),
+  closedAt: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => Fm200WorkOrderCountOrderByAggregateInputSchema).optional(),
+  _avg: z.lazy(() => Fm200WorkOrderAvgOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => Fm200WorkOrderMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => Fm200WorkOrderMinOrderByAggregateInputSchema).optional(),
+  _sum: z.lazy(() => Fm200WorkOrderSumOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Fm200WorkOrderScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200WorkOrderScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200WorkOrderScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200WorkOrderScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200WorkOrderScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200WorkOrderScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  cylinderId: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  sourcePhase: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  sourceCode: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  title: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  workType: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  responsible: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  trackLane: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  status: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  repeatCount: z.union([ z.lazy(() => IntWithAggregatesFilterSchema), z.number() ]).optional(),
+  companyTrackNo: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  sourceWorkId: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  revisionNote: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  correctApproval: z.union([ z.lazy(() => BoolWithAggregatesFilterSchema), z.boolean() ]).optional(),
+  closedAt: z.union([ z.lazy(() => DateTimeNullableWithAggregatesFilterSchema), z.coerce.date() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceWhereInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200WorkOrderEvidenceWhereInputSchema), z.lazy(() => Fm200WorkOrderEvidenceWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200WorkOrderEvidenceWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200WorkOrderEvidenceWhereInputSchema), z.lazy(() => Fm200WorkOrderEvidenceWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  workOrderId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  fileType: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  fileUrl: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  fileName: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  uploadedBy: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  workOrder: z.union([ z.lazy(() => Fm200WorkOrderRelationFilterSchema), z.lazy(() => Fm200WorkOrderWhereInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceOrderByWithRelationInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  workOrderId: z.lazy(() => SortOrderSchema).optional(),
+  fileType: z.lazy(() => SortOrderSchema).optional(),
+  fileUrl: z.lazy(() => SortOrderSchema).optional(),
+  fileName: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  uploadedBy: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  workOrder: z.lazy(() => Fm200WorkOrderOrderByWithRelationInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceWhereUniqueInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceWhereUniqueInput> = z.object({
+  id: z.cuid(),
+})
+.and(z.object({
+  id: z.cuid().optional(),
+  AND: z.union([ z.lazy(() => Fm200WorkOrderEvidenceWhereInputSchema), z.lazy(() => Fm200WorkOrderEvidenceWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200WorkOrderEvidenceWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200WorkOrderEvidenceWhereInputSchema), z.lazy(() => Fm200WorkOrderEvidenceWhereInputSchema).array() ]).optional(),
+  workOrderId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  fileType: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  fileUrl: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  fileName: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  uploadedBy: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  workOrder: z.union([ z.lazy(() => Fm200WorkOrderRelationFilterSchema), z.lazy(() => Fm200WorkOrderWhereInputSchema) ]).optional(),
+}).strict());
+
+export const Fm200WorkOrderEvidenceOrderByWithAggregationInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  workOrderId: z.lazy(() => SortOrderSchema).optional(),
+  fileType: z.lazy(() => SortOrderSchema).optional(),
+  fileUrl: z.lazy(() => SortOrderSchema).optional(),
+  fileName: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  uploadedBy: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => Fm200WorkOrderEvidenceCountOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => Fm200WorkOrderEvidenceMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => Fm200WorkOrderEvidenceMinOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200WorkOrderEvidenceScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200WorkOrderEvidenceScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200WorkOrderEvidenceScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200WorkOrderEvidenceScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200WorkOrderEvidenceScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  workOrderId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  fileType: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  fileUrl: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  fileName: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  uploadedBy: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const Fm200SettingWhereInputSchema: z.ZodType<Prisma.Fm200SettingWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200SettingWhereInputSchema), z.lazy(() => Fm200SettingWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200SettingWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200SettingWhereInputSchema), z.lazy(() => Fm200SettingWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  roomTypes: z.lazy(() => JsonFilterSchema).optional(),
+  systemTypes: z.lazy(() => JsonFilterSchema).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const Fm200SettingOrderByWithRelationInputSchema: z.ZodType<Prisma.Fm200SettingOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  roomTypes: z.lazy(() => SortOrderSchema).optional(),
+  systemTypes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200SettingWhereUniqueInputSchema: z.ZodType<Prisma.Fm200SettingWhereUniqueInput> = z.object({
+  id: z.string(),
+})
+.and(z.object({
+  id: z.string().optional(),
+  AND: z.union([ z.lazy(() => Fm200SettingWhereInputSchema), z.lazy(() => Fm200SettingWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200SettingWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200SettingWhereInputSchema), z.lazy(() => Fm200SettingWhereInputSchema).array() ]).optional(),
+  roomTypes: z.lazy(() => JsonFilterSchema).optional(),
+  systemTypes: z.lazy(() => JsonFilterSchema).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict());
+
+export const Fm200SettingOrderByWithAggregationInputSchema: z.ZodType<Prisma.Fm200SettingOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  roomTypes: z.lazy(() => SortOrderSchema).optional(),
+  systemTypes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => Fm200SettingCountOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => Fm200SettingMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => Fm200SettingMinOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const Fm200SettingScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Fm200SettingScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200SettingScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200SettingScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200SettingScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200SettingScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200SettingScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  roomTypes: z.lazy(() => JsonWithAggregatesFilterSchema).optional(),
+  systemTypes: z.lazy(() => JsonWithAggregatesFilterSchema).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const Fm200BuildingFloorWhereInputSchema: z.ZodType<Prisma.Fm200BuildingFloorWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200BuildingFloorWhereInputSchema), z.lazy(() => Fm200BuildingFloorWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200BuildingFloorWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200BuildingFloorWhereInputSchema), z.lazy(() => Fm200BuildingFloorWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  facilityId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  building: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  block: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  floor: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  facility: z.union([ z.lazy(() => FacilityRelationFilterSchema), z.lazy(() => FacilityWhereInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200BuildingFloorOrderByWithRelationInputSchema: z.ZodType<Prisma.Fm200BuildingFloorOrderByWithRelationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  building: z.lazy(() => SortOrderSchema).optional(),
+  block: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  floor: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  facility: z.lazy(() => FacilityOrderByWithRelationInputSchema).optional(),
+}).strict();
+
+export const Fm200BuildingFloorWhereUniqueInputSchema: z.ZodType<Prisma.Fm200BuildingFloorWhereUniqueInput> = z.union([
+  z.object({
+    id: z.cuid(),
+    facilityId_building_block_floor: z.lazy(() => Fm200BuildingFloorFacilityIdBuildingBlockFloorCompoundUniqueInputSchema),
+  }),
+  z.object({
+    id: z.cuid(),
+  }),
+  z.object({
+    facilityId_building_block_floor: z.lazy(() => Fm200BuildingFloorFacilityIdBuildingBlockFloorCompoundUniqueInputSchema),
+  }),
+])
+.and(z.object({
+  id: z.cuid().optional(),
+  facilityId_building_block_floor: z.lazy(() => Fm200BuildingFloorFacilityIdBuildingBlockFloorCompoundUniqueInputSchema).optional(),
+  AND: z.union([ z.lazy(() => Fm200BuildingFloorWhereInputSchema), z.lazy(() => Fm200BuildingFloorWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200BuildingFloorWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200BuildingFloorWhereInputSchema), z.lazy(() => Fm200BuildingFloorWhereInputSchema).array() ]).optional(),
+  facilityId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  building: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  block: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  floor: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  facility: z.union([ z.lazy(() => FacilityRelationFilterSchema), z.lazy(() => FacilityWhereInputSchema) ]).optional(),
+}).strict());
+
+export const Fm200BuildingFloorOrderByWithAggregationInputSchema: z.ZodType<Prisma.Fm200BuildingFloorOrderByWithAggregationInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  building: z.lazy(() => SortOrderSchema).optional(),
+  block: z.union([ z.lazy(() => SortOrderSchema), z.lazy(() => SortOrderInputSchema) ]).optional(),
+  floor: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+  _count: z.lazy(() => Fm200BuildingFloorCountOrderByAggregateInputSchema).optional(),
+  _max: z.lazy(() => Fm200BuildingFloorMaxOrderByAggregateInputSchema).optional(),
+  _min: z.lazy(() => Fm200BuildingFloorMinOrderByAggregateInputSchema).optional(),
+}).strict();
+
+export const Fm200BuildingFloorScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Fm200BuildingFloorScalarWhereWithAggregatesInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200BuildingFloorScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200BuildingFloorScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200BuildingFloorScalarWhereWithAggregatesInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200BuildingFloorScalarWhereWithAggregatesInputSchema), z.lazy(() => Fm200BuildingFloorScalarWhereWithAggregatesInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  facilityId: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  building: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  block: z.union([ z.lazy(() => StringNullableWithAggregatesFilterSchema), z.string() ]).optional().nullable(),
+  floor: z.union([ z.lazy(() => StringWithAggregatesFilterSchema), z.string() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
 export const UserCreateInputSchema: z.ZodType<Prisma.UserCreateInput> = z.object({
   username: z.string(),
   fullName: z.string(),
@@ -26711,6 +28623,8 @@ export const FacilityCreateInputSchema: z.ZodType<Prisma.FacilityCreateInput> = 
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateInput> = z.object({
@@ -26782,6 +28696,8 @@ export const FacilityUncheckedCreateInputSchema: z.ZodType<Prisma.FacilityUnchec
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUpdateInputSchema: z.ZodType<Prisma.FacilityUpdateInput> = z.object({
@@ -26853,6 +28769,8 @@ export const FacilityUpdateInputSchema: z.ZodType<Prisma.FacilityUpdateInput> = 
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateInput> = z.object({
@@ -26924,6 +28842,8 @@ export const FacilityUncheckedUpdateInputSchema: z.ZodType<Prisma.FacilityUnchec
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateManyInputSchema: z.ZodType<Prisma.FacilityCreateManyInput> = z.object({
@@ -41201,6 +43121,1224 @@ export const FireSafetySettingUncheckedUpdateManyInputSchema: z.ZodType<Prisma.F
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
+export const Fm200LocationCreateInputSchema: z.ZodType<Prisma.Fm200LocationCreateInput> = z.object({
+  id: z.cuid().optional(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string().optional(),
+  roomType: z.string(),
+  customRoomName: z.string().optional().nullable(),
+  index: z.number().int().optional(),
+  systemUid: z.string(),
+  systemType: z.string().optional(),
+  panelType: z.string().optional().nullable(),
+  roomVolumeM3: z.number().optional().nullable(),
+  cylinderCount: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  facility: z.lazy(() => FacilityCreateNestedOneWithoutFm200LocationsInputSchema),
+  cylinders: z.lazy(() => Fm200CylinderCreateNestedManyWithoutLocationInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentCreateNestedManyWithoutLocationInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionCreateNestedManyWithoutLocationInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceCreateNestedManyWithoutLocationInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestCreateNestedManyWithoutLocationInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderCreateNestedManyWithoutLocationInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedCreateInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedCreateInput> = z.object({
+  id: z.cuid().optional(),
+  facilityId: z.string(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string().optional(),
+  roomType: z.string(),
+  customRoomName: z.string().optional().nullable(),
+  index: z.number().int().optional(),
+  systemUid: z.string(),
+  systemType: z.string().optional(),
+  panelType: z.string().optional().nullable(),
+  roomVolumeM3: z.number().optional().nullable(),
+  cylinderCount: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  cylinders: z.lazy(() => Fm200CylinderUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUpdateInputSchema: z.ZodType<Prisma.Fm200LocationUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  facility: z.lazy(() => FacilityUpdateOneRequiredWithoutFm200LocationsNestedInputSchema).optional(),
+  cylinders: z.lazy(() => Fm200CylinderUpdateManyWithoutLocationNestedInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUpdateManyWithoutLocationNestedInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUpdateManyWithoutLocationNestedInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUpdateManyWithoutLocationNestedInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUpdateManyWithoutLocationNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUpdateManyWithoutLocationNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedUpdateInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinders: z.lazy(() => Fm200CylinderUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationCreateManyInputSchema: z.ZodType<Prisma.Fm200LocationCreateManyInput> = z.object({
+  id: z.cuid().optional(),
+  facilityId: z.string(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string().optional(),
+  roomType: z.string(),
+  customRoomName: z.string().optional().nullable(),
+  index: z.number().int().optional(),
+  systemUid: z.string(),
+  systemType: z.string().optional(),
+  panelType: z.string().optional().nullable(),
+  roomVolumeM3: z.number().optional().nullable(),
+  cylinderCount: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200LocationUpdateManyMutationInputSchema: z.ZodType<Prisma.Fm200LocationUpdateManyMutationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200CylinderCreateInputSchema: z.ZodType<Prisma.Fm200CylinderCreateInput> = z.object({
+  id: z.cuid().optional(),
+  serialNumber: z.string(),
+  labelCode: z.string(),
+  capacityKg: z.number().optional().nullable(),
+  tareKg: z.number().optional().nullable(),
+  manufacturingYear: z.number().int().optional().nullable(),
+  lastHydrostaticTestDate: z.coerce.date().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  location: z.lazy(() => Fm200LocationCreateNestedOneWithoutCylindersInputSchema),
+  maintenanceCylinders: z.lazy(() => Fm200MaintenanceCylinderCreateNestedManyWithoutCylinderInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderCreateNestedManyWithoutCylinderInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderUncheckedCreateInputSchema: z.ZodType<Prisma.Fm200CylinderUncheckedCreateInput> = z.object({
+  id: z.cuid().optional(),
+  locationId: z.string(),
+  serialNumber: z.string(),
+  labelCode: z.string(),
+  capacityKg: z.number().optional().nullable(),
+  tareKg: z.number().optional().nullable(),
+  manufacturingYear: z.number().int().optional().nullable(),
+  lastHydrostaticTestDate: z.coerce.date().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  maintenanceCylinders: z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateNestedManyWithoutCylinderInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedCreateNestedManyWithoutCylinderInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderUpdateInputSchema: z.ZodType<Prisma.Fm200CylinderUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  serialNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  labelCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  capacityKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  tareKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  manufacturingYear: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastHydrostaticTestDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  location: z.lazy(() => Fm200LocationUpdateOneRequiredWithoutCylindersNestedInputSchema).optional(),
+  maintenanceCylinders: z.lazy(() => Fm200MaintenanceCylinderUpdateManyWithoutCylinderNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUpdateManyWithoutCylinderNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderUncheckedUpdateInputSchema: z.ZodType<Prisma.Fm200CylinderUncheckedUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  locationId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  serialNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  labelCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  capacityKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  tareKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  manufacturingYear: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastHydrostaticTestDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  maintenanceCylinders: z.lazy(() => Fm200MaintenanceCylinderUncheckedUpdateManyWithoutCylinderNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedUpdateManyWithoutCylinderNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderCreateManyInputSchema: z.ZodType<Prisma.Fm200CylinderCreateManyInput> = z.object({
+  id: z.cuid().optional(),
+  locationId: z.string(),
+  serialNumber: z.string(),
+  labelCode: z.string(),
+  capacityKg: z.number().optional().nullable(),
+  tareKg: z.number().optional().nullable(),
+  manufacturingYear: z.number().int().optional().nullable(),
+  lastHydrostaticTestDate: z.coerce.date().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200CylinderUpdateManyMutationInputSchema: z.ZodType<Prisma.Fm200CylinderUpdateManyMutationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  serialNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  labelCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  capacityKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  tareKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  manufacturingYear: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastHydrostaticTestDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200CylinderUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Fm200CylinderUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  locationId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  serialNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  labelCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  capacityKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  tareKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  manufacturingYear: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastHydrostaticTestDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentCreateInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentCreateInput> = z.object({
+  id: z.cuid().optional(),
+  assessedBy: z.string(),
+  assessedDate: z.coerce.date().optional(),
+  f1_a1: z.string().optional().nullable(),
+  f1_a2: z.string().optional().nullable(),
+  f1_a3: z.string().optional().nullable(),
+  f1_a4: z.string().optional().nullable(),
+  f1_b1: z.string().optional().nullable(),
+  f1_b2: z.string().optional().nullable(),
+  f1_b3: z.string().optional().nullable(),
+  f1_b4: z.string().optional().nullable(),
+  f1_b5: z.string().optional().nullable(),
+  f1_b6: z.string().optional().nullable(),
+  f1_c1: z.string().optional().nullable(),
+  f1_c2: z.string().optional().nullable(),
+  f1_d1: z.string().optional().nullable(),
+  f1_d2: z.string().optional().nullable(),
+  f1_d3: z.string().optional().nullable(),
+  f1_e1: z.string().optional().nullable(),
+  f1_e2: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  isCompleted: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  location: z.lazy(() => Fm200LocationCreateNestedOneWithoutPhase1AssessmentsInputSchema),
+}).strict();
+
+export const Fm200Phase1AssessmentUncheckedCreateInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentUncheckedCreateInput> = z.object({
+  id: z.cuid().optional(),
+  locationId: z.string(),
+  assessedBy: z.string(),
+  assessedDate: z.coerce.date().optional(),
+  f1_a1: z.string().optional().nullable(),
+  f1_a2: z.string().optional().nullable(),
+  f1_a3: z.string().optional().nullable(),
+  f1_a4: z.string().optional().nullable(),
+  f1_b1: z.string().optional().nullable(),
+  f1_b2: z.string().optional().nullable(),
+  f1_b3: z.string().optional().nullable(),
+  f1_b4: z.string().optional().nullable(),
+  f1_b5: z.string().optional().nullable(),
+  f1_b6: z.string().optional().nullable(),
+  f1_c1: z.string().optional().nullable(),
+  f1_c2: z.string().optional().nullable(),
+  f1_d1: z.string().optional().nullable(),
+  f1_d2: z.string().optional().nullable(),
+  f1_d3: z.string().optional().nullable(),
+  f1_e1: z.string().optional().nullable(),
+  f1_e2: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  isCompleted: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentUpdateInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  assessedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  assessedDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  f1_a1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a4: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b4: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b5: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b6: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_c1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_c2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_e1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_e2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  isCompleted: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  location: z.lazy(() => Fm200LocationUpdateOneRequiredWithoutPhase1AssessmentsNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentUncheckedUpdateInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentUncheckedUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  locationId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  assessedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  assessedDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  f1_a1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a4: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b4: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b5: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b6: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_c1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_c2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_e1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_e2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  isCompleted: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentCreateManyInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentCreateManyInput> = z.object({
+  id: z.cuid().optional(),
+  locationId: z.string(),
+  assessedBy: z.string(),
+  assessedDate: z.coerce.date().optional(),
+  f1_a1: z.string().optional().nullable(),
+  f1_a2: z.string().optional().nullable(),
+  f1_a3: z.string().optional().nullable(),
+  f1_a4: z.string().optional().nullable(),
+  f1_b1: z.string().optional().nullable(),
+  f1_b2: z.string().optional().nullable(),
+  f1_b3: z.string().optional().nullable(),
+  f1_b4: z.string().optional().nullable(),
+  f1_b5: z.string().optional().nullable(),
+  f1_b6: z.string().optional().nullable(),
+  f1_c1: z.string().optional().nullable(),
+  f1_c2: z.string().optional().nullable(),
+  f1_d1: z.string().optional().nullable(),
+  f1_d2: z.string().optional().nullable(),
+  f1_d3: z.string().optional().nullable(),
+  f1_e1: z.string().optional().nullable(),
+  f1_e2: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  isCompleted: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentUpdateManyMutationInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentUpdateManyMutationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  assessedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  assessedDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  f1_a1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a4: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b4: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b5: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b6: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_c1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_c2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_e1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_e2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  isCompleted: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  locationId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  assessedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  assessedDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  f1_a1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a4: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b4: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b5: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b6: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_c1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_c2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_e1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_e2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  isCompleted: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionCreateInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionCreateInput> = z.object({
+  id: z.cuid().optional(),
+  inspectedBy: z.string(),
+  inspectionDate: z.coerce.date().optional(),
+  itemResponses: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  complianceScore: z.number().optional(),
+  ratingGrade: z.string().optional(),
+  isRedFlagged: z.boolean().optional(),
+  openWorkOrdersCount: z.number().int().optional(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  location: z.lazy(() => Fm200LocationCreateNestedOneWithoutInspectionsInputSchema),
+}).strict();
+
+export const Fm200PeriodicInspectionUncheckedCreateInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionUncheckedCreateInput> = z.object({
+  id: z.cuid().optional(),
+  locationId: z.string(),
+  inspectedBy: z.string(),
+  inspectionDate: z.coerce.date().optional(),
+  itemResponses: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  complianceScore: z.number().optional(),
+  ratingGrade: z.string().optional(),
+  isRedFlagged: z.boolean().optional(),
+  openWorkOrdersCount: z.number().int().optional(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionUpdateInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  itemResponses: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  complianceScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  ratingGrade: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isRedFlagged: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  openWorkOrdersCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  location: z.lazy(() => Fm200LocationUpdateOneRequiredWithoutInspectionsNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionUncheckedUpdateInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionUncheckedUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  locationId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  itemResponses: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  complianceScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  ratingGrade: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isRedFlagged: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  openWorkOrdersCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionCreateManyInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionCreateManyInput> = z.object({
+  id: z.cuid().optional(),
+  locationId: z.string(),
+  inspectedBy: z.string(),
+  inspectionDate: z.coerce.date().optional(),
+  itemResponses: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  complianceScore: z.number().optional(),
+  ratingGrade: z.string().optional(),
+  isRedFlagged: z.boolean().optional(),
+  openWorkOrdersCount: z.number().int().optional(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionUpdateManyMutationInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionUpdateManyMutationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  itemResponses: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  complianceScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  ratingGrade: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isRedFlagged: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  openWorkOrdersCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  locationId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  itemResponses: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  complianceScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  ratingGrade: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isRedFlagged: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  openWorkOrdersCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceCreateInputSchema: z.ZodType<Prisma.Fm200MaintenanceCreateInput> = z.object({
+  id: z.cuid().optional(),
+  performedBy: z.string(),
+  maintenanceDate: z.coerce.date().optional(),
+  panelControlStatus: z.string().optional(),
+  panelNotes: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  location: z.lazy(() => Fm200LocationCreateNestedOneWithoutMaintenancesInputSchema),
+  cylinders: z.lazy(() => Fm200MaintenanceCylinderCreateNestedManyWithoutMaintenanceInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceUncheckedCreateInputSchema: z.ZodType<Prisma.Fm200MaintenanceUncheckedCreateInput> = z.object({
+  id: z.cuid().optional(),
+  locationId: z.string(),
+  performedBy: z.string(),
+  maintenanceDate: z.coerce.date().optional(),
+  panelControlStatus: z.string().optional(),
+  panelNotes: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  cylinders: z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateNestedManyWithoutMaintenanceInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceUpdateInputSchema: z.ZodType<Prisma.Fm200MaintenanceUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  performedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  maintenanceDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  panelControlStatus: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelNotes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  location: z.lazy(() => Fm200LocationUpdateOneRequiredWithoutMaintenancesNestedInputSchema).optional(),
+  cylinders: z.lazy(() => Fm200MaintenanceCylinderUpdateManyWithoutMaintenanceNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceUncheckedUpdateInputSchema: z.ZodType<Prisma.Fm200MaintenanceUncheckedUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  locationId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  performedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  maintenanceDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  panelControlStatus: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelNotes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinders: z.lazy(() => Fm200MaintenanceCylinderUncheckedUpdateManyWithoutMaintenanceNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCreateManyInputSchema: z.ZodType<Prisma.Fm200MaintenanceCreateManyInput> = z.object({
+  id: z.cuid().optional(),
+  locationId: z.string(),
+  performedBy: z.string(),
+  maintenanceDate: z.coerce.date().optional(),
+  panelControlStatus: z.string().optional(),
+  panelNotes: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200MaintenanceUpdateManyMutationInputSchema: z.ZodType<Prisma.Fm200MaintenanceUpdateManyMutationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  performedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  maintenanceDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  panelControlStatus: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelNotes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Fm200MaintenanceUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  locationId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  performedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  maintenanceDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  panelControlStatus: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelNotes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderCreateInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderCreateInput> = z.object({
+  id: z.cuid().optional(),
+  govde: z.string().optional(),
+  muhur: z.string().optional(),
+  basinc: z.string().optional(),
+  emniyet: z.string().optional(),
+  notes: z.string().optional().nullable(),
+  maintenance: z.lazy(() => Fm200MaintenanceCreateNestedOneWithoutCylindersInputSchema),
+  cylinder: z.lazy(() => Fm200CylinderCreateNestedOneWithoutMaintenanceCylindersInputSchema),
+}).strict();
+
+export const Fm200MaintenanceCylinderUncheckedCreateInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUncheckedCreateInput> = z.object({
+  id: z.cuid().optional(),
+  maintenanceId: z.string(),
+  cylinderId: z.string(),
+  govde: z.string().optional(),
+  muhur: z.string().optional(),
+  basinc: z.string().optional(),
+  emniyet: z.string().optional(),
+  notes: z.string().optional().nullable(),
+}).strict();
+
+export const Fm200MaintenanceCylinderUpdateInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  govde: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  muhur: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  basinc: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  emniyet: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  maintenance: z.lazy(() => Fm200MaintenanceUpdateOneRequiredWithoutCylindersNestedInputSchema).optional(),
+  cylinder: z.lazy(() => Fm200CylinderUpdateOneRequiredWithoutMaintenanceCylindersNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderUncheckedUpdateInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUncheckedUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  maintenanceId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinderId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  govde: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  muhur: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  basinc: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  emniyet: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+}).strict();
+
+export const Fm200MaintenanceCylinderCreateManyInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderCreateManyInput> = z.object({
+  id: z.cuid().optional(),
+  maintenanceId: z.string(),
+  cylinderId: z.string(),
+  govde: z.string().optional(),
+  muhur: z.string().optional(),
+  basinc: z.string().optional(),
+  emniyet: z.string().optional(),
+  notes: z.string().optional().nullable(),
+}).strict();
+
+export const Fm200MaintenanceCylinderUpdateManyMutationInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUpdateManyMutationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  govde: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  muhur: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  basinc: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  emniyet: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+}).strict();
+
+export const Fm200MaintenanceCylinderUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  maintenanceId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinderId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  govde: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  muhur: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  basinc: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  emniyet: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+}).strict();
+
+export const Fm200TightnessTestCreateInputSchema: z.ZodType<Prisma.Fm200TightnessTestCreateInput> = z.object({
+  id: z.cuid().optional(),
+  performedBy: z.string(),
+  testDate: z.coerce.date().optional(),
+  retentionTimeMinutes: z.number().optional().nullable(),
+  measuredValue: z.number().optional().nullable(),
+  result: z.string(),
+  isUnconditional: z.boolean().optional(),
+  overrideReason: z.string().optional().nullable(),
+  reportUrl: z.string().optional().nullable(),
+  nextTestDate: z.coerce.date().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  location: z.lazy(() => Fm200LocationCreateNestedOneWithoutTightnessTestsInputSchema),
+}).strict();
+
+export const Fm200TightnessTestUncheckedCreateInputSchema: z.ZodType<Prisma.Fm200TightnessTestUncheckedCreateInput> = z.object({
+  id: z.cuid().optional(),
+  locationId: z.string(),
+  performedBy: z.string(),
+  testDate: z.coerce.date().optional(),
+  retentionTimeMinutes: z.number().optional().nullable(),
+  measuredValue: z.number().optional().nullable(),
+  result: z.string(),
+  isUnconditional: z.boolean().optional(),
+  overrideReason: z.string().optional().nullable(),
+  reportUrl: z.string().optional().nullable(),
+  nextTestDate: z.coerce.date().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200TightnessTestUpdateInputSchema: z.ZodType<Prisma.Fm200TightnessTestUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  performedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  testDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  retentionTimeMinutes: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measuredValue: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  result: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isUnconditional: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  overrideReason: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  reportUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  nextTestDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  location: z.lazy(() => Fm200LocationUpdateOneRequiredWithoutTightnessTestsNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200TightnessTestUncheckedUpdateInputSchema: z.ZodType<Prisma.Fm200TightnessTestUncheckedUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  locationId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  performedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  testDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  retentionTimeMinutes: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measuredValue: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  result: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isUnconditional: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  overrideReason: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  reportUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  nextTestDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200TightnessTestCreateManyInputSchema: z.ZodType<Prisma.Fm200TightnessTestCreateManyInput> = z.object({
+  id: z.cuid().optional(),
+  locationId: z.string(),
+  performedBy: z.string(),
+  testDate: z.coerce.date().optional(),
+  retentionTimeMinutes: z.number().optional().nullable(),
+  measuredValue: z.number().optional().nullable(),
+  result: z.string(),
+  isUnconditional: z.boolean().optional(),
+  overrideReason: z.string().optional().nullable(),
+  reportUrl: z.string().optional().nullable(),
+  nextTestDate: z.coerce.date().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200TightnessTestUpdateManyMutationInputSchema: z.ZodType<Prisma.Fm200TightnessTestUpdateManyMutationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  performedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  testDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  retentionTimeMinutes: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measuredValue: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  result: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isUnconditional: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  overrideReason: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  reportUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  nextTestDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200TightnessTestUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Fm200TightnessTestUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  locationId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  performedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  testDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  retentionTimeMinutes: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measuredValue: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  result: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isUnconditional: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  overrideReason: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  reportUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  nextTestDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderCreateInputSchema: z.ZodType<Prisma.Fm200WorkOrderCreateInput> = z.object({
+  id: z.cuid().optional(),
+  sourcePhase: z.string(),
+  sourceCode: z.string(),
+  title: z.string(),
+  workType: z.string().optional(),
+  responsible: z.string().optional(),
+  trackLane: z.string().optional(),
+  status: z.string().optional(),
+  repeatCount: z.number().int().optional(),
+  companyTrackNo: z.string().optional().nullable(),
+  sourceWorkId: z.string().optional().nullable(),
+  revisionNote: z.string().optional().nullable(),
+  correctApproval: z.boolean().optional(),
+  closedAt: z.coerce.date().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  location: z.lazy(() => Fm200LocationCreateNestedOneWithoutWorkOrdersInputSchema),
+  cylinder: z.lazy(() => Fm200CylinderCreateNestedOneWithoutWorkOrdersInputSchema).optional(),
+  evidences: z.lazy(() => Fm200WorkOrderEvidenceCreateNestedManyWithoutWorkOrderInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderUncheckedCreateInputSchema: z.ZodType<Prisma.Fm200WorkOrderUncheckedCreateInput> = z.object({
+  id: z.cuid().optional(),
+  locationId: z.string(),
+  cylinderId: z.string().optional().nullable(),
+  sourcePhase: z.string(),
+  sourceCode: z.string(),
+  title: z.string(),
+  workType: z.string().optional(),
+  responsible: z.string().optional(),
+  trackLane: z.string().optional(),
+  status: z.string().optional(),
+  repeatCount: z.number().int().optional(),
+  companyTrackNo: z.string().optional().nullable(),
+  sourceWorkId: z.string().optional().nullable(),
+  revisionNote: z.string().optional().nullable(),
+  correctApproval: z.boolean().optional(),
+  closedAt: z.coerce.date().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  evidences: z.lazy(() => Fm200WorkOrderEvidenceUncheckedCreateNestedManyWithoutWorkOrderInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderUpdateInputSchema: z.ZodType<Prisma.Fm200WorkOrderUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourcePhase: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourceCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  workType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  responsible: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  trackLane: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  repeatCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  companyTrackNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sourceWorkId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  revisionNote: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  correctApproval: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  closedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  location: z.lazy(() => Fm200LocationUpdateOneRequiredWithoutWorkOrdersNestedInputSchema).optional(),
+  cylinder: z.lazy(() => Fm200CylinderUpdateOneWithoutWorkOrdersNestedInputSchema).optional(),
+  evidences: z.lazy(() => Fm200WorkOrderEvidenceUpdateManyWithoutWorkOrderNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderUncheckedUpdateInputSchema: z.ZodType<Prisma.Fm200WorkOrderUncheckedUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  locationId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinderId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sourcePhase: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourceCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  workType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  responsible: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  trackLane: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  repeatCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  companyTrackNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sourceWorkId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  revisionNote: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  correctApproval: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  closedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  evidences: z.lazy(() => Fm200WorkOrderEvidenceUncheckedUpdateManyWithoutWorkOrderNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderCreateManyInputSchema: z.ZodType<Prisma.Fm200WorkOrderCreateManyInput> = z.object({
+  id: z.cuid().optional(),
+  locationId: z.string(),
+  cylinderId: z.string().optional().nullable(),
+  sourcePhase: z.string(),
+  sourceCode: z.string(),
+  title: z.string(),
+  workType: z.string().optional(),
+  responsible: z.string().optional(),
+  trackLane: z.string().optional(),
+  status: z.string().optional(),
+  repeatCount: z.number().int().optional(),
+  companyTrackNo: z.string().optional().nullable(),
+  sourceWorkId: z.string().optional().nullable(),
+  revisionNote: z.string().optional().nullable(),
+  correctApproval: z.boolean().optional(),
+  closedAt: z.coerce.date().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200WorkOrderUpdateManyMutationInputSchema: z.ZodType<Prisma.Fm200WorkOrderUpdateManyMutationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourcePhase: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourceCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  workType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  responsible: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  trackLane: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  repeatCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  companyTrackNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sourceWorkId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  revisionNote: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  correctApproval: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  closedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Fm200WorkOrderUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  locationId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinderId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sourcePhase: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourceCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  workType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  responsible: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  trackLane: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  repeatCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  companyTrackNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sourceWorkId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  revisionNote: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  correctApproval: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  closedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceCreateInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceCreateInput> = z.object({
+  id: z.cuid().optional(),
+  fileType: z.string().optional(),
+  fileUrl: z.string(),
+  fileName: z.string().optional().nullable(),
+  uploadedBy: z.string(),
+  createdAt: z.coerce.date().optional(),
+  workOrder: z.lazy(() => Fm200WorkOrderCreateNestedOneWithoutEvidencesInputSchema),
+}).strict();
+
+export const Fm200WorkOrderEvidenceUncheckedCreateInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceUncheckedCreateInput> = z.object({
+  id: z.cuid().optional(),
+  workOrderId: z.string(),
+  fileType: z.string().optional(),
+  fileUrl: z.string(),
+  fileName: z.string().optional().nullable(),
+  uploadedBy: z.string(),
+  createdAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceUpdateInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileUrl: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  uploadedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  workOrder: z.lazy(() => Fm200WorkOrderUpdateOneRequiredWithoutEvidencesNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceUncheckedUpdateInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceUncheckedUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  workOrderId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileUrl: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  uploadedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceCreateManyInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceCreateManyInput> = z.object({
+  id: z.cuid().optional(),
+  workOrderId: z.string(),
+  fileType: z.string().optional(),
+  fileUrl: z.string(),
+  fileName: z.string().optional().nullable(),
+  uploadedBy: z.string(),
+  createdAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceUpdateManyMutationInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceUpdateManyMutationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileUrl: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  uploadedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  workOrderId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileUrl: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  uploadedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200SettingCreateInputSchema: z.ZodType<Prisma.Fm200SettingCreateInput> = z.object({
+  id: z.string().optional(),
+  roomTypes: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  systemTypes: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200SettingUncheckedCreateInputSchema: z.ZodType<Prisma.Fm200SettingUncheckedCreateInput> = z.object({
+  id: z.string().optional(),
+  roomTypes: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  systemTypes: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200SettingUpdateInputSchema: z.ZodType<Prisma.Fm200SettingUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomTypes: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  systemTypes: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200SettingUncheckedUpdateInputSchema: z.ZodType<Prisma.Fm200SettingUncheckedUpdateInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomTypes: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  systemTypes: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200SettingCreateManyInputSchema: z.ZodType<Prisma.Fm200SettingCreateManyInput> = z.object({
+  id: z.string().optional(),
+  roomTypes: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  systemTypes: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200SettingUpdateManyMutationInputSchema: z.ZodType<Prisma.Fm200SettingUpdateManyMutationInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomTypes: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  systemTypes: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200SettingUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Fm200SettingUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomTypes: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  systemTypes: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200BuildingFloorCreateInputSchema: z.ZodType<Prisma.Fm200BuildingFloorCreateInput> = z.object({
+  id: z.cuid().optional(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  facility: z.lazy(() => FacilityCreateNestedOneWithoutFm200BuildingFloorsInputSchema),
+}).strict();
+
+export const Fm200BuildingFloorUncheckedCreateInputSchema: z.ZodType<Prisma.Fm200BuildingFloorUncheckedCreateInput> = z.object({
+  id: z.cuid().optional(),
+  facilityId: z.string(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200BuildingFloorUpdateInputSchema: z.ZodType<Prisma.Fm200BuildingFloorUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  facility: z.lazy(() => FacilityUpdateOneRequiredWithoutFm200BuildingFloorsNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200BuildingFloorUncheckedUpdateInputSchema: z.ZodType<Prisma.Fm200BuildingFloorUncheckedUpdateInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200BuildingFloorCreateManyInputSchema: z.ZodType<Prisma.Fm200BuildingFloorCreateManyInput> = z.object({
+  id: z.cuid().optional(),
+  facilityId: z.string(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200BuildingFloorUpdateManyMutationInputSchema: z.ZodType<Prisma.Fm200BuildingFloorUpdateManyMutationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200BuildingFloorUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Fm200BuildingFloorUncheckedUpdateManyInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
 export const StringFilterSchema: z.ZodType<Prisma.StringFilter> = z.object({
   equals: z.string().optional(),
   in: z.string().array().optional(),
@@ -42040,6 +45178,18 @@ export const FireSafetyAuditListRelationFilterSchema: z.ZodType<Prisma.FireSafet
   none: z.lazy(() => FireSafetyAuditWhereInputSchema).optional(),
 }).strict();
 
+export const Fm200LocationListRelationFilterSchema: z.ZodType<Prisma.Fm200LocationListRelationFilter> = z.object({
+  every: z.lazy(() => Fm200LocationWhereInputSchema).optional(),
+  some: z.lazy(() => Fm200LocationWhereInputSchema).optional(),
+  none: z.lazy(() => Fm200LocationWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200BuildingFloorListRelationFilterSchema: z.ZodType<Prisma.Fm200BuildingFloorListRelationFilter> = z.object({
+  every: z.lazy(() => Fm200BuildingFloorWhereInputSchema).optional(),
+  some: z.lazy(() => Fm200BuildingFloorWhereInputSchema).optional(),
+  none: z.lazy(() => Fm200BuildingFloorWhereInputSchema).optional(),
+}).strict();
+
 export const ActivityLogOrderByRelationAggregateInputSchema: z.ZodType<Prisma.ActivityLogOrderByRelationAggregateInput> = z.object({
   _count: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
@@ -42205,6 +45355,14 @@ export const ThermalInspectionSessionOrderByRelationAggregateInputSchema: z.ZodT
 }).strict();
 
 export const FireSafetyAuditOrderByRelationAggregateInputSchema: z.ZodType<Prisma.FireSafetyAuditOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200LocationOrderByRelationAggregateInputSchema: z.ZodType<Prisma.Fm200LocationOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200BuildingFloorOrderByRelationAggregateInputSchema: z.ZodType<Prisma.Fm200BuildingFloorOrderByRelationAggregateInput> = z.object({
   _count: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
@@ -50418,6 +53576,671 @@ export const FireSafetySettingMinOrderByAggregateInputSchema: z.ZodType<Prisma.F
   updatedAt: z.lazy(() => SortOrderSchema).optional(),
 }).strict();
 
+export const Fm200CylinderListRelationFilterSchema: z.ZodType<Prisma.Fm200CylinderListRelationFilter> = z.object({
+  every: z.lazy(() => Fm200CylinderWhereInputSchema).optional(),
+  some: z.lazy(() => Fm200CylinderWhereInputSchema).optional(),
+  none: z.lazy(() => Fm200CylinderWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentListRelationFilterSchema: z.ZodType<Prisma.Fm200Phase1AssessmentListRelationFilter> = z.object({
+  every: z.lazy(() => Fm200Phase1AssessmentWhereInputSchema).optional(),
+  some: z.lazy(() => Fm200Phase1AssessmentWhereInputSchema).optional(),
+  none: z.lazy(() => Fm200Phase1AssessmentWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionListRelationFilterSchema: z.ZodType<Prisma.Fm200PeriodicInspectionListRelationFilter> = z.object({
+  every: z.lazy(() => Fm200PeriodicInspectionWhereInputSchema).optional(),
+  some: z.lazy(() => Fm200PeriodicInspectionWhereInputSchema).optional(),
+  none: z.lazy(() => Fm200PeriodicInspectionWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceListRelationFilterSchema: z.ZodType<Prisma.Fm200MaintenanceListRelationFilter> = z.object({
+  every: z.lazy(() => Fm200MaintenanceWhereInputSchema).optional(),
+  some: z.lazy(() => Fm200MaintenanceWhereInputSchema).optional(),
+  none: z.lazy(() => Fm200MaintenanceWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200TightnessTestListRelationFilterSchema: z.ZodType<Prisma.Fm200TightnessTestListRelationFilter> = z.object({
+  every: z.lazy(() => Fm200TightnessTestWhereInputSchema).optional(),
+  some: z.lazy(() => Fm200TightnessTestWhereInputSchema).optional(),
+  none: z.lazy(() => Fm200TightnessTestWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderListRelationFilterSchema: z.ZodType<Prisma.Fm200WorkOrderListRelationFilter> = z.object({
+  every: z.lazy(() => Fm200WorkOrderWhereInputSchema).optional(),
+  some: z.lazy(() => Fm200WorkOrderWhereInputSchema).optional(),
+  none: z.lazy(() => Fm200WorkOrderWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderOrderByRelationAggregateInputSchema: z.ZodType<Prisma.Fm200CylinderOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentOrderByRelationAggregateInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionOrderByRelationAggregateInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceOrderByRelationAggregateInputSchema: z.ZodType<Prisma.Fm200MaintenanceOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200TightnessTestOrderByRelationAggregateInputSchema: z.ZodType<Prisma.Fm200TightnessTestOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderOrderByRelationAggregateInputSchema: z.ZodType<Prisma.Fm200WorkOrderOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200LocationFacilityIdSystemUidCompoundUniqueInputSchema: z.ZodType<Prisma.Fm200LocationFacilityIdSystemUidCompoundUniqueInput> = z.object({
+  facilityId: z.string(),
+  systemUid: z.string(),
+}).strict();
+
+export const Fm200LocationCountOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200LocationCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  building: z.lazy(() => SortOrderSchema).optional(),
+  block: z.lazy(() => SortOrderSchema).optional(),
+  floor: z.lazy(() => SortOrderSchema).optional(),
+  roomType: z.lazy(() => SortOrderSchema).optional(),
+  customRoomName: z.lazy(() => SortOrderSchema).optional(),
+  index: z.lazy(() => SortOrderSchema).optional(),
+  systemUid: z.lazy(() => SortOrderSchema).optional(),
+  systemType: z.lazy(() => SortOrderSchema).optional(),
+  panelType: z.lazy(() => SortOrderSchema).optional(),
+  roomVolumeM3: z.lazy(() => SortOrderSchema).optional(),
+  cylinderCount: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200LocationAvgOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200LocationAvgOrderByAggregateInput> = z.object({
+  index: z.lazy(() => SortOrderSchema).optional(),
+  roomVolumeM3: z.lazy(() => SortOrderSchema).optional(),
+  cylinderCount: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200LocationMaxOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200LocationMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  building: z.lazy(() => SortOrderSchema).optional(),
+  block: z.lazy(() => SortOrderSchema).optional(),
+  floor: z.lazy(() => SortOrderSchema).optional(),
+  roomType: z.lazy(() => SortOrderSchema).optional(),
+  customRoomName: z.lazy(() => SortOrderSchema).optional(),
+  index: z.lazy(() => SortOrderSchema).optional(),
+  systemUid: z.lazy(() => SortOrderSchema).optional(),
+  systemType: z.lazy(() => SortOrderSchema).optional(),
+  panelType: z.lazy(() => SortOrderSchema).optional(),
+  roomVolumeM3: z.lazy(() => SortOrderSchema).optional(),
+  cylinderCount: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200LocationMinOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200LocationMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  building: z.lazy(() => SortOrderSchema).optional(),
+  block: z.lazy(() => SortOrderSchema).optional(),
+  floor: z.lazy(() => SortOrderSchema).optional(),
+  roomType: z.lazy(() => SortOrderSchema).optional(),
+  customRoomName: z.lazy(() => SortOrderSchema).optional(),
+  index: z.lazy(() => SortOrderSchema).optional(),
+  systemUid: z.lazy(() => SortOrderSchema).optional(),
+  systemType: z.lazy(() => SortOrderSchema).optional(),
+  panelType: z.lazy(() => SortOrderSchema).optional(),
+  roomVolumeM3: z.lazy(() => SortOrderSchema).optional(),
+  cylinderCount: z.lazy(() => SortOrderSchema).optional(),
+  isActive: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200LocationSumOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200LocationSumOrderByAggregateInput> = z.object({
+  index: z.lazy(() => SortOrderSchema).optional(),
+  roomVolumeM3: z.lazy(() => SortOrderSchema).optional(),
+  cylinderCount: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200LocationRelationFilterSchema: z.ZodType<Prisma.Fm200LocationRelationFilter> = z.object({
+  is: z.lazy(() => Fm200LocationWhereInputSchema).optional(),
+  isNot: z.lazy(() => Fm200LocationWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderListRelationFilterSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderListRelationFilter> = z.object({
+  every: z.lazy(() => Fm200MaintenanceCylinderWhereInputSchema).optional(),
+  some: z.lazy(() => Fm200MaintenanceCylinderWhereInputSchema).optional(),
+  none: z.lazy(() => Fm200MaintenanceCylinderWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderOrderByRelationAggregateInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200CylinderCountOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200CylinderCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  serialNumber: z.lazy(() => SortOrderSchema).optional(),
+  labelCode: z.lazy(() => SortOrderSchema).optional(),
+  capacityKg: z.lazy(() => SortOrderSchema).optional(),
+  tareKg: z.lazy(() => SortOrderSchema).optional(),
+  manufacturingYear: z.lazy(() => SortOrderSchema).optional(),
+  lastHydrostaticTestDate: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200CylinderAvgOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200CylinderAvgOrderByAggregateInput> = z.object({
+  capacityKg: z.lazy(() => SortOrderSchema).optional(),
+  tareKg: z.lazy(() => SortOrderSchema).optional(),
+  manufacturingYear: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200CylinderMaxOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200CylinderMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  serialNumber: z.lazy(() => SortOrderSchema).optional(),
+  labelCode: z.lazy(() => SortOrderSchema).optional(),
+  capacityKg: z.lazy(() => SortOrderSchema).optional(),
+  tareKg: z.lazy(() => SortOrderSchema).optional(),
+  manufacturingYear: z.lazy(() => SortOrderSchema).optional(),
+  lastHydrostaticTestDate: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200CylinderMinOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200CylinderMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  serialNumber: z.lazy(() => SortOrderSchema).optional(),
+  labelCode: z.lazy(() => SortOrderSchema).optional(),
+  capacityKg: z.lazy(() => SortOrderSchema).optional(),
+  tareKg: z.lazy(() => SortOrderSchema).optional(),
+  manufacturingYear: z.lazy(() => SortOrderSchema).optional(),
+  lastHydrostaticTestDate: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200CylinderSumOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200CylinderSumOrderByAggregateInput> = z.object({
+  capacityKg: z.lazy(() => SortOrderSchema).optional(),
+  tareKg: z.lazy(() => SortOrderSchema).optional(),
+  manufacturingYear: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentCountOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  assessedBy: z.lazy(() => SortOrderSchema).optional(),
+  assessedDate: z.lazy(() => SortOrderSchema).optional(),
+  f1_a1: z.lazy(() => SortOrderSchema).optional(),
+  f1_a2: z.lazy(() => SortOrderSchema).optional(),
+  f1_a3: z.lazy(() => SortOrderSchema).optional(),
+  f1_a4: z.lazy(() => SortOrderSchema).optional(),
+  f1_b1: z.lazy(() => SortOrderSchema).optional(),
+  f1_b2: z.lazy(() => SortOrderSchema).optional(),
+  f1_b3: z.lazy(() => SortOrderSchema).optional(),
+  f1_b4: z.lazy(() => SortOrderSchema).optional(),
+  f1_b5: z.lazy(() => SortOrderSchema).optional(),
+  f1_b6: z.lazy(() => SortOrderSchema).optional(),
+  f1_c1: z.lazy(() => SortOrderSchema).optional(),
+  f1_c2: z.lazy(() => SortOrderSchema).optional(),
+  f1_d1: z.lazy(() => SortOrderSchema).optional(),
+  f1_d2: z.lazy(() => SortOrderSchema).optional(),
+  f1_d3: z.lazy(() => SortOrderSchema).optional(),
+  f1_e1: z.lazy(() => SortOrderSchema).optional(),
+  f1_e2: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  photos: z.lazy(() => SortOrderSchema).optional(),
+  isCompleted: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentMaxOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  assessedBy: z.lazy(() => SortOrderSchema).optional(),
+  assessedDate: z.lazy(() => SortOrderSchema).optional(),
+  f1_a1: z.lazy(() => SortOrderSchema).optional(),
+  f1_a2: z.lazy(() => SortOrderSchema).optional(),
+  f1_a3: z.lazy(() => SortOrderSchema).optional(),
+  f1_a4: z.lazy(() => SortOrderSchema).optional(),
+  f1_b1: z.lazy(() => SortOrderSchema).optional(),
+  f1_b2: z.lazy(() => SortOrderSchema).optional(),
+  f1_b3: z.lazy(() => SortOrderSchema).optional(),
+  f1_b4: z.lazy(() => SortOrderSchema).optional(),
+  f1_b5: z.lazy(() => SortOrderSchema).optional(),
+  f1_b6: z.lazy(() => SortOrderSchema).optional(),
+  f1_c1: z.lazy(() => SortOrderSchema).optional(),
+  f1_c2: z.lazy(() => SortOrderSchema).optional(),
+  f1_d1: z.lazy(() => SortOrderSchema).optional(),
+  f1_d2: z.lazy(() => SortOrderSchema).optional(),
+  f1_d3: z.lazy(() => SortOrderSchema).optional(),
+  f1_e1: z.lazy(() => SortOrderSchema).optional(),
+  f1_e2: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  isCompleted: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentMinOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  assessedBy: z.lazy(() => SortOrderSchema).optional(),
+  assessedDate: z.lazy(() => SortOrderSchema).optional(),
+  f1_a1: z.lazy(() => SortOrderSchema).optional(),
+  f1_a2: z.lazy(() => SortOrderSchema).optional(),
+  f1_a3: z.lazy(() => SortOrderSchema).optional(),
+  f1_a4: z.lazy(() => SortOrderSchema).optional(),
+  f1_b1: z.lazy(() => SortOrderSchema).optional(),
+  f1_b2: z.lazy(() => SortOrderSchema).optional(),
+  f1_b3: z.lazy(() => SortOrderSchema).optional(),
+  f1_b4: z.lazy(() => SortOrderSchema).optional(),
+  f1_b5: z.lazy(() => SortOrderSchema).optional(),
+  f1_b6: z.lazy(() => SortOrderSchema).optional(),
+  f1_c1: z.lazy(() => SortOrderSchema).optional(),
+  f1_c2: z.lazy(() => SortOrderSchema).optional(),
+  f1_d1: z.lazy(() => SortOrderSchema).optional(),
+  f1_d2: z.lazy(() => SortOrderSchema).optional(),
+  f1_d3: z.lazy(() => SortOrderSchema).optional(),
+  f1_e1: z.lazy(() => SortOrderSchema).optional(),
+  f1_e2: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  isCompleted: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionCountOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  inspectedBy: z.lazy(() => SortOrderSchema).optional(),
+  inspectionDate: z.lazy(() => SortOrderSchema).optional(),
+  itemResponses: z.lazy(() => SortOrderSchema).optional(),
+  complianceScore: z.lazy(() => SortOrderSchema).optional(),
+  ratingGrade: z.lazy(() => SortOrderSchema).optional(),
+  isRedFlagged: z.lazy(() => SortOrderSchema).optional(),
+  openWorkOrdersCount: z.lazy(() => SortOrderSchema).optional(),
+  photos: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionAvgOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionAvgOrderByAggregateInput> = z.object({
+  complianceScore: z.lazy(() => SortOrderSchema).optional(),
+  openWorkOrdersCount: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionMaxOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  inspectedBy: z.lazy(() => SortOrderSchema).optional(),
+  inspectionDate: z.lazy(() => SortOrderSchema).optional(),
+  complianceScore: z.lazy(() => SortOrderSchema).optional(),
+  ratingGrade: z.lazy(() => SortOrderSchema).optional(),
+  isRedFlagged: z.lazy(() => SortOrderSchema).optional(),
+  openWorkOrdersCount: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionMinOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  inspectedBy: z.lazy(() => SortOrderSchema).optional(),
+  inspectionDate: z.lazy(() => SortOrderSchema).optional(),
+  complianceScore: z.lazy(() => SortOrderSchema).optional(),
+  ratingGrade: z.lazy(() => SortOrderSchema).optional(),
+  isRedFlagged: z.lazy(() => SortOrderSchema).optional(),
+  openWorkOrdersCount: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionSumOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionSumOrderByAggregateInput> = z.object({
+  complianceScore: z.lazy(() => SortOrderSchema).optional(),
+  openWorkOrdersCount: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCountOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200MaintenanceCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  performedBy: z.lazy(() => SortOrderSchema).optional(),
+  maintenanceDate: z.lazy(() => SortOrderSchema).optional(),
+  panelControlStatus: z.lazy(() => SortOrderSchema).optional(),
+  panelNotes: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  photos: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceMaxOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200MaintenanceMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  performedBy: z.lazy(() => SortOrderSchema).optional(),
+  maintenanceDate: z.lazy(() => SortOrderSchema).optional(),
+  panelControlStatus: z.lazy(() => SortOrderSchema).optional(),
+  panelNotes: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceMinOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200MaintenanceMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  performedBy: z.lazy(() => SortOrderSchema).optional(),
+  maintenanceDate: z.lazy(() => SortOrderSchema).optional(),
+  panelControlStatus: z.lazy(() => SortOrderSchema).optional(),
+  panelNotes: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceRelationFilterSchema: z.ZodType<Prisma.Fm200MaintenanceRelationFilter> = z.object({
+  is: z.lazy(() => Fm200MaintenanceWhereInputSchema).optional(),
+  isNot: z.lazy(() => Fm200MaintenanceWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderRelationFilterSchema: z.ZodType<Prisma.Fm200CylinderRelationFilter> = z.object({
+  is: z.lazy(() => Fm200CylinderWhereInputSchema).optional(),
+  isNot: z.lazy(() => Fm200CylinderWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderCountOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  maintenanceId: z.lazy(() => SortOrderSchema).optional(),
+  cylinderId: z.lazy(() => SortOrderSchema).optional(),
+  govde: z.lazy(() => SortOrderSchema).optional(),
+  muhur: z.lazy(() => SortOrderSchema).optional(),
+  basinc: z.lazy(() => SortOrderSchema).optional(),
+  emniyet: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderMaxOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  maintenanceId: z.lazy(() => SortOrderSchema).optional(),
+  cylinderId: z.lazy(() => SortOrderSchema).optional(),
+  govde: z.lazy(() => SortOrderSchema).optional(),
+  muhur: z.lazy(() => SortOrderSchema).optional(),
+  basinc: z.lazy(() => SortOrderSchema).optional(),
+  emniyet: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderMinOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  maintenanceId: z.lazy(() => SortOrderSchema).optional(),
+  cylinderId: z.lazy(() => SortOrderSchema).optional(),
+  govde: z.lazy(() => SortOrderSchema).optional(),
+  muhur: z.lazy(() => SortOrderSchema).optional(),
+  basinc: z.lazy(() => SortOrderSchema).optional(),
+  emniyet: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200TightnessTestCountOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200TightnessTestCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  performedBy: z.lazy(() => SortOrderSchema).optional(),
+  testDate: z.lazy(() => SortOrderSchema).optional(),
+  retentionTimeMinutes: z.lazy(() => SortOrderSchema).optional(),
+  measuredValue: z.lazy(() => SortOrderSchema).optional(),
+  result: z.lazy(() => SortOrderSchema).optional(),
+  isUnconditional: z.lazy(() => SortOrderSchema).optional(),
+  overrideReason: z.lazy(() => SortOrderSchema).optional(),
+  reportUrl: z.lazy(() => SortOrderSchema).optional(),
+  nextTestDate: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  photos: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200TightnessTestAvgOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200TightnessTestAvgOrderByAggregateInput> = z.object({
+  retentionTimeMinutes: z.lazy(() => SortOrderSchema).optional(),
+  measuredValue: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200TightnessTestMaxOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200TightnessTestMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  performedBy: z.lazy(() => SortOrderSchema).optional(),
+  testDate: z.lazy(() => SortOrderSchema).optional(),
+  retentionTimeMinutes: z.lazy(() => SortOrderSchema).optional(),
+  measuredValue: z.lazy(() => SortOrderSchema).optional(),
+  result: z.lazy(() => SortOrderSchema).optional(),
+  isUnconditional: z.lazy(() => SortOrderSchema).optional(),
+  overrideReason: z.lazy(() => SortOrderSchema).optional(),
+  reportUrl: z.lazy(() => SortOrderSchema).optional(),
+  nextTestDate: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200TightnessTestMinOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200TightnessTestMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  performedBy: z.lazy(() => SortOrderSchema).optional(),
+  testDate: z.lazy(() => SortOrderSchema).optional(),
+  retentionTimeMinutes: z.lazy(() => SortOrderSchema).optional(),
+  measuredValue: z.lazy(() => SortOrderSchema).optional(),
+  result: z.lazy(() => SortOrderSchema).optional(),
+  isUnconditional: z.lazy(() => SortOrderSchema).optional(),
+  overrideReason: z.lazy(() => SortOrderSchema).optional(),
+  reportUrl: z.lazy(() => SortOrderSchema).optional(),
+  nextTestDate: z.lazy(() => SortOrderSchema).optional(),
+  notes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200TightnessTestSumOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200TightnessTestSumOrderByAggregateInput> = z.object({
+  retentionTimeMinutes: z.lazy(() => SortOrderSchema).optional(),
+  measuredValue: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200CylinderNullableRelationFilterSchema: z.ZodType<Prisma.Fm200CylinderNullableRelationFilter> = z.object({
+  is: z.lazy(() => Fm200CylinderWhereInputSchema).optional().nullable(),
+  isNot: z.lazy(() => Fm200CylinderWhereInputSchema).optional().nullable(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceListRelationFilterSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceListRelationFilter> = z.object({
+  every: z.lazy(() => Fm200WorkOrderEvidenceWhereInputSchema).optional(),
+  some: z.lazy(() => Fm200WorkOrderEvidenceWhereInputSchema).optional(),
+  none: z.lazy(() => Fm200WorkOrderEvidenceWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceOrderByRelationAggregateInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceOrderByRelationAggregateInput> = z.object({
+  _count: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderCountOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200WorkOrderCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  cylinderId: z.lazy(() => SortOrderSchema).optional(),
+  sourcePhase: z.lazy(() => SortOrderSchema).optional(),
+  sourceCode: z.lazy(() => SortOrderSchema).optional(),
+  title: z.lazy(() => SortOrderSchema).optional(),
+  workType: z.lazy(() => SortOrderSchema).optional(),
+  responsible: z.lazy(() => SortOrderSchema).optional(),
+  trackLane: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  repeatCount: z.lazy(() => SortOrderSchema).optional(),
+  companyTrackNo: z.lazy(() => SortOrderSchema).optional(),
+  sourceWorkId: z.lazy(() => SortOrderSchema).optional(),
+  revisionNote: z.lazy(() => SortOrderSchema).optional(),
+  correctApproval: z.lazy(() => SortOrderSchema).optional(),
+  closedAt: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderAvgOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200WorkOrderAvgOrderByAggregateInput> = z.object({
+  repeatCount: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderMaxOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200WorkOrderMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  cylinderId: z.lazy(() => SortOrderSchema).optional(),
+  sourcePhase: z.lazy(() => SortOrderSchema).optional(),
+  sourceCode: z.lazy(() => SortOrderSchema).optional(),
+  title: z.lazy(() => SortOrderSchema).optional(),
+  workType: z.lazy(() => SortOrderSchema).optional(),
+  responsible: z.lazy(() => SortOrderSchema).optional(),
+  trackLane: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  repeatCount: z.lazy(() => SortOrderSchema).optional(),
+  companyTrackNo: z.lazy(() => SortOrderSchema).optional(),
+  sourceWorkId: z.lazy(() => SortOrderSchema).optional(),
+  revisionNote: z.lazy(() => SortOrderSchema).optional(),
+  correctApproval: z.lazy(() => SortOrderSchema).optional(),
+  closedAt: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderMinOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200WorkOrderMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  locationId: z.lazy(() => SortOrderSchema).optional(),
+  cylinderId: z.lazy(() => SortOrderSchema).optional(),
+  sourcePhase: z.lazy(() => SortOrderSchema).optional(),
+  sourceCode: z.lazy(() => SortOrderSchema).optional(),
+  title: z.lazy(() => SortOrderSchema).optional(),
+  workType: z.lazy(() => SortOrderSchema).optional(),
+  responsible: z.lazy(() => SortOrderSchema).optional(),
+  trackLane: z.lazy(() => SortOrderSchema).optional(),
+  status: z.lazy(() => SortOrderSchema).optional(),
+  repeatCount: z.lazy(() => SortOrderSchema).optional(),
+  companyTrackNo: z.lazy(() => SortOrderSchema).optional(),
+  sourceWorkId: z.lazy(() => SortOrderSchema).optional(),
+  revisionNote: z.lazy(() => SortOrderSchema).optional(),
+  correctApproval: z.lazy(() => SortOrderSchema).optional(),
+  closedAt: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderSumOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200WorkOrderSumOrderByAggregateInput> = z.object({
+  repeatCount: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderRelationFilterSchema: z.ZodType<Prisma.Fm200WorkOrderRelationFilter> = z.object({
+  is: z.lazy(() => Fm200WorkOrderWhereInputSchema).optional(),
+  isNot: z.lazy(() => Fm200WorkOrderWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceCountOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  workOrderId: z.lazy(() => SortOrderSchema).optional(),
+  fileType: z.lazy(() => SortOrderSchema).optional(),
+  fileUrl: z.lazy(() => SortOrderSchema).optional(),
+  fileName: z.lazy(() => SortOrderSchema).optional(),
+  uploadedBy: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceMaxOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  workOrderId: z.lazy(() => SortOrderSchema).optional(),
+  fileType: z.lazy(() => SortOrderSchema).optional(),
+  fileUrl: z.lazy(() => SortOrderSchema).optional(),
+  fileName: z.lazy(() => SortOrderSchema).optional(),
+  uploadedBy: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceMinOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  workOrderId: z.lazy(() => SortOrderSchema).optional(),
+  fileType: z.lazy(() => SortOrderSchema).optional(),
+  fileUrl: z.lazy(() => SortOrderSchema).optional(),
+  fileName: z.lazy(() => SortOrderSchema).optional(),
+  uploadedBy: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200SettingCountOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200SettingCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  roomTypes: z.lazy(() => SortOrderSchema).optional(),
+  systemTypes: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200SettingMaxOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200SettingMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200SettingMinOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200SettingMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200BuildingFloorFacilityIdBuildingBlockFloorCompoundUniqueInputSchema: z.ZodType<Prisma.Fm200BuildingFloorFacilityIdBuildingBlockFloorCompoundUniqueInput> = z.object({
+  facilityId: z.string(),
+  building: z.string(),
+  block: z.string(),
+  floor: z.string(),
+}).strict();
+
+export const Fm200BuildingFloorCountOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200BuildingFloorCountOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  building: z.lazy(() => SortOrderSchema).optional(),
+  block: z.lazy(() => SortOrderSchema).optional(),
+  floor: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200BuildingFloorMaxOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200BuildingFloorMaxOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  building: z.lazy(() => SortOrderSchema).optional(),
+  block: z.lazy(() => SortOrderSchema).optional(),
+  floor: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
+export const Fm200BuildingFloorMinOrderByAggregateInputSchema: z.ZodType<Prisma.Fm200BuildingFloorMinOrderByAggregateInput> = z.object({
+  id: z.lazy(() => SortOrderSchema).optional(),
+  facilityId: z.lazy(() => SortOrderSchema).optional(),
+  building: z.lazy(() => SortOrderSchema).optional(),
+  block: z.lazy(() => SortOrderSchema).optional(),
+  floor: z.lazy(() => SortOrderSchema).optional(),
+  createdAt: z.lazy(() => SortOrderSchema).optional(),
+  updatedAt: z.lazy(() => SortOrderSchema).optional(),
+}).strict();
+
 export const UserFacilityCreateNestedManyWithoutUserInputSchema: z.ZodType<Prisma.UserFacilityCreateNestedManyWithoutUserInput> = z.object({
   create: z.union([ z.lazy(() => UserFacilityCreateWithoutUserInputSchema), z.lazy(() => UserFacilityCreateWithoutUserInputSchema).array(), z.lazy(() => UserFacilityUncheckedCreateWithoutUserInputSchema), z.lazy(() => UserFacilityUncheckedCreateWithoutUserInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => UserFacilityCreateOrConnectWithoutUserInputSchema), z.lazy(() => UserFacilityCreateOrConnectWithoutUserInputSchema).array() ]).optional(),
@@ -52076,6 +55899,20 @@ export const FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema: z.ZodTyp
   connect: z.union([ z.lazy(() => FireSafetyAuditWhereUniqueInputSchema), z.lazy(() => FireSafetyAuditWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
+export const Fm200LocationCreateNestedManyWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200LocationCreateNestedManyWithoutFacilityInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutFacilityInputSchema), z.lazy(() => Fm200LocationCreateWithoutFacilityInputSchema).array(), z.lazy(() => Fm200LocationUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200LocationCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => Fm200LocationCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200LocationCreateManyFacilityInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200LocationWhereUniqueInputSchema), z.lazy(() => Fm200LocationWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200BuildingFloorCreateNestedManyWithoutFacilityInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200BuildingFloorCreateWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorCreateWithoutFacilityInputSchema).array(), z.lazy(() => Fm200BuildingFloorUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200BuildingFloorCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200BuildingFloorCreateManyFacilityInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema), z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
 export const ActivityLogUncheckedCreateNestedManyWithoutFacilityInputSchema: z.ZodType<Prisma.ActivityLogUncheckedCreateNestedManyWithoutFacilityInput> = z.object({
   create: z.union([ z.lazy(() => ActivityLogCreateWithoutFacilityInputSchema), z.lazy(() => ActivityLogCreateWithoutFacilityInputSchema).array(), z.lazy(() => ActivityLogUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => ActivityLogUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => ActivityLogCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => ActivityLogCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
@@ -52402,6 +56239,20 @@ export const FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema:
   connectOrCreate: z.union([ z.lazy(() => FireSafetyAuditCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => FireSafetyAuditCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
   createMany: z.lazy(() => FireSafetyAuditCreateManyFacilityInputEnvelopeSchema).optional(),
   connect: z.union([ z.lazy(() => FireSafetyAuditWhereUniqueInputSchema), z.lazy(() => FireSafetyAuditWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedCreateNestedManyWithoutFacilityInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutFacilityInputSchema), z.lazy(() => Fm200LocationCreateWithoutFacilityInputSchema).array(), z.lazy(() => Fm200LocationUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200LocationCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => Fm200LocationCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200LocationCreateManyFacilityInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200LocationWhereUniqueInputSchema), z.lazy(() => Fm200LocationWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200BuildingFloorCreateWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorCreateWithoutFacilityInputSchema).array(), z.lazy(() => Fm200BuildingFloorUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200BuildingFloorCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200BuildingFloorCreateManyFacilityInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema), z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema).array() ]).optional(),
 }).strict();
 
 export const ActivityLogUpdateManyWithoutFacilityNestedInputSchema: z.ZodType<Prisma.ActivityLogUpdateManyWithoutFacilityNestedInput> = z.object({
@@ -53058,6 +56909,34 @@ export const FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema: z.ZodTyp
   deleteMany: z.union([ z.lazy(() => FireSafetyAuditScalarWhereInputSchema), z.lazy(() => FireSafetyAuditScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
+export const Fm200LocationUpdateManyWithoutFacilityNestedInputSchema: z.ZodType<Prisma.Fm200LocationUpdateManyWithoutFacilityNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutFacilityInputSchema), z.lazy(() => Fm200LocationCreateWithoutFacilityInputSchema).array(), z.lazy(() => Fm200LocationUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200LocationCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => Fm200LocationCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200LocationUpsertWithWhereUniqueWithoutFacilityInputSchema), z.lazy(() => Fm200LocationUpsertWithWhereUniqueWithoutFacilityInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200LocationCreateManyFacilityInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200LocationWhereUniqueInputSchema), z.lazy(() => Fm200LocationWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200LocationWhereUniqueInputSchema), z.lazy(() => Fm200LocationWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200LocationWhereUniqueInputSchema), z.lazy(() => Fm200LocationWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200LocationWhereUniqueInputSchema), z.lazy(() => Fm200LocationWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200LocationUpdateWithWhereUniqueWithoutFacilityInputSchema), z.lazy(() => Fm200LocationUpdateWithWhereUniqueWithoutFacilityInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200LocationUpdateManyWithWhereWithoutFacilityInputSchema), z.lazy(() => Fm200LocationUpdateManyWithWhereWithoutFacilityInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200LocationScalarWhereInputSchema), z.lazy(() => Fm200LocationScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema: z.ZodType<Prisma.Fm200BuildingFloorUpdateManyWithoutFacilityNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200BuildingFloorCreateWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorCreateWithoutFacilityInputSchema).array(), z.lazy(() => Fm200BuildingFloorUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200BuildingFloorCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200BuildingFloorUpsertWithWhereUniqueWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorUpsertWithWhereUniqueWithoutFacilityInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200BuildingFloorCreateManyFacilityInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema), z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema), z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema), z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema), z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200BuildingFloorUpdateWithWhereUniqueWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorUpdateWithWhereUniqueWithoutFacilityInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200BuildingFloorUpdateManyWithWhereWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorUpdateManyWithWhereWithoutFacilityInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200BuildingFloorScalarWhereInputSchema), z.lazy(() => Fm200BuildingFloorScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
 export const ActivityLogUncheckedUpdateManyWithoutFacilityNestedInputSchema: z.ZodType<Prisma.ActivityLogUncheckedUpdateManyWithoutFacilityNestedInput> = z.object({
   create: z.union([ z.lazy(() => ActivityLogCreateWithoutFacilityInputSchema), z.lazy(() => ActivityLogCreateWithoutFacilityInputSchema).array(), z.lazy(() => ActivityLogUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => ActivityLogUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => ActivityLogCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => ActivityLogCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
@@ -53710,6 +57589,34 @@ export const FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema:
   update: z.union([ z.lazy(() => FireSafetyAuditUpdateWithWhereUniqueWithoutFacilityInputSchema), z.lazy(() => FireSafetyAuditUpdateWithWhereUniqueWithoutFacilityInputSchema).array() ]).optional(),
   updateMany: z.union([ z.lazy(() => FireSafetyAuditUpdateManyWithWhereWithoutFacilityInputSchema), z.lazy(() => FireSafetyAuditUpdateManyWithWhereWithoutFacilityInputSchema).array() ]).optional(),
   deleteMany: z.union([ z.lazy(() => FireSafetyAuditScalarWhereInputSchema), z.lazy(() => FireSafetyAuditScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutFacilityInputSchema), z.lazy(() => Fm200LocationCreateWithoutFacilityInputSchema).array(), z.lazy(() => Fm200LocationUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200LocationCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => Fm200LocationCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200LocationUpsertWithWhereUniqueWithoutFacilityInputSchema), z.lazy(() => Fm200LocationUpsertWithWhereUniqueWithoutFacilityInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200LocationCreateManyFacilityInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200LocationWhereUniqueInputSchema), z.lazy(() => Fm200LocationWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200LocationWhereUniqueInputSchema), z.lazy(() => Fm200LocationWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200LocationWhereUniqueInputSchema), z.lazy(() => Fm200LocationWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200LocationWhereUniqueInputSchema), z.lazy(() => Fm200LocationWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200LocationUpdateWithWhereUniqueWithoutFacilityInputSchema), z.lazy(() => Fm200LocationUpdateWithWhereUniqueWithoutFacilityInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200LocationUpdateManyWithWhereWithoutFacilityInputSchema), z.lazy(() => Fm200LocationUpdateManyWithWhereWithoutFacilityInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200LocationScalarWhereInputSchema), z.lazy(() => Fm200LocationScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema: z.ZodType<Prisma.Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200BuildingFloorCreateWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorCreateWithoutFacilityInputSchema).array(), z.lazy(() => Fm200BuildingFloorUncheckedCreateWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorUncheckedCreateWithoutFacilityInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200BuildingFloorCreateOrConnectWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorCreateOrConnectWithoutFacilityInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200BuildingFloorUpsertWithWhereUniqueWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorUpsertWithWhereUniqueWithoutFacilityInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200BuildingFloorCreateManyFacilityInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema), z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema), z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema), z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema), z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200BuildingFloorUpdateWithWhereUniqueWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorUpdateWithWhereUniqueWithoutFacilityInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200BuildingFloorUpdateManyWithWhereWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorUpdateManyWithWhereWithoutFacilityInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200BuildingFloorScalarWhereInputSchema), z.lazy(() => Fm200BuildingFloorScalarWhereInputSchema).array() ]).optional(),
 }).strict();
 
 export const ExtraordinaryIncidentCreateNestedManyWithoutCategoryInputSchema: z.ZodType<Prisma.ExtraordinaryIncidentCreateNestedManyWithoutCategoryInput> = z.object({
@@ -62787,6 +66694,596 @@ export const FireSafetyItemUpdateOneRequiredWithoutActionsNestedInputSchema: z.Z
   update: z.union([ z.lazy(() => FireSafetyItemUpdateToOneWithWhereWithoutActionsInputSchema), z.lazy(() => FireSafetyItemUpdateWithoutActionsInputSchema), z.lazy(() => FireSafetyItemUncheckedUpdateWithoutActionsInputSchema) ]).optional(),
 }).strict();
 
+export const FacilityCreateNestedOneWithoutFm200LocationsInputSchema: z.ZodType<Prisma.FacilityCreateNestedOneWithoutFm200LocationsInput> = z.object({
+  create: z.union([ z.lazy(() => FacilityCreateWithoutFm200LocationsInputSchema), z.lazy(() => FacilityUncheckedCreateWithoutFm200LocationsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => FacilityCreateOrConnectWithoutFm200LocationsInputSchema).optional(),
+  connect: z.lazy(() => FacilityWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderCreateNestedManyWithoutLocationInputSchema: z.ZodType<Prisma.Fm200CylinderCreateNestedManyWithoutLocationInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200CylinderCreateWithoutLocationInputSchema), z.lazy(() => Fm200CylinderCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200CylinderUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200CylinderUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200CylinderCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200CylinderCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200CylinderCreateManyLocationInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200CylinderWhereUniqueInputSchema), z.lazy(() => Fm200CylinderWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentCreateNestedManyWithoutLocationInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentCreateNestedManyWithoutLocationInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200Phase1AssessmentCreateWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200Phase1AssessmentUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200Phase1AssessmentCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200Phase1AssessmentCreateManyLocationInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema), z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionCreateNestedManyWithoutLocationInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionCreateNestedManyWithoutLocationInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200PeriodicInspectionCreateWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200PeriodicInspectionUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200PeriodicInspectionCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200PeriodicInspectionCreateManyLocationInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema), z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceCreateNestedManyWithoutLocationInputSchema: z.ZodType<Prisma.Fm200MaintenanceCreateNestedManyWithoutLocationInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200MaintenanceCreateWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200MaintenanceUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200MaintenanceCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200MaintenanceCreateManyLocationInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200TightnessTestCreateNestedManyWithoutLocationInputSchema: z.ZodType<Prisma.Fm200TightnessTestCreateNestedManyWithoutLocationInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200TightnessTestCreateWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200TightnessTestUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200TightnessTestCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200TightnessTestCreateManyLocationInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema), z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderCreateNestedManyWithoutLocationInputSchema: z.ZodType<Prisma.Fm200WorkOrderCreateNestedManyWithoutLocationInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200WorkOrderCreateWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200WorkOrderCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200WorkOrderCreateManyLocationInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200CylinderUncheckedCreateNestedManyWithoutLocationInputSchema: z.ZodType<Prisma.Fm200CylinderUncheckedCreateNestedManyWithoutLocationInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200CylinderCreateWithoutLocationInputSchema), z.lazy(() => Fm200CylinderCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200CylinderUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200CylinderUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200CylinderCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200CylinderCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200CylinderCreateManyLocationInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200CylinderWhereUniqueInputSchema), z.lazy(() => Fm200CylinderWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentUncheckedCreateNestedManyWithoutLocationInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentUncheckedCreateNestedManyWithoutLocationInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200Phase1AssessmentCreateWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200Phase1AssessmentUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200Phase1AssessmentCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200Phase1AssessmentCreateManyLocationInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema), z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionUncheckedCreateNestedManyWithoutLocationInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionUncheckedCreateNestedManyWithoutLocationInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200PeriodicInspectionCreateWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200PeriodicInspectionUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200PeriodicInspectionCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200PeriodicInspectionCreateManyLocationInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema), z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceUncheckedCreateNestedManyWithoutLocationInputSchema: z.ZodType<Prisma.Fm200MaintenanceUncheckedCreateNestedManyWithoutLocationInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200MaintenanceCreateWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200MaintenanceUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200MaintenanceCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200MaintenanceCreateManyLocationInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200TightnessTestUncheckedCreateNestedManyWithoutLocationInputSchema: z.ZodType<Prisma.Fm200TightnessTestUncheckedCreateNestedManyWithoutLocationInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200TightnessTestCreateWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200TightnessTestUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200TightnessTestCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200TightnessTestCreateManyLocationInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema), z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderUncheckedCreateNestedManyWithoutLocationInputSchema: z.ZodType<Prisma.Fm200WorkOrderUncheckedCreateNestedManyWithoutLocationInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200WorkOrderCreateWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200WorkOrderCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200WorkOrderCreateManyLocationInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const FacilityUpdateOneRequiredWithoutFm200LocationsNestedInputSchema: z.ZodType<Prisma.FacilityUpdateOneRequiredWithoutFm200LocationsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FacilityCreateWithoutFm200LocationsInputSchema), z.lazy(() => FacilityUncheckedCreateWithoutFm200LocationsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => FacilityCreateOrConnectWithoutFm200LocationsInputSchema).optional(),
+  upsert: z.lazy(() => FacilityUpsertWithoutFm200LocationsInputSchema).optional(),
+  connect: z.lazy(() => FacilityWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => FacilityUpdateToOneWithWhereWithoutFm200LocationsInputSchema), z.lazy(() => FacilityUpdateWithoutFm200LocationsInputSchema), z.lazy(() => FacilityUncheckedUpdateWithoutFm200LocationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200CylinderUpdateManyWithoutLocationNestedInputSchema: z.ZodType<Prisma.Fm200CylinderUpdateManyWithoutLocationNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200CylinderCreateWithoutLocationInputSchema), z.lazy(() => Fm200CylinderCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200CylinderUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200CylinderUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200CylinderCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200CylinderCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200CylinderUpsertWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200CylinderUpsertWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200CylinderCreateManyLocationInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200CylinderWhereUniqueInputSchema), z.lazy(() => Fm200CylinderWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200CylinderWhereUniqueInputSchema), z.lazy(() => Fm200CylinderWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200CylinderWhereUniqueInputSchema), z.lazy(() => Fm200CylinderWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200CylinderWhereUniqueInputSchema), z.lazy(() => Fm200CylinderWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200CylinderUpdateWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200CylinderUpdateWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200CylinderUpdateManyWithWhereWithoutLocationInputSchema), z.lazy(() => Fm200CylinderUpdateManyWithWhereWithoutLocationInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200CylinderScalarWhereInputSchema), z.lazy(() => Fm200CylinderScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentUpdateManyWithoutLocationNestedInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentUpdateManyWithoutLocationNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200Phase1AssessmentCreateWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200Phase1AssessmentUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200Phase1AssessmentCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200Phase1AssessmentUpsertWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentUpsertWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200Phase1AssessmentCreateManyLocationInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema), z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema), z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema), z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema), z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200Phase1AssessmentUpdateWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentUpdateWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200Phase1AssessmentUpdateManyWithWhereWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentUpdateManyWithWhereWithoutLocationInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200Phase1AssessmentScalarWhereInputSchema), z.lazy(() => Fm200Phase1AssessmentScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionUpdateManyWithoutLocationNestedInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionUpdateManyWithoutLocationNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200PeriodicInspectionCreateWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200PeriodicInspectionUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200PeriodicInspectionCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200PeriodicInspectionUpsertWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionUpsertWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200PeriodicInspectionCreateManyLocationInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema), z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema), z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema), z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema), z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200PeriodicInspectionUpdateWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionUpdateWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200PeriodicInspectionUpdateManyWithWhereWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionUpdateManyWithWhereWithoutLocationInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200PeriodicInspectionScalarWhereInputSchema), z.lazy(() => Fm200PeriodicInspectionScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceUpdateManyWithoutLocationNestedInputSchema: z.ZodType<Prisma.Fm200MaintenanceUpdateManyWithoutLocationNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200MaintenanceCreateWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200MaintenanceUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200MaintenanceCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200MaintenanceUpsertWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceUpsertWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200MaintenanceCreateManyLocationInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200MaintenanceUpdateWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceUpdateWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200MaintenanceUpdateManyWithWhereWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceUpdateManyWithWhereWithoutLocationInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200MaintenanceScalarWhereInputSchema), z.lazy(() => Fm200MaintenanceScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200TightnessTestUpdateManyWithoutLocationNestedInputSchema: z.ZodType<Prisma.Fm200TightnessTestUpdateManyWithoutLocationNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200TightnessTestCreateWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200TightnessTestUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200TightnessTestCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200TightnessTestUpsertWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestUpsertWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200TightnessTestCreateManyLocationInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema), z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema), z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema), z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema), z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200TightnessTestUpdateWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestUpdateWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200TightnessTestUpdateManyWithWhereWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestUpdateManyWithWhereWithoutLocationInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200TightnessTestScalarWhereInputSchema), z.lazy(() => Fm200TightnessTestScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderUpdateManyWithoutLocationNestedInputSchema: z.ZodType<Prisma.Fm200WorkOrderUpdateManyWithoutLocationNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200WorkOrderCreateWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200WorkOrderCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200WorkOrderUpsertWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderUpsertWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200WorkOrderCreateManyLocationInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200WorkOrderUpdateWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderUpdateWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200WorkOrderUpdateManyWithWhereWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderUpdateManyWithWhereWithoutLocationInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200WorkOrderScalarWhereInputSchema), z.lazy(() => Fm200WorkOrderScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200CylinderUncheckedUpdateManyWithoutLocationNestedInputSchema: z.ZodType<Prisma.Fm200CylinderUncheckedUpdateManyWithoutLocationNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200CylinderCreateWithoutLocationInputSchema), z.lazy(() => Fm200CylinderCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200CylinderUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200CylinderUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200CylinderCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200CylinderCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200CylinderUpsertWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200CylinderUpsertWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200CylinderCreateManyLocationInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200CylinderWhereUniqueInputSchema), z.lazy(() => Fm200CylinderWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200CylinderWhereUniqueInputSchema), z.lazy(() => Fm200CylinderWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200CylinderWhereUniqueInputSchema), z.lazy(() => Fm200CylinderWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200CylinderWhereUniqueInputSchema), z.lazy(() => Fm200CylinderWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200CylinderUpdateWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200CylinderUpdateWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200CylinderUpdateManyWithWhereWithoutLocationInputSchema), z.lazy(() => Fm200CylinderUpdateManyWithWhereWithoutLocationInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200CylinderScalarWhereInputSchema), z.lazy(() => Fm200CylinderScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentUncheckedUpdateManyWithoutLocationNestedInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentUncheckedUpdateManyWithoutLocationNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200Phase1AssessmentCreateWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200Phase1AssessmentUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200Phase1AssessmentCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200Phase1AssessmentUpsertWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentUpsertWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200Phase1AssessmentCreateManyLocationInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema), z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema), z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema), z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema), z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200Phase1AssessmentUpdateWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentUpdateWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200Phase1AssessmentUpdateManyWithWhereWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentUpdateManyWithWhereWithoutLocationInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200Phase1AssessmentScalarWhereInputSchema), z.lazy(() => Fm200Phase1AssessmentScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionUncheckedUpdateManyWithoutLocationNestedInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionUncheckedUpdateManyWithoutLocationNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200PeriodicInspectionCreateWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200PeriodicInspectionUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200PeriodicInspectionCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200PeriodicInspectionUpsertWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionUpsertWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200PeriodicInspectionCreateManyLocationInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema), z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema), z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema), z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema), z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200PeriodicInspectionUpdateWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionUpdateWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200PeriodicInspectionUpdateManyWithWhereWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionUpdateManyWithWhereWithoutLocationInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200PeriodicInspectionScalarWhereInputSchema), z.lazy(() => Fm200PeriodicInspectionScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceUncheckedUpdateManyWithoutLocationNestedInputSchema: z.ZodType<Prisma.Fm200MaintenanceUncheckedUpdateManyWithoutLocationNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200MaintenanceCreateWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200MaintenanceUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200MaintenanceCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200MaintenanceUpsertWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceUpsertWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200MaintenanceCreateManyLocationInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200MaintenanceUpdateWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceUpdateWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200MaintenanceUpdateManyWithWhereWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceUpdateManyWithWhereWithoutLocationInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200MaintenanceScalarWhereInputSchema), z.lazy(() => Fm200MaintenanceScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200TightnessTestUncheckedUpdateManyWithoutLocationNestedInputSchema: z.ZodType<Prisma.Fm200TightnessTestUncheckedUpdateManyWithoutLocationNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200TightnessTestCreateWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200TightnessTestUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200TightnessTestCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200TightnessTestUpsertWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestUpsertWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200TightnessTestCreateManyLocationInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema), z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema), z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema), z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema), z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200TightnessTestUpdateWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestUpdateWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200TightnessTestUpdateManyWithWhereWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestUpdateManyWithWhereWithoutLocationInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200TightnessTestScalarWhereInputSchema), z.lazy(() => Fm200TightnessTestScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderUncheckedUpdateManyWithoutLocationNestedInputSchema: z.ZodType<Prisma.Fm200WorkOrderUncheckedUpdateManyWithoutLocationNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200WorkOrderCreateWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderCreateWithoutLocationInputSchema).array(), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutLocationInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200WorkOrderCreateOrConnectWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderCreateOrConnectWithoutLocationInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200WorkOrderUpsertWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderUpsertWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200WorkOrderCreateManyLocationInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200WorkOrderUpdateWithWhereUniqueWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderUpdateWithWhereUniqueWithoutLocationInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200WorkOrderUpdateManyWithWhereWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderUpdateManyWithWhereWithoutLocationInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200WorkOrderScalarWhereInputSchema), z.lazy(() => Fm200WorkOrderScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200LocationCreateNestedOneWithoutCylindersInputSchema: z.ZodType<Prisma.Fm200LocationCreateNestedOneWithoutCylindersInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutCylindersInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutCylindersInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200LocationCreateOrConnectWithoutCylindersInputSchema).optional(),
+  connect: z.lazy(() => Fm200LocationWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderCreateNestedManyWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderCreateNestedManyWithoutCylinderInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderCreateWithoutCylinderInputSchema).array(), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutCylinderInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateOrConnectWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderCreateOrConnectWithoutCylinderInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200MaintenanceCylinderCreateManyCylinderInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderCreateNestedManyWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200WorkOrderCreateNestedManyWithoutCylinderInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200WorkOrderCreateWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderCreateWithoutCylinderInputSchema).array(), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutCylinderInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200WorkOrderCreateOrConnectWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderCreateOrConnectWithoutCylinderInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200WorkOrderCreateManyCylinderInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderUncheckedCreateNestedManyWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUncheckedCreateNestedManyWithoutCylinderInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderCreateWithoutCylinderInputSchema).array(), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutCylinderInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateOrConnectWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderCreateOrConnectWithoutCylinderInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200MaintenanceCylinderCreateManyCylinderInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderUncheckedCreateNestedManyWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200WorkOrderUncheckedCreateNestedManyWithoutCylinderInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200WorkOrderCreateWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderCreateWithoutCylinderInputSchema).array(), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutCylinderInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200WorkOrderCreateOrConnectWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderCreateOrConnectWithoutCylinderInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200WorkOrderCreateManyCylinderInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200LocationUpdateOneRequiredWithoutCylindersNestedInputSchema: z.ZodType<Prisma.Fm200LocationUpdateOneRequiredWithoutCylindersNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutCylindersInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutCylindersInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200LocationCreateOrConnectWithoutCylindersInputSchema).optional(),
+  upsert: z.lazy(() => Fm200LocationUpsertWithoutCylindersInputSchema).optional(),
+  connect: z.lazy(() => Fm200LocationWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => Fm200LocationUpdateToOneWithWhereWithoutCylindersInputSchema), z.lazy(() => Fm200LocationUpdateWithoutCylindersInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutCylindersInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderUpdateManyWithoutCylinderNestedInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUpdateManyWithoutCylinderNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderCreateWithoutCylinderInputSchema).array(), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutCylinderInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateOrConnectWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderCreateOrConnectWithoutCylinderInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200MaintenanceCylinderUpsertWithWhereUniqueWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderUpsertWithWhereUniqueWithoutCylinderInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200MaintenanceCylinderCreateManyCylinderInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200MaintenanceCylinderUpdateWithWhereUniqueWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderUpdateWithWhereUniqueWithoutCylinderInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200MaintenanceCylinderUpdateManyWithWhereWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderUpdateManyWithWhereWithoutCylinderInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200MaintenanceCylinderScalarWhereInputSchema), z.lazy(() => Fm200MaintenanceCylinderScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderUpdateManyWithoutCylinderNestedInputSchema: z.ZodType<Prisma.Fm200WorkOrderUpdateManyWithoutCylinderNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200WorkOrderCreateWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderCreateWithoutCylinderInputSchema).array(), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutCylinderInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200WorkOrderCreateOrConnectWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderCreateOrConnectWithoutCylinderInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200WorkOrderUpsertWithWhereUniqueWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderUpsertWithWhereUniqueWithoutCylinderInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200WorkOrderCreateManyCylinderInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200WorkOrderUpdateWithWhereUniqueWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderUpdateWithWhereUniqueWithoutCylinderInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200WorkOrderUpdateManyWithWhereWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderUpdateManyWithWhereWithoutCylinderInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200WorkOrderScalarWhereInputSchema), z.lazy(() => Fm200WorkOrderScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderUncheckedUpdateManyWithoutCylinderNestedInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUncheckedUpdateManyWithoutCylinderNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderCreateWithoutCylinderInputSchema).array(), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutCylinderInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateOrConnectWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderCreateOrConnectWithoutCylinderInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200MaintenanceCylinderUpsertWithWhereUniqueWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderUpsertWithWhereUniqueWithoutCylinderInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200MaintenanceCylinderCreateManyCylinderInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200MaintenanceCylinderUpdateWithWhereUniqueWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderUpdateWithWhereUniqueWithoutCylinderInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200MaintenanceCylinderUpdateManyWithWhereWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderUpdateManyWithWhereWithoutCylinderInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200MaintenanceCylinderScalarWhereInputSchema), z.lazy(() => Fm200MaintenanceCylinderScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderUncheckedUpdateManyWithoutCylinderNestedInputSchema: z.ZodType<Prisma.Fm200WorkOrderUncheckedUpdateManyWithoutCylinderNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200WorkOrderCreateWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderCreateWithoutCylinderInputSchema).array(), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutCylinderInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200WorkOrderCreateOrConnectWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderCreateOrConnectWithoutCylinderInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200WorkOrderUpsertWithWhereUniqueWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderUpsertWithWhereUniqueWithoutCylinderInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200WorkOrderCreateManyCylinderInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200WorkOrderUpdateWithWhereUniqueWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderUpdateWithWhereUniqueWithoutCylinderInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200WorkOrderUpdateManyWithWhereWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderUpdateManyWithWhereWithoutCylinderInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200WorkOrderScalarWhereInputSchema), z.lazy(() => Fm200WorkOrderScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200LocationCreateNestedOneWithoutPhase1AssessmentsInputSchema: z.ZodType<Prisma.Fm200LocationCreateNestedOneWithoutPhase1AssessmentsInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutPhase1AssessmentsInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutPhase1AssessmentsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200LocationCreateOrConnectWithoutPhase1AssessmentsInputSchema).optional(),
+  connect: z.lazy(() => Fm200LocationWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUpdateOneRequiredWithoutPhase1AssessmentsNestedInputSchema: z.ZodType<Prisma.Fm200LocationUpdateOneRequiredWithoutPhase1AssessmentsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutPhase1AssessmentsInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutPhase1AssessmentsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200LocationCreateOrConnectWithoutPhase1AssessmentsInputSchema).optional(),
+  upsert: z.lazy(() => Fm200LocationUpsertWithoutPhase1AssessmentsInputSchema).optional(),
+  connect: z.lazy(() => Fm200LocationWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => Fm200LocationUpdateToOneWithWhereWithoutPhase1AssessmentsInputSchema), z.lazy(() => Fm200LocationUpdateWithoutPhase1AssessmentsInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutPhase1AssessmentsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200LocationCreateNestedOneWithoutInspectionsInputSchema: z.ZodType<Prisma.Fm200LocationCreateNestedOneWithoutInspectionsInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutInspectionsInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutInspectionsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200LocationCreateOrConnectWithoutInspectionsInputSchema).optional(),
+  connect: z.lazy(() => Fm200LocationWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUpdateOneRequiredWithoutInspectionsNestedInputSchema: z.ZodType<Prisma.Fm200LocationUpdateOneRequiredWithoutInspectionsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutInspectionsInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutInspectionsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200LocationCreateOrConnectWithoutInspectionsInputSchema).optional(),
+  upsert: z.lazy(() => Fm200LocationUpsertWithoutInspectionsInputSchema).optional(),
+  connect: z.lazy(() => Fm200LocationWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => Fm200LocationUpdateToOneWithWhereWithoutInspectionsInputSchema), z.lazy(() => Fm200LocationUpdateWithoutInspectionsInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutInspectionsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200LocationCreateNestedOneWithoutMaintenancesInputSchema: z.ZodType<Prisma.Fm200LocationCreateNestedOneWithoutMaintenancesInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutMaintenancesInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutMaintenancesInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200LocationCreateOrConnectWithoutMaintenancesInputSchema).optional(),
+  connect: z.lazy(() => Fm200LocationWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderCreateNestedManyWithoutMaintenanceInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderCreateNestedManyWithoutMaintenanceInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderCreateWithoutMaintenanceInputSchema).array(), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutMaintenanceInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateOrConnectWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderCreateOrConnectWithoutMaintenanceInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200MaintenanceCylinderCreateManyMaintenanceInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderUncheckedCreateNestedManyWithoutMaintenanceInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUncheckedCreateNestedManyWithoutMaintenanceInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderCreateWithoutMaintenanceInputSchema).array(), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutMaintenanceInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateOrConnectWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderCreateOrConnectWithoutMaintenanceInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200MaintenanceCylinderCreateManyMaintenanceInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200LocationUpdateOneRequiredWithoutMaintenancesNestedInputSchema: z.ZodType<Prisma.Fm200LocationUpdateOneRequiredWithoutMaintenancesNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutMaintenancesInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutMaintenancesInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200LocationCreateOrConnectWithoutMaintenancesInputSchema).optional(),
+  upsert: z.lazy(() => Fm200LocationUpsertWithoutMaintenancesInputSchema).optional(),
+  connect: z.lazy(() => Fm200LocationWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => Fm200LocationUpdateToOneWithWhereWithoutMaintenancesInputSchema), z.lazy(() => Fm200LocationUpdateWithoutMaintenancesInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutMaintenancesInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderUpdateManyWithoutMaintenanceNestedInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUpdateManyWithoutMaintenanceNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderCreateWithoutMaintenanceInputSchema).array(), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutMaintenanceInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateOrConnectWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderCreateOrConnectWithoutMaintenanceInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200MaintenanceCylinderUpsertWithWhereUniqueWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderUpsertWithWhereUniqueWithoutMaintenanceInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200MaintenanceCylinderCreateManyMaintenanceInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200MaintenanceCylinderUpdateWithWhereUniqueWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderUpdateWithWhereUniqueWithoutMaintenanceInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200MaintenanceCylinderUpdateManyWithWhereWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderUpdateManyWithWhereWithoutMaintenanceInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200MaintenanceCylinderScalarWhereInputSchema), z.lazy(() => Fm200MaintenanceCylinderScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderUncheckedUpdateManyWithoutMaintenanceNestedInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUncheckedUpdateManyWithoutMaintenanceNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderCreateWithoutMaintenanceInputSchema).array(), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutMaintenanceInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateOrConnectWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderCreateOrConnectWithoutMaintenanceInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200MaintenanceCylinderUpsertWithWhereUniqueWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderUpsertWithWhereUniqueWithoutMaintenanceInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200MaintenanceCylinderCreateManyMaintenanceInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema), z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200MaintenanceCylinderUpdateWithWhereUniqueWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderUpdateWithWhereUniqueWithoutMaintenanceInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200MaintenanceCylinderUpdateManyWithWhereWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderUpdateManyWithWhereWithoutMaintenanceInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200MaintenanceCylinderScalarWhereInputSchema), z.lazy(() => Fm200MaintenanceCylinderScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceCreateNestedOneWithoutCylindersInputSchema: z.ZodType<Prisma.Fm200MaintenanceCreateNestedOneWithoutCylindersInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200MaintenanceCreateWithoutCylindersInputSchema), z.lazy(() => Fm200MaintenanceUncheckedCreateWithoutCylindersInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200MaintenanceCreateOrConnectWithoutCylindersInputSchema).optional(),
+  connect: z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderCreateNestedOneWithoutMaintenanceCylindersInputSchema: z.ZodType<Prisma.Fm200CylinderCreateNestedOneWithoutMaintenanceCylindersInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200CylinderCreateWithoutMaintenanceCylindersInputSchema), z.lazy(() => Fm200CylinderUncheckedCreateWithoutMaintenanceCylindersInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200CylinderCreateOrConnectWithoutMaintenanceCylindersInputSchema).optional(),
+  connect: z.lazy(() => Fm200CylinderWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceUpdateOneRequiredWithoutCylindersNestedInputSchema: z.ZodType<Prisma.Fm200MaintenanceUpdateOneRequiredWithoutCylindersNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200MaintenanceCreateWithoutCylindersInputSchema), z.lazy(() => Fm200MaintenanceUncheckedCreateWithoutCylindersInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200MaintenanceCreateOrConnectWithoutCylindersInputSchema).optional(),
+  upsert: z.lazy(() => Fm200MaintenanceUpsertWithoutCylindersInputSchema).optional(),
+  connect: z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => Fm200MaintenanceUpdateToOneWithWhereWithoutCylindersInputSchema), z.lazy(() => Fm200MaintenanceUpdateWithoutCylindersInputSchema), z.lazy(() => Fm200MaintenanceUncheckedUpdateWithoutCylindersInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200CylinderUpdateOneRequiredWithoutMaintenanceCylindersNestedInputSchema: z.ZodType<Prisma.Fm200CylinderUpdateOneRequiredWithoutMaintenanceCylindersNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200CylinderCreateWithoutMaintenanceCylindersInputSchema), z.lazy(() => Fm200CylinderUncheckedCreateWithoutMaintenanceCylindersInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200CylinderCreateOrConnectWithoutMaintenanceCylindersInputSchema).optional(),
+  upsert: z.lazy(() => Fm200CylinderUpsertWithoutMaintenanceCylindersInputSchema).optional(),
+  connect: z.lazy(() => Fm200CylinderWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => Fm200CylinderUpdateToOneWithWhereWithoutMaintenanceCylindersInputSchema), z.lazy(() => Fm200CylinderUpdateWithoutMaintenanceCylindersInputSchema), z.lazy(() => Fm200CylinderUncheckedUpdateWithoutMaintenanceCylindersInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200LocationCreateNestedOneWithoutTightnessTestsInputSchema: z.ZodType<Prisma.Fm200LocationCreateNestedOneWithoutTightnessTestsInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutTightnessTestsInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutTightnessTestsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200LocationCreateOrConnectWithoutTightnessTestsInputSchema).optional(),
+  connect: z.lazy(() => Fm200LocationWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUpdateOneRequiredWithoutTightnessTestsNestedInputSchema: z.ZodType<Prisma.Fm200LocationUpdateOneRequiredWithoutTightnessTestsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutTightnessTestsInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutTightnessTestsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200LocationCreateOrConnectWithoutTightnessTestsInputSchema).optional(),
+  upsert: z.lazy(() => Fm200LocationUpsertWithoutTightnessTestsInputSchema).optional(),
+  connect: z.lazy(() => Fm200LocationWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => Fm200LocationUpdateToOneWithWhereWithoutTightnessTestsInputSchema), z.lazy(() => Fm200LocationUpdateWithoutTightnessTestsInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutTightnessTestsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200LocationCreateNestedOneWithoutWorkOrdersInputSchema: z.ZodType<Prisma.Fm200LocationCreateNestedOneWithoutWorkOrdersInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutWorkOrdersInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutWorkOrdersInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200LocationCreateOrConnectWithoutWorkOrdersInputSchema).optional(),
+  connect: z.lazy(() => Fm200LocationWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderCreateNestedOneWithoutWorkOrdersInputSchema: z.ZodType<Prisma.Fm200CylinderCreateNestedOneWithoutWorkOrdersInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200CylinderCreateWithoutWorkOrdersInputSchema), z.lazy(() => Fm200CylinderUncheckedCreateWithoutWorkOrdersInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200CylinderCreateOrConnectWithoutWorkOrdersInputSchema).optional(),
+  connect: z.lazy(() => Fm200CylinderWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceCreateNestedManyWithoutWorkOrderInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceCreateNestedManyWithoutWorkOrderInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200WorkOrderEvidenceCreateWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceCreateWithoutWorkOrderInputSchema).array(), z.lazy(() => Fm200WorkOrderEvidenceUncheckedCreateWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceUncheckedCreateWithoutWorkOrderInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200WorkOrderEvidenceCreateOrConnectWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceCreateOrConnectWithoutWorkOrderInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200WorkOrderEvidenceCreateManyWorkOrderInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceUncheckedCreateNestedManyWithoutWorkOrderInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceUncheckedCreateNestedManyWithoutWorkOrderInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200WorkOrderEvidenceCreateWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceCreateWithoutWorkOrderInputSchema).array(), z.lazy(() => Fm200WorkOrderEvidenceUncheckedCreateWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceUncheckedCreateWithoutWorkOrderInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200WorkOrderEvidenceCreateOrConnectWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceCreateOrConnectWithoutWorkOrderInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200WorkOrderEvidenceCreateManyWorkOrderInputEnvelopeSchema).optional(),
+  connect: z.union([ z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200LocationUpdateOneRequiredWithoutWorkOrdersNestedInputSchema: z.ZodType<Prisma.Fm200LocationUpdateOneRequiredWithoutWorkOrdersNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutWorkOrdersInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutWorkOrdersInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200LocationCreateOrConnectWithoutWorkOrdersInputSchema).optional(),
+  upsert: z.lazy(() => Fm200LocationUpsertWithoutWorkOrdersInputSchema).optional(),
+  connect: z.lazy(() => Fm200LocationWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => Fm200LocationUpdateToOneWithWhereWithoutWorkOrdersInputSchema), z.lazy(() => Fm200LocationUpdateWithoutWorkOrdersInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutWorkOrdersInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200CylinderUpdateOneWithoutWorkOrdersNestedInputSchema: z.ZodType<Prisma.Fm200CylinderUpdateOneWithoutWorkOrdersNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200CylinderCreateWithoutWorkOrdersInputSchema), z.lazy(() => Fm200CylinderUncheckedCreateWithoutWorkOrdersInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200CylinderCreateOrConnectWithoutWorkOrdersInputSchema).optional(),
+  upsert: z.lazy(() => Fm200CylinderUpsertWithoutWorkOrdersInputSchema).optional(),
+  disconnect: z.union([ z.boolean(),z.lazy(() => Fm200CylinderWhereInputSchema) ]).optional(),
+  delete: z.union([ z.boolean(),z.lazy(() => Fm200CylinderWhereInputSchema) ]).optional(),
+  connect: z.lazy(() => Fm200CylinderWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => Fm200CylinderUpdateToOneWithWhereWithoutWorkOrdersInputSchema), z.lazy(() => Fm200CylinderUpdateWithoutWorkOrdersInputSchema), z.lazy(() => Fm200CylinderUncheckedUpdateWithoutWorkOrdersInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceUpdateManyWithoutWorkOrderNestedInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceUpdateManyWithoutWorkOrderNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200WorkOrderEvidenceCreateWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceCreateWithoutWorkOrderInputSchema).array(), z.lazy(() => Fm200WorkOrderEvidenceUncheckedCreateWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceUncheckedCreateWithoutWorkOrderInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200WorkOrderEvidenceCreateOrConnectWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceCreateOrConnectWithoutWorkOrderInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200WorkOrderEvidenceUpsertWithWhereUniqueWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceUpsertWithWhereUniqueWithoutWorkOrderInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200WorkOrderEvidenceCreateManyWorkOrderInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200WorkOrderEvidenceUpdateWithWhereUniqueWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceUpdateWithWhereUniqueWithoutWorkOrderInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200WorkOrderEvidenceUpdateManyWithWhereWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceUpdateManyWithWhereWithoutWorkOrderInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200WorkOrderEvidenceScalarWhereInputSchema), z.lazy(() => Fm200WorkOrderEvidenceScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceUncheckedUpdateManyWithoutWorkOrderNestedInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceUncheckedUpdateManyWithoutWorkOrderNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200WorkOrderEvidenceCreateWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceCreateWithoutWorkOrderInputSchema).array(), z.lazy(() => Fm200WorkOrderEvidenceUncheckedCreateWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceUncheckedCreateWithoutWorkOrderInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => Fm200WorkOrderEvidenceCreateOrConnectWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceCreateOrConnectWithoutWorkOrderInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => Fm200WorkOrderEvidenceUpsertWithWhereUniqueWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceUpsertWithWhereUniqueWithoutWorkOrderInputSchema).array() ]).optional(),
+  createMany: z.lazy(() => Fm200WorkOrderEvidenceCreateManyWorkOrderInputEnvelopeSchema).optional(),
+  set: z.union([ z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema), z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => Fm200WorkOrderEvidenceUpdateWithWhereUniqueWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceUpdateWithWhereUniqueWithoutWorkOrderInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => Fm200WorkOrderEvidenceUpdateManyWithWhereWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceUpdateManyWithWhereWithoutWorkOrderInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => Fm200WorkOrderEvidenceScalarWhereInputSchema), z.lazy(() => Fm200WorkOrderEvidenceScalarWhereInputSchema).array() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderCreateNestedOneWithoutEvidencesInputSchema: z.ZodType<Prisma.Fm200WorkOrderCreateNestedOneWithoutEvidencesInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200WorkOrderCreateWithoutEvidencesInputSchema), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutEvidencesInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200WorkOrderCreateOrConnectWithoutEvidencesInputSchema).optional(),
+  connect: z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderUpdateOneRequiredWithoutEvidencesNestedInputSchema: z.ZodType<Prisma.Fm200WorkOrderUpdateOneRequiredWithoutEvidencesNestedInput> = z.object({
+  create: z.union([ z.lazy(() => Fm200WorkOrderCreateWithoutEvidencesInputSchema), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutEvidencesInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => Fm200WorkOrderCreateOrConnectWithoutEvidencesInputSchema).optional(),
+  upsert: z.lazy(() => Fm200WorkOrderUpsertWithoutEvidencesInputSchema).optional(),
+  connect: z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => Fm200WorkOrderUpdateToOneWithWhereWithoutEvidencesInputSchema), z.lazy(() => Fm200WorkOrderUpdateWithoutEvidencesInputSchema), z.lazy(() => Fm200WorkOrderUncheckedUpdateWithoutEvidencesInputSchema) ]).optional(),
+}).strict();
+
+export const FacilityCreateNestedOneWithoutFm200BuildingFloorsInputSchema: z.ZodType<Prisma.FacilityCreateNestedOneWithoutFm200BuildingFloorsInput> = z.object({
+  create: z.union([ z.lazy(() => FacilityCreateWithoutFm200BuildingFloorsInputSchema), z.lazy(() => FacilityUncheckedCreateWithoutFm200BuildingFloorsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => FacilityCreateOrConnectWithoutFm200BuildingFloorsInputSchema).optional(),
+  connect: z.lazy(() => FacilityWhereUniqueInputSchema).optional(),
+}).strict();
+
+export const FacilityUpdateOneRequiredWithoutFm200BuildingFloorsNestedInputSchema: z.ZodType<Prisma.FacilityUpdateOneRequiredWithoutFm200BuildingFloorsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => FacilityCreateWithoutFm200BuildingFloorsInputSchema), z.lazy(() => FacilityUncheckedCreateWithoutFm200BuildingFloorsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => FacilityCreateOrConnectWithoutFm200BuildingFloorsInputSchema).optional(),
+  upsert: z.lazy(() => FacilityUpsertWithoutFm200BuildingFloorsInputSchema).optional(),
+  connect: z.lazy(() => FacilityWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => FacilityUpdateToOneWithWhereWithoutFm200BuildingFloorsInputSchema), z.lazy(() => FacilityUpdateWithoutFm200BuildingFloorsInputSchema), z.lazy(() => FacilityUncheckedUpdateWithoutFm200BuildingFloorsInputSchema) ]).optional(),
+}).strict();
+
 export const NestedStringFilterSchema: z.ZodType<Prisma.NestedStringFilter> = z.object({
   equals: z.string().optional(),
   in: z.string().array().optional(),
@@ -67584,6 +72081,94 @@ export const FireSafetyAuditCreateManyFacilityInputEnvelopeSchema: z.ZodType<Pri
   skipDuplicates: z.boolean().optional(),
 }).strict();
 
+export const Fm200LocationCreateWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200LocationCreateWithoutFacilityInput> = z.object({
+  id: z.cuid().optional(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string().optional(),
+  roomType: z.string(),
+  customRoomName: z.string().optional().nullable(),
+  index: z.number().int().optional(),
+  systemUid: z.string(),
+  systemType: z.string().optional(),
+  panelType: z.string().optional().nullable(),
+  roomVolumeM3: z.number().optional().nullable(),
+  cylinderCount: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  cylinders: z.lazy(() => Fm200CylinderCreateNestedManyWithoutLocationInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentCreateNestedManyWithoutLocationInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionCreateNestedManyWithoutLocationInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceCreateNestedManyWithoutLocationInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestCreateNestedManyWithoutLocationInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderCreateNestedManyWithoutLocationInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedCreateWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedCreateWithoutFacilityInput> = z.object({
+  id: z.cuid().optional(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string().optional(),
+  roomType: z.string(),
+  customRoomName: z.string().optional().nullable(),
+  index: z.number().int().optional(),
+  systemUid: z.string(),
+  systemType: z.string().optional(),
+  panelType: z.string().optional().nullable(),
+  roomVolumeM3: z.number().optional().nullable(),
+  cylinderCount: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  cylinders: z.lazy(() => Fm200CylinderUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationCreateOrConnectWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200LocationCreateOrConnectWithoutFacilityInput> = z.object({
+  where: z.lazy(() => Fm200LocationWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutFacilityInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutFacilityInputSchema) ]),
+}).strict();
+
+export const Fm200LocationCreateManyFacilityInputEnvelopeSchema: z.ZodType<Prisma.Fm200LocationCreateManyFacilityInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => Fm200LocationCreateManyFacilityInputSchema), z.lazy(() => Fm200LocationCreateManyFacilityInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200BuildingFloorCreateWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200BuildingFloorCreateWithoutFacilityInput> = z.object({
+  id: z.cuid().optional(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200BuildingFloorUncheckedCreateWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200BuildingFloorUncheckedCreateWithoutFacilityInput> = z.object({
+  id: z.cuid().optional(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200BuildingFloorCreateOrConnectWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200BuildingFloorCreateOrConnectWithoutFacilityInput> = z.object({
+  where: z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200BuildingFloorCreateWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorUncheckedCreateWithoutFacilityInputSchema) ]),
+}).strict();
+
+export const Fm200BuildingFloorCreateManyFacilityInputEnvelopeSchema: z.ZodType<Prisma.Fm200BuildingFloorCreateManyFacilityInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => Fm200BuildingFloorCreateManyFacilityInputSchema), z.lazy(() => Fm200BuildingFloorCreateManyFacilityInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
 export const ActivityLogUpsertWithWhereUniqueWithoutFacilityInputSchema: z.ZodType<Prisma.ActivityLogUpsertWithWhereUniqueWithoutFacilityInput> = z.object({
   where: z.lazy(() => ActivityLogWhereUniqueInputSchema),
   update: z.union([ z.lazy(() => ActivityLogUpdateWithoutFacilityInputSchema), z.lazy(() => ActivityLogUncheckedUpdateWithoutFacilityInputSchema) ]),
@@ -69067,6 +73652,74 @@ export const FireSafetyAuditScalarWhereInputSchema: z.ZodType<Prisma.FireSafetyA
   updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
 }).strict();
 
+export const Fm200LocationUpsertWithWhereUniqueWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200LocationUpsertWithWhereUniqueWithoutFacilityInput> = z.object({
+  where: z.lazy(() => Fm200LocationWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => Fm200LocationUpdateWithoutFacilityInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutFacilityInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutFacilityInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutFacilityInputSchema) ]),
+}).strict();
+
+export const Fm200LocationUpdateWithWhereUniqueWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200LocationUpdateWithWhereUniqueWithoutFacilityInput> = z.object({
+  where: z.lazy(() => Fm200LocationWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => Fm200LocationUpdateWithoutFacilityInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutFacilityInputSchema) ]),
+}).strict();
+
+export const Fm200LocationUpdateManyWithWhereWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200LocationUpdateManyWithWhereWithoutFacilityInput> = z.object({
+  where: z.lazy(() => Fm200LocationScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => Fm200LocationUpdateManyMutationInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityInputSchema) ]),
+}).strict();
+
+export const Fm200LocationScalarWhereInputSchema: z.ZodType<Prisma.Fm200LocationScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200LocationScalarWhereInputSchema), z.lazy(() => Fm200LocationScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200LocationScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200LocationScalarWhereInputSchema), z.lazy(() => Fm200LocationScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  facilityId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  building: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  block: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  floor: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  roomType: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  customRoomName: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  index: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  systemUid: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  systemType: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  panelType: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  cylinderCount: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  isActive: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const Fm200BuildingFloorUpsertWithWhereUniqueWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200BuildingFloorUpsertWithWhereUniqueWithoutFacilityInput> = z.object({
+  where: z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => Fm200BuildingFloorUpdateWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorUncheckedUpdateWithoutFacilityInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200BuildingFloorCreateWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorUncheckedCreateWithoutFacilityInputSchema) ]),
+}).strict();
+
+export const Fm200BuildingFloorUpdateWithWhereUniqueWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200BuildingFloorUpdateWithWhereUniqueWithoutFacilityInput> = z.object({
+  where: z.lazy(() => Fm200BuildingFloorWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => Fm200BuildingFloorUpdateWithoutFacilityInputSchema), z.lazy(() => Fm200BuildingFloorUncheckedUpdateWithoutFacilityInputSchema) ]),
+}).strict();
+
+export const Fm200BuildingFloorUpdateManyWithWhereWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200BuildingFloorUpdateManyWithWhereWithoutFacilityInput> = z.object({
+  where: z.lazy(() => Fm200BuildingFloorScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => Fm200BuildingFloorUpdateManyMutationInputSchema), z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityInputSchema) ]),
+}).strict();
+
+export const Fm200BuildingFloorScalarWhereInputSchema: z.ZodType<Prisma.Fm200BuildingFloorScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200BuildingFloorScalarWhereInputSchema), z.lazy(() => Fm200BuildingFloorScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200BuildingFloorScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200BuildingFloorScalarWhereInputSchema), z.lazy(() => Fm200BuildingFloorScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  facilityId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  building: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  block: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  floor: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
 export const ExtraordinaryIncidentCreateWithoutCategoryInputSchema: z.ZodType<Prisma.ExtraordinaryIncidentCreateWithoutCategoryInput> = z.object({
   locationDetail: z.string(),
   incidentDate: z.coerce.date(),
@@ -69796,6 +74449,8 @@ export const FacilityCreateWithoutIncidentsInputSchema: z.ZodType<Prisma.Facilit
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutIncidentsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutIncidentsInput> = z.object({
@@ -69866,6 +74521,8 @@ export const FacilityUncheckedCreateWithoutIncidentsInputSchema: z.ZodType<Prism
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutIncidentsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutIncidentsInput> = z.object({
@@ -70123,6 +74780,8 @@ export const FacilityUpdateWithoutIncidentsInputSchema: z.ZodType<Prisma.Facilit
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutIncidentsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutIncidentsInput> = z.object({
@@ -70193,6 +74852,8 @@ export const FacilityUncheckedUpdateWithoutIncidentsInputSchema: z.ZodType<Prism
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const IncidentRootCauseUpsertWithoutIncidentsInputSchema: z.ZodType<Prisma.IncidentRootCauseUpsertWithoutIncidentsInput> = z.object({
@@ -70313,6 +74974,8 @@ export const FacilityCreateWithoutActivityLogsInputSchema: z.ZodType<Prisma.Faci
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutActivityLogsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutActivityLogsInput> = z.object({
@@ -70383,6 +75046,8 @@ export const FacilityUncheckedCreateWithoutActivityLogsInputSchema: z.ZodType<Pr
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutActivityLogsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutActivityLogsInput> = z.object({
@@ -70509,6 +75174,8 @@ export const FacilityUpdateWithoutActivityLogsInputSchema: z.ZodType<Prisma.Faci
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutActivityLogsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutActivityLogsInput> = z.object({
@@ -70579,6 +75246,8 @@ export const FacilityUncheckedUpdateWithoutActivityLogsInputSchema: z.ZodType<Pr
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const ProfessionalUpsertWithoutActivityLogsInputSchema: z.ZodType<Prisma.ProfessionalUpsertWithoutActivityLogsInput> = z.object({
@@ -70695,6 +75364,8 @@ export const FacilityCreateWithoutEmployeeCountHistoryInputSchema: z.ZodType<Pri
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutEmployeeCountHistoryInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutEmployeeCountHistoryInput> = z.object({
@@ -70765,6 +75436,8 @@ export const FacilityUncheckedCreateWithoutEmployeeCountHistoryInputSchema: z.Zo
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutEmployeeCountHistoryInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutEmployeeCountHistoryInput> = z.object({
@@ -70851,6 +75524,8 @@ export const FacilityUpdateWithoutEmployeeCountHistoryInputSchema: z.ZodType<Pri
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutEmployeeCountHistoryInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutEmployeeCountHistoryInput> = z.object({
@@ -70921,6 +75596,8 @@ export const FacilityUncheckedUpdateWithoutEmployeeCountHistoryInputSchema: z.Zo
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateWithoutBuildingsInputSchema: z.ZodType<Prisma.FacilityCreateWithoutBuildingsInput> = z.object({
@@ -70991,6 +75668,8 @@ export const FacilityCreateWithoutBuildingsInputSchema: z.ZodType<Prisma.Facilit
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBuildingsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBuildingsInput> = z.object({
@@ -71061,6 +75740,8 @@ export const FacilityUncheckedCreateWithoutBuildingsInputSchema: z.ZodType<Prism
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBuildingsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBuildingsInput> = z.object({
@@ -71203,6 +75884,8 @@ export const FacilityUpdateWithoutBuildingsInputSchema: z.ZodType<Prisma.Facilit
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBuildingsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBuildingsInput> = z.object({
@@ -71273,6 +75956,8 @@ export const FacilityUncheckedUpdateWithoutBuildingsInputSchema: z.ZodType<Prism
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUpsertWithWhereUniqueWithoutFacilityBuildingInputSchema: z.ZodType<Prisma.FacilityLocationUpsertWithWhereUniqueWithoutFacilityBuildingInput> = z.object({
@@ -71359,6 +76044,8 @@ export const FacilityCreateWithoutUsersInputSchema: z.ZodType<Prisma.FacilityCre
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutUsersInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutUsersInput> = z.object({
@@ -71429,6 +76116,8 @@ export const FacilityUncheckedCreateWithoutUsersInputSchema: z.ZodType<Prisma.Fa
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutUsersInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutUsersInput> = z.object({
@@ -71600,6 +76289,8 @@ export const FacilityUpdateWithoutUsersInputSchema: z.ZodType<Prisma.FacilityUpd
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutUsersInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutUsersInput> = z.object({
@@ -71670,6 +76361,8 @@ export const FacilityUncheckedUpdateWithoutUsersInputSchema: z.ZodType<Prisma.Fa
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const UserUpsertWithoutFacilitiesInputSchema: z.ZodType<Prisma.UserUpsertWithoutFacilitiesInput> = z.object({
@@ -72047,6 +76740,8 @@ export const FacilityCreateWithoutReconciliationsInputSchema: z.ZodType<Prisma.F
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutReconciliationsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutReconciliationsInput> = z.object({
@@ -72117,6 +76812,8 @@ export const FacilityUncheckedCreateWithoutReconciliationsInputSchema: z.ZodType
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutReconciliationsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutReconciliationsInput> = z.object({
@@ -72233,6 +76930,8 @@ export const FacilityUpdateWithoutReconciliationsInputSchema: z.ZodType<Prisma.F
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutReconciliationsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutReconciliationsInput> = z.object({
@@ -72303,6 +77002,8 @@ export const FacilityUncheckedUpdateWithoutReconciliationsInputSchema: z.ZodType
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const OSGBCompanyUpsertWithoutReconciliationsInputSchema: z.ZodType<Prisma.OSGBCompanyUpsertWithoutReconciliationsInput> = z.object({
@@ -72409,6 +77110,8 @@ export const FacilityCreateWithoutOhsBoardDepartmentsInputSchema: z.ZodType<Pris
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutOhsBoardDepartmentsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutOhsBoardDepartmentsInput> = z.object({
@@ -72479,6 +77182,8 @@ export const FacilityUncheckedCreateWithoutOhsBoardDepartmentsInputSchema: z.Zod
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutOhsBoardDepartmentsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutOhsBoardDepartmentsInput> = z.object({
@@ -72662,6 +77367,8 @@ export const FacilityUpdateWithoutOhsBoardDepartmentsInputSchema: z.ZodType<Pris
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutOhsBoardDepartmentsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutOhsBoardDepartmentsInput> = z.object({
@@ -72732,6 +77439,8 @@ export const FacilityUncheckedUpdateWithoutOhsBoardDepartmentsInputSchema: z.Zod
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const OhsBoardDecisionUpsertWithWhereUniqueWithoutDepartmentInputSchema: z.ZodType<Prisma.OhsBoardDecisionUpsertWithWhereUniqueWithoutDepartmentInput> = z.object({
@@ -72888,6 +77597,8 @@ export const FacilityCreateWithoutAssignmentsInputSchema: z.ZodType<Prisma.Facil
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutAssignmentsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutAssignmentsInput> = z.object({
@@ -72958,6 +77669,8 @@ export const FacilityUncheckedCreateWithoutAssignmentsInputSchema: z.ZodType<Pri
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutAssignmentsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutAssignmentsInput> = z.object({
@@ -73146,6 +77859,8 @@ export const FacilityUpdateWithoutAssignmentsInputSchema: z.ZodType<Prisma.Facil
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutAssignmentsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutAssignmentsInput> = z.object({
@@ -73216,6 +77931,8 @@ export const FacilityUncheckedUpdateWithoutAssignmentsInputSchema: z.ZodType<Pri
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const ProfessionalUpsertWithoutAssignmentsInputSchema: z.ZodType<Prisma.ProfessionalUpsertWithoutAssignmentsInput> = z.object({
@@ -73443,6 +78160,8 @@ export const FacilityCreateWithoutMonthlyHrDataInputSchema: z.ZodType<Prisma.Fac
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutMonthlyHrDataInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutMonthlyHrDataInput> = z.object({
@@ -73513,6 +78232,8 @@ export const FacilityUncheckedCreateWithoutMonthlyHrDataInputSchema: z.ZodType<P
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutMonthlyHrDataInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutMonthlyHrDataInput> = z.object({
@@ -73599,6 +78320,8 @@ export const FacilityUpdateWithoutMonthlyHrDataInputSchema: z.ZodType<Prisma.Fac
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutMonthlyHrDataInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutMonthlyHrDataInput> = z.object({
@@ -73669,6 +78392,8 @@ export const FacilityUncheckedUpdateWithoutMonthlyHrDataInputSchema: z.ZodType<P
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateWithoutMonthlyAccidentInputSchema: z.ZodType<Prisma.FacilityCreateWithoutMonthlyAccidentInput> = z.object({
@@ -73739,6 +78464,8 @@ export const FacilityCreateWithoutMonthlyAccidentInputSchema: z.ZodType<Prisma.F
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutMonthlyAccidentInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutMonthlyAccidentInput> = z.object({
@@ -73809,6 +78536,8 @@ export const FacilityUncheckedCreateWithoutMonthlyAccidentInputSchema: z.ZodType
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutMonthlyAccidentInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutMonthlyAccidentInput> = z.object({
@@ -73895,6 +78624,8 @@ export const FacilityUpdateWithoutMonthlyAccidentInputSchema: z.ZodType<Prisma.F
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutMonthlyAccidentInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutMonthlyAccidentInput> = z.object({
@@ -73965,6 +78696,8 @@ export const FacilityUncheckedUpdateWithoutMonthlyAccidentInputSchema: z.ZodType
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const CategoryCreateWithoutChildrenInputSchema: z.ZodType<Prisma.CategoryCreateWithoutChildrenInput> = z.object({
@@ -74964,6 +79697,8 @@ export const FacilityCreateWithoutNotebookPagesInputSchema: z.ZodType<Prisma.Fac
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutNotebookPagesInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutNotebookPagesInput> = z.object({
@@ -75034,6 +79769,8 @@ export const FacilityUncheckedCreateWithoutNotebookPagesInputSchema: z.ZodType<P
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutNotebookPagesInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutNotebookPagesInput> = z.object({
@@ -75136,6 +79873,8 @@ export const FacilityUpdateWithoutNotebookPagesInputSchema: z.ZodType<Prisma.Fac
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutNotebookPagesInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutNotebookPagesInput> = z.object({
@@ -75206,6 +79945,8 @@ export const FacilityUncheckedUpdateWithoutNotebookPagesInputSchema: z.ZodType<P
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const CategoryCreateWithoutMainNotebookItemsInputSchema: z.ZodType<Prisma.CategoryCreateWithoutMainNotebookItemsInput> = z.object({
@@ -75932,6 +80673,8 @@ export const FacilityCreateWithoutRiskExpertFacilitiesInputSchema: z.ZodType<Pri
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutRiskExpertFacilitiesInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutRiskExpertFacilitiesInput> = z.object({
@@ -76002,6 +80745,8 @@ export const FacilityUncheckedCreateWithoutRiskExpertFacilitiesInputSchema: z.Zo
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutRiskExpertFacilitiesInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutRiskExpertFacilitiesInput> = z.object({
@@ -76088,6 +80833,8 @@ export const FacilityUpdateWithoutRiskExpertFacilitiesInputSchema: z.ZodType<Pri
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutRiskExpertFacilitiesInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutRiskExpertFacilitiesInput> = z.object({
@@ -76158,6 +80905,8 @@ export const FacilityUncheckedUpdateWithoutRiskExpertFacilitiesInputSchema: z.Zo
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const RiskAuditLogCreateWithoutRiskInputSchema: z.ZodType<Prisma.RiskAuditLogCreateWithoutRiskInput> = z.object({
@@ -76790,6 +81539,8 @@ export const FacilityCreateWithoutRiskDepartmentSettingsInputSchema: z.ZodType<P
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutRiskDepartmentSettingsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutRiskDepartmentSettingsInput> = z.object({
@@ -76860,6 +81611,8 @@ export const FacilityUncheckedCreateWithoutRiskDepartmentSettingsInputSchema: z.
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutRiskDepartmentSettingsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutRiskDepartmentSettingsInput> = z.object({
@@ -76946,6 +81699,8 @@ export const FacilityUpdateWithoutRiskDepartmentSettingsInputSchema: z.ZodType<P
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutRiskDepartmentSettingsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutRiskDepartmentSettingsInput> = z.object({
@@ -77016,6 +81771,8 @@ export const FacilityUncheckedUpdateWithoutRiskDepartmentSettingsInputSchema: z.
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateWithoutRiskCategorySettingsInputSchema: z.ZodType<Prisma.FacilityCreateWithoutRiskCategorySettingsInput> = z.object({
@@ -77086,6 +81843,8 @@ export const FacilityCreateWithoutRiskCategorySettingsInputSchema: z.ZodType<Pri
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutRiskCategorySettingsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutRiskCategorySettingsInput> = z.object({
@@ -77156,6 +81915,8 @@ export const FacilityUncheckedCreateWithoutRiskCategorySettingsInputSchema: z.Zo
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutRiskCategorySettingsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutRiskCategorySettingsInput> = z.object({
@@ -77265,6 +82026,8 @@ export const FacilityUpdateWithoutRiskCategorySettingsInputSchema: z.ZodType<Pri
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutRiskCategorySettingsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutRiskCategorySettingsInput> = z.object({
@@ -77335,6 +82098,8 @@ export const FacilityUncheckedUpdateWithoutRiskCategorySettingsInputSchema: z.Zo
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const RiskSubCategorySettingUpsertWithWhereUniqueWithoutCategoryInputSchema: z.ZodType<Prisma.RiskSubCategorySettingUpsertWithWhereUniqueWithoutCategoryInput> = z.object({
@@ -79012,6 +83777,8 @@ export const FacilityCreateWithoutFacilityHazmatItemsInputSchema: z.ZodType<Pris
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutFacilityHazmatItemsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutFacilityHazmatItemsInput> = z.object({
@@ -79082,6 +83849,8 @@ export const FacilityUncheckedCreateWithoutFacilityHazmatItemsInputSchema: z.Zod
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutFacilityHazmatItemsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutFacilityHazmatItemsInput> = z.object({
@@ -79264,6 +84033,8 @@ export const FacilityUpdateWithoutFacilityHazmatItemsInputSchema: z.ZodType<Pris
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutFacilityHazmatItemsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutFacilityHazmatItemsInput> = z.object({
@@ -79334,6 +84105,8 @@ export const FacilityUncheckedUpdateWithoutFacilityHazmatItemsInputSchema: z.Zod
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const HazmatMaterialUpsertWithoutFacilityItemsInputSchema: z.ZodType<Prisma.HazmatMaterialUpsertWithoutFacilityItemsInput> = z.object({
@@ -79512,6 +84285,8 @@ export const FacilityCreateWithoutHazmatInventoryItemsInputSchema: z.ZodType<Pri
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutHazmatInventoryItemsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutHazmatInventoryItemsInput> = z.object({
@@ -79582,6 +84357,8 @@ export const FacilityUncheckedCreateWithoutHazmatInventoryItemsInputSchema: z.Zo
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutHazmatInventoryItemsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutHazmatInventoryItemsInput> = z.object({
@@ -79817,6 +84594,8 @@ export const FacilityUpdateWithoutHazmatInventoryItemsInputSchema: z.ZodType<Pri
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutHazmatInventoryItemsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutHazmatInventoryItemsInput> = z.object({
@@ -79887,6 +84666,8 @@ export const FacilityUncheckedUpdateWithoutHazmatInventoryItemsInputSchema: z.Zo
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUpsertWithoutHazmatMaterialsInputSchema: z.ZodType<Prisma.FacilityLocationUpsertWithoutHazmatMaterialsInput> = z.object({
@@ -80358,6 +85139,8 @@ export const FacilityCreateWithoutSpillKitsInputSchema: z.ZodType<Prisma.Facilit
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutSpillKitsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutSpillKitsInput> = z.object({
@@ -80428,6 +85211,8 @@ export const FacilityUncheckedCreateWithoutSpillKitsInputSchema: z.ZodType<Prism
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutSpillKitsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutSpillKitsInput> = z.object({
@@ -80582,6 +85367,8 @@ export const FacilityUpdateWithoutSpillKitsInputSchema: z.ZodType<Prisma.Facilit
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutSpillKitsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutSpillKitsInput> = z.object({
@@ -80652,6 +85439,8 @@ export const FacilityUncheckedUpdateWithoutSpillKitsInputSchema: z.ZodType<Prism
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const HazmatSpillKitCreateWithoutItemsInputSchema: z.ZodType<Prisma.HazmatSpillKitCreateWithoutItemsInput> = z.object({
@@ -81369,6 +86158,8 @@ export const FacilityCreateWithoutSpillKitMasterItemsInputSchema: z.ZodType<Pris
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutSpillKitMasterItemsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutSpillKitMasterItemsInput> = z.object({
@@ -81439,6 +86230,8 @@ export const FacilityUncheckedCreateWithoutSpillKitMasterItemsInputSchema: z.Zod
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutSpillKitMasterItemsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutSpillKitMasterItemsInput> = z.object({
@@ -81525,6 +86318,8 @@ export const FacilityUpdateWithoutSpillKitMasterItemsInputSchema: z.ZodType<Pris
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutSpillKitMasterItemsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutSpillKitMasterItemsInput> = z.object({
@@ -81595,6 +86390,8 @@ export const FacilityUncheckedUpdateWithoutSpillKitMasterItemsInputSchema: z.Zod
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateWithoutHazmatEyewashAnalysesInputSchema: z.ZodType<Prisma.FacilityCreateWithoutHazmatEyewashAnalysesInput> = z.object({
@@ -81665,6 +86462,8 @@ export const FacilityCreateWithoutHazmatEyewashAnalysesInputSchema: z.ZodType<Pr
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutHazmatEyewashAnalysesInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutHazmatEyewashAnalysesInput> = z.object({
@@ -81735,6 +86534,8 @@ export const FacilityUncheckedCreateWithoutHazmatEyewashAnalysesInputSchema: z.Z
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutHazmatEyewashAnalysesInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutHazmatEyewashAnalysesInput> = z.object({
@@ -81821,6 +86622,8 @@ export const FacilityUpdateWithoutHazmatEyewashAnalysesInputSchema: z.ZodType<Pr
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutHazmatEyewashAnalysesInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutHazmatEyewashAnalysesInput> = z.object({
@@ -81891,6 +86694,8 @@ export const FacilityUncheckedUpdateWithoutHazmatEyewashAnalysesInputSchema: z.Z
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const HazmatCategoryCreateWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.HazmatCategoryCreateWithoutHazmatIncidentsInput> = z.object({
@@ -82049,6 +86854,8 @@ export const FacilityCreateWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.F
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutHazmatIncidentsInput> = z.object({
@@ -82119,6 +86926,8 @@ export const FacilityUncheckedCreateWithoutHazmatIncidentsInputSchema: z.ZodType
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutHazmatIncidentsInput> = z.object({
@@ -82526,6 +87335,8 @@ export const FacilityUpdateWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.F
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutHazmatIncidentsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutHazmatIncidentsInput> = z.object({
@@ -82596,6 +87407,8 @@ export const FacilityUncheckedUpdateWithoutHazmatIncidentsInputSchema: z.ZodType
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUpsertWithoutIncidentsInputSchema: z.ZodType<Prisma.FacilityLocationUpsertWithoutIncidentsInput> = z.object({
@@ -83050,6 +87863,8 @@ export const FacilityCreateWithoutFireResponsiblesInputSchema: z.ZodType<Prisma.
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutFireResponsiblesInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutFireResponsiblesInput> = z.object({
@@ -83120,6 +87935,8 @@ export const FacilityUncheckedCreateWithoutFireResponsiblesInputSchema: z.ZodTyp
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutFireResponsiblesInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutFireResponsiblesInput> = z.object({
@@ -83268,6 +88085,8 @@ export const FacilityUpdateWithoutFireResponsiblesInputSchema: z.ZodType<Prisma.
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutFireResponsiblesInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutFireResponsiblesInput> = z.object({
@@ -83338,6 +88157,8 @@ export const FacilityUncheckedUpdateWithoutFireResponsiblesInputSchema: z.ZodTyp
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FireEquipmentUpsertWithWhereUniqueWithoutResponsibleInputSchema: z.ZodType<Prisma.FireEquipmentUpsertWithWhereUniqueWithoutResponsibleInput> = z.object({
@@ -83424,6 +88245,8 @@ export const FacilityCreateWithoutFireEquipmentCompaniesInputSchema: z.ZodType<P
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutFireEquipmentCompaniesInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutFireEquipmentCompaniesInput> = z.object({
@@ -83494,6 +88317,8 @@ export const FacilityUncheckedCreateWithoutFireEquipmentCompaniesInputSchema: z.
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutFireEquipmentCompaniesInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutFireEquipmentCompaniesInput> = z.object({
@@ -83680,6 +88505,8 @@ export const FacilityUpdateWithoutFireEquipmentCompaniesInputSchema: z.ZodType<P
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutFireEquipmentCompaniesInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutFireEquipmentCompaniesInput> = z.object({
@@ -83750,6 +88577,8 @@ export const FacilityUncheckedUpdateWithoutFireEquipmentCompaniesInputSchema: z.
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FireEquipmentUpsertWithWhereUniqueWithoutCompanyInputSchema: z.ZodType<Prisma.FireEquipmentUpsertWithWhereUniqueWithoutCompanyInput> = z.object({
@@ -83954,6 +88783,8 @@ export const FacilityCreateWithoutFireEquipmentsInputSchema: z.ZodType<Prisma.Fa
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutFireEquipmentsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutFireEquipmentsInput> = z.object({
@@ -84024,6 +88855,8 @@ export const FacilityUncheckedCreateWithoutFireEquipmentsInputSchema: z.ZodType<
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutFireEquipmentsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutFireEquipmentsInput> = z.object({
@@ -84324,6 +89157,8 @@ export const FacilityUpdateWithoutFireEquipmentsInputSchema: z.ZodType<Prisma.Fa
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutFireEquipmentsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutFireEquipmentsInput> = z.object({
@@ -84394,6 +89229,8 @@ export const FacilityUncheckedUpdateWithoutFireEquipmentsInputSchema: z.ZodType<
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FireEquipmentResponsibleUpsertWithoutEquipmentsInputSchema: z.ZodType<Prisma.FireEquipmentResponsibleUpsertWithoutEquipmentsInput> = z.object({
@@ -84868,6 +89705,8 @@ export const FacilityCreateWithoutBuildContractorInputSchema: z.ZodType<Prisma.F
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBuildContractorInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBuildContractorInput> = z.object({
@@ -84938,6 +89777,8 @@ export const FacilityUncheckedCreateWithoutBuildContractorInputSchema: z.ZodType
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBuildContractorInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBuildContractorInput> = z.object({
@@ -85098,6 +89939,8 @@ export const FacilityUpdateWithoutBuildContractorInputSchema: z.ZodType<Prisma.F
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBuildContractorInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBuildContractorInput> = z.object({
@@ -85168,6 +90011,8 @@ export const FacilityUncheckedUpdateWithoutBuildContractorInputSchema: z.ZodType
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const BuildProjectUpsertWithWhereUniqueWithoutContractorInputSchema: z.ZodType<Prisma.BuildProjectUpsertWithWhereUniqueWithoutContractorInput> = z.object({
@@ -85254,6 +90099,8 @@ export const FacilityCreateWithoutBuildWorkTypeInputSchema: z.ZodType<Prisma.Fac
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBuildWorkTypeInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBuildWorkTypeInput> = z.object({
@@ -85324,6 +90171,8 @@ export const FacilityUncheckedCreateWithoutBuildWorkTypeInputSchema: z.ZodType<P
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBuildWorkTypeInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBuildWorkTypeInput> = z.object({
@@ -85484,6 +90333,8 @@ export const FacilityUpdateWithoutBuildWorkTypeInputSchema: z.ZodType<Prisma.Fac
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBuildWorkTypeInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBuildWorkTypeInput> = z.object({
@@ -85554,6 +90405,8 @@ export const FacilityUncheckedUpdateWithoutBuildWorkTypeInputSchema: z.ZodType<P
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const BuildProjectUpsertWithWhereUniqueWithoutWorkTypeInputSchema: z.ZodType<Prisma.BuildProjectUpsertWithWhereUniqueWithoutWorkTypeInput> = z.object({
@@ -85640,6 +90493,8 @@ export const FacilityCreateWithoutBuildProjectInputSchema: z.ZodType<Prisma.Faci
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBuildProjectInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBuildProjectInput> = z.object({
@@ -85710,6 +90565,8 @@ export const FacilityUncheckedCreateWithoutBuildProjectInputSchema: z.ZodType<Pr
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBuildProjectInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBuildProjectInput> = z.object({
@@ -86450,6 +91307,8 @@ export const FacilityUpdateWithoutBuildProjectInputSchema: z.ZodType<Prisma.Faci
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBuildProjectInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBuildProjectInput> = z.object({
@@ -86520,6 +91379,8 @@ export const FacilityUncheckedUpdateWithoutBuildProjectInputSchema: z.ZodType<Pr
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const UserUpsertWithoutBuildProjectInputSchema: z.ZodType<Prisma.UserUpsertWithoutBuildProjectInput> = z.object({
@@ -89954,6 +94815,8 @@ export const FacilityCreateWithoutBtAnaGruplarInputSchema: z.ZodType<Prisma.Faci
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBtAnaGruplarInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBtAnaGruplarInput> = z.object({
@@ -90024,6 +94887,8 @@ export const FacilityUncheckedCreateWithoutBtAnaGruplarInputSchema: z.ZodType<Pr
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBtAnaGruplarInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBtAnaGruplarInput> = z.object({
@@ -90126,6 +94991,8 @@ export const FacilityUpdateWithoutBtAnaGruplarInputSchema: z.ZodType<Prisma.Faci
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBtAnaGruplarInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBtAnaGruplarInput> = z.object({
@@ -90196,6 +95063,8 @@ export const FacilityUncheckedUpdateWithoutBtAnaGruplarInputSchema: z.ZodType<Pr
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const BTSoruBankasiCreateWithoutDenetlenenAlanInputSchema: z.ZodType<Prisma.BTSoruBankasiCreateWithoutDenetlenenAlanInput> = z.object({
@@ -90297,6 +95166,8 @@ export const FacilityCreateWithoutBtDenetlenenAlanlarInputSchema: z.ZodType<Pris
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBtDenetlenenAlanlarInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBtDenetlenenAlanlarInput> = z.object({
@@ -90367,6 +95238,8 @@ export const FacilityUncheckedCreateWithoutBtDenetlenenAlanlarInputSchema: z.Zod
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBtDenetlenenAlanlarInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBtDenetlenenAlanlarInput> = z.object({
@@ -90469,6 +95342,8 @@ export const FacilityUpdateWithoutBtDenetlenenAlanlarInputSchema: z.ZodType<Pris
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBtDenetlenenAlanlarInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBtDenetlenenAlanlarInput> = z.object({
@@ -90539,6 +95414,8 @@ export const FacilityUncheckedUpdateWithoutBtDenetlenenAlanlarInputSchema: z.Zod
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const BTSoruBankasiCreateWithoutKategoriInputSchema: z.ZodType<Prisma.BTSoruBankasiCreateWithoutKategoriInput> = z.object({
@@ -90640,6 +95517,8 @@ export const FacilityCreateWithoutBtKategorilerInputSchema: z.ZodType<Prisma.Fac
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBtKategorilerInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBtKategorilerInput> = z.object({
@@ -90710,6 +95589,8 @@ export const FacilityUncheckedCreateWithoutBtKategorilerInputSchema: z.ZodType<P
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBtKategorilerInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBtKategorilerInput> = z.object({
@@ -90812,6 +95693,8 @@ export const FacilityUpdateWithoutBtKategorilerInputSchema: z.ZodType<Prisma.Fac
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBtKategorilerInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBtKategorilerInput> = z.object({
@@ -90882,6 +95765,8 @@ export const FacilityUncheckedUpdateWithoutBtKategorilerInputSchema: z.ZodType<P
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const BTAnaGrupCreateWithoutSorularInputSchema: z.ZodType<Prisma.BTAnaGrupCreateWithoutSorularInput> = z.object({
@@ -91078,6 +95963,8 @@ export const FacilityCreateWithoutBtSoruBankasiInputSchema: z.ZodType<Prisma.Fac
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBtSoruBankasiInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBtSoruBankasiInput> = z.object({
@@ -91148,6 +96035,8 @@ export const FacilityUncheckedCreateWithoutBtSoruBankasiInputSchema: z.ZodType<P
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBtSoruBankasiInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBtSoruBankasiInput> = z.object({
@@ -91388,6 +96277,8 @@ export const FacilityUpdateWithoutBtSoruBankasiInputSchema: z.ZodType<Prisma.Fac
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBtSoruBankasiInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBtSoruBankasiInput> = z.object({
@@ -91458,6 +96349,8 @@ export const FacilityUncheckedUpdateWithoutBtSoruBankasiInputSchema: z.ZodType<P
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const BTTurCreateWithoutSorumluBirimlerInputSchema: z.ZodType<Prisma.BTTurCreateWithoutSorumluBirimlerInput> = z.object({
@@ -91631,6 +96524,8 @@ export const FacilityCreateWithoutBtSorumluBirimlerInputSchema: z.ZodType<Prisma
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBtSorumluBirimlerInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBtSorumluBirimlerInput> = z.object({
@@ -91701,6 +96596,8 @@ export const FacilityUncheckedCreateWithoutBtSorumluBirimlerInputSchema: z.ZodTy
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBtSorumluBirimlerInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBtSorumluBirimlerInput> = z.object({
@@ -91835,6 +96732,8 @@ export const FacilityUpdateWithoutBtSorumluBirimlerInputSchema: z.ZodType<Prisma
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBtSorumluBirimlerInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBtSorumluBirimlerInput> = z.object({
@@ -91905,6 +96804,8 @@ export const FacilityUncheckedUpdateWithoutBtSorumluBirimlerInputSchema: z.ZodTy
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const BTSorumluBirimCreateWithoutKisilerInputSchema: z.ZodType<Prisma.BTSorumluBirimCreateWithoutKisilerInput> = z.object({
@@ -92073,6 +96974,8 @@ export const FacilityCreateWithoutBtSorumluKisilerInputSchema: z.ZodType<Prisma.
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBtSorumluKisilerInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBtSorumluKisilerInput> = z.object({
@@ -92143,6 +97046,8 @@ export const FacilityUncheckedCreateWithoutBtSorumluKisilerInputSchema: z.ZodTyp
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBtSorumluKisilerInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBtSorumluKisilerInput> = z.object({
@@ -92289,6 +97194,8 @@ export const FacilityUpdateWithoutBtSorumluKisilerInputSchema: z.ZodType<Prisma.
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBtSorumluKisilerInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBtSorumluKisilerInput> = z.object({
@@ -92359,6 +97266,8 @@ export const FacilityUncheckedUpdateWithoutBtSorumluKisilerInputSchema: z.ZodTyp
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const BTSorumluBirimCreateWithoutTurlerInputSchema: z.ZodType<Prisma.BTSorumluBirimCreateWithoutTurlerInput> = z.object({
@@ -92560,6 +97469,8 @@ export const FacilityCreateWithoutBtTurlerInputSchema: z.ZodType<Prisma.Facility
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBtTurlerInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBtTurlerInput> = z.object({
@@ -92630,6 +97541,8 @@ export const FacilityUncheckedCreateWithoutBtTurlerInputSchema: z.ZodType<Prisma
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBtTurlerInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBtTurlerInput> = z.object({
@@ -92805,6 +97718,8 @@ export const FacilityUpdateWithoutBtTurlerInputSchema: z.ZodType<Prisma.Facility
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBtTurlerInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBtTurlerInput> = z.object({
@@ -92875,6 +97790,8 @@ export const FacilityUncheckedUpdateWithoutBtTurlerInputSchema: z.ZodType<Prisma
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const BTTurCreateWithoutDenetimEkibiInputSchema: z.ZodType<Prisma.BTTurCreateWithoutDenetimEkibiInput> = z.object({
@@ -93486,6 +98403,8 @@ export const FacilityCreateWithoutBtUygunsuzluklarInputSchema: z.ZodType<Prisma.
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutBtUygunsuzluklarInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutBtUygunsuzluklarInput> = z.object({
@@ -93556,6 +98475,8 @@ export const FacilityUncheckedCreateWithoutBtUygunsuzluklarInputSchema: z.ZodTyp
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutBtUygunsuzluklarInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutBtUygunsuzluklarInput> = z.object({
@@ -93801,6 +98722,8 @@ export const FacilityUpdateWithoutBtUygunsuzluklarInputSchema: z.ZodType<Prisma.
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutBtUygunsuzluklarInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutBtUygunsuzluklarInput> = z.object({
@@ -93871,6 +98794,8 @@ export const FacilityUncheckedUpdateWithoutBtUygunsuzluklarInputSchema: z.ZodTyp
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateWithoutLocationsInputSchema: z.ZodType<Prisma.FacilityCreateWithoutLocationsInput> = z.object({
@@ -93941,6 +98866,8 @@ export const FacilityCreateWithoutLocationsInputSchema: z.ZodType<Prisma.Facilit
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutLocationsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutLocationsInput> = z.object({
@@ -94011,6 +98938,8 @@ export const FacilityUncheckedCreateWithoutLocationsInputSchema: z.ZodType<Prism
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutLocationsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutLocationsInput> = z.object({
@@ -94692,6 +99621,8 @@ export const FacilityUpdateWithoutLocationsInputSchema: z.ZodType<Prisma.Facilit
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutLocationsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutLocationsInput> = z.object({
@@ -94762,6 +99693,8 @@ export const FacilityUncheckedUpdateWithoutLocationsInputSchema: z.ZodType<Prism
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityBuildingUpsertWithoutLocationsInputSchema: z.ZodType<Prisma.FacilityBuildingUpsertWithoutLocationsInput> = z.object({
@@ -95077,6 +100010,8 @@ export const FacilityCreateWithoutHazmatVehicleInputSchema: z.ZodType<Prisma.Fac
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutHazmatVehicleInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutHazmatVehicleInput> = z.object({
@@ -95147,6 +100082,8 @@ export const FacilityUncheckedCreateWithoutHazmatVehicleInputSchema: z.ZodType<P
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutHazmatVehicleInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutHazmatVehicleInput> = z.object({
@@ -95265,6 +100202,8 @@ export const FacilityUpdateWithoutHazmatVehicleInputSchema: z.ZodType<Prisma.Fac
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutHazmatVehicleInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutHazmatVehicleInput> = z.object({
@@ -95335,6 +100274,8 @@ export const FacilityUncheckedUpdateWithoutHazmatVehicleInputSchema: z.ZodType<P
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const HazmatInventoryItemUpsertWithWhereUniqueWithoutVehicleInputSchema: z.ZodType<Prisma.HazmatInventoryItemUpsertWithWhereUniqueWithoutVehicleInput> = z.object({
@@ -99149,6 +104090,8 @@ export const FacilityCreateWithoutIntegratedAuditsInputSchema: z.ZodType<Prisma.
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutIntegratedAuditsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutIntegratedAuditsInput> = z.object({
@@ -99219,6 +104162,8 @@ export const FacilityUncheckedCreateWithoutIntegratedAuditsInputSchema: z.ZodTyp
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutIntegratedAuditsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutIntegratedAuditsInput> = z.object({
@@ -99359,6 +104304,8 @@ export const FacilityUpdateWithoutIntegratedAuditsInputSchema: z.ZodType<Prisma.
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutIntegratedAuditsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutIntegratedAuditsInput> = z.object({
@@ -99429,6 +104376,8 @@ export const FacilityUncheckedUpdateWithoutIntegratedAuditsInputSchema: z.ZodTyp
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const IntegratedFindingUpsertWithWhereUniqueWithoutAuditInputSchema: z.ZodType<Prisma.IntegratedFindingUpsertWithWhereUniqueWithoutAuditInput> = z.object({
@@ -101292,6 +106241,8 @@ export const FacilityCreateWithoutChecklistSubmissionsInputSchema: z.ZodType<Pri
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutChecklistSubmissionsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutChecklistSubmissionsInput> = z.object({
@@ -101362,6 +106313,8 @@ export const FacilityUncheckedCreateWithoutChecklistSubmissionsInputSchema: z.Zo
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutChecklistSubmissionsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutChecklistSubmissionsInput> = z.object({
@@ -101642,6 +106595,8 @@ export const FacilityUpdateWithoutChecklistSubmissionsInputSchema: z.ZodType<Pri
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutChecklistSubmissionsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutChecklistSubmissionsInput> = z.object({
@@ -101712,6 +106667,8 @@ export const FacilityUncheckedUpdateWithoutChecklistSubmissionsInputSchema: z.Zo
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const ChecklistAnswerUpsertWithWhereUniqueWithoutSubmissionInputSchema: z.ZodType<Prisma.ChecklistAnswerUpsertWithWhereUniqueWithoutSubmissionInput> = z.object({
@@ -102351,6 +107308,8 @@ export const FacilityCreateWithoutOhsBoardPeriodInputSchema: z.ZodType<Prisma.Fa
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutOhsBoardPeriodInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutOhsBoardPeriodInput> = z.object({
@@ -102421,6 +107380,8 @@ export const FacilityUncheckedCreateWithoutOhsBoardPeriodInputSchema: z.ZodType<
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutOhsBoardPeriodInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutOhsBoardPeriodInput> = z.object({
@@ -102586,6 +107547,8 @@ export const FacilityUpdateWithoutOhsBoardPeriodInputSchema: z.ZodType<Prisma.Fa
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutOhsBoardPeriodInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutOhsBoardPeriodInput> = z.object({
@@ -102656,6 +107619,8 @@ export const FacilityUncheckedUpdateWithoutOhsBoardPeriodInputSchema: z.ZodType<
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const OhsBoardMeetingUpsertWithWhereUniqueWithoutPeriodInputSchema: z.ZodType<Prisma.OhsBoardMeetingUpsertWithWhereUniqueWithoutPeriodInput> = z.object({
@@ -102758,6 +107723,8 @@ export const FacilityCreateWithoutOhsBoardMeetingsInputSchema: z.ZodType<Prisma.
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutOhsBoardMeetingsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutOhsBoardMeetingsInput> = z.object({
@@ -102828,6 +107795,8 @@ export const FacilityUncheckedCreateWithoutOhsBoardMeetingsInputSchema: z.ZodTyp
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutOhsBoardMeetingsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutOhsBoardMeetingsInput> = z.object({
@@ -103067,6 +108036,8 @@ export const FacilityUpdateWithoutOhsBoardMeetingsInputSchema: z.ZodType<Prisma.
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutOhsBoardMeetingsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutOhsBoardMeetingsInput> = z.object({
@@ -103137,6 +108108,8 @@ export const FacilityUncheckedUpdateWithoutOhsBoardMeetingsInputSchema: z.ZodTyp
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const OhsBoardPeriodUpsertWithoutMeetingsInputSchema: z.ZodType<Prisma.OhsBoardPeriodUpsertWithoutMeetingsInput> = z.object({
@@ -104573,6 +109546,8 @@ export const FacilityCreateWithoutOhsBoardMembersInputSchema: z.ZodType<Prisma.F
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutOhsBoardMembersInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutOhsBoardMembersInput> = z.object({
@@ -104643,6 +109618,8 @@ export const FacilityUncheckedCreateWithoutOhsBoardMembersInputSchema: z.ZodType
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutOhsBoardMembersInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutOhsBoardMembersInput> = z.object({
@@ -104809,6 +109786,8 @@ export const FacilityUpdateWithoutOhsBoardMembersInputSchema: z.ZodType<Prisma.F
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutOhsBoardMembersInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutOhsBoardMembersInput> = z.object({
@@ -104879,6 +109858,8 @@ export const FacilityUncheckedUpdateWithoutOhsBoardMembersInputSchema: z.ZodType
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FireDoorQuestionCreateWithoutGroupInputSchema: z.ZodType<Prisma.FireDoorQuestionCreateWithoutGroupInput> = z.object({
@@ -105129,6 +110110,8 @@ export const FacilityCreateWithoutFireDoorInputSchema: z.ZodType<Prisma.Facility
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutFireDoorInput> = z.object({
@@ -105199,6 +110182,8 @@ export const FacilityUncheckedCreateWithoutFireDoorInputSchema: z.ZodType<Prisma
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutFireDoorInput> = z.object({
@@ -105372,6 +110357,8 @@ export const FacilityUpdateWithoutFireDoorInputSchema: z.ZodType<Prisma.Facility
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutFireDoorInput> = z.object({
@@ -105442,6 +110429,8 @@ export const FacilityUncheckedUpdateWithoutFireDoorInputSchema: z.ZodType<Prisma
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityLocationUpsertWithoutFireDoorInputSchema: z.ZodType<Prisma.FacilityLocationUpsertWithoutFireDoorInput> = z.object({
@@ -105859,6 +110848,8 @@ export const FacilityCreateWithoutElevatorsInputSchema: z.ZodType<Prisma.Facilit
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutElevatorsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutElevatorsInput> = z.object({
@@ -105929,6 +110920,8 @@ export const FacilityUncheckedCreateWithoutElevatorsInputSchema: z.ZodType<Prism
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutElevatorsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutElevatorsInput> = z.object({
@@ -106047,6 +111040,8 @@ export const FacilityUpdateWithoutElevatorsInputSchema: z.ZodType<Prisma.Facilit
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutElevatorsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutElevatorsInput> = z.object({
@@ -106117,6 +111112,8 @@ export const FacilityUncheckedUpdateWithoutElevatorsInputSchema: z.ZodType<Prism
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const ElevatorInspectionUpsertWithWhereUniqueWithoutElevatorInputSchema: z.ZodType<Prisma.ElevatorInspectionUpsertWithWhereUniqueWithoutElevatorInput> = z.object({
@@ -106358,6 +111355,8 @@ export const FacilityCreateWithoutElectricInfrastructureRecordsInputSchema: z.Zo
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutElectricInfrastructureRecordsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutElectricInfrastructureRecordsInput> = z.object({
@@ -106428,6 +111427,8 @@ export const FacilityUncheckedCreateWithoutElectricInfrastructureRecordsInputSch
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutElectricInfrastructureRecordsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutElectricInfrastructureRecordsInput> = z.object({
@@ -106514,6 +111515,8 @@ export const FacilityUpdateWithoutElectricInfrastructureRecordsInputSchema: z.Zo
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutElectricInfrastructureRecordsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutElectricInfrastructureRecordsInput> = z.object({
@@ -106584,6 +111587,8 @@ export const FacilityUncheckedUpdateWithoutElectricInfrastructureRecordsInputSch
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateWithoutElectricInfrastructureStatusInputSchema: z.ZodType<Prisma.FacilityCreateWithoutElectricInfrastructureStatusInput> = z.object({
@@ -106654,6 +111659,8 @@ export const FacilityCreateWithoutElectricInfrastructureStatusInputSchema: z.Zod
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutElectricInfrastructureStatusInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutElectricInfrastructureStatusInput> = z.object({
@@ -106724,6 +111731,8 @@ export const FacilityUncheckedCreateWithoutElectricInfrastructureStatusInputSche
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutElectricInfrastructureStatusInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutElectricInfrastructureStatusInput> = z.object({
@@ -106810,6 +111819,8 @@ export const FacilityUpdateWithoutElectricInfrastructureStatusInputSchema: z.Zod
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutElectricInfrastructureStatusInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutElectricInfrastructureStatusInput> = z.object({
@@ -106880,6 +111891,8 @@ export const FacilityUncheckedUpdateWithoutElectricInfrastructureStatusInputSche
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const ThermalInspectionItemCreateWithoutSessionInputSchema: z.ZodType<Prisma.ThermalInspectionItemCreateWithoutSessionInput> = z.object({
@@ -107018,6 +112031,8 @@ export const FacilityCreateWithoutThermalInspectionSessionsInputSchema: z.ZodTyp
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutThermalInspectionSessionsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutThermalInspectionSessionsInput> = z.object({
@@ -107088,6 +112103,8 @@ export const FacilityUncheckedCreateWithoutThermalInspectionSessionsInputSchema:
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutThermalInspectionSessionsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutThermalInspectionSessionsInput> = z.object({
@@ -107223,6 +112240,8 @@ export const FacilityUpdateWithoutThermalInspectionSessionsInputSchema: z.ZodTyp
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutThermalInspectionSessionsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutThermalInspectionSessionsInput> = z.object({
@@ -107293,6 +112312,8 @@ export const FacilityUncheckedUpdateWithoutThermalInspectionSessionsInputSchema:
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const ThermalInspectionSessionCreateWithoutItemsInputSchema: z.ZodType<Prisma.ThermalInspectionSessionCreateWithoutItemsInput> = z.object({
@@ -107431,6 +112452,8 @@ export const FacilityCreateWithoutFireSafetyAuditsInputSchema: z.ZodType<Prisma.
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedCreateWithoutFireSafetyAuditsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutFireSafetyAuditsInput> = z.object({
@@ -107501,6 +112524,8 @@ export const FacilityUncheckedCreateWithoutFireSafetyAuditsInputSchema: z.ZodTyp
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
 }).strict();
 
 export const FacilityCreateOrConnectWithoutFireSafetyAuditsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutFireSafetyAuditsInput> = z.object({
@@ -107635,6 +112660,8 @@ export const FacilityUpdateWithoutFireSafetyAuditsInputSchema: z.ZodType<Prisma.
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FacilityUncheckedUpdateWithoutFireSafetyAuditsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutFireSafetyAuditsInput> = z.object({
@@ -107705,6 +112732,8 @@ export const FacilityUncheckedUpdateWithoutFireSafetyAuditsInputSchema: z.ZodTyp
   electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
   electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
   thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const FireSafetyItemUpsertWithWhereUniqueWithoutAuditInputSchema: z.ZodType<Prisma.FireSafetyItemUpsertWithWhereUniqueWithoutAuditInput> = z.object({
@@ -107985,6 +113014,2364 @@ export const FireSafetyItemUncheckedUpdateWithoutActionsInputSchema: z.ZodType<P
   notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FacilityCreateWithoutFm200LocationsInputSchema: z.ZodType<Prisma.FacilityCreateWithoutFm200LocationsInput> = z.object({
+  id: z.string(),
+  name: z.string(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  city: z.string().optional().nullable(),
+  commercialTitle: z.string().optional().nullable(),
+  dangerClass: z.string().optional(),
+  district: z.string().optional().nullable(),
+  email: z.string().optional().nullable(),
+  employeeCount: z.number().int().optional(),
+  fullAddress: z.string().optional().nullable(),
+  naceCode: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  sgkNumber: z.string().optional().nullable(),
+  shortName: z.string().optional().nullable(),
+  taxNumber: z.string().optional().nullable(),
+  taxOffice: z.string().optional().nullable(),
+  type: z.string().optional().nullable(),
+  website: z.string().optional().nullable(),
+  logoUrl: z.string().optional().nullable(),
+  activityLogs: z.lazy(() => ActivityLogCreateNestedManyWithoutFacilityInputSchema).optional(),
+  assignments: z.lazy(() => AssignmentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  employeeCountHistory: z.lazy(() => EmployeeCountHistoryCreateNestedManyWithoutFacilityInputSchema).optional(),
+  incidents: z.lazy(() => ExtraordinaryIncidentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  buildings: z.lazy(() => FacilityBuildingCreateNestedManyWithoutFacilityInputSchema).optional(),
+  monthlyAccident: z.lazy(() => MonthlyAccidentDataCreateNestedManyWithoutFacilityInputSchema).optional(),
+  monthlyHrData: z.lazy(() => MonthlyHRDataCreateNestedManyWithoutFacilityInputSchema).optional(),
+  notebookPages: z.lazy(() => NotebookPageCreateNestedManyWithoutFacilityInputSchema).optional(),
+  reconciliations: z.lazy(() => ReconciliationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskCategorySettings: z.lazy(() => RiskCategorySettingCreateNestedManyWithoutFacilityInputSchema).optional(),
+  locations: z.lazy(() => FacilityLocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskDepartmentSettings: z.lazy(() => RiskDepartmentSettingCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskExpertFacilities: z.lazy(() => RiskExpertFacilityCreateNestedManyWithoutFacilityInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutFacilityInputSchema).optional(),
+  users: z.lazy(() => UserFacilityCreateNestedManyWithoutFacilityInputSchema).optional(),
+  facilityHazmatItems: z.lazy(() => FacilityHazmatItemCreateNestedManyWithoutFacilityInputSchema).optional(),
+  spillKits: z.lazy(() => HazmatSpillKitCreateNestedManyWithoutFacilityInputSchema).optional(),
+  spillKitMasterItems: z.lazy(() => HazmatSpillKitMasterItemCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatInventoryItems: z.lazy(() => HazmatInventoryItemCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatEyewashAnalyses: z.lazy(() => HazmatEyewashRiskAnalysisCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireResponsibles: z.lazy(() => FireEquipmentResponsibleCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireEquipmentCompanies: z.lazy(() => FireEquipmentCompanyCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildContractor: z.lazy(() => BuildContractorCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildWorkType: z.lazy(() => BuildWorkTypeCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btAnaGruplar: z.lazy(() => BTAnaGrupCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btDenetlenenAlanlar: z.lazy(() => BTDenetlenenAlanCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btKategoriler: z.lazy(() => BTKategoriCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSorumluBirimler: z.lazy(() => BTSorumluBirimCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSorumluKisiler: z.lazy(() => BTSorumluKisiCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btTurler: z.lazy(() => BTTurCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukCreateNestedManyWithoutFacilityInputSchema).optional(),
+  HazmatVehicle: z.lazy(() => HazmatVehicleCreateNestedManyWithoutFacilityInputSchema).optional(),
+  integratedAudits: z.lazy(() => IntegratedAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
+  OhsBoardPeriod: z.lazy(() => OhsBoardPeriodCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
+  electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
+  electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorCreateNestedManyWithoutFacilityInputSchema).optional(),
+}).strict();
+
+export const FacilityUncheckedCreateWithoutFm200LocationsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutFm200LocationsInput> = z.object({
+  id: z.string(),
+  name: z.string(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  city: z.string().optional().nullable(),
+  commercialTitle: z.string().optional().nullable(),
+  dangerClass: z.string().optional(),
+  district: z.string().optional().nullable(),
+  email: z.string().optional().nullable(),
+  employeeCount: z.number().int().optional(),
+  fullAddress: z.string().optional().nullable(),
+  naceCode: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  sgkNumber: z.string().optional().nullable(),
+  shortName: z.string().optional().nullable(),
+  taxNumber: z.string().optional().nullable(),
+  taxOffice: z.string().optional().nullable(),
+  type: z.string().optional().nullable(),
+  website: z.string().optional().nullable(),
+  logoUrl: z.string().optional().nullable(),
+  activityLogs: z.lazy(() => ActivityLogUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  assignments: z.lazy(() => AssignmentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  employeeCountHistory: z.lazy(() => EmployeeCountHistoryUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  incidents: z.lazy(() => ExtraordinaryIncidentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  buildings: z.lazy(() => FacilityBuildingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  monthlyAccident: z.lazy(() => MonthlyAccidentDataUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  monthlyHrData: z.lazy(() => MonthlyHRDataUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  notebookPages: z.lazy(() => NotebookPageUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  reconciliations: z.lazy(() => ReconciliationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskCategorySettings: z.lazy(() => RiskCategorySettingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  locations: z.lazy(() => FacilityLocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskDepartmentSettings: z.lazy(() => RiskDepartmentSettingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskExpertFacilities: z.lazy(() => RiskExpertFacilityUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  users: z.lazy(() => UserFacilityUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  facilityHazmatItems: z.lazy(() => FacilityHazmatItemUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  spillKits: z.lazy(() => HazmatSpillKitUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  spillKitMasterItems: z.lazy(() => HazmatSpillKitMasterItemUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatInventoryItems: z.lazy(() => HazmatInventoryItemUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatEyewashAnalyses: z.lazy(() => HazmatEyewashRiskAnalysisUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireResponsibles: z.lazy(() => FireEquipmentResponsibleUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireEquipmentCompanies: z.lazy(() => FireEquipmentCompanyUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildContractor: z.lazy(() => BuildContractorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildWorkType: z.lazy(() => BuildWorkTypeUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btAnaGruplar: z.lazy(() => BTAnaGrupUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btDenetlenenAlanlar: z.lazy(() => BTDenetlenenAlanUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btKategoriler: z.lazy(() => BTKategoriUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSorumluBirimler: z.lazy(() => BTSorumluBirimUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSorumluKisiler: z.lazy(() => BTSorumluKisiUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btTurler: z.lazy(() => BTTurUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  HazmatVehicle: z.lazy(() => HazmatVehicleUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  integratedAudits: z.lazy(() => IntegratedAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  OhsBoardPeriod: z.lazy(() => OhsBoardPeriodUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+}).strict();
+
+export const FacilityCreateOrConnectWithoutFm200LocationsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutFm200LocationsInput> = z.object({
+  where: z.lazy(() => FacilityWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => FacilityCreateWithoutFm200LocationsInputSchema), z.lazy(() => FacilityUncheckedCreateWithoutFm200LocationsInputSchema) ]),
+}).strict();
+
+export const Fm200CylinderCreateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200CylinderCreateWithoutLocationInput> = z.object({
+  id: z.cuid().optional(),
+  serialNumber: z.string(),
+  labelCode: z.string(),
+  capacityKg: z.number().optional().nullable(),
+  tareKg: z.number().optional().nullable(),
+  manufacturingYear: z.number().int().optional().nullable(),
+  lastHydrostaticTestDate: z.coerce.date().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  maintenanceCylinders: z.lazy(() => Fm200MaintenanceCylinderCreateNestedManyWithoutCylinderInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderCreateNestedManyWithoutCylinderInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderUncheckedCreateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200CylinderUncheckedCreateWithoutLocationInput> = z.object({
+  id: z.cuid().optional(),
+  serialNumber: z.string(),
+  labelCode: z.string(),
+  capacityKg: z.number().optional().nullable(),
+  tareKg: z.number().optional().nullable(),
+  manufacturingYear: z.number().int().optional().nullable(),
+  lastHydrostaticTestDate: z.coerce.date().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  maintenanceCylinders: z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateNestedManyWithoutCylinderInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedCreateNestedManyWithoutCylinderInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderCreateOrConnectWithoutLocationInputSchema: z.ZodType<Prisma.Fm200CylinderCreateOrConnectWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200CylinderWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200CylinderCreateWithoutLocationInputSchema), z.lazy(() => Fm200CylinderUncheckedCreateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200CylinderCreateManyLocationInputEnvelopeSchema: z.ZodType<Prisma.Fm200CylinderCreateManyLocationInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => Fm200CylinderCreateManyLocationInputSchema), z.lazy(() => Fm200CylinderCreateManyLocationInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentCreateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentCreateWithoutLocationInput> = z.object({
+  id: z.cuid().optional(),
+  assessedBy: z.string(),
+  assessedDate: z.coerce.date().optional(),
+  f1_a1: z.string().optional().nullable(),
+  f1_a2: z.string().optional().nullable(),
+  f1_a3: z.string().optional().nullable(),
+  f1_a4: z.string().optional().nullable(),
+  f1_b1: z.string().optional().nullable(),
+  f1_b2: z.string().optional().nullable(),
+  f1_b3: z.string().optional().nullable(),
+  f1_b4: z.string().optional().nullable(),
+  f1_b5: z.string().optional().nullable(),
+  f1_b6: z.string().optional().nullable(),
+  f1_c1: z.string().optional().nullable(),
+  f1_c2: z.string().optional().nullable(),
+  f1_d1: z.string().optional().nullable(),
+  f1_d2: z.string().optional().nullable(),
+  f1_d3: z.string().optional().nullable(),
+  f1_e1: z.string().optional().nullable(),
+  f1_e2: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  isCompleted: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentUncheckedCreateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentUncheckedCreateWithoutLocationInput> = z.object({
+  id: z.cuid().optional(),
+  assessedBy: z.string(),
+  assessedDate: z.coerce.date().optional(),
+  f1_a1: z.string().optional().nullable(),
+  f1_a2: z.string().optional().nullable(),
+  f1_a3: z.string().optional().nullable(),
+  f1_a4: z.string().optional().nullable(),
+  f1_b1: z.string().optional().nullable(),
+  f1_b2: z.string().optional().nullable(),
+  f1_b3: z.string().optional().nullable(),
+  f1_b4: z.string().optional().nullable(),
+  f1_b5: z.string().optional().nullable(),
+  f1_b6: z.string().optional().nullable(),
+  f1_c1: z.string().optional().nullable(),
+  f1_c2: z.string().optional().nullable(),
+  f1_d1: z.string().optional().nullable(),
+  f1_d2: z.string().optional().nullable(),
+  f1_d3: z.string().optional().nullable(),
+  f1_e1: z.string().optional().nullable(),
+  f1_e2: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  isCompleted: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentCreateOrConnectWithoutLocationInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentCreateOrConnectWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200Phase1AssessmentCreateWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentUncheckedCreateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200Phase1AssessmentCreateManyLocationInputEnvelopeSchema: z.ZodType<Prisma.Fm200Phase1AssessmentCreateManyLocationInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => Fm200Phase1AssessmentCreateManyLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentCreateManyLocationInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionCreateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionCreateWithoutLocationInput> = z.object({
+  id: z.cuid().optional(),
+  inspectedBy: z.string(),
+  inspectionDate: z.coerce.date().optional(),
+  itemResponses: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  complianceScore: z.number().optional(),
+  ratingGrade: z.string().optional(),
+  isRedFlagged: z.boolean().optional(),
+  openWorkOrdersCount: z.number().int().optional(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionUncheckedCreateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionUncheckedCreateWithoutLocationInput> = z.object({
+  id: z.cuid().optional(),
+  inspectedBy: z.string(),
+  inspectionDate: z.coerce.date().optional(),
+  itemResponses: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  complianceScore: z.number().optional(),
+  ratingGrade: z.string().optional(),
+  isRedFlagged: z.boolean().optional(),
+  openWorkOrdersCount: z.number().int().optional(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionCreateOrConnectWithoutLocationInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionCreateOrConnectWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200PeriodicInspectionCreateWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionUncheckedCreateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200PeriodicInspectionCreateManyLocationInputEnvelopeSchema: z.ZodType<Prisma.Fm200PeriodicInspectionCreateManyLocationInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => Fm200PeriodicInspectionCreateManyLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionCreateManyLocationInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200MaintenanceCreateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200MaintenanceCreateWithoutLocationInput> = z.object({
+  id: z.cuid().optional(),
+  performedBy: z.string(),
+  maintenanceDate: z.coerce.date().optional(),
+  panelControlStatus: z.string().optional(),
+  panelNotes: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  cylinders: z.lazy(() => Fm200MaintenanceCylinderCreateNestedManyWithoutMaintenanceInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceUncheckedCreateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200MaintenanceUncheckedCreateWithoutLocationInput> = z.object({
+  id: z.cuid().optional(),
+  performedBy: z.string(),
+  maintenanceDate: z.coerce.date().optional(),
+  panelControlStatus: z.string().optional(),
+  panelNotes: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  cylinders: z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateNestedManyWithoutMaintenanceInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCreateOrConnectWithoutLocationInputSchema: z.ZodType<Prisma.Fm200MaintenanceCreateOrConnectWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200MaintenanceCreateWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceUncheckedCreateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200MaintenanceCreateManyLocationInputEnvelopeSchema: z.ZodType<Prisma.Fm200MaintenanceCreateManyLocationInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => Fm200MaintenanceCreateManyLocationInputSchema), z.lazy(() => Fm200MaintenanceCreateManyLocationInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200TightnessTestCreateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200TightnessTestCreateWithoutLocationInput> = z.object({
+  id: z.cuid().optional(),
+  performedBy: z.string(),
+  testDate: z.coerce.date().optional(),
+  retentionTimeMinutes: z.number().optional().nullable(),
+  measuredValue: z.number().optional().nullable(),
+  result: z.string(),
+  isUnconditional: z.boolean().optional(),
+  overrideReason: z.string().optional().nullable(),
+  reportUrl: z.string().optional().nullable(),
+  nextTestDate: z.coerce.date().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200TightnessTestUncheckedCreateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200TightnessTestUncheckedCreateWithoutLocationInput> = z.object({
+  id: z.cuid().optional(),
+  performedBy: z.string(),
+  testDate: z.coerce.date().optional(),
+  retentionTimeMinutes: z.number().optional().nullable(),
+  measuredValue: z.number().optional().nullable(),
+  result: z.string(),
+  isUnconditional: z.boolean().optional(),
+  overrideReason: z.string().optional().nullable(),
+  reportUrl: z.string().optional().nullable(),
+  nextTestDate: z.coerce.date().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200TightnessTestCreateOrConnectWithoutLocationInputSchema: z.ZodType<Prisma.Fm200TightnessTestCreateOrConnectWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200TightnessTestCreateWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestUncheckedCreateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200TightnessTestCreateManyLocationInputEnvelopeSchema: z.ZodType<Prisma.Fm200TightnessTestCreateManyLocationInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => Fm200TightnessTestCreateManyLocationInputSchema), z.lazy(() => Fm200TightnessTestCreateManyLocationInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200WorkOrderCreateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200WorkOrderCreateWithoutLocationInput> = z.object({
+  id: z.cuid().optional(),
+  sourcePhase: z.string(),
+  sourceCode: z.string(),
+  title: z.string(),
+  workType: z.string().optional(),
+  responsible: z.string().optional(),
+  trackLane: z.string().optional(),
+  status: z.string().optional(),
+  repeatCount: z.number().int().optional(),
+  companyTrackNo: z.string().optional().nullable(),
+  sourceWorkId: z.string().optional().nullable(),
+  revisionNote: z.string().optional().nullable(),
+  correctApproval: z.boolean().optional(),
+  closedAt: z.coerce.date().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  cylinder: z.lazy(() => Fm200CylinderCreateNestedOneWithoutWorkOrdersInputSchema).optional(),
+  evidences: z.lazy(() => Fm200WorkOrderEvidenceCreateNestedManyWithoutWorkOrderInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderUncheckedCreateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200WorkOrderUncheckedCreateWithoutLocationInput> = z.object({
+  id: z.cuid().optional(),
+  cylinderId: z.string().optional().nullable(),
+  sourcePhase: z.string(),
+  sourceCode: z.string(),
+  title: z.string(),
+  workType: z.string().optional(),
+  responsible: z.string().optional(),
+  trackLane: z.string().optional(),
+  status: z.string().optional(),
+  repeatCount: z.number().int().optional(),
+  companyTrackNo: z.string().optional().nullable(),
+  sourceWorkId: z.string().optional().nullable(),
+  revisionNote: z.string().optional().nullable(),
+  correctApproval: z.boolean().optional(),
+  closedAt: z.coerce.date().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  evidences: z.lazy(() => Fm200WorkOrderEvidenceUncheckedCreateNestedManyWithoutWorkOrderInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderCreateOrConnectWithoutLocationInputSchema: z.ZodType<Prisma.Fm200WorkOrderCreateOrConnectWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200WorkOrderCreateWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200WorkOrderCreateManyLocationInputEnvelopeSchema: z.ZodType<Prisma.Fm200WorkOrderCreateManyLocationInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => Fm200WorkOrderCreateManyLocationInputSchema), z.lazy(() => Fm200WorkOrderCreateManyLocationInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const FacilityUpsertWithoutFm200LocationsInputSchema: z.ZodType<Prisma.FacilityUpsertWithoutFm200LocationsInput> = z.object({
+  update: z.union([ z.lazy(() => FacilityUpdateWithoutFm200LocationsInputSchema), z.lazy(() => FacilityUncheckedUpdateWithoutFm200LocationsInputSchema) ]),
+  create: z.union([ z.lazy(() => FacilityCreateWithoutFm200LocationsInputSchema), z.lazy(() => FacilityUncheckedCreateWithoutFm200LocationsInputSchema) ]),
+  where: z.lazy(() => FacilityWhereInputSchema).optional(),
+}).strict();
+
+export const FacilityUpdateToOneWithWhereWithoutFm200LocationsInputSchema: z.ZodType<Prisma.FacilityUpdateToOneWithWhereWithoutFm200LocationsInput> = z.object({
+  where: z.lazy(() => FacilityWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => FacilityUpdateWithoutFm200LocationsInputSchema), z.lazy(() => FacilityUncheckedUpdateWithoutFm200LocationsInputSchema) ]),
+}).strict();
+
+export const FacilityUpdateWithoutFm200LocationsInputSchema: z.ZodType<Prisma.FacilityUpdateWithoutFm200LocationsInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  city: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  commercialTitle: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  dangerClass: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  district: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  email: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  employeeCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  fullAddress: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  naceCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  phone: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sgkNumber: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  shortName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  taxNumber: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  taxOffice: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  type: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  website: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  logoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  activityLogs: z.lazy(() => ActivityLogUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  assignments: z.lazy(() => AssignmentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  employeeCountHistory: z.lazy(() => EmployeeCountHistoryUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  incidents: z.lazy(() => ExtraordinaryIncidentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  buildings: z.lazy(() => FacilityBuildingUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  monthlyAccident: z.lazy(() => MonthlyAccidentDataUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  monthlyHrData: z.lazy(() => MonthlyHRDataUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  notebookPages: z.lazy(() => NotebookPageUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  reconciliations: z.lazy(() => ReconciliationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskCategorySettings: z.lazy(() => RiskCategorySettingUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  locations: z.lazy(() => FacilityLocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskDepartmentSettings: z.lazy(() => RiskDepartmentSettingUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskExpertFacilities: z.lazy(() => RiskExpertFacilityUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  users: z.lazy(() => UserFacilityUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  facilityHazmatItems: z.lazy(() => FacilityHazmatItemUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  spillKits: z.lazy(() => HazmatSpillKitUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  spillKitMasterItems: z.lazy(() => HazmatSpillKitMasterItemUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatInventoryItems: z.lazy(() => HazmatInventoryItemUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatEyewashAnalyses: z.lazy(() => HazmatEyewashRiskAnalysisUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireResponsibles: z.lazy(() => FireEquipmentResponsibleUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireEquipmentCompanies: z.lazy(() => FireEquipmentCompanyUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildContractor: z.lazy(() => BuildContractorUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildWorkType: z.lazy(() => BuildWorkTypeUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btAnaGruplar: z.lazy(() => BTAnaGrupUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btDenetlenenAlanlar: z.lazy(() => BTDenetlenenAlanUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btKategoriler: z.lazy(() => BTKategoriUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSorumluBirimler: z.lazy(() => BTSorumluBirimUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSorumluKisiler: z.lazy(() => BTSorumluKisiUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btTurler: z.lazy(() => BTTurUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  HazmatVehicle: z.lazy(() => HazmatVehicleUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  integratedAudits: z.lazy(() => IntegratedAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  OhsBoardPeriod: z.lazy(() => OhsBoardPeriodUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUpdateManyWithoutFacilityNestedInputSchema).optional(),
+}).strict();
+
+export const FacilityUncheckedUpdateWithoutFm200LocationsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutFm200LocationsInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  city: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  commercialTitle: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  dangerClass: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  district: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  email: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  employeeCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  fullAddress: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  naceCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  phone: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sgkNumber: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  shortName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  taxNumber: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  taxOffice: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  type: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  website: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  logoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  activityLogs: z.lazy(() => ActivityLogUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  assignments: z.lazy(() => AssignmentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  employeeCountHistory: z.lazy(() => EmployeeCountHistoryUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  incidents: z.lazy(() => ExtraordinaryIncidentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  buildings: z.lazy(() => FacilityBuildingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  monthlyAccident: z.lazy(() => MonthlyAccidentDataUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  monthlyHrData: z.lazy(() => MonthlyHRDataUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  notebookPages: z.lazy(() => NotebookPageUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  reconciliations: z.lazy(() => ReconciliationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskCategorySettings: z.lazy(() => RiskCategorySettingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  locations: z.lazy(() => FacilityLocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskDepartmentSettings: z.lazy(() => RiskDepartmentSettingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskExpertFacilities: z.lazy(() => RiskExpertFacilityUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  users: z.lazy(() => UserFacilityUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  facilityHazmatItems: z.lazy(() => FacilityHazmatItemUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  spillKits: z.lazy(() => HazmatSpillKitUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  spillKitMasterItems: z.lazy(() => HazmatSpillKitMasterItemUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatInventoryItems: z.lazy(() => HazmatInventoryItemUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatEyewashAnalyses: z.lazy(() => HazmatEyewashRiskAnalysisUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireResponsibles: z.lazy(() => FireEquipmentResponsibleUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireEquipmentCompanies: z.lazy(() => FireEquipmentCompanyUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildContractor: z.lazy(() => BuildContractorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildWorkType: z.lazy(() => BuildWorkTypeUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btAnaGruplar: z.lazy(() => BTAnaGrupUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btDenetlenenAlanlar: z.lazy(() => BTDenetlenenAlanUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btKategoriler: z.lazy(() => BTKategoriUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSorumluBirimler: z.lazy(() => BTSorumluBirimUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSorumluKisiler: z.lazy(() => BTSorumluKisiUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btTurler: z.lazy(() => BTTurUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  HazmatVehicle: z.lazy(() => HazmatVehicleUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  integratedAudits: z.lazy(() => IntegratedAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  OhsBoardPeriod: z.lazy(() => OhsBoardPeriodUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200BuildingFloors: z.lazy(() => Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderUpsertWithWhereUniqueWithoutLocationInputSchema: z.ZodType<Prisma.Fm200CylinderUpsertWithWhereUniqueWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200CylinderWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => Fm200CylinderUpdateWithoutLocationInputSchema), z.lazy(() => Fm200CylinderUncheckedUpdateWithoutLocationInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200CylinderCreateWithoutLocationInputSchema), z.lazy(() => Fm200CylinderUncheckedCreateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200CylinderUpdateWithWhereUniqueWithoutLocationInputSchema: z.ZodType<Prisma.Fm200CylinderUpdateWithWhereUniqueWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200CylinderWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => Fm200CylinderUpdateWithoutLocationInputSchema), z.lazy(() => Fm200CylinderUncheckedUpdateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200CylinderUpdateManyWithWhereWithoutLocationInputSchema: z.ZodType<Prisma.Fm200CylinderUpdateManyWithWhereWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200CylinderScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => Fm200CylinderUpdateManyMutationInputSchema), z.lazy(() => Fm200CylinderUncheckedUpdateManyWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200CylinderScalarWhereInputSchema: z.ZodType<Prisma.Fm200CylinderScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200CylinderScalarWhereInputSchema), z.lazy(() => Fm200CylinderScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200CylinderScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200CylinderScalarWhereInputSchema), z.lazy(() => Fm200CylinderScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  serialNumber: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  labelCode: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  capacityKg: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  tareKg: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  manufacturingYear: z.union([ z.lazy(() => IntNullableFilterSchema), z.number() ]).optional().nullable(),
+  lastHydrostaticTestDate: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentUpsertWithWhereUniqueWithoutLocationInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentUpsertWithWhereUniqueWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => Fm200Phase1AssessmentUpdateWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentUncheckedUpdateWithoutLocationInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200Phase1AssessmentCreateWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentUncheckedCreateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200Phase1AssessmentUpdateWithWhereUniqueWithoutLocationInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentUpdateWithWhereUniqueWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200Phase1AssessmentWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => Fm200Phase1AssessmentUpdateWithoutLocationInputSchema), z.lazy(() => Fm200Phase1AssessmentUncheckedUpdateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200Phase1AssessmentUpdateManyWithWhereWithoutLocationInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentUpdateManyWithWhereWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200Phase1AssessmentScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => Fm200Phase1AssessmentUpdateManyMutationInputSchema), z.lazy(() => Fm200Phase1AssessmentUncheckedUpdateManyWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200Phase1AssessmentScalarWhereInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200Phase1AssessmentScalarWhereInputSchema), z.lazy(() => Fm200Phase1AssessmentScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200Phase1AssessmentScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200Phase1AssessmentScalarWhereInputSchema), z.lazy(() => Fm200Phase1AssessmentScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  assessedBy: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  assessedDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  f1_a1: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_a2: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_a3: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_a4: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_b1: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_b2: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_b3: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_b4: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_b5: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_b6: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_c1: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_c2: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_d1: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_d2: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_d3: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_e1: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  f1_e2: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  photos: z.lazy(() => JsonFilterSchema).optional(),
+  isCompleted: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionUpsertWithWhereUniqueWithoutLocationInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionUpsertWithWhereUniqueWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => Fm200PeriodicInspectionUpdateWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionUncheckedUpdateWithoutLocationInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200PeriodicInspectionCreateWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionUncheckedCreateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200PeriodicInspectionUpdateWithWhereUniqueWithoutLocationInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionUpdateWithWhereUniqueWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200PeriodicInspectionWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => Fm200PeriodicInspectionUpdateWithoutLocationInputSchema), z.lazy(() => Fm200PeriodicInspectionUncheckedUpdateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200PeriodicInspectionUpdateManyWithWhereWithoutLocationInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionUpdateManyWithWhereWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200PeriodicInspectionScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => Fm200PeriodicInspectionUpdateManyMutationInputSchema), z.lazy(() => Fm200PeriodicInspectionUncheckedUpdateManyWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200PeriodicInspectionScalarWhereInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200PeriodicInspectionScalarWhereInputSchema), z.lazy(() => Fm200PeriodicInspectionScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200PeriodicInspectionScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200PeriodicInspectionScalarWhereInputSchema), z.lazy(() => Fm200PeriodicInspectionScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  inspectedBy: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  inspectionDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  itemResponses: z.lazy(() => JsonFilterSchema).optional(),
+  complianceScore: z.union([ z.lazy(() => FloatFilterSchema), z.number() ]).optional(),
+  ratingGrade: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  isRedFlagged: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  openWorkOrdersCount: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  photos: z.lazy(() => JsonFilterSchema).optional(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceUpsertWithWhereUniqueWithoutLocationInputSchema: z.ZodType<Prisma.Fm200MaintenanceUpsertWithWhereUniqueWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => Fm200MaintenanceUpdateWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceUncheckedUpdateWithoutLocationInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200MaintenanceCreateWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceUncheckedCreateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200MaintenanceUpdateWithWhereUniqueWithoutLocationInputSchema: z.ZodType<Prisma.Fm200MaintenanceUpdateWithWhereUniqueWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => Fm200MaintenanceUpdateWithoutLocationInputSchema), z.lazy(() => Fm200MaintenanceUncheckedUpdateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200MaintenanceUpdateManyWithWhereWithoutLocationInputSchema: z.ZodType<Prisma.Fm200MaintenanceUpdateManyWithWhereWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200MaintenanceScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => Fm200MaintenanceUpdateManyMutationInputSchema), z.lazy(() => Fm200MaintenanceUncheckedUpdateManyWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200MaintenanceScalarWhereInputSchema: z.ZodType<Prisma.Fm200MaintenanceScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200MaintenanceScalarWhereInputSchema), z.lazy(() => Fm200MaintenanceScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200MaintenanceScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200MaintenanceScalarWhereInputSchema), z.lazy(() => Fm200MaintenanceScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  performedBy: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  maintenanceDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  panelControlStatus: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  panelNotes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  photos: z.lazy(() => JsonFilterSchema).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const Fm200TightnessTestUpsertWithWhereUniqueWithoutLocationInputSchema: z.ZodType<Prisma.Fm200TightnessTestUpsertWithWhereUniqueWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => Fm200TightnessTestUpdateWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestUncheckedUpdateWithoutLocationInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200TightnessTestCreateWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestUncheckedCreateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200TightnessTestUpdateWithWhereUniqueWithoutLocationInputSchema: z.ZodType<Prisma.Fm200TightnessTestUpdateWithWhereUniqueWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200TightnessTestWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => Fm200TightnessTestUpdateWithoutLocationInputSchema), z.lazy(() => Fm200TightnessTestUncheckedUpdateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200TightnessTestUpdateManyWithWhereWithoutLocationInputSchema: z.ZodType<Prisma.Fm200TightnessTestUpdateManyWithWhereWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200TightnessTestScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => Fm200TightnessTestUpdateManyMutationInputSchema), z.lazy(() => Fm200TightnessTestUncheckedUpdateManyWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200TightnessTestScalarWhereInputSchema: z.ZodType<Prisma.Fm200TightnessTestScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200TightnessTestScalarWhereInputSchema), z.lazy(() => Fm200TightnessTestScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200TightnessTestScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200TightnessTestScalarWhereInputSchema), z.lazy(() => Fm200TightnessTestScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  performedBy: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  testDate: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  retentionTimeMinutes: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  measuredValue: z.union([ z.lazy(() => FloatNullableFilterSchema), z.number() ]).optional().nullable(),
+  result: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  isUnconditional: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  overrideReason: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  reportUrl: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  nextTestDate: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  photos: z.lazy(() => JsonFilterSchema).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderUpsertWithWhereUniqueWithoutLocationInputSchema: z.ZodType<Prisma.Fm200WorkOrderUpsertWithWhereUniqueWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => Fm200WorkOrderUpdateWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderUncheckedUpdateWithoutLocationInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200WorkOrderCreateWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200WorkOrderUpdateWithWhereUniqueWithoutLocationInputSchema: z.ZodType<Prisma.Fm200WorkOrderUpdateWithWhereUniqueWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => Fm200WorkOrderUpdateWithoutLocationInputSchema), z.lazy(() => Fm200WorkOrderUncheckedUpdateWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200WorkOrderUpdateManyWithWhereWithoutLocationInputSchema: z.ZodType<Prisma.Fm200WorkOrderUpdateManyWithWhereWithoutLocationInput> = z.object({
+  where: z.lazy(() => Fm200WorkOrderScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => Fm200WorkOrderUpdateManyMutationInputSchema), z.lazy(() => Fm200WorkOrderUncheckedUpdateManyWithoutLocationInputSchema) ]),
+}).strict();
+
+export const Fm200WorkOrderScalarWhereInputSchema: z.ZodType<Prisma.Fm200WorkOrderScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200WorkOrderScalarWhereInputSchema), z.lazy(() => Fm200WorkOrderScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200WorkOrderScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200WorkOrderScalarWhereInputSchema), z.lazy(() => Fm200WorkOrderScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  locationId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  cylinderId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  sourcePhase: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  sourceCode: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  title: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  workType: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  responsible: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  trackLane: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  status: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  repeatCount: z.union([ z.lazy(() => IntFilterSchema), z.number() ]).optional(),
+  companyTrackNo: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  sourceWorkId: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  revisionNote: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  correctApproval: z.union([ z.lazy(() => BoolFilterSchema), z.boolean() ]).optional(),
+  closedAt: z.union([ z.lazy(() => DateTimeNullableFilterSchema), z.coerce.date() ]).optional().nullable(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+  updatedAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const Fm200LocationCreateWithoutCylindersInputSchema: z.ZodType<Prisma.Fm200LocationCreateWithoutCylindersInput> = z.object({
+  id: z.cuid().optional(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string().optional(),
+  roomType: z.string(),
+  customRoomName: z.string().optional().nullable(),
+  index: z.number().int().optional(),
+  systemUid: z.string(),
+  systemType: z.string().optional(),
+  panelType: z.string().optional().nullable(),
+  roomVolumeM3: z.number().optional().nullable(),
+  cylinderCount: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  facility: z.lazy(() => FacilityCreateNestedOneWithoutFm200LocationsInputSchema),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentCreateNestedManyWithoutLocationInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionCreateNestedManyWithoutLocationInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceCreateNestedManyWithoutLocationInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestCreateNestedManyWithoutLocationInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderCreateNestedManyWithoutLocationInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedCreateWithoutCylindersInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedCreateWithoutCylindersInput> = z.object({
+  id: z.cuid().optional(),
+  facilityId: z.string(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string().optional(),
+  roomType: z.string(),
+  customRoomName: z.string().optional().nullable(),
+  index: z.number().int().optional(),
+  systemUid: z.string(),
+  systemType: z.string().optional(),
+  panelType: z.string().optional().nullable(),
+  roomVolumeM3: z.number().optional().nullable(),
+  cylinderCount: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationCreateOrConnectWithoutCylindersInputSchema: z.ZodType<Prisma.Fm200LocationCreateOrConnectWithoutCylindersInput> = z.object({
+  where: z.lazy(() => Fm200LocationWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutCylindersInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutCylindersInputSchema) ]),
+}).strict();
+
+export const Fm200MaintenanceCylinderCreateWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderCreateWithoutCylinderInput> = z.object({
+  id: z.cuid().optional(),
+  govde: z.string().optional(),
+  muhur: z.string().optional(),
+  basinc: z.string().optional(),
+  emniyet: z.string().optional(),
+  notes: z.string().optional().nullable(),
+  maintenance: z.lazy(() => Fm200MaintenanceCreateNestedOneWithoutCylindersInputSchema),
+}).strict();
+
+export const Fm200MaintenanceCylinderUncheckedCreateWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUncheckedCreateWithoutCylinderInput> = z.object({
+  id: z.cuid().optional(),
+  maintenanceId: z.string(),
+  govde: z.string().optional(),
+  muhur: z.string().optional(),
+  basinc: z.string().optional(),
+  emniyet: z.string().optional(),
+  notes: z.string().optional().nullable(),
+}).strict();
+
+export const Fm200MaintenanceCylinderCreateOrConnectWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderCreateOrConnectWithoutCylinderInput> = z.object({
+  where: z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutCylinderInputSchema) ]),
+}).strict();
+
+export const Fm200MaintenanceCylinderCreateManyCylinderInputEnvelopeSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderCreateManyCylinderInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateManyCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderCreateManyCylinderInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200WorkOrderCreateWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200WorkOrderCreateWithoutCylinderInput> = z.object({
+  id: z.cuid().optional(),
+  sourcePhase: z.string(),
+  sourceCode: z.string(),
+  title: z.string(),
+  workType: z.string().optional(),
+  responsible: z.string().optional(),
+  trackLane: z.string().optional(),
+  status: z.string().optional(),
+  repeatCount: z.number().int().optional(),
+  companyTrackNo: z.string().optional().nullable(),
+  sourceWorkId: z.string().optional().nullable(),
+  revisionNote: z.string().optional().nullable(),
+  correctApproval: z.boolean().optional(),
+  closedAt: z.coerce.date().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  location: z.lazy(() => Fm200LocationCreateNestedOneWithoutWorkOrdersInputSchema),
+  evidences: z.lazy(() => Fm200WorkOrderEvidenceCreateNestedManyWithoutWorkOrderInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderUncheckedCreateWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200WorkOrderUncheckedCreateWithoutCylinderInput> = z.object({
+  id: z.cuid().optional(),
+  locationId: z.string(),
+  sourcePhase: z.string(),
+  sourceCode: z.string(),
+  title: z.string(),
+  workType: z.string().optional(),
+  responsible: z.string().optional(),
+  trackLane: z.string().optional(),
+  status: z.string().optional(),
+  repeatCount: z.number().int().optional(),
+  companyTrackNo: z.string().optional().nullable(),
+  sourceWorkId: z.string().optional().nullable(),
+  revisionNote: z.string().optional().nullable(),
+  correctApproval: z.boolean().optional(),
+  closedAt: z.coerce.date().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  evidences: z.lazy(() => Fm200WorkOrderEvidenceUncheckedCreateNestedManyWithoutWorkOrderInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderCreateOrConnectWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200WorkOrderCreateOrConnectWithoutCylinderInput> = z.object({
+  where: z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200WorkOrderCreateWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutCylinderInputSchema) ]),
+}).strict();
+
+export const Fm200WorkOrderCreateManyCylinderInputEnvelopeSchema: z.ZodType<Prisma.Fm200WorkOrderCreateManyCylinderInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => Fm200WorkOrderCreateManyCylinderInputSchema), z.lazy(() => Fm200WorkOrderCreateManyCylinderInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200LocationUpsertWithoutCylindersInputSchema: z.ZodType<Prisma.Fm200LocationUpsertWithoutCylindersInput> = z.object({
+  update: z.union([ z.lazy(() => Fm200LocationUpdateWithoutCylindersInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutCylindersInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutCylindersInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutCylindersInputSchema) ]),
+  where: z.lazy(() => Fm200LocationWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUpdateToOneWithWhereWithoutCylindersInputSchema: z.ZodType<Prisma.Fm200LocationUpdateToOneWithWhereWithoutCylindersInput> = z.object({
+  where: z.lazy(() => Fm200LocationWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => Fm200LocationUpdateWithoutCylindersInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutCylindersInputSchema) ]),
+}).strict();
+
+export const Fm200LocationUpdateWithoutCylindersInputSchema: z.ZodType<Prisma.Fm200LocationUpdateWithoutCylindersInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  facility: z.lazy(() => FacilityUpdateOneRequiredWithoutFm200LocationsNestedInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUpdateManyWithoutLocationNestedInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUpdateManyWithoutLocationNestedInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUpdateManyWithoutLocationNestedInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUpdateManyWithoutLocationNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUpdateManyWithoutLocationNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedUpdateWithoutCylindersInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedUpdateWithoutCylindersInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderUpsertWithWhereUniqueWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUpsertWithWhereUniqueWithoutCylinderInput> = z.object({
+  where: z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => Fm200MaintenanceCylinderUpdateWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderUncheckedUpdateWithoutCylinderInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutCylinderInputSchema) ]),
+}).strict();
+
+export const Fm200MaintenanceCylinderUpdateWithWhereUniqueWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUpdateWithWhereUniqueWithoutCylinderInput> = z.object({
+  where: z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => Fm200MaintenanceCylinderUpdateWithoutCylinderInputSchema), z.lazy(() => Fm200MaintenanceCylinderUncheckedUpdateWithoutCylinderInputSchema) ]),
+}).strict();
+
+export const Fm200MaintenanceCylinderUpdateManyWithWhereWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUpdateManyWithWhereWithoutCylinderInput> = z.object({
+  where: z.lazy(() => Fm200MaintenanceCylinderScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => Fm200MaintenanceCylinderUpdateManyMutationInputSchema), z.lazy(() => Fm200MaintenanceCylinderUncheckedUpdateManyWithoutCylinderInputSchema) ]),
+}).strict();
+
+export const Fm200MaintenanceCylinderScalarWhereInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200MaintenanceCylinderScalarWhereInputSchema), z.lazy(() => Fm200MaintenanceCylinderScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200MaintenanceCylinderScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200MaintenanceCylinderScalarWhereInputSchema), z.lazy(() => Fm200MaintenanceCylinderScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  maintenanceId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  cylinderId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  govde: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  muhur: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  basinc: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  emniyet: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  notes: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+}).strict();
+
+export const Fm200WorkOrderUpsertWithWhereUniqueWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200WorkOrderUpsertWithWhereUniqueWithoutCylinderInput> = z.object({
+  where: z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => Fm200WorkOrderUpdateWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderUncheckedUpdateWithoutCylinderInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200WorkOrderCreateWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutCylinderInputSchema) ]),
+}).strict();
+
+export const Fm200WorkOrderUpdateWithWhereUniqueWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200WorkOrderUpdateWithWhereUniqueWithoutCylinderInput> = z.object({
+  where: z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => Fm200WorkOrderUpdateWithoutCylinderInputSchema), z.lazy(() => Fm200WorkOrderUncheckedUpdateWithoutCylinderInputSchema) ]),
+}).strict();
+
+export const Fm200WorkOrderUpdateManyWithWhereWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200WorkOrderUpdateManyWithWhereWithoutCylinderInput> = z.object({
+  where: z.lazy(() => Fm200WorkOrderScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => Fm200WorkOrderUpdateManyMutationInputSchema), z.lazy(() => Fm200WorkOrderUncheckedUpdateManyWithoutCylinderInputSchema) ]),
+}).strict();
+
+export const Fm200LocationCreateWithoutPhase1AssessmentsInputSchema: z.ZodType<Prisma.Fm200LocationCreateWithoutPhase1AssessmentsInput> = z.object({
+  id: z.cuid().optional(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string().optional(),
+  roomType: z.string(),
+  customRoomName: z.string().optional().nullable(),
+  index: z.number().int().optional(),
+  systemUid: z.string(),
+  systemType: z.string().optional(),
+  panelType: z.string().optional().nullable(),
+  roomVolumeM3: z.number().optional().nullable(),
+  cylinderCount: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  facility: z.lazy(() => FacilityCreateNestedOneWithoutFm200LocationsInputSchema),
+  cylinders: z.lazy(() => Fm200CylinderCreateNestedManyWithoutLocationInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionCreateNestedManyWithoutLocationInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceCreateNestedManyWithoutLocationInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestCreateNestedManyWithoutLocationInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderCreateNestedManyWithoutLocationInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedCreateWithoutPhase1AssessmentsInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedCreateWithoutPhase1AssessmentsInput> = z.object({
+  id: z.cuid().optional(),
+  facilityId: z.string(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string().optional(),
+  roomType: z.string(),
+  customRoomName: z.string().optional().nullable(),
+  index: z.number().int().optional(),
+  systemUid: z.string(),
+  systemType: z.string().optional(),
+  panelType: z.string().optional().nullable(),
+  roomVolumeM3: z.number().optional().nullable(),
+  cylinderCount: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  cylinders: z.lazy(() => Fm200CylinderUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationCreateOrConnectWithoutPhase1AssessmentsInputSchema: z.ZodType<Prisma.Fm200LocationCreateOrConnectWithoutPhase1AssessmentsInput> = z.object({
+  where: z.lazy(() => Fm200LocationWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutPhase1AssessmentsInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutPhase1AssessmentsInputSchema) ]),
+}).strict();
+
+export const Fm200LocationUpsertWithoutPhase1AssessmentsInputSchema: z.ZodType<Prisma.Fm200LocationUpsertWithoutPhase1AssessmentsInput> = z.object({
+  update: z.union([ z.lazy(() => Fm200LocationUpdateWithoutPhase1AssessmentsInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutPhase1AssessmentsInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutPhase1AssessmentsInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutPhase1AssessmentsInputSchema) ]),
+  where: z.lazy(() => Fm200LocationWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUpdateToOneWithWhereWithoutPhase1AssessmentsInputSchema: z.ZodType<Prisma.Fm200LocationUpdateToOneWithWhereWithoutPhase1AssessmentsInput> = z.object({
+  where: z.lazy(() => Fm200LocationWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => Fm200LocationUpdateWithoutPhase1AssessmentsInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutPhase1AssessmentsInputSchema) ]),
+}).strict();
+
+export const Fm200LocationUpdateWithoutPhase1AssessmentsInputSchema: z.ZodType<Prisma.Fm200LocationUpdateWithoutPhase1AssessmentsInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  facility: z.lazy(() => FacilityUpdateOneRequiredWithoutFm200LocationsNestedInputSchema).optional(),
+  cylinders: z.lazy(() => Fm200CylinderUpdateManyWithoutLocationNestedInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUpdateManyWithoutLocationNestedInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUpdateManyWithoutLocationNestedInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUpdateManyWithoutLocationNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUpdateManyWithoutLocationNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedUpdateWithoutPhase1AssessmentsInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedUpdateWithoutPhase1AssessmentsInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinders: z.lazy(() => Fm200CylinderUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationCreateWithoutInspectionsInputSchema: z.ZodType<Prisma.Fm200LocationCreateWithoutInspectionsInput> = z.object({
+  id: z.cuid().optional(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string().optional(),
+  roomType: z.string(),
+  customRoomName: z.string().optional().nullable(),
+  index: z.number().int().optional(),
+  systemUid: z.string(),
+  systemType: z.string().optional(),
+  panelType: z.string().optional().nullable(),
+  roomVolumeM3: z.number().optional().nullable(),
+  cylinderCount: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  facility: z.lazy(() => FacilityCreateNestedOneWithoutFm200LocationsInputSchema),
+  cylinders: z.lazy(() => Fm200CylinderCreateNestedManyWithoutLocationInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentCreateNestedManyWithoutLocationInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceCreateNestedManyWithoutLocationInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestCreateNestedManyWithoutLocationInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderCreateNestedManyWithoutLocationInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedCreateWithoutInspectionsInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedCreateWithoutInspectionsInput> = z.object({
+  id: z.cuid().optional(),
+  facilityId: z.string(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string().optional(),
+  roomType: z.string(),
+  customRoomName: z.string().optional().nullable(),
+  index: z.number().int().optional(),
+  systemUid: z.string(),
+  systemType: z.string().optional(),
+  panelType: z.string().optional().nullable(),
+  roomVolumeM3: z.number().optional().nullable(),
+  cylinderCount: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  cylinders: z.lazy(() => Fm200CylinderUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationCreateOrConnectWithoutInspectionsInputSchema: z.ZodType<Prisma.Fm200LocationCreateOrConnectWithoutInspectionsInput> = z.object({
+  where: z.lazy(() => Fm200LocationWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutInspectionsInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutInspectionsInputSchema) ]),
+}).strict();
+
+export const Fm200LocationUpsertWithoutInspectionsInputSchema: z.ZodType<Prisma.Fm200LocationUpsertWithoutInspectionsInput> = z.object({
+  update: z.union([ z.lazy(() => Fm200LocationUpdateWithoutInspectionsInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutInspectionsInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutInspectionsInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutInspectionsInputSchema) ]),
+  where: z.lazy(() => Fm200LocationWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUpdateToOneWithWhereWithoutInspectionsInputSchema: z.ZodType<Prisma.Fm200LocationUpdateToOneWithWhereWithoutInspectionsInput> = z.object({
+  where: z.lazy(() => Fm200LocationWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => Fm200LocationUpdateWithoutInspectionsInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutInspectionsInputSchema) ]),
+}).strict();
+
+export const Fm200LocationUpdateWithoutInspectionsInputSchema: z.ZodType<Prisma.Fm200LocationUpdateWithoutInspectionsInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  facility: z.lazy(() => FacilityUpdateOneRequiredWithoutFm200LocationsNestedInputSchema).optional(),
+  cylinders: z.lazy(() => Fm200CylinderUpdateManyWithoutLocationNestedInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUpdateManyWithoutLocationNestedInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUpdateManyWithoutLocationNestedInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUpdateManyWithoutLocationNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUpdateManyWithoutLocationNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedUpdateWithoutInspectionsInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedUpdateWithoutInspectionsInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinders: z.lazy(() => Fm200CylinderUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationCreateWithoutMaintenancesInputSchema: z.ZodType<Prisma.Fm200LocationCreateWithoutMaintenancesInput> = z.object({
+  id: z.cuid().optional(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string().optional(),
+  roomType: z.string(),
+  customRoomName: z.string().optional().nullable(),
+  index: z.number().int().optional(),
+  systemUid: z.string(),
+  systemType: z.string().optional(),
+  panelType: z.string().optional().nullable(),
+  roomVolumeM3: z.number().optional().nullable(),
+  cylinderCount: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  facility: z.lazy(() => FacilityCreateNestedOneWithoutFm200LocationsInputSchema),
+  cylinders: z.lazy(() => Fm200CylinderCreateNestedManyWithoutLocationInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentCreateNestedManyWithoutLocationInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionCreateNestedManyWithoutLocationInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestCreateNestedManyWithoutLocationInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderCreateNestedManyWithoutLocationInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedCreateWithoutMaintenancesInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedCreateWithoutMaintenancesInput> = z.object({
+  id: z.cuid().optional(),
+  facilityId: z.string(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string().optional(),
+  roomType: z.string(),
+  customRoomName: z.string().optional().nullable(),
+  index: z.number().int().optional(),
+  systemUid: z.string(),
+  systemType: z.string().optional(),
+  panelType: z.string().optional().nullable(),
+  roomVolumeM3: z.number().optional().nullable(),
+  cylinderCount: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  cylinders: z.lazy(() => Fm200CylinderUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationCreateOrConnectWithoutMaintenancesInputSchema: z.ZodType<Prisma.Fm200LocationCreateOrConnectWithoutMaintenancesInput> = z.object({
+  where: z.lazy(() => Fm200LocationWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutMaintenancesInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutMaintenancesInputSchema) ]),
+}).strict();
+
+export const Fm200MaintenanceCylinderCreateWithoutMaintenanceInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderCreateWithoutMaintenanceInput> = z.object({
+  id: z.cuid().optional(),
+  govde: z.string().optional(),
+  muhur: z.string().optional(),
+  basinc: z.string().optional(),
+  emniyet: z.string().optional(),
+  notes: z.string().optional().nullable(),
+  cylinder: z.lazy(() => Fm200CylinderCreateNestedOneWithoutMaintenanceCylindersInputSchema),
+}).strict();
+
+export const Fm200MaintenanceCylinderUncheckedCreateWithoutMaintenanceInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUncheckedCreateWithoutMaintenanceInput> = z.object({
+  id: z.cuid().optional(),
+  cylinderId: z.string(),
+  govde: z.string().optional(),
+  muhur: z.string().optional(),
+  basinc: z.string().optional(),
+  emniyet: z.string().optional(),
+  notes: z.string().optional().nullable(),
+}).strict();
+
+export const Fm200MaintenanceCylinderCreateOrConnectWithoutMaintenanceInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderCreateOrConnectWithoutMaintenanceInput> = z.object({
+  where: z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutMaintenanceInputSchema) ]),
+}).strict();
+
+export const Fm200MaintenanceCylinderCreateManyMaintenanceInputEnvelopeSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderCreateManyMaintenanceInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateManyMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderCreateManyMaintenanceInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200LocationUpsertWithoutMaintenancesInputSchema: z.ZodType<Prisma.Fm200LocationUpsertWithoutMaintenancesInput> = z.object({
+  update: z.union([ z.lazy(() => Fm200LocationUpdateWithoutMaintenancesInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutMaintenancesInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutMaintenancesInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutMaintenancesInputSchema) ]),
+  where: z.lazy(() => Fm200LocationWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUpdateToOneWithWhereWithoutMaintenancesInputSchema: z.ZodType<Prisma.Fm200LocationUpdateToOneWithWhereWithoutMaintenancesInput> = z.object({
+  where: z.lazy(() => Fm200LocationWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => Fm200LocationUpdateWithoutMaintenancesInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutMaintenancesInputSchema) ]),
+}).strict();
+
+export const Fm200LocationUpdateWithoutMaintenancesInputSchema: z.ZodType<Prisma.Fm200LocationUpdateWithoutMaintenancesInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  facility: z.lazy(() => FacilityUpdateOneRequiredWithoutFm200LocationsNestedInputSchema).optional(),
+  cylinders: z.lazy(() => Fm200CylinderUpdateManyWithoutLocationNestedInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUpdateManyWithoutLocationNestedInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUpdateManyWithoutLocationNestedInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUpdateManyWithoutLocationNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUpdateManyWithoutLocationNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedUpdateWithoutMaintenancesInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedUpdateWithoutMaintenancesInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinders: z.lazy(() => Fm200CylinderUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderUpsertWithWhereUniqueWithoutMaintenanceInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUpsertWithWhereUniqueWithoutMaintenanceInput> = z.object({
+  where: z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => Fm200MaintenanceCylinderUpdateWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderUncheckedUpdateWithoutMaintenanceInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200MaintenanceCylinderCreateWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateWithoutMaintenanceInputSchema) ]),
+}).strict();
+
+export const Fm200MaintenanceCylinderUpdateWithWhereUniqueWithoutMaintenanceInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUpdateWithWhereUniqueWithoutMaintenanceInput> = z.object({
+  where: z.lazy(() => Fm200MaintenanceCylinderWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => Fm200MaintenanceCylinderUpdateWithoutMaintenanceInputSchema), z.lazy(() => Fm200MaintenanceCylinderUncheckedUpdateWithoutMaintenanceInputSchema) ]),
+}).strict();
+
+export const Fm200MaintenanceCylinderUpdateManyWithWhereWithoutMaintenanceInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUpdateManyWithWhereWithoutMaintenanceInput> = z.object({
+  where: z.lazy(() => Fm200MaintenanceCylinderScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => Fm200MaintenanceCylinderUpdateManyMutationInputSchema), z.lazy(() => Fm200MaintenanceCylinderUncheckedUpdateManyWithoutMaintenanceInputSchema) ]),
+}).strict();
+
+export const Fm200MaintenanceCreateWithoutCylindersInputSchema: z.ZodType<Prisma.Fm200MaintenanceCreateWithoutCylindersInput> = z.object({
+  id: z.cuid().optional(),
+  performedBy: z.string(),
+  maintenanceDate: z.coerce.date().optional(),
+  panelControlStatus: z.string().optional(),
+  panelNotes: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  location: z.lazy(() => Fm200LocationCreateNestedOneWithoutMaintenancesInputSchema),
+}).strict();
+
+export const Fm200MaintenanceUncheckedCreateWithoutCylindersInputSchema: z.ZodType<Prisma.Fm200MaintenanceUncheckedCreateWithoutCylindersInput> = z.object({
+  id: z.cuid().optional(),
+  locationId: z.string(),
+  performedBy: z.string(),
+  maintenanceDate: z.coerce.date().optional(),
+  panelControlStatus: z.string().optional(),
+  panelNotes: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200MaintenanceCreateOrConnectWithoutCylindersInputSchema: z.ZodType<Prisma.Fm200MaintenanceCreateOrConnectWithoutCylindersInput> = z.object({
+  where: z.lazy(() => Fm200MaintenanceWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200MaintenanceCreateWithoutCylindersInputSchema), z.lazy(() => Fm200MaintenanceUncheckedCreateWithoutCylindersInputSchema) ]),
+}).strict();
+
+export const Fm200CylinderCreateWithoutMaintenanceCylindersInputSchema: z.ZodType<Prisma.Fm200CylinderCreateWithoutMaintenanceCylindersInput> = z.object({
+  id: z.cuid().optional(),
+  serialNumber: z.string(),
+  labelCode: z.string(),
+  capacityKg: z.number().optional().nullable(),
+  tareKg: z.number().optional().nullable(),
+  manufacturingYear: z.number().int().optional().nullable(),
+  lastHydrostaticTestDate: z.coerce.date().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  location: z.lazy(() => Fm200LocationCreateNestedOneWithoutCylindersInputSchema),
+  workOrders: z.lazy(() => Fm200WorkOrderCreateNestedManyWithoutCylinderInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderUncheckedCreateWithoutMaintenanceCylindersInputSchema: z.ZodType<Prisma.Fm200CylinderUncheckedCreateWithoutMaintenanceCylindersInput> = z.object({
+  id: z.cuid().optional(),
+  locationId: z.string(),
+  serialNumber: z.string(),
+  labelCode: z.string(),
+  capacityKg: z.number().optional().nullable(),
+  tareKg: z.number().optional().nullable(),
+  manufacturingYear: z.number().int().optional().nullable(),
+  lastHydrostaticTestDate: z.coerce.date().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedCreateNestedManyWithoutCylinderInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderCreateOrConnectWithoutMaintenanceCylindersInputSchema: z.ZodType<Prisma.Fm200CylinderCreateOrConnectWithoutMaintenanceCylindersInput> = z.object({
+  where: z.lazy(() => Fm200CylinderWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200CylinderCreateWithoutMaintenanceCylindersInputSchema), z.lazy(() => Fm200CylinderUncheckedCreateWithoutMaintenanceCylindersInputSchema) ]),
+}).strict();
+
+export const Fm200MaintenanceUpsertWithoutCylindersInputSchema: z.ZodType<Prisma.Fm200MaintenanceUpsertWithoutCylindersInput> = z.object({
+  update: z.union([ z.lazy(() => Fm200MaintenanceUpdateWithoutCylindersInputSchema), z.lazy(() => Fm200MaintenanceUncheckedUpdateWithoutCylindersInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200MaintenanceCreateWithoutCylindersInputSchema), z.lazy(() => Fm200MaintenanceUncheckedCreateWithoutCylindersInputSchema) ]),
+  where: z.lazy(() => Fm200MaintenanceWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceUpdateToOneWithWhereWithoutCylindersInputSchema: z.ZodType<Prisma.Fm200MaintenanceUpdateToOneWithWhereWithoutCylindersInput> = z.object({
+  where: z.lazy(() => Fm200MaintenanceWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => Fm200MaintenanceUpdateWithoutCylindersInputSchema), z.lazy(() => Fm200MaintenanceUncheckedUpdateWithoutCylindersInputSchema) ]),
+}).strict();
+
+export const Fm200MaintenanceUpdateWithoutCylindersInputSchema: z.ZodType<Prisma.Fm200MaintenanceUpdateWithoutCylindersInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  performedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  maintenanceDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  panelControlStatus: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelNotes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  location: z.lazy(() => Fm200LocationUpdateOneRequiredWithoutMaintenancesNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceUncheckedUpdateWithoutCylindersInputSchema: z.ZodType<Prisma.Fm200MaintenanceUncheckedUpdateWithoutCylindersInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  locationId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  performedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  maintenanceDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  panelControlStatus: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelNotes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200CylinderUpsertWithoutMaintenanceCylindersInputSchema: z.ZodType<Prisma.Fm200CylinderUpsertWithoutMaintenanceCylindersInput> = z.object({
+  update: z.union([ z.lazy(() => Fm200CylinderUpdateWithoutMaintenanceCylindersInputSchema), z.lazy(() => Fm200CylinderUncheckedUpdateWithoutMaintenanceCylindersInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200CylinderCreateWithoutMaintenanceCylindersInputSchema), z.lazy(() => Fm200CylinderUncheckedCreateWithoutMaintenanceCylindersInputSchema) ]),
+  where: z.lazy(() => Fm200CylinderWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderUpdateToOneWithWhereWithoutMaintenanceCylindersInputSchema: z.ZodType<Prisma.Fm200CylinderUpdateToOneWithWhereWithoutMaintenanceCylindersInput> = z.object({
+  where: z.lazy(() => Fm200CylinderWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => Fm200CylinderUpdateWithoutMaintenanceCylindersInputSchema), z.lazy(() => Fm200CylinderUncheckedUpdateWithoutMaintenanceCylindersInputSchema) ]),
+}).strict();
+
+export const Fm200CylinderUpdateWithoutMaintenanceCylindersInputSchema: z.ZodType<Prisma.Fm200CylinderUpdateWithoutMaintenanceCylindersInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  serialNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  labelCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  capacityKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  tareKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  manufacturingYear: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastHydrostaticTestDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  location: z.lazy(() => Fm200LocationUpdateOneRequiredWithoutCylindersNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUpdateManyWithoutCylinderNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderUncheckedUpdateWithoutMaintenanceCylindersInputSchema: z.ZodType<Prisma.Fm200CylinderUncheckedUpdateWithoutMaintenanceCylindersInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  locationId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  serialNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  labelCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  capacityKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  tareKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  manufacturingYear: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastHydrostaticTestDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedUpdateManyWithoutCylinderNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationCreateWithoutTightnessTestsInputSchema: z.ZodType<Prisma.Fm200LocationCreateWithoutTightnessTestsInput> = z.object({
+  id: z.cuid().optional(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string().optional(),
+  roomType: z.string(),
+  customRoomName: z.string().optional().nullable(),
+  index: z.number().int().optional(),
+  systemUid: z.string(),
+  systemType: z.string().optional(),
+  panelType: z.string().optional().nullable(),
+  roomVolumeM3: z.number().optional().nullable(),
+  cylinderCount: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  facility: z.lazy(() => FacilityCreateNestedOneWithoutFm200LocationsInputSchema),
+  cylinders: z.lazy(() => Fm200CylinderCreateNestedManyWithoutLocationInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentCreateNestedManyWithoutLocationInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionCreateNestedManyWithoutLocationInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceCreateNestedManyWithoutLocationInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderCreateNestedManyWithoutLocationInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedCreateWithoutTightnessTestsInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedCreateWithoutTightnessTestsInput> = z.object({
+  id: z.cuid().optional(),
+  facilityId: z.string(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string().optional(),
+  roomType: z.string(),
+  customRoomName: z.string().optional().nullable(),
+  index: z.number().int().optional(),
+  systemUid: z.string(),
+  systemType: z.string().optional(),
+  panelType: z.string().optional().nullable(),
+  roomVolumeM3: z.number().optional().nullable(),
+  cylinderCount: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  cylinders: z.lazy(() => Fm200CylinderUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationCreateOrConnectWithoutTightnessTestsInputSchema: z.ZodType<Prisma.Fm200LocationCreateOrConnectWithoutTightnessTestsInput> = z.object({
+  where: z.lazy(() => Fm200LocationWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutTightnessTestsInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutTightnessTestsInputSchema) ]),
+}).strict();
+
+export const Fm200LocationUpsertWithoutTightnessTestsInputSchema: z.ZodType<Prisma.Fm200LocationUpsertWithoutTightnessTestsInput> = z.object({
+  update: z.union([ z.lazy(() => Fm200LocationUpdateWithoutTightnessTestsInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutTightnessTestsInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutTightnessTestsInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutTightnessTestsInputSchema) ]),
+  where: z.lazy(() => Fm200LocationWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUpdateToOneWithWhereWithoutTightnessTestsInputSchema: z.ZodType<Prisma.Fm200LocationUpdateToOneWithWhereWithoutTightnessTestsInput> = z.object({
+  where: z.lazy(() => Fm200LocationWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => Fm200LocationUpdateWithoutTightnessTestsInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutTightnessTestsInputSchema) ]),
+}).strict();
+
+export const Fm200LocationUpdateWithoutTightnessTestsInputSchema: z.ZodType<Prisma.Fm200LocationUpdateWithoutTightnessTestsInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  facility: z.lazy(() => FacilityUpdateOneRequiredWithoutFm200LocationsNestedInputSchema).optional(),
+  cylinders: z.lazy(() => Fm200CylinderUpdateManyWithoutLocationNestedInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUpdateManyWithoutLocationNestedInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUpdateManyWithoutLocationNestedInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUpdateManyWithoutLocationNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUpdateManyWithoutLocationNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedUpdateWithoutTightnessTestsInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedUpdateWithoutTightnessTestsInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinders: z.lazy(() => Fm200CylinderUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationCreateWithoutWorkOrdersInputSchema: z.ZodType<Prisma.Fm200LocationCreateWithoutWorkOrdersInput> = z.object({
+  id: z.cuid().optional(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string().optional(),
+  roomType: z.string(),
+  customRoomName: z.string().optional().nullable(),
+  index: z.number().int().optional(),
+  systemUid: z.string(),
+  systemType: z.string().optional(),
+  panelType: z.string().optional().nullable(),
+  roomVolumeM3: z.number().optional().nullable(),
+  cylinderCount: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  facility: z.lazy(() => FacilityCreateNestedOneWithoutFm200LocationsInputSchema),
+  cylinders: z.lazy(() => Fm200CylinderCreateNestedManyWithoutLocationInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentCreateNestedManyWithoutLocationInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionCreateNestedManyWithoutLocationInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceCreateNestedManyWithoutLocationInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestCreateNestedManyWithoutLocationInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedCreateWithoutWorkOrdersInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedCreateWithoutWorkOrdersInput> = z.object({
+  id: z.cuid().optional(),
+  facilityId: z.string(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string().optional(),
+  roomType: z.string(),
+  customRoomName: z.string().optional().nullable(),
+  index: z.number().int().optional(),
+  systemUid: z.string(),
+  systemType: z.string().optional(),
+  panelType: z.string().optional().nullable(),
+  roomVolumeM3: z.number().optional().nullable(),
+  cylinderCount: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  cylinders: z.lazy(() => Fm200CylinderUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUncheckedCreateNestedManyWithoutLocationInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationCreateOrConnectWithoutWorkOrdersInputSchema: z.ZodType<Prisma.Fm200LocationCreateOrConnectWithoutWorkOrdersInput> = z.object({
+  where: z.lazy(() => Fm200LocationWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutWorkOrdersInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutWorkOrdersInputSchema) ]),
+}).strict();
+
+export const Fm200CylinderCreateWithoutWorkOrdersInputSchema: z.ZodType<Prisma.Fm200CylinderCreateWithoutWorkOrdersInput> = z.object({
+  id: z.cuid().optional(),
+  serialNumber: z.string(),
+  labelCode: z.string(),
+  capacityKg: z.number().optional().nullable(),
+  tareKg: z.number().optional().nullable(),
+  manufacturingYear: z.number().int().optional().nullable(),
+  lastHydrostaticTestDate: z.coerce.date().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  location: z.lazy(() => Fm200LocationCreateNestedOneWithoutCylindersInputSchema),
+  maintenanceCylinders: z.lazy(() => Fm200MaintenanceCylinderCreateNestedManyWithoutCylinderInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderUncheckedCreateWithoutWorkOrdersInputSchema: z.ZodType<Prisma.Fm200CylinderUncheckedCreateWithoutWorkOrdersInput> = z.object({
+  id: z.cuid().optional(),
+  locationId: z.string(),
+  serialNumber: z.string(),
+  labelCode: z.string(),
+  capacityKg: z.number().optional().nullable(),
+  tareKg: z.number().optional().nullable(),
+  manufacturingYear: z.number().int().optional().nullable(),
+  lastHydrostaticTestDate: z.coerce.date().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  maintenanceCylinders: z.lazy(() => Fm200MaintenanceCylinderUncheckedCreateNestedManyWithoutCylinderInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderCreateOrConnectWithoutWorkOrdersInputSchema: z.ZodType<Prisma.Fm200CylinderCreateOrConnectWithoutWorkOrdersInput> = z.object({
+  where: z.lazy(() => Fm200CylinderWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200CylinderCreateWithoutWorkOrdersInputSchema), z.lazy(() => Fm200CylinderUncheckedCreateWithoutWorkOrdersInputSchema) ]),
+}).strict();
+
+export const Fm200WorkOrderEvidenceCreateWithoutWorkOrderInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceCreateWithoutWorkOrderInput> = z.object({
+  id: z.cuid().optional(),
+  fileType: z.string().optional(),
+  fileUrl: z.string(),
+  fileName: z.string().optional().nullable(),
+  uploadedBy: z.string(),
+  createdAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceUncheckedCreateWithoutWorkOrderInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceUncheckedCreateWithoutWorkOrderInput> = z.object({
+  id: z.cuid().optional(),
+  fileType: z.string().optional(),
+  fileUrl: z.string(),
+  fileName: z.string().optional().nullable(),
+  uploadedBy: z.string(),
+  createdAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceCreateOrConnectWithoutWorkOrderInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceCreateOrConnectWithoutWorkOrderInput> = z.object({
+  where: z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200WorkOrderEvidenceCreateWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceUncheckedCreateWithoutWorkOrderInputSchema) ]),
+}).strict();
+
+export const Fm200WorkOrderEvidenceCreateManyWorkOrderInputEnvelopeSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceCreateManyWorkOrderInputEnvelope> = z.object({
+  data: z.union([ z.lazy(() => Fm200WorkOrderEvidenceCreateManyWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceCreateManyWorkOrderInputSchema).array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200LocationUpsertWithoutWorkOrdersInputSchema: z.ZodType<Prisma.Fm200LocationUpsertWithoutWorkOrdersInput> = z.object({
+  update: z.union([ z.lazy(() => Fm200LocationUpdateWithoutWorkOrdersInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutWorkOrdersInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200LocationCreateWithoutWorkOrdersInputSchema), z.lazy(() => Fm200LocationUncheckedCreateWithoutWorkOrdersInputSchema) ]),
+  where: z.lazy(() => Fm200LocationWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUpdateToOneWithWhereWithoutWorkOrdersInputSchema: z.ZodType<Prisma.Fm200LocationUpdateToOneWithWhereWithoutWorkOrdersInput> = z.object({
+  where: z.lazy(() => Fm200LocationWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => Fm200LocationUpdateWithoutWorkOrdersInputSchema), z.lazy(() => Fm200LocationUncheckedUpdateWithoutWorkOrdersInputSchema) ]),
+}).strict();
+
+export const Fm200LocationUpdateWithoutWorkOrdersInputSchema: z.ZodType<Prisma.Fm200LocationUpdateWithoutWorkOrdersInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  facility: z.lazy(() => FacilityUpdateOneRequiredWithoutFm200LocationsNestedInputSchema).optional(),
+  cylinders: z.lazy(() => Fm200CylinderUpdateManyWithoutLocationNestedInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUpdateManyWithoutLocationNestedInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUpdateManyWithoutLocationNestedInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUpdateManyWithoutLocationNestedInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUpdateManyWithoutLocationNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedUpdateWithoutWorkOrdersInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedUpdateWithoutWorkOrdersInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  facilityId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinders: z.lazy(() => Fm200CylinderUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderUpsertWithoutWorkOrdersInputSchema: z.ZodType<Prisma.Fm200CylinderUpsertWithoutWorkOrdersInput> = z.object({
+  update: z.union([ z.lazy(() => Fm200CylinderUpdateWithoutWorkOrdersInputSchema), z.lazy(() => Fm200CylinderUncheckedUpdateWithoutWorkOrdersInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200CylinderCreateWithoutWorkOrdersInputSchema), z.lazy(() => Fm200CylinderUncheckedCreateWithoutWorkOrdersInputSchema) ]),
+  where: z.lazy(() => Fm200CylinderWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderUpdateToOneWithWhereWithoutWorkOrdersInputSchema: z.ZodType<Prisma.Fm200CylinderUpdateToOneWithWhereWithoutWorkOrdersInput> = z.object({
+  where: z.lazy(() => Fm200CylinderWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => Fm200CylinderUpdateWithoutWorkOrdersInputSchema), z.lazy(() => Fm200CylinderUncheckedUpdateWithoutWorkOrdersInputSchema) ]),
+}).strict();
+
+export const Fm200CylinderUpdateWithoutWorkOrdersInputSchema: z.ZodType<Prisma.Fm200CylinderUpdateWithoutWorkOrdersInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  serialNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  labelCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  capacityKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  tareKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  manufacturingYear: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastHydrostaticTestDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  location: z.lazy(() => Fm200LocationUpdateOneRequiredWithoutCylindersNestedInputSchema).optional(),
+  maintenanceCylinders: z.lazy(() => Fm200MaintenanceCylinderUpdateManyWithoutCylinderNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderUncheckedUpdateWithoutWorkOrdersInputSchema: z.ZodType<Prisma.Fm200CylinderUncheckedUpdateWithoutWorkOrdersInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  locationId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  serialNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  labelCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  capacityKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  tareKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  manufacturingYear: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastHydrostaticTestDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  maintenanceCylinders: z.lazy(() => Fm200MaintenanceCylinderUncheckedUpdateManyWithoutCylinderNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceUpsertWithWhereUniqueWithoutWorkOrderInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceUpsertWithWhereUniqueWithoutWorkOrderInput> = z.object({
+  where: z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => Fm200WorkOrderEvidenceUpdateWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceUncheckedUpdateWithoutWorkOrderInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200WorkOrderEvidenceCreateWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceUncheckedCreateWithoutWorkOrderInputSchema) ]),
+}).strict();
+
+export const Fm200WorkOrderEvidenceUpdateWithWhereUniqueWithoutWorkOrderInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceUpdateWithWhereUniqueWithoutWorkOrderInput> = z.object({
+  where: z.lazy(() => Fm200WorkOrderEvidenceWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => Fm200WorkOrderEvidenceUpdateWithoutWorkOrderInputSchema), z.lazy(() => Fm200WorkOrderEvidenceUncheckedUpdateWithoutWorkOrderInputSchema) ]),
+}).strict();
+
+export const Fm200WorkOrderEvidenceUpdateManyWithWhereWithoutWorkOrderInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceUpdateManyWithWhereWithoutWorkOrderInput> = z.object({
+  where: z.lazy(() => Fm200WorkOrderEvidenceScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => Fm200WorkOrderEvidenceUpdateManyMutationInputSchema), z.lazy(() => Fm200WorkOrderEvidenceUncheckedUpdateManyWithoutWorkOrderInputSchema) ]),
+}).strict();
+
+export const Fm200WorkOrderEvidenceScalarWhereInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceScalarWhereInput> = z.object({
+  AND: z.union([ z.lazy(() => Fm200WorkOrderEvidenceScalarWhereInputSchema), z.lazy(() => Fm200WorkOrderEvidenceScalarWhereInputSchema).array() ]).optional(),
+  OR: z.lazy(() => Fm200WorkOrderEvidenceScalarWhereInputSchema).array().optional(),
+  NOT: z.union([ z.lazy(() => Fm200WorkOrderEvidenceScalarWhereInputSchema), z.lazy(() => Fm200WorkOrderEvidenceScalarWhereInputSchema).array() ]).optional(),
+  id: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  workOrderId: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  fileType: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  fileUrl: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  fileName: z.union([ z.lazy(() => StringNullableFilterSchema), z.string() ]).optional().nullable(),
+  uploadedBy: z.union([ z.lazy(() => StringFilterSchema), z.string() ]).optional(),
+  createdAt: z.union([ z.lazy(() => DateTimeFilterSchema), z.coerce.date() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderCreateWithoutEvidencesInputSchema: z.ZodType<Prisma.Fm200WorkOrderCreateWithoutEvidencesInput> = z.object({
+  id: z.cuid().optional(),
+  sourcePhase: z.string(),
+  sourceCode: z.string(),
+  title: z.string(),
+  workType: z.string().optional(),
+  responsible: z.string().optional(),
+  trackLane: z.string().optional(),
+  status: z.string().optional(),
+  repeatCount: z.number().int().optional(),
+  companyTrackNo: z.string().optional().nullable(),
+  sourceWorkId: z.string().optional().nullable(),
+  revisionNote: z.string().optional().nullable(),
+  correctApproval: z.boolean().optional(),
+  closedAt: z.coerce.date().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  location: z.lazy(() => Fm200LocationCreateNestedOneWithoutWorkOrdersInputSchema),
+  cylinder: z.lazy(() => Fm200CylinderCreateNestedOneWithoutWorkOrdersInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderUncheckedCreateWithoutEvidencesInputSchema: z.ZodType<Prisma.Fm200WorkOrderUncheckedCreateWithoutEvidencesInput> = z.object({
+  id: z.cuid().optional(),
+  locationId: z.string(),
+  cylinderId: z.string().optional().nullable(),
+  sourcePhase: z.string(),
+  sourceCode: z.string(),
+  title: z.string(),
+  workType: z.string().optional(),
+  responsible: z.string().optional(),
+  trackLane: z.string().optional(),
+  status: z.string().optional(),
+  repeatCount: z.number().int().optional(),
+  companyTrackNo: z.string().optional().nullable(),
+  sourceWorkId: z.string().optional().nullable(),
+  revisionNote: z.string().optional().nullable(),
+  correctApproval: z.boolean().optional(),
+  closedAt: z.coerce.date().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200WorkOrderCreateOrConnectWithoutEvidencesInputSchema: z.ZodType<Prisma.Fm200WorkOrderCreateOrConnectWithoutEvidencesInput> = z.object({
+  where: z.lazy(() => Fm200WorkOrderWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => Fm200WorkOrderCreateWithoutEvidencesInputSchema), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutEvidencesInputSchema) ]),
+}).strict();
+
+export const Fm200WorkOrderUpsertWithoutEvidencesInputSchema: z.ZodType<Prisma.Fm200WorkOrderUpsertWithoutEvidencesInput> = z.object({
+  update: z.union([ z.lazy(() => Fm200WorkOrderUpdateWithoutEvidencesInputSchema), z.lazy(() => Fm200WorkOrderUncheckedUpdateWithoutEvidencesInputSchema) ]),
+  create: z.union([ z.lazy(() => Fm200WorkOrderCreateWithoutEvidencesInputSchema), z.lazy(() => Fm200WorkOrderUncheckedCreateWithoutEvidencesInputSchema) ]),
+  where: z.lazy(() => Fm200WorkOrderWhereInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderUpdateToOneWithWhereWithoutEvidencesInputSchema: z.ZodType<Prisma.Fm200WorkOrderUpdateToOneWithWhereWithoutEvidencesInput> = z.object({
+  where: z.lazy(() => Fm200WorkOrderWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => Fm200WorkOrderUpdateWithoutEvidencesInputSchema), z.lazy(() => Fm200WorkOrderUncheckedUpdateWithoutEvidencesInputSchema) ]),
+}).strict();
+
+export const Fm200WorkOrderUpdateWithoutEvidencesInputSchema: z.ZodType<Prisma.Fm200WorkOrderUpdateWithoutEvidencesInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourcePhase: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourceCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  workType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  responsible: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  trackLane: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  repeatCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  companyTrackNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sourceWorkId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  revisionNote: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  correctApproval: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  closedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  location: z.lazy(() => Fm200LocationUpdateOneRequiredWithoutWorkOrdersNestedInputSchema).optional(),
+  cylinder: z.lazy(() => Fm200CylinderUpdateOneWithoutWorkOrdersNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderUncheckedUpdateWithoutEvidencesInputSchema: z.ZodType<Prisma.Fm200WorkOrderUncheckedUpdateWithoutEvidencesInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  locationId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinderId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sourcePhase: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourceCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  workType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  responsible: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  trackLane: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  repeatCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  companyTrackNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sourceWorkId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  revisionNote: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  correctApproval: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  closedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const FacilityCreateWithoutFm200BuildingFloorsInputSchema: z.ZodType<Prisma.FacilityCreateWithoutFm200BuildingFloorsInput> = z.object({
+  id: z.string(),
+  name: z.string(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  city: z.string().optional().nullable(),
+  commercialTitle: z.string().optional().nullable(),
+  dangerClass: z.string().optional(),
+  district: z.string().optional().nullable(),
+  email: z.string().optional().nullable(),
+  employeeCount: z.number().int().optional(),
+  fullAddress: z.string().optional().nullable(),
+  naceCode: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  sgkNumber: z.string().optional().nullable(),
+  shortName: z.string().optional().nullable(),
+  taxNumber: z.string().optional().nullable(),
+  taxOffice: z.string().optional().nullable(),
+  type: z.string().optional().nullable(),
+  website: z.string().optional().nullable(),
+  logoUrl: z.string().optional().nullable(),
+  activityLogs: z.lazy(() => ActivityLogCreateNestedManyWithoutFacilityInputSchema).optional(),
+  assignments: z.lazy(() => AssignmentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  employeeCountHistory: z.lazy(() => EmployeeCountHistoryCreateNestedManyWithoutFacilityInputSchema).optional(),
+  incidents: z.lazy(() => ExtraordinaryIncidentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  buildings: z.lazy(() => FacilityBuildingCreateNestedManyWithoutFacilityInputSchema).optional(),
+  monthlyAccident: z.lazy(() => MonthlyAccidentDataCreateNestedManyWithoutFacilityInputSchema).optional(),
+  monthlyHrData: z.lazy(() => MonthlyHRDataCreateNestedManyWithoutFacilityInputSchema).optional(),
+  notebookPages: z.lazy(() => NotebookPageCreateNestedManyWithoutFacilityInputSchema).optional(),
+  reconciliations: z.lazy(() => ReconciliationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskCategorySettings: z.lazy(() => RiskCategorySettingCreateNestedManyWithoutFacilityInputSchema).optional(),
+  locations: z.lazy(() => FacilityLocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskDepartmentSettings: z.lazy(() => RiskDepartmentSettingCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskExpertFacilities: z.lazy(() => RiskExpertFacilityCreateNestedManyWithoutFacilityInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionCreateNestedManyWithoutFacilityInputSchema).optional(),
+  users: z.lazy(() => UserFacilityCreateNestedManyWithoutFacilityInputSchema).optional(),
+  facilityHazmatItems: z.lazy(() => FacilityHazmatItemCreateNestedManyWithoutFacilityInputSchema).optional(),
+  spillKits: z.lazy(() => HazmatSpillKitCreateNestedManyWithoutFacilityInputSchema).optional(),
+  spillKitMasterItems: z.lazy(() => HazmatSpillKitMasterItemCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatInventoryItems: z.lazy(() => HazmatInventoryItemCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatEyewashAnalyses: z.lazy(() => HazmatEyewashRiskAnalysisCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireResponsibles: z.lazy(() => FireEquipmentResponsibleCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireEquipmentCompanies: z.lazy(() => FireEquipmentCompanyCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildContractor: z.lazy(() => BuildContractorCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildWorkType: z.lazy(() => BuildWorkTypeCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btAnaGruplar: z.lazy(() => BTAnaGrupCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btDenetlenenAlanlar: z.lazy(() => BTDenetlenenAlanCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btKategoriler: z.lazy(() => BTKategoriCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSorumluBirimler: z.lazy(() => BTSorumluBirimCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSorumluKisiler: z.lazy(() => BTSorumluKisiCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btTurler: z.lazy(() => BTTurCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukCreateNestedManyWithoutFacilityInputSchema).optional(),
+  HazmatVehicle: z.lazy(() => HazmatVehicleCreateNestedManyWithoutFacilityInputSchema).optional(),
+  integratedAudits: z.lazy(() => IntegratedAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardMeetings: z.lazy(() => OhsBoardMeetingCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardMembers: z.lazy(() => OhsBoardMemberCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorCreateNestedManyWithoutFacilityInputSchema).optional(),
+  OhsBoardPeriod: z.lazy(() => OhsBoardPeriodCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentCreateNestedManyWithoutFacilityInputSchema).optional(),
+  elevators: z.lazy(() => ElevatorCreateNestedManyWithoutFacilityInputSchema).optional(),
+  electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordCreateNestedManyWithoutFacilityInputSchema).optional(),
+  electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireSafetyAudits: z.lazy(() => FireSafetyAuditCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationCreateNestedManyWithoutFacilityInputSchema).optional(),
+}).strict();
+
+export const FacilityUncheckedCreateWithoutFm200BuildingFloorsInputSchema: z.ZodType<Prisma.FacilityUncheckedCreateWithoutFm200BuildingFloorsInput> = z.object({
+  id: z.string(),
+  name: z.string(),
+  isActive: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  city: z.string().optional().nullable(),
+  commercialTitle: z.string().optional().nullable(),
+  dangerClass: z.string().optional(),
+  district: z.string().optional().nullable(),
+  email: z.string().optional().nullable(),
+  employeeCount: z.number().int().optional(),
+  fullAddress: z.string().optional().nullable(),
+  naceCode: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  sgkNumber: z.string().optional().nullable(),
+  shortName: z.string().optional().nullable(),
+  taxNumber: z.string().optional().nullable(),
+  taxOffice: z.string().optional().nullable(),
+  type: z.string().optional().nullable(),
+  website: z.string().optional().nullable(),
+  logoUrl: z.string().optional().nullable(),
+  activityLogs: z.lazy(() => ActivityLogUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  assignments: z.lazy(() => AssignmentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  employeeCountHistory: z.lazy(() => EmployeeCountHistoryUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  incidents: z.lazy(() => ExtraordinaryIncidentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  buildings: z.lazy(() => FacilityBuildingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  monthlyAccident: z.lazy(() => MonthlyAccidentDataUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  monthlyHrData: z.lazy(() => MonthlyHRDataUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  notebookPages: z.lazy(() => NotebookPageUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  reconciliations: z.lazy(() => ReconciliationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskCategorySettings: z.lazy(() => RiskCategorySettingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  locations: z.lazy(() => FacilityLocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskDepartmentSettings: z.lazy(() => RiskDepartmentSettingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  riskExpertFacilities: z.lazy(() => RiskExpertFacilityUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  users: z.lazy(() => UserFacilityUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  facilityHazmatItems: z.lazy(() => FacilityHazmatItemUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  spillKits: z.lazy(() => HazmatSpillKitUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  spillKitMasterItems: z.lazy(() => HazmatSpillKitMasterItemUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatInventoryItems: z.lazy(() => HazmatInventoryItemUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatEyewashAnalyses: z.lazy(() => HazmatEyewashRiskAnalysisUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireResponsibles: z.lazy(() => FireEquipmentResponsibleUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireEquipmentCompanies: z.lazy(() => FireEquipmentCompanyUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildContractor: z.lazy(() => BuildContractorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  BuildWorkType: z.lazy(() => BuildWorkTypeUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btAnaGruplar: z.lazy(() => BTAnaGrupUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btDenetlenenAlanlar: z.lazy(() => BTDenetlenenAlanUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btKategoriler: z.lazy(() => BTKategoriUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSorumluBirimler: z.lazy(() => BTSorumluBirimUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btSorumluKisiler: z.lazy(() => BTSorumluKisiUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btTurler: z.lazy(() => BTTurUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  HazmatVehicle: z.lazy(() => HazmatVehicleUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  integratedAudits: z.lazy(() => IntegratedAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  OhsBoardPeriod: z.lazy(() => OhsBoardPeriodUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  elevators: z.lazy(() => ElevatorUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedCreateNestedOneWithoutFacilityInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedCreateNestedManyWithoutFacilityInputSchema).optional(),
+}).strict();
+
+export const FacilityCreateOrConnectWithoutFm200BuildingFloorsInputSchema: z.ZodType<Prisma.FacilityCreateOrConnectWithoutFm200BuildingFloorsInput> = z.object({
+  where: z.lazy(() => FacilityWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => FacilityCreateWithoutFm200BuildingFloorsInputSchema), z.lazy(() => FacilityUncheckedCreateWithoutFm200BuildingFloorsInputSchema) ]),
+}).strict();
+
+export const FacilityUpsertWithoutFm200BuildingFloorsInputSchema: z.ZodType<Prisma.FacilityUpsertWithoutFm200BuildingFloorsInput> = z.object({
+  update: z.union([ z.lazy(() => FacilityUpdateWithoutFm200BuildingFloorsInputSchema), z.lazy(() => FacilityUncheckedUpdateWithoutFm200BuildingFloorsInputSchema) ]),
+  create: z.union([ z.lazy(() => FacilityCreateWithoutFm200BuildingFloorsInputSchema), z.lazy(() => FacilityUncheckedCreateWithoutFm200BuildingFloorsInputSchema) ]),
+  where: z.lazy(() => FacilityWhereInputSchema).optional(),
+}).strict();
+
+export const FacilityUpdateToOneWithWhereWithoutFm200BuildingFloorsInputSchema: z.ZodType<Prisma.FacilityUpdateToOneWithWhereWithoutFm200BuildingFloorsInput> = z.object({
+  where: z.lazy(() => FacilityWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => FacilityUpdateWithoutFm200BuildingFloorsInputSchema), z.lazy(() => FacilityUncheckedUpdateWithoutFm200BuildingFloorsInputSchema) ]),
+}).strict();
+
+export const FacilityUpdateWithoutFm200BuildingFloorsInputSchema: z.ZodType<Prisma.FacilityUpdateWithoutFm200BuildingFloorsInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  city: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  commercialTitle: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  dangerClass: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  district: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  email: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  employeeCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  fullAddress: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  naceCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  phone: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sgkNumber: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  shortName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  taxNumber: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  taxOffice: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  type: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  website: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  logoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  activityLogs: z.lazy(() => ActivityLogUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  assignments: z.lazy(() => AssignmentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  employeeCountHistory: z.lazy(() => EmployeeCountHistoryUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  incidents: z.lazy(() => ExtraordinaryIncidentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  buildings: z.lazy(() => FacilityBuildingUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  monthlyAccident: z.lazy(() => MonthlyAccidentDataUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  monthlyHrData: z.lazy(() => MonthlyHRDataUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  notebookPages: z.lazy(() => NotebookPageUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  reconciliations: z.lazy(() => ReconciliationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskCategorySettings: z.lazy(() => RiskCategorySettingUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  locations: z.lazy(() => FacilityLocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskDepartmentSettings: z.lazy(() => RiskDepartmentSettingUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskExpertFacilities: z.lazy(() => RiskExpertFacilityUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  users: z.lazy(() => UserFacilityUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  facilityHazmatItems: z.lazy(() => FacilityHazmatItemUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  spillKits: z.lazy(() => HazmatSpillKitUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  spillKitMasterItems: z.lazy(() => HazmatSpillKitMasterItemUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatInventoryItems: z.lazy(() => HazmatInventoryItemUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatEyewashAnalyses: z.lazy(() => HazmatEyewashRiskAnalysisUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireResponsibles: z.lazy(() => FireEquipmentResponsibleUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireEquipmentCompanies: z.lazy(() => FireEquipmentCompanyUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildContractor: z.lazy(() => BuildContractorUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildWorkType: z.lazy(() => BuildWorkTypeUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btAnaGruplar: z.lazy(() => BTAnaGrupUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btDenetlenenAlanlar: z.lazy(() => BTDenetlenenAlanUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btKategoriler: z.lazy(() => BTKategoriUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSorumluBirimler: z.lazy(() => BTSorumluBirimUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSorumluKisiler: z.lazy(() => BTSorumluKisiUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btTurler: z.lazy(() => BTTurUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  HazmatVehicle: z.lazy(() => HazmatVehicleUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  integratedAudits: z.lazy(() => IntegratedAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardMembers: z.lazy(() => OhsBoardMemberUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  OhsBoardPeriod: z.lazy(() => OhsBoardPeriodUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  elevators: z.lazy(() => ElevatorUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireSafetyAudits: z.lazy(() => FireSafetyAuditUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUpdateManyWithoutFacilityNestedInputSchema).optional(),
+}).strict();
+
+export const FacilityUncheckedUpdateWithoutFm200BuildingFloorsInputSchema: z.ZodType<Prisma.FacilityUncheckedUpdateWithoutFm200BuildingFloorsInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  name: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  city: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  commercialTitle: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  dangerClass: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  district: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  email: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  employeeCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  fullAddress: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  naceCode: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  phone: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sgkNumber: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  shortName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  taxNumber: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  taxOffice: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  type: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  website: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  logoUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  activityLogs: z.lazy(() => ActivityLogUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  assignments: z.lazy(() => AssignmentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  employeeCountHistory: z.lazy(() => EmployeeCountHistoryUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  incidents: z.lazy(() => ExtraordinaryIncidentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  buildings: z.lazy(() => FacilityBuildingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  monthlyAccident: z.lazy(() => MonthlyAccidentDataUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  monthlyHrData: z.lazy(() => MonthlyHRDataUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  notebookPages: z.lazy(() => NotebookPageUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  reconciliations: z.lazy(() => ReconciliationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskCategorySettings: z.lazy(() => RiskCategorySettingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  locations: z.lazy(() => FacilityLocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskDepartmentSettings: z.lazy(() => RiskDepartmentSettingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  riskExpertFacilities: z.lazy(() => RiskExpertFacilityUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  checklistSubmissions: z.lazy(() => ChecklistSubmissionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  users: z.lazy(() => UserFacilityUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  facilityHazmatItems: z.lazy(() => FacilityHazmatItemUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  spillKits: z.lazy(() => HazmatSpillKitUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  spillKitMasterItems: z.lazy(() => HazmatSpillKitMasterItemUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatInventoryItems: z.lazy(() => HazmatInventoryItemUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatEyewashAnalyses: z.lazy(() => HazmatEyewashRiskAnalysisUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  hazmatIncidents: z.lazy(() => HazmatIncidentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireEquipments: z.lazy(() => FireEquipmentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireResponsibles: z.lazy(() => FireEquipmentResponsibleUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireEquipmentCompanies: z.lazy(() => FireEquipmentCompanyUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildProject: z.lazy(() => BuildProjectUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildContractor: z.lazy(() => BuildContractorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  BuildWorkType: z.lazy(() => BuildWorkTypeUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btAnaGruplar: z.lazy(() => BTAnaGrupUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btDenetlenenAlanlar: z.lazy(() => BTDenetlenenAlanUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btKategoriler: z.lazy(() => BTKategoriUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSoruBankasi: z.lazy(() => BTSoruBankasiUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSorumluBirimler: z.lazy(() => BTSorumluBirimUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btSorumluKisiler: z.lazy(() => BTSorumluKisiUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btTurler: z.lazy(() => BTTurUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  btUygunsuzluklar: z.lazy(() => BTUygunsuzlukUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  HazmatVehicle: z.lazy(() => HazmatVehicleUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  integratedAudits: z.lazy(() => IntegratedAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardMeetings: z.lazy(() => OhsBoardMeetingUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardMembers: z.lazy(() => OhsBoardMemberUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  FireDoor: z.lazy(() => FireDoorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  OhsBoardPeriod: z.lazy(() => OhsBoardPeriodUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  ohsBoardDepartments: z.lazy(() => OhsBoardDepartmentUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  elevators: z.lazy(() => ElevatorUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  electricInfrastructureRecords: z.lazy(() => ElectricInfrastructureRecordUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  electricInfrastructureStatus: z.lazy(() => ElectricInfrastructureFacilityStatusUncheckedUpdateOneWithoutFacilityNestedInputSchema).optional(),
+  thermalInspectionSessions: z.lazy(() => ThermalInspectionSessionUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fireSafetyAudits: z.lazy(() => FireSafetyAuditUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
+  fm200Locations: z.lazy(() => Fm200LocationUncheckedUpdateManyWithoutFacilityNestedInputSchema).optional(),
 }).strict();
 
 export const UserFacilityCreateManyUserInputSchema: z.ZodType<Prisma.UserFacilityCreateManyUserInput> = z.object({
@@ -110016,6 +117403,34 @@ export const FireSafetyAuditCreateManyFacilityInputSchema: z.ZodType<Prisma.Fire
   updatedAt: z.coerce.date().optional(),
 }).strict();
 
+export const Fm200LocationCreateManyFacilityInputSchema: z.ZodType<Prisma.Fm200LocationCreateManyFacilityInput> = z.object({
+  id: z.cuid().optional(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string().optional(),
+  roomType: z.string(),
+  customRoomName: z.string().optional().nullable(),
+  index: z.number().int().optional(),
+  systemUid: z.string(),
+  systemType: z.string().optional(),
+  panelType: z.string().optional().nullable(),
+  roomVolumeM3: z.number().optional().nullable(),
+  cylinderCount: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200BuildingFloorCreateManyFacilityInputSchema: z.ZodType<Prisma.Fm200BuildingFloorCreateManyFacilityInput> = z.object({
+  id: z.cuid().optional(),
+  building: z.string().optional(),
+  block: z.string().optional().nullable(),
+  floor: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
 export const ActivityLogUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.ActivityLogUpdateWithoutFacilityInput> = z.object({
   action: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
@@ -111997,6 +119412,102 @@ export const FireSafetyAuditUncheckedUpdateManyWithoutFacilityInputSchema: z.Zod
   reviewedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   approvedBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   createdBy: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200LocationUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200LocationUpdateWithoutFacilityInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinders: z.lazy(() => Fm200CylinderUpdateManyWithoutLocationNestedInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUpdateManyWithoutLocationNestedInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUpdateManyWithoutLocationNestedInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUpdateManyWithoutLocationNestedInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUpdateManyWithoutLocationNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUpdateManyWithoutLocationNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedUpdateWithoutFacilityInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinders: z.lazy(() => Fm200CylinderUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  phase1Assessments: z.lazy(() => Fm200Phase1AssessmentUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  inspections: z.lazy(() => Fm200PeriodicInspectionUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  maintenances: z.lazy(() => Fm200MaintenanceUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  tightnessTests: z.lazy(() => Fm200TightnessTestUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedUpdateManyWithoutLocationNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200LocationUncheckedUpdateManyWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200LocationUncheckedUpdateManyWithoutFacilityInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  roomType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  customRoomName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  index: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  systemUid: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  systemType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelType: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  roomVolumeM3: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinderCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  isActive: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200BuildingFloorUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200BuildingFloorUpdateWithoutFacilityInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200BuildingFloorUncheckedUpdateWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200BuildingFloorUncheckedUpdateWithoutFacilityInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityInputSchema: z.ZodType<Prisma.Fm200BuildingFloorUncheckedUpdateManyWithoutFacilityInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  building: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  block: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  floor: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
@@ -120314,6 +127825,632 @@ export const FireSafetyItemActionUncheckedUpdateManyWithoutItemInputSchema: z.Zo
   evidencePhotos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
   createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200CylinderCreateManyLocationInputSchema: z.ZodType<Prisma.Fm200CylinderCreateManyLocationInput> = z.object({
+  id: z.cuid().optional(),
+  serialNumber: z.string(),
+  labelCode: z.string(),
+  capacityKg: z.number().optional().nullable(),
+  tareKg: z.number().optional().nullable(),
+  manufacturingYear: z.number().int().optional().nullable(),
+  lastHydrostaticTestDate: z.coerce.date().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentCreateManyLocationInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentCreateManyLocationInput> = z.object({
+  id: z.cuid().optional(),
+  assessedBy: z.string(),
+  assessedDate: z.coerce.date().optional(),
+  f1_a1: z.string().optional().nullable(),
+  f1_a2: z.string().optional().nullable(),
+  f1_a3: z.string().optional().nullable(),
+  f1_a4: z.string().optional().nullable(),
+  f1_b1: z.string().optional().nullable(),
+  f1_b2: z.string().optional().nullable(),
+  f1_b3: z.string().optional().nullable(),
+  f1_b4: z.string().optional().nullable(),
+  f1_b5: z.string().optional().nullable(),
+  f1_b6: z.string().optional().nullable(),
+  f1_c1: z.string().optional().nullable(),
+  f1_c2: z.string().optional().nullable(),
+  f1_d1: z.string().optional().nullable(),
+  f1_d2: z.string().optional().nullable(),
+  f1_d3: z.string().optional().nullable(),
+  f1_e1: z.string().optional().nullable(),
+  f1_e2: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  isCompleted: z.boolean().optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionCreateManyLocationInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionCreateManyLocationInput> = z.object({
+  id: z.cuid().optional(),
+  inspectedBy: z.string(),
+  inspectionDate: z.coerce.date().optional(),
+  itemResponses: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  complianceScore: z.number().optional(),
+  ratingGrade: z.string().optional(),
+  isRedFlagged: z.boolean().optional(),
+  openWorkOrdersCount: z.number().int().optional(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200MaintenanceCreateManyLocationInputSchema: z.ZodType<Prisma.Fm200MaintenanceCreateManyLocationInput> = z.object({
+  id: z.cuid().optional(),
+  performedBy: z.string(),
+  maintenanceDate: z.coerce.date().optional(),
+  panelControlStatus: z.string().optional(),
+  panelNotes: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200TightnessTestCreateManyLocationInputSchema: z.ZodType<Prisma.Fm200TightnessTestCreateManyLocationInput> = z.object({
+  id: z.cuid().optional(),
+  performedBy: z.string(),
+  testDate: z.coerce.date().optional(),
+  retentionTimeMinutes: z.number().optional().nullable(),
+  measuredValue: z.number().optional().nullable(),
+  result: z.string(),
+  isUnconditional: z.boolean().optional(),
+  overrideReason: z.string().optional().nullable(),
+  reportUrl: z.string().optional().nullable(),
+  nextTestDate: z.coerce.date().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200WorkOrderCreateManyLocationInputSchema: z.ZodType<Prisma.Fm200WorkOrderCreateManyLocationInput> = z.object({
+  id: z.cuid().optional(),
+  cylinderId: z.string().optional().nullable(),
+  sourcePhase: z.string(),
+  sourceCode: z.string(),
+  title: z.string(),
+  workType: z.string().optional(),
+  responsible: z.string().optional(),
+  trackLane: z.string().optional(),
+  status: z.string().optional(),
+  repeatCount: z.number().int().optional(),
+  companyTrackNo: z.string().optional().nullable(),
+  sourceWorkId: z.string().optional().nullable(),
+  revisionNote: z.string().optional().nullable(),
+  correctApproval: z.boolean().optional(),
+  closedAt: z.coerce.date().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200CylinderUpdateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200CylinderUpdateWithoutLocationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  serialNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  labelCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  capacityKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  tareKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  manufacturingYear: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastHydrostaticTestDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  maintenanceCylinders: z.lazy(() => Fm200MaintenanceCylinderUpdateManyWithoutCylinderNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUpdateManyWithoutCylinderNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderUncheckedUpdateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200CylinderUncheckedUpdateWithoutLocationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  serialNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  labelCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  capacityKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  tareKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  manufacturingYear: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastHydrostaticTestDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  maintenanceCylinders: z.lazy(() => Fm200MaintenanceCylinderUncheckedUpdateManyWithoutCylinderNestedInputSchema).optional(),
+  workOrders: z.lazy(() => Fm200WorkOrderUncheckedUpdateManyWithoutCylinderNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200CylinderUncheckedUpdateManyWithoutLocationInputSchema: z.ZodType<Prisma.Fm200CylinderUncheckedUpdateManyWithoutLocationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  serialNumber: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  labelCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  capacityKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  tareKg: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  manufacturingYear: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  lastHydrostaticTestDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentUpdateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentUpdateWithoutLocationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  assessedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  assessedDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  f1_a1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a4: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b4: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b5: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b6: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_c1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_c2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_e1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_e2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  isCompleted: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentUncheckedUpdateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentUncheckedUpdateWithoutLocationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  assessedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  assessedDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  f1_a1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a4: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b4: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b5: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b6: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_c1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_c2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_e1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_e2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  isCompleted: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentUncheckedUpdateManyWithoutLocationInputSchema: z.ZodType<Prisma.Fm200Phase1AssessmentUncheckedUpdateManyWithoutLocationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  assessedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  assessedDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  f1_a1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_a4: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b4: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b5: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_b6: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_c1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_c2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_d3: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_e1: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  f1_e2: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  isCompleted: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionUpdateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionUpdateWithoutLocationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  itemResponses: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  complianceScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  ratingGrade: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isRedFlagged: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  openWorkOrdersCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionUncheckedUpdateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionUncheckedUpdateWithoutLocationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  itemResponses: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  complianceScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  ratingGrade: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isRedFlagged: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  openWorkOrdersCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionUncheckedUpdateManyWithoutLocationInputSchema: z.ZodType<Prisma.Fm200PeriodicInspectionUncheckedUpdateManyWithoutLocationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  inspectionDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  itemResponses: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  complianceScore: z.union([ z.number(),z.lazy(() => FloatFieldUpdateOperationsInputSchema) ]).optional(),
+  ratingGrade: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isRedFlagged: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  openWorkOrdersCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceUpdateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200MaintenanceUpdateWithoutLocationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  performedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  maintenanceDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  panelControlStatus: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelNotes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinders: z.lazy(() => Fm200MaintenanceCylinderUpdateManyWithoutMaintenanceNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceUncheckedUpdateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200MaintenanceUncheckedUpdateWithoutLocationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  performedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  maintenanceDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  panelControlStatus: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelNotes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinders: z.lazy(() => Fm200MaintenanceCylinderUncheckedUpdateManyWithoutMaintenanceNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceUncheckedUpdateManyWithoutLocationInputSchema: z.ZodType<Prisma.Fm200MaintenanceUncheckedUpdateManyWithoutLocationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  performedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  maintenanceDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  panelControlStatus: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  panelNotes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200TightnessTestUpdateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200TightnessTestUpdateWithoutLocationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  performedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  testDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  retentionTimeMinutes: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measuredValue: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  result: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isUnconditional: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  overrideReason: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  reportUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  nextTestDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200TightnessTestUncheckedUpdateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200TightnessTestUncheckedUpdateWithoutLocationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  performedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  testDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  retentionTimeMinutes: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measuredValue: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  result: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isUnconditional: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  overrideReason: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  reportUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  nextTestDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200TightnessTestUncheckedUpdateManyWithoutLocationInputSchema: z.ZodType<Prisma.Fm200TightnessTestUncheckedUpdateManyWithoutLocationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  performedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  testDate: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  retentionTimeMinutes: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  measuredValue: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  result: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  isUnconditional: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  overrideReason: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  reportUrl: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  nextTestDate: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  photos: z.union([ z.lazy(() => JsonNullValueInputSchema), InputJsonValueSchema ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderUpdateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200WorkOrderUpdateWithoutLocationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourcePhase: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourceCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  workType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  responsible: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  trackLane: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  repeatCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  companyTrackNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sourceWorkId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  revisionNote: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  correctApproval: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  closedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinder: z.lazy(() => Fm200CylinderUpdateOneWithoutWorkOrdersNestedInputSchema).optional(),
+  evidences: z.lazy(() => Fm200WorkOrderEvidenceUpdateManyWithoutWorkOrderNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderUncheckedUpdateWithoutLocationInputSchema: z.ZodType<Prisma.Fm200WorkOrderUncheckedUpdateWithoutLocationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinderId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sourcePhase: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourceCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  workType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  responsible: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  trackLane: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  repeatCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  companyTrackNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sourceWorkId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  revisionNote: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  correctApproval: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  closedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  evidences: z.lazy(() => Fm200WorkOrderEvidenceUncheckedUpdateManyWithoutWorkOrderNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderUncheckedUpdateManyWithoutLocationInputSchema: z.ZodType<Prisma.Fm200WorkOrderUncheckedUpdateManyWithoutLocationInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinderId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sourcePhase: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourceCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  workType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  responsible: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  trackLane: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  repeatCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  companyTrackNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sourceWorkId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  revisionNote: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  correctApproval: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  closedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderCreateManyCylinderInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderCreateManyCylinderInput> = z.object({
+  id: z.cuid().optional(),
+  maintenanceId: z.string(),
+  govde: z.string().optional(),
+  muhur: z.string().optional(),
+  basinc: z.string().optional(),
+  emniyet: z.string().optional(),
+  notes: z.string().optional().nullable(),
+}).strict();
+
+export const Fm200WorkOrderCreateManyCylinderInputSchema: z.ZodType<Prisma.Fm200WorkOrderCreateManyCylinderInput> = z.object({
+  id: z.cuid().optional(),
+  locationId: z.string(),
+  sourcePhase: z.string(),
+  sourceCode: z.string(),
+  title: z.string(),
+  workType: z.string().optional(),
+  responsible: z.string().optional(),
+  trackLane: z.string().optional(),
+  status: z.string().optional(),
+  repeatCount: z.number().int().optional(),
+  companyTrackNo: z.string().optional().nullable(),
+  sourceWorkId: z.string().optional().nullable(),
+  revisionNote: z.string().optional().nullable(),
+  correctApproval: z.boolean().optional(),
+  closedAt: z.coerce.date().optional().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderUpdateWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUpdateWithoutCylinderInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  govde: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  muhur: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  basinc: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  emniyet: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  maintenance: z.lazy(() => Fm200MaintenanceUpdateOneRequiredWithoutCylindersNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderUncheckedUpdateWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUncheckedUpdateWithoutCylinderInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  maintenanceId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  govde: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  muhur: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  basinc: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  emniyet: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+}).strict();
+
+export const Fm200MaintenanceCylinderUncheckedUpdateManyWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUncheckedUpdateManyWithoutCylinderInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  maintenanceId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  govde: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  muhur: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  basinc: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  emniyet: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+}).strict();
+
+export const Fm200WorkOrderUpdateWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200WorkOrderUpdateWithoutCylinderInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourcePhase: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourceCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  workType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  responsible: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  trackLane: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  repeatCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  companyTrackNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sourceWorkId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  revisionNote: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  correctApproval: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  closedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  location: z.lazy(() => Fm200LocationUpdateOneRequiredWithoutWorkOrdersNestedInputSchema).optional(),
+  evidences: z.lazy(() => Fm200WorkOrderEvidenceUpdateManyWithoutWorkOrderNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderUncheckedUpdateWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200WorkOrderUncheckedUpdateWithoutCylinderInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  locationId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourcePhase: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourceCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  workType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  responsible: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  trackLane: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  repeatCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  companyTrackNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sourceWorkId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  revisionNote: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  correctApproval: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  closedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  evidences: z.lazy(() => Fm200WorkOrderEvidenceUncheckedUpdateManyWithoutWorkOrderNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200WorkOrderUncheckedUpdateManyWithoutCylinderInputSchema: z.ZodType<Prisma.Fm200WorkOrderUncheckedUpdateManyWithoutCylinderInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  locationId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourcePhase: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  sourceCode: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  workType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  responsible: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  trackLane: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  status: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  repeatCount: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  companyTrackNo: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  sourceWorkId: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  revisionNote: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  correctApproval: z.union([ z.boolean(),z.lazy(() => BoolFieldUpdateOperationsInputSchema) ]).optional(),
+  closedAt: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  updatedAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderCreateManyMaintenanceInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderCreateManyMaintenanceInput> = z.object({
+  id: z.cuid().optional(),
+  cylinderId: z.string(),
+  govde: z.string().optional(),
+  muhur: z.string().optional(),
+  basinc: z.string().optional(),
+  emniyet: z.string().optional(),
+  notes: z.string().optional().nullable(),
+}).strict();
+
+export const Fm200MaintenanceCylinderUpdateWithoutMaintenanceInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUpdateWithoutMaintenanceInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  govde: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  muhur: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  basinc: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  emniyet: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  cylinder: z.lazy(() => Fm200CylinderUpdateOneRequiredWithoutMaintenanceCylindersNestedInputSchema).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderUncheckedUpdateWithoutMaintenanceInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUncheckedUpdateWithoutMaintenanceInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinderId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  govde: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  muhur: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  basinc: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  emniyet: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+}).strict();
+
+export const Fm200MaintenanceCylinderUncheckedUpdateManyWithoutMaintenanceInputSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUncheckedUpdateManyWithoutMaintenanceInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  cylinderId: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  govde: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  muhur: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  basinc: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  emniyet: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  notes: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceCreateManyWorkOrderInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceCreateManyWorkOrderInput> = z.object({
+  id: z.cuid().optional(),
+  fileType: z.string().optional(),
+  fileUrl: z.string(),
+  fileName: z.string().optional().nullable(),
+  uploadedBy: z.string(),
+  createdAt: z.coerce.date().optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceUpdateWithoutWorkOrderInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceUpdateWithoutWorkOrderInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileUrl: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  uploadedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceUncheckedUpdateWithoutWorkOrderInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceUncheckedUpdateWithoutWorkOrderInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileUrl: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  uploadedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceUncheckedUpdateManyWithoutWorkOrderInputSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceUncheckedUpdateManyWithoutWorkOrderInput> = z.object({
+  id: z.union([ z.cuid(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileType: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileUrl: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  fileName: z.union([ z.string(),z.lazy(() => NullableStringFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  uploadedBy: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  createdAt: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict();
 
 /////////////////////////////////////////
@@ -130321,6 +138458,683 @@ export const FireSafetySettingFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.Fire
   where: FireSafetySettingWhereUniqueInputSchema, 
 }).strict();
 
+export const Fm200LocationFindFirstArgsSchema: z.ZodType<Prisma.Fm200LocationFindFirstArgs> = z.object({
+  select: Fm200LocationSelectSchema.optional(),
+  include: Fm200LocationIncludeSchema.optional(),
+  where: Fm200LocationWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200LocationOrderByWithRelationInputSchema.array(), Fm200LocationOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200LocationWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200LocationScalarFieldEnumSchema, Fm200LocationScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200LocationFindFirstOrThrowArgsSchema: z.ZodType<Prisma.Fm200LocationFindFirstOrThrowArgs> = z.object({
+  select: Fm200LocationSelectSchema.optional(),
+  include: Fm200LocationIncludeSchema.optional(),
+  where: Fm200LocationWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200LocationOrderByWithRelationInputSchema.array(), Fm200LocationOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200LocationWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200LocationScalarFieldEnumSchema, Fm200LocationScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200LocationFindManyArgsSchema: z.ZodType<Prisma.Fm200LocationFindManyArgs> = z.object({
+  select: Fm200LocationSelectSchema.optional(),
+  include: Fm200LocationIncludeSchema.optional(),
+  where: Fm200LocationWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200LocationOrderByWithRelationInputSchema.array(), Fm200LocationOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200LocationWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200LocationScalarFieldEnumSchema, Fm200LocationScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200LocationAggregateArgsSchema: z.ZodType<Prisma.Fm200LocationAggregateArgs> = z.object({
+  where: Fm200LocationWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200LocationOrderByWithRelationInputSchema.array(), Fm200LocationOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200LocationWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200LocationGroupByArgsSchema: z.ZodType<Prisma.Fm200LocationGroupByArgs> = z.object({
+  where: Fm200LocationWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200LocationOrderByWithAggregationInputSchema.array(), Fm200LocationOrderByWithAggregationInputSchema ]).optional(),
+  by: Fm200LocationScalarFieldEnumSchema.array(), 
+  having: Fm200LocationScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200LocationFindUniqueArgsSchema: z.ZodType<Prisma.Fm200LocationFindUniqueArgs> = z.object({
+  select: Fm200LocationSelectSchema.optional(),
+  include: Fm200LocationIncludeSchema.optional(),
+  where: Fm200LocationWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200LocationFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.Fm200LocationFindUniqueOrThrowArgs> = z.object({
+  select: Fm200LocationSelectSchema.optional(),
+  include: Fm200LocationIncludeSchema.optional(),
+  where: Fm200LocationWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200CylinderFindFirstArgsSchema: z.ZodType<Prisma.Fm200CylinderFindFirstArgs> = z.object({
+  select: Fm200CylinderSelectSchema.optional(),
+  include: Fm200CylinderIncludeSchema.optional(),
+  where: Fm200CylinderWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200CylinderOrderByWithRelationInputSchema.array(), Fm200CylinderOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200CylinderWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200CylinderScalarFieldEnumSchema, Fm200CylinderScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200CylinderFindFirstOrThrowArgsSchema: z.ZodType<Prisma.Fm200CylinderFindFirstOrThrowArgs> = z.object({
+  select: Fm200CylinderSelectSchema.optional(),
+  include: Fm200CylinderIncludeSchema.optional(),
+  where: Fm200CylinderWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200CylinderOrderByWithRelationInputSchema.array(), Fm200CylinderOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200CylinderWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200CylinderScalarFieldEnumSchema, Fm200CylinderScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200CylinderFindManyArgsSchema: z.ZodType<Prisma.Fm200CylinderFindManyArgs> = z.object({
+  select: Fm200CylinderSelectSchema.optional(),
+  include: Fm200CylinderIncludeSchema.optional(),
+  where: Fm200CylinderWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200CylinderOrderByWithRelationInputSchema.array(), Fm200CylinderOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200CylinderWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200CylinderScalarFieldEnumSchema, Fm200CylinderScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200CylinderAggregateArgsSchema: z.ZodType<Prisma.Fm200CylinderAggregateArgs> = z.object({
+  where: Fm200CylinderWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200CylinderOrderByWithRelationInputSchema.array(), Fm200CylinderOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200CylinderWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200CylinderGroupByArgsSchema: z.ZodType<Prisma.Fm200CylinderGroupByArgs> = z.object({
+  where: Fm200CylinderWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200CylinderOrderByWithAggregationInputSchema.array(), Fm200CylinderOrderByWithAggregationInputSchema ]).optional(),
+  by: Fm200CylinderScalarFieldEnumSchema.array(), 
+  having: Fm200CylinderScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200CylinderFindUniqueArgsSchema: z.ZodType<Prisma.Fm200CylinderFindUniqueArgs> = z.object({
+  select: Fm200CylinderSelectSchema.optional(),
+  include: Fm200CylinderIncludeSchema.optional(),
+  where: Fm200CylinderWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200CylinderFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.Fm200CylinderFindUniqueOrThrowArgs> = z.object({
+  select: Fm200CylinderSelectSchema.optional(),
+  include: Fm200CylinderIncludeSchema.optional(),
+  where: Fm200CylinderWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200Phase1AssessmentFindFirstArgsSchema: z.ZodType<Prisma.Fm200Phase1AssessmentFindFirstArgs> = z.object({
+  select: Fm200Phase1AssessmentSelectSchema.optional(),
+  include: Fm200Phase1AssessmentIncludeSchema.optional(),
+  where: Fm200Phase1AssessmentWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200Phase1AssessmentOrderByWithRelationInputSchema.array(), Fm200Phase1AssessmentOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200Phase1AssessmentWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200Phase1AssessmentScalarFieldEnumSchema, Fm200Phase1AssessmentScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentFindFirstOrThrowArgsSchema: z.ZodType<Prisma.Fm200Phase1AssessmentFindFirstOrThrowArgs> = z.object({
+  select: Fm200Phase1AssessmentSelectSchema.optional(),
+  include: Fm200Phase1AssessmentIncludeSchema.optional(),
+  where: Fm200Phase1AssessmentWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200Phase1AssessmentOrderByWithRelationInputSchema.array(), Fm200Phase1AssessmentOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200Phase1AssessmentWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200Phase1AssessmentScalarFieldEnumSchema, Fm200Phase1AssessmentScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentFindManyArgsSchema: z.ZodType<Prisma.Fm200Phase1AssessmentFindManyArgs> = z.object({
+  select: Fm200Phase1AssessmentSelectSchema.optional(),
+  include: Fm200Phase1AssessmentIncludeSchema.optional(),
+  where: Fm200Phase1AssessmentWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200Phase1AssessmentOrderByWithRelationInputSchema.array(), Fm200Phase1AssessmentOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200Phase1AssessmentWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200Phase1AssessmentScalarFieldEnumSchema, Fm200Phase1AssessmentScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentAggregateArgsSchema: z.ZodType<Prisma.Fm200Phase1AssessmentAggregateArgs> = z.object({
+  where: Fm200Phase1AssessmentWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200Phase1AssessmentOrderByWithRelationInputSchema.array(), Fm200Phase1AssessmentOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200Phase1AssessmentWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentGroupByArgsSchema: z.ZodType<Prisma.Fm200Phase1AssessmentGroupByArgs> = z.object({
+  where: Fm200Phase1AssessmentWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200Phase1AssessmentOrderByWithAggregationInputSchema.array(), Fm200Phase1AssessmentOrderByWithAggregationInputSchema ]).optional(),
+  by: Fm200Phase1AssessmentScalarFieldEnumSchema.array(), 
+  having: Fm200Phase1AssessmentScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentFindUniqueArgsSchema: z.ZodType<Prisma.Fm200Phase1AssessmentFindUniqueArgs> = z.object({
+  select: Fm200Phase1AssessmentSelectSchema.optional(),
+  include: Fm200Phase1AssessmentIncludeSchema.optional(),
+  where: Fm200Phase1AssessmentWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200Phase1AssessmentFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.Fm200Phase1AssessmentFindUniqueOrThrowArgs> = z.object({
+  select: Fm200Phase1AssessmentSelectSchema.optional(),
+  include: Fm200Phase1AssessmentIncludeSchema.optional(),
+  where: Fm200Phase1AssessmentWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200PeriodicInspectionFindFirstArgsSchema: z.ZodType<Prisma.Fm200PeriodicInspectionFindFirstArgs> = z.object({
+  select: Fm200PeriodicInspectionSelectSchema.optional(),
+  include: Fm200PeriodicInspectionIncludeSchema.optional(),
+  where: Fm200PeriodicInspectionWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200PeriodicInspectionOrderByWithRelationInputSchema.array(), Fm200PeriodicInspectionOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200PeriodicInspectionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200PeriodicInspectionScalarFieldEnumSchema, Fm200PeriodicInspectionScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionFindFirstOrThrowArgsSchema: z.ZodType<Prisma.Fm200PeriodicInspectionFindFirstOrThrowArgs> = z.object({
+  select: Fm200PeriodicInspectionSelectSchema.optional(),
+  include: Fm200PeriodicInspectionIncludeSchema.optional(),
+  where: Fm200PeriodicInspectionWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200PeriodicInspectionOrderByWithRelationInputSchema.array(), Fm200PeriodicInspectionOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200PeriodicInspectionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200PeriodicInspectionScalarFieldEnumSchema, Fm200PeriodicInspectionScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionFindManyArgsSchema: z.ZodType<Prisma.Fm200PeriodicInspectionFindManyArgs> = z.object({
+  select: Fm200PeriodicInspectionSelectSchema.optional(),
+  include: Fm200PeriodicInspectionIncludeSchema.optional(),
+  where: Fm200PeriodicInspectionWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200PeriodicInspectionOrderByWithRelationInputSchema.array(), Fm200PeriodicInspectionOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200PeriodicInspectionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200PeriodicInspectionScalarFieldEnumSchema, Fm200PeriodicInspectionScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionAggregateArgsSchema: z.ZodType<Prisma.Fm200PeriodicInspectionAggregateArgs> = z.object({
+  where: Fm200PeriodicInspectionWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200PeriodicInspectionOrderByWithRelationInputSchema.array(), Fm200PeriodicInspectionOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200PeriodicInspectionWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionGroupByArgsSchema: z.ZodType<Prisma.Fm200PeriodicInspectionGroupByArgs> = z.object({
+  where: Fm200PeriodicInspectionWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200PeriodicInspectionOrderByWithAggregationInputSchema.array(), Fm200PeriodicInspectionOrderByWithAggregationInputSchema ]).optional(),
+  by: Fm200PeriodicInspectionScalarFieldEnumSchema.array(), 
+  having: Fm200PeriodicInspectionScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionFindUniqueArgsSchema: z.ZodType<Prisma.Fm200PeriodicInspectionFindUniqueArgs> = z.object({
+  select: Fm200PeriodicInspectionSelectSchema.optional(),
+  include: Fm200PeriodicInspectionIncludeSchema.optional(),
+  where: Fm200PeriodicInspectionWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200PeriodicInspectionFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.Fm200PeriodicInspectionFindUniqueOrThrowArgs> = z.object({
+  select: Fm200PeriodicInspectionSelectSchema.optional(),
+  include: Fm200PeriodicInspectionIncludeSchema.optional(),
+  where: Fm200PeriodicInspectionWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200MaintenanceFindFirstArgsSchema: z.ZodType<Prisma.Fm200MaintenanceFindFirstArgs> = z.object({
+  select: Fm200MaintenanceSelectSchema.optional(),
+  include: Fm200MaintenanceIncludeSchema.optional(),
+  where: Fm200MaintenanceWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200MaintenanceOrderByWithRelationInputSchema.array(), Fm200MaintenanceOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200MaintenanceWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200MaintenanceScalarFieldEnumSchema, Fm200MaintenanceScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceFindFirstOrThrowArgsSchema: z.ZodType<Prisma.Fm200MaintenanceFindFirstOrThrowArgs> = z.object({
+  select: Fm200MaintenanceSelectSchema.optional(),
+  include: Fm200MaintenanceIncludeSchema.optional(),
+  where: Fm200MaintenanceWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200MaintenanceOrderByWithRelationInputSchema.array(), Fm200MaintenanceOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200MaintenanceWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200MaintenanceScalarFieldEnumSchema, Fm200MaintenanceScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceFindManyArgsSchema: z.ZodType<Prisma.Fm200MaintenanceFindManyArgs> = z.object({
+  select: Fm200MaintenanceSelectSchema.optional(),
+  include: Fm200MaintenanceIncludeSchema.optional(),
+  where: Fm200MaintenanceWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200MaintenanceOrderByWithRelationInputSchema.array(), Fm200MaintenanceOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200MaintenanceWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200MaintenanceScalarFieldEnumSchema, Fm200MaintenanceScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceAggregateArgsSchema: z.ZodType<Prisma.Fm200MaintenanceAggregateArgs> = z.object({
+  where: Fm200MaintenanceWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200MaintenanceOrderByWithRelationInputSchema.array(), Fm200MaintenanceOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200MaintenanceWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200MaintenanceGroupByArgsSchema: z.ZodType<Prisma.Fm200MaintenanceGroupByArgs> = z.object({
+  where: Fm200MaintenanceWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200MaintenanceOrderByWithAggregationInputSchema.array(), Fm200MaintenanceOrderByWithAggregationInputSchema ]).optional(),
+  by: Fm200MaintenanceScalarFieldEnumSchema.array(), 
+  having: Fm200MaintenanceScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200MaintenanceFindUniqueArgsSchema: z.ZodType<Prisma.Fm200MaintenanceFindUniqueArgs> = z.object({
+  select: Fm200MaintenanceSelectSchema.optional(),
+  include: Fm200MaintenanceIncludeSchema.optional(),
+  where: Fm200MaintenanceWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200MaintenanceFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.Fm200MaintenanceFindUniqueOrThrowArgs> = z.object({
+  select: Fm200MaintenanceSelectSchema.optional(),
+  include: Fm200MaintenanceIncludeSchema.optional(),
+  where: Fm200MaintenanceWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200MaintenanceCylinderFindFirstArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderFindFirstArgs> = z.object({
+  select: Fm200MaintenanceCylinderSelectSchema.optional(),
+  include: Fm200MaintenanceCylinderIncludeSchema.optional(),
+  where: Fm200MaintenanceCylinderWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200MaintenanceCylinderOrderByWithRelationInputSchema.array(), Fm200MaintenanceCylinderOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200MaintenanceCylinderWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200MaintenanceCylinderScalarFieldEnumSchema, Fm200MaintenanceCylinderScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderFindFirstOrThrowArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderFindFirstOrThrowArgs> = z.object({
+  select: Fm200MaintenanceCylinderSelectSchema.optional(),
+  include: Fm200MaintenanceCylinderIncludeSchema.optional(),
+  where: Fm200MaintenanceCylinderWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200MaintenanceCylinderOrderByWithRelationInputSchema.array(), Fm200MaintenanceCylinderOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200MaintenanceCylinderWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200MaintenanceCylinderScalarFieldEnumSchema, Fm200MaintenanceCylinderScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderFindManyArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderFindManyArgs> = z.object({
+  select: Fm200MaintenanceCylinderSelectSchema.optional(),
+  include: Fm200MaintenanceCylinderIncludeSchema.optional(),
+  where: Fm200MaintenanceCylinderWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200MaintenanceCylinderOrderByWithRelationInputSchema.array(), Fm200MaintenanceCylinderOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200MaintenanceCylinderWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200MaintenanceCylinderScalarFieldEnumSchema, Fm200MaintenanceCylinderScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderAggregateArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderAggregateArgs> = z.object({
+  where: Fm200MaintenanceCylinderWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200MaintenanceCylinderOrderByWithRelationInputSchema.array(), Fm200MaintenanceCylinderOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200MaintenanceCylinderWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderGroupByArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderGroupByArgs> = z.object({
+  where: Fm200MaintenanceCylinderWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200MaintenanceCylinderOrderByWithAggregationInputSchema.array(), Fm200MaintenanceCylinderOrderByWithAggregationInputSchema ]).optional(),
+  by: Fm200MaintenanceCylinderScalarFieldEnumSchema.array(), 
+  having: Fm200MaintenanceCylinderScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderFindUniqueArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderFindUniqueArgs> = z.object({
+  select: Fm200MaintenanceCylinderSelectSchema.optional(),
+  include: Fm200MaintenanceCylinderIncludeSchema.optional(),
+  where: Fm200MaintenanceCylinderWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200MaintenanceCylinderFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderFindUniqueOrThrowArgs> = z.object({
+  select: Fm200MaintenanceCylinderSelectSchema.optional(),
+  include: Fm200MaintenanceCylinderIncludeSchema.optional(),
+  where: Fm200MaintenanceCylinderWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200TightnessTestFindFirstArgsSchema: z.ZodType<Prisma.Fm200TightnessTestFindFirstArgs> = z.object({
+  select: Fm200TightnessTestSelectSchema.optional(),
+  include: Fm200TightnessTestIncludeSchema.optional(),
+  where: Fm200TightnessTestWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200TightnessTestOrderByWithRelationInputSchema.array(), Fm200TightnessTestOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200TightnessTestWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200TightnessTestScalarFieldEnumSchema, Fm200TightnessTestScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200TightnessTestFindFirstOrThrowArgsSchema: z.ZodType<Prisma.Fm200TightnessTestFindFirstOrThrowArgs> = z.object({
+  select: Fm200TightnessTestSelectSchema.optional(),
+  include: Fm200TightnessTestIncludeSchema.optional(),
+  where: Fm200TightnessTestWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200TightnessTestOrderByWithRelationInputSchema.array(), Fm200TightnessTestOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200TightnessTestWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200TightnessTestScalarFieldEnumSchema, Fm200TightnessTestScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200TightnessTestFindManyArgsSchema: z.ZodType<Prisma.Fm200TightnessTestFindManyArgs> = z.object({
+  select: Fm200TightnessTestSelectSchema.optional(),
+  include: Fm200TightnessTestIncludeSchema.optional(),
+  where: Fm200TightnessTestWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200TightnessTestOrderByWithRelationInputSchema.array(), Fm200TightnessTestOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200TightnessTestWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200TightnessTestScalarFieldEnumSchema, Fm200TightnessTestScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200TightnessTestAggregateArgsSchema: z.ZodType<Prisma.Fm200TightnessTestAggregateArgs> = z.object({
+  where: Fm200TightnessTestWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200TightnessTestOrderByWithRelationInputSchema.array(), Fm200TightnessTestOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200TightnessTestWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200TightnessTestGroupByArgsSchema: z.ZodType<Prisma.Fm200TightnessTestGroupByArgs> = z.object({
+  where: Fm200TightnessTestWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200TightnessTestOrderByWithAggregationInputSchema.array(), Fm200TightnessTestOrderByWithAggregationInputSchema ]).optional(),
+  by: Fm200TightnessTestScalarFieldEnumSchema.array(), 
+  having: Fm200TightnessTestScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200TightnessTestFindUniqueArgsSchema: z.ZodType<Prisma.Fm200TightnessTestFindUniqueArgs> = z.object({
+  select: Fm200TightnessTestSelectSchema.optional(),
+  include: Fm200TightnessTestIncludeSchema.optional(),
+  where: Fm200TightnessTestWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200TightnessTestFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.Fm200TightnessTestFindUniqueOrThrowArgs> = z.object({
+  select: Fm200TightnessTestSelectSchema.optional(),
+  include: Fm200TightnessTestIncludeSchema.optional(),
+  where: Fm200TightnessTestWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200WorkOrderFindFirstArgsSchema: z.ZodType<Prisma.Fm200WorkOrderFindFirstArgs> = z.object({
+  select: Fm200WorkOrderSelectSchema.optional(),
+  include: Fm200WorkOrderIncludeSchema.optional(),
+  where: Fm200WorkOrderWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200WorkOrderOrderByWithRelationInputSchema.array(), Fm200WorkOrderOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200WorkOrderWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200WorkOrderScalarFieldEnumSchema, Fm200WorkOrderScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderFindFirstOrThrowArgsSchema: z.ZodType<Prisma.Fm200WorkOrderFindFirstOrThrowArgs> = z.object({
+  select: Fm200WorkOrderSelectSchema.optional(),
+  include: Fm200WorkOrderIncludeSchema.optional(),
+  where: Fm200WorkOrderWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200WorkOrderOrderByWithRelationInputSchema.array(), Fm200WorkOrderOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200WorkOrderWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200WorkOrderScalarFieldEnumSchema, Fm200WorkOrderScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderFindManyArgsSchema: z.ZodType<Prisma.Fm200WorkOrderFindManyArgs> = z.object({
+  select: Fm200WorkOrderSelectSchema.optional(),
+  include: Fm200WorkOrderIncludeSchema.optional(),
+  where: Fm200WorkOrderWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200WorkOrderOrderByWithRelationInputSchema.array(), Fm200WorkOrderOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200WorkOrderWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200WorkOrderScalarFieldEnumSchema, Fm200WorkOrderScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderAggregateArgsSchema: z.ZodType<Prisma.Fm200WorkOrderAggregateArgs> = z.object({
+  where: Fm200WorkOrderWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200WorkOrderOrderByWithRelationInputSchema.array(), Fm200WorkOrderOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200WorkOrderWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200WorkOrderGroupByArgsSchema: z.ZodType<Prisma.Fm200WorkOrderGroupByArgs> = z.object({
+  where: Fm200WorkOrderWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200WorkOrderOrderByWithAggregationInputSchema.array(), Fm200WorkOrderOrderByWithAggregationInputSchema ]).optional(),
+  by: Fm200WorkOrderScalarFieldEnumSchema.array(), 
+  having: Fm200WorkOrderScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200WorkOrderFindUniqueArgsSchema: z.ZodType<Prisma.Fm200WorkOrderFindUniqueArgs> = z.object({
+  select: Fm200WorkOrderSelectSchema.optional(),
+  include: Fm200WorkOrderIncludeSchema.optional(),
+  where: Fm200WorkOrderWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200WorkOrderFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.Fm200WorkOrderFindUniqueOrThrowArgs> = z.object({
+  select: Fm200WorkOrderSelectSchema.optional(),
+  include: Fm200WorkOrderIncludeSchema.optional(),
+  where: Fm200WorkOrderWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200WorkOrderEvidenceFindFirstArgsSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceFindFirstArgs> = z.object({
+  select: Fm200WorkOrderEvidenceSelectSchema.optional(),
+  include: Fm200WorkOrderEvidenceIncludeSchema.optional(),
+  where: Fm200WorkOrderEvidenceWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200WorkOrderEvidenceOrderByWithRelationInputSchema.array(), Fm200WorkOrderEvidenceOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200WorkOrderEvidenceWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200WorkOrderEvidenceScalarFieldEnumSchema, Fm200WorkOrderEvidenceScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceFindFirstOrThrowArgsSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceFindFirstOrThrowArgs> = z.object({
+  select: Fm200WorkOrderEvidenceSelectSchema.optional(),
+  include: Fm200WorkOrderEvidenceIncludeSchema.optional(),
+  where: Fm200WorkOrderEvidenceWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200WorkOrderEvidenceOrderByWithRelationInputSchema.array(), Fm200WorkOrderEvidenceOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200WorkOrderEvidenceWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200WorkOrderEvidenceScalarFieldEnumSchema, Fm200WorkOrderEvidenceScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceFindManyArgsSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceFindManyArgs> = z.object({
+  select: Fm200WorkOrderEvidenceSelectSchema.optional(),
+  include: Fm200WorkOrderEvidenceIncludeSchema.optional(),
+  where: Fm200WorkOrderEvidenceWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200WorkOrderEvidenceOrderByWithRelationInputSchema.array(), Fm200WorkOrderEvidenceOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200WorkOrderEvidenceWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200WorkOrderEvidenceScalarFieldEnumSchema, Fm200WorkOrderEvidenceScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceAggregateArgsSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceAggregateArgs> = z.object({
+  where: Fm200WorkOrderEvidenceWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200WorkOrderEvidenceOrderByWithRelationInputSchema.array(), Fm200WorkOrderEvidenceOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200WorkOrderEvidenceWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceGroupByArgsSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceGroupByArgs> = z.object({
+  where: Fm200WorkOrderEvidenceWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200WorkOrderEvidenceOrderByWithAggregationInputSchema.array(), Fm200WorkOrderEvidenceOrderByWithAggregationInputSchema ]).optional(),
+  by: Fm200WorkOrderEvidenceScalarFieldEnumSchema.array(), 
+  having: Fm200WorkOrderEvidenceScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceFindUniqueArgsSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceFindUniqueArgs> = z.object({
+  select: Fm200WorkOrderEvidenceSelectSchema.optional(),
+  include: Fm200WorkOrderEvidenceIncludeSchema.optional(),
+  where: Fm200WorkOrderEvidenceWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200WorkOrderEvidenceFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceFindUniqueOrThrowArgs> = z.object({
+  select: Fm200WorkOrderEvidenceSelectSchema.optional(),
+  include: Fm200WorkOrderEvidenceIncludeSchema.optional(),
+  where: Fm200WorkOrderEvidenceWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200SettingFindFirstArgsSchema: z.ZodType<Prisma.Fm200SettingFindFirstArgs> = z.object({
+  select: Fm200SettingSelectSchema.optional(),
+  where: Fm200SettingWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200SettingOrderByWithRelationInputSchema.array(), Fm200SettingOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200SettingWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200SettingScalarFieldEnumSchema, Fm200SettingScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200SettingFindFirstOrThrowArgsSchema: z.ZodType<Prisma.Fm200SettingFindFirstOrThrowArgs> = z.object({
+  select: Fm200SettingSelectSchema.optional(),
+  where: Fm200SettingWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200SettingOrderByWithRelationInputSchema.array(), Fm200SettingOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200SettingWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200SettingScalarFieldEnumSchema, Fm200SettingScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200SettingFindManyArgsSchema: z.ZodType<Prisma.Fm200SettingFindManyArgs> = z.object({
+  select: Fm200SettingSelectSchema.optional(),
+  where: Fm200SettingWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200SettingOrderByWithRelationInputSchema.array(), Fm200SettingOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200SettingWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200SettingScalarFieldEnumSchema, Fm200SettingScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200SettingAggregateArgsSchema: z.ZodType<Prisma.Fm200SettingAggregateArgs> = z.object({
+  where: Fm200SettingWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200SettingOrderByWithRelationInputSchema.array(), Fm200SettingOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200SettingWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200SettingGroupByArgsSchema: z.ZodType<Prisma.Fm200SettingGroupByArgs> = z.object({
+  where: Fm200SettingWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200SettingOrderByWithAggregationInputSchema.array(), Fm200SettingOrderByWithAggregationInputSchema ]).optional(),
+  by: Fm200SettingScalarFieldEnumSchema.array(), 
+  having: Fm200SettingScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200SettingFindUniqueArgsSchema: z.ZodType<Prisma.Fm200SettingFindUniqueArgs> = z.object({
+  select: Fm200SettingSelectSchema.optional(),
+  where: Fm200SettingWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200SettingFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.Fm200SettingFindUniqueOrThrowArgs> = z.object({
+  select: Fm200SettingSelectSchema.optional(),
+  where: Fm200SettingWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200BuildingFloorFindFirstArgsSchema: z.ZodType<Prisma.Fm200BuildingFloorFindFirstArgs> = z.object({
+  select: Fm200BuildingFloorSelectSchema.optional(),
+  include: Fm200BuildingFloorIncludeSchema.optional(),
+  where: Fm200BuildingFloorWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200BuildingFloorOrderByWithRelationInputSchema.array(), Fm200BuildingFloorOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200BuildingFloorWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200BuildingFloorScalarFieldEnumSchema, Fm200BuildingFloorScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200BuildingFloorFindFirstOrThrowArgsSchema: z.ZodType<Prisma.Fm200BuildingFloorFindFirstOrThrowArgs> = z.object({
+  select: Fm200BuildingFloorSelectSchema.optional(),
+  include: Fm200BuildingFloorIncludeSchema.optional(),
+  where: Fm200BuildingFloorWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200BuildingFloorOrderByWithRelationInputSchema.array(), Fm200BuildingFloorOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200BuildingFloorWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200BuildingFloorScalarFieldEnumSchema, Fm200BuildingFloorScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200BuildingFloorFindManyArgsSchema: z.ZodType<Prisma.Fm200BuildingFloorFindManyArgs> = z.object({
+  select: Fm200BuildingFloorSelectSchema.optional(),
+  include: Fm200BuildingFloorIncludeSchema.optional(),
+  where: Fm200BuildingFloorWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200BuildingFloorOrderByWithRelationInputSchema.array(), Fm200BuildingFloorOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200BuildingFloorWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+  distinct: z.union([ Fm200BuildingFloorScalarFieldEnumSchema, Fm200BuildingFloorScalarFieldEnumSchema.array() ]).optional(),
+}).strict();
+
+export const Fm200BuildingFloorAggregateArgsSchema: z.ZodType<Prisma.Fm200BuildingFloorAggregateArgs> = z.object({
+  where: Fm200BuildingFloorWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200BuildingFloorOrderByWithRelationInputSchema.array(), Fm200BuildingFloorOrderByWithRelationInputSchema ]).optional(),
+  cursor: Fm200BuildingFloorWhereUniqueInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200BuildingFloorGroupByArgsSchema: z.ZodType<Prisma.Fm200BuildingFloorGroupByArgs> = z.object({
+  where: Fm200BuildingFloorWhereInputSchema.optional(), 
+  orderBy: z.union([ Fm200BuildingFloorOrderByWithAggregationInputSchema.array(), Fm200BuildingFloorOrderByWithAggregationInputSchema ]).optional(),
+  by: Fm200BuildingFloorScalarFieldEnumSchema.array(), 
+  having: Fm200BuildingFloorScalarWhereWithAggregatesInputSchema.optional(), 
+  take: z.number().optional(),
+  skip: z.number().optional(),
+}).strict();
+
+export const Fm200BuildingFloorFindUniqueArgsSchema: z.ZodType<Prisma.Fm200BuildingFloorFindUniqueArgs> = z.object({
+  select: Fm200BuildingFloorSelectSchema.optional(),
+  include: Fm200BuildingFloorIncludeSchema.optional(),
+  where: Fm200BuildingFloorWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200BuildingFloorFindUniqueOrThrowArgsSchema: z.ZodType<Prisma.Fm200BuildingFloorFindUniqueOrThrowArgs> = z.object({
+  select: Fm200BuildingFloorSelectSchema.optional(),
+  include: Fm200BuildingFloorIncludeSchema.optional(),
+  where: Fm200BuildingFloorWhereUniqueInputSchema, 
+}).strict();
+
 export const UserCreateArgsSchema: z.ZodType<Prisma.UserCreateArgs> = z.object({
   select: UserSelectSchema.optional(),
   include: UserIncludeSchema.optional(),
@@ -137733,4 +146547,506 @@ export const FireSafetySettingUpdateManyArgsSchema: z.ZodType<Prisma.FireSafetyS
 
 export const FireSafetySettingDeleteManyArgsSchema: z.ZodType<Prisma.FireSafetySettingDeleteManyArgs> = z.object({
   where: FireSafetySettingWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200LocationCreateArgsSchema: z.ZodType<Prisma.Fm200LocationCreateArgs> = z.object({
+  select: Fm200LocationSelectSchema.optional(),
+  include: Fm200LocationIncludeSchema.optional(),
+  data: z.union([ Fm200LocationCreateInputSchema, Fm200LocationUncheckedCreateInputSchema ]),
+}).strict();
+
+export const Fm200LocationUpsertArgsSchema: z.ZodType<Prisma.Fm200LocationUpsertArgs> = z.object({
+  select: Fm200LocationSelectSchema.optional(),
+  include: Fm200LocationIncludeSchema.optional(),
+  where: Fm200LocationWhereUniqueInputSchema, 
+  create: z.union([ Fm200LocationCreateInputSchema, Fm200LocationUncheckedCreateInputSchema ]),
+  update: z.union([ Fm200LocationUpdateInputSchema, Fm200LocationUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const Fm200LocationCreateManyArgsSchema: z.ZodType<Prisma.Fm200LocationCreateManyArgs> = z.object({
+  data: z.union([ Fm200LocationCreateManyInputSchema, Fm200LocationCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200LocationCreateManyAndReturnArgsSchema: z.ZodType<Prisma.Fm200LocationCreateManyAndReturnArgs> = z.object({
+  data: z.union([ Fm200LocationCreateManyInputSchema, Fm200LocationCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200LocationDeleteArgsSchema: z.ZodType<Prisma.Fm200LocationDeleteArgs> = z.object({
+  select: Fm200LocationSelectSchema.optional(),
+  include: Fm200LocationIncludeSchema.optional(),
+  where: Fm200LocationWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200LocationUpdateArgsSchema: z.ZodType<Prisma.Fm200LocationUpdateArgs> = z.object({
+  select: Fm200LocationSelectSchema.optional(),
+  include: Fm200LocationIncludeSchema.optional(),
+  data: z.union([ Fm200LocationUpdateInputSchema, Fm200LocationUncheckedUpdateInputSchema ]),
+  where: Fm200LocationWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200LocationUpdateManyArgsSchema: z.ZodType<Prisma.Fm200LocationUpdateManyArgs> = z.object({
+  data: z.union([ Fm200LocationUpdateManyMutationInputSchema, Fm200LocationUncheckedUpdateManyInputSchema ]),
+  where: Fm200LocationWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200LocationDeleteManyArgsSchema: z.ZodType<Prisma.Fm200LocationDeleteManyArgs> = z.object({
+  where: Fm200LocationWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200CylinderCreateArgsSchema: z.ZodType<Prisma.Fm200CylinderCreateArgs> = z.object({
+  select: Fm200CylinderSelectSchema.optional(),
+  include: Fm200CylinderIncludeSchema.optional(),
+  data: z.union([ Fm200CylinderCreateInputSchema, Fm200CylinderUncheckedCreateInputSchema ]),
+}).strict();
+
+export const Fm200CylinderUpsertArgsSchema: z.ZodType<Prisma.Fm200CylinderUpsertArgs> = z.object({
+  select: Fm200CylinderSelectSchema.optional(),
+  include: Fm200CylinderIncludeSchema.optional(),
+  where: Fm200CylinderWhereUniqueInputSchema, 
+  create: z.union([ Fm200CylinderCreateInputSchema, Fm200CylinderUncheckedCreateInputSchema ]),
+  update: z.union([ Fm200CylinderUpdateInputSchema, Fm200CylinderUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const Fm200CylinderCreateManyArgsSchema: z.ZodType<Prisma.Fm200CylinderCreateManyArgs> = z.object({
+  data: z.union([ Fm200CylinderCreateManyInputSchema, Fm200CylinderCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200CylinderCreateManyAndReturnArgsSchema: z.ZodType<Prisma.Fm200CylinderCreateManyAndReturnArgs> = z.object({
+  data: z.union([ Fm200CylinderCreateManyInputSchema, Fm200CylinderCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200CylinderDeleteArgsSchema: z.ZodType<Prisma.Fm200CylinderDeleteArgs> = z.object({
+  select: Fm200CylinderSelectSchema.optional(),
+  include: Fm200CylinderIncludeSchema.optional(),
+  where: Fm200CylinderWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200CylinderUpdateArgsSchema: z.ZodType<Prisma.Fm200CylinderUpdateArgs> = z.object({
+  select: Fm200CylinderSelectSchema.optional(),
+  include: Fm200CylinderIncludeSchema.optional(),
+  data: z.union([ Fm200CylinderUpdateInputSchema, Fm200CylinderUncheckedUpdateInputSchema ]),
+  where: Fm200CylinderWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200CylinderUpdateManyArgsSchema: z.ZodType<Prisma.Fm200CylinderUpdateManyArgs> = z.object({
+  data: z.union([ Fm200CylinderUpdateManyMutationInputSchema, Fm200CylinderUncheckedUpdateManyInputSchema ]),
+  where: Fm200CylinderWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200CylinderDeleteManyArgsSchema: z.ZodType<Prisma.Fm200CylinderDeleteManyArgs> = z.object({
+  where: Fm200CylinderWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200Phase1AssessmentCreateArgsSchema: z.ZodType<Prisma.Fm200Phase1AssessmentCreateArgs> = z.object({
+  select: Fm200Phase1AssessmentSelectSchema.optional(),
+  include: Fm200Phase1AssessmentIncludeSchema.optional(),
+  data: z.union([ Fm200Phase1AssessmentCreateInputSchema, Fm200Phase1AssessmentUncheckedCreateInputSchema ]),
+}).strict();
+
+export const Fm200Phase1AssessmentUpsertArgsSchema: z.ZodType<Prisma.Fm200Phase1AssessmentUpsertArgs> = z.object({
+  select: Fm200Phase1AssessmentSelectSchema.optional(),
+  include: Fm200Phase1AssessmentIncludeSchema.optional(),
+  where: Fm200Phase1AssessmentWhereUniqueInputSchema, 
+  create: z.union([ Fm200Phase1AssessmentCreateInputSchema, Fm200Phase1AssessmentUncheckedCreateInputSchema ]),
+  update: z.union([ Fm200Phase1AssessmentUpdateInputSchema, Fm200Phase1AssessmentUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const Fm200Phase1AssessmentCreateManyArgsSchema: z.ZodType<Prisma.Fm200Phase1AssessmentCreateManyArgs> = z.object({
+  data: z.union([ Fm200Phase1AssessmentCreateManyInputSchema, Fm200Phase1AssessmentCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentCreateManyAndReturnArgsSchema: z.ZodType<Prisma.Fm200Phase1AssessmentCreateManyAndReturnArgs> = z.object({
+  data: z.union([ Fm200Phase1AssessmentCreateManyInputSchema, Fm200Phase1AssessmentCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200Phase1AssessmentDeleteArgsSchema: z.ZodType<Prisma.Fm200Phase1AssessmentDeleteArgs> = z.object({
+  select: Fm200Phase1AssessmentSelectSchema.optional(),
+  include: Fm200Phase1AssessmentIncludeSchema.optional(),
+  where: Fm200Phase1AssessmentWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200Phase1AssessmentUpdateArgsSchema: z.ZodType<Prisma.Fm200Phase1AssessmentUpdateArgs> = z.object({
+  select: Fm200Phase1AssessmentSelectSchema.optional(),
+  include: Fm200Phase1AssessmentIncludeSchema.optional(),
+  data: z.union([ Fm200Phase1AssessmentUpdateInputSchema, Fm200Phase1AssessmentUncheckedUpdateInputSchema ]),
+  where: Fm200Phase1AssessmentWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200Phase1AssessmentUpdateManyArgsSchema: z.ZodType<Prisma.Fm200Phase1AssessmentUpdateManyArgs> = z.object({
+  data: z.union([ Fm200Phase1AssessmentUpdateManyMutationInputSchema, Fm200Phase1AssessmentUncheckedUpdateManyInputSchema ]),
+  where: Fm200Phase1AssessmentWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200Phase1AssessmentDeleteManyArgsSchema: z.ZodType<Prisma.Fm200Phase1AssessmentDeleteManyArgs> = z.object({
+  where: Fm200Phase1AssessmentWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200PeriodicInspectionCreateArgsSchema: z.ZodType<Prisma.Fm200PeriodicInspectionCreateArgs> = z.object({
+  select: Fm200PeriodicInspectionSelectSchema.optional(),
+  include: Fm200PeriodicInspectionIncludeSchema.optional(),
+  data: z.union([ Fm200PeriodicInspectionCreateInputSchema, Fm200PeriodicInspectionUncheckedCreateInputSchema ]),
+}).strict();
+
+export const Fm200PeriodicInspectionUpsertArgsSchema: z.ZodType<Prisma.Fm200PeriodicInspectionUpsertArgs> = z.object({
+  select: Fm200PeriodicInspectionSelectSchema.optional(),
+  include: Fm200PeriodicInspectionIncludeSchema.optional(),
+  where: Fm200PeriodicInspectionWhereUniqueInputSchema, 
+  create: z.union([ Fm200PeriodicInspectionCreateInputSchema, Fm200PeriodicInspectionUncheckedCreateInputSchema ]),
+  update: z.union([ Fm200PeriodicInspectionUpdateInputSchema, Fm200PeriodicInspectionUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const Fm200PeriodicInspectionCreateManyArgsSchema: z.ZodType<Prisma.Fm200PeriodicInspectionCreateManyArgs> = z.object({
+  data: z.union([ Fm200PeriodicInspectionCreateManyInputSchema, Fm200PeriodicInspectionCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionCreateManyAndReturnArgsSchema: z.ZodType<Prisma.Fm200PeriodicInspectionCreateManyAndReturnArgs> = z.object({
+  data: z.union([ Fm200PeriodicInspectionCreateManyInputSchema, Fm200PeriodicInspectionCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200PeriodicInspectionDeleteArgsSchema: z.ZodType<Prisma.Fm200PeriodicInspectionDeleteArgs> = z.object({
+  select: Fm200PeriodicInspectionSelectSchema.optional(),
+  include: Fm200PeriodicInspectionIncludeSchema.optional(),
+  where: Fm200PeriodicInspectionWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200PeriodicInspectionUpdateArgsSchema: z.ZodType<Prisma.Fm200PeriodicInspectionUpdateArgs> = z.object({
+  select: Fm200PeriodicInspectionSelectSchema.optional(),
+  include: Fm200PeriodicInspectionIncludeSchema.optional(),
+  data: z.union([ Fm200PeriodicInspectionUpdateInputSchema, Fm200PeriodicInspectionUncheckedUpdateInputSchema ]),
+  where: Fm200PeriodicInspectionWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200PeriodicInspectionUpdateManyArgsSchema: z.ZodType<Prisma.Fm200PeriodicInspectionUpdateManyArgs> = z.object({
+  data: z.union([ Fm200PeriodicInspectionUpdateManyMutationInputSchema, Fm200PeriodicInspectionUncheckedUpdateManyInputSchema ]),
+  where: Fm200PeriodicInspectionWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200PeriodicInspectionDeleteManyArgsSchema: z.ZodType<Prisma.Fm200PeriodicInspectionDeleteManyArgs> = z.object({
+  where: Fm200PeriodicInspectionWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200MaintenanceCreateArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCreateArgs> = z.object({
+  select: Fm200MaintenanceSelectSchema.optional(),
+  include: Fm200MaintenanceIncludeSchema.optional(),
+  data: z.union([ Fm200MaintenanceCreateInputSchema, Fm200MaintenanceUncheckedCreateInputSchema ]),
+}).strict();
+
+export const Fm200MaintenanceUpsertArgsSchema: z.ZodType<Prisma.Fm200MaintenanceUpsertArgs> = z.object({
+  select: Fm200MaintenanceSelectSchema.optional(),
+  include: Fm200MaintenanceIncludeSchema.optional(),
+  where: Fm200MaintenanceWhereUniqueInputSchema, 
+  create: z.union([ Fm200MaintenanceCreateInputSchema, Fm200MaintenanceUncheckedCreateInputSchema ]),
+  update: z.union([ Fm200MaintenanceUpdateInputSchema, Fm200MaintenanceUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const Fm200MaintenanceCreateManyArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCreateManyArgs> = z.object({
+  data: z.union([ Fm200MaintenanceCreateManyInputSchema, Fm200MaintenanceCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200MaintenanceCreateManyAndReturnArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCreateManyAndReturnArgs> = z.object({
+  data: z.union([ Fm200MaintenanceCreateManyInputSchema, Fm200MaintenanceCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200MaintenanceDeleteArgsSchema: z.ZodType<Prisma.Fm200MaintenanceDeleteArgs> = z.object({
+  select: Fm200MaintenanceSelectSchema.optional(),
+  include: Fm200MaintenanceIncludeSchema.optional(),
+  where: Fm200MaintenanceWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200MaintenanceUpdateArgsSchema: z.ZodType<Prisma.Fm200MaintenanceUpdateArgs> = z.object({
+  select: Fm200MaintenanceSelectSchema.optional(),
+  include: Fm200MaintenanceIncludeSchema.optional(),
+  data: z.union([ Fm200MaintenanceUpdateInputSchema, Fm200MaintenanceUncheckedUpdateInputSchema ]),
+  where: Fm200MaintenanceWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200MaintenanceUpdateManyArgsSchema: z.ZodType<Prisma.Fm200MaintenanceUpdateManyArgs> = z.object({
+  data: z.union([ Fm200MaintenanceUpdateManyMutationInputSchema, Fm200MaintenanceUncheckedUpdateManyInputSchema ]),
+  where: Fm200MaintenanceWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200MaintenanceDeleteManyArgsSchema: z.ZodType<Prisma.Fm200MaintenanceDeleteManyArgs> = z.object({
+  where: Fm200MaintenanceWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200MaintenanceCylinderCreateArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderCreateArgs> = z.object({
+  select: Fm200MaintenanceCylinderSelectSchema.optional(),
+  include: Fm200MaintenanceCylinderIncludeSchema.optional(),
+  data: z.union([ Fm200MaintenanceCylinderCreateInputSchema, Fm200MaintenanceCylinderUncheckedCreateInputSchema ]),
+}).strict();
+
+export const Fm200MaintenanceCylinderUpsertArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUpsertArgs> = z.object({
+  select: Fm200MaintenanceCylinderSelectSchema.optional(),
+  include: Fm200MaintenanceCylinderIncludeSchema.optional(),
+  where: Fm200MaintenanceCylinderWhereUniqueInputSchema, 
+  create: z.union([ Fm200MaintenanceCylinderCreateInputSchema, Fm200MaintenanceCylinderUncheckedCreateInputSchema ]),
+  update: z.union([ Fm200MaintenanceCylinderUpdateInputSchema, Fm200MaintenanceCylinderUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const Fm200MaintenanceCylinderCreateManyArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderCreateManyArgs> = z.object({
+  data: z.union([ Fm200MaintenanceCylinderCreateManyInputSchema, Fm200MaintenanceCylinderCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderCreateManyAndReturnArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderCreateManyAndReturnArgs> = z.object({
+  data: z.union([ Fm200MaintenanceCylinderCreateManyInputSchema, Fm200MaintenanceCylinderCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200MaintenanceCylinderDeleteArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderDeleteArgs> = z.object({
+  select: Fm200MaintenanceCylinderSelectSchema.optional(),
+  include: Fm200MaintenanceCylinderIncludeSchema.optional(),
+  where: Fm200MaintenanceCylinderWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200MaintenanceCylinderUpdateArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUpdateArgs> = z.object({
+  select: Fm200MaintenanceCylinderSelectSchema.optional(),
+  include: Fm200MaintenanceCylinderIncludeSchema.optional(),
+  data: z.union([ Fm200MaintenanceCylinderUpdateInputSchema, Fm200MaintenanceCylinderUncheckedUpdateInputSchema ]),
+  where: Fm200MaintenanceCylinderWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200MaintenanceCylinderUpdateManyArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderUpdateManyArgs> = z.object({
+  data: z.union([ Fm200MaintenanceCylinderUpdateManyMutationInputSchema, Fm200MaintenanceCylinderUncheckedUpdateManyInputSchema ]),
+  where: Fm200MaintenanceCylinderWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200MaintenanceCylinderDeleteManyArgsSchema: z.ZodType<Prisma.Fm200MaintenanceCylinderDeleteManyArgs> = z.object({
+  where: Fm200MaintenanceCylinderWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200TightnessTestCreateArgsSchema: z.ZodType<Prisma.Fm200TightnessTestCreateArgs> = z.object({
+  select: Fm200TightnessTestSelectSchema.optional(),
+  include: Fm200TightnessTestIncludeSchema.optional(),
+  data: z.union([ Fm200TightnessTestCreateInputSchema, Fm200TightnessTestUncheckedCreateInputSchema ]),
+}).strict();
+
+export const Fm200TightnessTestUpsertArgsSchema: z.ZodType<Prisma.Fm200TightnessTestUpsertArgs> = z.object({
+  select: Fm200TightnessTestSelectSchema.optional(),
+  include: Fm200TightnessTestIncludeSchema.optional(),
+  where: Fm200TightnessTestWhereUniqueInputSchema, 
+  create: z.union([ Fm200TightnessTestCreateInputSchema, Fm200TightnessTestUncheckedCreateInputSchema ]),
+  update: z.union([ Fm200TightnessTestUpdateInputSchema, Fm200TightnessTestUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const Fm200TightnessTestCreateManyArgsSchema: z.ZodType<Prisma.Fm200TightnessTestCreateManyArgs> = z.object({
+  data: z.union([ Fm200TightnessTestCreateManyInputSchema, Fm200TightnessTestCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200TightnessTestCreateManyAndReturnArgsSchema: z.ZodType<Prisma.Fm200TightnessTestCreateManyAndReturnArgs> = z.object({
+  data: z.union([ Fm200TightnessTestCreateManyInputSchema, Fm200TightnessTestCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200TightnessTestDeleteArgsSchema: z.ZodType<Prisma.Fm200TightnessTestDeleteArgs> = z.object({
+  select: Fm200TightnessTestSelectSchema.optional(),
+  include: Fm200TightnessTestIncludeSchema.optional(),
+  where: Fm200TightnessTestWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200TightnessTestUpdateArgsSchema: z.ZodType<Prisma.Fm200TightnessTestUpdateArgs> = z.object({
+  select: Fm200TightnessTestSelectSchema.optional(),
+  include: Fm200TightnessTestIncludeSchema.optional(),
+  data: z.union([ Fm200TightnessTestUpdateInputSchema, Fm200TightnessTestUncheckedUpdateInputSchema ]),
+  where: Fm200TightnessTestWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200TightnessTestUpdateManyArgsSchema: z.ZodType<Prisma.Fm200TightnessTestUpdateManyArgs> = z.object({
+  data: z.union([ Fm200TightnessTestUpdateManyMutationInputSchema, Fm200TightnessTestUncheckedUpdateManyInputSchema ]),
+  where: Fm200TightnessTestWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200TightnessTestDeleteManyArgsSchema: z.ZodType<Prisma.Fm200TightnessTestDeleteManyArgs> = z.object({
+  where: Fm200TightnessTestWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200WorkOrderCreateArgsSchema: z.ZodType<Prisma.Fm200WorkOrderCreateArgs> = z.object({
+  select: Fm200WorkOrderSelectSchema.optional(),
+  include: Fm200WorkOrderIncludeSchema.optional(),
+  data: z.union([ Fm200WorkOrderCreateInputSchema, Fm200WorkOrderUncheckedCreateInputSchema ]),
+}).strict();
+
+export const Fm200WorkOrderUpsertArgsSchema: z.ZodType<Prisma.Fm200WorkOrderUpsertArgs> = z.object({
+  select: Fm200WorkOrderSelectSchema.optional(),
+  include: Fm200WorkOrderIncludeSchema.optional(),
+  where: Fm200WorkOrderWhereUniqueInputSchema, 
+  create: z.union([ Fm200WorkOrderCreateInputSchema, Fm200WorkOrderUncheckedCreateInputSchema ]),
+  update: z.union([ Fm200WorkOrderUpdateInputSchema, Fm200WorkOrderUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const Fm200WorkOrderCreateManyArgsSchema: z.ZodType<Prisma.Fm200WorkOrderCreateManyArgs> = z.object({
+  data: z.union([ Fm200WorkOrderCreateManyInputSchema, Fm200WorkOrderCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200WorkOrderCreateManyAndReturnArgsSchema: z.ZodType<Prisma.Fm200WorkOrderCreateManyAndReturnArgs> = z.object({
+  data: z.union([ Fm200WorkOrderCreateManyInputSchema, Fm200WorkOrderCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200WorkOrderDeleteArgsSchema: z.ZodType<Prisma.Fm200WorkOrderDeleteArgs> = z.object({
+  select: Fm200WorkOrderSelectSchema.optional(),
+  include: Fm200WorkOrderIncludeSchema.optional(),
+  where: Fm200WorkOrderWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200WorkOrderUpdateArgsSchema: z.ZodType<Prisma.Fm200WorkOrderUpdateArgs> = z.object({
+  select: Fm200WorkOrderSelectSchema.optional(),
+  include: Fm200WorkOrderIncludeSchema.optional(),
+  data: z.union([ Fm200WorkOrderUpdateInputSchema, Fm200WorkOrderUncheckedUpdateInputSchema ]),
+  where: Fm200WorkOrderWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200WorkOrderUpdateManyArgsSchema: z.ZodType<Prisma.Fm200WorkOrderUpdateManyArgs> = z.object({
+  data: z.union([ Fm200WorkOrderUpdateManyMutationInputSchema, Fm200WorkOrderUncheckedUpdateManyInputSchema ]),
+  where: Fm200WorkOrderWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200WorkOrderDeleteManyArgsSchema: z.ZodType<Prisma.Fm200WorkOrderDeleteManyArgs> = z.object({
+  where: Fm200WorkOrderWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200WorkOrderEvidenceCreateArgsSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceCreateArgs> = z.object({
+  select: Fm200WorkOrderEvidenceSelectSchema.optional(),
+  include: Fm200WorkOrderEvidenceIncludeSchema.optional(),
+  data: z.union([ Fm200WorkOrderEvidenceCreateInputSchema, Fm200WorkOrderEvidenceUncheckedCreateInputSchema ]),
+}).strict();
+
+export const Fm200WorkOrderEvidenceUpsertArgsSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceUpsertArgs> = z.object({
+  select: Fm200WorkOrderEvidenceSelectSchema.optional(),
+  include: Fm200WorkOrderEvidenceIncludeSchema.optional(),
+  where: Fm200WorkOrderEvidenceWhereUniqueInputSchema, 
+  create: z.union([ Fm200WorkOrderEvidenceCreateInputSchema, Fm200WorkOrderEvidenceUncheckedCreateInputSchema ]),
+  update: z.union([ Fm200WorkOrderEvidenceUpdateInputSchema, Fm200WorkOrderEvidenceUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const Fm200WorkOrderEvidenceCreateManyArgsSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceCreateManyArgs> = z.object({
+  data: z.union([ Fm200WorkOrderEvidenceCreateManyInputSchema, Fm200WorkOrderEvidenceCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceCreateManyAndReturnArgsSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceCreateManyAndReturnArgs> = z.object({
+  data: z.union([ Fm200WorkOrderEvidenceCreateManyInputSchema, Fm200WorkOrderEvidenceCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200WorkOrderEvidenceDeleteArgsSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceDeleteArgs> = z.object({
+  select: Fm200WorkOrderEvidenceSelectSchema.optional(),
+  include: Fm200WorkOrderEvidenceIncludeSchema.optional(),
+  where: Fm200WorkOrderEvidenceWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200WorkOrderEvidenceUpdateArgsSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceUpdateArgs> = z.object({
+  select: Fm200WorkOrderEvidenceSelectSchema.optional(),
+  include: Fm200WorkOrderEvidenceIncludeSchema.optional(),
+  data: z.union([ Fm200WorkOrderEvidenceUpdateInputSchema, Fm200WorkOrderEvidenceUncheckedUpdateInputSchema ]),
+  where: Fm200WorkOrderEvidenceWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200WorkOrderEvidenceUpdateManyArgsSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceUpdateManyArgs> = z.object({
+  data: z.union([ Fm200WorkOrderEvidenceUpdateManyMutationInputSchema, Fm200WorkOrderEvidenceUncheckedUpdateManyInputSchema ]),
+  where: Fm200WorkOrderEvidenceWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200WorkOrderEvidenceDeleteManyArgsSchema: z.ZodType<Prisma.Fm200WorkOrderEvidenceDeleteManyArgs> = z.object({
+  where: Fm200WorkOrderEvidenceWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200SettingCreateArgsSchema: z.ZodType<Prisma.Fm200SettingCreateArgs> = z.object({
+  select: Fm200SettingSelectSchema.optional(),
+  data: z.union([ Fm200SettingCreateInputSchema, Fm200SettingUncheckedCreateInputSchema ]),
+}).strict();
+
+export const Fm200SettingUpsertArgsSchema: z.ZodType<Prisma.Fm200SettingUpsertArgs> = z.object({
+  select: Fm200SettingSelectSchema.optional(),
+  where: Fm200SettingWhereUniqueInputSchema, 
+  create: z.union([ Fm200SettingCreateInputSchema, Fm200SettingUncheckedCreateInputSchema ]),
+  update: z.union([ Fm200SettingUpdateInputSchema, Fm200SettingUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const Fm200SettingCreateManyArgsSchema: z.ZodType<Prisma.Fm200SettingCreateManyArgs> = z.object({
+  data: z.union([ Fm200SettingCreateManyInputSchema, Fm200SettingCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200SettingCreateManyAndReturnArgsSchema: z.ZodType<Prisma.Fm200SettingCreateManyAndReturnArgs> = z.object({
+  data: z.union([ Fm200SettingCreateManyInputSchema, Fm200SettingCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200SettingDeleteArgsSchema: z.ZodType<Prisma.Fm200SettingDeleteArgs> = z.object({
+  select: Fm200SettingSelectSchema.optional(),
+  where: Fm200SettingWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200SettingUpdateArgsSchema: z.ZodType<Prisma.Fm200SettingUpdateArgs> = z.object({
+  select: Fm200SettingSelectSchema.optional(),
+  data: z.union([ Fm200SettingUpdateInputSchema, Fm200SettingUncheckedUpdateInputSchema ]),
+  where: Fm200SettingWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200SettingUpdateManyArgsSchema: z.ZodType<Prisma.Fm200SettingUpdateManyArgs> = z.object({
+  data: z.union([ Fm200SettingUpdateManyMutationInputSchema, Fm200SettingUncheckedUpdateManyInputSchema ]),
+  where: Fm200SettingWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200SettingDeleteManyArgsSchema: z.ZodType<Prisma.Fm200SettingDeleteManyArgs> = z.object({
+  where: Fm200SettingWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200BuildingFloorCreateArgsSchema: z.ZodType<Prisma.Fm200BuildingFloorCreateArgs> = z.object({
+  select: Fm200BuildingFloorSelectSchema.optional(),
+  include: Fm200BuildingFloorIncludeSchema.optional(),
+  data: z.union([ Fm200BuildingFloorCreateInputSchema, Fm200BuildingFloorUncheckedCreateInputSchema ]),
+}).strict();
+
+export const Fm200BuildingFloorUpsertArgsSchema: z.ZodType<Prisma.Fm200BuildingFloorUpsertArgs> = z.object({
+  select: Fm200BuildingFloorSelectSchema.optional(),
+  include: Fm200BuildingFloorIncludeSchema.optional(),
+  where: Fm200BuildingFloorWhereUniqueInputSchema, 
+  create: z.union([ Fm200BuildingFloorCreateInputSchema, Fm200BuildingFloorUncheckedCreateInputSchema ]),
+  update: z.union([ Fm200BuildingFloorUpdateInputSchema, Fm200BuildingFloorUncheckedUpdateInputSchema ]),
+}).strict();
+
+export const Fm200BuildingFloorCreateManyArgsSchema: z.ZodType<Prisma.Fm200BuildingFloorCreateManyArgs> = z.object({
+  data: z.union([ Fm200BuildingFloorCreateManyInputSchema, Fm200BuildingFloorCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200BuildingFloorCreateManyAndReturnArgsSchema: z.ZodType<Prisma.Fm200BuildingFloorCreateManyAndReturnArgs> = z.object({
+  data: z.union([ Fm200BuildingFloorCreateManyInputSchema, Fm200BuildingFloorCreateManyInputSchema.array() ]),
+  skipDuplicates: z.boolean().optional(),
+}).strict();
+
+export const Fm200BuildingFloorDeleteArgsSchema: z.ZodType<Prisma.Fm200BuildingFloorDeleteArgs> = z.object({
+  select: Fm200BuildingFloorSelectSchema.optional(),
+  include: Fm200BuildingFloorIncludeSchema.optional(),
+  where: Fm200BuildingFloorWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200BuildingFloorUpdateArgsSchema: z.ZodType<Prisma.Fm200BuildingFloorUpdateArgs> = z.object({
+  select: Fm200BuildingFloorSelectSchema.optional(),
+  include: Fm200BuildingFloorIncludeSchema.optional(),
+  data: z.union([ Fm200BuildingFloorUpdateInputSchema, Fm200BuildingFloorUncheckedUpdateInputSchema ]),
+  where: Fm200BuildingFloorWhereUniqueInputSchema, 
+}).strict();
+
+export const Fm200BuildingFloorUpdateManyArgsSchema: z.ZodType<Prisma.Fm200BuildingFloorUpdateManyArgs> = z.object({
+  data: z.union([ Fm200BuildingFloorUpdateManyMutationInputSchema, Fm200BuildingFloorUncheckedUpdateManyInputSchema ]),
+  where: Fm200BuildingFloorWhereInputSchema.optional(), 
+}).strict();
+
+export const Fm200BuildingFloorDeleteManyArgsSchema: z.ZodType<Prisma.Fm200BuildingFloorDeleteManyArgs> = z.object({
+  where: Fm200BuildingFloorWhereInputSchema.optional(), 
 }).strict();

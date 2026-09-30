@@ -110,74 +110,76 @@ model UserModule {
 }
 
 model Facility {
-  id                     String                      @id
-  name                   String
-  isActive               Boolean                     @default(true)
-  createdAt              DateTime                    @default(now())
-  updatedAt              DateTime                    @updatedAt
-  city                   String?
-  commercialTitle        String?
-  dangerClass            String                      @default("Az Tehlikeli")
-  district               String?
-  email                  String?
-  employeeCount          Int                         @default(0)
-  fullAddress            String?
-  naceCode               String?
-  phone                  String?
-  sgkNumber              String?
-  shortName              String?
-  taxNumber              String?
-  taxOffice              String?
-  type                   String?
-  website                String?
-  logoUrl                String?                     @default("/mlpcare.jpg")
-  activityLogs           ActivityLog[]
-  assignments            Assignment[]
-  employeeCountHistory   EmployeeCountHistory[]
-  incidents              ExtraordinaryIncident[]
-  buildings              FacilityBuilding[]
-  monthlyAccident        MonthlyAccidentData[]
-  monthlyHrData          MonthlyHRData[]
-  notebookPages          NotebookPage[]
-  reconciliations        Reconciliation[]
-  riskCategorySettings   RiskCategorySetting[]
-  locations              FacilityLocation[]
-  riskDepartmentSettings RiskDepartmentSetting[]
-  riskExpertFacilities   RiskExpertFacility[]
-  checklistSubmissions   ChecklistSubmission[]
-  users                  UserFacility[]
-  facilityHazmatItems    FacilityHazmatItem[]
-  spillKits              HazmatSpillKit[]
-  spillKitMasterItems    HazmatSpillKitMasterItem[]
-  hazmatInventoryItems   HazmatInventoryItem[]
-  hazmatEyewashAnalyses  HazmatEyewashRiskAnalysis[]
-  hazmatIncidents        HazmatIncident[]
-  fireEquipments         FireEquipment[]
-  fireResponsibles       FireEquipmentResponsible[]
-  fireEquipmentCompanies FireEquipmentCompany[]
-  BuildProject           BuildProject[]
-  BuildContractor        BuildContractor[]
-  BuildWorkType          BuildWorkType[]
-  btAnaGruplar           BTAnaGrup[]
-  btDenetlenenAlanlar    BTDenetlenenAlan[]
-  btKategoriler          BTKategori[]
-  btSoruBankasi          BTSoruBankasi[]
-  btSorumluBirimler      BTSorumluBirim[]
-  btSorumluKisiler       BTSorumluKisi[]
-  btTurler               BTTur[]
-  btUygunsuzluklar       BTUygunsuzluk[]
-  HazmatVehicle          HazmatVehicle[]
-  integratedAudits       IntegratedAudit[]
-  ohsBoardMeetings       OhsBoardMeeting[]
-  ohsBoardMembers        OhsBoardMember[]
-  FireDoor               FireDoor[]
-  OhsBoardPeriod         OhsBoardPeriod[]
-  ohsBoardDepartments    OhsBoardDepartment[]
-  elevators              Elevator[]
+  id                            String                                @id
+  name                          String
+  isActive                      Boolean                               @default(true)
+  createdAt                     DateTime                              @default(now())
+  updatedAt                     DateTime                              @updatedAt
+  city                          String?
+  commercialTitle               String?
+  dangerClass                   String                                @default("Az Tehlikeli")
+  district                      String?
+  email                         String?
+  employeeCount                 Int                                   @default(0)
+  fullAddress                   String?
+  naceCode                      String?
+  phone                         String?
+  sgkNumber                     String?
+  shortName                     String?
+  taxNumber                     String?
+  taxOffice                     String?
+  type                          String?
+  website                       String?
+  logoUrl                       String?                               @default("/mlpcare.jpg")
+  activityLogs                  ActivityLog[]
+  assignments                   Assignment[]
+  employeeCountHistory          EmployeeCountHistory[]
+  incidents                     ExtraordinaryIncident[]
+  buildings                     FacilityBuilding[]
+  monthlyAccident               MonthlyAccidentData[]
+  monthlyHrData                 MonthlyHRData[]
+  notebookPages                 NotebookPage[]
+  reconciliations               Reconciliation[]
+  riskCategorySettings          RiskCategorySetting[]
+  locations                     FacilityLocation[]
+  riskDepartmentSettings        RiskDepartmentSetting[]
+  riskExpertFacilities          RiskExpertFacility[]
+  checklistSubmissions          ChecklistSubmission[]
+  users                         UserFacility[]
+  facilityHazmatItems           FacilityHazmatItem[]
+  spillKits                     HazmatSpillKit[]
+  spillKitMasterItems           HazmatSpillKitMasterItem[]
+  hazmatInventoryItems          HazmatInventoryItem[]
+  hazmatEyewashAnalyses         HazmatEyewashRiskAnalysis[]
+  hazmatIncidents               HazmatIncident[]
+  fireEquipments                FireEquipment[]
+  fireResponsibles              FireEquipmentResponsible[]
+  fireEquipmentCompanies        FireEquipmentCompany[]
+  BuildProject                  BuildProject[]
+  BuildContractor               BuildContractor[]
+  BuildWorkType                 BuildWorkType[]
+  btAnaGruplar                  BTAnaGrup[]
+  btDenetlenenAlanlar           BTDenetlenenAlan[]
+  btKategoriler                 BTKategori[]
+  btSoruBankasi                 BTSoruBankasi[]
+  btSorumluBirimler             BTSorumluBirim[]
+  btSorumluKisiler              BTSorumluKisi[]
+  btTurler                      BTTur[]
+  btUygunsuzluklar              BTUygunsuzluk[]
+  HazmatVehicle                 HazmatVehicle[]
+  integratedAudits              IntegratedAudit[]
+  ohsBoardMeetings              OhsBoardMeeting[]
+  ohsBoardMembers               OhsBoardMember[]
+  FireDoor                      FireDoor[]
+  OhsBoardPeriod                OhsBoardPeriod[]
+  ohsBoardDepartments           OhsBoardDepartment[]
+  elevators                     Elevator[]
   electricInfrastructureRecords ElectricInfrastructureRecord[]
   electricInfrastructureStatus  ElectricInfrastructureFacilityStatus?
   thermalInspectionSessions     ThermalInspectionSession[]
-  fireSafetyAudits       FireSafetyAudit[]
+  fireSafetyAudits              FireSafetyAudit[]
+  fm200Locations                Fm200Location[]
+  fm200BuildingFloors           Fm200BuildingFloor[]
 }
 
 model IncidentCategory {
@@ -2683,45 +2685,45 @@ model ElevatorLabel {
 }
 
 model ElectricInfrastructureRecord {
-  id                     String    @id @default(uuid())
-  facilityId             String
-  orderIndex             Int       @default(1)
-  
-  equipmentCategory      String    // ADP, Kat Panosu, Jeneratör, UPS, Trafo vb.
-  equipmentCodeName      String    // Pano / Ekipman adı - kodu
-  locationDescription    String    // Kat / Konum (Örn: Blok A - Kat 3)
-  
+  id         String @id @default(uuid())
+  facilityId String
+  orderIndex Int    @default(1)
+
+  equipmentCategory   String // ADP, Kat Panosu, Jeneratör, UPS, Trafo vb.
+  equipmentCodeName   String // Pano / Ekipman adı - kodu
+  locationDescription String // Kat / Konum (Örn: Blok A - Kat 3)
+
   isInspected            String?   @default("Evet") // Evet, Hayır
-  hasRisk                String?   @default("Yok")  // Var, Yok
-  hasMaintenanceRecord   String?   @default("Var")  // Var, Yok
+  hasRisk                String?   @default("Yok") // Var, Yok
+  hasMaintenanceRecord   String?   @default("Var") // Var, Yok
   lastMaintenanceDate    DateTime?
-  thermalControl         String?   // Uygun, Uygun Değil, Yapılmadı
-  overloadHeat           String?   // Yok, Var, Kontrol Edilmedi
-  cablesBreakers         String?   // Uygun, Uygun Değil, Kontrol Edilmedi
-  cleanlinessVentilation  String?   // Uygun, Uygun Değil, Kontrol Edilmedi
-  extinguishingSystem    String?   // Var ve Uygun, Yok, Uygun Değil, Uygulanamaz, Kontrol Edilmedi
-  sealingFireStop        String?   // Var ve Uygun, Yok, Uygun Değil, Uygulanamaz, Kontrol Edilmedi
-  protectionSystem       String?   // Uygun, Uygun Değil, Kontrol Edilmedi
-  
-  detectedRisk           String?   // Tespit edilen risk / uygunsuzluk
-  suggestedAction        String?   // Önerilen önlem
-  emergencyActionTaken   String?   // Yapılan acil aksiyon
-  responsiblePerson      String?   // Sorumlu
-  deadlineDate           DateTime? // Termin
-  actionStatus           String?   @default("Tamamlandı") // Açık, Devam Ediyor, Tamamlandı
-  
-  evidenceNo             String?   // Fotoğraf / Kanıt No
-  photoUrls              Json      @default("[]") // Yüklenen kanıt / fotoğraflar
-  
-  inspectorName          String?   // Kontrol eden
-  inspectionDate         DateTime? @default(now()) // Kontrol tarihi
-  notes                  String?   // Notlar
-  
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
-  createdBy              String?
-  
-  facility               Facility  @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  thermalControl         String? // Uygun, Uygun Değil, Yapılmadı
+  overloadHeat           String? // Yok, Var, Kontrol Edilmedi
+  cablesBreakers         String? // Uygun, Uygun Değil, Kontrol Edilmedi
+  cleanlinessVentilation String? // Uygun, Uygun Değil, Kontrol Edilmedi
+  extinguishingSystem    String? // Var ve Uygun, Yok, Uygun Değil, Uygulanamaz, Kontrol Edilmedi
+  sealingFireStop        String? // Var ve Uygun, Yok, Uygun Değil, Uygulanamaz, Kontrol Edilmedi
+  protectionSystem       String? // Uygun, Uygun Değil, Kontrol Edilmedi
+
+  detectedRisk         String? // Tespit edilen risk / uygunsuzluk
+  suggestedAction      String? // Önerilen önlem
+  emergencyActionTaken String? // Yapılan acil aksiyon
+  responsiblePerson    String? // Sorumlu
+  deadlineDate         DateTime? // Termin
+  actionStatus         String?   @default("Tamamlandı") // Açık, Devam Ediyor, Tamamlandı
+
+  evidenceNo String? // Fotoğraf / Kanıt No
+  photoUrls  Json    @default("[]") // Yüklenen kanıt / fotoğraflar
+
+  inspectorName  String? // Kontrol eden
+  inspectionDate DateTime? @default(now()) // Kontrol tarihi
+  notes          String? // Notlar
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
 
   @@index([facilityId])
   @@index([equipmentCategory])
@@ -2729,16 +2731,16 @@ model ElectricInfrastructureRecord {
 }
 
 model ElectricInfrastructureFacilityStatus {
-  facilityId             String    @id
-  isCompleted            Boolean   @default(false)
-  completedAt            DateTime?
-  completedBy            String?
-  notes                  String?
-  
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
-  
-  facility               Facility  @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  facilityId  String    @id
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  completedBy String?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
 }
 
 // ─────────────────────────────────────────────────────────
@@ -2746,63 +2748,63 @@ model ElectricInfrastructureFacilityStatus {
 // ─────────────────────────────────────────────────────────
 
 model ThermalInspectionSession {
-  id             String                  @id @default(uuid())
-  facilityId     String
-  reportDate     DateTime?               @default(now())
-  status         String                  @default("DEVAM_EDIYOR") // DEVAM_EDIYOR, TAMAMLANDI
-  completedAt    DateTime?
-  completedBy    String?
-  notes          String?
-  uploadedBy     String?
+  id          String    @id @default(uuid())
+  facilityId  String
+  reportDate  DateTime? @default(now())
+  status      String    @default("DEVAM_EDIYOR") // DEVAM_EDIYOR, TAMAMLANDI
+  completedAt DateTime?
+  completedBy String?
+  notes       String?
+  uploadedBy  String?
 
-  items          ThermalInspectionItem[]
+  items ThermalInspectionItem[]
 
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  facility       Facility                @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
 
   @@index([facilityId])
   @@index([status])
 }
 
 model ThermalInspectionItem {
-  id                  String                   @id @default(uuid())
-  sessionId           String
-  orderIndex          Int                      @default(1)
-  
-  buildingLocation    String?                  // Lokasyon / Bina
-  floorSection        String?                  // Kat / Bölüm
-  measurementDate     DateTime?                // Tarih
-  controlTime         String?                  // Kontrol Saati
-  panelName           String                   // Pano No / Adı
-  measurementPoint    String?                  // Ölçüm Noktası
-  equipmentConnection String?                  // Ekipman / Bağlantı
-  
-  measuredTemp        Float?                   // Ölçülen Sıcaklık (°C)
-  ambientTemp         Float?                   // Ortam Sıcaklığı (°C)
-  deltaTemp           Float?                   // Fark (Ölçülen - Ortam)
-  
-  status              String?                  @default("Normal") // Normal, Dikkat, Kritik
-  priority            String?                  @default("Düşük")  // Düşük, Orta, Yüksek, Acil
-  detectedRisk        String?                  // Tespit / Açıklama
-  actionTaken         String?                  // Aksiyon (eski alan ile geriye uyumluluk)
+  id         String @id @default(uuid())
+  sessionId  String
+  orderIndex Int    @default(1)
+
+  buildingLocation    String? // Lokasyon / Bina
+  floorSection        String? // Kat / Bölüm
+  measurementDate     DateTime? // Tarih
+  controlTime         String? // Kontrol Saati
+  panelName           String // Pano No / Adı
+  measurementPoint    String? // Ölçüm Noktası
+  equipmentConnection String? // Ekipman / Bağlantı
+
+  measuredTemp Float? // Ölçülen Sıcaklık (°C)
+  ambientTemp  Float? // Ortam Sıcaklığı (°C)
+  deltaTemp    Float? // Fark (Ölçülen - Ortam)
+
+  status       String? @default("Normal") // Normal, Dikkat, Kritik
+  priority     String? @default("Düşük") // Düşük, Orta, Yüksek, Acil
+  detectedRisk String? // Tespit / Açıklama
+  actionTaken  String? // Aksiyon (eski alan ile geriye uyumluluk)
 
   // Gelişmiş Aksiyon & Termin Takibi
-  actionPlan          String?                  // Planlanan aksiyon açıklaması
-  actionDueDate       DateTime?                // Termin / Hedef Tarih
-  actionAssignee      String?                  // Sorumlu Kişi / Birim
-  actionStatus        String?                  @default("BEKLIYOR") // BEKLIYOR, DEVAM_EDIYOR, TAMAMLANDI, IPTAL
-  actionCompletedDate DateTime?                // Aksiyon Tamamlanma Tarihi
-  actionNotes         String?                  // Tamamlama / Çözüm Detayları
-  actionPhotos        Json                     @default("[]") // Düzeltme sonrası çekilen fotoğraflar (Termal/Görsel)
-  
-  photoUrls           Json                     @default("[]") // Max 5 fotoğraf yolu
-  
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @updatedAt
+  actionPlan          String? // Planlanan aksiyon açıklaması
+  actionDueDate       DateTime? // Termin / Hedef Tarih
+  actionAssignee      String? // Sorumlu Kişi / Birim
+  actionStatus        String?   @default("BEKLIYOR") // BEKLIYOR, DEVAM_EDIYOR, TAMAMLANDI, IPTAL
+  actionCompletedDate DateTime? // Aksiyon Tamamlanma Tarihi
+  actionNotes         String? // Tamamlama / Çözüm Detayları
+  actionPhotos        Json      @default("[]") // Düzeltme sonrası çekilen fotoğraflar (Termal/Görsel)
 
-  session             ThermalInspectionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  photoUrls Json @default("[]") // Max 5 fotoğraf yolu
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  session ThermalInspectionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
   @@index([status])
@@ -2816,56 +2818,56 @@ model ThermalInspectionItem {
 // ─────────────────────────────────────────────────────────
 
 model FireSafetyAudit {
-  id           String   @id @default(cuid())
-  facilityId   String
-  title        String   @default("TOPLANTI TUTANAĞI")
-  subtitle     String?  @default("Teknik Hizmetler, Yangın Güvenliği ve Fiziki Alan Değerlendirme Toplantısı")
-  auditDate    DateTime @default(now())
-  topic        String?
-  purpose      String?
-  status       String   @default("DEVAM_EDIYOR") // DRAFT, DEVAM_EDIYOR, TAMAMLANDI, ARSIV
-  
-  preparedBy   String?  // Hazırlayan
-  reviewedBy   String?  // Kontrol Eden
-  approvedBy   String?  // Onaylayan
-  
-  createdBy    String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
-  facility     Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
-  items        FireSafetyItem[]
+  id         String   @id @default(cuid())
+  facilityId String
+  title      String   @default("TOPLANTI TUTANAĞI")
+  subtitle   String?  @default("Teknik Hizmetler, Yangın Güvenliği ve Fiziki Alan Değerlendirme Toplantısı")
+  auditDate  DateTime @default(now())
+  topic      String?
+  purpose    String?
+  status     String   @default("DEVAM_EDIYOR") // DRAFT, DEVAM_EDIYOR, TAMAMLANDI, ARSIV
+
+  preparedBy String? // Hazırlayan
+  reviewedBy String? // Kontrol Eden
+  approvedBy String? // Onaylayan
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  facility Facility         @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  items    FireSafetyItem[]
 
   @@index([facilityId])
   @@index([auditDate])
 }
 
 model FireSafetyItem {
-  id            String   @id @default(cuid())
-  auditId       String
-  orderNo       Int      @default(1)
-  
-  topic         String   // Konu / Tespit / Açıklama
-  source        String?  // Kaynak (İtfaiye Denetim Raporu, İç Süreç, SEGEM, vb.)
-  category      String?  // Kategori
-  
-  action        String   // Karar / Aksiyon
-  responsible   String   // Sorumlu (Departman veya Kişi)
-  deadlineDate  DateTime? // Termin Tarihi
-  status        String   @default("ACIK") // ACIK, DEVAM_EDIYOR, TAMAMLANDI, IPTAL
-  riskLevel     String?  @default("Orta") // Yüksek, Orta, Düşük
-  
-  progressPercent Int      @default(0) // 0-100 arası anlık ilerleme yüzdesi
-  
+  id      String @id @default(cuid())
+  auditId String
+  orderNo Int    @default(1)
+
+  topic    String // Konu / Tespit / Açıklama
+  source   String? // Kaynak (İtfaiye Denetim Raporu, İç Süreç, SEGEM, vb.)
+  category String? // Kategori
+
+  action       String // Karar / Aksiyon
+  responsible  String // Sorumlu (Departman veya Kişi)
+  deadlineDate DateTime? // Termin Tarihi
+  status       String    @default("ACIK") // ACIK, DEVAM_EDIYOR, TAMAMLANDI, IPTAL
+  riskLevel    String?   @default("Orta") // Yüksek, Orta, Düşük
+
+  progressPercent Int @default(0) // 0-100 arası anlık ilerleme yüzdesi
+
   // Tespit anındaki fotoğraflar ve dokümanlar: [{ url, name, type, uploadedAt }]
-  findingPhotos Json     @default("[]")
+  findingPhotos Json    @default("[]")
   notes         String?
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  audit         FireSafetyAudit @relation(fields: [auditId], references: [id], onDelete: Cascade)
-  actions       FireSafetyItemAction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  audit   FireSafetyAudit        @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  actions FireSafetyItemAction[]
 
   @@index([auditId])
   @@index([status])
@@ -2873,22 +2875,22 @@ model FireSafetyItem {
 }
 
 model FireSafetyItemAction {
-  id             String   @id @default(cuid())
-  itemId         String
-  
-  performedBy    String   // İşi yapan / işlemi giren kullanıcı
-  actionDate     DateTime @default(now())
-  status         String   @default("Devam Ediyor") // Başlamadı, Devam Ediyor, Tamamlandı, İptal Edildi
-  explanation    String   // Yapılan işlem açıklaması
-  progressPercent Int     @default(100) // Bu işlem yapıldığında işin yüzde kaçına ulaşıldığı (0 - 100)
-  
+  id     String @id @default(cuid())
+  itemId String
+
+  performedBy     String // İşi yapan / işlemi giren kullanıcı
+  actionDate      DateTime @default(now())
+  status          String   @default("Devam Ediyor") // Başlamadı, Devam Ediyor, Tamamlandı, İptal Edildi
+  explanation     String // Yapılan işlem açıklaması
+  progressPercent Int      @default(100) // Bu işlem yapıldığında işin yüzde kaçına ulaşıldığı (0 - 100)
+
   // Aksiyon tamamlanma / işlem kanıt fotoğrafları ve belgeleri: [{ url, name, type, uploadedAt }]
-  evidencePhotos Json     @default("[]")
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
-  item           FireSafetyItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  evidencePhotos Json @default("[]")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  item FireSafetyItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@index([itemId])
 }
@@ -2900,4 +2902,265 @@ model FireSafetySetting {
   responsibles Json     @default("[]") // [{ id, name }]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// FM-200 / Gazlı Yangın Söndürme & Sızdırmazlık Takip Sistemi
+// ──────────────────────────────────────────────────────────────────────────────
+
+model Fm200Location {
+  id             String  @id @default(cuid())
+  facilityId     String
+  building       String  @default("Ana Bina")
+  block          String?
+  floor          String  @default("Zemin")
+  roomType       String // Sunucu Odası, Sistem Odası, UPS Odası, Trafo Odası vb.
+  customRoomName String?
+  index          Int     @default(1) // Kat Panosu #1, Trafo Odası #2
+  systemUid      String // örn: TES01-B1-K3-KP-001
+
+  systemType    String  @default("FM-200") // FM-200, Novec1230, CO2, Inergen
+  panelType     String? // Panel markası/modeli
+  roomVolumeM3  Float? // Korunan oda hacmi m3
+  cylinderCount Int     @default(1) // Tüp sayısı
+  isActive      Boolean @default(true)
+  notes         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  facility          Facility                  @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  cylinders         Fm200Cylinder[]
+  phase1Assessments Fm200Phase1Assessment[]
+  inspections       Fm200PeriodicInspection[]
+  maintenances      Fm200Maintenance[]
+  tightnessTests    Fm200TightnessTest[]
+  workOrders        Fm200WorkOrder[]
+
+  @@unique([facilityId, systemUid])
+  @@index([facilityId])
+  @@index([roomType])
+}
+
+model Fm200Cylinder {
+  id                      String    @id @default(cuid())
+  locationId              String
+  serialNumber            String
+  labelCode               String // Tüp #1, Tüp #2 vb.
+  capacityKg              Float?
+  tareKg                  Float?
+  manufacturingYear       Int?
+  lastHydrostaticTestDate DateTime?
+  notes                   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  location             Fm200Location              @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  maintenanceCylinders Fm200MaintenanceCylinder[]
+  workOrders           Fm200WorkOrder[]
+
+  @@index([locationId])
+}
+
+model Fm200Phase1Assessment {
+  id           String   @id @default(cuid())
+  locationId   String
+  assessedBy   String
+  assessedDate DateTime @default(now())
+
+  // A - Hacim ve Boyut
+  f1_a1 String? // Evet / Hayır
+  f1_a2 String? // Evet / Hayır
+  f1_a3 String? // Evet / Hayır
+  f1_a4 String? // Evet / Hayır / Bilinmiyor
+
+  // B - Söndürücü Sistemi ve Belgeler
+  f1_b1 String? // Evet / Hayır
+  f1_b2 String? // Evet / Hayır / Bilinmiyor
+  f1_b3 String? // Evet / Hayır
+  f1_b4 String? // Evet / Hayır
+  f1_b5 String? // Evet / Hayır
+  f1_b6 String? // Evet / Hayır
+
+  // C - Dağıtım ve Boşluk Kapsamı
+  f1_c1 String? // Evet / Hayır
+  f1_c2 String? // Evet / Hayır / Bilinmiyor
+
+  // D - Sızdırmazlık ve Fiziksel Yapı
+  f1_d1 String? // Evet / Hayır
+  f1_d2 String? // Evet / Hayır
+  f1_d3 String? // Evet / Hayır
+
+  // E - Geçmiş Sızdırmazlık
+  f1_e1 String? // Evet / Hayır
+  f1_e2 String? // Evet / Hayır
+
+  notes       String?
+  photos      Json    @default("[]") // [{ url, name, type, uploadedAt }]
+  isCompleted Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  location Fm200Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([locationId])
+}
+
+model Fm200PeriodicInspection {
+  id             String   @id @default(cuid())
+  locationId     String
+  inspectedBy    String
+  inspectionDate DateTime @default(now())
+
+  // 26 Madde Yanıtları: { "M01": { status: "U"|"UD"|"UY", note: "..." }, ... }
+  itemResponses Json @default("{}")
+
+  complianceScore Float   @default(100) // %0 - 100 Ağırlıklı Uygunluk Skoru
+  ratingGrade     String  @default("A") // A, B, C, D
+  isRedFlagged    Boolean @default(false) // M13 (Gaz) veya M21 (Algılama) UD ise kırmızı bayrak
+
+  openWorkOrdersCount Int     @default(0)
+  photos              Json    @default("[]")
+  notes               String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  location Fm200Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([locationId])
+  @@index([inspectionDate])
+}
+
+model Fm200Maintenance {
+  id              String   @id @default(cuid())
+  locationId      String
+  performedBy     String
+  maintenanceDate DateTime @default(now())
+
+  panelControlStatus String  @default("U") // U / UD
+  panelNotes         String?
+  notes              String?
+  photos             Json    @default("[]")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  location  Fm200Location              @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  cylinders Fm200MaintenanceCylinder[]
+
+  @@index([locationId])
+  @@index([maintenanceDate])
+}
+
+model Fm200MaintenanceCylinder {
+  id            String @id @default(cuid())
+  maintenanceId String
+  cylinderId    String
+
+  govde   String  @default("U") // U / UD
+  muhur   String  @default("U") // U / UD
+  basinc  String  @default("U") // U / UD
+  emniyet String  @default("U") // U / UD
+  notes   String?
+
+  maintenance Fm200Maintenance @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
+  cylinder    Fm200Cylinder    @relation(fields: [cylinderId], references: [id], onDelete: Cascade)
+
+  @@index([maintenanceId])
+  @@index([cylinderId])
+}
+
+model Fm200TightnessTest {
+  id                   String    @id @default(cuid())
+  locationId           String
+  performedBy          String
+  testDate             DateTime  @default(now())
+  retentionTimeMinutes Float? // Tutma süresi (dk)
+  measuredValue        Float? // Ölçülen değer
+  result               String // Gecti / Kaldi
+  isUnconditional      Boolean   @default(false) // Soft-lock override
+  overrideReason       String? // Gerekçe seçimi
+  reportUrl            String? // Rapor dosya/PDF url
+  nextTestDate         DateTime? // Geçti ise +365 gün, Kaldı ise null
+  notes                String?
+  photos               Json      @default("[]")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  location Fm200Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([locationId])
+  @@index([testDate])
+}
+
+model Fm200WorkOrder {
+  id              String    @id @default(cuid())
+  locationId      String
+  cylinderId      String? // Tüp bazlı iş ise ilgili tüp
+  sourcePhase     String // FAZ1, FAZ2, FAZ3, FAZ4
+  sourceCode      String // F1-D1, M13, F3-BASINC, F4-TEST vb.
+  title           String // İş Tanımı (Spesifikasyona uygun otomatik metin)
+  workType        String    @default("Kucuk") // Kucuk / Buyuk
+  responsible     String    @default("Teknik") // Teknik / Firma
+  trackLane       String    @default("Fiziksel") // Fiziksel / Dokuman
+  status          String    @default("Planlandi") // Planlandi, Uygulandi, Revize_Gerekli, Tamamlandi
+  repeatCount     Int       @default(1) // Mükerrer uygunsuzluk sayacı (Eskalasyon)
+  companyTrackNo  String? // Firma takip no / fatura / servis fişi no
+  sourceWorkId    String? // Dönüşen iş referansı
+  revisionNote    String? // Teknik sorumlu ret gerekçesi
+  correctApproval Boolean   @default(false) // dogru_onay
+  closedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  location  Fm200Location            @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  cylinder  Fm200Cylinder?           @relation(fields: [cylinderId], references: [id], onDelete: SetNull)
+  evidences Fm200WorkOrderEvidence[]
+
+  @@index([locationId])
+  @@index([status])
+  @@index([trackLane])
+  @@index([responsible])
+}
+
+model Fm200WorkOrderEvidence {
+  id          String   @id @default(cuid())
+  workOrderId String
+  fileType    String   @default("Foto_Sonrasi") // Foto_Oncesi, Foto_Sonrasi, Servis_Formu, Test_Raporu
+  fileUrl     String
+  fileName    String?
+  uploadedBy  String
+  createdAt   DateTime @default(now())
+
+  workOrder Fm200WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId])
+}
+
+model Fm200Setting {
+  id          String   @id @default("default")
+  roomTypes   Json     @default("[\"Sunucu Odası\", \"Sistem Odası\", \"UPS Odası\", \"Trafo Odası\", \"Arşiv Odası\", \"MCC Panosu\", \"ADP Pano Odası\", \"Elektrik Panosu\", \"Kat Panosu\", \"Radyoloji Odası\", \"Hücre Odası\", \"CCTV Odası\", \"Bedaş Odası\", \"Anjiyo Odası\", \"Jeneratör Odası\", \"Diğer\"]")
+  systemTypes Json     @default("[\"FM-200\", \"Novec1230\", \"CO2\", \"Inergen\"]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Fm200BuildingFloor {
+  id         String   @id @default(cuid())
+  facilityId String
+  building   String   @default("Ana Bina")
+  block      String? // A Blok, B Blok vb. (veya Tek Blok ise Ana Bina)
+  floor      String // Zemin Kat, 1.Kat, B1.Kat vb.
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@unique([facilityId, building, block, floor])
+  @@index([facilityId])
 }

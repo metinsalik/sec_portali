@@ -336,6 +336,32 @@ export default function ThermalCameraPage() {
     }
   };
 
+  // Delete session
+  const handleDeleteSession = async (sessionId: string) => {
+    try {
+      setLoading(true);
+      await thermalInspectionService.deleteSession(sessionId);
+      toast.success('Termal kontrol oturumu başarıyla silindi.');
+      if (selectedSession?.id === sessionId) {
+        setSelectedSession(null);
+        setViewMode('DATE_CARDS');
+        setSearchParams(prev => {
+          const next = new URLSearchParams(prev);
+          next.delete('sessionId');
+          next.delete('view');
+          return next;
+        });
+      }
+      // Re-fetch sessions and dashboard stats
+      await fetchData();
+    } catch (err: any) {
+      console.error('Delete session error:', err);
+      toast.error('Oturum silinemedi: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Delete item
   const handleDeleteItem = async (itemId: string) => {
     if (!confirm('Bu ölçüm satırını silmek istediğinize emin misiniz?')) return;
@@ -426,6 +452,7 @@ export default function ThermalCameraPage() {
           onCleanupEmptyClick={handleCleanupEmpty}
           onViewExecutiveDashboard={isAdminOrMgmt ? () => setViewMode('EXECUTIVE') : undefined}
           onViewWatchlist={() => setViewMode('WATCHLIST')}
+          onDeleteSession={handleDeleteSession}
           isLoading={loading}
         />
       )}
@@ -456,6 +483,7 @@ export default function ThermalCameraPage() {
           onItemUpdated={handleItemUpdated}
           onOpenPanelDetail={(panel) => setViewMode('PANEL_DETAIL', panel)}
           onCleanupEmptyClick={handleCleanupEmpty}
+          onDeleteSession={() => handleDeleteSession(selectedSession.id)}
         />
       )}
 

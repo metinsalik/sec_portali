@@ -85,12 +85,14 @@ app.use('/api/safety-management/isg-defter', isgDefterRoutes);
 import electricInfrastructureRoutes from './routes/electric-infrastructure.routes';
 import thermalInspectionRoutes from './routes/thermal-inspection.routes';
 import fireSafetyControlRoutes from './routes/fire-safety-control';
+import fm200Routes from './routes/fm200';
 
 app.use('/api/safety-management/elevators', elevatorRoutes);
 app.use('/api/safety-management/elevator-settings', elevatorSettingsRoutes);
 app.use('/api/safety-management/electric-infrastructure/thermal', thermalInspectionRoutes);
 app.use('/api/safety-management/electric-infrastructure', electricInfrastructureRoutes);
 app.use('/api/fire-safety-control', fireSafetyControlRoutes);
+app.use('/api/fm200', fm200Routes);
 
 // Sağlık kontrolü
 app.get('/health', (req, res) => {
