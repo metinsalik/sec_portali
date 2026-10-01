@@ -68,8 +68,10 @@ import {
   Trophy,
   AlertOctagon,
   Briefcase,
-  Zap
+  Zap,
+  Download
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { 
   PieChart as RechartsPieChart, 
   Pie, 
@@ -946,6 +948,227 @@ export default function FireSafetyExecutiveSummary() {
     return Math.round(totalWeightSum / totalFindings);
   }, [allItems, totalFindings]);
 
+  // ─────────────────────────────────────────────────────────────
+  // TÜM İÇERİKLERİ VE KATEGORİLERİ KONSOLİDE EXCEL'E DÖKME FONKSİYONU
+  // ─────────────────────────────────────────────────────────────
+  const handleExportComprehensiveExcel = () => {
+    try {
+      const wb = XLSX.utils.book_new();
+      const exportDateStr = new Date().toISOString().split('T')[0];
+
+      // 1. SAYFA: GENEL YÖNETİCİ ÖZETİ & KPI'LAR
+      const generalSummaryData = [
+        { 'Metrik': 'Rapor Tarihi', 'Değer': new Date().toLocaleDateString('tr-TR') },
+        { 'Metrik': 'Kapsamdaki Tesis Sayısı', 'Değer': isAllSelected ? accessibleFacilities.length : selectedFacilityIds.length },
+        { 'Metrik': 'Toplam Denetim / Tutanak Sayısı', 'Değer': audits.length },
+        { 'Metrik': 'Toplam Tespit Maddesi Sayısı', 'Değer': totalFindings },
+        { 'Metrik': 'Tamamlanan / Kapatılan Madde', 'Değer': completedCount },
+        { 'Metrik': 'Devam Eden / Süreçteki Madde', 'Değer': inProgressCount },
+        { 'Metrik': 'Açık / Bekleyen Risk Sayısı', 'Değer': openCount },
+        { 'Metrik': 'Genel Konsolide Uyum Skoru', 'Değer': `%${overallSuccessRate}` },
+        { 'Metrik': 'Doğrudan Kapanma Oranı', 'Değer': `%${rawCompletedRate}` },
+        { 'Metrik': 'Devam Eden İşlem Oranı', 'Değer': `%${overallInProgressRate}` },
+        { 'Metrik': 'Açık Risk Oranı', 'Değer': `%${overallOpenRate}` },
+        { 'Metrik': 'Toplam Kanıt / Aksiyon Kaydı', 'Değer': totalEvidenceCount }
+      ];
+      const wsGeneral = XLSX.utils.json_to_sheet(generalSummaryData);
+      wsGeneral['!cols'] = [{ wch: 35 }, { wch: 25 }];
+      XLSX.utils.book_append_sheet(wb, wsGeneral, 'Yönetici Özeti');
+
+      // 2. SAYFA: KATEGORİ BAZLI ANALİZ & UYUM SKORLARI
+      const categoryData = categoryStats.map((cat, idx) => ({
+        'Sıra': idx + 1,
+        'Kategori Adı': cat.name,
+        'Toplam Tespit': cat.total,
+        'Tamamlanan': cat.completed,
+        'Devam Eden': cat.inProgress,
+        'Bekleyen / Açık': cat.open,
+        'Uyum Skoru (%)': `%${cat.pct}`,
+        'Tamamlanma Oranı (%)': `%${cat.rawCompletedPct}`,
+        'Süreçteki Oranı (%)': `%${cat.inProgPct}`,
+        'Açık Risk Oranı (%)': `%${cat.openPct}`
+      }));
+      const wsCategory = XLSX.utils.json_to_sheet(categoryData);
+      wsCategory['!cols'] = [
+        { wch: 6 },
+        { wch: 35 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 20 },
+        { wch: 20 },
+        { wch: 20 }
+      ];
+      XLSX.utils.book_append_sheet(wb, wsCategory, 'Kategori Dağılımı');
+
+      // 3. SAYFA: TESİS BAZLI PERFORMANS & LİG KARNESİ
+      const facilityData = facilityStats.map((fac, idx) => ({
+        'Sıra': idx + 1,
+        'Tesis Adı': fac.name,
+        'Tutanak Sayısı': fac.auditsCount,
+        'Toplam Tespit': fac.total,
+        'Kapatılan': fac.completed,
+        'Süreçte': fac.inProgress,
+        'Bekleyen': fac.open,
+        'Uyum Skoru (%)': `%${fac.pct}`,
+        'Tamamlanma Oranı (%)': `%${fac.rawCompletedPct}`,
+        'Açık Risk Oranı (%)': `%${fac.openPct}`
+      }));
+      const wsFacility = XLSX.utils.json_to_sheet(facilityData);
+      wsFacility['!cols'] = [
+        { wch: 6 },
+        { wch: 32 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 20 },
+        { wch: 20 }
+      ];
+      XLSX.utils.book_append_sheet(wb, wsFacility, 'Tesis Karnesi');
+
+      // 4. SAYFA: DEPARTMAN & SORUMLU BİRİM DAĞILIMI
+      const respData = responsibleStats.map((r, idx) => ({
+        'Sıra': idx + 1,
+        'Sorumlu Departman / Birim': r.name,
+        'Toplam İş': r.total,
+        'Tamamlanan': r.completed,
+        'Devam Eden': r.inProgress,
+        'Açık / Masada Bekleyen': r.open,
+        'Tamamlama Başarısı (%)': `%${r.pct}`,
+        'Açık Yük Payı (%)': `%${r.openPct}`
+      }));
+      const wsResp = XLSX.utils.json_to_sheet(respData);
+      wsResp['!cols'] = [
+        { wch: 6 },
+        { wch: 30 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 25 },
+        { wch: 22 },
+        { wch: 20 }
+      ];
+      XLSX.utils.book_append_sheet(wb, wsResp, 'Departman Yükü');
+
+      // 5. SAYFA: TÜM TESPİT MADDELERİ VE DETAYLAR (GENİŞ TABLO)
+      const findingRows = allItems.map((item: any) => {
+        const itemAudit = audits.find((a: any) => (a.items || []).some((i: any) => i.id === item.id));
+        const itemFacilityName = itemAudit?.facility?.name || facilities.find((f: any) => f.id === itemAudit?.facilityId)?.name || 'Bilinmeyen Tesis';
+        const progressInfo = calculateItemProgress(item);
+        const { title: itemTitle, detail: itemDetail } = splitItemTopic(item.topic, 100);
+        
+        const rawStatus = (item.status || '').toUpperCase();
+        let statusTr = 'Bekliyor / Başlamadı';
+        if (rawStatus === 'TAMAMLANDI' || rawStatus === 'COMPLETED') statusTr = 'Tamamlandı';
+        else if (rawStatus === 'DEVAM_EDIYOR' || rawStatus === 'IN_PROGRESS') statusTr = 'Devam Ediyor';
+
+        const lastAction = item.actions && item.actions.length > 0 ? item.actions[item.actions.length - 1] : null;
+
+        return {
+          'Tesis Adı': itemFacilityName,
+          'Denetim / Tutanak': itemAudit?.title || '',
+          'Denetim Tarihi': itemAudit?.auditDate ? new Date(itemAudit.auditDate).toLocaleDateString('tr-TR') : '',
+          'Madde No': item.orderNo || '',
+          'Kategori': item.category || 'Genel Yangın Güvenliği',
+          'Tespit / Konu Başlığı': itemTitle,
+          'Tespit Detayı': itemDetail || item.topic || '',
+          'Alınan Karar / Aksiyon Planı': item.action || '',
+          'Sorumlu Birim / Kişi': item.responsible || '',
+          'Termin / Hedef Tarih': item.dueDate ? new Date(item.dueDate).toLocaleDateString('tr-TR') : '',
+          'Durum': statusTr,
+          'İlerleme (%)': `%${progressInfo.percent}`,
+          'Aksiyon Sayısı': item.actions?.length || 0,
+          'Tespit Fotoğraf Sayısı': item.findingPhotos?.length || 0,
+          'Son Aksiyon Açıklaması': lastAction?.explanation || '',
+          'Son Aksiyonu Yapan': lastAction?.performedBy || '',
+          'Son Aksiyon Tarihi': lastAction?.actionDate ? new Date(lastAction.actionDate).toLocaleDateString('tr-TR') : ''
+        };
+      });
+      const wsFindings = XLSX.utils.json_to_sheet(findingRows);
+      wsFindings['!cols'] = [
+        { wch: 25 },
+        { wch: 25 },
+        { wch: 14 },
+        { wch: 10 },
+        { wch: 28 },
+        { wch: 35 },
+        { wch: 45 },
+        { wch: 35 },
+        { wch: 25 },
+        { wch: 15 },
+        { wch: 18 },
+        { wch: 14 },
+        { wch: 14 },
+        { wch: 22 },
+        { wch: 40 },
+        { wch: 22 },
+        { wch: 16 }
+      ];
+      XLSX.utils.book_append_sheet(wb, wsFindings, 'Tüm Tespit Maddeleri');
+
+      // 6. SAYFA: TÜM SAHA AKSİYONLARI VE KANIT KAYITLARI
+      const allActionRows: any[] = [];
+      allItems.forEach((item: any) => {
+        const itemAudit = audits.find((a: any) => (a.items || []).some((i: any) => i.id === item.id));
+        const itemFacilityName = itemAudit?.facility?.name || facilities.find((f: any) => f.id === itemAudit?.facilityId)?.name || 'Tesis';
+        const { title: itemTitle } = splitItemTopic(item.topic, 70);
+
+        (item.actions || []).forEach((act: any, actIdx: number) => {
+          allActionRows.push({
+            'Tesis Adı': itemFacilityName,
+            'Tutanak': itemAudit?.title || '',
+            'Madde No': item.orderNo || '',
+            'Madde Başlığı': itemTitle,
+            'Kategori': item.category || '',
+            'Aksiyon No': actIdx + 1,
+            'Açıklama / Yapılan İşlem': act.explanation || '',
+            'İşlemi Yürüten': act.performedBy || '',
+            'Departman': act.department || '',
+            'Aksiyon Tarihi': act.actionDate ? new Date(act.actionDate).toLocaleDateString('tr-TR') : '',
+            'İşlem Durumu': act.status || '',
+            'Katkı / İlerleme (%)': act.progressPercent !== undefined ? `%${act.progressPercent}` : '',
+            'Kanıt Fotoğrafı Adedi': act.evidencePhotos?.length || 0,
+            'Kanıt Bağlantıları': (act.evidencePhotos || []).join(' ; ')
+          });
+        });
+      });
+
+      if (allActionRows.length > 0) {
+        const wsActions = XLSX.utils.json_to_sheet(allActionRows);
+        wsActions['!cols'] = [
+          { wch: 22 },
+          { wch: 22 },
+          { wch: 10 },
+          { wch: 30 },
+          { wch: 25 },
+          { wch: 12 },
+          { wch: 45 },
+          { wch: 20 },
+          { wch: 20 },
+          { wch: 15 },
+          { wch: 15 },
+          { wch: 18 },
+          { wch: 20 },
+          { wch: 40 }
+        ];
+        XLSX.utils.book_append_sheet(wb, wsActions, 'Saha Aksiyonları ve Kanıtlar');
+      }
+
+      // Dosyayı indir
+      const fileName = `Yangin_Guvenligi_Yonetici_Konsolu_${exportDateStr}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      toast.success('Yangın Güvenliği tüm verileri başarıyla Excel olarak indirildi!');
+    } catch (err: any) {
+      console.error('Excel indirme hatası:', err);
+      toast.error('Excel dosyası oluşturulurken bir hata oluştu');
+    }
+  };
+
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
       {/* EXECUTIVE HEADER BANNER */}
@@ -995,13 +1218,25 @@ export default function FireSafetyExecutiveSummary() {
             </div>
           </div>
 
-          {/* Banner Sağ Üst: Hızlı Özet Rozeti */}
-          <div className="shrink-0 bg-white/5 border border-white/10 backdrop-blur-md rounded-2xl p-4 hidden lg:flex flex-col items-center justify-center text-center min-w-[170px]">
-            <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Konsolide Başarı</span>
-            <span className="text-3xl font-black text-emerald-400 mt-1">%{overallSuccessRate}</span>
-            <span className="text-[11px] text-slate-300 mt-0.5">
-              {completedCount} / {totalFindings} Tamamlandı
-            </span>
+          {/* Banner Sağ Üst: Hızlı Özet Rozeti & Excel Dışa Aktar Butonu */}
+          <div className="shrink-0 flex items-center gap-3">
+            <Button
+              type="button"
+              onClick={handleExportComprehensiveExcel}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-2xl shadow-lg border border-emerald-400/40 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              title="Tüm yönetici özetini, kategorileri, tesisleri, tespit maddelerini ve aksiyonları Excel'e aktar"
+            >
+              <Download className="w-4 h-4 text-emerald-100" />
+              <span>Tümünü Excel'e Aktar</span>
+            </Button>
+
+            <div className="bg-white/5 border border-white/10 backdrop-blur-md rounded-2xl p-4 hidden lg:flex flex-col items-center justify-center text-center min-w-[170px]">
+              <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Konsolide Başarı</span>
+              <span className="text-3xl font-black text-emerald-400 mt-1">%{overallSuccessRate}</span>
+              <span className="text-[11px] text-slate-300 mt-0.5">
+                {completedCount} / {totalFindings} Tamamlandı
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -2483,6 +2718,18 @@ export default function FireSafetyExecutiveSummary() {
                         </button>
                       )}
                     </div>
+
+                    {/* Excel İndir Butonu */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExportComprehensiveExcel}
+                      className="text-xs h-8 px-2.5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-bold shrink-0 flex items-center gap-1.5 shadow-2xs"
+                      title="Tespit maddelerini ve tüm detayları Excel olarak indir"
+                    >
+                      <Download className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="hidden sm:inline">Excel İndir</span>
+                    </Button>
 
                     {/* Kategori Sıfırlama Butonu */}
                     {selectedCategoryFilter !== 'ALL' && (
