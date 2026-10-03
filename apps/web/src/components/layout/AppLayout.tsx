@@ -258,12 +258,14 @@ const fireSafetyControlNavItems = (hasAdminAccess: boolean) => [
 
 const fm200NavItems = (hasAdminAccess: boolean) => [
   { label: 'GENEL', type: 'group' },
-  { label: 'Dashboard', icon: LayoutDashboard, to: '/fm200', end: true },
-  { label: 'DENETİM & İŞLEMLER', type: 'group' },
-  { label: 'Denetim Sihirbazı (Wizard)', icon: Flame, to: '/fm200/wizard' },
-  { label: 'İş Emirleri & Aksiyonlar', icon: ClipboardList, to: '/fm200/work-orders' },
-  { label: 'AYARLAR & ENVANTER', type: 'group' },
-  { label: 'Konum & Tüp Ayarları', icon: Settings, to: '/fm200/settings' },
+  { label: 'Yönetici Özeti', icon: Building2, to: '/fm200', end: true },
+  { label: 'Denetim', icon: Flame, to: '/fm200/wizard' },
+  { label: 'İş Listesi', icon: ClipboardList, to: '/fm200/work-orders' },
+  { label: 'Dashboard', icon: LayoutDashboard, to: '/fm200/dashboard', end: true },
+  ...(hasAdminAccess ? [
+    { label: 'AYARLAR', type: 'group' },
+    { label: 'Ayarlar', icon: Settings, to: '/fm200/settings' },
+  ] : []),
 ];
 
 const profileNavItems = (hasAdminAccess: boolean) => [
@@ -482,7 +484,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* Facility Switcher (Show for modules that need it) */}
-        {(path.startsWith('/isg-kurul') || path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management') || path.startsWith('/renovation-report') || path.startsWith('/checklists') || path.startsWith('/safety-management/fire-doors') || path.startsWith('/safety-management/elevator-tracking') || path.startsWith('/safety-management/electric-infrastructure') || path.startsWith('/safety-management/thermal-camera') || path.startsWith('/fire-safety-control')) && (
+        {(path.startsWith('/isg-kurul') || path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management') || path.startsWith('/renovation-report') || path.startsWith('/checklists') || path.startsWith('/safety-management/fire-doors') || path.startsWith('/safety-management/elevator-tracking') || path.startsWith('/safety-management/electric-infrastructure') || path.startsWith('/safety-management/thermal-camera') || path.startsWith('/fire-safety-control') || path.startsWith('/fm200')) && (
           <div className="flex-shrink-0">
             <FacilitySwitcher isCollapsed={isCollapsed} />
           </div>

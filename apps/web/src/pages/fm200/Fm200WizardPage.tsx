@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { ImageUploadWithPreview, type PhotoItem } from '@/components/fm200/ImageUploadWithPreview';
 import {
   CheckCircle2,
@@ -11,18 +13,28 @@ import {
   ArrowRight,
   ArrowLeft,
   Flame,
-  FileCheck,
-  ShieldAlert,
-  Gauge,
-  Lock,
-  Unlock,
   Building2,
-  Calendar,
   Layers,
   Sparkles,
   Info,
   Plus,
-  Loader2
+  Loader2,
+  ShieldAlert,
+  ShieldCheck,
+  Wrench,
+  HelpCircle,
+  Camera,
+  DoorOpen,
+  Filter,
+  Check,
+  RotateCcw,
+  Edit2,
+  FileCheck2,
+  ClipboardList,
+  Calendar,
+  Search,
+  Trash2,
+  Settings2
 } from 'lucide-react';
 import {
   Dialog,
@@ -35,83 +47,78 @@ import {
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
-// FAZ 2 - 26 Madde Tanımları (Spesifikasyon Bölüm 5)
-const PERIODIC_QUESTIONS = [
-  { id: 1, code: 'M01', text: 'Sicil kartı ve bakım kayıtları düzenli mi?', level: 'Dusuk', resp: 'Teknik' },
-  { id: 2, code: 'M02', text: 'Önceki kontrol eksiklikleri giderildi mi? (Sistem tarafından otomatik kontrol edilir)', level: 'Dusuk', resp: 'Teknik', auto: true },
-  { id: 3, code: 'M03', text: 'Yetkili / eğitimli personel durumu uygun mu?', level: 'Orta', resp: 'Firma' },
-  { id: 4, code: 'M04', text: 'Etiket, sertifika ve uyarılar eksiksiz ve görünür mü?', level: 'Dusuk', resp: 'Teknik' },
-  { id: 5, code: 'M05', text: 'Kullanma talimatı ve acil durum levhaları asılı mı?', level: 'Dusuk', resp: 'Teknik' },
-  { id: 6, code: 'M06', text: 'Rutin kontrol kayıt defteri mevcut ve işleniyor mu?', level: 'Dusuk', resp: 'Teknik' },
-  { id: 7, code: 'M07', text: 'Onaylı proje ve resmi itfaiye/idare onayı mevcut mu?', level: 'Kritik', resp: 'Firma' },
-  { id: 8, code: 'M08', text: 'Tesisatın sahada onaylı projeye uygunluğu tam mı?', level: 'Kritik', resp: 'Firma' },
-  { id: 9, code: 'M09', text: 'Sızdırmazlık test kayıtları ve raporları geçerli mi?', level: 'Dusuk', resp: 'Firma' },
-  { id: 10, code: 'M10', text: 'Gaz tankı bölme ortamı, temizliği ve aydınlatması uygun mu?', level: 'Dusuk', resp: 'Teknik' },
-  { id: 11, code: 'M11', text: 'Tank vanaları, boşaltma kolu ve emniyet mühürleri sağlam mı?', level: 'Orta', resp: 'Firma' },
-  { id: 12, code: 'M12', text: 'Basınç göstergeleri (Manometre) yeşil alanda ve sağlam mı?', level: 'Kritik', resp: 'Firma' },
-  { id: 13, code: 'M13', text: 'Tank gaz doluluk oranları ve ağırlıkları tam mı? (GATEKEEPER)', level: 'Kritik', resp: 'Firma' },
-  { id: 14, code: 'M14', text: 'Boşaltma hortumları, manifold ve boru askıları sabit mi?', level: 'Orta', resp: 'Firma' },
-  { id: 15, code: 'M15', text: 'Yangın kontrol ve söndürme paneli hatasız devrede mi?', level: 'Kritik', resp: 'Firma' },
-  { id: 16, code: 'M16', text: 'Elektrik beslemesi, bağımsız linye ve yedek aküler sağlam mı?', level: 'Orta', resp: 'Firma' },
-  { id: 17, code: 'M17', text: 'Boşaltma nozulları temiz, hasarsız ve yönleri doğru mu?', level: 'Orta', resp: 'Firma' },
-  { id: 18, code: 'M18', text: 'Aşırı basınç tahliye damperi mekanik olarak çalışır durumda mı?', level: 'Orta', resp: 'Firma' },
-  { id: 19, code: 'M19', text: 'Manuel deşarj butonu sağlam, erişilebilir ve mühürlü mü?', level: 'Orta', resp: 'Firma' },
-  { id: 20, code: 'M20', text: 'Deşarj durdurma (Stop) butonu işlevsel mi?', level: 'Orta', resp: 'Firma' },
-  { id: 21, code: 'M21', text: 'Algılama dedektör hatları ve çapraz zonlar hatasız mı? (GATEKEEPER)', level: 'Kritik', resp: 'Firma' },
-  { id: 22, code: 'M22', text: 'Alarm kornası ve flaşörler test edildiğinde çalışıyor mu?', level: 'Orta', resp: 'Firma' },
-  { id: 23, code: 'M23', text: 'Gaz basma anında menfez ve havalandırma damperleri otomatik kapanıyor mu?', level: 'Kritik', resp: 'Firma' },
-  { id: 24, code: 'M24', text: 'Otomatik gaz salım aktivatörü (solenoid/patlatıcı) faal mi?', level: 'Kritik', resp: 'Firma' },
-  { id: 25, code: 'M25', text: 'Tekrarlayıcı ve bina ana yangın santraline sinyal iletimi var mı?', level: 'Orta', resp: 'Firma' },
-  { id: 26, code: 'M26', text: 'Görevliye teslim tutanağı imzalı olarak düzenlendi mi?', level: 'Dusuk', resp: 'Teknik' }
+// Varsayılan Soru Listesi (Eğer backend ayarlarından gelmezse)
+const DEFAULT_QUESTIONS_FALLBACK = [
+  { id: 1, category: 'Fiziksel Güvenlik ve Ortam', text: 'Gaz tüpleri mahal dışında ve yetkisiz erişimden korunacak şekilde mi?', weight: 7, criticality: 'Standart', isSealing: false },
+  { id: 2, category: 'Fiziksel Güvenlik ve Ortam', text: 'Gaz tüpleri doğrudan güneş ışığı, ısı veya titreşime maruz kalıyor mu?', weight: 7, criticality: 'Standart', isSealing: false },
+  { id: 3, category: 'Fiziksel Güvenlik ve Ortam', text: 'Kontrol paneli mahal dışında ve korunmuş şekilde mi?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 4, category: 'Fiziksel Güvenlik ve Ortam', text: 'Duvar, tavan, döşeme geçişleri ve kablo tavalarında sızdırmazlık tam mı?', weight: 10, criticality: 'KRİTİK', isSealing: true },
+  { id: 5, category: 'Fiziksel Güvenlik ve Ortam', text: 'Kapı altları, contalar ve birleşim yerleri yeterli sızdırmazlıkta mı?', weight: 10, criticality: 'Yüksek', isSealing: true },
+  { id: 6, category: 'Fiziksel Güvenlik ve Ortam', text: 'Havalandırma açıklıkları/damperler gaz boşalmasında otomatik kapanıyor mu?', weight: 10, criticality: 'KRİTİK', isSealing: true },
+  { id: 7, category: 'Fiziksel Güvenlik ve Ortam', text: 'Odanın mevcut kullanım düzeni ve net hacmi tasarım hacmiyle uyumlu mu?', weight: 10, criticality: 'Standart', isSealing: true },
+  { id: 8, category: 'Fiziksel Güvenlik ve Ortam', text: 'Güncel Door Fan Test raporu var mı ve gaz tutma süresi standardı sağlıyor mu?', weight: 10, criticality: 'KRİTİK', isSealing: true },
+  { id: 9, category: 'Etiketleme ve İşaretleme', text: 'Tüpler üzerinde üretici, içerik, seri no etiketleri okunabilir mi?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 10, category: 'Etiketleme ve İşaretleme', text: 'Tüpler üzerinde güncel dolum ve kontrol tarihleri mevcut mu?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 11, category: 'Etiketleme ve İşaretleme', text: 'Giriş kapısında tehlike uyarı levhası var mı?', weight: 3, criticality: 'Düşük', isSealing: false },
+  { id: 12, category: 'Tesisat ve Donanım', text: 'Tüpler dolu, kullanıma hazır ve manometre basınçları yeşil alanda mı?', weight: 10, criticality: 'KRİTİK', isSealing: false },
+  { id: 13, category: 'Tesisat ve Donanım', text: 'Sistem normal işletim koşullarında "Otomatik" modda mı?', weight: 5, criticality: 'KRİTİK', isSealing: false },
+  { id: 14, category: 'Tesisat ve Donanım', text: 'Acil durdurma butonu mahal dışında, erişilebilir ve çalışır durumda mı?', weight: 5, criticality: 'Standart', isSealing: false },
+  { id: 15, category: 'Tesisat ve Donanım', text: 'Nozul atış yönünde gaz dağılımını engelleyen kabin, tava vb. engel var mı?', weight: 10, criticality: 'KRİTİK', isSealing: false },
+  { id: 16, category: 'Tesisat ve Donanım', text: 'Asma tavan veya yükseltilmiş döşemede ayrı nozul koruması var mı?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 17, category: 'Tesisat ve Donanım', text: 'Dedektörler yangını erken algılayacak konumda mı?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 18, category: 'Tesisat ve Donanım', text: 'Dedektör çevrelerinde hava akışını/dumanı engelleyen bariyer var mı?', weight: 7, criticality: 'Standart', isSealing: false },
+  { id: 19, category: 'Tesisat ve Donanım', text: 'Asma tavan ve döşeme altında gereken algılama sağlanmış mı?', weight: 7, criticality: 'Standart', isSealing: false },
+  { id: 20, category: 'Periyodik Kontrol & Bakım', text: 'Yetkili kurum periyodik kontrol raporları eksiksiz ve güncel mi?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 21, category: 'Periyodik Kontrol & Bakım', text: 'Üretici talimatlarına uygun düzenli bakım kayıtları mevcut mu?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 22, category: 'Acil Durum Senaryoları', text: 'Boşalma öncesi çalışanları uyaran sesli ve ışıklı alarm sistemi var mı?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 23, category: 'Acil Durum Senaryoları', text: 'Genel yangın ihbar sistemine entegrasyon test edilmiş mi?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 24, category: 'Acil Durum Senaryoları', text: 'Yangın damperi ve havalandırma durdurma otomasyonu entegre çalışıyor mu?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 25, category: 'Acil Durum Senaryoları', text: 'Boşalma sonrası gaz tahliyesi için mekanik/doğal tahliye sistemi var mı?', weight: 7, criticality: 'Standart', isSealing: false }
 ];
+
+export interface QuestionResponse {
+  status: 'Karşılıyor' | 'Kısmen Karşılıyor' | 'Karşılamıyor' | 'Kapsam Dışı';
+  responsible?: 'Teknik' | 'Firma'; // geriye dönük uyumluluk
+  responsibles?: ('Teknik' | 'Firma')[]; // hem Teknik hem Firma çoklu seçim imkanı
+  templates?: string[];
+  customNote?: string;
+  photos?: PhotoItem[];
+}
 
 export default function Fm200WizardPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Wizard Adımları (1: Konum Seçimi, 2: Faz 1, 3: Faz 2, 4: Faz 3, 5: Faz 4, 6: Özet & Tamamlandı)
-  const [currentStep, setCurrentStep] = useState<number>(1);
+  // Aktif Tesis (Global Side Menü FacilitySwitcher ile senkron)
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string>(() => {
+    return searchParams.get('facilityId') || localStorage.getItem('activeFacilityId') || '';
+  });
 
-  // Seçilen Tesis ve Konum
-  const [selectedFacilityId, setSelectedFacilityId] = useState<string>('');
+  // Wizard Açık mı?
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
+  const [editingInspectionId, setEditingInspectionId] = useState<string | null>(null);
+
+  // Denetimi Yapılan Mahaller Tablo Filtreleri
+  const [tableFilterBlock, setTableFilterBlock] = useState<string>('all');
+  const [tableFilterFloor, setTableFilterFloor] = useState<string>('all');
+  const [tableFilterRoomType, setTableFilterRoomType] = useState<string>('all');
+  const [tableFilterStatus, setTableFilterStatus] = useState<string>('all'); // all, Devam Ediyor, Tamamlandi
+  const [tableSearchQuery, setTableSearchQuery] = useState<string>('');
+
+  // Form Alanları (Konum Seçimi)
+  const [selectedBuilding, setSelectedBuilding] = useState<string>('');
+  const [selectedBlock, setSelectedBlock] = useState<string>('');
+  const [selectedFloor, setSelectedFloor] = useState<string>('');
+  const [selectedRoomType, setSelectedRoomType] = useState<string>('');
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
 
-  // Tesisleri Çek
-  const { data: facilities = [] } = useQuery<any[]>({
-    queryKey: ['facilities'],
-    queryFn: async () => {
-      const res = await api.get('/settings/facilities');
-      if (!res.ok) throw new Error('Tesisler alınamadı');
-      return res.json();
-    }
-  });
+  // Soru Sırası & Yanıtlar
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+  const [responses, setResponses] = useState<Record<number, QuestionResponse>>({});
 
-  // Konumları Çek
-  const { data: locations = [] } = useQuery<any[]>({
-    queryKey: ['fm200Locations', selectedFacilityId],
-    queryFn: async () => {
-      if (!selectedFacilityId) return [];
-      const res = await api.get(`/fm200/locations?facilityId=${selectedFacilityId}`);
-      if (!res.ok) throw new Error('Konumlar alınamadı');
-      return res.json();
-    },
-    enabled: !!selectedFacilityId
-  });
-
-  // Seçili Tesisin Bina, Blok ve Kat Konum Listesini Çek
-  const { data: buildingFloors = [] } = useQuery<any[]>({
-    queryKey: ['fm200BuildingFloors', selectedFacilityId],
-    queryFn: async () => {
-      if (!selectedFacilityId) return [];
-      const res = await api.get(`/fm200/building-floors?facilityId=${selectedFacilityId}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!selectedFacilityId
-  });
-
-  // Yeni Konum Tanımlama Modal State
+  // Manuel Konum Tanımlama Modal
   const [isAddLocationModalOpen, setIsAddLocationModalOpen] = useState(false);
   const [newLocationForm, setNewLocationForm] = useState({
     building: 'Ana Bina',
@@ -126,1421 +133,1491 @@ export default function Fm200WizardPage() {
     notes: ''
   });
 
-  // Yeni Konum Ekleme Mutasyonu
-  const addLocationMutation = useMutation({
-    mutationFn: async (formData: typeof newLocationForm) => {
-      const res = await api.post('/fm200/locations', {
-        ...formData,
-        facilityId: selectedFacilityId,
-        roomVolumeM3: formData.roomVolumeM3 ? parseFloat(formData.roomVolumeM3) : undefined,
-        cylinderCount: Number(formData.cylinderCount) || 1
+  // Tesisleri Çek
+  const { data: facilities = [] } = useQuery<any[]>({
+    queryKey: ['facilities'],
+    queryFn: async () => {
+      const res = await api.get('/settings/facilities');
+      if (!res.ok) throw new Error('Tesisler alınamadı');
+      return res.json();
+    }
+  });
+
+  // Side Menü FacilitySwitcher ile Çift Yönlü Senkronizasyon
+  useEffect(() => {
+    const handleFacilityChange = () => {
+      const activeFac = localStorage.getItem('activeFacilityId') || '';
+      if (activeFac && activeFac !== 'all') {
+        setSelectedFacilityId(activeFac);
+      }
+    };
+    handleFacilityChange();
+    window.addEventListener('facilityChanged', handleFacilityChange);
+    return () => window.removeEventListener('facilityChanged', handleFacilityChange);
+  }, []);
+
+  // Bina, Blok ve Kat Listesini Çek
+  const { data: buildingFloors = [] } = useQuery<any[]>({
+    queryKey: ['fm200BuildingFloors', selectedFacilityId],
+    queryFn: async () => {
+      if (!selectedFacilityId || selectedFacilityId === 'all') return [];
+      const res = await api.get(`/fm200/building-floors?facilityId=${selectedFacilityId}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!selectedFacilityId && selectedFacilityId !== 'all'
+  });
+
+  // Ayarları ve Soru Setini Çek
+  const { data: fm200Settings } = useQuery<any>({
+    queryKey: ['fm200Settings'],
+    queryFn: async () => {
+      const res = await api.get('/fm200/settings');
+      if (!res.ok) return null;
+      return res.json();
+    }
+  });
+
+  const questions = useMemo(() => {
+    return (fm200Settings?.checklistQuestions as any[]) || DEFAULT_QUESTIONS_FALLBACK;
+  }, [fm200Settings]);
+
+  const issueTemplates = useMemo(() => {
+    return (fm200Settings?.issueTemplates as Record<number, { teknik: string[]; firma: string[] }>) || {};
+  }, [fm200Settings]);
+
+  const availableRoomTypes = useMemo(() => {
+    return fm200Settings?.roomTypes || [
+      'Sunucu Odası', 'Sistem Odası', 'UPS Odası', 'Trafo Odası', 'Arşiv Odası',
+      'MCC Panosu', 'ADP Pano Odası', 'Elektrik Panosu', 'Kat Panosu', 'Radyoloji Odası',
+      'Hücre Odası', 'CCTV Odası', 'Bedaş Odası', 'Anjiyo Odası', 'Jeneratör Odası', 'Diğer'
+    ];
+  }, [fm200Settings]);
+
+  // Bu Tesise Ait Denetim Yapılan / Yapılacak Konumları Çek
+  const { data: locations = [], refetch: refetchLocations } = useQuery<any[]>({
+    queryKey: ['fm200Locations', selectedFacilityId],
+    queryFn: async () => {
+      if (!selectedFacilityId || selectedFacilityId === 'all') return [];
+      const res = await api.get(`/fm200/locations?facilityId=${selectedFacilityId}`);
+      if (!res.ok) throw new Error('Konumlar alınamadı');
+      return res.json();
+    },
+    enabled: !!selectedFacilityId && selectedFacilityId !== 'all'
+  });
+
+  // Bu Tesise Ait Tamamlanmış Denetim Kayıtlarını Çek
+  const { data: inspections = [], refetch: refetchInspections } = useQuery<any[]>({
+    queryKey: ['fm200Inspections', selectedFacilityId],
+    queryFn: async () => {
+      if (!selectedFacilityId || selectedFacilityId === 'all') return [];
+      const res = await api.get(`/fm200/inspections?facilityId=${selectedFacilityId}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!selectedFacilityId && selectedFacilityId !== 'all'
+  });
+
+  // URL'den locationId veya edit ID gelmişse doğrudan aç
+  useEffect(() => {
+    const locParam = searchParams.get('locationId');
+    if (locParam) {
+      setSelectedLocationId(locParam);
+      const locObj = locations.find((l: any) => l.id === locParam);
+      if (locObj) {
+        setSelectedBuilding(locObj.building || '');
+        setSelectedBlock(locObj.block || '');
+        setSelectedFloor(locObj.floor || '');
+        setSelectedRoomType(locObj.roomType || '');
+      }
+      initQuestions();
+      setIsWizardOpen(true);
+    }
+  }, [searchParams, locations]);
+
+  // Bina, Blok ve Kat Filtreleri
+  const availableBuildings = useMemo(() => {
+    const bSet = new Set<string>();
+    buildingFloors.forEach((bf: any) => {
+      if (bf.building) bSet.add(bf.building);
+    });
+    return Array.from(bSet);
+  }, [buildingFloors]);
+
+  const availableBlocks = useMemo(() => {
+    const blkSet = new Set<string>();
+    buildingFloors
+      .filter((bf: any) => !selectedBuilding || bf.building === selectedBuilding)
+      .forEach((bf: any) => {
+        if (bf.block) blkSet.add(bf.block);
+      });
+    return Array.from(blkSet);
+  }, [buildingFloors, selectedBuilding]);
+
+  const availableFloors = useMemo(() => {
+    return buildingFloors
+      .filter((bf: any) => {
+        if (selectedBuilding && bf.building !== selectedBuilding) return false;
+        if (selectedBlock && bf.block !== selectedBlock) return false;
+        return true;
+      })
+      .map((bf: any) => bf.floor);
+  }, [buildingFloors, selectedBuilding, selectedBlock]);
+
+  // Seçili Filtrelere Uyan Konumlar
+  const filteredLocations = useMemo(() => {
+    return locations.filter((loc: any) => {
+      if (selectedBuilding && loc.building !== selectedBuilding) return false;
+      if (selectedBlock && (loc.block || '') !== selectedBlock) return false;
+      if (selectedFloor && loc.floor !== selectedFloor) return false;
+      if (selectedRoomType && loc.roomType !== selectedRoomType) return false;
+      return true;
+    });
+  }, [locations, selectedBuilding, selectedBlock, selectedFloor, selectedRoomType]);
+
+  // Aynı Seçimde Kaçıncı Mahal Olacağı (#1, #2, #3...)
+  const duplicateCount = useMemo(() => {
+    if (!selectedFacilityId || !selectedFloor || !selectedRoomType) return 1;
+    const sameCount = locations.filter((l: any) =>
+      l.building === (selectedBuilding || 'Ana Bina') &&
+      (l.block || '') === selectedBlock &&
+      l.floor === selectedFloor &&
+      l.roomType === selectedRoomType
+    ).length;
+    return sameCount + 1;
+  }, [locations, selectedFacilityId, selectedBuilding, selectedBlock, selectedFloor, selectedRoomType]);
+
+  // Tablo Filtreleri için Seçenek Listeleri
+  const tableAvailableBlocks = useMemo(() => {
+    const s = new Set<string>();
+    inspections.forEach((insp: any) => {
+      if (insp.location?.block) s.add(insp.location.block);
+    });
+    return Array.from(s).sort();
+  }, [inspections]);
+
+  const tableAvailableFloors = useMemo(() => {
+    const s = new Set<string>();
+    inspections.forEach((insp: any) => {
+      if (insp.location?.floor) s.add(insp.location.floor);
+    });
+    return Array.from(s);
+  }, [inspections]);
+
+  const tableAvailableRoomTypes = useMemo(() => {
+    const s = new Set<string>();
+    inspections.forEach((insp: any) => {
+      if (insp.location?.roomType) s.add(insp.location.roomType);
+    });
+    return Array.from(s).sort();
+  }, [inspections]);
+
+  // Filtrelenmiş Denetim Kayıtları (Blok, Kat, Pano/Mahal, Arama)
+  const filteredInspections = useMemo(() => {
+    return inspections.filter((insp: any) => {
+      // Blok Filtresi
+      if (tableFilterBlock !== 'all') {
+        const blk = insp.location?.block || '';
+        if (blk !== tableFilterBlock) return false;
+      }
+
+      // Kat Filtresi
+      if (tableFilterFloor !== 'all') {
+        const flr = insp.location?.floor || '';
+        if (flr !== tableFilterFloor) return false;
+      }
+
+      // Pano / Mahal Türü Filtresi
+      if (tableFilterRoomType !== 'all') {
+        const rt = insp.location?.roomType || '';
+        if (rt !== tableFilterRoomType) return false;
+      }
+
+      // Durum Filtresi (Devam Ediyor / Tamamlandı)
+      if (tableFilterStatus !== 'all') {
+        const isCompleted = insp.status === 'Tamamlandi' && insp.isCompleted !== false;
+        if (tableFilterStatus === 'Tamamlandi' && !isCompleted) return false;
+        if (tableFilterStatus === 'Devam Ediyor' && isCompleted) return false;
+      }
+
+      // Arama Metni Filtresi (UID, customRoomName, roomType, inspectedBy, notes)
+      if (tableSearchQuery.trim()) {
+        const query = tableSearchQuery.toLowerCase().trim();
+        const uid = (insp.location?.systemUid || '').toLowerCase();
+        const roomName = (insp.location?.customRoomName || '').toLowerCase();
+        const roomType = (insp.location?.roomType || '').toLowerCase();
+        const inspectedBy = (insp.inspectedBy || '').toLowerCase();
+        const floor = (insp.location?.floor || '').toLowerCase();
+        const block = (insp.location?.block || '').toLowerCase();
+
+        const match =
+          uid.includes(query) ||
+          roomName.includes(query) ||
+          roomType.includes(query) ||
+          inspectedBy.includes(query) ||
+          floor.includes(query) ||
+          block.includes(query);
+
+        if (!match) return false;
+      }
+
+      return true;
+    });
+  }, [inspections, tableFilterBlock, tableFilterFloor, tableFilterRoomType, tableSearchQuery]);
+
+  // Soruları İlklendir
+  const initQuestions = (existingResponses?: Record<number, QuestionResponse>, startIndex: number = 0) => {
+    const initObj: Record<number, QuestionResponse> = {};
+    questions.forEach((q: any) => {
+      if (existingResponses && (existingResponses[q.id] || (existingResponses as any)[String(q.id)])) {
+        const item = existingResponses[q.id] || (existingResponses as any)[String(q.id)];
+        const respList: ('Teknik' | 'Firma')[] = Array.isArray(item.responsibles) && item.responsibles.length > 0
+          ? item.responsibles
+          : item.responsible ? [item.responsible] : ['Teknik'];
+
+        initObj[q.id] = {
+          ...item,
+          responsible: respList[0] || 'Teknik',
+          responsibles: respList
+        };
+      } else {
+        initObj[q.id] = {
+          status: 'Karşılıyor',
+          responsible: 'Teknik',
+          responsibles: ['Teknik'],
+          templates: [],
+          customNote: '',
+          photos: []
+        };
+      }
+    });
+    setResponses(initObj);
+    setCurrentQuestionIndex(Math.max(0, Math.min(questions.length - 1, startIndex)));
+  };
+
+  // Soru Yanıtını Güncelle
+  const updateQuestionResponse = (qId: number, patch: Partial<QuestionResponse>) => {
+    setResponses(prev => ({
+      ...prev,
+      [qId]: {
+        ...(prev[qId] || { status: 'Karşılıyor', responsible: 'Teknik', templates: [], customNote: '', photos: [] }),
+        ...patch
+      }
+    }));
+  };
+
+  // Skor ve Risk Analizi Hesaplamaları
+  const stats = useMemo(() => {
+    const GATEKEEPER_IDS = [4, 6, 8, 12, 13, 15];
+    const SEALING_IDS = [4, 5, 6, 7, 8];
+
+    let totalWeight = 0;
+    let earnedWeight = 0;
+    let totalSealingWeight = 0;
+    let earnedSealingWeight = 0;
+    let totalHardwareWeight = 0;
+    let earnedHardwareWeight = 0;
+
+    let redFlagFound = false;
+
+    questions.forEach((q: any) => {
+      const resp = responses[q.id] || { status: 'Karşılıyor' };
+      const status = resp.status;
+
+      if (status === 'Kapsam Dışı') return;
+
+      const weight = Number(q.weight) || 10;
+      let multiplier = 0;
+      if (status === 'Karşılıyor') multiplier = 1.0;
+      else if (status === 'Kısmen Karşılıyor') multiplier = 0.5;
+      else if (status === 'Karşılamıyor') multiplier = 0.0;
+
+      const earned = weight * multiplier;
+      totalWeight += weight;
+      earnedWeight += earned;
+
+      if (SEALING_IDS.includes(q.id) || q.isSealing) {
+        totalSealingWeight += weight;
+        earnedSealingWeight += earned;
+      } else {
+        totalHardwareWeight += weight;
+        earnedHardwareWeight += earned;
+      }
+
+      if (GATEKEEPER_IDS.includes(q.id) && (status === 'Kısmen Karşılıyor' || status === 'Karşılamıyor')) {
+        redFlagFound = true;
+      }
+    });
+
+    const overallScore = totalWeight > 0 ? Math.round((earnedWeight / totalWeight) * 1000) / 10 : 100;
+    const sealingScore = totalSealingWeight > 0 ? Math.round((earnedSealingWeight / totalSealingWeight) * 1000) / 10 : 100;
+    const hardwareScore = totalHardwareWeight > 0 ? Math.round((earnedHardwareWeight / totalHardwareWeight) * 1000) / 10 : 100;
+
+    let riskLevel = 'DÜŞÜK RİSK';
+    let ratingGrade = 'A';
+
+    if (redFlagFound || overallScore < 60 || sealingScore < 60) {
+      riskLevel = 'YÜKSEK RİSK';
+      ratingGrade = 'D';
+    } else if (overallScore < 80 || sealingScore < 80) {
+      riskLevel = 'ORTA RİSK';
+      ratingGrade = 'C';
+    } else if (overallScore < 95) {
+      ratingGrade = 'B';
+    }
+
+    return {
+      overallScore,
+      sealingScore,
+      hardwareScore,
+      riskLevel,
+      ratingGrade,
+      redFlagFound
+    };
+  }, [questions, responses]);
+
+  // Denetimi Başlat / Yeni Mahal Oluştur
+  const handleStartInspection = async () => {
+    if (!selectedFacilityId || selectedFacilityId === 'all') {
+      toast.error('Lütfen sol üst menüden bir tesis seçiniz.');
+      return;
+    }
+    if (!selectedFloor || !selectedRoomType) {
+      toast.error('Lütfen Kat ve Mahal Tipini seçiniz.');
+      return;
+    }
+
+    try {
+      let locId = selectedLocationId;
+      if (!locId) {
+        // Otomatik yeni mahal kaydet
+        const res = await api.post('/fm200/locations', {
+          facilityId: selectedFacilityId,
+          building: selectedBuilding || 'Ana Bina',
+          block: selectedBlock || null,
+          floor: selectedFloor,
+          roomType: selectedRoomType,
+          systemType: 'FM-200',
+          cylinderCount: 1
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Mahal oluşturulamadı');
+        }
+        const createdLoc = await res.json();
+        locId = createdLoc.id;
+        setSelectedLocationId(locId);
+        refetchLocations();
+        toast.success(`Mahal tanımlandı: ${createdLoc.systemUid}`);
+      }
+
+      setEditingInspectionId(null);
+      initQuestions();
+      setIsWizardOpen(true);
+    } catch (e: any) {
+      toast.error(e.message || 'Denetim başlatılamadı');
+    }
+  };
+
+  // Mevcut Denetimi Düzenle / Kaldığı Yerden Devam Et
+  const handleEditInspection = (insp: any) => {
+    setEditingInspectionId(insp.id);
+    setSelectedLocationId(insp.locationId);
+    if (insp.location) {
+      setSelectedBuilding(insp.location.building || '');
+      setSelectedBlock(insp.location.block || '');
+      setSelectedFloor(insp.location.floor || '');
+      setSelectedRoomType(insp.location.roomType || '');
+    }
+
+    // Kaldığı soru indeksini tespit et (Notlardan "Soru X" varsa veya ilk cevaplanmamış / taslak sorusu)
+    let resumeIndex = 0;
+    if (insp.notes) {
+      const match = insp.notes.match(/Soru\s*(\d+)/i);
+      if (match) {
+        const qNum = parseInt(match[1], 10);
+        const idx = questions.findIndex((q: any) => q.id === qNum);
+        if (idx >= 0) resumeIndex = idx;
+      }
+    }
+
+    initQuestions(insp.itemResponses, resumeIndex);
+    setIsWizardOpen(true);
+  };
+
+  // Denetimi Kaydet / Güncelle (Tamamla veya Devam Ediyor Olarak Taslak Kaydet)
+  const saveInspectionMutation = useMutation({
+    mutationFn: async ({ isDraft = false }: { isDraft?: boolean } = {}) => {
+      const targetStatus = isDraft ? 'Devam Ediyor' : 'Tamamlandi';
+      const isCompleted = !isDraft;
+
+      // Tamamlama durumunda doğrulama: Kısmen veya Karşılamıyor seçildiyse kalıp veya açıklama zorunludur!
+      if (!isDraft) {
+        for (let i = 0; i < questions.length; i++) {
+          const q = questions[i];
+          const resp = responses[q.id];
+          if (resp && (resp.status === 'Kısmen Karşılıyor' || resp.status === 'Karşılamıyor')) {
+            const hasTemplate = Array.isArray(resp.templates) && resp.templates.length > 0;
+            const hasNote = Boolean(resp.customNote && resp.customNote.trim().length > 0);
+            if (!hasTemplate && !hasNote) {
+              setCurrentQuestionIndex(i);
+              throw new Error(`Kriter ${i + 1} (${q.category}): "${resp.status}" seçildi ancak ne hazır kalıp tespit seçilmiş ne de açıklama yazılmış. Lütfen hazır kalıplardan birini seçin veya açıklama yazın.`);
+            }
+          }
+        }
+      }
+
+      if (editingInspectionId) {
+        // Güncelleme (PUT)
+        const res = await api.put(`/fm200/inspections/${editingInspectionId}`, {
+          responses,
+          status: targetStatus,
+          isCompleted,
+          notes: isDraft
+            ? `FM-200 Denetimi Devam Ediyor (Soru ${currentQuestionIndex + 1}/${questions.length})`
+            : `FM-200 Denetimi Tamamlandı - Skor: %${stats.overallScore} (${stats.riskLevel})`
+        });
+        if (!res.ok) throw new Error('Denetim güncellenemedi');
+        return res.json();
+      } else {
+        // Yeni Kayıt (POST)
+        const res = await api.post('/fm200/inspections', {
+          locationId: selectedLocationId,
+          responses,
+          status: targetStatus,
+          isCompleted,
+          notes: isDraft
+            ? `FM-200 Denetimi Devam Ediyor (Soru ${currentQuestionIndex + 1}/${questions.length})`
+            : `FM-200 Saha Denetimi - Skor: %${stats.overallScore} (${stats.riskLevel})`
+        });
+        if (!res.ok) throw new Error('Denetim kaydedilemedi');
+        return res.json();
+      }
+    },
+    onSuccess: (data, variables) => {
+      const isDraft = variables?.isDraft;
+      toast.success(
+        isDraft
+          ? 'Denetim "Devam Ediyor" olarak kaydedildi.'
+          : (editingInspectionId ? 'Denetim başarıyla güncellendi!' : 'Denetim tamamlandı ve kaydedildi!')
+      );
+      refetchInspections();
+      refetchLocations();
+      queryClient.invalidateQueries({ queryKey: ['fm200Inspections'] });
+      setIsWizardOpen(false);
+      setEditingInspectionId(null);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Kayıt sırasında hata oluştu');
+    }
+  });
+
+  // Seçili Konum Bilgisini Güncelleme (Pano Türü / Adı Değiştirme)
+  const [isEditingLocationDetails, setIsEditingLocationDetails] = useState(false);
+  const [editRoomType, setEditRoomType] = useState('');
+  const [editCustomRoomName, setEditCustomRoomName] = useState('');
+
+  // Konum (Pano / Mahal) Güncelleme Mutation
+  const updateLocationMutation = useMutation({
+    mutationFn: async ({ locId, roomType, customRoomName }: { locId: string; roomType: string; customRoomName?: string }) => {
+      const res = await api.put(`/fm200/locations/${locId}`, {
+        roomType,
+        customRoomName: customRoomName || null
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Konum oluşturulamadı');
+        throw new Error(err.error || 'Mahal bilgisi güncellenemedi');
       }
       return res.json();
     },
-    onSuccess: (newLoc) => {
-      queryClient.invalidateQueries({ queryKey: ['fm200Locations', selectedFacilityId] });
-      toast.success(`Yeni konum başarıyla oluşturuldu: ${newLoc.systemUid}`);
-      setSelectedLocationId(newLoc.id);
-      setIsAddLocationModalOpen(false);
-      setNewLocationForm({
-        building: 'Ana Bina',
-        block: '',
-        floor: 'Zemin Kat',
-        roomType: 'Sunucu Odası',
-        customRoomName: '',
-        systemType: 'FM-200',
-        panelType: '',
-        roomVolumeM3: '',
-        cylinderCount: 1,
-        notes: ''
-      });
+    onSuccess: (updatedLoc) => {
+      toast.success(`Pano / Mahal bilgisi güncellendi: ${updatedLoc.roomType}`);
+      refetchLocations();
+      refetchInspections();
+      setIsEditingLocationDetails(false);
     },
     onError: (err: any) => {
-      toast.error(err.message || 'Konum kaydedilirken hata oluştu');
+      toast.error(err.message || 'Güncelleme başarısız');
     }
   });
 
-  // Seçili Konum Detayı
-  const { data: locationDetail, refetch: refetchLocationDetail } = useQuery<any>({
-    queryKey: ['fm200LocationDetail', selectedLocationId],
-    queryFn: async () => {
-      if (!selectedLocationId) return null;
-      const res = await api.get(`/fm200/locations/${selectedLocationId}`);
-      if (!res.ok) throw new Error('Konum detayı alınamadı');
-      return res.json();
-    },
-    enabled: !!selectedLocationId
-  });
+  // Denetimi Silme Onay State
+  const [inspectionToDelete, setInspectionToDelete] = useState<any | null>(null);
 
-  // İlk Açılış Parametre Kontrolü
-  useEffect(() => {
-    const locParam = searchParams.get('locationId');
-    const facParam = searchParams.get('facilityId');
-    if (facParam) setSelectedFacilityId(facParam);
-    if (locParam) setSelectedLocationId(locParam);
-  }, [searchParams]);
-
-  // ────────────────────────────────────────────────────────────────────────────
-  // ADIM 2: FAZ 1 STATE (Fiziksel Durum ve Tasarım Değerlendirmesi)
-  // ────────────────────────────────────────────────────────────────────────────
-  const [phase1Answers, setPhase1Answers] = useState<Record<string, string>>({
-    f1_a1: 'Evet', f1_a2: 'Evet', f1_a3: 'Hayır', f1_a4: 'Evet',
-    f1_b1: 'Evet', f1_b2: 'Evet', f1_b3: 'Evet', f1_b4: 'Evet', f1_b5: 'Evet', f1_b6: 'Evet',
-    f1_c1: 'Hayır', f1_c2: 'Evet',
-    f1_d1: 'Hayır', f1_d2: 'Hayır', f1_d3: 'Evet',
-    f1_e1: 'Evet', f1_e2: 'Evet'
-  });
-  const [phase1Notes, setPhase1Notes] = useState('');
-  const [phase1Photos, setPhase1Photos] = useState<PhotoItem[]>([]);
-
-  // ────────────────────────────────────────────────────────────────────────────
-  // ADIM 3: FAZ 2 STATE (26 Madde Periyodik Kontrol)
-  // ────────────────────────────────────────────────────────────────────────────
-  const [phase2Responses, setPhase2Responses] = useState<Record<string, { status: 'U' | 'UD' | 'UY'; note?: string }>>({});
-  const [phase2Notes, setPhase2Notes] = useState('');
-  const [phase2Photos, setPhase2Photos] = useState<PhotoItem[]>([]);
-
-  // Madde 2 Otomasyon Bilgisi
-  const { data: item2Status } = useQuery({
-    queryKey: ['item2Status', selectedLocationId],
-    queryFn: async () => {
-      if (!selectedLocationId) return null;
-      const res = await api.get(`/fm200/inspections/item2-status/${selectedLocationId}`);
-      if (!res.ok) return null;
-      return res.json();
-    },
-    enabled: !!selectedLocationId && currentStep === 3
-  });
-
-  // Faz 2 Açıldığında varsayılan U doldur
-  useEffect(() => {
-    if (currentStep === 3) {
-      const initial: Record<string, { status: 'U' | 'UD' | 'UY'; note?: string }> = {};
-      PERIODIC_QUESTIONS.forEach(q => {
-        initial[q.code] = { status: 'U' };
-      });
-      if (item2Status) {
-        initial['M02'] = { status: item2Status.status as any, note: item2Status.message };
+  // Denetim Kaydını Kalıcı Olarak Silme Mutation
+  const deleteInspectionMutation = useMutation({
+    mutationFn: async (inspId: string) => {
+      const res = await api.delete(`/fm200/inspections/${inspId}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Denetim silinemedi');
       }
-      setPhase2Responses(initial);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success('Denetim kaydı ve bağlı iş emirleri başarıyla silindi.');
+      refetchInspections();
+      queryClient.invalidateQueries({ queryKey: ['fm200Inspections'] });
+      queryClient.invalidateQueries({ queryKey: ['fm200WorkOrders'] });
+      setInspectionToDelete(null);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Silme işlemi sırasında hata oluştu');
     }
-  }, [currentStep, item2Status]);
-
-  // ────────────────────────────────────────────────────────────────────────────
-  // ADIM 4: FAZ 3 STATE (6 Aylık Bakım - Tüp Bazlı Çoklu Değerlendirme)
-  // ────────────────────────────────────────────────────────────────────────────
-  const [cylinderChecks, setCylinderChecks] = useState<any[]>([]);
-  const [panelStatus, setPanelStatus] = useState<'U' | 'UD'>('U');
-  const [panelNotes, setPanelNotes] = useState('');
-  const [phase3Notes, setPhase3Notes] = useState('');
-  const [phase3Photos, setPhase3Photos] = useState<PhotoItem[]>([]);
-
-  // Konum seçildiğinde tüpleri hazırla
-  useEffect(() => {
-    if (locationDetail?.cylinders) {
-      setCylinderChecks(
-        locationDetail.cylinders.map((c: any) => ({
-          cylinderId: c.id,
-          labelCode: c.labelCode,
-          serialNumber: c.serialNumber,
-          govde: 'U',
-          muhur: 'U',
-          basinc: 'U',
-          emniyet: 'U',
-          notes: ''
-        }))
-      );
-    }
-  }, [locationDetail]);
-
-  // ────────────────────────────────────────────────────────────────────────────
-  // ADIM 5: FAZ 4 STATE (Sızdırmazlık Testi / Soft-Lock)
-  // ────────────────────────────────────────────────────────────────────────────
-  const [testDate, setTestDate] = useState(new Date().toISOString().split('T')[0]);
-  const [retentionTime, setRetentionTime] = useState('10.5');
-  const [measuredValue, setMeasuredValue] = useState('');
-  const [testResult, setTestResult] = useState<'Gecti' | 'Kaldi'>('Gecti');
-  const [isUnconditional, setIsUnconditional] = useState(false);
-  const [overrideReason, setOverrideReason] = useState('Resmi periyot son günü');
-  const [testNotes, setTestNotes] = useState('');
-  const [testPhotos, setTestPhotos] = useState<PhotoItem[]>([]);
-
-  // Soft-Lock Durum Sorgusu
-  const { data: softLockInfo } = useQuery({
-    queryKey: ['softLockStatus', selectedLocationId],
-    queryFn: async () => {
-      if (!selectedLocationId) return null;
-      const res = await api.get(`/fm200/tests/soft-lock-status/${selectedLocationId}`);
-      if (!res.ok) return null;
-      return res.json();
-    },
-    enabled: !!selectedLocationId && currentStep === 5
   });
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // MUTATIONS (API KAYITLARI)
-  // ────────────────────────────────────────────────────────────────────────────
-  const [createdSummary, setCreatedSummary] = useState<any>({
-    phase1: null,
-    phase2: null,
-    phase3: null,
-    phase4: null
-  });
-
-  // Faz 1 Kaydet
-  const savePhase1Mutation = useMutation({
-    mutationFn: async () => {
-      const res = await api.post('/fm200/assessments/phase1', {
-        locationId: selectedLocationId,
-        answers: phase1Answers,
-        notes: phase1Notes,
-        photos: phase1Photos
-      });
-      if (!res.ok) throw new Error('Faz 1 kaydedilemedi');
-      return res.json();
-    },
-    onSuccess: (data) => {
-      setCreatedSummary((prev: any) => ({ ...prev, phase1: data }));
-      toast.success(`Faz 1 tamamlandı. ${data.openedJobsCount || 0} adet otomatik iş açıldı.`);
-      setCurrentStep(3);
-    },
-    onError: (err: any) => toast.error(err.message)
-  });
-
-  // Faz 2 Kaydet
-  const savePhase2Mutation = useMutation({
-    mutationFn: async () => {
-      const res = await api.post('/fm200/inspections/phase2', {
-        locationId: selectedLocationId,
-        responses: phase2Responses,
-        notes: phase2Notes,
-        photos: phase2Photos
-      });
-      if (!res.ok) throw new Error('Faz 2 kaydedilemedi');
-      return res.json();
-    },
-    onSuccess: (data) => {
-      setCreatedSummary((prev: any) => ({ ...prev, phase2: data }));
-      toast.success(`Faz 2 tamamlandı. Skor: %${data.complianceScore} (${data.ratingGrade})`);
-      setCurrentStep(4);
-    },
-    onError: (err: any) => toast.error(err.message)
-  });
-
-  // Faz 3 Kaydet
-  const savePhase3Mutation = useMutation({
-    mutationFn: async () => {
-      const res = await api.post('/fm200/maintenances/phase3', {
-        locationId: selectedLocationId,
-        cylinderChecks,
-        panelControlStatus: panelStatus,
-        panelNotes,
-        notes: phase3Notes,
-        photos: phase3Photos
-      });
-      if (!res.ok) throw new Error('Faz 3 kaydedilemedi');
-      return res.json();
-    },
-    onSuccess: (data) => {
-      setCreatedSummary((prev: any) => ({ ...prev, phase3: data }));
-      toast.success(`Faz 3 6-Aylık Bakım kaydedildi. ${data.openedJobsCount || 0} adet iş emri üretildi.`);
-      setCurrentStep(5);
-    },
-    onError: (err: any) => toast.error(err.message)
-  });
-
-  // Faz 4 Kaydet
-  const savePhase4Mutation = useMutation({
-    mutationFn: async () => {
-      const res = await api.post('/fm200/tests/phase4', {
-        locationId: selectedLocationId,
-        testDate,
-        retentionTimeMinutes: retentionTime,
-        measuredValue,
-        result: testResult,
-        isUnconditional,
-        overrideReason: isUnconditional ? overrideReason : null,
-        reportUrl: testPhotos[0]?.url || null,
-        notes: testNotes,
-        photos: testPhotos
-      });
-      if (!res.ok) throw new Error('Faz 4 kaydedilemedi');
-      return res.json();
-    },
-    onSuccess: (data) => {
-      setCreatedSummary((prev: any) => ({ ...prev, phase4: data }));
-      toast.success(`Sızdırmazlık testi (${testResult}) başarıyla sisteme işlendi.`);
-      refetchLocationDetail();
-      queryClient.invalidateQueries({ queryKey: ['fm200Locations'] });
-      setCurrentStep(6);
-    },
-    onError: (err: any) => toast.error(err.message)
-  });
-
+  // Aktif Tesis Nesnesi
   const activeFacility = facilities.find((f: any) => f.id === selectedFacilityId);
+  const activeLocation = locations.find((l: any) => l.id === selectedLocationId);
+
+  const currentQ = questions[currentQuestionIndex] || questions[0];
+  const currentResp = currentQ ? (responses[currentQ.id] || { status: 'Karşılıyor', responsible: 'Teknik', templates: [], customNote: '', photos: [] }) : null;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-20">
-      {/* Wizard İlerleme Başlığı (Breadcrumbs / Steps) */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-[#0051d5] dark:text-[#b4c5ff]">
-              Denetim Sihirbazı
-            </span>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">
-              FM-200 ve Gazlı Söndürme Adım Adım Denetim
-            </h1>
+    <div className="max-w-6xl mx-auto space-y-6 pb-20">
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {/* WIZARD MODAL / SAHA DENETİM EKRANI (TAM EKRAN MOBİL FORMAT)               */}
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {isWizardOpen && currentQ && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[96vh] overflow-hidden my-auto animate-in fade-in-50 zoom-in-95">
+            {/* Modal Header: Tesis, Konum ve Durum Bilgisi */}
+            <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 flex items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200">
+                    {activeLocation?.systemUid || 'MAHAL DENETİMİ'}
+                  </span>
+                  <span className="text-xs text-slate-500 font-medium">
+                    {activeFacility?.name} · {selectedBuilding || 'Ana Bina'} {selectedBlock ? `/ ${selectedBlock}` : ''} ({selectedFloor})
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    {editingInspectionId ? 'Denetimi Düzenle' : 'Saha Denetimi'}: {activeLocation?.customRoomName || `${activeLocation?.roomType || selectedRoomType} #${duplicateCount}`}
+                  </h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setEditRoomType(activeLocation?.roomType || selectedRoomType || 'Kat Panosu');
+                      setEditCustomRoomName(activeLocation?.customRoomName || '');
+                      setIsEditingLocationDetails(true);
+                    }}
+                    className="h-6 px-2 text-[11px] font-semibold text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100 flex items-center gap-1"
+                    title="Panonun / Mahalin Türünü Değiştir"
+                  >
+                    <Settings2 className="w-3 h-3 text-blue-600" />
+                    Pano Türünü Düzenle
+                  </Button>
+                </div>
+              </div>
+
+              {/* Kapat Butonu */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsExitConfirmOpen(true)}
+                className="text-xs text-slate-500 hover:text-slate-900"
+              >
+                Kapat ✕
+              </Button>
+            </div>
+
+            {/* Modal Gövdesi: Mobil Uyumlu Sadeleştirilmiş Soru Kartı */}
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
+              {/* Canlı İlerleme Çubuğu */}
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1.5 font-semibold text-slate-600 dark:text-slate-300">
+                  <span>Kriter {currentQuestionIndex + 1} / {questions.length}</span>
+                  <span className="text-primary font-bold">
+                    %{Math.round(((currentQuestionIndex + 1) / questions.length) * 100)} Tamamlandı
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-[#0051d5] h-full rounded-full transition-all duration-300"
+                    style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Soru Başlığı */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800">
+                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                  <Badge variant="outline" className="text-[10px] bg-white dark:bg-slate-900">
+                    {currentQ.category}
+                  </Badge>
+                  {currentQ.isSealing && (
+                    <Badge className="bg-cyan-100 text-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-300 text-[10px]">
+                      Sızdırmazlık
+                    </Badge>
+                  )}
+                  {currentQ.criticality === 'KRİTİK' && (
+                    <Badge className="bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300 text-[10px] font-bold">
+                      Kritik Risk
+                    </Badge>
+                  )}
+                  <span className="text-[11px] text-slate-400 ml-auto">Ağırlık: %{currentQ.weight}</span>
+                </div>
+                <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-relaxed">
+                  {currentQ.text}
+                </h4>
+              </div>
+
+              {/* 4 Seçenek Butonu */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { value: 'Karşılıyor', label: 'Karşılıyor', color: 'emerald' },
+                  { value: 'Kısmen Karşılıyor', label: 'Kısmen', color: 'amber' },
+                  { value: 'Karşılamıyor', label: 'Karşılamıyor', color: 'red' },
+                  { value: 'Kapsam Dışı', label: 'Kapsam Dışı', color: 'slate' }
+                ].map((opt) => {
+                  const isSelected = currentResp?.status === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => updateQuestionResponse(currentQ.id, { status: opt.value as any })}
+                      className={`p-3 rounded-xl border text-center transition-all ${
+                        isSelected
+                          ? opt.color === 'emerald'
+                            ? 'bg-emerald-500 text-white font-bold border-emerald-600 shadow-sm'
+                            : opt.color === 'amber'
+                            ? 'bg-amber-500 text-white font-bold border-amber-600 shadow-sm'
+                            : opt.color === 'red'
+                            ? 'bg-red-600 text-white font-bold border-red-700 shadow-sm'
+                            : 'bg-slate-600 text-white font-bold border-slate-700 shadow-sm'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="text-xs sm:text-sm font-semibold">{opt.label}</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Akıllı Dallanma Paneli (Kısmen veya Karşılamıyor için) */}
+              {(currentResp?.status === 'Kısmen Karşılıyor' || currentResp?.status === 'Karşılamıyor') && (
+                <div className="p-4 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 space-y-3.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900 dark:text-amber-300 uppercase">
+                    <Wrench className="w-3.5 h-3.5 text-amber-600" />
+                    Uygunsuzluk Çözüm & Sorumlu Seçimi
+                  </div>
+
+                  {/* Sorumlu Seçimi (Çoklu Seçim Desteği: Hem Teknik Hem Firma) */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                        Sorumlu Birim (İkisi Birlikte Seçilebilir):
+                      </Label>
+                      {((currentResp?.responsibles?.length || 0) > 1) && (
+                        <span className="text-[10px] text-amber-700 font-bold bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">
+                          Ortak Müdahale (Teknik + Firma)
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Teknik Hizmetler */}
+                      {(() => {
+                        const isTeknikSelected = currentResp?.responsibles?.includes('Teknik') ?? (currentResp?.responsible === 'Teknik');
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cur = currentResp?.responsibles || (currentResp?.responsible ? [currentResp.responsible] : ['Teknik']);
+                              let next: ('Teknik' | 'Firma')[];
+                              if (isTeknikSelected) {
+                                if (cur.length > 1) {
+                                  next = cur.filter(r => r !== 'Teknik');
+                                } else {
+                                  next = ['Firma'];
+                                }
+                              } else {
+                                next = [...cur, 'Teknik'];
+                              }
+                              updateQuestionResponse(currentQ.id, {
+                                responsibles: next,
+                                responsible: next[0]
+                              });
+                            }}
+                            className={`p-2.5 rounded-lg border text-left text-xs transition-all relative ${
+                              isTeknikSelected
+                                ? 'bg-white dark:bg-slate-900 border-blue-600 text-blue-900 dark:text-blue-300 font-bold shadow-xs ring-1 ring-blue-500'
+                                : 'bg-white/50 border-slate-200 text-slate-500 hover:bg-slate-100'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5 font-bold text-[#0051d5]">
+                                <Wrench className="w-3.5 h-3.5" /> Teknik Hizmetler
+                              </div>
+                              <span className={`w-4 h-4 rounded flex items-center justify-center text-[10px] border ${
+                                isTeknikSelected ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 bg-white'
+                              }`}>
+                                {isTeknikSelected ? '✓' : ''}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-slate-500 font-normal block mt-1">≤ 10 cm küçük açıklık</span>
+                          </button>
+                        );
+                      })()}
+
+                      {/* Yetkili Firma */}
+                      {(() => {
+                        const isFirmaSelected = currentResp?.responsibles?.includes('Firma') ?? (currentResp?.responsible === 'Firma');
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cur = currentResp?.responsibles || (currentResp?.responsible ? [currentResp.responsible] : ['Teknik']);
+                              let next: ('Teknik' | 'Firma')[];
+                              if (isFirmaSelected) {
+                                if (cur.length > 1) {
+                                  next = cur.filter(r => r !== 'Firma');
+                                } else {
+                                  next = ['Teknik'];
+                                }
+                              } else {
+                                next = [...cur, 'Firma'];
+                              }
+                              updateQuestionResponse(currentQ.id, {
+                                responsibles: next,
+                                responsible: next[0]
+                              });
+                            }}
+                            className={`p-2.5 rounded-lg border text-left text-xs transition-all relative ${
+                              isFirmaSelected
+                                ? 'bg-white dark:bg-slate-900 border-purple-600 text-purple-900 dark:text-purple-300 font-bold shadow-xs ring-1 ring-purple-500'
+                                : 'bg-white/50 border-slate-200 text-slate-500 hover:bg-slate-100'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5 font-bold text-purple-700">
+                                <Building2 className="w-3.5 h-3.5" /> Yetkili Firma
+                              </div>
+                              <span className={`w-4 h-4 rounded flex items-center justify-center text-[10px] border ${
+                                isFirmaSelected ? 'bg-purple-600 text-white border-purple-600' : 'border-slate-300 bg-white'
+                              }`}>
+                                {isFirmaSelected ? '✓' : ''}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-slate-500 font-normal block mt-1">&gt; 10 cm / Alçıpan / Damper</span>
+                          </button>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Hazır Kalıplar (Her iki taraf seçilmişse ikisinin kalıpları da listelenir) */}
+                  {issueTemplates[currentQ.id] && (() => {
+                    const selectedRespList = currentResp?.responsibles || (currentResp?.responsible ? [currentResp.responsible] : ['Teknik']);
+                    const availableTpls: { tpl: string; source: string }[] = [];
+                    if (selectedRespList.includes('Teknik')) {
+                      (issueTemplates[currentQ.id]?.teknik || []).forEach((t: string) => {
+                        availableTpls.push({ tpl: t, source: 'Teknik' });
+                      });
+                    }
+                    if (selectedRespList.includes('Firma')) {
+                      (issueTemplates[currentQ.id]?.firma || []).forEach((t: string) => {
+                        if (!availableTpls.some(a => a.tpl === t)) {
+                          availableTpls.push({ tpl: t, source: 'Firma' });
+                        }
+                      });
+                    }
+
+                    if (availableTpls.length === 0) return null;
+
+                    return (
+                      <div>
+                        <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1 block">
+                          Hazır Tespit Kalıpları:
+                        </Label>
+                        <div className="space-y-1">
+                          {availableTpls.map((item, idx: number) => {
+                            const isChecked = currentResp?.templates?.includes(item.tpl);
+                            return (
+                              <label
+                                key={idx}
+                                className={`flex items-start gap-2 p-2 rounded-lg border text-xs cursor-pointer ${
+                                  isChecked
+                                    ? 'bg-white dark:bg-slate-900 border-amber-500 font-medium'
+                                    : 'bg-white/60 dark:bg-slate-900/40 border-slate-200/80 text-slate-600'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={!!isChecked}
+                                  onChange={(e) => {
+                                    const cur = currentResp?.templates || [];
+                                    const upd = e.target.checked ? [...cur, item.tpl] : cur.filter(t => t !== item.tpl);
+                                    updateQuestionResponse(currentQ.id, { templates: upd });
+                                  }}
+                                  className="rounded text-amber-600 focus:ring-amber-500 mt-0.5"
+                                />
+                                <div className="flex-1">
+                                  <span className="text-[11px]">{item.tpl}</span>
+                                  {selectedRespList.length > 1 && (
+                                    <span className={`ml-1.5 text-[9px] px-1 py-0.2 rounded font-semibold ${
+                                      item.source === 'Teknik' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                                    }`}>
+                                      {item.source}
+                                    </span>
+                                  )}
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Ek Açıklama */}
+                  <div>
+                    <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1 block">
+                      Ek Açıklama (İsteğe Bağlı):
+                    </Label>
+                    <Textarea
+                      value={currentResp?.customNote || ''}
+                      onChange={(e) => updateQuestionResponse(currentQ.id, { customNote: e.target.value })}
+                      placeholder="Sahadaki ek notunuz..."
+                      rows={2}
+                      className="text-xs bg-white dark:bg-slate-900"
+                    />
+                  </div>
+
+                  {/* Fotoğraf Yükleme */}
+                  <div>
+                    <Label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 block">
+                      Uygunsuzluk Fotoğrafları (Kamera / Galeri):
+                    </Label>
+                    <ImageUploadWithPreview
+                      facilityId={selectedFacilityId}
+                      facilityName={activeFacility?.shortName || activeFacility?.name || 'facility'}
+                      photos={currentResp?.photos || []}
+                      onChange={(newPhotos) => updateQuestionResponse(currentQ.id, { photos: newPhotos })}
+                      maxCount={5}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer: İleri / Geri & Bitir Butonları */}
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 flex items-center justify-between gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentQuestionIndex === 0}
+                onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
+                className="text-xs"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Önceki
+              </Button>
+
+              <div className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                Kriter {currentQuestionIndex + 1} / {questions.length}
+              </div>
+
+              {currentQuestionIndex < questions.length - 1 ? (
+                <Button
+                  size="sm"
+                  onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
+                  className="bg-[#0051d5] hover:bg-[#0042b0] text-white text-xs"
+                >
+                  Sonraki <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => saveInspectionMutation.mutate()}
+                  disabled={saveInspectionMutation.isPending}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
+                >
+                  {saveInspectionMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
+                      Kaydediliyor...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5 mr-1" />
+                      {editingInspectionId ? 'Değişiklikleri Kaydet' : 'Denetimi Tamamla'}
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/operations-management')}
-            className="text-xs text-slate-500"
-          >
-            Vazgeç ve Çık
-          </Button>
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {/* ANA DENETİM SAYFASI: YENİ DENETİM BAŞLATMA + DENETLENENLER LİSTESİ         */}
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      <div className="space-y-6">
+        {/* Üst Karşılama Kartı */}
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-[#0051d5] dark:text-[#b4c5ff]">
+                <Flame className="w-6 h-6" />
+              </span>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+                  FM-200 Gazlı Söndürme Denetim Merkezi
+                </h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Aktif Tesis: <strong className="font-semibold text-slate-800 dark:text-slate-200">{activeFacility?.name || 'Lütfen sol menüden tesis seçin'}</strong>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/fm200')}
+              className="text-xs h-9"
+            >
+              Yönetici Özeti ➔
+            </Button>
+          </div>
         </div>
 
-        {/* 6 Aşamalı Step Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-          {[
-            { step: 1, label: '1. Konum' },
-            { step: 2, label: '2. Faz 1: Tasarım' },
-            { step: 3, label: '3. Faz 2: Periyodik' },
-            { step: 4, label: '4. Faz 3: Bakım' },
-            { step: 5, label: '5. Faz 4: Test' },
-            { step: 6, label: '6. Tamamlandı' }
-          ].map((item) => (
-            <div
-              key={item.step}
-              onClick={() => {
-                if (item.step < currentStep && selectedLocationId) {
-                  setCurrentStep(item.step);
-                }
-              }}
-              className={`p-2.5 rounded-xl border text-center transition-all ${
-                currentStep === item.step
-                  ? 'bg-blue-50 border-[#0051d5] text-[#0051d5] dark:bg-blue-950/40 dark:border-blue-500 dark:text-blue-300 font-bold shadow-xs'
-                  : currentStep > item.step
-                  ? 'bg-emerald-50/50 border-emerald-300 text-emerald-700 dark:bg-emerald-950/20 dark:border-emerald-800 dark:text-emerald-400 cursor-pointer font-medium'
-                  : 'bg-slate-50 border-slate-200 text-slate-400 dark:bg-slate-900/50 dark:border-slate-800/80 font-normal'
-              }`}
-            >
-              <div className="text-[11px] truncate">{item.label}</div>
+        {/* Yeni Denetim Başlatma Kartı (Tesis seçimi sol menüden gelir, sadece Bina, Blok, Kat ve Mahal seçilir) */}
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Plus className="w-4 h-4 text-[#0051d5]" /> Yeni Denetim Başlat
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Denetim yapacağınız konumu seçip "Denetime Başla" butonuna basarak sihirbazı açın.
+            </p>
+          </div>
+
+          {/* Konum Seçim Alanları */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+            {/* Bina */}
+            <div>
+              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Bina</Label>
+              <select
+                value={selectedBuilding}
+                onChange={(e) => {
+                  setSelectedBuilding(e.target.value);
+                  setSelectedLocationId('');
+                }}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs mt-1"
+              >
+                <option value="">Tüm Binalar / Ana Bina</option>
+                {availableBuildings.map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
             </div>
-          ))}
+
+            {/* Blok */}
+            <div>
+              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Blok</Label>
+              <select
+                value={selectedBlock}
+                onChange={(e) => {
+                  setSelectedBlock(e.target.value);
+                  setSelectedLocationId('');
+                }}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs mt-1"
+              >
+                <option value="">Tüm Bloklar</option>
+                {availableBlocks.map((blk) => (
+                  <option key={blk} value={blk}>{blk}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Kat (Çatıdan Bodruma Sıralı) */}
+            <div>
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Kat * (Sıralı)</Label>
+              <select
+                value={selectedFloor}
+                onChange={(e) => {
+                  setSelectedFloor(e.target.value);
+                  setSelectedLocationId('');
+                }}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs mt-1 font-medium"
+              >
+                <option value="">-- Kat Seçin --</option>
+                {availableFloors.map((floor: string, idx: number) => (
+                  <option key={`${floor}-${idx}`} value={floor}>{floor}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Pano / Mahal Türü */}
+            <div>
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Pano / Mahal Türü *</Label>
+              <select
+                value={selectedRoomType}
+                onChange={(e) => {
+                  setSelectedRoomType(e.target.value);
+                  setSelectedLocationId('');
+                }}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs mt-1 font-medium"
+              >
+                <option value="">-- Mahal Türü Seçin --</option>
+                {availableRoomTypes.map((type: string) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Aksiyon Satırı: Başlat Butonu & İndeks Bilgisi */}
+          {selectedFloor && selectedRoomType && (
+            <div className="p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="text-xs">
+                <span className="font-bold text-slate-800 dark:text-slate-200">
+                  Seçilen: {selectedBuilding || 'Ana Bina'} {selectedBlock ? `/ ${selectedBlock}` : ''} — {selectedFloor} Katı / {selectedRoomType}
+                </span>
+                <div className="text-slate-500 text-[11px] mt-0.5">
+                  Otomatik İndeksleme: <span className="font-bold text-blue-700 dark:text-blue-300">#{duplicateCount}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {filteredLocations.length > 0 && (
+                  <select
+                    value={selectedLocationId}
+                    onChange={(e) => setSelectedLocationId(e.target.value)}
+                    className="h-9 px-2.5 rounded-lg border border-blue-300 bg-white dark:bg-slate-900 text-xs font-medium"
+                  >
+                    <option value="">-- Mevcut #{filteredLocations.length} Kayıttan Seç --</option>
+                    {filteredLocations.map((loc: any) => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.systemUid} — {loc.customRoomName || `${loc.roomType} #${loc.index}`}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                <Button
+                  onClick={handleStartInspection}
+                  className="bg-[#0051d5] hover:bg-[#0042b0] text-white text-xs h-9 px-4 font-bold"
+                >
+                  <Flame className="w-3.5 h-3.5 mr-1" />
+                  Denetime Başla (Wizard)
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ────────────────────────────────────────────────────────────────────────── */}
+        {/* DENETİMİ YAPILAN YERLERİN LİSTESİ (TAMAMLANANLAR & EDİT İMKANI)             */}
+        {/* ────────────────────────────────────────────────────────────────────────── */}
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 gap-3">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <ClipboardList className="w-4 h-4 text-emerald-600" />
+                Denetimi Yapılan Mahaller Listesi ({filteredInspections.length} / {inspections.length})
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Tamamlanmış denetimlerin özet skorları ve düzenleme (Edit) geçmişi.
+              </p>
+            </div>
+
+            {/* Arama Kutusu */}
+            <div className="relative w-full sm:w-64">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
+              <Input
+                type="text"
+                placeholder="UID, mahal, denetleyen ara..."
+                value={tableSearchQuery}
+                onChange={(e) => setTableSearchQuery(e.target.value)}
+                className="pl-8.5 h-9 text-xs rounded-xl bg-slate-50/60 dark:bg-slate-800/60 border-slate-200 dark:border-slate-800"
+              />
+            </div>
+          </div>
+
+          {/* FİLTRE ÇUBUĞU: BLOK, KAT, PANO / MAHAL TÜRÜ */}
+          <div className="p-3 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+              <Filter className="w-3.5 h-3.5 text-slate-400" />
+              <span>Filtreler:</span>
+            </div>
+
+            {/* Blok Filtresi */}
+            <div className="flex items-center gap-1.5">
+              <label className="text-[11px] font-medium text-slate-500">Blok:</label>
+              <select
+                value={tableFilterBlock}
+                onChange={(e) => setTableFilterBlock(e.target.value)}
+                className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium"
+              >
+                <option value="all">Tüm Bloklar</option>
+                {tableAvailableBlocks.map((blk) => (
+                  <option key={blk} value={blk}>{blk}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Kat Filtresi */}
+            <div className="flex items-center gap-1.5">
+              <label className="text-[11px] font-medium text-slate-500">Kat:</label>
+              <select
+                value={tableFilterFloor}
+                onChange={(e) => setTableFilterFloor(e.target.value)}
+                className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium"
+              >
+                <option value="all">Tüm Katlar</option>
+                {tableAvailableFloors.map((flr) => (
+                  <option key={flr} value={flr}>{flr}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Pano / Mahal Türü Filtresi */}
+            <div className="flex items-center gap-1.5">
+              <label className="text-[11px] font-medium text-slate-500">Pano / Mahal:</label>
+              <select
+                value={tableFilterRoomType}
+                onChange={(e) => setTableFilterRoomType(e.target.value)}
+                className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium"
+              >
+                <option value="all">Tüm Mahaller / Panolar</option>
+                {tableAvailableRoomTypes.map((rt) => (
+                  <option key={rt} value={rt}>{rt}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Durum Filtresi (Devam Ediyor / Tamamlandı) */}
+            <div className="flex items-center gap-1.5">
+              <label className="text-[11px] font-medium text-slate-500">Durum:</label>
+              <select
+                value={tableFilterStatus}
+                onChange={(e) => setTableFilterStatus(e.target.value)}
+                className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-200"
+              >
+                <option value="all">Tüm Durumlar</option>
+                <option value="Devam Ediyor">⏳ Devam Edenler</option>
+                <option value="Tamamlandi">✓ Tamamlananlar</option>
+              </select>
+            </div>
+
+            {/* Filtreleri Sıfırla Butonu */}
+            {(tableFilterBlock !== 'all' || tableFilterFloor !== 'all' || tableFilterRoomType !== 'all' || tableFilterStatus !== 'all' || tableSearchQuery.trim() !== '') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setTableFilterBlock('all');
+                  setTableFilterFloor('all');
+                  setTableFilterRoomType('all');
+                  setTableFilterStatus('all');
+                  setTableSearchQuery('');
+                }}
+                className="h-8 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 ml-auto"
+              >
+                <RotateCcw className="w-3 h-3 mr-1" />
+                Filtreleri Temizle
+              </Button>
+            )}
+          </div>
+
+          {inspections.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 border border-dashed rounded-xl space-y-2">
+              <ClipboardList className="w-8 h-8 mx-auto opacity-50 text-slate-400" />
+              <p className="text-xs font-medium">Bu tesiste henüz denetim kaydı bulunmuyor.</p>
+              <p className="text-[11px] text-slate-400">Yukarıdaki formdan konum seçip "Denetime Başla" butonuyla ilk denetimi gerçekleştirebilirsiniz.</p>
+            </div>
+          ) : filteredInspections.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 border border-dashed rounded-xl space-y-2">
+              <Filter className="w-8 h-8 mx-auto opacity-40 text-slate-400" />
+              <p className="text-xs font-medium">Seçili filtrelere uygun denetim kaydı bulunamadı.</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setTableFilterBlock('all');
+                  setTableFilterFloor('all');
+                  setTableFilterRoomType('all');
+                  setTableSearchQuery('');
+                }}
+                className="text-xs mt-2"
+              >
+                Filtreleri Sıfırla
+              </Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-semibold">
+                    <th className="pb-2.5">Sistem UID / Mahal</th>
+                    <th className="pb-2.5">Konum (Bina / Kat)</th>
+                    <th className="pb-2.5 text-center">Genel Skor</th>
+                    <th className="pb-2.5 text-center">Sızdırmazlık</th>
+                    <th className="pb-2.5 text-center">Risk / Durum</th>
+                    <th className="pb-2.5">Denetleyen / Tarih</th>
+                    <th className="pb-2.5 text-right">İşlemler</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {filteredInspections.map((insp: any) => (
+                    <tr key={insp.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3 font-medium text-slate-800 dark:text-slate-200">
+                        <div className="font-mono text-[11px] text-[#0051d5] font-bold">
+                          {insp.location?.systemUid}
+                        </div>
+                        <div className="text-xs mt-0.5">
+                          {insp.location?.customRoomName || `${insp.location?.roomType} #${insp.location?.index}`}
+                        </div>
+                      </td>
+                      <td className="py-3 text-slate-600 dark:text-slate-400">
+                        {insp.location?.building} {insp.location?.block ? `/ ${insp.location?.block}` : ''}
+                        <div className="text-[11px] text-slate-400 font-semibold">{insp.location?.floor}</div>
+                      </td>
+                      <td className="py-3 text-center">
+                        <span className="font-extrabold text-xs text-slate-800 dark:text-slate-200">
+                          %{insp.complianceScore}
+                        </span>
+                        <div className="text-[10px] text-slate-400 font-bold">({insp.ratingGrade})</div>
+                      </td>
+                      <td className="py-3 text-center font-bold text-cyan-700 dark:text-cyan-400">
+                        %{insp.sealingScore ?? insp.complianceScore}
+                      </td>
+                      <td className="py-3 text-center space-y-1">
+                        <div>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            insp.isRedFlagged || insp.riskLevel === 'YÜKSEK RİSK'
+                              ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300'
+                              : insp.riskLevel === 'ORTA RİSK'
+                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                              : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                          }`}>
+                            {insp.riskLevel || (insp.isRedFlagged ? 'YÜKSEK RİSK' : 'DÜŞÜK RİSK')}
+                          </span>
+                        </div>
+                        <div>
+                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-semibold ${
+                            insp.status === 'Devam Ediyor' || !insp.isCompleted
+                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 animate-pulse'
+                              : 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300'
+                          }`}>
+                            {insp.status === 'Devam Ediyor' || !insp.isCompleted ? '⏳ Devam Ediyor' : '✓ Tamamlandı'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 text-slate-500">
+                        <div className="font-medium text-slate-700 dark:text-slate-300">{insp.inspectedBy}</div>
+                        <div className="text-[10px] text-slate-400">
+                          {new Date(insp.inspectionDate).toLocaleDateString('tr-TR')}
+                        </div>
+                      </td>
+                      <td className="py-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditInspection(insp)}
+                            className="h-8 text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
+                          >
+                            <Edit2 className="w-3.5 h-3.5 mr-1" />
+                            {insp.status === 'Devam Ediyor' || !insp.isCompleted ? 'Devam Et' : 'Düzenle (Edit)'}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setInspectionToDelete(insp)}
+                            className="h-8 text-xs text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                            title="Denetim Kaydını Sil"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 mr-1" />
+                            Sil
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ────────────────────────────────────────────────────────────────────────── */}
-      {/* ADIM 1: TESİS VE KONUM SEÇİMİ                                              */}
+      {/* DENETİMDEN ÇIKIŞ ONAY MODAL DIALOG                                         */}
       {/* ────────────────────────────────────────────────────────────────────────── */}
-      {currentStep === 1 && (
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-6">
-          <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-primary" />
-              1. Adım: Denetlenecek Tesis ve FM-200 Konumunu Seçin
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Spesifikasyona göre 35 tesisteki her gazlı söndürme mahali tekil bir UID ile bağımsız olarak takip edilir.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Tesis Seçimi *</label>
-              <select
-                value={selectedFacilityId}
-                onChange={(e) => {
-                  setSelectedFacilityId(e.target.value);
-                  setSelectedLocationId('');
-                }}
-                className="w-full h-11 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm mt-1 focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="">-- Lütfen Tesis Seçin --</option>
-                {facilities.map((f: any) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Konum / Mahal *</label>
-                {selectedFacilityId && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // Form alanlarını tesisin ilk bina/kat bilgileriyle ilklendir
-                      const firstBf = buildingFloors[0];
-                      if (firstBf) {
-                        setNewLocationForm(prev => ({
-                          ...prev,
-                          building: firstBf.building || 'Ana Bina',
-                          block: firstBf.block || '',
-                          floor: firstBf.floor || 'Zemin Kat'
-                        }));
-                      }
-                      setIsAddLocationModalOpen(true);
-                    }}
-                    className="text-xs text-[#0051d5] hover:underline font-semibold flex items-center gap-1"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Yeni Mahal Tanımla
-                  </button>
-                )}
-              </div>
-              <select
-                disabled={!selectedFacilityId}
-                value={selectedLocationId}
-                onChange={(e) => setSelectedLocationId(e.target.value)}
-                className="w-full h-11 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm mt-1 focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="">-- Korunan Mahali Seçin --</option>
-                {locations.map((l: any) => (
-                  <option key={l.id} value={l.id}>
-                    {l.systemUid} — {l.customRoomName || `${l.roomType} #${l.index}`} ({l.building}, {l.floor})
-                  </option>
-                ))}
-              </select>
-              {locations.length === 0 && selectedFacilityId && (
-                <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
-                  <Info className="w-3 h-3" /> Bu tesiste henüz tanımlı FM-200 mahali bulunmuyor. Yukarıdaki "Yeni Mahal Tanımla" butonuyla hemen ekleyebilirsiniz.
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Konum Kartı Özeti (Spesifikasyon Bölüm 16.1) */}
-          {locationDetail && (
-            <div className="mt-4 p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/40 dark:from-slate-900/60 dark:to-blue-950/20 border border-blue-200/60 dark:border-blue-900/40 space-y-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-blue-100 dark:border-blue-900/40 pb-3">
-                <div>
-                  <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
-                    {locationDetail.systemUid}
-                  </span>
-                  <h4 className="text-base font-bold text-slate-900 dark:text-white mt-1.5">
-                    {locationDetail.customRoomName || `${locationDetail.roomType} #${locationDetail.index}`}
-                  </h4>
-                </div>
-                <div className="text-xs text-right text-slate-500 dark:text-slate-400">
-                  <span className="font-semibold text-slate-700 dark:text-slate-200">{locationDetail.facility?.name}</span>
-                  <div>{locationDetail.building} — {locationDetail.floor}</div>
-                </div>
-              </div>
-
-              {/* 4 Fazın Mevcut Durum Özeti */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800">
-                  <span className="text-slate-400 block mb-1 font-semibold">[FAZ 1] Fiziksel/Tasarım</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200">
-                    {locationDetail.phase1Assessments?.length > 0 ? 'Değerlendirildi' : 'Bekliyor'}
-                  </span>
-                </div>
-                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800">
-                  <span className="text-slate-400 block mb-1 font-semibold">[FAZ 2] Periyodik Skor</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200">
-                    {locationDetail.inspections?.length > 0
-                      ? `%${locationDetail.inspections[0].complianceScore} (${locationDetail.inspections[0].ratingGrade})`
-                      : 'Henüz Yapılmadı'}
-                  </span>
-                </div>
-                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800">
-                  <span className="text-slate-400 block mb-1 font-semibold">[FAZ 3] Tüp Envanteri</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200">
-                    {locationDetail.cylinders?.length || 0} Adet Tüp Tanımlı
-                  </span>
-                </div>
-                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800">
-                  <span className="text-slate-400 block mb-1 font-semibold">[FAZ 4] Sızdırmazlık</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200">
-                    {locationDetail.tightnessTests?.length > 0
-                      ? locationDetail.tightnessTests[0].result
-                      : 'Kayıt Yok'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Açık İş Emirleri Vurgusu */}
-              {locationDetail.workOrders?.length > 0 && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl text-xs text-amber-800 dark:text-amber-300">
-                  <div className="font-bold flex items-center gap-1.5 mb-1">
-                    <AlertTriangle className="w-4 h-4 text-amber-600" />
-                    Bu mahalde {locationDetail.workOrders.length} adet açık/devam eden iş emri bulunmaktadır:
-                  </div>
-                  <ul className="list-disc list-inside space-y-0.5 text-[11px] text-amber-900 dark:text-amber-400 pl-1">
-                    {locationDetail.workOrders.slice(0, 3).map((w: any) => (
-                      <li key={w.id}>
-                        [{w.trackLane}] {w.title} ({w.responsible})
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="flex justify-end pt-4">
-            <Button
-              disabled={!selectedLocationId}
-              onClick={() => setCurrentStep(2)}
-              className="flex items-center gap-2 bg-[#0051d5] hover:bg-[#0042b0] text-white px-6 h-11 rounded-xl"
-            >
-              Devam Et (Faz 1'e Geç)
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      {/* ADIM 2: FAZ 1 — FİZİKSEL DURUM VE TASARIM DEĞERLENDİRMESİ                   */}
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      {currentStep === 2 && (
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-6">
-          <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
-            <span className="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 font-mono">
-              FAZ 1
-            </span>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-1">
-              Fiziksel Durum ve Tasarım Değerlendirmesi
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Hacim, proje, nozul engelleri ve fiziksel sızdırmazlık deliklerini kontrol edin. "Hayır/Evet" yanıtları ilgili sorumlulara otomatik iş emri üretecektir.
-            </p>
-          </div>
-
-          {/* Soru Grupları A-B-C-D-E */}
-          <div className="space-y-6">
-            {/* A Grubu */}
-            <div className="space-y-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200/80 dark:border-slate-800">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                A — Hacim ve Boyut Bilgileri
-              </h4>
-              {[
-                { code: 'f1_a1', q: 'F1-A1: Oda hacmi ölçüldü mü?', options: ['Evet', 'Hayır'] },
-                { code: 'f1_a2', q: 'F1-A2: Tasarım hacmi ile sahada ölçülen hacim uyuşuyor mu?', options: ['Evet', 'Hayır'] },
-                { code: 'f1_a3', q: 'F1-A3: Kurulumdan bu yana oda sınırlarında/yapısında değişiklik yapıldı mı?', options: ['Evet', 'Hayır'] },
-                { code: 'f1_a4', q: 'F1-A4: Oda değişiklik geçmişi biliniyor mu?', options: ['Evet', 'Hayır', 'Bilinmiyor'] }
-              ].map(item => (
-                <div key={item.code} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-lg bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs">
-                  <span className="font-medium text-slate-800 dark:text-slate-200">{item.q}</span>
-                  <div className="flex gap-1.5 shrink-0">
-                    {item.options.map(opt => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => setPhase1Answers({ ...phase1Answers, [item.code]: opt })}
-                        className={`px-3 py-1 rounded-md font-semibold transition-colors ${
-                          phase1Answers[item.code] === opt
-                            ? opt === 'Hayır' || opt === 'Bilinmiyor'
-                              ? 'bg-amber-600 text-white'
-                              : 'bg-[#0051d5] text-white'
-                            : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-                        }`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* B Grubu */}
-            <div className="space-y-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200/80 dark:border-slate-800">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                B — Söndürücü Sistemi ve Tasarım Belgeleri
-              </h4>
-              {[
-                { code: 'f1_b1', q: 'F1-B1: Onaylı tasarım hesabı mevcut mu?', options: ['Evet', 'Hayır'] },
-                { code: 'f1_b2', q: 'F1-B2: Tasarım hesabının varlığı şirket kayıtlarında biliniyor mu?', options: ['Evet', 'Hayır', 'Bilinmiyor'] },
-                { code: 'f1_b3', q: 'F1-B3: Tüp dolum bilgileri ve etiketler doğrulanabiliyor mu?', options: ['Evet', 'Hayır'] },
-                { code: 'f1_b4', q: 'F1-B4: Kurulu gaz miktarı tasarım hesabıyla tam uyuşuyor mu?', options: ['Evet', 'Hayır'] },
-                { code: 'f1_b5', q: 'F1-B5: Nozul ve borulama hidrolik izometrik hesabı var mı?', options: ['Evet', 'Hayır'] },
-                { code: 'f1_b6', q: 'F1-B6: Yangın ve söndürme otomasyon senaryo dokümanı var mı?', options: ['Evet', 'Hayır'] }
-              ].map(item => (
-                <div key={item.code} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-lg bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs">
-                  <span className="font-medium text-slate-800 dark:text-slate-200">{item.q}</span>
-                  <div className="flex gap-1.5 shrink-0">
-                    {item.options.map(opt => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => setPhase1Answers({ ...phase1Answers, [item.code]: opt })}
-                        className={`px-3 py-1 rounded-md font-semibold transition-colors ${
-                          phase1Answers[item.code] === opt
-                            ? opt === 'Hayır' || opt === 'Bilinmiyor'
-                              ? 'bg-amber-600 text-white'
-                              : 'bg-[#0051d5] text-white'
-                            : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-                        }`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* C & D Grubu */}
-            <div className="space-y-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200/80 dark:border-slate-800">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                C & D — Dağıtım Engelleri ve Sızdırmazlık Açıklıkları (Fiziksel Yol)
-              </h4>
-              {[
-                { code: 'f1_c1', q: 'F1-C1: Nozul atış konisi önünde fiziksel engel var mı?', options: ['Evet', 'Hayır'] },
-                { code: 'f1_c2', q: 'F1-C2: Asma tavan üstü / yükseltilmiş döşeme koruma kapsamında mı?', options: ['Evet', 'Hayır', 'Bilinmiyor'] },
-                { code: 'f1_d1', q: 'F1-D1: Kablo / boru geçişlerinde yalıtılmamış açıklık var mı?', options: ['Evet', 'Hayır'] },
-                { code: 'f1_d2', q: 'F1-D2: Duvar, tavan veya döşemede yapısal delik/açıklık var mı?', options: ['Evet', 'Hayır'] },
-                { code: 'f1_d3', q: 'F1-D3: Kapı tam kapanıyor, fitil ve sızdırmazlık sağlıyor mu?', options: ['Evet', 'Hayır'] }
-              ].map(item => (
-                <div key={item.code} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-lg bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs">
-                  <span className="font-medium text-slate-800 dark:text-slate-200">{item.q}</span>
-                  <div className="flex gap-1.5 shrink-0">
-                    {item.options.map(opt => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => setPhase1Answers({ ...phase1Answers, [item.code]: opt })}
-                        className={`px-3 py-1 rounded-md font-semibold transition-colors ${
-                          phase1Answers[item.code] === opt
-                            ? (item.code === 'f1_d3' && opt === 'Hayır') || (item.code !== 'f1_d3' && opt === 'Evet')
-                              ? 'bg-red-600 text-white'
-                              : 'bg-[#0051d5] text-white'
-                            : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-                        }`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Sıkıştırmalı Fotoğraf Yükleyici & Önizleme */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200/80 dark:border-slate-800">
-              <ImageUploadWithPreview
-                facilityId={selectedFacilityId}
-                facilityName={activeFacility?.name}
-                photos={phase1Photos}
-                onChange={setPhase1Photos}
-                label="Faz 1 Saha Fotoğrafları ve Kanıtlar"
-                description="Oda genel görünümü, nozul atış hatları ve açıklık tespit fotoğraflarını yükleyin."
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Değerlendirme Notları</label>
-              <Input
-                placeholder="Ör: Kapı fitilinde yıpranma var, nozul önüne yeni pano yerleştirilmiş"
-                value={phase1Notes}
-                onChange={(e) => setPhase1Notes(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
-            <Button variant="outline" onClick={() => setCurrentStep(1)}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Geri (Konum Seçimi)
-            </Button>
-            <Button
-              onClick={() => savePhase1Mutation.mutate()}
-              disabled={savePhase1Mutation.isPending}
-              className="bg-[#0051d5] hover:bg-[#0042b0] text-white px-6"
-            >
-              {savePhase1Mutation.isPending ? 'Kaydediliyor...' : 'Faz 1’i Kaydet ve Faz 2’ye Geç'}
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      {/* ADIM 3: FAZ 2 — PERİYODİK KONTROL (26 MADDE & AĞIRLIKLI SKOR)              */}
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      {currentStep === 3 && (
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-6">
-          <div className="border-b border-slate-100 dark:border-slate-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <span className="text-xs font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 font-mono">
-                FAZ 2
-              </span>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-1">
-                26 Madde Yıllık Periyodik Kontrol Listesi
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                U: Uygun | UD: Uygun Değil | UY: Uygulanamaz. UD durumlarında sistem otomatik iş emri açar.
-              </p>
-            </div>
-            {/* Canlı Skor Rozeti */}
-            <div className="text-right bg-blue-50 dark:bg-blue-950/40 p-3 rounded-xl border border-blue-200/80 dark:border-blue-900/40">
-              <span className="text-[10px] uppercase font-bold text-slate-500">Mevcut Seviye</span>
-              <div className="text-base font-extrabold text-[#0051d5] dark:text-[#b4c5ff]">
-                Ağırlıklı Skor Motoru Aktif
-              </div>
-            </div>
-          </div>
-
-          {/* 26 Madde Tablosu */}
-          <div className="space-y-2">
-            {PERIODIC_QUESTIONS.map((q) => {
-              const currentResp = phase2Responses[q.code] || { status: 'U' };
-              const isUD = currentResp.status === 'UD';
-              const isUY = currentResp.status === 'UY';
-
-              return (
-                <div
-                  key={q.code}
-                  className={`p-3 rounded-xl border transition-all ${
-                    isUD
-                      ? 'bg-red-50/70 border-red-300 dark:bg-red-950/20 dark:border-red-900/60'
-                      : isUY
-                      ? 'bg-slate-50 border-slate-200 dark:bg-slate-900/40 dark:border-slate-800 opacity-75'
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-                  }`}
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-start gap-2.5">
-                      <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[11px] font-mono font-bold text-slate-700 dark:text-slate-300 mt-0.5">
-                        {q.code}
-                      </span>
-                      <div>
-                        <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                          {q.text}
-                          {q.level === 'Kritik' && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">
-                              Kritik
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[11px] text-slate-400">
-                          Sorumlu: {q.resp} {q.auto ? '· Otomatik Madde' : ''}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Butonlar: U / UD / UY */}
-                    <div className="flex items-center gap-1 shrink-0 self-end sm:self-center">
-                      <button
-                        type="button"
-                        disabled={q.auto}
-                        onClick={() =>
-                          setPhase2Responses({
-                            ...phase2Responses,
-                            [q.code]: { ...currentResp, status: 'U' }
-                          })
-                        }
-                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${
-                          currentResp.status === 'U'
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
-                        }`}
-                      >
-                        U (Uygun)
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={q.auto}
-                        onClick={() =>
-                          setPhase2Responses({
-                            ...phase2Responses,
-                            [q.code]: { ...currentResp, status: 'UD' }
-                          })
-                        }
-                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${
-                          currentResp.status === 'UD'
-                            ? 'bg-red-600 text-white'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
-                        }`}
-                      >
-                        UD (Uygun Değil)
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={q.auto}
-                        onClick={() =>
-                          setPhase2Responses({
-                            ...phase2Responses,
-                            [q.code]: { ...currentResp, status: 'UY' }
-                          })
-                        }
-                        className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors ${
-                          currentResp.status === 'UY'
-                            ? 'bg-slate-700 text-white'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'
-                        }`}
-                      >
-                        UY
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Eğer UD ise açıklama kutusu */}
-                  {isUD && (
-                    <div className="mt-2.5 pt-2 border-t border-red-200 dark:border-red-900/40">
-                      <Input
-                        placeholder="Uygunsuzluk detayını ve saha gözlemini yazın (Ör: Vana mührü kopmuş)..."
-                        value={currentResp.note || ''}
-                        onChange={(e) =>
-                          setPhase2Responses({
-                            ...phase2Responses,
-                            [q.code]: { ...currentResp, note: e.target.value }
-                          })
-                        }
-                        className="h-8 text-xs bg-white dark:bg-slate-900 border-red-300 dark:border-red-900"
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Fotoğraf Yükleyici */}
-          <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200/80 dark:border-slate-800">
-            <ImageUploadWithPreview
-              facilityId={selectedFacilityId}
-              facilityName={activeFacility?.name}
-              photos={phase2Photos}
-              onChange={setPhase2Photos}
-              label="Faz 2 Periyodik Kontrol Fotoğrafları"
-              description="Manometre ibreleri, panel ekranı ve etiketlerin net fotoğraflarını yükleyin."
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Genel Denetçi Notları</label>
-            <Input
-              placeholder="Yıllık periyodik kontrol genel tespit ve tavsiyeleri..."
-              value={phase2Notes}
-              onChange={(e) => setPhase2Notes(e.target.value)}
-              className="mt-1"
-            />
-          </div>
-
-          <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
-            <Button variant="outline" onClick={() => setCurrentStep(2)}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Geri (Faz 1)
-            </Button>
-            <Button
-              onClick={() => savePhase2Mutation.mutate()}
-              disabled={savePhase2Mutation.isPending}
-              className="bg-[#0051d5] hover:bg-[#0042b0] text-white px-6"
-            >
-              {savePhase2Mutation.isPending ? 'Hesaplanıyor...' : 'Faz 2’yi Kaydet ve Faz 3’e Geç'}
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      {/* ADIM 4: FAZ 3 — 6 AYLIK BAKIM (TÜP BAZLI ÇOKLU DEĞERLENDİRME)               */}
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      {currentStep === 4 && (
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-6">
-          <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
-            <span className="text-xs font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 font-mono">
-              FAZ 3
-            </span>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-1">
-              6 Aylık Bakım (Varlık / Tüp Bazlı Çoklu Değerlendirme)
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Spesifikasyon Bölüm 6 gereği, mahalde bulunan her tüp bağımsız olarak Gövde, Mühür, Basınç ve Emniyet yönünden denetlenir.
-            </p>
-          </div>
-
-          {/* Tüp Satırları */}
-          <div className="space-y-4">
-            {cylinderChecks.map((chk, idx) => (
-              <div
-                key={chk.cylinderId || idx}
-                className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-primary"></span>
-                    <span className="text-sm font-bold text-slate-900 dark:text-white">
-                      {chk.labelCode} — Seri No: <span className="font-mono text-primary">{chk.serialNumber}</span>
-                    </span>
-                  </div>
-                  <span className="text-xs text-slate-400">Tüp #{idx + 1}</span>
-                </div>
-
-                {/* 4 Parametre: Gövde, Mühür, Basınç, Emniyet */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
-                  {[
-                    { key: 'govde', label: 'Tüp Gövdesi' },
-                    { key: 'muhur', label: 'Emniyet Mührü' },
-                    { key: 'basinc', label: 'Basınç / Manometre' },
-                    { key: 'emniyet', label: 'Emniyet Tertibatı' }
-                  ].map(param => (
-                    <div key={param.key} className="bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
-                      <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{param.label}</span>
-                      <div className="flex gap-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = [...cylinderChecks];
-                            updated[idx][param.key] = 'U';
-                            setCylinderChecks(updated);
-                          }}
-                          className={`px-2 py-0.5 rounded text-xs font-bold ${
-                            chk[param.key] === 'U'
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-slate-100 dark:bg-slate-700 text-slate-500'
-                          }`}
-                        >
-                          U
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = [...cylinderChecks];
-                            updated[idx][param.key] = 'UD';
-                            setCylinderChecks(updated);
-                          }}
-                          className={`px-2 py-0.5 rounded text-xs font-bold ${
-                            chk[param.key] === 'UD'
-                              ? 'bg-red-600 text-white'
-                              : 'bg-slate-100 dark:bg-slate-700 text-slate-500'
-                          }`}
-                        >
-                          UD
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-
-            {cylinderChecks.length === 0 && (
-              <div className="p-6 bg-amber-50 dark:bg-amber-950/20 rounded-xl border border-amber-200 text-center text-xs text-amber-800">
-                Bu konuma ait henüz tanımlı tüp bulunamadı. Lütfen "Ayarlar" sayfasından konuma ait tüpleri ekleyin.
-              </div>
-            )}
-
-            {/* Panel & Hat Kontrolü */}
-            <div className="p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  Panel & Hat Kontrolü (Genel)
-                </span>
-                <p className="text-[11px] text-slate-400">Söndürme paneli ve tetikleme solenoid hatları kontrolü</p>
-              </div>
-              <div className="flex gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setPanelStatus('U')}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold ${
-                    panelStatus === 'U' ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500'
-                  }`}
-                >
-                  U (Uygun)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPanelStatus('UD')}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold ${
-                    panelStatus === 'UD' ? 'bg-red-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500'
-                  }`}
-                >
-                  UD (Arıza Var)
-                </button>
-              </div>
-            </div>
-
-            {/* Fotoğraf Yükleme */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200/80 dark:border-slate-800">
-              <ImageUploadWithPreview
-                facilityId={selectedFacilityId}
-                facilityName={activeFacility?.name}
-                photos={phase3Photos}
-                onChange={setPhase3Photos}
-                label="6 Aylık Bakım Servis Formu ve Tüp Fotoğrafları"
-                description="Yetkili firma servis formu ve tüplerin fotoğraflarını ekleyin."
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Bakım Açıklaması</label>
-              <Input
-                placeholder="Ör: Yetkili firma tarafından 6 aylık bakım formu tanzim edildi..."
-                value={phase3Notes}
-                onChange={(e) => setPhase3Notes(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
-            <Button variant="outline" onClick={() => setCurrentStep(3)}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Geri (Faz 2)
-            </Button>
-            <Button
-              onClick={() => savePhase3Mutation.mutate()}
-              disabled={savePhase3Mutation.isPending}
-              className="bg-[#0051d5] hover:bg-[#0042b0] text-white px-6"
-            >
-              {savePhase3Mutation.isPending ? 'Kaydediliyor...' : 'Faz 3’ü Kaydet ve Faz 4’e Geç'}
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      {/* ADIM 5: FAZ 4 — SIZDIRMAZLIK TESTİ (SOFT-LOCK & GEREKÇELİ GİRİŞ)            */}
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      {currentStep === 5 && (
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-6">
-          <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
-            <span className="text-xs font-bold px-2 py-0.5 rounded bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300 font-mono">
-              FAZ 4
-            </span>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-1">
-              Sızdırmazlık Testi (Door Fan / Basınç Tutma Testi)
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              NFPA 2001 ve ISO 14520 gereğince mahalin gaz tutma süresi (min. 10 dakika) test edilir.
-            </p>
-          </div>
-
-          {/* SOFT-LOCK UYARI BLOĞU (Spesifikasyon Bölüm 7) */}
-          {softLockInfo?.isLocked && !isUnconditional && (
-            <div className="p-5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-900/70 space-y-3 animate-in fade-in duration-300">
-              <div className="flex items-start gap-3">
-                <Lock className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-sm font-bold text-amber-900 dark:text-amber-300">
-                    Ön Koşul Uyarısı (Soft-Lock)
-                  </h4>
-                  <p className="text-xs text-amber-800 dark:text-amber-400 mt-1 leading-relaxed">
-                    {softLockInfo.message} Sahada delik/açıklık veya fitil problemi varken test yapılması testin kalmasına neden olabilir.
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-2 flex flex-col sm:flex-row items-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => navigate('/operations-management')}
-                  className="w-full sm:w-auto text-xs bg-white text-slate-700"
-                >
-                  Vazgeç / Önce Saha İşlerini Tamamla
-                </Button>
-                <Button
-                  onClick={() => setIsUnconditional(true)}
-                  className="w-full sm:w-auto text-xs bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-1.5"
-                >
-                  <Unlock className="w-3.5 h-3.5" />
-                  Gerekçeli İstisnai Giriş Yap (Soft-Lock Aşımı)
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Gerekçeli Giriş Seçimi */}
-          {isUnconditional && (
-            <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-blue-900 dark:text-blue-300">
-                <Info className="w-4 h-4" />
-                İstisnai Test Giriş Gerekçesi (Zorunlu)
-              </div>
-              <select
-                value={overrideReason}
-                onChange={(e) => setOverrideReason(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-900 text-xs font-medium"
-              >
-                <option value="Resmi periyot son günü">Resmi periyot son günü (Yasal süre dolumu)</option>
-                <option value="Firma sahada hazır">Yetkili firma sahada ve cihaz kurulu hazır</option>
-                <option value="Müşteri/Yönetim talebi">Müşteri / Üst Yönetim doğrudan denetim talebi</option>
-              </select>
-              <span className="text-[10px] text-blue-600 dark:text-blue-400 block">
-                Bu kayıt raporlara "Ön Koşulsuz / İstisnai Yapıldı" bayrağı ile işlenecektir.
-              </span>
-            </div>
-          )}
-
-          {/* Test Formu */}
-          {(!softLockInfo?.isLocked || isUnconditional) && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Test Tarihi *</label>
-                  <Input
-                    type="date"
-                    value={testDate}
-                    onChange={(e) => setTestDate(e.target.value)}
-                    className="h-10 mt-1"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    Ölçülen Gaz Tutma Süresi (Dakika) *
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    placeholder="Ör: 11.5"
-                    value={retentionTime}
-                    onChange={(e) => {
-                      setRetentionTime(e.target.value);
-                      const val = parseFloat(e.target.value);
-                      if (!isNaN(val)) {
-                        setTestResult(val >= 10.0 ? 'Gecti' : 'Kaldi');
-                      }
-                    }}
-                    className="h-10 mt-1"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Test Sonucu *</label>
-                  <select
-                    value={testResult}
-                    onChange={(e) => setTestResult(e.target.value as any)}
-                    className={`w-full h-10 px-3 rounded-xl border text-sm font-bold mt-1 ${
-                      testResult === 'Gecti'
-                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300'
-                        : 'bg-red-50 text-red-800 border-red-300 dark:bg-red-950/40 dark:text-red-300'
-                    }`}
-                  >
-                    <option value="Gecti">GEÇTİ (Standart Sağlandı - 365 Gün Geçerli)</option>
-                    <option value="Kaldi">KALDI (Başarısız - Otomatik İş Açılır)</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Sıkıştırmalı Rapor & Foto Yükleme */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200/80 dark:border-slate-800">
-                <ImageUploadWithPreview
-                  facilityId={selectedFacilityId}
-                  facilityName={activeFacility?.name}
-                  photos={testPhotos}
-                  onChange={setTestPhotos}
-                  label="Test Raporu Belgesi (PDF veya Görsel)"
-                  description="Yetkili test kuruluşunun verdiği Door Fan Test Raporunu veya sertifikasını yükleyin."
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Test Notları</label>
-                <Input
-                  placeholder="Test cihazı modeli, teknisyen adı veya tespit edilen sızıntı detayları..."
-                  value={testNotes}
-                  onChange={(e) => setTestNotes(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
-            <Button variant="outline" onClick={() => setCurrentStep(4)}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Geri (Faz 3)
-            </Button>
-            <Button
-              disabled={(!softLockInfo?.isLocked ? false : !isUnconditional) || savePhase4Mutation.isPending}
-              onClick={() => savePhase4Mutation.mutate()}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6"
-            >
-              {savePhase4Mutation.isPending ? 'Kaydediliyor...' : 'Testi Sisteme Kaydet ve Bitir'}
-              <CheckCircle2 className="w-4 h-4 ml-2" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      {/* ADIM 6: ÖZET VE TAMAMLANMA                                                 */}
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      {currentStep === 6 && (
-        <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200/80 dark:border-slate-800 text-center space-y-6">
-          <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-sm">
-            <CheckCircle2 className="w-10 h-10" />
-          </div>
-
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-              Denetim Süreci Başarıyla Tamamlandı!
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-lg mx-auto">
-              Mahal için tüm faz kontrolleri sisteme aktarılmış, uygunsuzluklar kanıt gerektiren iş emirlerine dönüştürülmüştür.
-            </p>
-          </div>
-
-          {/* Sonuç Kartları */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto text-left text-xs">
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-              <span className="text-slate-400 block mb-1">Faz 2 Uygunluk Skoru</span>
-              <span className="text-lg font-bold text-[#0051d5] dark:text-[#b4c5ff]">
-                %{createdSummary.phase2?.complianceScore ?? 100} (Seviye {createdSummary.phase2?.ratingGrade ?? 'A'})
-              </span>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-              <span className="text-slate-400 block mb-1">Açılan Otomatik İşler</span>
-              <span className="text-lg font-bold text-amber-600 dark:text-amber-400">
-                {(createdSummary.phase1?.openedJobsCount || 0) + (createdSummary.phase2?.openedJobsCount || 0) + (createdSummary.phase3?.openedJobsCount || 0)} İş Emri
-              </span>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-              <span className="text-slate-400 block mb-1">Sızdırmazlık Testi</span>
-              <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                {createdSummary.phase4?.test?.result || 'Geçti'}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-center gap-3 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setCurrentStep(1);
-                setSelectedLocationId('');
-              }}
-              className="rounded-xl px-5"
-            >
-              Başka Bir Konum Denetle
-            </Button>
-            <Button
-              onClick={() => navigate('/operations-management')}
-              className="bg-[#0051d5] hover:bg-[#0042b0] text-white rounded-xl px-6"
-            >
-              Operasyon Yönetimine Dön
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      {/* YENİ MAHAL / KONUM TANIMLAMA MODALI                                        */}
-      {/* ────────────────────────────────────────────────────────────────────────── */}
-      <Dialog open={isAddLocationModalOpen} onOpenChange={setIsAddLocationModalOpen}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={isExitConfirmOpen} onOpenChange={setIsExitConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-primary" />
-              Yeni Korunan Mahal / Konum Tanımla
+            <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center mb-2">
+              <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <DialogTitle className="text-base font-bold text-slate-900 dark:text-white">
+              Denetimden Çıkılsın mı?
             </DialogTitle>
-            <DialogDescription className="text-xs">
-              Bu tesisteki gazlı söndürme mahallini tanımlayın. Bina, Blok ve Kat bilgisi ayarlarınızdan otomatik eşleştirilir.
+            <DialogDescription className="text-xs text-slate-500 pt-1 leading-relaxed">
+              Şu an {currentQuestionIndex + 1}. sorudasınız. Çıkış yaparken mevcut yanıtlarınızı <strong>"Devam Ediyor"</strong> olarak kaydedebilir veya kaydetmeden çıkabilirsiniz.
             </DialogDescription>
           </DialogHeader>
-
-          <div className="space-y-4 py-2 text-xs">
-            {/* Bina, Blok ve Kat Seçimi */}
-            <div className="p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-3">
-              <div className="font-semibold text-slate-800 dark:text-slate-200 flex items-center justify-between">
-                <span>1. Fiziksel Konum (Bina / Blok / Kat)</span>
-                {buildingFloors.length > 0 && (
-                  <span className="text-[11px] text-muted-foreground font-normal">
-                    {buildingFloors.length} tanımlı kat mevcut
-                  </span>
-                )}
-              </div>
-
-              {buildingFloors.length > 0 ? (
-                <div>
-                  <Label className="text-[11px] font-semibold text-muted-foreground mb-1 block">
-                    Kayıtlı Bina/Kat Listesinden Seçin:
-                  </Label>
-                  <select
-                    className="w-full h-10 px-3 rounded-lg border text-xs bg-background"
-                    value={`${newLocationForm.building}|||${newLocationForm.block || ''}|||${newLocationForm.floor}`}
-                    onChange={(e) => {
-                      const [b, blk, f] = e.target.value.split('|||');
-                      setNewLocationForm(prev => ({
-                        ...prev,
-                        building: b,
-                        block: blk,
-                        floor: f
-                      }));
-                    }}
-                  >
-                    {buildingFloors.map((bf: any) => {
-                      const display = `${bf.building}${bf.block ? ` (${bf.block})` : ''} - ${bf.floor}`;
-                      const val = `${bf.building}|||${bf.block || ''}|||${bf.floor}`;
-                      return (
-                        <option key={bf.id} value={val}>
-                          {display}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <Label className="text-[11px] font-semibold">Bina *</Label>
-                    <Input
-                      value={newLocationForm.building}
-                      onChange={e => setNewLocationForm(prev => ({ ...prev, building: e.target.value }))}
-                      placeholder="Ana Bina"
-                      className="h-9 text-xs mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[11px] font-semibold">Blok</Label>
-                    <Input
-                      value={newLocationForm.block}
-                      onChange={e => setNewLocationForm(prev => ({ ...prev, block: e.target.value }))}
-                      placeholder="A Blok"
-                      className="h-9 text-xs mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[11px] font-semibold">Kat *</Label>
-                    <Input
-                      value={newLocationForm.floor}
-                      onChange={e => setNewLocationForm(prev => ({ ...prev, floor: e.target.value }))}
-                      placeholder="Zemin Kat"
-                      className="h-9 text-xs mt-1"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Mahal / Korunan Alan Bilgileri */}
-            <div className="space-y-3">
-              <div className="font-semibold text-slate-800 dark:text-slate-200">
-                2. Korunan Mahal ve Sistem Detayı
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-[11px] font-semibold">Mahal Tipi *</Label>
-                  <select
-                    value={newLocationForm.roomType}
-                    onChange={e => setNewLocationForm(prev => ({ ...prev, roomType: e.target.value }))}
-                    className="w-full h-9 px-3 rounded-lg border text-xs bg-background mt-1"
-                  >
-                    {[
-                      'Sunucu Odası', 'Sistem Odası', 'UPS Odası', 'Trafo Odası', 'Arşiv Odası',
-                      'MCC Panosu', 'ADP Pano Odası', 'Elektrik Panosu', 'Kat Panosu', 'Radyoloji Odası',
-                      'Hücre Odası', 'CCTV Odası', 'Bedaş Odası', 'Anjiyo Odası', 'Jeneratör Odası', 'Diğer'
-                    ].map(type => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <Label className="text-[11px] font-semibold">Özel Mahal Adı / Açıklama</Label>
-                  <Input
-                    value={newLocationForm.customRoomName}
-                    onChange={e => setNewLocationForm(prev => ({ ...prev, customRoomName: e.target.value }))}
-                    placeholder="Örn: B1 Veri Merkezi Sunucu Odası"
-                    className="h-9 text-xs mt-1"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label className="text-[11px] font-semibold">Gaz / Sistem Tipi</Label>
-                  <select
-                    value={newLocationForm.systemType}
-                    onChange={e => setNewLocationForm(prev => ({ ...prev, systemType: e.target.value }))}
-                    className="w-full h-9 px-3 rounded-lg border text-xs bg-background mt-1"
-                  >
-                    <option value="FM-200">FM-200 (HFC-227ea)</option>
-                    <option value="Novec1230">Novec 1230 (FK-5-1-12)</option>
-                    <option value="CO2">CO2 (Karbondioksit)</option>
-                    <option value="Inergen">Inergen (IG-541)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <Label className="text-[11px] font-semibold">Tüp Sayısı (Adet) *</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={newLocationForm.cylinderCount}
-                    onChange={e => setNewLocationForm(prev => ({ ...prev, cylinderCount: parseInt(e.target.value) || 1 }))}
-                    className="h-9 text-xs mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-[11px] font-semibold">Oda Hacmi (m³)</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={newLocationForm.roomVolumeM3}
-                    onChange={e => setNewLocationForm(prev => ({ ...prev, roomVolumeM3: e.target.value }))}
-                    placeholder="Örn: 48.5"
-                    className="h-9 text-xs mt-1"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-[11px] font-semibold">Panel Marka / Modeli</Label>
-                <Input
-                  value={newLocationForm.panelType}
-                  onChange={e => setNewLocationForm(prev => ({ ...prev, panelType: e.target.value }))}
-                  placeholder="Örn: Kentec Sigma A-XT, Notifier NFS2"
-                  className="h-9 text-xs mt-1"
-                />
-              </div>
-
-              <div>
-                <Label className="text-[11px] font-semibold">Ek Notlar</Label>
-                <Input
-                  value={newLocationForm.notes}
-                  onChange={e => setNewLocationForm(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Sistemle ilgili özel notlar..."
-                  className="h-9 text-xs mt-1"
-                />
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t">
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 justify-end mt-4">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsAddLocationModalOpen(false)}
+              onClick={() => setIsExitConfirmOpen(false)}
+              className="text-xs"
+            >
+              Vazgeç (Denetime Dön)
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={saveInspectionMutation.isPending}
+              onClick={() => {
+                setIsExitConfirmOpen(false);
+                saveInspectionMutation.mutate({ isDraft: true });
+              }}
+              className="text-xs bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200 font-semibold"
+            >
+              {saveInspectionMutation.isPending ? 'Kaydediliyor...' : 'Taslak Kaydet & Çık'}
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                setIsExitConfirmOpen(false);
+                setIsWizardOpen(false);
+                setEditingInspectionId(null);
+                toast.info('Denetim ekranı kapatıldı.');
+              }}
+              className="text-xs"
+            >
+              Kaydetmeden Çık
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {/* PANO TÜRÜ / MAHAL ADI DÜZENLEME MODAL DİALOG                                */}
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      <Dialog open={isEditingLocationDetails} onOpenChange={setIsEditingLocationDetails}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-950/50 flex items-center justify-center mb-2">
+              <Settings2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <DialogTitle className="text-base font-bold text-slate-900 dark:text-white">
+              Pano Türü ve Mahal Adını Düzenle
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 pt-1 leading-relaxed">
+              Bu mahalin veya panonun tipini yanlış seçtiyseniz (örn: ADP Panosu yerine Kat Panosu) buradan değiştirebilirsiniz. Bu değişiklik mevcut denetime ve bağlı iş listesine anında yansır.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Pano / Mahal Türü:
+              </Label>
+              <select
+                value={editRoomType}
+                onChange={(e) => setEditRoomType(e.target.value)}
+                className="w-full mt-1.5 h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-medium focus:ring-2 focus:ring-blue-500"
+              >
+                {availableRoomTypes.map((pt: string) => (
+                  <option key={pt} value={pt}>{pt}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Özel Mahal / Pano Tanımı (Opsiyonel):
+              </Label>
+              <Input
+                value={editCustomRoomName}
+                onChange={(e) => setEditCustomRoomName(e.target.value)}
+                placeholder="Örn: Kat Panosu (Yoğun Bakım Yanı)"
+                className="mt-1.5 h-10 text-xs"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 justify-end mt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditingLocationDetails(false)}
+              className="text-xs"
             >
               İptal
             </Button>
             <Button
               size="sm"
-              onClick={() => addLocationMutation.mutate(newLocationForm)}
-              disabled={addLocationMutation.isPending || !newLocationForm.roomType}
-              className="bg-[#0051d5] hover:bg-[#0042b0] text-white"
+              disabled={updateLocationMutation.isPending || !activeLocation?.id}
+              onClick={() => {
+                if (activeLocation?.id) {
+                  updateLocationMutation.mutate({
+                    locId: activeLocation.id,
+                    roomType: editRoomType,
+                    customRoomName: editCustomRoomName
+                  });
+                }
+              }}
+              className="text-xs bg-[#0051d5] hover:bg-blue-700 text-white font-semibold"
             >
-              {addLocationMutation.isPending ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                  Kaydediliyor...
-                </>
-              ) : (
-                'Mahali Tanımla ve Seç'
-              )}
+              {updateLocationMutation.isPending ? 'Güncelleniyor...' : 'Pano Türünü Kaydet'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {/* DENETİMİ TAMAMEN SİLME ONAY MODAL DİALOG                                   */}
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      <Dialog open={!!inspectionToDelete} onOpenChange={(open) => !open && setInspectionToDelete(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-950/50 flex items-center justify-center mb-2">
+              <Trash2 className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+            </div>
+            <DialogTitle className="text-base font-bold text-slate-900 dark:text-white">
+              Denetim Kaydını Sil
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 pt-1 leading-relaxed">
+              <strong>{inspectionToDelete?.location?.systemUid}</strong> - {inspectionToDelete?.location?.customRoomName || inspectionToDelete?.location?.roomType} mahaline ait denetim kaydını silmek üzeresiniz.
+              <br /><br />
+              <span className="text-rose-600 font-semibold">Dikkat:</span> Bu denetime bağlı oluşturulmuş iş emirleri de silinecektir. Bu işlem geri alınamaz.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 justify-end mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setInspectionToDelete(null)}
+              className="text-xs"
+            >
+              Vazgeç
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={deleteInspectionMutation.isPending}
+              onClick={() => {
+                if (inspectionToDelete?.id) {
+                  deleteInspectionMutation.mutate(inspectionToDelete.id);
+                }
+              }}
+              className="text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white"
+            >
+              {deleteInspectionMutation.isPending ? 'Siliniyor...' : 'Evet, Denetimi Sil'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -98,6 +98,105 @@ router.post('/upload', authMiddleware, upload.array('files', 20), async (req: an
 // ──────────────────────────────────────────────────────────────────────────────
 // AYARLAR & REFERANS METİNLERİ
 // ──────────────────────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// AYARLAR & 25 MADDELİK SIZDIRMAZLIK VE SİSTEM SORU SETİ
+// ──────────────────────────────────────────────────────────────────────────────
+export const DEFAULT_FM200_QUESTIONS = [
+  { id: 1, category: 'Fiziksel Güvenlik ve Ortam', text: 'Gaz tüpleri mahal dışında ve yetkisiz erişimden korunacak şekilde mi?', weight: 7, criticality: 'Standart', isSealing: false },
+  { id: 2, category: 'Fiziksel Güvenlik ve Ortam', text: 'Gaz tüpleri doğrudan güneş ışığı, ısı veya titreşime maruz kalıyor mu?', weight: 7, criticality: 'Standart', isSealing: false },
+  { id: 3, category: 'Fiziksel Güvenlik ve Ortam', text: 'Kontrol paneli mahal dışında ve korunmuş şekilde mi?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 4, category: 'Fiziksel Güvenlik ve Ortam', text: 'Duvar, tavan, döşeme geçişleri ve kablo tavalarında sızdırmazlık tam mı?', weight: 10, criticality: 'KRİTİK', isSealing: true },
+  { id: 5, category: 'Fiziksel Güvenlik ve Ortam', text: 'Kapı altları, contalar ve birleşim yerleri yeterli sızdırmazlıkta mı?', weight: 10, criticality: 'Yüksek', isSealing: true },
+  { id: 6, category: 'Fiziksel Güvenlik ve Ortam', text: 'Havalandırma açıklıkları/damperler gaz boşalmasında otomatik kapanıyor mu?', weight: 10, criticality: 'KRİTİK', isSealing: true },
+  { id: 7, category: 'Fiziksel Güvenlik ve Ortam', text: 'Odanın mevcut kullanım düzeni ve net hacmi tasarım hacmiyle uyumlu mu?', weight: 10, criticality: 'Standart', isSealing: true },
+  { id: 8, category: 'Fiziksel Güvenlik ve Ortam', text: 'Güncel Door Fan Test raporu var mı ve gaz tutma süresi standardı sağlıyor mu?', weight: 10, criticality: 'KRİTİK', isSealing: true },
+  { id: 9, category: 'Etiketleme ve İşaretleme', text: 'Tüpler üzerinde üretici, içerik, seri no etiketleri okunabilir mi?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 10, category: 'Etiketleme ve İşaretleme', text: 'Tüpler üzerinde güncel dolum ve kontrol tarihleri mevcut mu?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 11, category: 'Etiketleme ve İşaretleme', text: 'Giriş kapısında tehlike uyarı levhası var mı?', weight: 3, criticality: 'Düşük', isSealing: false },
+  { id: 12, category: 'Tesisat ve Donanım', text: 'Tüpler dolu, kullanıma hazır ve manometre basınçları yeşil alanda mı?', weight: 10, criticality: 'KRİTİK', isSealing: false },
+  { id: 13, category: 'Tesisat ve Donanım', text: 'Sistem normal işletim koşullarında "Otomatik" modda mı?', weight: 5, criticality: 'KRİTİK', isSealing: false },
+  { id: 14, category: 'Tesisat ve Donanım', text: 'Acil durdurma butonu mahal dışında, erişilebilir ve çalışır durumda mı?', weight: 5, criticality: 'Standart', isSealing: false },
+  { id: 15, category: 'Tesisat ve Donanım', text: 'Nozul atış yönünde gaz dağılımını engelleyen kabin, tava vb. engel var mı?', weight: 10, criticality: 'KRİTİK', isSealing: false },
+  { id: 16, category: 'Tesisat ve Donanım', text: 'Asma tavan veya yükseltilmiş döşemede ayrı nozul koruması var mı?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 17, category: 'Tesisat ve Donanım', text: 'Dedektörler yangını erken algılayacak konumda mı?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 18, category: 'Tesisat ve Donanım', text: 'Dedektör çevrelerinde hava akışını/dumanı engelleyen bariyer var mı?', weight: 7, criticality: 'Standart', isSealing: false },
+  { id: 19, category: 'Tesisat ve Donanım', text: 'Asma tavan ve döşeme altında gereken algılama sağlanmış mı?', weight: 7, criticality: 'Standart', isSealing: false },
+  { id: 20, category: 'Periyodik Kontrol & Bakım', text: 'Yetkili kurum periyodik kontrol raporları eksiksiz ve güncel mi?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 21, category: 'Periyodik Kontrol & Bakım', text: 'Üretici talimatlarına uygun düzenli bakım kayıtları mevcut mu?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 22, category: 'Acil Durum Senaryoları', text: 'Boşalma öncesi çalışanları uyaran sesli ve ışıklı alarm sistemi var mı?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 23, category: 'Acil Durum Senaryoları', text: 'Genel yangın ihbar sistemine entegrasyon test edilmiş mi?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 24, category: 'Acil Durum Senaryoları', text: 'Yangın damperi ve havalandırma durdurma otomasyonu entegre çalışıyor mu?', weight: 10, criticality: 'Standart', isSealing: false },
+  { id: 25, category: 'Acil Durum Senaryoları', text: 'Boşalma sonrası gaz tahliyesi için mekanik/doğal tahliye sistemi var mı?', weight: 7, criticality: 'Standart', isSealing: false }
+];
+
+export const DEFAULT_ISSUE_TEMPLATES: Record<number, { teknik: string[]; firma: string[] }> = {
+  4: {
+    teknik: [
+      '1-5 cm arası kablo geçiş boşluğu mevcut; yangın durdurucu mastik/harç ile Teknik Hizmetler tarafından kapatılmalı.',
+      'Kablo tavası çevresinde lokal açıklık/çatlak var; yangın yastığı ile doldurulmalı.',
+      '10 cm\'den küçük havalandırma kenar açıklığı yangın köpüğü ile izole edilecek.'
+    ],
+    firma: [
+      'Açıklık 10 cm\'den büyük; alçıpan ve yangın bariyer levhası ile yetkili firma tarafından kapatılmalı.',
+      'Tavan/duvar geçişinde büyük yapısal açıklık (>15 cm); taşyünü ve yangın yalıtımı firma tarafından yapılmalı.',
+      'Bölme bütünlüğü bozulmuş; kalıcı mimari sızdırmazlık imalatı için dış firma desteği gerekli.'
+    ]
+  },
+  5: {
+    teknik: [
+      'Kapı altı süpürgeliği/fitili aşınmış; Teknik Hizmetler tarafından fitil yenilenecek.',
+      'Kapı hidroliğinde ayar bozukluğu var; Teknik Hizmetler tarafından kapanma hızı ve mandalı ayarlanmalı.'
+    ],
+    firma: [
+      'Kapı kasası ve kanadı deforme olmuş; yangın kapısı revizyonu/değişimi firma tarafından yapılmalı.',
+      'Yangın kapısı conta ve eşik profili eksik; standartlara uygun sızdırmaz kapı takımı temin edilmeli.'
+    ]
+  },
+  6: {
+    teknik: [
+      'Damper mekanik kolunda sıkışma var; yağlama ve temizlik Teknik Hizmetler tarafından yapılacak.',
+      'Damper mikroanahtarı gevşemiş; fiziksel montajı sıkılaştırılacak.'
+    ],
+    firma: [
+      'Damper motoru/patlayıcı solenoidi arızalı veya panel bağlantısı yok; yetkili firma tarafından onarılmalı.',
+      'Havalandırma kanalı üzerinde yangın damperi mevcut değil; kanal tipi motorlu yangın damperi montajı yapılmalı.'
+    ]
+  },
+  8: {
+    teknik: [],
+    firma: [
+      'Door Fan Test raporu mevcut değil/süresi dolmuş; akredite firmaya test yaptırılmalı.',
+      'Door Fan Testi yapılmış ancak gaz tutma süresi standart sınırın (10 dk) altında kalarak başarısız olmuştur; sızdırmazlık iyileştirmesi ve yeniden test gerekli.'
+    ]
+  },
+  12: {
+    teknik: [
+      'Tüp manometre camı kirli/hasarlı; yerinde fiziksel kontrol ve temizlik yapılacak.'
+    ],
+    firma: [
+      'Tüp manometresi kırmızı alanda (gaz kaçağı/basınç kaybı); acil firma servisi ve yeniden dolum gerekli.',
+      'Tüp hidrostatik test süresi (10 yıl) dolmuş; periyodik test ve yeniden belgelendirme yapılmalı.'
+    ]
+  },
+  13: {
+    teknik: [
+      'Panel manuel modda unutulmuş; Teknik Hizmetler tarafından anahtarlı otomatik konuma alındı.'
+    ],
+    firma: [
+      'Söndürme paneli otomatik modda arıza veriyor; yetkili firma tarafından kontrol kartı incelenmeli.'
+    ]
+  },
+  15: {
+    teknik: [
+      'Nozul atış hattı üzerinde sunucu kabini/raf malzemesi var; yerleşimi Teknik Hizmetler tarafından kaydırılmalı.',
+      'Nozul önündeki kablo tavası nozul püskürtme açısını daraltıyor; lokal tava revizyonu yapılmalı.'
+    ],
+    firma: [
+      'Mahal oda mimarisi değişmiş, mevcut nozul sayısı ve konumları yeni odayı kapsayamıyor; hidrolik proje revizyonu ve nozul ekleme gerekli.'
+    ]
+  }
+};
+
 const DEFAULT_ROOM_TYPES = [
   'Sunucu Odası', 'Sistem Odası', 'UPS Odası', 'Trafo Odası', 'Arşiv Odası',
   'MCC Panosu', 'ADP Pano Odası', 'Elektrik Panosu', 'Kat Panosu', 'Radyoloji Odası',
@@ -112,9 +211,29 @@ router.get('/settings', authMiddleware, async (req: AuthRequest, res: Response) 
         data: {
           id: 'default',
           roomTypes: DEFAULT_ROOM_TYPES,
-          systemTypes: ['FM-200', 'Novec1230', 'CO2', 'Inergen']
+          systemTypes: ['FM-200', 'Novec1230', 'CO2', 'Inergen'],
+          checklistQuestions: DEFAULT_FM200_QUESTIONS as any,
+          issueTemplates: DEFAULT_ISSUE_TEMPLATES as any
         }
       });
+    } else {
+      // Eğer sorular veya hazır kalıplar henüz atanmamışsa varsayılanları doldur
+      let needsUpdate = false;
+      const updateData: any = {};
+      if (!setting.checklistQuestions) {
+        updateData.checklistQuestions = DEFAULT_FM200_QUESTIONS;
+        needsUpdate = true;
+      }
+      if (!setting.issueTemplates) {
+        updateData.issueTemplates = DEFAULT_ISSUE_TEMPLATES;
+        needsUpdate = true;
+      }
+      if (needsUpdate) {
+        setting = await prisma.fm200Setting.update({
+          where: { id: 'default' },
+          data: updateData
+        });
+      }
     }
     res.json(setting);
   } catch (error) {
@@ -125,17 +244,21 @@ router.get('/settings', authMiddleware, async (req: AuthRequest, res: Response) 
 
 router.put('/settings', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { roomTypes, systemTypes } = req.body;
+    const { roomTypes, systemTypes, checklistQuestions, issueTemplates } = req.body;
     const updated = await prisma.fm200Setting.upsert({
       where: { id: 'default' },
       update: {
         ...(roomTypes && { roomTypes }),
-        ...(systemTypes && { systemTypes })
+        ...(systemTypes && { systemTypes }),
+        ...(checklistQuestions && { checklistQuestions }),
+        ...(issueTemplates && { issueTemplates })
       },
       create: {
         id: 'default',
         roomTypes: roomTypes || DEFAULT_ROOM_TYPES,
-        systemTypes: systemTypes || ['FM-200', 'Novec1230', 'CO2', 'Inergen']
+        systemTypes: systemTypes || ['FM-200', 'Novec1230', 'CO2', 'Inergen'],
+        checklistQuestions: checklistQuestions || (DEFAULT_FM200_QUESTIONS as any),
+        issueTemplates: issueTemplates || (DEFAULT_ISSUE_TEMPLATES as any)
       }
     });
     res.json(updated);
@@ -273,19 +396,94 @@ router.get('/locations/:id', authMiddleware, async (req: AuthRequest, res: Respo
   }
 });
 
+// Kat sıralama ağırlık motoru: En üstten (Çatı, Yüksek Katlar) en alta (Zemin, Bodrum Katlar: B1, B2... B7)
+export const getFloorSortWeight = (floorStr: string): number => {
+  if (!floorStr) return 0;
+  const s = floorStr.trim().toUpperCase();
+
+  // Çatı, Teras, Asansör Kulesi -> En üst
+  if (s.includes('ÇATI') || s.includes('CATI') || s.includes('ROOF')) return 9999;
+  if (s.includes('TERAS') || s.includes('KULE')) return 9990;
+
+  // Bodrum Katlar: B1, B2, B-1, -1, -2, BODRUM vb. -> Negatif ağırlık
+  // Örn: B1 -> -1, B2 -> -2, B5 -> -5 (böylece B1 > B2 > B5 şeklinde sıralanır)
+  const bodrumMatch = s.match(/(?:B|BODRUM|KAT\s*-\s*|-)\s*(\d+)/i);
+  if (bodrumMatch) {
+    const num = parseInt(bodrumMatch[1], 10);
+    return -num;
+  }
+  if (s.includes('BODRUM') || s.includes('SUB') || s.includes('KAZAN')) return -0.5;
+
+  // Zemin Kat / Giriş Kat / 0. Kat -> 0
+  if (s.includes('ZEMİN') || s.includes('ZEMIN') || s.includes('GİRİŞ') || s.includes('GIRIS') || s.includes('LOBİ') || s.includes('LOBI')) {
+    return 0;
+  }
+  if (/^0(?:\.|\s*kat)?$/i.test(s) || s === '0') {
+    return 0;
+  }
+
+  // Tesisat Katı veya Ara Kat varsa numara ile kombine et
+  const isAra = s.includes('ARA') || s.includes('MEZZANINE');
+  const isTesisat = s.includes('TESİSAT') || s.includes('TESISAT');
+
+  // Normal Pozitif Katlar: 11.Kat, 10.Kat, Kat 4, 3 vb.
+  const posMatch = s.match(/(\d+)/);
+  if (posMatch) {
+    let num = parseInt(posMatch[1], 10);
+    if (isAra || isTesisat) {
+      return num + 0.5; // Örn 4. Kat Tesisat Katı -> 4.5
+    }
+    return num;
+  }
+
+  return 0;
+};
+
+// Kat listesini blok/bina bazında yukarıdan aşağıya (en büyük kattan bodruma) sıralayan yardımcı
+export const sortFloorsDescending = <T extends { floor: string }>(items: T[]): T[] => {
+  return [...items].sort((a, b) => {
+    const weightA = getFloorSortWeight(a.floor);
+    const weightB = getFloorSortWeight(b.floor);
+    if (weightA !== weightB) {
+      return weightB - weightA; // Azalan sıra (En üst kat en başta)
+    }
+    return a.floor.localeCompare(b.floor, 'tr');
+  });
+};
+
 // Otomatik İndeks ve UID Üretici Yardımcı Fonksiyonu
-const generateLocationUid = async (facilityId: string, building: string, floor: string, roomType: string) => {
+// Kullanıcı kuralı: Aynı tesiste, aynı bina, aynı blok, aynı kat ve aynı oda türü (örn: A Blok 7. Kat - Kat Panosu)
+// seçildiğinde 1, 2, 3.. şeklinde otomatik sıralı numara atanır.
+const generateLocationUid = async (
+  facilityId: string,
+  building: string,
+  block: string | null | undefined,
+  floor: string,
+  roomType: string
+) => {
   const fac = await prisma.facility.findUnique({
     where: { id: facilityId },
     select: { shortName: true, name: true }
   });
   const facCode = (fac?.shortName || fac?.name || 'TES').toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 5) || 'TES01';
   
-  // Aynı tesiste bu mahal tipindeki mevcut konum sayısı
-  const count = await prisma.fm200Location.count({
-    where: { facilityId, roomType }
+  // Aynı tesiste, aynı bina, blok, kat ve mahal tipindeki mevcut konum sayısı
+  const whereSameLocation: any = {
+    facilityId,
+    building: building || 'Ana Bina',
+    floor: floor || 'Zemin Kat',
+    roomType
+  };
+  if (block) {
+    whereSameLocation.block = block;
+  } else {
+    whereSameLocation.block = null;
+  }
+
+  const countOnSameFloor = await prisma.fm200Location.count({
+    where: whereSameLocation
   });
-  const nextIndex = count + 1;
+  const nextIndex = countOnSameFloor + 1; // 1, 2, 3...
 
   // Mahal kodu kısaltması
   const mapCode: Record<string, string> = {
@@ -295,11 +493,13 @@ const generateLocationUid = async (facilityId: string, building: string, floor: 
     'Bedaş Odası': 'BDS', 'Anjiyo Odası': 'ANJ', 'Jeneratör Odası': 'JEN', 'Diğer': 'DGR'
   };
   const typeCode = mapCode[roomType] || 'MAH';
-  const cleanBuilding = building.replace(/[^A-Z0-9]/gi, '').substring(0, 3).toUpperCase() || 'B1';
-  const cleanFloor = floor.replace(/[^A-Z0-9]/gi, '').substring(0, 3).toUpperCase() || 'K0';
-  const paddedIndex = String(nextIndex).padStart(3, '0');
+  const cleanBuilding = (building || 'Ana').replace(/[^A-Z0-9]/gi, '').substring(0, 3).toUpperCase() || 'B1';
+  const cleanBlock = (block || '').replace(/[^A-Z0-9]/gi, '').substring(0, 3).toUpperCase();
+  const cleanFloor = (floor || 'ZEM').replace(/[^A-Z0-9]/gi, '').substring(0, 4).toUpperCase() || 'K0';
+  const paddedIndex = String(nextIndex).padStart(2, '0');
 
-  const systemUid = `${facCode}-${cleanBuilding}-${cleanFloor}-${typeCode}-${paddedIndex}`;
+  const blockPart = cleanBlock ? `-${cleanBlock}` : '';
+  const systemUid = `${facCode}-${cleanBuilding}${blockPart}-${cleanFloor}-${typeCode}-${paddedIndex}`;
   return { nextIndex, systemUid };
 };
 
@@ -318,7 +518,8 @@ router.post('/locations', authMiddleware, async (req: AuthRequest, res: Response
     const { nextIndex, systemUid } = await generateLocationUid(
       facilityId,
       building || 'Ana Bina',
-      floor || 'Zemin',
+      block || null,
+      floor || 'Zemin Kat',
       roomType
     );
 
@@ -472,9 +673,31 @@ router.get('/building-floors', authMiddleware, async (req: AuthRequest, res: Res
     }
     const items = await prisma.fm200BuildingFloor.findMany({
       where,
-      orderBy: [{ building: 'asc' }, { block: 'asc' }, { floor: 'asc' }]
+      orderBy: [{ building: 'asc' }, { block: 'asc' }]
     });
-    res.json(items);
+
+    // Gruplayarak veya doğrudan blok bazında katları yukarıdan aşağıya (en yüksek kattan bodruma) sıralayalım
+    const sorted = [...items].sort((a, b) => {
+      // 1. Bina karşılaştırma
+      const bComp = (a.building || '').localeCompare(b.building || '', 'tr');
+      if (bComp !== 0) return bComp;
+
+      // 2. Blok karşılaştırma
+      const blkA = a.block || '';
+      const blkB = b.block || '';
+      const blkComp = blkA.localeCompare(blkB, 'tr');
+      if (blkComp !== 0) return blkComp;
+
+      // 3. Kat yüksekliği (En yüksek kat/çatı en üstte, B1/B2/B5 en altta)
+      const weightA = getFloorSortWeight(a.floor);
+      const weightB = getFloorSortWeight(b.floor);
+      if (weightA !== weightB) {
+        return weightB - weightA; // Azalan sıra
+      }
+      return a.floor.localeCompare(b.floor, 'tr');
+    });
+
+    res.json(sorted);
   } catch (error) {
     console.error('FM200 get building floors error:', error);
     res.status(500).json({ error: 'Bina ve kat listesi getirilemedi' });
@@ -492,23 +715,53 @@ router.post('/building-floors', authMiddleware, async (req: AuthRequest, res: Re
       where: {
         facilityId_building_block_floor: {
           facilityId,
-          building: building || 'Ana Bina',
-          block: block || null,
-          floor
+          building: (building || 'Ana Bina').trim(),
+          block: block ? block.trim() : null,
+          floor: floor.trim()
         }
       },
       update: {},
       create: {
         facilityId,
-        building: building || 'Ana Bina',
-        block: block || null,
-        floor
+        building: (building || 'Ana Bina').trim(),
+        block: block ? block.trim() : null,
+        floor: floor.trim()
       }
     });
     res.json(item);
   } catch (error) {
     console.error('FM200 create building floor error:', error);
     res.status(500).json({ error: 'Bina/Kat kaydedilemedi' });
+  }
+});
+
+// Manuel Bina/Kat Güncelleme (Edit)
+router.put('/building-floors/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { building, block, floor } = req.body;
+    if (!floor || !floor.trim()) {
+      return res.status(400).json({ error: 'Kat bilgisi boş bırakılamaz' });
+    }
+
+    const existing = await prisma.fm200BuildingFloor.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Kayıt bulunamadı' });
+    }
+
+    const updated = await prisma.fm200BuildingFloor.update({
+      where: { id },
+      data: {
+        building: building !== undefined ? (building || 'Ana Bina').trim() : existing.building,
+        block: block !== undefined ? (block ? block.trim() : null) : existing.block,
+        floor: floor.trim()
+      }
+    });
+
+    res.json(updated);
+  } catch (error: any) {
+    console.error('FM200 update building floor error:', error);
+    res.status(500).json({ error: error.message || 'Kat güncellenemedi' });
   }
 });
 
@@ -530,28 +783,44 @@ router.get('/excel-template', authMiddleware, async (req: AuthRequest, res: Resp
   try {
     const sampleData = [
       {
-        'Tesis Adı': 'MP Adana',
         'Bina': 'Ana Bina',
         'Blok': 'A Blok',
-        'Kat': 'Zemin Kat'
+        'Kat': '11.Kat'
       },
       {
-        'Tesis Adı': 'MP Adana',
+        'Bina': 'Ana Bina',
+        'Blok': 'A Blok',
+        'Kat': '10.Kat'
+      },
+      {
         'Bina': 'Ana Bina',
         'Blok': 'A Blok',
         'Kat': '1.Kat'
       },
       {
-        'Tesis Adı': 'MP Adana',
         'Bina': 'Ana Bina',
-        'Blok': 'B Blok',
-        'Kat': 'B1.Kat'
+        'Blok': 'A Blok',
+        'Kat': '0. Kat'
       },
       {
-        'Tesis Adı': 'Liv Gaziantep',
         'Bina': 'Ana Bina',
-        'Blok': 'Ana Bina',
-        'Kat': 'Zemin Kat'
+        'Blok': 'A Blok',
+        'Kat': 'B1. Kat'
+      },
+      {
+        'Bina': 'Ana Bina',
+        'Blok': 'A Blok',
+        'Kat': 'B2. Kat'
+      },
+      {
+        'Bina': 'Ana Bina',
+        'Blok': 'C Blok',
+        'Kat': '3.Kat'
+      },
+      {
+        'Bina': 'Ek Bina',
+        'Blok': 'D Blok',
+        'Kat': '2.Kat'
       }
     ];
 
@@ -597,6 +866,7 @@ router.post('/import-excel', authMiddleware, excelUpload.single('file'), async (
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
+      // Kullanıcı kuralı: Tesis adı sütunu önemsenmeyebilir, formdan seçilen facilityId önceliklidir
       const rawFacilityName = (row['Tesis Adı'] || row['Tesis'] || '').toString().trim();
       const building = (row['Bina'] || 'Ana Bina').toString().trim();
       const block = row['Blok'] ? row['Blok'].toString().trim() : null;
@@ -605,7 +875,8 @@ router.post('/import-excel', authMiddleware, excelUpload.single('file'), async (
       if (!floor) continue;
 
       let targetFacilityId = facilityId;
-      if (rawFacilityName) {
+      // Eğer kullanıcı formdan belirli bir tesis seçmemişse ('all' veya boş ise) Excel'deki tesis adını eşleştirmeye çalış
+      if ((!targetFacilityId || targetFacilityId === 'all') && rawFacilityName) {
         const matched = allFacilities.find(f => 
           f.name.toLowerCase() === rawFacilityName.toLowerCase() ||
           (f.shortName && f.shortName.toLowerCase() === rawFacilityName.toLowerCase()) ||
@@ -617,8 +888,8 @@ router.post('/import-excel', authMiddleware, excelUpload.single('file'), async (
         }
       }
 
-      if (!targetFacilityId) {
-        errors.push(`Satır ${i + 2}: Tesis adı ("${rawFacilityName}") eşleştirilemedi.`);
+      if (!targetFacilityId || targetFacilityId === 'all') {
+        errors.push(`Satır ${i + 2}: Tesis seçilmemiş veya Excel'deki tesis adı ("${rawFacilityName}") eşleştirilemedi.`);
         continue;
       }
 
@@ -670,6 +941,11 @@ const triggerWorkOrder = async (params: {
   workType: 'Kucuk' | 'Buyuk';
   responsible: 'Teknik' | 'Firma';
   trackLane: 'Fiziksel' | 'Dokuman';
+  dueDate?: Date | null;
+  questionText?: string | null;
+  templates?: any[];
+  customNote?: string | null;
+  photos?: any[];
 }) => {
   // Mükerrer kontrolü: Aynı konum ve kaynak kod için Tamamlanmamış iş var mı?
   const existing = await prisma.fm200WorkOrder.findFirst({
@@ -682,11 +958,19 @@ const triggerWorkOrder = async (params: {
   });
 
   if (existing) {
-    // Eskalasyon: tekrar sayacını artır
+    // Eskalasyon: tekrar sayacını artır ve yeni detayları ekle
     return await prisma.fm200WorkOrder.update({
       where: { id: existing.id },
       data: {
         repeatCount: existing.repeatCount + 1,
+        title: params.title,
+        workType: params.workType,
+        responsible: params.responsible,
+        questionText: params.questionText !== undefined ? params.questionText : existing.questionText,
+        templates: (params.templates !== undefined ? params.templates : (existing.templates || [])) as any,
+        customNote: params.customNote !== undefined ? params.customNote : existing.customNote,
+        photos: (params.photos !== undefined && params.photos.length > 0 ? params.photos : (existing.photos || [])) as any,
+        dueDate: params.dueDate !== undefined ? params.dueDate : existing.dueDate,
         updatedAt: new Date()
       }
     });
@@ -703,7 +987,12 @@ const triggerWorkOrder = async (params: {
         responsible: params.responsible,
         trackLane: params.trackLane,
         status: 'Planlandi',
-        repeatCount: 1
+        repeatCount: 1,
+        dueDate: params.dueDate || null,
+        questionText: params.questionText || null,
+        templates: params.templates || [],
+        customNote: params.customNote || null,
+        photos: params.photos || []
       }
     });
   }
@@ -970,12 +1259,381 @@ router.get('/inspections/item2-status/:locationId', authMiddleware, async (req: 
   }
 });
 
-// Faz 2 Kaydet & Skor Hesapla
+// 25 Kriterlik FM-200 Denetimi Kaydet & Skor Hesapla (Audit Engine)
+router.post('/inspections', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { locationId, responses, notes, photos, status: reqStatus } = req.body;
+    if (!locationId || !responses) {
+      return res.status(400).json({ error: 'Konum ve yanıtlar zorunludur' });
+    }
+
+    const inspectionStatus = reqStatus || 'Tamamlandi';
+    const user = req.user!;
+
+    // Sistem ayarlarındaki soruları veya varsayılan soruları al
+    const settings = await prisma.fm200Setting.findUnique({
+      where: { id: 'default' }
+    });
+    const questions: any[] = (settings?.checklistQuestions as any[]) || DEFAULT_FM200_QUESTIONS;
+
+    // Gatekeeper ID'leri: [4, 6, 8, 12, 13, 15]
+    const GATEKEEPER_IDS = [4, 6, 8, 12, 13, 15];
+    const SEALING_IDS = [4, 5, 6, 7, 8];
+
+    let totalWeight = 0;
+    let earnedWeight = 0;
+
+    let totalSealingWeight = 0;
+    let earnedSealingWeight = 0;
+
+    let totalHardwareWeight = 0;
+    let earnedHardwareWeight = 0;
+
+    let isRedFlagged = false;
+    const openedJobs = [];
+
+    for (const q of questions) {
+      const qId = q.id;
+      const resp = responses[qId] || responses[String(qId)] || { status: 'Karşılıyor' };
+      const status = resp.status; // 'Karşılıyor' | 'Kısmen Karşılıyor' | 'Karşılamıyor' | 'Kapsam Dışı'
+
+      if (status === 'Kapsam Dışı') {
+        continue; // Ağırlık hesaba katılmaz
+      }
+
+      const weight = Number(q.weight) || 10;
+      let multiplier = 0;
+      if (status === 'Karşılıyor') multiplier = 1.0;
+      else if (status === 'Kısmen Karşılıyor') multiplier = 0.5;
+      else if (status === 'Karşılamıyor') multiplier = 0.0;
+
+      const earned = weight * multiplier;
+      totalWeight += weight;
+      earnedWeight += earned;
+
+      // Sızdırmazlık Endeksi (4, 5, 6, 7, 8)
+      if (SEALING_IDS.includes(qId) || q.isSealing) {
+        totalSealingWeight += weight;
+        earnedSealingWeight += earned;
+      } else {
+        totalHardwareWeight += weight;
+        earnedHardwareWeight += earned;
+      }
+
+      // Gatekeeper Kontrolü (4, 6, 8, 12, 13, 15)
+      if (GATEKEEPER_IDS.includes(qId) && (status === 'Kısmen Karşılıyor' || status === 'Karşılamıyor')) {
+        isRedFlagged = true;
+      }
+
+      // Kısmen veya Karşılamıyor ise İş Emri Oluştur (Yalnızca Tamamlandı durumundaysa)
+      const inspectionStatus = req.body.status || 'Tamamlandi';
+      if (inspectionStatus === 'Tamamlandi' && (status === 'Kısmen Karşılıyor' || status === 'Karşılamıyor')) {
+        // Kullanıcı hem Teknik hem Firma seçmiş olabilir (responsibles: ['Teknik', 'Firma'])
+        let responsiblesList: string[] = [];
+        if (Array.isArray(resp.responsibles) && resp.responsibles.length > 0) {
+          responsiblesList = resp.responsibles;
+        } else if (resp.responsible) {
+          responsiblesList = [resp.responsible];
+        } else {
+          responsiblesList = ['Teknik'];
+        }
+
+        const templates = Array.isArray(resp.templates) ? resp.templates.join(' | ') : '';
+        const customNote = resp.customNote || resp.note || '';
+        
+        let titleParts = [];
+        if (templates) titleParts.push(templates);
+        if (customNote) titleParts.push(customNote);
+        const baseTitle = titleParts.length > 0 
+          ? `[Soru ${qId}] ${titleParts.join(' - ')}`
+          : `[Soru ${qId}] ${q.text} (${status})`;
+
+        for (const r of responsiblesList) {
+          const normResponsible = (r === 'Teknik Hizmetler' || r === 'Teknik') ? 'Teknik' : 'Firma';
+          const fullTitle = responsiblesList.length > 1 ? `${baseTitle} (${normResponsible})` : baseTitle;
+          openedJobs.push(await triggerWorkOrder({
+            locationId,
+            sourcePhase: 'DENETIM',
+            sourceCode: `S${qId}`,
+            title: fullTitle.slice(0, 500),
+            workType: normResponsible === 'Teknik' ? 'Kucuk' : 'Buyuk',
+            responsible: normResponsible,
+            trackLane: SEALING_IDS.includes(qId) || q.isSealing ? 'Fiziksel' : 'Dokuman',
+            questionText: `[Kriter ${qId}] ${q.text}`,
+            templates: Array.isArray(resp.templates) ? resp.templates : [],
+            customNote: customNote || null,
+            photos: Array.isArray(resp.photos) ? resp.photos : []
+          }));
+        }
+      }
+    }
+
+    // Skor Hesapları (Yüzde 0 - 100)
+    const overallScore = totalWeight > 0 ? Math.round((earnedWeight / totalWeight) * 1000) / 10 : 100;
+    const sealingScore = totalSealingWeight > 0 ? Math.round((earnedSealingWeight / totalSealingWeight) * 1000) / 10 : 100;
+    const hardwareScore = totalHardwareWeight > 0 ? Math.round((earnedHardwareWeight / totalHardwareWeight) * 1000) / 10 : 100;
+
+    // Risk Seviyesi ve Derece
+    let riskLevel = 'DÜŞÜK RİSK';
+    let ratingGrade = 'A';
+
+    if (isRedFlagged || overallScore < 60 || sealingScore < 60) {
+      riskLevel = 'YÜKSEK RİSK';
+      ratingGrade = 'D';
+    } else if (overallScore < 80 || sealingScore < 80) {
+      riskLevel = 'ORTA RİSK';
+      ratingGrade = 'C';
+    } else if (overallScore < 95) {
+      ratingGrade = 'B';
+    }
+
+    const inspection = await prisma.fm200PeriodicInspection.create({
+      data: {
+        locationId,
+        inspectedBy: user.fullName || user.username,
+        itemResponses: responses,
+        complianceScore: overallScore,
+        sealingScore,
+        hardwareScore,
+        ratingGrade,
+        riskLevel,
+        isRedFlagged,
+        openWorkOrdersCount: openedJobs.length,
+        status: inspectionStatus,
+        isCompleted: inspectionStatus === 'Tamamlandi',
+        notes: notes || null,
+        photos: photos || []
+      }
+    });
+
+    res.json({
+      success: true,
+      inspection,
+      overallScore,
+      sealingScore,
+      hardwareScore,
+      ratingGrade,
+      riskLevel,
+      isRedFlagged,
+      openedJobsCount: openedJobs.length,
+      openedJobs
+    });
+  } catch (error) {
+    console.error('FM200 inspection error:', error);
+    res.status(500).json({ error: 'Denetim kaydedilemedi' });
+  }
+});
+
+// Denetimleri Listele
+router.get('/inspections', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { facilityId, locationId } = req.query;
+    const where: any = {};
+    if (locationId) {
+      where.locationId = String(locationId);
+    } else if (facilityId && facilityId !== 'all') {
+      where.location = { facilityId: String(facilityId) };
+    }
+
+    const inspections = await prisma.fm200PeriodicInspection.findMany({
+      where,
+      include: {
+        location: {
+          select: {
+            id: true, systemUid: true, building: true, block: true, floor: true,
+            roomType: true, customRoomName: true, index: true, facilityId: true,
+            facility: { select: { id: true, name: true, shortName: true } }
+          }
+        }
+      },
+      orderBy: { inspectionDate: 'desc' }
+    });
+
+    res.json(inspections);
+  } catch (error) {
+    console.error('FM200 get inspections error:', error);
+    res.status(500).json({ error: 'Denetim kayıtları yüklenemedi' });
+  }
+});
+
+// Tek Denetim Detayı
+router.get('/inspections/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const inspection = await prisma.fm200PeriodicInspection.findUnique({
+      where: { id },
+      include: {
+        location: {
+          include: {
+            facility: true,
+            cylinders: true
+          }
+        }
+      }
+    });
+
+    if (!inspection) return res.status(404).json({ error: 'Denetim kaydı bulunamadı' });
+    res.json(inspection);
+  } catch (error) {
+    console.error('FM200 get inspection detail error:', error);
+    res.status(500).json({ error: 'Denetim detayı getirilemedi' });
+  }
+});
+
+// Denetimi Güncelle / Edit Et (Mevcut Yanıtları ve Skorları Yeniden Hesapla)
+router.put('/inspections/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { responses, notes, photos } = req.body;
+
+    const existing = await prisma.fm200PeriodicInspection.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Denetim kaydı bulunamadı' });
+
+    const settings = await prisma.fm200Setting.findUnique({ where: { id: 'default' } });
+    const questions: any[] = (settings?.checklistQuestions as any[]) || DEFAULT_FM200_QUESTIONS;
+
+    const GATEKEEPER_IDS = [4, 6, 8, 12, 13, 15];
+    const SEALING_IDS = [4, 5, 6, 7, 8];
+
+    let totalWeight = 0;
+    let earnedWeight = 0;
+    let totalSealingWeight = 0;
+    let earnedSealingWeight = 0;
+    let totalHardwareWeight = 0;
+    let earnedHardwareWeight = 0;
+    let isRedFlagged = false;
+
+    for (const q of questions) {
+      const qId = q.id;
+      const resp = responses[qId] || responses[String(qId)] || { status: 'Karşılıyor' };
+      const status = resp.status;
+
+      if (status === 'Kapsam Dışı') continue;
+
+      const weight = Number(q.weight) || 10;
+      let multiplier = 0;
+      if (status === 'Karşılıyor') multiplier = 1.0;
+      else if (status === 'Kısmen Karşılıyor') multiplier = 0.5;
+      else if (status === 'Karşılamıyor') multiplier = 0.0;
+
+      const earned = weight * multiplier;
+      totalWeight += weight;
+      earnedWeight += earned;
+
+      if (SEALING_IDS.includes(qId) || q.isSealing) {
+        totalSealingWeight += weight;
+        earnedSealingWeight += earned;
+      } else {
+        totalHardwareWeight += weight;
+        earnedHardwareWeight += earned;
+      }
+
+      if (GATEKEEPER_IDS.includes(qId) && (status === 'Kısmen Karşılıyor' || status === 'Karşılamıyor')) {
+        isRedFlagged = true;
+      }
+    }
+
+    const overallScore = totalWeight > 0 ? Math.round((earnedWeight / totalWeight) * 1000) / 10 : 100;
+    const sealingScore = totalSealingWeight > 0 ? Math.round((earnedSealingWeight / totalSealingWeight) * 1000) / 10 : 100;
+    const hardwareScore = totalHardwareWeight > 0 ? Math.round((earnedHardwareWeight / totalHardwareWeight) * 1000) / 10 : 100;
+
+    let riskLevel = 'DÜŞÜK RİSK';
+    let ratingGrade = 'A';
+
+    if (isRedFlagged || overallScore < 60 || sealingScore < 60) {
+      riskLevel = 'YÜKSEK RİSK';
+      ratingGrade = 'D';
+    } else if (overallScore < 80 || sealingScore < 80) {
+      riskLevel = 'ORTA RİSK';
+      ratingGrade = 'C';
+    } else if (overallScore < 95) {
+      ratingGrade = 'B';
+    }
+
+    const inspectionStatus = req.body.status !== undefined ? req.body.status : existing.status;
+    const isCompleted = req.body.isCompleted !== undefined 
+      ? req.body.isCompleted 
+      : (inspectionStatus === 'Tamamlandi');
+
+    const updated = await prisma.fm200PeriodicInspection.update({
+      where: { id },
+      data: {
+        locationId: req.body.locationId || existing.locationId,
+        itemResponses: responses,
+        complianceScore: overallScore,
+        sealingScore,
+        hardwareScore,
+        ratingGrade,
+        riskLevel,
+        isRedFlagged,
+        status: inspectionStatus,
+        isCompleted,
+        notes: notes !== undefined ? notes : existing.notes,
+        photos: photos !== undefined ? photos : existing.photos
+      },
+      include: {
+        location: {
+          include: { facility: true }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      inspection: updated,
+      overallScore,
+      sealingScore,
+      hardwareScore,
+      ratingGrade,
+      riskLevel,
+      isRedFlagged
+    });
+  } catch (error) {
+    console.error('FM200 update inspection error:', error);
+    res.status(500).json({ error: 'Denetim güncellenemedi' });
+  }
+});
+
+// Denetim Kaydını Tamamen Sil
+router.delete('/inspections/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const existing = await prisma.fm200PeriodicInspection.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Denetim kaydı bulunamadı' });
+
+    // İlgili mahale ait bu fazdaki iş emirlerini temizle
+    await prisma.fm200WorkOrder.deleteMany({
+      where: {
+        locationId: existing.locationId,
+        sourcePhase: 'FAZ2'
+      }
+    });
+
+    await prisma.fm200PeriodicInspection.delete({
+      where: { id }
+    });
+
+    res.json({ success: true, message: 'Denetim kaydı ve bağlı kayıtlar başarıyla silindi' });
+  } catch (error) {
+    console.error('FM200 delete inspection error:', error);
+    res.status(500).json({ error: 'Denetim kaydı silinemedi' });
+  }
+});
+
+// Faz 2 Kaydet & Skor Hesapla (Geriye Dönük Uyumluluk)
 router.post('/inspections/phase2', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { locationId, responses, notes, photos } = req.body;
     if (!locationId || !responses) {
       return res.status(400).json({ error: 'Konum ve yanıtlar zorunludur' });
+    }
+
+    // Eğer yeni 25 soru formatında geldiyse /inspections ile aynı hesaplamayı uygula
+    const isNewFormat = Object.keys(responses).some(k => !isNaN(Number(k)) || k.startsWith('item_'));
+    if (isNewFormat) {
+      // Forward to same logic
+      req.url = '/inspections';
+      return (router as any).handle(req, res);
     }
 
     const user = req.user!;
@@ -995,7 +1653,6 @@ router.post('/inspections/phase2', authMiddleware, async (req: AuthRequest, res:
         : `Önceki dönemden devam eden ${openPhase2JobsCount} adet açık iş kaydı bulunmaktadır.`
     };
 
-    // Matematiksel Model ve Skor Hesabı (Bölüm 11.3 & Bölüm 15)
     let totalUdWeight = 0;
     let totalUyWeight = 0;
     let isRedFlagged = false;
@@ -1008,12 +1665,10 @@ router.post('/inspections/phase2', authMiddleware, async (req: AuthRequest, res:
 
       if (resp.status === 'UD') {
         totalUdWeight += itemDef.weight;
-        // Gatekeeper Kuralı (M13 ve M21)
         if (i === 13 || i === 21) {
           isRedFlagged = true;
         }
 
-        // Otomatik İş Emri Aç (Madde 2 hariç, çünkü zaten devam eden işler var)
         if (i !== 2) {
           openedJobs.push(await triggerWorkOrder({
             locationId,
@@ -1030,11 +1685,9 @@ router.post('/inspections/phase2', authMiddleware, async (req: AuthRequest, res:
       }
     }
 
-    // Skor Hesabı: Uygunluk Skoru (%) = 100 - [ (Toplam UD / (100 - Toplam UY)) * 100 ]
     const effectiveDenominator = Math.max(1, 100 - totalUyWeight);
     let complianceScore = Math.max(0, Math.min(100, Math.round((100 - (totalUdWeight / effectiveDenominator) * 100) * 10) / 10));
 
-    // Derece: A (%95-100), B (%80-94), C (%60-79), D (%0-59)
     let ratingGrade = 'A';
     if (complianceScore >= 95) ratingGrade = 'A';
     else if (complianceScore >= 80) ratingGrade = 'B';
@@ -1047,7 +1700,10 @@ router.post('/inspections/phase2', authMiddleware, async (req: AuthRequest, res:
         inspectedBy: user.fullName || user.username,
         itemResponses: responses,
         complianceScore,
+        sealingScore: complianceScore,
+        hardwareScore: complianceScore,
         ratingGrade,
+        riskLevel: isRedFlagged ? 'YÜKSEK RİSK' : (complianceScore < 70 ? 'ORTA RİSK' : 'DÜŞÜK RİSK'),
         isRedFlagged,
         openWorkOrdersCount: openedJobs.length,
         notes: notes || null,
@@ -1312,7 +1968,7 @@ router.get('/work-orders', authMiddleware, async (req: AuthRequest, res: Respons
         location: {
           select: {
             id: true, systemUid: true, roomType: true, index: true,
-            building: true, floor: true,
+            building: true, block: true, floor: true, customRoomName: true,
             facility: { select: { id: true, name: true, shortName: true } }
           }
         },
@@ -1433,6 +2089,45 @@ router.post('/work-orders/:id/verify', authMiddleware, async (req: AuthRequest, 
   }
 });
 
+// İş Emri Bilgilerini Güncelle (Termin Tarihi / Sorumlu / Not / Durum)
+router.put('/work-orders/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { dueDate, responsible, status, title, revisionNote, companyTrackNo } = req.body;
+
+    const existing = await prisma.fm200WorkOrder.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'İş kaydı bulunamadı' });
+
+    const updated = await prisma.fm200WorkOrder.update({
+      where: { id },
+      data: {
+        dueDate: dueDate !== undefined ? (dueDate ? new Date(dueDate) : null) : existing.dueDate,
+        responsible: responsible !== undefined ? responsible : existing.responsible,
+        status: status !== undefined ? status : existing.status,
+        title: title !== undefined ? title : existing.title,
+        revisionNote: revisionNote !== undefined ? revisionNote : existing.revisionNote,
+        companyTrackNo: companyTrackNo !== undefined ? companyTrackNo : existing.companyTrackNo,
+        closedAt: status === 'Tamamlandi' ? new Date() : (status ? null : existing.closedAt)
+      },
+      include: {
+        location: {
+          select: {
+            id: true, systemUid: true, roomType: true, index: true,
+            building: true, block: true, floor: true,
+            facility: { select: { id: true, name: true, shortName: true } }
+          }
+        },
+        evidences: true
+      }
+    });
+
+    res.json({ success: true, workOrder: updated });
+  } catch (error) {
+    console.error('FM200 update work order error:', error);
+    res.status(500).json({ error: 'İş emri güncellenemedi' });
+  }
+});
+
 // ──────────────────────────────────────────────────────────────────────────────
 // DASHBOARD & KPI İSTATİSTİKLERİ (Bölüm 11)
 // ──────────────────────────────────────────────────────────────────────────────
@@ -1468,17 +2163,274 @@ router.get('/dashboard-stats', authMiddleware, async (req: AuthRequest, res: Res
     // Aksiyon Kapatma Başarı Oranı (%)
     const workSuccessRate = totalWorks === 0 ? 100 : Math.round((completedWorks / totalWorks) * 100);
 
-    // Son Periyodik Kontrollerin Ortalama Skoru ve Gatekeeper Kırmızı Bayraklar
-    const recentInspections = await prisma.fm200PeriodicInspection.findMany({
+    // Son Denetim Kayıtları (Mahal bazında en güncel olanları al)
+    const allInspections = await prisma.fm200PeriodicInspection.findMany({
       where: { location: locationWhere },
+      include: {
+        location: {
+          select: {
+            id: true, systemUid: true, building: true, block: true, floor: true,
+            roomType: true, customRoomName: true, facilityId: true,
+            facility: { select: { id: true, name: true, shortName: true } }
+          }
+        }
+      },
       orderBy: { inspectionDate: 'desc' }
     });
 
-    const avgScore = recentInspections.length > 0
-      ? Math.round(recentInspections.reduce((acc, i) => acc + i.complianceScore, 0) / recentInspections.length)
-      : 100;
+    // Her mahal için sadece en son denetimi baz al
+    const latestInspectionByLoc = new Map<string, any>();
+    allInspections.forEach(insp => {
+      if (!latestInspectionByLoc.has(insp.locationId)) {
+        latestInspectionByLoc.set(insp.locationId, insp);
+      }
+    });
 
-    const redFlaggedCount = recentInspections.filter(i => i.isRedFlagged).length;
+    const activeInspections = Array.from(latestInspectionByLoc.values());
+
+    // 5 Ana Kategori İndeksi
+    // 1. Fiziksel Güvenlik & Sızdırmazlık (1-8)
+    // 2. Etiketleme ve İşaretleme (9-11)
+    // 3. Tesisat ve Donanım (12-19)
+    // 4. Periyodik Kontrol & Bakım (20-21)
+    // 5. Acil Durum Senaryoları & Otomasyon (22-25)
+    const CATEGORIES = [
+      { name: 'Fiziksel Güvenlik ve Ortam (Sızdırmazlık)', questionIds: [1, 2, 3, 4, 5, 6, 7, 8], isSealing: true },
+      { name: 'Etiketleme ve İşaretleme', questionIds: [9, 10, 11], isSealing: false },
+      { name: 'Tesisat ve Donanım Bütünlüğü', questionIds: [12, 13, 14, 15, 16, 17, 18, 19], isSealing: false },
+      { name: 'Periyodik Kontrol & Bakım Kayıtları', questionIds: [20, 21], isSealing: false },
+      { name: 'Acil Durum Senaryoları & Otomasyon', questionIds: [22, 23, 24, 25], isSealing: false }
+    ];
+
+    // Soruların ağırlık referansları
+    const questionWeights: Record<number, number> = {
+      1: 7, 2: 7, 3: 10, 4: 10, 5: 10, 6: 10, 7: 10, 8: 10,
+      9: 10, 10: 10, 11: 3,
+      12: 10, 13: 5, 14: 5, 15: 10, 16: 10, 17: 10, 18: 7, 19: 7,
+      20: 10, 21: 10,
+      22: 10, 23: 10, 24: 10, 25: 7
+    };
+
+    const GATEKEEPER_BARRIERS = [4, 6, 8, 12, 13, 15];
+
+    // 5 Kategori İstatistiklerini Topla
+    const categoryStats = CATEGORIES.map(cat => {
+      let catEarned = 0;
+      let catApplicable = 0;
+
+      activeInspections.forEach(insp => {
+        const respMap = (insp.itemResponses || {}) as Record<string, any>;
+        cat.questionIds.forEach(qId => {
+          const resp = respMap[qId] || respMap[`item_${qId}`];
+          const weight = questionWeights[qId] || 10;
+          if (!resp || resp.status === 'Kapsam Dışı') return;
+
+          catApplicable += weight;
+          if (resp.status === 'Karşılıyor') {
+            catEarned += weight;
+          } else if (resp.status === 'Kısmen Karşılıyor') {
+            catEarned += weight * 0.5;
+          }
+        });
+      });
+
+      const score = catApplicable > 0 ? Math.round((catEarned / catApplicable) * 1000) / 10 : 100;
+      return {
+        name: cat.name,
+        isSealing: cat.isSealing,
+        score,
+        applicableWeight: catApplicable,
+        earnedWeight: catEarned
+      };
+    });
+
+    // Hastane Genel Uygunluk Skoru (Aktif denetimlerin ağırlıklı ortalaması)
+    let hospitalEarnedWeight = 0;
+    let hospitalApplicableWeight = 0;
+    let criticalVetoLocationsCount = 0;
+
+    const inspectedLocationsList = activeInspections.map(insp => {
+      const respMap = (insp.itemResponses || {}) as Record<string, any>;
+      let hasVeto = false;
+      const vetoReasons: string[] = [];
+
+      GATEKEEPER_BARRIERS.forEach(barrierId => {
+        const r = respMap[barrierId] || respMap[`item_${barrierId}`];
+        if (r && (r.status === 'Kısmen Karşılıyor' || r.status === 'Karşılamıyor')) {
+          hasVeto = true;
+          if (barrierId === 4) vetoReasons.push('Madde 4: Tesisat Geçişi / Sızdırmazlık Açıklığı');
+          else if (barrierId === 6) vetoReasons.push('Madde 6: Yangın Damperi / Havalandırma Kapanmıyor');
+          else if (barrierId === 8) vetoReasons.push('Madde 8: Door Fan Test / Oda Bütünlüğü Eksik');
+          else if (barrierId === 12) vetoReasons.push('Madde 12: Tüp Basıncı / Manometre Uygunsuz');
+          else if (barrierId === 13) vetoReasons.push('Madde 13: Sistem Otomatik Modda Değil');
+          else if (barrierId === 15) vetoReasons.push('Madde 15: Nozul Atış Önünde Engel Var');
+        }
+      });
+
+      if (hasVeto || insp.isRedFlagged) {
+        criticalVetoLocationsCount++;
+      }
+
+      // Skor hesaplama
+      let locEarned = 0;
+      let locApplicable = 0;
+      for (let q = 1; q <= 25; q++) {
+        const r = respMap[q] || respMap[`item_${q}`];
+        const w = questionWeights[q] || 10;
+        if (!r || r.status === 'Kapsam Dışı') continue;
+        locApplicable += w;
+        if (r.status === 'Karşılıyor') locEarned += w;
+        else if (r.status === 'Kısmen Karşılıyor') locEarned += w * 0.5;
+      }
+
+      // Kategori bazlı skorları bu mahal için hesapla
+      const locationCategoryScores: Record<number, number> = {};
+      CATEGORIES.forEach((cat, catIdx) => {
+        let catEarned = 0;
+        let catApplicable = 0;
+        cat.questionIds.forEach(qId => {
+          const r = respMap[qId] || respMap[String(qId)] || respMap[`item_${qId}`];
+          const w = questionWeights[qId] || 10;
+          if (!r || r.status === 'Kapsam Dışı') return;
+          catApplicable += w;
+          if (r.status === 'Karşılıyor') catEarned += w;
+          else if (r.status === 'Kısmen Karşılıyor') catEarned += w * 0.5;
+        });
+        locationCategoryScores[catIdx] = catApplicable > 0 ? Math.round((catEarned / catApplicable) * 1000) / 10 : 100;
+      });
+
+      const standardScore = locApplicable > 0 ? Math.round((locEarned / locApplicable) * 1000) / 10 : insp.complianceScore;
+      hospitalEarnedWeight += locEarned;
+      hospitalApplicableWeight += locApplicable;
+
+      return {
+        id: insp.id,
+        locationId: insp.locationId,
+        systemUid: insp.location?.systemUid,
+        roomType: insp.location?.roomType,
+        customRoomName: insp.location?.customRoomName,
+        building: insp.location?.building,
+        block: insp.location?.block,
+        floor: insp.location?.floor,
+        facilityId: insp.location?.facilityId,
+        facility: insp.location?.facility,
+        complianceScore: standardScore,
+        sealingScore: insp.sealingScore,
+        categoryScores: locationCategoryScores,
+        isVetoed: hasVeto || insp.isRedFlagged,
+        vetoReasons,
+        riskLevel: hasVeto ? 'KRİTİK UYGUNSUZ (VETO)' : insp.riskLevel,
+        inspectionDate: insp.inspectionDate
+      };
+    });
+
+    const hospitalOverallScore = hospitalApplicableWeight > 0
+      ? Math.round((hospitalEarnedWeight / hospitalApplicableWeight) * 1000) / 10
+      : (activeInspections.length > 0 ? Math.round(activeInspections.reduce((a, b) => a + b.complianceScore, 0) / activeInspections.length) : 100);
+
+    // Tesisler Bazında Konsolide İstatistikler (Tüm Tesisler seçildiğinde kıyaslama için)
+    const facilityMap = new Map<string, {
+      facilityId: string;
+      facilityName: string;
+      shortName?: string;
+      totalInspected: number;
+      vetoCount: number;
+      earnedSum: number;
+      applicableSum: number;
+      categoryEarned: number[];
+      categoryApplicable: number[];
+    }>();
+
+    inspectedLocationsList.forEach(loc => {
+      const fId = loc.facilityId || 'unknown';
+      const fName = loc.facility?.name || 'Tesis';
+      const sName = loc.facility?.shortName || fName;
+
+      if (!facilityMap.has(fId)) {
+        facilityMap.set(fId, {
+          facilityId: fId,
+          facilityName: fName,
+          shortName: sName,
+          totalInspected: 0,
+          vetoCount: 0,
+          earnedSum: 0,
+          applicableSum: 0,
+          categoryEarned: [0, 0, 0, 0, 0],
+          categoryApplicable: [0, 0, 0, 0, 0]
+        });
+      }
+
+      const fData = facilityMap.get(fId)!;
+      fData.totalInspected++;
+      if (loc.isVetoed) fData.vetoCount++;
+
+      // Kategori skorlarını topla
+      CATEGORIES.forEach((_, cIdx) => {
+        const cScore = loc.categoryScores?.[cIdx] ?? 100;
+        fData.categoryEarned[cIdx] += cScore;
+        fData.categoryApplicable[cIdx] += 1;
+      });
+
+      fData.earnedSum += loc.complianceScore;
+      fData.applicableSum += 1;
+    });
+
+    const facilityStats = Array.from(facilityMap.values()).map(f => {
+      const overallScore = f.applicableSum > 0 ? Math.round((f.earnedSum / f.applicableSum) * 10) / 10 : 100;
+      const categoryScores: number[] = f.categoryEarned.map((sum, i) => {
+        const count = f.categoryApplicable[i];
+        return count > 0 ? Math.round((sum / count) * 10) / 10 : 100;
+      });
+
+      return {
+        facilityId: f.facilityId,
+        facilityName: f.facilityName,
+        shortName: f.shortName,
+        overallScore,
+        vetoCount: f.vetoCount,
+        totalInspected: f.totalInspected,
+        categoryScores
+      };
+    });
+
+    // En Kötü / Müdahale Gerektiren Odalar (Skoru en düşük veya Veto yemişler en başta)
+    const worstLocations = [...inspectedLocationsList]
+      .sort((a, b) => {
+        if (a.isVetoed && !b.isVetoed) return -1;
+        if (!a.isVetoed && b.isVetoed) return 1;
+        return a.complianceScore - b.complianceScore;
+      })
+      .slice(0, 8);
+
+    // Kat Bazında Risk & Skor Hiyerarşisi
+    const floorGroups: Record<string, { total: number; sumScore: number; vetoCount: number; building: string; block: string; floor: string }> = {};
+    inspectedLocationsList.forEach(loc => {
+      const key = `${loc.building || 'Bina'}_${loc.block || 'Blok'}_${loc.floor || 'Kat'}`;
+      if (!floorGroups[key]) {
+        floorGroups[key] = {
+          total: 0,
+          sumScore: 0,
+          vetoCount: 0,
+          building: loc.building || 'Ana Bina',
+          block: loc.block || '',
+          floor: loc.floor || 'Zemin Kat'
+        };
+      }
+      floorGroups[key].total++;
+      floorGroups[key].sumScore += loc.complianceScore;
+      if (loc.isVetoed) floorGroups[key].vetoCount++;
+    });
+
+    const floorHierarchy = Object.values(floorGroups)
+      .map(fg => ({
+        building: fg.building,
+        block: fg.block,
+        floor: fg.floor,
+        count: fg.total,
+        vetoCount: fg.vetoCount,
+        avgScore: Math.round((fg.sumScore / fg.total) * 10) / 10
+      }))
+      .sort((a, b) => a.avgScore - b.avgScore);
 
     // Sızdırmazlık Testi İstatistikleri
     const tests = await prisma.fm200TightnessTest.findMany({
@@ -1499,8 +2451,15 @@ router.get('/dashboard-stats', authMiddleware, async (req: AuthRequest, res: Res
       reviewPending,
       escalatedCount,
       workSuccessRate,
-      avgScore,
-      redFlaggedCount,
+      hospitalOverallScore,
+      avgScore: hospitalOverallScore,
+      criticalVetoLocationsCount,
+      inspectedLocationsCount: activeInspections.length,
+      categoryStats,
+      facilityStats,
+      worstLocations,
+      allInspectedLocations: inspectedLocationsList,
+      floorHierarchy,
       passedTests,
       failedTests
     });

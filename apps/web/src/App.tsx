@@ -1377,8 +1377,10 @@ function App() {
 
                   {/* ── FM-200 KONTROL VE SIZDIRMAZLIK TAKİP SİSTEMİ ──── */}
                   <Route path="/fm200" element={<ProtectedRoute><AppLayout><Fm200DashboardPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/fm200/dashboard" element={<ProtectedRoute><AppLayout><Fm200DashboardPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/fm200/wizard" element={<ProtectedRoute><AppLayout><Fm200WizardPage /></AppLayout></ProtectedRoute>} />
-                  <Route path="/fm200/settings" element={<ProtectedRoute><AppLayout><Fm200SettingsPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/fm200/executive-summary" element={<ProtectedRoute><AppLayout><Fm200DashboardPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/fm200/settings" element={<ProtectedRoute requireAdmin><AppLayout><Fm200SettingsPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/fm200/work-orders" element={<ProtectedRoute><AppLayout><Fm200WorkOrdersPage /></AppLayout></ProtectedRoute>} />
 
                   {/* ── Redirects ──────────────────────────────────── */}

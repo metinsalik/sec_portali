@@ -3014,14 +3014,19 @@ model Fm200PeriodicInspection {
   inspectedBy    String
   inspectionDate DateTime @default(now())
 
-  // 26 Madde Yanıtları: { "M01": { status: "U"|"UD"|"UY", note: "..." }, ... }
+  // 25 Madde Yanıtları: { "item_1": { status: "Karşılıyor"|"Kısmen Karşılıyor"|"Karşılamıyor"|"Kapsam Dışı", note: "...", responsible: "Teknik"|"Firma", templates: [], photos: [] } }
   itemResponses Json @default("{}")
 
-  complianceScore Float   @default(100) // %0 - 100 Ağırlıklı Uygunluk Skoru
+  complianceScore Float   @default(100) // %0 - 100 Genel FM-200 Başarı Skoru (overall_score)
+  sealingScore    Float?  @default(100) // %0 - 100 Sızdırmazlık Endeksi (Maddeler: 4, 5, 6, 7, 8)
+  hardwareScore   Float?  @default(100) // %0 - 100 Sistem ve Donanım Endeksi
   ratingGrade     String  @default("A") // A, B, C, D
-  isRedFlagged    Boolean @default(false) // M13 (Gaz) veya M21 (Algılama) UD ise kırmızı bayrak
+  riskLevel       String? @default("DÜŞÜK RİSK") // DÜŞÜK RİSK, ORTA RİSK, YÜKSEK RİSK
+  isRedFlagged    Boolean @default(false) // 4, 6, 8, 12, 13 veya 15 kriterlerinden biri başarısızsa true
 
   openWorkOrdersCount Int     @default(0)
+  status              String  @default("Tamamlandi") // Devam Ediyor, Tamamlandi
+  isCompleted         Boolean @default(true)
   photos              Json    @default("[]")
   notes               String?
 
@@ -3113,6 +3118,11 @@ model Fm200WorkOrder {
   sourceWorkId    String? // Dönüşen iş referansı
   revisionNote    String? // Teknik sorumlu ret gerekçesi
   correctApproval Boolean   @default(false) // dogru_onay
+  dueDate         DateTime? // Termin Tarihi (Hedef Tamamlanma Tarihi)
+  questionText    String? // İlgili Kriter / Soru Metni
+  templates       Json      @default("[]") // Seçilen hazır kalıp cevaplar
+  customNote      String? // Ek saha açıklaması
+  photos          Json      @default("[]") // Denetimde çekilen tespit fotoğrafları [{url, name}]
   closedAt        DateTime?
 
   createdAt DateTime @default(now())
@@ -3143,11 +3153,13 @@ model Fm200WorkOrderEvidence {
 }
 
 model Fm200Setting {
-  id          String   @id @default("default")
-  roomTypes   Json     @default("[\"Sunucu Odası\", \"Sistem Odası\", \"UPS Odası\", \"Trafo Odası\", \"Arşiv Odası\", \"MCC Panosu\", \"ADP Pano Odası\", \"Elektrik Panosu\", \"Kat Panosu\", \"Radyoloji Odası\", \"Hücre Odası\", \"CCTV Odası\", \"Bedaş Odası\", \"Anjiyo Odası\", \"Jeneratör Odası\", \"Diğer\"]")
-  systemTypes Json     @default("[\"FM-200\", \"Novec1230\", \"CO2\", \"Inergen\"]")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                 String   @id @default("default")
+  roomTypes          Json     @default("[\"Sunucu Odası\", \"Sistem Odası\", \"UPS Odası\", \"Trafo Odası\", \"Arşiv Odası\", \"MCC Panosu\", \"ADP Pano Odası\", \"Elektrik Panosu\", \"Kat Panosu\", \"Radyoloji Odası\", \"Hücre Odası\", \"CCTV Odası\", \"Bedaş Odası\", \"Anjiyo Odası\", \"Jeneratör Odası\", \"Diğer\"]")
+  systemTypes        Json     @default("[\"FM-200\", \"Novec1230\", \"CO2\", \"Inergen\"]")
+  checklistQuestions Json?    // 25 Soruluk Denetim ve Sızdırmazlık Soru Seti
+  issueTemplates     Json?    // Soru bazlı Teknik Hizmetler ve Firma Hazır Kalıp Cümleleri
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model Fm200BuildingFloor {
