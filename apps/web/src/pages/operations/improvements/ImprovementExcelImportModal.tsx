@@ -47,33 +47,54 @@ export const ImprovementExcelImportModal: React.FC<Props> = ({
     processFile(files[0]);
   };
 
+  // Helper: Sekmede başlık satırı indeksini dinamik tespit et
+  const findHeaderRowIndex = (rows: any[][]): number => {
+    for (let i = 0; i < Math.min(10, rows.length); i++) {
+      const row = rows[i] || [];
+      const rowStr = row.map((c: any) => String(c || '').toLowerCase()).join(' ');
+      if (
+        rowStr.includes('tespitler') || 
+        rowStr.includes('hastane adı') || 
+        rowStr.includes('hastane adi') || 
+        rowStr.includes('ekipman')
+      ) {
+        return i;
+      }
+    }
+    return 3; // varsayılan index 3 (4. satır)
+  };
+
   const processFile = (f: File) => {
     setFile(f);
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const data = e.target?.result;
-        const wb = XLSX.read(data, { type: 'binary', cellDates: true });
+        const wb = XLSX.read(data, { type: 'array', cellDates: true });
         setWorkbook(wb);
 
         const sheetInfos: Array<{ name: string; rowCount: number }> = [];
         const detectedSheets: string[] = [];
 
         wb.SheetNames.forEach(sheetName => {
-          // Sayfa2 veya Dashboard hariç tutulabilir veya listelenebilir
           if (sheetName.toLowerCase() === 'sayfa2') return;
 
           const ws = wb.Sheets[sheetName];
-          const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false });
-          // Başlık satırı hariç veri satırları (genelde 4. satırdan sonra)
-          const validDataRows = rawRows.filter((r, idx) => idx >= 4 && r && r.length > 2);
-          
+          const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+          const headerIdx = findHeaderRowIndex(rawRows);
+          const dataRows = rawRows.slice(headerIdx + 1);
+
+          // Tespit veya Hastane içeren satırları say
+          const validDataRows = dataRows.filter((r) => {
+            if (!r || r.length === 0) return false;
+            return r.some((c: any) => c !== undefined && c !== null && String(c).trim() !== '');
+          });
+
           sheetInfos.push({
             name: sheetName,
             rowCount: validDataRows.length,
           });
 
-          // Başlangıçta veri içeren sekmeleri otomatik seç (Dashboard hariç)
           if (sheetName.toLowerCase() !== 'dashboard' && validDataRows.length > 0) {
             detectedSheets.push(sheetName);
           }
@@ -82,13 +103,11 @@ export const ImprovementExcelImportModal: React.FC<Props> = ({
         setSheets(sheetInfos);
         setSelectedSheets(detectedSheets.length > 0 ? detectedSheets : (sheetInfos[0] ? [sheetInfos[0].name] : []));
 
-        // İlk sekmenin önizlemesini yükle
         const firstSheet = detectedSheets[0] || sheetInfos[0]?.name;
         if (firstSheet) {
           loadSheetPreview(wb, firstSheet);
         }
 
-        // Hastane adını dosya veya sheet içinde otomatik bulmaya çalış
         const lowerName = f.name.toLowerCase();
         const matchedFac = facilities.find(fac => 
           lowerName.includes(fac.shortName.toLowerCase()) || 
@@ -104,7 +123,7 @@ export const ImprovementExcelImportModal: React.FC<Props> = ({
         toast.error('Excel dosyası okunamadı: ' + err.message);
       }
     };
-    reader.readAsBinaryString(f);
+    reader.readAsArrayBuffer(f);
   };
 
   const loadSheetPreview = (wb: XLSX.WorkBook, sheetName: string) => {
@@ -115,15 +134,16 @@ export const ImprovementExcelImportModal: React.FC<Props> = ({
       return;
     }
 
-    const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false });
-    // Başlık satırı (4. satır -> index 3) ve veri satırları (index 4+)
-    if (rawRows.length <= 4) {
+    const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    const headerIdx = findHeaderRowIndex(rawRows);
+
+    if (rawRows.length <= headerIdx + 1) {
       setPreviewRows([]);
       return;
     }
 
-    const headers = rawRows[3] || [];
-    const rows = rawRows.slice(4, 9).map((row, idx) => {
+    const headers = rawRows[headerIdx] || [];
+    const rows = rawRows.slice(headerIdx + 1, headerIdx + 6).map((row) => {
       const obj: any = {};
       headers.forEach((h: any, colIdx: number) => {
         if (h) {
@@ -181,12 +201,12 @@ export const ImprovementExcelImportModal: React.FC<Props> = ({
         const ws = workbook.Sheets[sheetName];
         if (!ws) continue;
 
-        // Başlık 4. satır (index 3), veriler 5. satırdan (index 4) başlar
-        const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false });
-        if (rawRows.length <= 4) continue;
+        const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        const headerIdx = findHeaderRowIndex(rawRows);
+        if (rawRows.length <= headerIdx + 1) continue;
 
-        const headers: string[] = (rawRows[3] || []).map(h => String(h || '').trim());
-        const dataRows = rawRows.slice(4);
+        const headers: string[] = (rawRows[headerIdx] || []).map(h => String(h || '').trim());
+        const dataRows = rawRows.slice(headerIdx + 1);
 
         const parsedRows = dataRows.map((r, rIdx) => {
           const rowObj: any = {};
@@ -195,7 +215,6 @@ export const ImprovementExcelImportModal: React.FC<Props> = ({
               rowObj[h] = r[cIdx];
             }
           });
-          // Sıra no
           rowObj.rowNo = rIdx + 1;
           return rowObj;
         });
@@ -225,6 +244,8 @@ export const ImprovementExcelImportModal: React.FC<Props> = ({
       }
 
       toast.success(`Başarılı! Toplam ${totalImported} kayıt aktarıldı.`);
+      localStorage.setItem('activeFacilityId', selectedFacilityId);
+      window.dispatchEvent(new Event('facilityChanged'));
       onSuccess();
       onClose();
     } catch (err: any) {

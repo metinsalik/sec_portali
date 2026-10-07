@@ -25,6 +25,67 @@ export const ImprovementsSettingsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Veri Temizleme State
+  const [facilities, setFacilities] = useState<Array<{ id: string; name: string }>>([]);
+  const [cleanupFacilityId, setCleanupFacilityId] = useState('');
+  const [cleanupSheetType, setCleanupSheetType] = useState('ALL');
+  const [cleaning, setCleaning] = useState(false);
+
+  const fetchFacilities = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/api/operations/improvements/facilities`, {
+        headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        setFacilities(data.data);
+        if (data.data.length > 0) {
+          setCleanupFacilityId(data.data[0].id);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleCleanupRecords = async () => {
+    if (!cleanupFacilityId) {
+      toast.error('Lütfen bir hastane seçin.');
+      return;
+    }
+
+    const facObj = facilities.find(f => f.id === cleanupFacilityId);
+    const confirmMsg = `${facObj?.name || cleanupFacilityId} hastanesinin ${cleanupSheetType === 'ALL' ? 'TÜM' : cleanupSheetType} verileri silinecektir. Emin misiniz?`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setCleaning(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/api/operations/improvements/facility-records`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify({
+          facilityId: cleanupFacilityId,
+          sheetType: cleanupSheetType,
+        })
+      });
+      const d = await res.json();
+      if (!res.ok || !d.success) throw new Error(d.message || 'Silinemedi');
+
+      toast.success(d.message || 'Kayıtlar başarıyla temizlendi.');
+      fetchFacilities();
+      window.dispatchEvent(new Event('facilityChanged'));
+    } catch (err: any) {
+      toast.error('Hata: ' + err.message);
+    } finally {
+      setCleaning(false);
+    }
+  };
+
   // Kategorileri getir
   const fetchCategories = async () => {
     try {
@@ -49,6 +110,7 @@ export const ImprovementsSettingsPage: React.FC = () => {
 
   useEffect(() => {
     fetchCategories();
+    fetchFacilities();
   }, []);
 
   // Kategori Ekle
@@ -222,6 +284,83 @@ export const ImprovementsSettingsPage: React.FC = () => {
           </div>
         )}
 
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* VERİ YÖNETİMİ & MÜKERRER / SEKME TEMİZLEME ARACI                  */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      <div className="bg-card text-card-foreground border border-red-200 dark:border-red-900/50 rounded-2xl p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center font-bold">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-foreground">
+                Veri Temizleme & Sekme Sıfırlama
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Üst üste yapılan yüklemeleri, mükerrer kayıtları veya belirli bir hastanenin sekmelerini güvenle temizleyin.
+              </p>
+            </div>
+          </div>
+          <Badge variant="outline" className="border-red-300 text-red-600 dark:border-red-800 dark:text-red-400 self-start sm:self-auto">
+            Yönetimsel Araç
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          {/* Hastane Seçimi */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-foreground">Hastane</label>
+            <select
+              value={cleanupFacilityId}
+              onChange={(e) => setCleanupFacilityId(e.target.value)}
+              disabled={cleaning}
+              className="w-full h-9 px-3 rounded-lg border bg-background text-xs text-foreground outline-none"
+            >
+              <option value="">Hastane Seçiniz...</option>
+              {facilities.map(f => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sekme Seçimi */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-foreground">Sekme / Alan</label>
+            <select
+              value={cleanupSheetType}
+              onChange={(e) => setCleanupSheetType(e.target.value)}
+              disabled={cleaning}
+              className="w-full h-9 px-3 rounded-lg border bg-background text-xs text-foreground outline-none"
+            >
+              <option value="ALL">Tüm Sekmeler (Hastanenin Bütün Verileri)</option>
+              <option value="DENETIMLER">Denetimler</option>
+              <option value="ELEKTRIK_PK">Elektrik PK</option>
+              <option value="TOPRAKLAMA_PK">Topraklama PK</option>
+              <option value="PARATONER_PK">Paratoner PK</option>
+              <option value="JENERATOR_PK">Jeneratör PK</option>
+              <option value="ELEKTRIK_PANO_KONTROLLERI">Elektrik Pano Kontrolleri</option>
+              <option value="TRAFO">Trafo</option>
+              <option value="UPS">UPS</option>
+            </select>
+          </div>
+
+          {/* Temizle Butonu */}
+          <div className="flex items-end">
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleCleanupRecords}
+              disabled={cleaning || !cleanupFacilityId}
+              className="w-full h-9 text-xs font-medium"
+            >
+              <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+              {cleaning ? 'Temizleniyor...' : 'Seçili Verileri Temizle'}
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────── */}

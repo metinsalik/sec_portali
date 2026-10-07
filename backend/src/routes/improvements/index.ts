@@ -743,6 +743,36 @@ router.post('/import-sheet', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// 10. HASTANE VEYA SEKME BAZLI KAYITLARI TEMİZLE / SİL
+router.delete('/facility-records', async (req: AuthRequest, res: Response) => {
+  try {
+    const user = getUser(req);
+    const { facilityId, sheetType } = req.body;
+
+    if (!facilityId) {
+      return res.status(400).json({ success: false, message: 'facilityId zorunludur.' });
+    }
+
+    const whereClause: any = { facilityId };
+    if (sheetType && sheetType !== 'ALL') {
+      whereClause.sheetType = sheetType;
+    }
+
+    const deleteResult = await prisma.improvementRecord.deleteMany({
+      where: whereClause,
+    });
+
+    res.json({
+      success: true,
+      message: `${deleteResult.count} adet kayıt başarıyla silindi.`,
+      deletedCount: deleteResult.count,
+    });
+  } catch (error: any) {
+    console.error('Error deleting facility records:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // 11. KATEGORİ LİSTESİ YÖNETİMİ
 export const DEFAULT_CATEGORIES = [
   'Yangın Güvenliği',

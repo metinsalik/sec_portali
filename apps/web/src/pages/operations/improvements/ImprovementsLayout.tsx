@@ -87,6 +87,19 @@ export const ImprovementsLayout: React.FC = () => {
 
   useEffect(() => {
     fetchFacilities();
+
+    const handleFacilityChange = () => {
+      const activeLocal = localStorage.getItem('activeFacilityId');
+      if (activeLocal) {
+        setSelectedFacilityId(activeLocal);
+      }
+      fetchFacilities();
+    };
+
+    window.addEventListener('facilityChanged', handleFacilityChange);
+    return () => {
+      window.removeEventListener('facilityChanged', handleFacilityChange);
+    };
   }, [user]);
 
   const currentPath = location.pathname;
