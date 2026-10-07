@@ -22,6 +22,7 @@ export const SHEET_MAP: Record<string, { sheetType: string; moduleGroup: string;
   'Jenerator PK': { sheetType: 'JENERATOR_PK', moduleGroup: 'ELEKTRIK', label: 'Jeneratör PK' },
   'Elektrik Pano Kontrolleri': { sheetType: 'ELEKTRIK_PANO_KONTROLLERI', moduleGroup: 'ELEKTRIK', label: 'Elektrik Pano Kontrolleri' },
   'Elektrik Pano Kontolleri': { sheetType: 'ELEKTRIK_PANO_KONTROLLERI', moduleGroup: 'ELEKTRIK', label: 'Elektrik Pano Kontrolleri' },
+  'Pano Kontrolleri': { sheetType: 'ELEKTRIK_PANO_KONTROLLERI', moduleGroup: 'ELEKTRIK', label: 'Elektrik Pano Kontrolleri' },
   'Trafo': { sheetType: 'TRAFO', moduleGroup: 'ELEKTRIK', label: 'Trafo' },
   'UPS': { sheetType: 'UPS', moduleGroup: 'ELEKTRIK', label: 'UPS' },
 };
@@ -658,15 +659,48 @@ router.post('/import-sheet', async (req: AuthRequest, res: Response) => {
       const rowNoVal = r.rowNo || r['#'] || (i + 1);
       const parsedRowNo = parseInt(String(rowNoVal), 10) || (i + 1);
 
-      let recordDate: Date | null = null;
-      const rawDate = r.recordDate || r.Tarih || r['Tespit Tarihi'] || r['PK Tarihi'] || r['Rapor Tarihi'] || r['Denetim Tarihi'];
-      if (rawDate) {
-        // Excel serial date veya string check
-        if (typeof rawDate === 'number') {
-          recordDate = new Date((rawDate - 25569) * 86400 * 1000);
+      const parseDateVal = (val: any): Date | null => {
+        if (!val && val !== 0) return null;
+        if (typeof val === 'number') {
+          // Excel serial date (days since 1900-01-01)
+          if (val > 20000 && val < 60000) {
+            return new Date(Math.round((val - 25569) * 86400 * 1000));
+          }
+        }
+        if (typeof val === 'string') {
+          const s = val.trim();
+          if (!s) return null;
+          // Format: DD.MM.YYYY veya DD/MM/YYYY
+          const parts = s.split(/[./-]/);
+          if (parts.length === 3 && parts[0].length <= 2 && parts[1].length <= 2 && parts[2].length === 4) {
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const year = parseInt(parts[2], 10);
+            const d = new Date(Date.UTC(year, month, day));
+            if (!isNaN(d.getTime())) return d;
+          }
+          const d = new Date(s);
+          if (!isNaN(d.getTime())) return d;
+        }
+        if (val instanceof Date && !isNaN(val.getTime())) {
+          return val;
+        }
+        return null;
+      };
+
+      const rawRecordDate = r.recordDate || r.Tarih || r['Tespit Tarihi'] || r['PK Tarihi'] || r['Rapor Tarihi'] || r['Denetim Tarihi'];
+      const recordDate = parseDateVal(rawRecordDate);
+
+      const rawDueDate = r.dueDate || r.Termin || r['Termin Tarihi'] || r['Termin'];
+      const dueDate = parseDateVal(rawDueDate);
+
+      // Kategori boş gelmişse bile modül grubuna ve tespit içeriğine göre otomatik uygun kategori ata
+      let assignedCategory = (r.category || r.Kategori || '').trim();
+      if (!assignedCategory) {
+        if (moduleGroup === 'ELEKTRIK') {
+          assignedCategory = 'Elektrik Güvenliği';
         } else {
-          const d = new Date(rawDate);
-          if (!isNaN(d.getTime())) recordDate = d;
+          assignedCategory = 'İş Güvenliği / Fiziksel Riskler';
         }
       }
 
@@ -685,8 +719,9 @@ router.post('/import-sheet', async (req: AuthRequest, res: Response) => {
           actionPlan: r.actionPlan || r['İş Planı'] || r['Is Plani'] || null,
           currentNote: r.currentNote || r['Aksiyon / Açıklama'] || r['Aksiyon/Açıklama'] || null,
           auditName: r.auditName || r['Denetim Adı'] || null,
-          category: r.category || r.Kategori || (moduleGroup === 'ELEKTRIK' ? 'Elektrik Güvenliği' : 'Diğer'),
+          category: assignedCategory,
           recordDate,
+          dueDate,
           applicationType: r.applicationType || r.Uygulama || null,
           sourceFileName: sourceFileName || 'Excel İçe Aktarım',
           createdBy: user.username,
