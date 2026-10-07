@@ -198,6 +198,7 @@ import Fm200DashboardPage from './pages/fm200/Fm200DashboardPage';
 import Fm200WizardPage from './pages/fm200/Fm200WizardPage';
 import Fm200SettingsPage from './pages/fm200/Fm200SettingsPage';
 import Fm200WorkOrdersPage from './pages/fm200/Fm200WorkOrdersPage';
+import Fm200InspectionViewPage from './pages/fm200/Fm200InspectionViewPage';
 
 
 const queryClient = new QueryClient({
@@ -1382,6 +1383,8 @@ function App() {
                   <Route path="/fm200/executive-summary" element={<ProtectedRoute><AppLayout><Fm200DashboardPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/fm200/settings" element={<ProtectedRoute requireAdmin><AppLayout><Fm200SettingsPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/fm200/work-orders" element={<ProtectedRoute><AppLayout><Fm200WorkOrdersPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/fm200/inspections/:id" element={<ProtectedRoute><AppLayout><Fm200InspectionViewPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/fm200/view/:id" element={<ProtectedRoute><AppLayout><Fm200InspectionViewPage /></AppLayout></ProtectedRoute>} />
 
                   {/* ── Redirects ──────────────────────────────────── */}
                   <Route path="/" element={<Navigate to="/portal" replace />} />

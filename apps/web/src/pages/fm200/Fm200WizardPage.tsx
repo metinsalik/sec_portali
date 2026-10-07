@@ -34,7 +34,8 @@ import {
   Calendar,
   Search,
   Trash2,
-  Settings2
+  Settings2,
+  Eye
 } from 'lucide-react';
 import {
   Dialog,
@@ -605,7 +606,12 @@ export default function Fm200WizardPage() {
       refetchLocations();
       queryClient.invalidateQueries({ queryKey: ['fm200Inspections'] });
       setIsWizardOpen(false);
+      const inspectionId = data?.inspection?.id || data?.id || editingInspectionId;
       setEditingInspectionId(null);
+
+      if (!isDraft && inspectionId) {
+        navigate(`/fm200/inspections/${inspectionId}`);
+      }
     },
     onError: (err: any) => {
       toast.error(err.message || 'Kayıt sırasında hata oluştu');
@@ -1369,9 +1375,14 @@ export default function Fm200WizardPage() {
                   {filteredInspections.map((insp: any) => (
                     <tr key={insp.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                       <td className="py-3 font-medium text-slate-800 dark:text-slate-200">
-                        <div className="font-mono text-[11px] text-[#0051d5] font-bold">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/fm200/inspections/${insp.id}`)}
+                          className="font-mono text-[11px] text-[#0051d5] hover:underline font-bold text-left block"
+                          title="Denetim Detayını Gör"
+                        >
                           {insp.location?.systemUid}
-                        </div>
+                        </button>
                         <div className="text-xs mt-0.5">
                           {insp.location?.customRoomName || `${insp.location?.roomType} #${insp.location?.index}`}
                         </div>
@@ -1419,6 +1430,16 @@ export default function Fm200WizardPage() {
                       </td>
                       <td className="py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/fm200/inspections/${insp.id}`)}
+                            className="h-8 text-xs font-bold text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                            title="Denetim Detay Raporunu Görüntüle (View)"
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1" />
+                            Görüntüle
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
