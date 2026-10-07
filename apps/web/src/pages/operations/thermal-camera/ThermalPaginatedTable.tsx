@@ -43,6 +43,7 @@ interface Props {
   onOpenImportModal: (sessionId?: string) => void;
   onOpenQuickEntryModal: (sessionId?: string) => void;
   onDeleteSession?: (sessionId: string) => void;
+  onOpenBulkDeleteSessions?: () => void;
 }
 
 export const ThermalPaginatedTable: React.FC<Props> = ({
@@ -57,7 +58,8 @@ export const ThermalPaginatedTable: React.FC<Props> = ({
   onOpenNewReportModal,
   onOpenImportModal,
   onOpenQuickEntryModal,
-  onDeleteSession
+  onDeleteSession,
+  onOpenBulkDeleteSessions
 }) => {
   // Session Selection: 'ALL' or specific sessionId
   const [selectedSessionId, setSelectedSessionId] = useState<string>('ALL');
@@ -259,9 +261,23 @@ export const ThermalPaginatedTable: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Sağ: 3 Net Aksiyon Butonu + Rapor Sil */}
+          {/* Sağ: 3 Net Aksiyon Butonu + Rapor Sil / Toplu Sil */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Raporu Sil (Seçili Rapor Varsa) */}
+            {/* Toplu Rapor Sil Butonu */}
+            {onOpenBulkDeleteSessions && sessionList.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onOpenBulkDeleteSessions}
+                className="text-xs gap-1.5 font-medium border-rose-200 dark:border-rose-900/50 bg-rose-50/40 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 hover:bg-rose-100 hover:text-rose-800 shadow-xs"
+                title="Birden fazla raporu ve içindeki tüm verileri toplu seçerek siler"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                Toplu Rapor Sil
+              </Button>
+            )}
+
+            {/* Tekil Raporu Sil (Dropdown'da Tekil Rapor Seçiliyse) */}
             {selectedSessionId !== 'ALL' && onDeleteSession && (
               <Button
                 size="sm"
@@ -274,11 +290,11 @@ export const ThermalPaginatedTable: React.FC<Props> = ({
                     setSelectedSessionId('ALL');
                   }
                 }}
-                className="text-xs gap-1.5 font-medium border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 hover:bg-rose-100 hover:text-rose-800 shadow-xs"
+                className="text-xs gap-1.5 font-medium border-rose-300 dark:border-rose-800 bg-rose-100/60 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 hover:bg-rose-200 shadow-xs"
                 title="Seçili raporu ve içindeki tüm verileri tamamen siler"
               >
                 <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                Raporu Sil
+                Seçiliyi Sil
               </Button>
             )}
 

@@ -300,7 +300,64 @@ router.patch('/sessions/:id/status', async (req: AuthRequest, res) => {
 });
 
 // ─────────────────────────────────────────────────────────
-// 5. DELETE SESSION
+// 5. BULK DELETE SESSIONS
+// ─────────────────────────────────────────────────────────
+router.delete('/sessions/bulk', async (req: AuthRequest, res) => {
+  try {
+    const { sessionIds } = req.body as { sessionIds?: string[] };
+    if (!Array.isArray(sessionIds) || sessionIds.length === 0) {
+      return res.status(400).json({ error: 'Silinecek rapor listesi (sessionIds) gereklidir.' });
+    }
+
+    // 1. Fetch items to clean up physical photo files from disk
+    const items = await prisma.thermalInspectionItem.findMany({
+      where: { sessionId: { in: sessionIds } },
+      select: { id: true, photoUrls: true, actionPhotos: true }
+    });
+
+    for (const item of items) {
+      const allUrls = [
+        ...(Array.isArray(item.photoUrls) ? (item.photoUrls as string[]) : []),
+        ...(Array.isArray(item.actionPhotos) ? (item.actionPhotos as string[]) : [])
+      ];
+      for (const pUrl of allUrls) {
+        if (typeof pUrl === 'string' && pUrl) {
+          try {
+            const relPath = pUrl.startsWith('/') ? pUrl.slice(1) : pUrl;
+            const fullDiskPath = path.join(process.cwd(), relPath);
+            if (fs.existsSync(fullDiskPath)) {
+              fs.unlinkSync(fullDiskPath);
+            }
+          } catch (e) {
+            // ignore disk unlink error
+          }
+        }
+      }
+    }
+
+    // 2. Delete items
+    const deletedItems = await prisma.thermalInspectionItem.deleteMany({
+      where: { sessionId: { in: sessionIds } }
+    });
+
+    // 3. Delete sessions
+    const deletedSessions = await prisma.thermalInspectionSession.deleteMany({
+      where: { id: { in: sessionIds } }
+    });
+
+    res.json({
+      message: `${deletedSessions.count} adet rapor ve ${deletedItems.count} adet ölçüm kaydı başarıyla silindi.`,
+      deletedSessionCount: deletedSessions.count,
+      deletedItemCount: deletedItems.count
+    });
+  } catch (error: any) {
+    console.error('Error bulk deleting thermal sessions:', error);
+    res.status(500).json({ error: error.message || 'Raporlar toplu silinirken hata oluştu.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────
+// 5.1 DELETE SINGLE SESSION
 // ─────────────────────────────────────────────────────────
 router.delete('/sessions/:id', async (req: AuthRequest, res) => {
   try {

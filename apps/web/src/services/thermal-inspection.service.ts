@@ -147,6 +147,19 @@ export const thermalInspectionService = {
     if (!res.ok) throw new Error('Oturum silinemedi.');
   },
 
+  // Toplu oturum/rapor sil
+  async deleteSessionsBulk(sessionIds: string[]): Promise<{ message: string; deletedSessionCount: number; deletedItemCount: number }> {
+    const res = await api.delete('/safety-management/electric-infrastructure/thermal/sessions/bulk', {
+      body: JSON.stringify({ sessionIds }),
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Raporlar toplu silinemedi.');
+    }
+    return await res.json();
+  },
+
   // Excel yükle
   async importExcel(facilityId: string, file: File, reportDate?: string): Promise<{ message: string; session: ThermalInspectionSession }> {
     const formData = new FormData();

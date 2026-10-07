@@ -27,6 +27,7 @@ import { ThermalItemDetailModal } from './ThermalItemDetailModal';
 import { ThermalItemFormModal } from './ThermalItemFormModal';
 import { ThermalActionModal } from './ThermalActionModal';
 import { ThermalMergePanelsModal } from './ThermalMergePanelsModal';
+import { ThermalBulkDeleteReportsModal } from './ThermalBulkDeleteReportsModal';
 import { toast } from 'sonner';
 
 const API = import.meta.env.VITE_API_URL || '';
@@ -76,6 +77,7 @@ export default function ThermalCameraPage() {
   const [quickEntrySessionId, setQuickEntrySessionId] = useState<string | undefined>(undefined);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMergeModal, setShowMergeModal] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [editingItem, setEditingItem] = useState<ThermalInspectionItem | null>(null);
   const [viewingItem, setViewingItem] = useState<ThermalInspectionItem | null>(null);
   const [actionItem, setActionItem] = useState<ThermalInspectionItem | null>(null);
@@ -210,6 +212,19 @@ export default function ThermalCameraPage() {
     }
   };
 
+  const handleBulkDeleteSessions = async (sessionIds: string[]) => {
+    try {
+      const res = await thermalInspectionService.deleteSessionsBulk(sessionIds);
+      toast.success(res.message || `${sessionIds.length} adet rapor silindi.`);
+      setSessions(prev => prev.filter(s => !sessionIds.includes(s.id)));
+      setAllItems(prev => prev.filter(i => !sessionIds.includes(i.sessionId)));
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Raporlar toplu silinemedi.');
+      throw err;
+    }
+  };
+
   // Keep activeTab in sync with URL searchParams (e.g. when clicked from AppLayout sidebar)
   useEffect(() => {
     const tabParam = searchParams.get('tab') as 'dashboard' | 'table' | 'panels' | null;
@@ -314,6 +329,7 @@ export default function ThermalCameraPage() {
               setShowQuickEntryModal(true);
             }}
             onDeleteSession={handleDeleteSession}
+            onOpenBulkDeleteSessions={() => setShowBulkDeleteModal(true)}
           />
         ) : (
           /* Panels Inventory and Cycles View */
@@ -433,6 +449,16 @@ export default function ThermalCameraPage() {
           onMerged={() => {
             fetchThermalData();
           }}
+        />
+      )}
+
+      {showBulkDeleteModal && (
+        <ThermalBulkDeleteReportsModal
+          isOpen={showBulkDeleteModal}
+          onClose={() => setShowBulkDeleteModal(false)}
+          sessions={sessions}
+          facilityName={currentFacilityName}
+          onDeleteSelected={handleBulkDeleteSessions}
         />
       )}
     </div>
