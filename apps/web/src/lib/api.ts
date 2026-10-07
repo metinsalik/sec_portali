@@ -36,8 +36,11 @@ export const api = {
     apiFetch(endpoint, { method: 'PUT', body: body instanceof FormData ? body : JSON.stringify(body) }),
   patch: (endpoint: string, body: unknown) =>
     apiFetch(endpoint, { method: 'PATCH', body: body instanceof FormData ? body : JSON.stringify(body) }),
-  delete: (endpoint: string) =>
-    apiFetch(endpoint, { method: 'DELETE' }),
+  delete: (endpoint: string, body?: unknown) =>
+    apiFetch(endpoint, {
+      method: 'DELETE',
+      ...(body !== undefined ? { body: body instanceof FormData ? body : JSON.stringify(body) } : {})
+    }),
   customFetch: (endpoint: string, options: RequestInit) => {
     const token = localStorage.getItem('token');
     const headers = {

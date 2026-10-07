@@ -304,8 +304,9 @@ router.patch('/sessions/:id/status', async (req: AuthRequest, res) => {
 // ─────────────────────────────────────────────────────────
 router.delete('/sessions/bulk', async (req: AuthRequest, res) => {
   try {
-    const { sessionIds } = req.body as { sessionIds?: string[] };
-    if (!Array.isArray(sessionIds) || sessionIds.length === 0) {
+    const rawIds = req.body?.sessionIds || (typeof req.query.ids === 'string' ? req.query.ids.split(',') : undefined);
+    const sessionIds = Array.isArray(rawIds) ? rawIds : [];
+    if (sessionIds.length === 0) {
       return res.status(400).json({ error: 'Silinecek rapor listesi (sessionIds) gereklidir.' });
     }
 
