@@ -40,7 +40,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Dinamik modül kontrolü
   let requiredModule = '';
-  if (location.pathname.startsWith('/hazmat')) requiredModule = 'HAZMAT';
+  if (location.pathname.startsWith('/safety-management/electric-infrastructure')) {
+    // Elektrik altyapı modülü geçici olarak pasife alındı, yalnızca yöneticilere açık
+    if (!hasAdminAccess) {
+      return <Navigate to="/portal" replace />;
+    }
+  } else if (location.pathname.startsWith('/operations-management/thermal-camera') || location.pathname.startsWith('/safety-management/thermal-camera')) {
+    const hasThermalAccess = hasAdminAccess || 
+      user.modules?.includes('ELECTRIC_PANEL_INSPECTION') || 
+      user.modules?.includes('THERMAL_CAMERA') ||
+      user.modules?.includes('ELECTRIC_INFRASTRUCTURE');
+    if (!hasThermalAccess) {
+      return <Navigate to="/portal" replace />;
+    }
+  } else if (location.pathname.startsWith('/hazmat')) requiredModule = 'HAZMAT';
   else if (location.pathname.startsWith('/fire-equipment')) requiredModule = 'FIRE_EQUIPMENT';
   else if (location.pathname.startsWith('/build-management')) requiredModule = 'BUILD_MANAGEMENT';
   else if (location.pathname.startsWith('/renovation-report')) requiredModule = 'RENOVATION_REPORT';

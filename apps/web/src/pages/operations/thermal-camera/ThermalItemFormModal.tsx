@@ -9,17 +9,17 @@ import { toast } from 'sonner';
 import { thermalInspectionService, type ThermalInspectionItem } from '@/services/thermal-inspection.service';
 
 interface Props {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
-  sessionId: string;
+  sessionId?: string;
   item: ThermalInspectionItem | null;
   onSaved: (item: ThermalInspectionItem) => void;
 }
 
 export const ThermalItemFormModal: React.FC<Props> = ({
-  isOpen,
+  isOpen = true,
   onClose,
-  sessionId,
+  sessionId = '',
   item,
   onSaved
 }) => {

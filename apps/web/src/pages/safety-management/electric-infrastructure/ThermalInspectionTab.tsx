@@ -22,7 +22,7 @@ import { ThermalPhotoModal } from './ThermalPhotoModal';
 import { ThermalItemFormModal } from './ThermalItemFormModal';
 import { ThermalExecutiveDashboard } from './ThermalExecutiveDashboard';
 import { ThermalOriginalDashboard } from './ThermalOriginalDashboard';
-import { ThermalDateCardsView } from '../thermal-camera/ThermalDateCardsView';
+import { ThermalDateCardsView } from '@/pages/operations/thermal-camera/ThermalDateCardsView';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from 'recharts';
 
 interface Props {

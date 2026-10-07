@@ -190,8 +190,8 @@ import IsgDefterSettings from './pages/safety-management/isg-defter/IsgDefterSet
 import IsgDefterItemDetail from './pages/safety-management/isg-defter/IsgDefterItemDetail';
 import IsgDefterPageBuilder from './pages/safety-management/isg-defter/IsgDefterPageBuilder';
 
-import ThermalCameraPage from './pages/safety-management/thermal-camera/ThermalCameraPage';
-import ThermalCameraDashboard from './pages/safety-management/thermal-camera/ThermalCameraDashboard';
+import ThermalCameraPage from './pages/operations/thermal-camera/ThermalCameraPage';
+import ThermalCameraDashboard from './pages/operations/thermal-camera/ThermalCameraDashboard';
 
 // Yangın Güvenliği Kontrol Sistemi
 import FireSafetyDashboard from './pages/fire_safety_control/FireSafetyDashboard';
@@ -387,9 +387,9 @@ function App() {
                     }
                   />
 
-                  {/* ── TERMAL KAMERA KONTROLÜ ─────────────────────── */}
+                  {/* ── TERMAL KAMERA & ELEKTRİK PANO KONTROLÜ (OPERATIONS MANAGEMENT) ──── */}
                   <Route
-                    path="/safety-management/thermal-camera"
+                    path="/operations-management/thermal-camera"
                     element={
                       <ProtectedRoute>
                         <AppLayout><ThermalCameraPage /></AppLayout>
@@ -397,12 +397,21 @@ function App() {
                     }
                   />
                   <Route
-                    path="/safety-management/thermal-camera/dashboard"
+                    path="/operations-management/thermal-camera/dashboard"
                     element={
                       <ProtectedRoute>
                         <AppLayout><ThermalCameraDashboard /></AppLayout>
                       </ProtectedRoute>
                     }
+                  />
+                  {/* Eski linklerden gelenler için yönlendirme */}
+                  <Route
+                    path="/safety-management/thermal-camera"
+                    element={<Navigate to="/operations-management/thermal-camera" replace />}
+                  />
+                  <Route
+                    path="/safety-management/thermal-camera/dashboard"
+                    element={<Navigate to="/operations-management/thermal-camera/dashboard" replace />}
                   />
 
                   {/* ── İSG KURUL YÖNETİMİ ─────────────────────── */}

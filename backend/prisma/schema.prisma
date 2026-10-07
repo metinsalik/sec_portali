@@ -2814,6 +2814,18 @@ model ThermalInspectionItem {
   @@index([actionDueDate])
 }
 
+model ThermalSetting {
+  id                String   @id @default(uuid())
+  facilityId        String?  @unique // null ise genel sistem varsayılanı
+  warningThreshold  Float    @default(35.0) // 35°C Takip başlangıcı
+  criticalThreshold Float    @default(40.0) // 40°C Uygunsuz / Kritik
+  deltaWarning      Float    @default(15.0) // ΔT 15°C Fark uyarısı
+  deltaCritical     Float    @default(30.0) // ΔT 30°C Acil fark
+  negativeDeltaWarn Boolean  @default(true) // Ortamdan soğuk (ΔT < 0) doğrula uyarısı
+  updatedAt         DateTime @updatedAt
+  createdAt         DateTime @default(now())
+}
+
 // ─────────────────────────────────────────────────────────
 // YANGIN GÜVENLİĞİ KONTROL SİSTEMİ MODELLERİ
 // ─────────────────────────────────────────────────────────

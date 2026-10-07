@@ -30,17 +30,21 @@ import {
 } from '@/services/thermal-inspection.service';
 
 interface Props {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
   item: ThermalInspectionItem | null;
-  onActionSaved: (updatedItem: ThermalInspectionItem) => void;
+  facilityId?: string;
+  onActionSaved?: (updatedItem: ThermalInspectionItem) => void;
+  onSaved?: (updatedItem: ThermalInspectionItem) => void;
 }
 
 export const ThermalActionModal: React.FC<Props> = ({
-  isOpen,
+  isOpen = true,
   onClose,
   item,
-  onActionSaved
+  facilityId,
+  onActionSaved,
+  onSaved
 }) => {
   if (!item) return null;
 
@@ -61,6 +65,8 @@ export const ThermalActionModal: React.FC<Props> = ({
   const [actionNotes, setActionNotes] = useState(item.actionNotes || '');
   const [panelStatus, setPanelStatus] = useState<string>(item.status || 'Normal');
   const [panelPriority, setPanelPriority] = useState<string>(item.priority || 'Düşük');
+  const [newMeasuredTemp, setNewMeasuredTemp] = useState<string>(item.measuredTemp != null ? String(item.measuredTemp) : '');
+  const [newAmbientTemp, setNewAmbientTemp] = useState<string>(item.ambientTemp != null ? String(item.ambientTemp) : '24');
   const [photos, setPhotos] = useState<string[]>(Array.isArray(item.actionPhotos) ? (item.actionPhotos as string[]) : []);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -68,12 +74,16 @@ export const ThermalActionModal: React.FC<Props> = ({
   // Status mapping
   const isUrgent = item.priority === 'Acil' || (item.measuredTemp && item.measuredTemp >= 60);
 
-  // When user clicks 'TAMAMLANDI', auto-suggest changing panel status to 'Normal'
-  const handleStatusChange = (newActionStatus: string) => {
-    setActionStatus(newActionStatus);
-    if (newActionStatus === 'TAMAMLANDI') {
+  // When user clicks 'TAMAMLANDI', auto-suggest changing panel status to 'Normal' and updating measurement
+  const handleStatusChange = (newStatus: string) => {
+    setActionStatus(newStatus);
+    if (newStatus === 'TAMAMLANDI') {
       setPanelStatus('Normal');
       setPanelPriority('Düşük');
+      // Eğer mevcut sıcaklık 40°C veya üzeriyse, düzeltme sonrası normal çalışma sıcaklığı öner (örn: 28.5°C)
+      if (!newMeasuredTemp || parseFloat(newMeasuredTemp) >= 40) {
+        setNewMeasuredTemp('28.5');
+      }
     }
   };
 
@@ -112,6 +122,10 @@ export const ThermalActionModal: React.FC<Props> = ({
 
     setIsSubmitting(true);
     try {
+      const mTemp = newMeasuredTemp !== '' ? parseFloat(newMeasuredTemp) : null;
+      const aTemp = newAmbientTemp !== '' ? parseFloat(newAmbientTemp) : null;
+      const dTemp = (mTemp !== null && aTemp !== null) ? Number((mTemp - aTemp).toFixed(1)) : null;
+
       const updated = await thermalInspectionService.updateItemAction(item.id, {
         actionPlan: actionPlan.trim(),
         actionDueDate: actionDueDate ? new Date(actionDueDate).toISOString() : null,
@@ -121,11 +135,15 @@ export const ThermalActionModal: React.FC<Props> = ({
         actionPhotos: photos,
         status: panelStatus,
         priority: panelPriority,
-        actionCompletedDate: actionStatus === 'TAMAMLANDI' ? new Date().toISOString() : null
+        actionCompletedDate: actionStatus === 'TAMAMLANDI' ? new Date().toISOString() : null,
+        measuredTemp: mTemp,
+        ambientTemp: aTemp,
+        deltaTemp: dTemp
       });
 
       toast.success('Pano aksiyon ve durum güncellemesi başarıyla kaydedildi.');
-      onActionSaved(updated);
+      onActionSaved?.(updated);
+      onSaved?.(updated);
       onClose();
     } catch (err: any) {
       console.error(err);
@@ -179,7 +197,7 @@ export const ThermalActionModal: React.FC<Props> = ({
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => setActionStatus('BEKLIYOR')}
+                onClick={() => handleStatusChange('BEKLIYOR')}
                 className={`py-2 px-3 text-xs font-medium rounded-lg border text-center transition-all ${
                   actionStatus === 'BEKLIYOR'
                     ? 'border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 ring-2 ring-amber-400'
@@ -191,7 +209,7 @@ export const ThermalActionModal: React.FC<Props> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setActionStatus('DEVAM_EDIYOR')}
+                onClick={() => handleStatusChange('DEVAM_EDIYOR')}
                 className={`py-2 px-3 text-xs font-medium rounded-lg border text-center transition-all ${
                   actionStatus === 'DEVAM_EDIYOR'
                     ? 'border-blue-500 bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300 ring-2 ring-blue-400'
@@ -203,7 +221,7 @@ export const ThermalActionModal: React.FC<Props> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setActionStatus('TAMAMLANDI')}
+                onClick={() => handleStatusChange('TAMAMLANDI')}
                 className={`py-2 px-3 text-xs font-medium rounded-lg border text-center transition-all ${
                   actionStatus === 'TAMAMLANDI'
                     ? 'border-emerald-500 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 ring-2 ring-emerald-400'
@@ -265,19 +283,76 @@ export const ThermalActionModal: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Pano Durumu Değiştirme (İş bitince Normale geçiş veya Durum Ayarı) */}
-          <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-2">
+          {/* Pano Durumu ve Tekrar Kontrol Ölçüm Değerleri */}
+          <div className="p-3.5 rounded-lg border border-indigo-100 dark:border-indigo-900/40 bg-gradient-to-br from-indigo-50/40 to-slate-50 dark:from-slate-800/60 dark:to-indigo-950/20 space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Pano Durumu Güncelle
+              <label className="text-xs font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5">
+                <Thermometer className="w-3.5 h-3.5 text-indigo-600" />
+                Tekrar Kontrol Ölçümü & Pano Durumu
               </label>
-              <span className="text-[10px] text-slate-400">
-                (İş tamamlandığında panoyu doğrudan <strong>Normal</strong> durumuna alabilirsiniz)
+              <span className="text-[10px] text-slate-500">
+                (Normale çekerken yapılan yeni ölçüm değerini giriniz)
               </span>
             </div>
+
+            {/* Tekrar Kontrol Ölçüm Değerleri */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <div>
+                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 block mb-1">
+                  Son Ölçülen Sıcaklık (°C):
+                </span>
+                <Input
+                  type="number"
+                  step="0.1"
+                  placeholder="Örn: 28.5"
+                  value={newMeasuredTemp}
+                  onChange={(e) => {
+                    setNewMeasuredTemp(e.target.value);
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val)) {
+                      if (val < 40) {
+                        setPanelStatus('Normal');
+                        setPanelPriority('Düşük');
+                      } else if (val >= 60) {
+                        setPanelStatus('Kritik');
+                        setPanelPriority('Acil');
+                      } else {
+                        setPanelStatus('Uygunsuz');
+                        setPanelPriority('Orta');
+                      }
+                    }
+                  }}
+                  className="h-8 text-xs font-mono font-bold"
+                />
+              </div>
+
+              <div>
+                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 block mb-1">
+                  Ortam Sıcaklığı (°C):
+                </span>
+                <Input
+                  type="number"
+                  step="0.1"
+                  placeholder="Örn: 24.0"
+                  value={newAmbientTemp}
+                  onChange={(e) => setNewAmbientTemp(e.target.value)}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+
+              <div className="col-span-2 sm:col-span-1 flex flex-col justify-center">
+                <span className="text-[10px] font-bold text-slate-500 block mb-1">Hesaplanan ΔT Fark:</span>
+                <div className="h-8 px-2.5 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex items-center font-mono font-bold text-xs text-indigo-600">
+                  {newMeasuredTemp && newAmbientTemp
+                    ? `+${(parseFloat(newMeasuredTemp) - parseFloat(newAmbientTemp)).toFixed(1)} °C`
+                    : '—'}
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <span className="text-[11px] text-slate-500 block mb-1">Pano Durumu:</span>
+                <span className="text-[11px] text-slate-600 dark:text-slate-400 font-medium block mb-1">Pano Durumu:</span>
                 <select
                   value={panelStatus}
                   onChange={(e) => setPanelStatus(e.target.value)}
@@ -291,7 +366,7 @@ export const ThermalActionModal: React.FC<Props> = ({
               </div>
 
               <div>
-                <span className="text-[11px] text-slate-500 block mb-1">Öncelik Derecesi:</span>
+                <span className="text-[11px] text-slate-600 dark:text-slate-400 font-medium block mb-1">Öncelik Derecesi:</span>
                 <select
                   value={panelPriority}
                   onChange={(e) => setPanelPriority(e.target.value)}

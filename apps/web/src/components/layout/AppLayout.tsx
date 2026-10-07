@@ -7,7 +7,7 @@ import {
   ClipboardList, FileText, Settings, Bell, ChevronDown, LogOut,
   User, BarChart3, ChevronRight, LayoutGrid, Database, Users2, Mail,
   BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame, PenTool, Menu, X, ShoppingCart, PieChart, Calendar, AlertCircle, MessageSquare, BookOpen, DoorClosed,
-  PanelLeftClose, PanelLeftOpen, PanelLeft, Zap, Camera, ShieldCheck
+  PanelLeftClose, PanelLeftOpen, PanelLeft, Zap, Camera, ShieldCheck, Thermometer, Sliders
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -182,10 +182,13 @@ const electricInfrastructureNavItems = (hasAdminAccess: boolean) => [
 const thermalCameraNavItems = (hasAdminAccess: boolean) => [
   ...(hasAdminAccess ? [
     { label: 'YÖNETİCİ', type: 'group' },
-    { label: 'Yönetici Dashboard', icon: LayoutDashboard, to: '/safety-management/thermal-camera/dashboard' },
+    { label: 'Yönetici Özeti', icon: BarChart3, to: '/operations-management/thermal-camera/dashboard' },
   ] : []),
+  { label: 'GENEL', type: 'group' },
+  { label: 'Genel Dashboard', icon: LayoutDashboard, to: '/operations-management/thermal-camera?tab=dashboard' },
   { label: 'İŞLEMLER', type: 'group' },
-  { label: 'Termal Kamera Kontrolü', icon: Camera, to: '/safety-management/thermal-camera' },
+  { label: 'Ölçüm Tablosu', icon: Thermometer, to: '/operations-management/thermal-camera?tab=table' },
+  { label: 'Pano Envanteri & Döngüler', icon: Layers, to: '/operations-management/thermal-camera?tab=panels' },
 ];
 
 const binaTuruNavItems = [
@@ -354,7 +357,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   } else if (path.startsWith('/safety-management/electric-infrastructure')) {
     navItems = electricInfrastructureNavItems(!!hasAdminAccess);
     moduleName = 'Elektrik Altyapı Kontrol Formu';
-  } else if (path.startsWith('/safety-management/thermal-camera')) {
+  } else if (path.startsWith('/operations-management/thermal-camera') || path.startsWith('/safety-management/thermal-camera')) {
     navItems = thermalCameraNavItems(!!hasAdminAccess);
     moduleName = 'Termal Kamera Kontrolü';
   } else if (path.startsWith('/bina-turu')) {
@@ -398,15 +401,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
       path.startsWith('/risks') ||
       path.startsWith('/checklists') ||
       path.startsWith('/safety-management/fire-doors') ||
-      path.startsWith('/safety-management/elevator-tracking') ||
-      path.startsWith('/safety-management/thermal-camera')
+      path.startsWith('/safety-management/elevator-tracking')
     ) {
       return '/safety-management';
     }
     if (
       path.startsWith('/panel') ||
       path.startsWith('/renovation-report') ||
-      path.startsWith('/fire-safety-control')
+      path.startsWith('/fire-safety-control') ||
+      path.startsWith('/operations-management') ||
+      path.startsWith('/fm200')
     ) {
       return '/operations-management';
     }
@@ -484,7 +488,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* Facility Switcher (Show for modules that need it) */}
-        {(path.startsWith('/isg-kurul') || path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management') || path.startsWith('/renovation-report') || path.startsWith('/checklists') || path.startsWith('/safety-management/fire-doors') || path.startsWith('/safety-management/elevator-tracking') || path.startsWith('/safety-management/electric-infrastructure') || path.startsWith('/safety-management/thermal-camera') || path.startsWith('/fire-safety-control') || path.startsWith('/fm200')) && (
+        {(path.startsWith('/isg-kurul') || path.startsWith('/bina-turu') || path.startsWith('/hazmat') || path.startsWith('/risks') || path.startsWith('/operations') || path.startsWith('/fire-equipment') || path.startsWith('/build-management') || path.startsWith('/renovation-report') || path.startsWith('/checklists') || path.startsWith('/safety-management/fire-doors') || path.startsWith('/safety-management/elevator-tracking') || path.startsWith('/safety-management/electric-infrastructure') || path.startsWith('/safety-management/thermal-camera') || path.startsWith('/operations-management/thermal-camera') || path.startsWith('/fire-safety-control') || path.startsWith('/fm200')) && (
           <div className="flex-shrink-0">
             <FacilitySwitcher isCollapsed={isCollapsed} />
           </div>
@@ -513,6 +517,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
             
             if (item.to?.includes('?category=')) {
               customIsActive = (location.pathname + decodedSearch) === item.to;
+            } else if (item.to?.includes('?tab=')) {
+              const currentTab = new URLSearchParams(location.search).get('tab') || 'dashboard';
+              const itemTab = new URLSearchParams(item.to.split('?')[1]).get('tab');
+              customIsActive = location.pathname === item.to.split('?')[0] && currentTab === itemTab;
             } else if (item.to === '/fire-equipment/list') {
               customIsActive = location.pathname === item.to && (!decodedSearch || !decodedSearch.includes('category='));
             } else {

@@ -148,10 +148,13 @@ export const thermalInspectionService = {
   },
 
   // Excel yükle
-  async importExcel(facilityId: string, file: File): Promise<{ message: string; session: ThermalInspectionSession }> {
+  async importExcel(facilityId: string, file: File, reportDate?: string): Promise<{ message: string; session: ThermalInspectionSession }> {
     const formData = new FormData();
     formData.append('facilityId', facilityId);
     formData.append('file', file);
+    if (reportDate) {
+      formData.append('reportDate', reportDate);
+    }
     const res = await api.post('/safety-management/electric-infrastructure/thermal/import-excel', formData);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -234,12 +237,29 @@ export const thermalInspectionService = {
       actionPhotos?: string[];
       status?: string;
       priority?: string;
+      measuredTemp?: number | null;
+      ambientTemp?: number | null;
+      deltaTemp?: number | null;
     }
   ): Promise<ThermalInspectionItem> {
     const res = await api.patch(`/safety-management/electric-infrastructure/thermal/items/${itemId}/action`, data);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Aksiyon güncellenemedi.');
+    }
+    return await res.json();
+  },
+
+  // Farklı veya hatalı adlandırılmış panoları tek bir isim altında birleştirme
+  async mergePanels(data: {
+    targetPanelName: string;
+    sourcePanelNames: string[];
+    facilityId?: string;
+  }): Promise<{ message: string; updatedCount: number; targetPanelName: string }> {
+    const res = await api.post('/safety-management/electric-infrastructure/thermal/merge-panels', data);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Panolar birleştirilemedi.');
     }
     return await res.json();
   },
@@ -274,5 +294,44 @@ export const thermalInspectionService = {
       throw new Error(err.error || 'Boş satırlar temizlenemedi.');
     }
     return await res.json();
+  },
+
+  // Delta T ve Sıcaklık Eşik Değerleri Ayarları
+  async getSettings(facilityId?: string): Promise<any> {
+    const query = facilityId && facilityId !== 'all' ? `?facilityId=${encodeURIComponent(facilityId)}` : '';
+    const res = await api.get(`/safety-management/electric-infrastructure/thermal/settings${query}`);
+    if (!res.ok) throw new Error('Ayarlar getirilemedi.');
+    const data = await res.json();
+    return data.data;
+  },
+
+  async updateSettings(data: {
+    facilityId?: string | null;
+    warningThreshold: number;
+    criticalThreshold: number;
+    deltaWarning: number;
+    deltaCritical: number;
+    negativeDeltaWarn: boolean;
+  }): Promise<any> {
+    const res = await api.put('/safety-management/electric-infrastructure/thermal/settings', data);
+    if (!res.ok) throw new Error('Ayarlar kaydedilemedi.');
+    return await res.json();
+  },
+
+  // Pano adı otomatik tamamlama önerileri
+  async getPanelSuggestions(facilityId?: string, search?: string): Promise<Array<{
+    panelName: string;
+    buildingLocation?: string;
+    floorSection?: string;
+    equipmentConnection?: string;
+    measurementPoint?: string;
+  }>> {
+    const params = new URLSearchParams();
+    if (facilityId && facilityId !== 'all') params.append('facilityId', facilityId);
+    if (search) params.append('search', search);
+    const res = await api.get(`/safety-management/electric-infrastructure/thermal/panels/suggestions?${params.toString()}`);
+    if (!res.ok) return [];
+    const json = await res.json();
+    return json.data || [];
   }
 };

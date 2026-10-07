@@ -588,12 +588,13 @@ router.post('/import-excel', tempUpload.single('file'), async (req: AuthRequest,
     }
 
     const targetFacilityId = (await resolveFacilityId(facilityId)) || facilityId;
+    const customReportDate = req.body.reportDate ? new Date(req.body.reportDate) : null;
 
     // Create session
     const session = await prisma.thermalInspectionSession.create({
       data: {
         facilityId: targetFacilityId,
-        reportDate: firstFoundDate || new Date(),
+        reportDate: customReportDate || firstFoundDate || new Date(),
         status: 'DEVAM_EDIYOR',
         notes: `${file.originalname} dosyasından ${itemsToCreate.length} satır aktarıldı.`,
         uploadedBy: req.user?.fullName || req.user?.username || 'Kullanıcı',
@@ -830,6 +831,52 @@ router.post('/cleanup-empty', async (req: AuthRequest, res) => {
   }
 });
 
+// Pano Birleştirme (Farklı veya hatalı yazılmış pano isimlerini tek bir standart isim altında birleştirme)
+router.post('/merge-panels', async (req: AuthRequest, res) => {
+  try {
+    const { targetPanelName, sourcePanelNames, facilityId } = req.body;
+
+    if (!targetPanelName || !targetPanelName.trim()) {
+      return res.status(400).json({ error: 'Hedef pano adı zorunludur.' });
+    }
+    if (!Array.isArray(sourcePanelNames) || sourcePanelNames.length === 0) {
+      return res.status(400).json({ error: 'Birleştirilecek kaynak panolar seçilmelidir.' });
+    }
+
+    const cleanTargetName = targetPanelName.trim();
+    const cleanSourceNames = sourcePanelNames.map((s: string) => s.trim()).filter((s: string) => s && s !== cleanTargetName);
+
+    if (cleanSourceNames.length === 0) {
+      return res.status(400).json({ error: 'Hedef isimden farklı en az bir pano seçilmelidir.' });
+    }
+
+    const whereClause: any = {
+      panelName: { in: cleanSourceNames }
+    };
+
+    if (facilityId && facilityId !== 'all') {
+      const canonicalFacId = (await resolveFacilityId(facilityId)) || facilityId;
+      whereClause.session = { facilityId: canonicalFacId };
+    }
+
+    const updateResult = await prisma.thermalInspectionItem.updateMany({
+      where: whereClause,
+      data: {
+        panelName: cleanTargetName
+      }
+    });
+
+    res.json({
+      message: `${updateResult.count} adet ölçüm kaydı başarıyla "${cleanTargetName}" panosu altında birleştirildi.`,
+      updatedCount: updateResult.count,
+      targetPanelName: cleanTargetName
+    });
+  } catch (error: any) {
+    console.error('Error merging panels:', error);
+    res.status(500).json({ error: error.message || 'Panolar birleştirilirken bir hata oluştu.' });
+  }
+});
+
 // ─────────────────────────────────────────────────────────
 // AKSİYON AL / GÜNCELLE VE TAKİP ENDPOINTLERİ
 // ─────────────────────────────────────────────────────────
@@ -847,7 +894,9 @@ router.patch('/items/:id/action', async (req: AuthRequest, res) => {
       actionNotes,
       actionPhotos,
       status,
-      priority
+      priority,
+      measuredTemp,
+      ambientTemp
     } = req.body;
 
     const existing = await prisma.thermalInspectionItem.findUnique({
@@ -855,6 +904,21 @@ router.patch('/items/:id/action', async (req: AuthRequest, res) => {
     });
     if (!existing) {
       return res.status(404).json({ error: 'Ölçüm kaydı bulunamadı.' });
+    }
+
+    // If new measurements provided, update measuredTemp & ambientTemp & deltaTemp
+    let newMeasuredTemp = existing.measuredTemp;
+    let newAmbientTemp = existing.ambientTemp;
+    let newDeltaTemp = existing.deltaTemp;
+
+    if (measuredTemp !== undefined && measuredTemp !== '' && measuredTemp !== null) {
+      newMeasuredTemp = parseFloat(measuredTemp);
+    }
+    if (ambientTemp !== undefined && ambientTemp !== '' && ambientTemp !== null) {
+      newAmbientTemp = parseFloat(ambientTemp);
+    }
+    if (newMeasuredTemp !== null && newAmbientTemp !== null) {
+      newDeltaTemp = Number((newMeasuredTemp - newAmbientTemp).toFixed(1));
     }
 
     // If actionStatus is TAMAMLANDI and user hasn't explicitly set status, transition to Normal
@@ -877,6 +941,9 @@ router.patch('/items/:id/action', async (req: AuthRequest, res) => {
         actionPhotos: actionPhotos !== undefined ? actionPhotos : undefined,
         status: resolvedStatus,
         priority: resolvedPriority,
+        measuredTemp: newMeasuredTemp,
+        ambientTemp: newAmbientTemp,
+        deltaTemp: newDeltaTemp,
         // Sync with legacy actionTaken if updated
         actionTaken: actionPlan || actionNotes || existing.actionTaken
       }
@@ -1227,6 +1294,146 @@ router.get('/dashboard-stats', async (req: AuthRequest, res) => {
   } catch (error: any) {
     console.error('Error fetching thermal dashboard stats:', error);
     res.status(500).json({ error: error.message || 'Termal yönetici paneli verileri alınamadı.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────
+// 12. GET & PUT SETTINGS (DELTA T VE EŞİK DEĞERLERİ)
+// ─────────────────────────────────────────────────────────
+router.get('/settings', async (req: AuthRequest, res) => {
+  try {
+    const { facilityId } = req.query;
+    let targetFacilityId: string | null = null;
+    if (facilityId && facilityId !== 'all') {
+      targetFacilityId = (await resolveFacilityId(String(facilityId))) || String(facilityId);
+    }
+
+    let setting = null;
+    if (targetFacilityId) {
+      setting = await prisma.thermalSetting.findUnique({
+        where: { facilityId: targetFacilityId }
+      });
+    }
+
+    if (!setting) {
+      // Genel sistem varsayılanı (facilityId = null veya ilk kayıt)
+      setting = await prisma.thermalSetting.findFirst({
+        where: { facilityId: null }
+      });
+    }
+
+    if (!setting) {
+      setting = {
+        id: 'default',
+        facilityId: null,
+        warningThreshold: 35.0,
+        criticalThreshold: 40.0,
+        deltaWarning: 15.0,
+        deltaCritical: 30.0,
+        negativeDeltaWarn: true,
+        updatedAt: new Date(),
+        createdAt: new Date()
+      };
+    }
+
+    res.json({ success: true, data: setting });
+  } catch (error: any) {
+    console.error('Error fetching thermal settings:', error);
+    res.status(500).json({ error: error.message || 'Ayarlar alınamadı.' });
+  }
+});
+
+router.put('/settings', async (req: AuthRequest, res) => {
+  try {
+    const {
+      facilityId,
+      warningThreshold,
+      criticalThreshold,
+      deltaWarning,
+      deltaCritical,
+      negativeDeltaWarn
+    } = req.body;
+
+    let targetFacilityId: string | null = null;
+    if (facilityId && facilityId !== 'all') {
+      targetFacilityId = (await resolveFacilityId(String(facilityId))) || String(facilityId);
+    }
+
+    const payload = {
+      warningThreshold: parseFloat(warningThreshold) || 35.0,
+      criticalThreshold: parseFloat(criticalThreshold) || 40.0,
+      deltaWarning: parseFloat(deltaWarning) || 15.0,
+      deltaCritical: parseFloat(deltaCritical) || 30.0,
+      negativeDeltaWarn: negativeDeltaWarn !== false
+    };
+
+    let setting;
+    if (targetFacilityId) {
+      setting = await prisma.thermalSetting.upsert({
+        where: { facilityId: targetFacilityId },
+        update: payload,
+        create: { ...payload, facilityId: targetFacilityId }
+      });
+    } else {
+      const existing = await prisma.thermalSetting.findFirst({ where: { facilityId: null } });
+      if (existing) {
+        setting = await prisma.thermalSetting.update({
+          where: { id: existing.id },
+          data: payload
+        });
+      } else {
+        setting = await prisma.thermalSetting.create({
+          data: { ...payload, facilityId: null }
+        });
+      }
+    }
+
+    res.json({ success: true, data: setting, message: 'Ayarlar başarıyla kaydedildi.' });
+  } catch (error: any) {
+    console.error('Error saving thermal settings:', error);
+    res.status(500).json({ error: error.message || 'Ayarlar kaydedilemedi.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────
+// 13. GET PANEL AUTOCOMPLETE / SUGGESTIONS
+// ─────────────────────────────────────────────────────────
+router.get('/panels/suggestions', async (req: AuthRequest, res) => {
+  try {
+    const { facilityId, search } = req.query;
+    const where: any = {};
+
+    if (facilityId && facilityId !== 'all') {
+      const canonical = await resolveFacilityId(String(facilityId));
+      where.session = { facilityId: canonical || String(facilityId) };
+    }
+
+    if (search && String(search).trim()) {
+      where.panelName = {
+        contains: String(search).trim(),
+        mode: 'insensitive'
+      };
+    }
+
+    // Tekil pano isimleri ve son konum bilgileri
+    const items = await prisma.thermalInspectionItem.findMany({
+      where,
+      select: {
+        panelName: true,
+        buildingLocation: true,
+        floorSection: true,
+        equipmentConnection: true,
+        measurementPoint: true
+      },
+      distinct: ['panelName'],
+      take: 25,
+      orderBy: { updatedAt: 'desc' }
+    });
+
+    res.json({ success: true, data: items });
+  } catch (error: any) {
+    console.error('Error getting panel suggestions:', error);
+    res.status(500).json({ error: error.message || 'Pano önerileri alınamadı.' });
   }
 });
 

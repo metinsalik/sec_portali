@@ -329,6 +329,46 @@ export default function OperationsManagementPage() {
           </div>
           )}
 
+          {/* Card 6: Termal Kamera & Elektrik Pano Kontrolü */}
+          {(hasAdminAccess || user?.modules?.includes('ELECTRIC_PANEL_INSPECTION') || user?.modules?.includes('THERMAL_CAMERA')) && (
+            <div
+              onClick={() => navigate('/operations-management/thermal-camera')}
+              className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
+            >
+              <div className="flex md:hidden items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center text-orange-600 dark:text-orange-400">
+                  <span className="material-symbols-outlined text-[28px]">photo_camera</span>
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">Elektrik Pano & Termal Kamera Kontrolü</h2>
+                  <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
+                    Termal kamera sıcaklık ölçümleri, pano kontrol listeleri, risk derecelendirme ve aksiyon takibi.
+                  </p>
+                  <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 text-sm font-medium group-hover:underline">
+                    Uygulamaya Git
+                    <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="hidden md:flex flex-col justify-between h-full">
+                <div>
+                  <div className="w-14 h-14 rounded-xl bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center mb-6 text-orange-600 dark:text-orange-400 transition-transform group-hover:scale-110">
+                    <span className="material-symbols-outlined text-[32px]">photo_camera</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">Elektrik Pano & Termal Kamera Kontrolü</h3>
+                  <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
+                    Tesislerdeki panoların termal kamera ile periyodik ısınma ölçümleri, Excel yükleme, sıcaklık takibi ve kritik aksiyon yönetimi.
+                  </p>
+                </div>
+                <div className="inline-flex items-center gap-2 text-orange-600 dark:text-orange-400 text-sm font-medium group-hover:gap-4 transition-all">
+                  Uygulamaya Git
+                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       </main>
 
