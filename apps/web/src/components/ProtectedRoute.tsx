@@ -45,6 +45,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   else if (location.pathname.startsWith('/build-management')) requiredModule = 'BUILD_MANAGEMENT';
   else if (location.pathname.startsWith('/renovation-report')) requiredModule = 'RENOVATION_REPORT';
   else if (location.pathname.startsWith('/bina-turu')) requiredModule = 'BUILDING_TOUR';
+  else if (location.pathname.startsWith('/operations-management/improvements')) requiredModule = 'IMPROVEMENTS_TRACKING';
   else if (location.pathname.startsWith('/operations-management')) requiredModule = '';
   else if (location.pathname.startsWith('/operations')) requiredModule = 'OPERATIONS';
   else if (location.pathname.startsWith('/workflow')) requiredModule = 'WORKFLOW';

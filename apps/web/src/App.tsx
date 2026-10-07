@@ -43,6 +43,12 @@ import EmailTemplatesPage from './pages/settings/EmailTemplatesPage';
 import ReportTemplatesPage from './pages/settings/ReportTemplatesPage';
 import ReportEditorPage from './pages/settings/ReportEditorPage';
 import OperationsSettings from './pages/operations/OperationsSettings';
+import { ImprovementsLayout } from './pages/operations/improvements/ImprovementsLayout';
+import { ImprovementsDashboardPage } from './pages/operations/improvements/ImprovementsDashboardPage';
+import { DenetimlerPage } from './pages/operations/improvements/DenetimlerPage';
+import { ElectricalTrackingPage } from './pages/operations/improvements/ElectricalTrackingPage';
+import { CriticalItemsPage } from './pages/operations/improvements/CriticalItemsPage';
+import { ImprovementsSettingsPage } from './pages/operations/improvements/ImprovementsSettingsPage';
 
 // Panel
 import PanelDashboard from './pages/panel/PanelDashboard';
@@ -240,6 +246,27 @@ function App() {
                         <OperationsManagementPage />
                       </ProtectedRoute>
                     }
+                  />
+
+                  {/* ── İYİLEŞTİRME VE AKSİYON TAKİP MODÜLÜ ─────────────────────── */}
+                  <Route
+                    path="/operations-management/improvements"
+                    element={
+                      <ProtectedRoute>
+                        <ImprovementsLayout />
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route index element={<ImprovementsDashboardPage />} />
+                    <Route path="critical" element={<CriticalItemsPage />} />
+                    <Route path="denetimler" element={<DenetimlerPage />} />
+                    <Route path="electrical/:subCategory" element={<ElectricalTrackingPage />} />
+                    <Route path="settings" element={<ImprovementsSettingsPage />} />
+                  </Route>
+
+                  <Route
+                    path="/operations/improvements/*"
+                    element={<Navigate to="/operations-management/improvements" replace />}
                   />
 
                   <Route

@@ -30,6 +30,7 @@ import fireDoorsRoutes from './routes/fire_doors';
 import isgDefterRoutes from './routes/isgDefter.routes';
 import elevatorRoutes from './routes/elevator.routes';
 import elevatorSettingsRoutes from './routes/elevator-settings.routes';
+import improvementRoutes from './routes/improvements';
 
 // Middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
@@ -65,6 +66,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/settings/hazmat-kit-items', hazmatKitItemsRoutes);
 app.use('/api/panel', panelRoutes);
 app.use('/api/operations', operationsRoutes);
+app.use('/api/operations/improvements', improvementRoutes);
 app.use('/api/operations/board', ohsBoardRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/notebooks', notebookRoutes);

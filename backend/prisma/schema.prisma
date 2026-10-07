@@ -180,6 +180,7 @@ model Facility {
   fireSafetyAudits              FireSafetyAudit[]
   fm200Locations                Fm200Location[]
   fm200BuildingFloors           Fm200BuildingFloor[]
+  improvementRecords            ImprovementRecord[]
 }
 
 model IncidentCategory {
@@ -3175,4 +3176,78 @@ model Fm200BuildingFloor {
 
   @@unique([facilityId, building, block, floor])
   @@index([facilityId])
+}
+
+// ============================================================================
+// İYİLEŞTİRME VE AKSİYON TAKİP MODÜLÜ (DENETİMLER & ELEKTRİK ALTYAPI / PK)
+// ============================================================================
+
+model ImprovementRecord {
+  id              String   @id @default(uuid())
+  facilityId      String
+  facility        Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  // Modül Ana Grubu: "DENETIMLER" veya "ELEKTRIK"
+  moduleGroup     String
+
+  // Sekme Tipi (8 Alt Sekme)
+  // "DENETIMLER", "ELEKTRIK_PK", "TOPRAKLAMA_PK", "PARATONER_PK", "JENERATOR_PK", "ELEKTRIK_PANO_KONTROLLERI", "TRAFO", "UPS"
+  sheetType       String
+
+  rowNo           Int?      // Kaynak Excel Sıra No (#)
+  location        String?   // Mahal
+  equipment       String?   // Ekipman (PK'lar, Pano, Trafo, UPS)
+  finding         String    // Tespitler
+  riskScore       String?   // "Kritik", "Yüksek", "Önemli", "Olası", "Önemsiz"
+  assignedTo      String?   // Sorumlusu
+  status          String    @default("Başlamadı") // "Tamamlandı", "Devam Ediyor", "Başlamadı", "İptal Edildi"
+  actionPlan      String?   // İş Planı (Orijinal plan metni)
+  currentNote     String?   // Aksiyon / Açıklama (Güncel durum / sahadan girilen not)
+
+  // Sekmeye Özel Alanlar
+  auditName       String?   // Denetim Adı (Denetimler için)
+  category        String?   // Kategori (Denetimler için: Yangın Güvenliği, Elektrik Güvenliği vb.)
+  recordDate      DateTime? // Tespit Tarihi / PK Tarihi / Rapor Tarihi / Tarih
+  dueDate         DateTime? // Termin Tarihi (Hedef Tamamlanma Tarihi)
+  applicationType String?   // Uygulama (Trafo ve UPS için)
+
+  sourceFileName  String?   // Kaynak Excel dosyasının adı
+  isArchived      Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdBy       String?
+  updatedBy       String?
+
+  histories       ImprovementRecordHistory[]
+
+  @@index([facilityId])
+  @@index([moduleGroup])
+  @@index([sheetType])
+  @@index([status])
+  @@index([riskScore])
+}
+
+model ImprovementRecordHistory {
+  id              String            @id @default(uuid())
+  recordId        String
+  record          ImprovementRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  previousNote    String?
+  newNote         String
+  previousStatus  String?
+  newStatus       String?
+  changedBy       String            // Kullanıcı username
+  changedByName   String?           // Kullanıcı Ad Soyad
+  createdAt       DateTime          @default(now())
+
+  @@index([recordId])
+}
+
+model ImprovementSetting {
+  id          String   @id @default("default")
+  key         String   @unique
+  value       Json?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
