@@ -684,70 +684,70 @@ export const ThermalExecutiveDashboard: React.FC<Props> = ({
           </div>
 
           {/* ═════════════════════════════════════════════════════════ */}
-          {/* TABLO 1: SICAKLIĞI NORMAL OLABİLECEK EKİPMANLAR (İLK 6)   */}
+          {/* TABLO 1: ACİL AKSİYON ALINMASI GEREKEN PANOLAR (İLK 6)   */}
           {/* ═════════════════════════════════════════════════════════ */}
-          <div className="rounded-2xl border-2 border-teal-800 dark:border-teal-700 overflow-hidden shadow-sm bg-white dark:bg-slate-900">
-            <div className="bg-[#1b5e52] text-white p-3 px-5 flex items-center justify-between">
+          <div className="rounded-2xl border-2 border-rose-700 dark:border-rose-800 overflow-hidden shadow-sm bg-white dark:bg-slate-900">
+            <div className="bg-[#c51f26] text-white p-3 px-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className="w-7 h-7 rounded-full bg-white text-[#1b5e52] font-black text-sm flex items-center justify-center shrink-0">
+                <span className="w-7 h-7 rounded-full bg-white text-[#c51f26] font-black text-sm flex items-center justify-center shrink-0">
                   1
                 </span>
                 <div>
                   <h2 className="font-black text-base sm:text-lg tracking-wide flex items-center gap-2">
-                    SICAKLIĞI NORMAL OLABİLECEK EKİPMANLAR
+                    ACİL AKSİYON ALINMASI GEREKEN PANOLAR
                   </h2>
-                  <span className="text-xs text-teal-100 font-medium">
-                    (Üretici kriteri ile teyit edilmelidir • En sıcak ilk 6 ekipman)
+                  <span className="text-xs text-rose-100 font-medium">
+                    (Öncelikli teknik kontrol gerektiren kritik panolar • En sıcak ilk 6 kayıt)
                   </span>
                 </div>
               </div>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => handleOpenDrilldown('NORMAL_SPECIAL')}
-                className="text-xs font-bold bg-white text-[#1b5e52] hover:bg-teal-50 border-0 shadow-sm gap-1"
+                onClick={() => handleOpenDrilldown('URGENT_ACTION')}
+                className="text-xs font-bold bg-white text-[#c51f26] hover:bg-rose-50 border-0 shadow-sm gap-1"
               >
-                Tümünü Gör ({categorizedData.normalSpecialEquipments.length})
+                Tümünü Gör ({categorizedData.urgentActionPanels.length})
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
-                <thead className="bg-[#e9f2ef] dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-b border-teal-200 font-bold text-xs uppercase">
+                <thead className="bg-[#fceeed] dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-b border-rose-200 font-bold text-xs uppercase">
                   <tr>
                     <th className="py-2.5 px-5 w-1/4">Hastane</th>
-                    <th className="py-2.5 px-5 w-1/3">Ekipman</th>
+                    <th className="py-2.5 px-5 w-1/3">Pano</th>
                     <th className="py-2.5 px-5 text-center w-36">Ölçüm</th>
                     <th className="py-2.5 px-5">Not & Ölçüm Trendi</th>
                     <th className="py-2.5 px-4 text-right w-20">Özet</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-teal-100 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
-                  {categorizedData.normalSpecialEquipments.slice(0, 6).map((item) => (
-                    <tr key={item.id} className="hover:bg-teal-50/50 dark:hover:bg-slate-800/40">
+                <tbody className="divide-y divide-rose-100 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
+                  {categorizedData.urgentActionPanels.slice(0, 6).map((item) => (
+                    <tr key={item.id} className="hover:bg-rose-50/50 dark:hover:bg-slate-800/40">
                       <td className="py-2.5 px-5 font-semibold text-slate-900 dark:text-white">
                         {item.session?.facility?.name || item.session?.facility?.shortName || '—'}
                       </td>
                       <td className="py-2.5 px-5 font-medium">
                         <button
                           onClick={() => setPreviewItem(item)}
-                          className="hover:text-teal-700 font-bold text-left hover:underline cursor-pointer"
+                          className="hover:text-rose-700 font-bold text-left hover:underline cursor-pointer text-slate-950 dark:text-white"
                           title="Özet & Ölçüm Detayını Gör"
                         >
-                          {item.equipmentConnection ? `${item.panelName} (${item.equipmentConnection})` : item.panelName}
+                          {item.panelName} {item.equipmentConnection ? `(${item.equipmentConnection})` : ''}
                         </button>
                       </td>
                       <td className="py-2.5 px-5 text-center font-bold font-mono text-sm text-[#b91c1c]">
                         {item.measuredTemp} °C
                       </td>
-                      <td className="py-2.5 px-5 text-slate-600 dark:text-slate-300 font-medium">
-                        {getActionRecommendationNote(item, 'NORMAL')}
+                      <td className="py-2.5 px-5 text-rose-700 dark:text-rose-300 font-semibold">
+                        {getActionRecommendationNote(item, 'URGENT')}
                       </td>
                       <td className="py-2.5 px-4 text-right">
                         <button
                           onClick={() => setPreviewItem(item)}
-                          className="p-1 text-slate-400 hover:text-teal-700 hover:bg-teal-50 rounded"
+                          className="p-1 text-slate-400 hover:text-rose-700 hover:bg-rose-50 rounded"
                           title="Özet Bilgi & Çoklu Ölçüm İncele"
                         >
                           <Eye className="w-4 h-4" />
@@ -838,70 +838,70 @@ export const ThermalExecutiveDashboard: React.FC<Props> = ({
           </div>
 
           {/* ═════════════════════════════════════════════════════════ */}
-          {/* TABLO 3: ACİL AKSİYON ALINMASI GEREKEN PANOLAR (İLK 6)   */}
+          {/* TABLO 3: SICAKLIĞI NORMAL OLABİLECEK EKİPMANLAR (İLK 6)   */}
           {/* ═════════════════════════════════════════════════════════ */}
-          <div className="rounded-2xl border-2 border-rose-700 dark:border-rose-800 overflow-hidden shadow-sm bg-white dark:bg-slate-900">
-            <div className="bg-[#c51f26] text-white p-3 px-5 flex items-center justify-between">
+          <div className="rounded-2xl border-2 border-teal-800 dark:border-teal-700 overflow-hidden shadow-sm bg-white dark:bg-slate-900">
+            <div className="bg-[#1b5e52] text-white p-3 px-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className="w-7 h-7 rounded-full bg-white text-[#c51f26] font-black text-sm flex items-center justify-center shrink-0">
+                <span className="w-7 h-7 rounded-full bg-white text-[#1b5e52] font-black text-sm flex items-center justify-center shrink-0">
                   3
                 </span>
                 <div>
                   <h2 className="font-black text-base sm:text-lg tracking-wide flex items-center gap-2">
-                    ACİL AKSİYON ALINMASI GEREKEN PANOLAR
+                    SICAKLIĞI NORMAL OLABİLECEK EKİPMANLAR
                   </h2>
-                  <span className="text-xs text-rose-100 font-medium">
-                    (Öncelikli teknik kontrol gerektiren kritik panolar • En sıcak ilk 6 kayıt)
+                  <span className="text-xs text-teal-100 font-medium">
+                    (Üretici kriteri ile teyit edilmelidir • En sıcak ilk 6 ekipman)
                   </span>
                 </div>
               </div>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => handleOpenDrilldown('URGENT_ACTION')}
-                className="text-xs font-bold bg-white text-[#c51f26] hover:bg-rose-50 border-0 shadow-sm gap-1"
+                onClick={() => handleOpenDrilldown('NORMAL_SPECIAL')}
+                className="text-xs font-bold bg-white text-[#1b5e52] hover:bg-teal-50 border-0 shadow-sm gap-1"
               >
-                Tümünü Gör ({categorizedData.urgentActionPanels.length})
+                Tümünü Gör ({categorizedData.normalSpecialEquipments.length})
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
-                <thead className="bg-[#fceeed] dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-b border-rose-200 font-bold text-xs uppercase">
+                <thead className="bg-[#e9f2ef] dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-b border-teal-200 font-bold text-xs uppercase">
                   <tr>
                     <th className="py-2.5 px-5 w-1/4">Hastane</th>
-                    <th className="py-2.5 px-5 w-1/3">Pano</th>
+                    <th className="py-2.5 px-5 w-1/3">Ekipman</th>
                     <th className="py-2.5 px-5 text-center w-36">Ölçüm</th>
                     <th className="py-2.5 px-5">Not & Ölçüm Trendi</th>
                     <th className="py-2.5 px-4 text-right w-20">Özet</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-rose-100 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
-                  {categorizedData.urgentActionPanels.slice(0, 6).map((item) => (
-                    <tr key={item.id} className="hover:bg-rose-50/50 dark:hover:bg-slate-800/40">
+                <tbody className="divide-y divide-teal-100 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
+                  {categorizedData.normalSpecialEquipments.slice(0, 6).map((item) => (
+                    <tr key={item.id} className="hover:bg-teal-50/50 dark:hover:bg-slate-800/40">
                       <td className="py-2.5 px-5 font-semibold text-slate-900 dark:text-white">
                         {item.session?.facility?.name || item.session?.facility?.shortName || '—'}
                       </td>
                       <td className="py-2.5 px-5 font-medium">
                         <button
                           onClick={() => setPreviewItem(item)}
-                          className="hover:text-rose-700 font-bold text-left hover:underline cursor-pointer text-slate-950 dark:text-white"
+                          className="hover:text-teal-700 font-bold text-left hover:underline cursor-pointer"
                           title="Özet & Ölçüm Detayını Gör"
                         >
-                          {item.panelName} {item.equipmentConnection ? `(${item.equipmentConnection})` : ''}
+                          {item.equipmentConnection ? `${item.panelName} (${item.equipmentConnection})` : item.panelName}
                         </button>
                       </td>
                       <td className="py-2.5 px-5 text-center font-bold font-mono text-sm text-[#b91c1c]">
                         {item.measuredTemp} °C
                       </td>
-                      <td className="py-2.5 px-5 text-rose-700 dark:text-rose-300 font-semibold">
-                        {getActionRecommendationNote(item, 'URGENT')}
+                      <td className="py-2.5 px-5 text-slate-600 dark:text-slate-300 font-medium">
+                        {getActionRecommendationNote(item, 'NORMAL')}
                       </td>
                       <td className="py-2.5 px-4 text-right">
                         <button
                           onClick={() => setPreviewItem(item)}
-                          className="p-1 text-slate-400 hover:text-rose-700 hover:bg-rose-50 rounded"
+                          className="p-1 text-slate-400 hover:text-teal-700 hover:bg-teal-50 rounded"
                           title="Özet Bilgi & Çoklu Ölçüm İncele"
                         >
                           <Eye className="w-4 h-4" />
