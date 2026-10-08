@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import type { ThermalInspectionItem, ThermalInspectionSession } from '@/services/thermal-inspection.service';
 import { 
   Building2, 
@@ -30,7 +30,10 @@ import {
   Activity,
   FileSpreadsheet,
   X,
-  FileText
+  FileText,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -70,6 +73,33 @@ export const ThermalExecutiveDashboard: React.FC<Props> = ({
 
   // Modal inspection preview item
   const [previewItem, setPreviewItem] = useState<ThermalInspectionItem | null>(null);
+
+  // Termal Risk Matrisi Excel Tarzı Sütun Filtreleme & Sıralama State'leri
+  const [matrixSortField, setMatrixSortField] = useState<string>('urgentCount');
+  const [matrixSortOrder, setMatrixSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [matrixColumnFilters, setMatrixColumnFilters] = useState<Record<string, { textSearch: string; selectedValues: Set<string> }>>({});
+  const [matrixActiveFilterCol, setMatrixActiveFilterCol] = useState<string | null>(null);
+  const [matrixPopoverSearch, setMatrixPopoverSearch] = useState('');
+  const [matrixPopoverTextFilter, setMatrixPopoverTextFilter] = useState('');
+  const [matrixPopoverSelectedValues, setMatrixPopoverSelectedValues] = useState<Set<string>>(new Set());
+  const [matrixFilterPos, setMatrixFilterPos] = useState<{ top: number; left: number } | null>(null);
+
+  const matrixFilterPopoverRef = useRef<HTMLDivElement>(null);
+
+  // Popover dışına tıklandığında kapat
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (matrixFilterPopoverRef.current && !matrixFilterPopoverRef.current.contains(e.target as Node)) {
+        setMatrixActiveFilterCol(null);
+      }
+    };
+    if (matrixActiveFilterCol) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [matrixActiveFilterCol]);
 
   // 1. Kural: Sadece type === 'Hastane' olan VE aktif olan tesisleri ele al (pasif olanlar gelmez)
   const hospitalFacilities = useMemo(() => {
@@ -237,6 +267,206 @@ export const ThermalExecutiveDashboard: React.FC<Props> = ({
       hospitalsWithoutData: withoutDataList
     };
   }, [hospitalFacilities, hospitalItems, hospitalSessions]);
+
+  // Termal Matris Sütun Değeri Getirici
+  type MatrixHospitalItem = typeof hospitalsWithData[0];
+
+  const getMatrixColValue = (h: MatrixHospitalItem, colKey: string): string => {
+    switch (colKey) {
+      case 'facilityName': return h.facilityName;
+      case 'reportCount': return `${h.reportCount} Rapor`;
+      case 'panelCount': return `${h.panelCount} Pano`;
+      case 'urgentCount': return String(h.urgentCount);
+      case 'peakLoadCount': return String(h.peakLoadCount);
+      case 'normalEquipCount': return String(h.normalEquipCount);
+      case 'normalCount': return String(h.normalCount);
+      case 'maxTemp': return h.maxTemp > 0 ? `${h.maxTemp} °C` : '—';
+      case 'maxTempPanel': return h.maxTempPanel || '—';
+      default: return '';
+    }
+  };
+
+  const getMatrixColHeaderName = (colKey: string): string => {
+    switch (colKey) {
+      case 'facilityName': return 'Hastane Adı';
+      case 'reportCount': return 'Rapor / Dönem';
+      case 'panelCount': return 'Pano Sayısı';
+      case 'urgentCount': return 'Acil Risk';
+      case 'peakLoadCount': return 'Pik Takip';
+      case 'normalEquipCount': return 'Trafo / Reaktör';
+      case 'normalCount': return 'Normal';
+      case 'maxTemp': return 'Zirve Sıcaklık';
+      case 'maxTempPanel': return 'En Sıcak Pano';
+      default: return colKey;
+    }
+  };
+
+  // Sütundaki Benzersiz Değerleri Topla (Rapor / Dönem için 1 Rapor, 2 Rapor vb. tek tek listelenir)
+  const getMatrixUniqueColumnValues = (colKey: string): string[] => {
+    const set = new Set<string>();
+    hospitalsWithData.forEach(h => {
+      const val = getMatrixColValue(h, colKey);
+      if (val !== undefined && val !== null && val.trim() !== '') {
+        set.add(val.trim());
+      }
+    });
+
+    if (['reportCount', 'panelCount', 'urgentCount', 'peakLoadCount', 'normalEquipCount', 'normalCount'].includes(colKey)) {
+      return Array.from(set).sort((a, b) => {
+        const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+        const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+        return numA - numB;
+      });
+    }
+
+    if (colKey === 'maxTemp') {
+      return Array.from(set).sort((a, b) => {
+        const numA = parseFloat(a.replace(/[^\d.-]/g, '')) || 0;
+        const numB = parseFloat(b.replace(/[^\d.-]/g, '')) || 0;
+        return numA - numB;
+      });
+    }
+
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'tr'));
+  };
+
+  // Filtre Popover Aç
+  const handleOpenMatrixFilter = (colKey: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (matrixActiveFilterCol === colKey) {
+      setMatrixActiveFilterCol(null);
+      setMatrixFilterPos(null);
+      return;
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const popoverWidth = 320;
+    let left = rect.left;
+    if (left + popoverWidth > window.innerWidth - 16) {
+      left = Math.max(16, window.innerWidth - popoverWidth - 16);
+    }
+    const top = rect.bottom + 6;
+
+    setMatrixFilterPos({ top, left });
+
+    const currentFilter = matrixColumnFilters[colKey];
+    const uniqueVals = getMatrixUniqueColumnValues(colKey);
+
+    setMatrixActiveFilterCol(colKey);
+    setMatrixPopoverSearch('');
+    setMatrixPopoverTextFilter(currentFilter?.textSearch || '');
+    setMatrixPopoverSelectedValues(
+      currentFilter?.selectedValues 
+        ? new Set(currentFilter.selectedValues) 
+        : new Set(uniqueVals)
+    );
+  };
+
+  // Filtre Uygula
+  const handleApplyMatrixFilter = () => {
+    if (!matrixActiveFilterCol) return;
+
+    const uniqueVals = getMatrixUniqueColumnValues(matrixActiveFilterCol);
+    const isAllSelected = uniqueVals.length === matrixPopoverSelectedValues.size && !matrixPopoverTextFilter.trim();
+
+    if (isAllSelected && !matrixPopoverTextFilter.trim()) {
+      const next = { ...matrixColumnFilters };
+      delete next[matrixActiveFilterCol];
+      setMatrixColumnFilters(next);
+    } else {
+      setMatrixColumnFilters(prev => ({
+        ...prev,
+        [matrixActiveFilterCol]: {
+          textSearch: matrixPopoverTextFilter.trim(),
+          selectedValues: new Set(matrixPopoverSelectedValues),
+        }
+      }));
+    }
+    setMatrixActiveFilterCol(null);
+  };
+
+  const handleClearMatrixColumnFilter = (colKey: string) => {
+    const next = { ...matrixColumnFilters };
+    delete next[colKey];
+    setMatrixColumnFilters(next);
+    if (matrixActiveFilterCol === colKey) {
+      setMatrixActiveFilterCol(null);
+    }
+  };
+
+  const handleClearAllMatrixFilters = () => {
+    setMatrixColumnFilters({});
+    setMatrixActiveFilterCol(null);
+  };
+
+  const toggleMatrixValueSelect = (val: string) => {
+    setMatrixPopoverSelectedValues(prev => {
+      const next = new Set(prev);
+      if (next.has(val)) {
+        next.delete(val);
+      } else {
+        next.add(val);
+      }
+      return next;
+    });
+  };
+
+  const toggleMatrixSelectAll = (filteredVals: string[]) => {
+    const allIn = filteredVals.every(v => matrixPopoverSelectedValues.has(v));
+    setMatrixPopoverSelectedValues(prev => {
+      const next = new Set(prev);
+      if (allIn) {
+        filteredVals.forEach(v => next.delete(v));
+      } else {
+        filteredVals.forEach(v => next.add(v));
+      }
+      return next;
+    });
+  };
+
+  const handleMatrixSort = (field: string) => {
+    if (matrixSortField === field) {
+      setMatrixSortOrder(matrixSortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setMatrixSortField(field);
+      setMatrixSortOrder('asc');
+    }
+  };
+
+  // Filtrelenmiş ve Sıralanmış Termal Matris Hastane Listesi
+  const filteredHospitalsWithData = useMemo(() => {
+    return hospitalsWithData.filter(h => {
+      // Sütun filtreleri
+      for (const [colKey, filter] of Object.entries(matrixColumnFilters)) {
+        const val = getMatrixColValue(h, colKey);
+
+        if (filter.textSearch) {
+          if (!val.toLowerCase().includes(filter.textSearch.toLowerCase())) {
+            return false;
+          }
+        }
+
+        if (filter.selectedValues && filter.selectedValues.size > 0) {
+          if (!filter.selectedValues.has(val.trim())) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }).sort((a, b) => {
+      const aVal = (a as any)[matrixSortField];
+      const bVal = (b as any)[matrixSortField];
+
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return matrixSortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+
+      const cmp = String(aVal || '').localeCompare(String(bVal || ''), 'tr');
+      return matrixSortOrder === 'asc' ? cmp : -cmp;
+    });
+  }, [hospitalsWithData, matrixColumnFilters, matrixSortField, matrixSortOrder]);
+
+  const hasActiveMatrixFilters = Object.keys(matrixColumnFilters).length > 0;
 
   // 4. Verileri Filtrele ve 3 Kategoride Grupla (Görseldeki Sıra: 1. Normal, 2. Pik Yük, 3. Acil Aksiyon)
   const categorizedData = useMemo(() => {
@@ -560,98 +790,361 @@ export const ThermalExecutiveDashboard: React.FC<Props> = ({
 
             {/* SEKME 1: ÖLÇÜMÜ OLAN HASTANELER MATRİS TABLOSU (DEFAULT) */}
             {matrixTab === 'ENTERED' && (
-              <div className="overflow-x-auto rounded-xl border border-slate-100 dark:border-slate-800">
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 font-bold uppercase text-[11px] border-b border-slate-200 dark:border-slate-800">
-                    <tr>
-                      <th className="py-2.5 px-4 font-bold">Hastane Adı</th>
-                      <th className="py-2.5 px-3 text-center">Rapor / Dönem</th>
-                      <th className="py-2.5 px-3 text-center">Pano Sayısı</th>
-                      <th className="py-2.5 px-3 text-center text-rose-600">Acil Risk</th>
-                      <th className="py-2.5 px-3 text-center text-orange-600">Pik Takip</th>
-                      <th className="py-2.5 px-3 text-center text-teal-600">Trafo/Reaktör</th>
-                      <th className="py-2.5 px-3 text-center text-emerald-600">Normal</th>
-                      <th className="py-2.5 px-4 text-center">Zirve Sıcaklık</th>
-                      <th className="py-2.5 px-4">En Sıcak Pano</th>
-                      <th className="py-2.5 px-3 text-right">Filtre</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
-                    {hospitalsWithData.map((h) => {
-                      const isSelected = selectedFacilityFilter === h.facilityId;
-                      return (
-                        <tr 
-                          key={h.facilityId}
-                          className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors ${
-                            isSelected ? 'bg-orange-50/50 dark:bg-orange-950/30 font-semibold' : ''
-                          }`}
-                        >
-                          <td className="py-2.5 px-4 font-bold text-slate-900 dark:text-white">
-                            {h.facilityName}
-                          </td>
-                          <td className="py-2.5 px-3 text-center font-semibold text-slate-600 dark:text-slate-300">
-                            {h.reportCount} Rapor
-                          </td>
-                          <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800 dark:text-slate-200">
-                            {h.panelCount} Pano
-                          </td>
-                          <td className="py-2.5 px-3 text-center">
-                            {h.urgentCount > 0 ? (
-                              <span className="inline-flex px-2 py-0.5 rounded-full font-bold text-xs bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-mono">
-                                {h.urgentCount}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400">—</span>
-                            )}
-                          </td>
-                          <td className="py-2.5 px-3 text-center">
-                            {h.peakLoadCount > 0 ? (
-                              <span className="inline-flex px-2 py-0.5 rounded-full font-semibold text-xs bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 font-mono">
-                                {h.peakLoadCount}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400">—</span>
-                            )}
-                          </td>
-                          <td className="py-2.5 px-3 text-center">
-                            {h.normalEquipCount > 0 ? (
-                              <span className="inline-flex px-2 py-0.5 rounded-full font-semibold text-xs bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 font-mono">
-                                {h.normalEquipCount}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400">—</span>
-                            )}
-                          </td>
-                          <td className="py-2.5 px-3 text-center font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
-                            {h.normalCount}
-                          </td>
-                          <td className="py-2.5 px-4 text-center font-mono font-bold">
-                            <span className={h.maxTemp >= 60 ? 'text-rose-600' : h.maxTemp >= 40 ? 'text-orange-600' : 'text-slate-700 dark:text-slate-300'}>
-                              {h.maxTemp > 0 ? `${h.maxTemp} °C` : '—'}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-4 font-medium text-slate-600 dark:text-slate-300 truncate max-w-[150px]" title={h.maxTempPanel}>
-                            {h.maxTempPanel}
-                          </td>
-                          <td className="py-2.5 px-3 text-right">
-                            <button
-                              onClick={() => {
-                                setSelectedFacilityFilter(isSelected ? 'ALL' : h.facilityId);
-                              }}
-                              className={`text-xs px-2.5 py-1 rounded-lg font-bold transition-all ${
-                                isSelected
-                                  ? 'bg-orange-600 text-white'
-                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-orange-100 hover:text-orange-700'
-                              }`}
-                            >
-                              {isSelected ? 'Filtreli' : 'Seç'}
-                            </button>
+              <div className="space-y-2">
+                {/* Filtre Bilgi ve Temizleme Çubuğu */}
+                <div className="flex items-center justify-between text-xs px-1">
+                  <div className="text-slate-500 font-medium">
+                    Toplam <strong className="text-slate-900 dark:text-white font-bold">{hospitalsWithData.length}</strong> hastaneden <strong className="text-orange-600 font-bold">{filteredHospitalsWithData.length}</strong> tanesi listeleniyor
+                  </div>
+                  {hasActiveMatrixFilters && (
+                    <button
+                      type="button"
+                      onClick={handleClearAllMatrixFilters}
+                      className="text-orange-600 hover:text-orange-700 font-bold text-xs hover:underline flex items-center gap-1"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      Filtreleri Temizle ({Object.keys(matrixColumnFilters).length})
+                    </button>
+                  )}
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 font-bold uppercase text-[11px] border-b border-slate-200 dark:border-slate-800 select-none">
+                      <tr>
+                        {/* Başlık Hücre Render Yardımcısı */}
+                        {(() => {
+                          const renderHeader = (colKey: string, label: string, className = '', isCenter = false) => {
+                            const isSorted = matrixSortField === colKey;
+                            const isFiltered = Boolean(matrixColumnFilters[colKey]);
+
+                            return (
+                              <th className={`py-2 px-2.5 transition-colors font-bold ${className}`}>
+                                <div className={`flex items-center gap-1.5 ${isCenter ? 'justify-center' : 'justify-between'}`}>
+                                  <div
+                                    onClick={() => handleMatrixSort(colKey)}
+                                    className="flex items-center gap-1 cursor-pointer hover:text-orange-600 transition-colors"
+                                    title="Sıralamak için tıklayın"
+                                  >
+                                    <span>{label}</span>
+                                    {isSorted ? (
+                                      matrixSortOrder === 'asc' ? (
+                                        <ArrowUp className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+                                      ) : (
+                                        <ArrowDown className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+                                      )
+                                    ) : (
+                                      <ArrowUpDown className="w-3 h-3 opacity-30 hover:opacity-70 shrink-0" />
+                                    )}
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleOpenMatrixFilter(colKey, e)}
+                                    title={`${label} filtresi`}
+                                    className={`p-1 rounded transition-colors shrink-0 ${
+                                      isFiltered
+                                        ? 'bg-orange-600 text-white shadow-2xs'
+                                        : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700'
+                                    }`}
+                                  >
+                                    <Filter className={`w-3.5 h-3.5 ${isFiltered ? 'fill-current' : ''}`} />
+                                  </button>
+                                </div>
+                              </th>
+                            );
+                          };
+
+                          return (
+                            <>
+                              {renderHeader('facilityName', 'Hastane Adı', 'min-w-[170px]')}
+                              {renderHeader('reportCount', 'Rapor / Dönem', 'w-32 text-center', true)}
+                              {renderHeader('panelCount', 'Pano Sayısı', 'w-28 text-center', true)}
+                              {renderHeader('urgentCount', 'Acil Risk', 'w-24 text-center text-rose-600', true)}
+                              {renderHeader('peakLoadCount', 'Pik Takip', 'w-24 text-center text-orange-600', true)}
+                              {renderHeader('normalEquipCount', 'Trafo/Reaktör', 'w-28 text-center text-teal-600', true)}
+                              {renderHeader('normalCount', 'Normal', 'w-24 text-center text-emerald-600', true)}
+                              {renderHeader('maxTemp', 'Zirve Sıcaklık', 'w-28 text-center', true)}
+                              {renderHeader('maxTempPanel', 'En Sıcak Pano', 'min-w-[140px]')}
+                              <th className="py-2.5 px-3 text-right w-20">Filtre</th>
+                            </>
+                          );
+                        })()}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-800 dark:text-slate-200">
+                      {filteredHospitalsWithData.length === 0 ? (
+                        <tr>
+                          <td colSpan={10} className="py-10 text-center text-slate-400">
+                            Filtrelere uygun hastane bulunamadı.
                           </td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      ) : (
+                        filteredHospitalsWithData.map((h) => {
+                          const isSelected = selectedFacilityFilter === h.facilityId;
+                          return (
+                            <tr 
+                              key={h.facilityId}
+                              className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors ${
+                                isSelected ? 'bg-orange-50/50 dark:bg-orange-950/30 font-semibold' : ''
+                              }`}
+                            >
+                              <td className="py-2.5 px-3 font-bold text-slate-900 dark:text-white">
+                                {h.facilityName}
+                              </td>
+                              <td className="py-2.5 px-3 text-center font-semibold text-slate-600 dark:text-slate-300">
+                                <span className="inline-flex px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[11px] font-bold">
+                                  {h.reportCount} Rapor
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800 dark:text-slate-200">
+                                {h.panelCount} Pano
+                              </td>
+                              <td className="py-2.5 px-3 text-center">
+                                {h.urgentCount > 0 ? (
+                                  <span className="inline-flex px-2 py-0.5 rounded-full font-bold text-xs bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-mono">
+                                    {h.urgentCount}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 text-center">
+                                {h.peakLoadCount > 0 ? (
+                                  <span className="inline-flex px-2 py-0.5 rounded-full font-semibold text-xs bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 font-mono">
+                                    {h.peakLoadCount}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 text-center">
+                                {h.normalEquipCount > 0 ? (
+                                  <span className="inline-flex px-2 py-0.5 rounded-full font-semibold text-xs bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 font-mono">
+                                    {h.normalEquipCount}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 text-center font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
+                                {h.normalCount}
+                              </td>
+                              <td className="py-2.5 px-3 text-center font-mono font-bold">
+                                <span className={h.maxTemp >= 60 ? 'text-rose-600' : h.maxTemp >= 40 ? 'text-orange-600' : 'text-slate-700 dark:text-slate-300'}>
+                                  {h.maxTemp > 0 ? `${h.maxTemp} °C` : '—'}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 font-medium text-slate-600 dark:text-slate-300 truncate max-w-[150px]" title={h.maxTempPanel}>
+                                {h.maxTempPanel}
+                              </td>
+                              <td className="py-2.5 px-3 text-right">
+                                <button
+                                  onClick={() => {
+                                    setSelectedFacilityFilter(isSelected ? 'ALL' : h.facilityId);
+                                  }}
+                                  className={`text-xs px-2.5 py-1 rounded-lg font-bold transition-all ${
+                                    isSelected
+                                      ? 'bg-orange-600 text-white'
+                                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-orange-100 hover:text-orange-700'
+                                  }`}
+                                >
+                                  {isSelected ? 'Filtreli' : 'Seç'}
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* EXCEL FİLTRE POPOVER MENÜSÜ */}
+                {matrixActiveFilterCol && matrixFilterPos && (
+                  <div 
+                    ref={matrixFilterPopoverRef}
+                    style={{
+                      position: 'fixed',
+                      top: `${matrixFilterPos.top}px`,
+                      left: `${matrixFilterPos.left}px`,
+                      zIndex: 80,
+                    }}
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl w-80 p-3.5 space-y-3 animate-in fade-in zoom-in-95 duration-150 text-xs"
+                  >
+                    {/* Popover Header */}
+                    <div className="flex items-center justify-between border-b pb-2">
+                      <div className="flex items-center gap-1.5 min-w-0 pr-2">
+                        <Filter className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+                        <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          {getMatrixColHeaderName(matrixActiveFilterCol)}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-1 shrink-0">
+                        {matrixColumnFilters[matrixActiveFilterCol] && (
+                          <button
+                            type="button"
+                            onClick={() => handleClearMatrixColumnFilter(matrixActiveFilterCol)}
+                            title="Filtreyi Temizle"
+                            className="text-[11px] text-red-600 hover:underline px-1.5 py-0.5 rounded font-medium"
+                          >
+                            Temizle
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => {
+                            setMatrixActiveFilterCol(null);
+                            setMatrixFilterPos(null);
+                          }}
+                          className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+                          title="Kapat"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Sıralama Hızlı Seçenekleri */}
+                    <div className="space-y-1 border-b pb-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMatrixSortField(matrixActiveFilterCol);
+                          setMatrixSortOrder('asc');
+                          setMatrixActiveFilterCol(null);
+                        }}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-left transition-colors"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5 text-orange-600" />
+                        <span>Artan sırala (Küçükten Büyüğe / A-Z)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMatrixSortField(matrixActiveFilterCol);
+                          setMatrixSortOrder('desc');
+                          setMatrixActiveFilterCol(null);
+                        }}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-left transition-colors"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5 text-orange-600" />
+                        <span>Azalan sırala (Büyükten Küçüğe / Z-A)</span>
+                      </button>
+                    </div>
+
+                    {/* Metin İçerir Araması */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-500 block">
+                        Metin içerir
+                      </label>
+                      <input
+                        type="text"
+                        value={matrixPopoverTextFilter}
+                        onChange={(e) => setMatrixPopoverTextFilter(e.target.value)}
+                        placeholder="Arama yapın..."
+                        className="w-full h-8 px-2.5 rounded-lg border bg-white dark:bg-slate-800 text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-orange-500"
+                      />
+                    </div>
+
+                    {/* Değerlerde Arama & Checkbox Listesi */}
+                    <div className="space-y-1.5">
+                      <input
+                        type="text"
+                        value={matrixPopoverSearch}
+                        onChange={(e) => setMatrixPopoverSearch(e.target.value)}
+                        placeholder="Seçenekleri filtrele..."
+                        className="w-full h-8 px-2.5 rounded-lg border bg-white dark:bg-slate-800 text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-1 focus:ring-orange-500"
+                      />
+
+                      {/* Değerler Listesi & Checkbox */}
+                      {(() => {
+                        const allVals = getMatrixUniqueColumnValues(matrixActiveFilterCol);
+                        const filteredVals = allVals.filter(v => 
+                          v.toLowerCase().includes(matrixPopoverSearch.toLowerCase())
+                        );
+                        const isAllSelected = filteredVals.length > 0 && filteredVals.every(v => matrixPopoverSelectedValues.has(v));
+
+                        return (
+                          <div className="space-y-1">
+                            <label className="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-200 border-b pb-1.5 select-none">
+                              <input
+                                type="checkbox"
+                                checked={isAllSelected}
+                                onChange={() => toggleMatrixSelectAll(filteredVals)}
+                                className="rounded border-slate-300 text-orange-600 focus:ring-orange-500 w-3.5 h-3.5"
+                              />
+                              <span>Tümünü Seç ({filteredVals.length})</span>
+                            </label>
+
+                            <div className="max-h-40 overflow-y-auto space-y-0.5 pr-1">
+                              {filteredVals.length === 0 ? (
+                                <div className="p-2 text-center text-xs text-slate-400">
+                                  Değer bulunamadı
+                                </div>
+                              ) : (
+                                filteredVals.map(val => {
+                                  const isChecked = matrixPopoverSelectedValues.has(val);
+                                  return (
+                                    <label
+                                      key={val}
+                                      className="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-xs text-slate-700 dark:text-slate-300 truncate select-none"
+                                      title={val}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={() => toggleMatrixValueSelect(val)}
+                                        className="rounded border-slate-300 text-orange-600 focus:ring-orange-500 w-3.5 h-3.5 shrink-0"
+                                      />
+                                      <span className="truncate">{val}</span>
+                                    </label>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Popover Butonları */}
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      {matrixColumnFilters[matrixActiveFilterCol] ? (
+                        <button
+                          type="button"
+                          onClick={() => handleClearMatrixColumnFilter(matrixActiveFilterCol)}
+                          className="h-8 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 p-1.5 rounded"
+                        >
+                          Filtreyi Kaldır
+                        </button>
+                      ) : <div />}
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setMatrixActiveFilterCol(null);
+                            setMatrixFilterPos(null);
+                          }}
+                          className="h-8 text-xs"
+                        >
+                          Vazgeç
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleApplyMatrixFilter}
+                          className="h-8 text-xs bg-orange-600 text-white hover:bg-orange-700"
+                        >
+                          Uygula
+                        </Button>
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+
               </div>
             )}
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   X, Check, AlertCircle, Clock, Calendar, Building2, 
-  MapPin, Wrench, Shield, User, FileText, CheckCircle2, Tag, Plus 
+  MapPin, Wrench, Shield, User, FileText, CheckCircle2, Tag, Plus, Trash2 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -381,9 +381,10 @@ interface EditProps {
   record: ImprovementRecord | null;
   onClose: () => void;
   onSuccess: () => void;
+  onDelete?: (record: ImprovementRecord) => void;
 }
 
-export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSuccess }) => {
+export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSuccess, onDelete }) => {
   if (!record) return null;
 
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
@@ -650,13 +651,29 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
             />
           </div>
 
-          <div className="pt-3 border-t flex justify-end gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading}>
-              Vazgeç
-            </Button>
-            <Button type="submit" size="sm" disabled={loading} className="bg-primary text-primary-foreground hover:bg-primary/90">
-              {loading ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
-            </Button>
+          <div className="pt-3 border-t flex items-center justify-between">
+            {onDelete ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onDelete(record)}
+                disabled={loading}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 text-xs flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Kaydı Sil
+              </Button>
+            ) : <div />}
+
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading}>
+                Vazgeç
+              </Button>
+              <Button type="submit" size="sm" disabled={loading} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                {loading ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
+              </Button>
+            </div>
           </div>
 
         </form>

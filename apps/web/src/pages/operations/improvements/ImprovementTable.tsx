@@ -2,14 +2,17 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { 
   Search, ArrowUpDown, ArrowUp, ArrowDown, Download, RefreshCw, X, Calendar, 
-  Tag, Shield, AlertTriangle, CheckCircle2, Building2, Filter, Plus, Check 
+  Tag, Shield, AlertTriangle, CheckCircle2, Building2, Filter, Plus, Check, Trash2, ListOrdered 
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { type ImprovementRecord, type FacilityOption } from './types';
 import { 
   InspectRecordDialog, EditRecordDialog, ActionNoteDialog, CreateRecordDialog 
 } from './ImprovementRecordDialogs';
+
+const API = import.meta.env.VITE_API_URL || '';
 
 interface Props {
   records: ImprovementRecord[];
@@ -41,7 +44,71 @@ export const ImprovementTable: React.FC<Props> = ({
   const [inspectRecord, setInspectRecord] = useState<ImprovementRecord | null>(null);
   const [editRecord, setEditRecord] = useState<ImprovementRecord | null>(null);
   const [actionRecord, setActionRecord] = useState<ImprovementRecord | null>(null);
+  const [deleteConfirmRecord, setDeleteConfirmRecord] = useState<ImprovementRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [isRenumbering, setIsRenumbering] = useState<boolean>(false);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+
+  // Kayıt Silme
+  const handleDeleteRecord = async (recordToDelete: ImprovementRecord) => {
+    try {
+      setIsDeleting(true);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/api/operations/improvements/records/${recordToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Kayıt silindi ve numaralar otomatik güncellendi.');
+        setDeleteConfirmRecord(null);
+        if (editRecord?.id === recordToDelete.id) {
+          setEditRecord(null);
+        }
+        onRefresh();
+      } else {
+        toast.error(data.message || 'Kayıt silinirken bir hata oluştu.');
+      }
+    } catch (err: any) {
+      console.error('Silme hatası:', err);
+      toast.error('Bağlantı hatası: Kayıt silinemedi.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Sıra Numaralarını Otomatik Yeniden Diz (1, 2, 3...)
+  const handleRenumber = async () => {
+    try {
+      setIsRenumbering(true);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/api/operations/improvements/renumber`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({
+          facilityId: selectedFacilityId,
+          sheetType: sheetType === 'KRITIK' ? undefined : sheetType,
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || 'Sıra numaraları yeniden düzenlendi.');
+        onRefresh();
+      } else {
+        toast.error(data.message || 'Numaralar güncellenemedi.');
+      }
+    } catch (err) {
+      console.error('Renumber hatası:', err);
+      toast.error('Bağlantı hatası.');
+    } finally {
+      setIsRenumbering(false);
+    }
+  };
 
   // Genel Arama
   const [searchTerm, setSearchTerm] = useState('');
@@ -532,6 +599,19 @@ export const ImprovementTable: React.FC<Props> = ({
             <span className="hidden sm:inline">Excel</span>
           </Button>
 
+          {/* Numaraları Yeniden Diz (1, 2, 3...) */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRenumber}
+            disabled={isRenumbering || loading || records.length === 0}
+            className="h-8 text-xs font-normal"
+            title="Eksik/silinmiş sıra numaralarını baştan düzenler (1, 2, 3...)"
+          >
+            <ListOrdered className={`w-3.5 h-3.5 mr-1 text-blue-600 dark:text-blue-400 ${isRenumbering ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Numaraları Sırala</span>
+          </Button>
+
           {/* Yeni Kayıt Ekle Butonu */}
           <Button
             size="sm"
@@ -913,7 +993,7 @@ export const ImprovementTable: React.FC<Props> = ({
                         )}
                       </td>
 
-                      {/* İşlem Butonları (Görsel 1 ile birebir aynı: İncele, Düzenle, Aksiyon Gir) */}
+                      {/* İşlem Butonları (İncele, Düzenle, Aksiyon Gir, Sil) */}
                       <td className="p-2 text-center sticky right-0 bg-card/95 group-hover:bg-muted/95 border-l">
                         <div className="flex flex-col gap-1 items-center">
                           <button
@@ -933,6 +1013,14 @@ export const ImprovementTable: React.FC<Props> = ({
                             className="w-20 py-0.5 rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 transition-colors shadow-2xs"
                           >
                             Aksiyon Gir
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirmRecord(record)}
+                            className="w-20 py-0.5 rounded border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-[11px] font-semibold text-red-600 dark:text-red-400 transition-colors shadow-2xs flex items-center justify-center gap-1"
+                            title="Bu kaydı sil"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            Sil
                           </button>
                         </div>
                       </td>
@@ -962,6 +1050,10 @@ export const ImprovementTable: React.FC<Props> = ({
           record={editRecord}
           onClose={() => setEditRecord(null)}
           onSuccess={onRefresh}
+          onDelete={(rec) => {
+            setEditRecord(null);
+            setDeleteConfirmRecord(rec);
+          }}
         />
       )}
 
@@ -981,6 +1073,78 @@ export const ImprovementTable: React.FC<Props> = ({
           onClose={() => setShowCreateModal(false)}
           onSuccess={onRefresh}
         />
+      )}
+
+      {/* Kayıt Silme Onay Modalı */}
+      {deleteConfirmRecord && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-card text-card-foreground border rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-foreground">
+                  Kaydı Silmek İstiyor Musunuz?
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Bu işlem geri alınamaz. Kayıt ve varsa geçmiş işlem notları kalıcı olarak silinecektir.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-muted/40 rounded-xl border text-xs space-y-1.5">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span>Hastane:</span>
+                <span className="font-semibold text-foreground">
+                  {deleteConfirmRecord.facility?.name || '-'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span>Sekme:</span>
+                <span className="font-semibold text-foreground">
+                  {getSheetLabel(deleteConfirmRecord.sheetType)} #{deleteConfirmRecord.rowNo || '-'}
+                </span>
+              </div>
+              <div className="text-muted-foreground">
+                <span className="block mb-0.5">Tespit:</span>
+                <p className="line-clamp-2 italic text-foreground bg-background/50 p-1.5 rounded border border-border/50">
+                  {deleteConfirmRecord.finding}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDeleteConfirmRecord(null)}
+                disabled={isDeleting}
+              >
+                Vazgeç
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => handleDeleteRecord(deleteConfirmRecord)}
+                disabled={isDeleting}
+                className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5"
+              >
+                {isDeleting ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    Siliniyor...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Evet, Sil
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

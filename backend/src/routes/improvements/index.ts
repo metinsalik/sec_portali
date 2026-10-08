@@ -600,7 +600,50 @@ router.patch('/records/:id/action-note', async (req: AuthRequest, res: Response)
   }
 });
 
-// 8. GEÇMİŞ (Audit Log)
+// 8. TEKİL KAYIT SİL VE SIRA NUMARALARINI GÜNCELLE
+router.delete('/records/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const existing = await prisma.improvementRecord.findUnique({
+      where: { id }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Kayıt bulunamadı.' });
+    }
+
+    const { facilityId, sheetType, rowNo } = existing;
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Kaydı sil
+      await tx.improvementRecord.delete({
+        where: { id }
+      });
+
+      // 2. Eğer silinen kaydın sıra numarası varsa, kendisinden sonraki kayıtların numarasını 1 azaltarak zinciri düzelt
+      if (typeof rowNo === 'number' && rowNo > 0) {
+        await tx.improvementRecord.updateMany({
+          where: {
+            facilityId,
+            sheetType,
+            rowNo: { gt: rowNo }
+          },
+          data: {
+            rowNo: { decrement: 1 }
+          }
+        });
+      }
+    });
+
+    res.json({ success: true, message: 'Kayıt silindi ve sıra numaraları güncellendi.' });
+  } catch (error: any) {
+    console.error('Error deleting improvement record:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 9. GEÇMİŞ (Audit Log)
 router.get('/records/:id/history', async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -811,6 +854,65 @@ router.post('/categories', async (req: AuthRequest, res: Response) => {
     });
     res.json({ success: true, data: setting.value });
   } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 12. SIRA NUMARALARINI YENİDEN DÜZENLE (Otomatik Boşluk Giderme)
+router.post('/renumber', async (req: AuthRequest, res: Response) => {
+  try {
+    const { facilityId, sheetType } = req.body;
+    const whereClause: any = { isArchived: false };
+    if (facilityId && facilityId !== 'ALL') {
+      whereClause.facilityId = facilityId;
+    }
+    if (sheetType && sheetType !== 'ALL') {
+      whereClause.sheetType = sheetType;
+    }
+
+    const records = await prisma.improvementRecord.findMany({
+      where: whereClause,
+      orderBy: [
+        { facilityId: 'asc' },
+        { sheetType: 'asc' },
+        { rowNo: 'asc' },
+        { createdAt: 'asc' }
+      ],
+      select: { id: true, facilityId: true, sheetType: true, rowNo: true }
+    });
+
+    // Her hastane ve sekme grubu için 1'den başlat
+    const groups: Record<string, typeof records> = {};
+    for (const r of records) {
+      const key = `${r.facilityId}_${r.sheetType}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(r);
+    }
+
+    let updatedCount = 0;
+    await prisma.$transaction(async (tx) => {
+      for (const key of Object.keys(groups)) {
+        const list = groups[key];
+        for (let i = 0; i < list.length; i++) {
+          const expectedNo = i + 1;
+          if (list[i].rowNo !== expectedNo) {
+            await tx.improvementRecord.update({
+              where: { id: list[i].id },
+              data: { rowNo: expectedNo }
+            });
+            updatedCount++;
+          }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      message: `Sıra numaraları başarıyla güncellendi. (${updatedCount} kayıt düzeltildi)`,
+      updatedCount
+    });
+  } catch (error: any) {
+    console.error('Error renumbering improvement records:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
