@@ -468,9 +468,23 @@ export const ThermalExecutiveDashboard: React.FC<Props> = ({
 
   const hasActiveMatrixFilters = Object.keys(matrixColumnFilters).length > 0;
 
+  // Matriste filtrelenmiş hastanelerin ID kümesi (filtre aktifse alt tablolar da kısıtlanır)
+  const allowedMatrixFacilityIds = useMemo(() => {
+    if (!hasActiveMatrixFilters) return null;
+    return new Set(filteredHospitalsWithData.map(h => h.facilityId));
+  }, [hasActiveMatrixFilters, filteredHospitalsWithData]);
+
   // 4. Verileri Filtrele ve 3 Kategoride Grupla (Görseldeki Sıra: 1. Normal, 2. Pik Yük, 3. Acil Aksiyon)
   const categorizedData = useMemo(() => {
     let filteredList = hospitalItems;
+
+    // Üst matris tablosu filtresi aktifse alt tabloları da bu hastanelerle sınırla
+    if (allowedMatrixFacilityIds) {
+      filteredList = filteredList.filter(it => {
+        const facId = it.session?.facilityId || it.session?.facility?.id;
+        return facId && allowedMatrixFacilityIds.has(facId);
+      });
+    }
 
     if (selectedFacilityFilter !== 'ALL') {
       filteredList = filteredList.filter(it => 
@@ -528,7 +542,7 @@ export const ThermalExecutiveDashboard: React.FC<Props> = ({
       peakLoadFollowUpPanels,
       urgentActionPanels
     };
-  }, [hospitalItems, selectedFacilityFilter, searchTerm]);
+  }, [hospitalItems, allowedMatrixFacilityIds, selectedFacilityFilter, searchTerm]);
 
   // Trend & Karşılaştırmalı Ölçüm Bilgisi
   const getPanelTrendMetrics = (item: ThermalInspectionItem) => {
@@ -605,11 +619,12 @@ export const ThermalExecutiveDashboard: React.FC<Props> = ({
   const drilldownTotalPages = Math.ceil(currentDrilldownList.length / PAGE_SIZE) || 1;
   const drilldownSlice = currentDrilldownList.slice((drilldownPage - 1) * PAGE_SIZE, drilldownPage * PAGE_SIZE);
 
-  // Top overall metrics for CEO banner
-  const grandTotalUrgent = hospitalsWithData.reduce((acc, f) => acc + f.urgentCount, 0);
-  const grandTotalPeak = hospitalsWithData.reduce((acc, f) => acc + f.peakLoadCount, 0);
-  const grandTotalNormalEquip = hospitalsWithData.reduce((acc, f) => acc + f.normalEquipCount, 0);
-  const hospitalsAtRisk = hospitalsWithData.filter(f => f.urgentCount > 0).length;
+  // Top overall metrics for CEO banner (Matris filtresi varsa filtrelenmiş hastaneler üzerinden hesaplanır)
+  const activeMatrixHospitals = hasActiveMatrixFilters ? filteredHospitalsWithData : hospitalsWithData;
+  const grandTotalUrgent = activeMatrixHospitals.reduce((acc, f) => acc + f.urgentCount, 0);
+  const grandTotalPeak = activeMatrixHospitals.reduce((acc, f) => acc + f.peakLoadCount, 0);
+  const grandTotalNormalEquip = activeMatrixHospitals.reduce((acc, f) => acc + f.normalEquipCount, 0);
+  const hospitalsAtRisk = activeMatrixHospitals.filter(f => f.urgentCount > 0).length;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
@@ -620,13 +635,21 @@ export const ThermalExecutiveDashboard: React.FC<Props> = ({
       <div className="relative overflow-hidden p-6 rounded-3xl bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 text-white shadow-2xl border border-slate-800">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 flex-wrap">
               <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center gap-1.5">
                 <Activity className="w-3.5 h-3.5" />
                 Yönetici Özeti • Hastaneler Termal Güvenlik Konsolu
               </span>
               <span className="text-xs text-slate-400 font-medium">
-                {hospitalsWithData.length} Verisi Girilen • {hospitalsWithoutData.length} Henüz Girilmeyen Hastane
+                {hasActiveMatrixFilters ? (
+                  <span className="text-orange-300 font-semibold">
+                    {filteredHospitalsWithData.length} / {hospitalsWithData.length} Hastane (Filtrelenmiş) • {hospitalsWithoutData.length} Henüz Girilmeyen
+                  </span>
+                ) : (
+                  <span>
+                    {hospitalsWithData.length} Verisi Girilen • {hospitalsWithoutData.length} Henüz Girilmeyen Hastane
+                  </span>
+                )}
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white font-sans">
@@ -1454,8 +1477,10 @@ export const ThermalExecutiveDashboard: React.FC<Props> = ({
                 }}
                 className="text-xs font-semibold h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
               >
-                <option value="ALL">Tüm Hastaneler</option>
-                {hospitalsWithData.map(h => (
+                <option value="ALL">
+                  {hasActiveMatrixFilters ? `Filtrelenen Hastaneler (${activeMatrixHospitals.length})` : 'Tüm Hastaneler'}
+                </option>
+                {activeMatrixHospitals.map(h => (
                   <option key={h.facilityId} value={h.facilityId}>{h.facilityName}</option>
                 ))}
               </select>
