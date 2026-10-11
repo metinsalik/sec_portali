@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { api } from '@/lib/api';
 import { 
   thermalInspectionService, 
   type ThermalInspectionSession,
@@ -110,6 +111,80 @@ export const ThermalQuickEntryModal: React.FC<Props> = ({
     if (s.measurementPoint) setMeasurementPoint(s.measurementPoint);
     setShowSuggestions(false);
   };
+
+  // Ortak Ayarlardan Bina, Kat ve Pano Türleri (NFC Normalizasyonlu)
+  const [buildingFloors, setBuildingFloors] = useState<any[]>([]);
+  const [configuredRoomTypes, setConfiguredRoomTypes] = useState<string[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchSettingsData = async () => {
+      try {
+        if (facilityId && facilityId !== 'all') {
+          const bRes = await api.get(`/fm200/building-floors?facilityId=${facilityId}`);
+          if (bRes.ok && isMounted) {
+            const bData = await bRes.json();
+            setBuildingFloors(Array.isArray(bData) ? bData : []);
+          }
+        }
+
+        const sRes = await api.get('/fm200/settings');
+        if (sRes.ok && isMounted) {
+          const sData = await sRes.json();
+          let rTypes = sData.roomTypes;
+          if (typeof rTypes === 'string') {
+            try { rTypes = JSON.parse(rTypes); } catch {}
+          }
+          if (Array.isArray(rTypes)) {
+            const seen = new Set<string>();
+            const cleaned: string[] = [];
+            for (const item of rTypes) {
+              if (typeof item === 'string' && item.trim()) {
+                const norm = item.trim().normalize('NFC');
+                const key = norm.toLocaleLowerCase('tr-TR');
+                if (!seen.has(key) && key !== 'diğer' && key !== 'diger') {
+                  seen.add(key);
+                  cleaned.push(norm);
+                }
+              }
+            }
+            setConfiguredRoomTypes(cleaned);
+          }
+        }
+      } catch (e) {
+        console.error('Settings fetch error:', e);
+      }
+    };
+
+    fetchSettingsData();
+    return () => { isMounted = false; };
+  }, [facilityId]);
+
+  const availableBuildings = React.useMemo(() => {
+    const s = new Set<string>();
+    buildingFloors.forEach((bf: any) => {
+      if (bf.building && bf.building.trim()) s.add(bf.building.trim().normalize('NFC'));
+    });
+    if (s.size === 0) s.add('Ana Bina');
+    return Array.from(s);
+  }, [buildingFloors]);
+
+  const availableFloors = React.useMemo(() => {
+    const s = new Set<string>();
+    const normB = (buildingLocation || '').trim().normalize('NFC').toLocaleLowerCase('tr-TR');
+    buildingFloors.forEach((bf: any) => {
+      const bfB = (bf.building || '').trim().normalize('NFC').toLocaleLowerCase('tr-TR');
+      if (!normB || bfB === normB) {
+        if (bf.floor && bf.floor.trim()) s.add(bf.floor.trim().normalize('NFC'));
+      }
+    });
+    if (s.size === 0) {
+      buildingFloors.forEach((bf: any) => {
+        if (bf.floor && bf.floor.trim()) s.add(bf.floor.trim().normalize('NFC'));
+      });
+    }
+    return Array.from(s);
+  }, [buildingFloors, buildingLocation]);
 
   const ensureSession = async (): Promise<string> => {
     // If user explicitly picked an existing session
@@ -319,6 +394,32 @@ export const ThermalQuickEntryModal: React.FC<Props> = ({
               <Search className="w-4 h-4 text-slate-400 absolute right-3 top-3" />
             </div>
 
+            {/* Hızlı Pano Tipi Seçim Rozetleri (Ayarlardan Gelen) */}
+            {configuredRoomTypes.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Hızlı Tip:</span>
+                {configuredRoomTypes.slice(0, 8).map((rt) => (
+                  <button
+                    key={rt}
+                    type="button"
+                    onClick={() => {
+                      if (!panelName.trim()) {
+                        setPanelName(rt);
+                      } else if (!panelName.includes(rt)) {
+                        setPanelName(`${panelName} - ${rt}`);
+                      }
+                      if (!equipmentConnection.trim()) {
+                        setEquipmentConnection(rt);
+                      }
+                    }}
+                    className="text-[11px] px-2 py-0.5 rounded-md bg-slate-100 hover:bg-orange-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium transition-colors"
+                  >
+                    {rt}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Suggestions Popup */}
             {showSuggestions && suggestions.length > 0 && (
               <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-20 max-h-48 overflow-y-auto">
@@ -331,10 +432,17 @@ export const ThermalQuickEntryModal: React.FC<Props> = ({
                     onClick={() => handleSelectSuggestion(s)}
                     className="p-2.5 px-3 hover:bg-orange-50 dark:hover:bg-slate-700/60 cursor-pointer flex items-center justify-between text-xs border-b border-slate-100 dark:border-slate-700/50 last:border-0"
                   >
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">
-                      {s.panelName}
-                    </span>
-                    <span className="text-[11px] text-slate-400">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 truncate font-mono">
+                        {s.displayName || s.panelName}
+                      </span>
+                      {s.isInventory && (
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 shrink-0 font-medium">
+                          Envanter
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-slate-400 shrink-0 ml-2">
                       {s.floorSection || s.buildingLocation || '—'}
                     </span>
                   </div>
@@ -343,6 +451,23 @@ export const ThermalQuickEntryModal: React.FC<Props> = ({
             )}
           </div>
 
+          {/* Datalists for Autocomplete */}
+          <datalist id="quick-buildings-list">
+            {availableBuildings.map(b => (
+              <option key={b} value={b} />
+            ))}
+          </datalist>
+          <datalist id="quick-floors-list">
+            {availableFloors.map(f => (
+              <option key={f} value={f} />
+            ))}
+          </datalist>
+          <datalist id="quick-roomtypes-list">
+            {configuredRoomTypes.map(rt => (
+              <option key={rt} value={rt} />
+            ))}
+          </datalist>
+
           {/* Konum / Kat & Ekipman */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="space-y-1.5">
@@ -350,6 +475,7 @@ export const ThermalQuickEntryModal: React.FC<Props> = ({
                 Lokasyon / Bina
               </Label>
               <Input
+                list="quick-buildings-list"
                 value={buildingLocation}
                 onChange={(e) => setBuildingLocation(e.target.value)}
                 placeholder="Örn: Hastane Geneli"
@@ -361,6 +487,7 @@ export const ThermalQuickEntryModal: React.FC<Props> = ({
                 Kat / Bölüm
               </Label>
               <Input
+                list="quick-floors-list"
                 value={floorSection}
                 onChange={(e) => setFloorSection(e.target.value)}
                 placeholder="Örn: -1 ADP veya 3. Kat"
@@ -369,12 +496,13 @@ export const ThermalQuickEntryModal: React.FC<Props> = ({
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Ekipman / Bağlantı
+                Ekipman / Bağlantı (Pano Tipi)
               </Label>
               <Input
+                list="quick-roomtypes-list"
                 value={equipmentConnection}
                 onChange={(e) => setEquipmentConnection(e.target.value)}
-                placeholder="Örn: Şönt Reaktif Panosu"
+                placeholder="Örn: ADP Panosu, Bara..."
                 className="h-9 text-xs"
               />
             </div>

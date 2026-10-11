@@ -6,12 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { api } from '@/lib/api';
 import { thermalInspectionService, type ThermalInspectionItem } from '@/services/thermal-inspection.service';
 
 interface Props {
   isOpen?: boolean;
   onClose: () => void;
   sessionId?: string;
+  facilityId?: string;
   item: ThermalInspectionItem | null;
   onSaved: (item: ThermalInspectionItem) => void;
 }
@@ -20,6 +22,7 @@ export const ThermalItemFormModal: React.FC<Props> = ({
   isOpen = true,
   onClose,
   sessionId = '',
+  facilityId,
   item,
   onSaved
 }) => {
@@ -81,6 +84,80 @@ export const ThermalItemFormModal: React.FC<Props> = ({
     }
   }, [item, isOpen]);
 
+  const effectiveFacilityId = facilityId || (item as any)?.session?.facilityId;
+  const [buildingFloors, setBuildingFloors] = useState<any[]>([]);
+  const [configuredRoomTypes, setConfiguredRoomTypes] = useState<string[]>([]);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const fetchSettingsData = async () => {
+      try {
+        if (effectiveFacilityId && effectiveFacilityId !== 'all') {
+          const bRes = await api.get(`/fm200/building-floors?facilityId=${effectiveFacilityId}`);
+          if (bRes.ok && isMounted) {
+            const bData = await bRes.json();
+            setBuildingFloors(Array.isArray(bData) ? bData : []);
+          }
+        }
+
+        const sRes = await api.get('/fm200/settings');
+        if (sRes.ok && isMounted) {
+          const sData = await sRes.json();
+          let rTypes = sData.roomTypes;
+          if (typeof rTypes === 'string') {
+            try { rTypes = JSON.parse(rTypes); } catch {}
+          }
+          if (Array.isArray(rTypes)) {
+            const seen = new Set<string>();
+            const cleaned: string[] = [];
+            for (const itm of rTypes) {
+              if (typeof itm === 'string' && itm.trim()) {
+                const norm = itm.trim().normalize('NFC');
+                const key = norm.toLocaleLowerCase('tr-TR');
+                if (!seen.has(key) && key !== 'diğer' && key !== 'diger') {
+                  seen.add(key);
+                  cleaned.push(norm);
+                }
+              }
+            }
+            setConfiguredRoomTypes(cleaned);
+          }
+        }
+      } catch (e) {
+        console.error('Settings fetch error:', e);
+      }
+    };
+
+    fetchSettingsData();
+    return () => { isMounted = false; };
+  }, [effectiveFacilityId]);
+
+  const availableBuildings = React.useMemo(() => {
+    const s = new Set<string>();
+    buildingFloors.forEach((bf: any) => {
+      if (bf.building && bf.building.trim()) s.add(bf.building.trim().normalize('NFC'));
+    });
+    if (s.size === 0) s.add('Ana Bina');
+    return Array.from(s);
+  }, [buildingFloors]);
+
+  const availableFloors = React.useMemo(() => {
+    const s = new Set<string>();
+    const normB = (formData.buildingLocation || '').trim().normalize('NFC').toLocaleLowerCase('tr-TR');
+    buildingFloors.forEach((bf: any) => {
+      const bfB = (bf.building || '').trim().normalize('NFC').toLocaleLowerCase('tr-TR');
+      if (!normB || bfB === normB) {
+        if (bf.floor && bf.floor.trim()) s.add(bf.floor.trim().normalize('NFC'));
+      }
+    });
+    if (s.size === 0) {
+      buildingFloors.forEach((bf: any) => {
+        if (bf.floor && bf.floor.trim()) s.add(bf.floor.trim().normalize('NFC'));
+      });
+    }
+    return Array.from(s);
+  }, [buildingFloors, formData.buildingLocation]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.panelName.trim()) {
@@ -125,6 +202,23 @@ export const ThermalItemFormModal: React.FC<Props> = ({
           </DialogTitle>
         </DialogHeader>
 
+        {/* Datalists for quick select */}
+        <datalist id="edit-buildings-list">
+          {availableBuildings.map(b => (
+            <option key={b} value={b} />
+          ))}
+        </datalist>
+        <datalist id="edit-floors-list">
+          {availableFloors.map(f => (
+            <option key={f} value={f} />
+          ))}
+        </datalist>
+        <datalist id="edit-roomtypes-list">
+          {configuredRoomTypes.map(rt => (
+            <option key={rt} value={rt} />
+          ))}
+        </datalist>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
@@ -139,6 +233,7 @@ export const ThermalItemFormModal: React.FC<Props> = ({
             <div>
               <Label className="text-xs">Lokasyon / Bina</Label>
               <Input
+                list="edit-buildings-list"
                 placeholder="Örn: Ana Bina / A Blok"
                 value={formData.buildingLocation}
                 onChange={(e) => setFormData({ ...formData, buildingLocation: e.target.value })}
@@ -148,6 +243,7 @@ export const ThermalItemFormModal: React.FC<Props> = ({
             <div>
               <Label className="text-xs">Kat / Bölüm</Label>
               <Input
+                list="edit-floors-list"
                 placeholder="Örn: -1. Kat / Teknik Alan"
                 value={formData.floorSection}
                 onChange={(e) => setFormData({ ...formData, floorSection: e.target.value })}
@@ -157,7 +253,7 @@ export const ThermalItemFormModal: React.FC<Props> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
+            <div className="space-y-1">
               <Label className="text-xs font-semibold text-indigo-700 dark:text-indigo-400">Pano No / Adı *</Label>
               <Input
                 placeholder="Örn: ADP-01"
@@ -166,6 +262,26 @@ export const ThermalItemFormModal: React.FC<Props> = ({
                 onChange={(e) => setFormData({ ...formData, panelName: e.target.value })}
                 className="h-8 text-xs mt-1 border-indigo-300 dark:border-indigo-800"
               />
+              {configuredRoomTypes.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1 pt-1">
+                  {configuredRoomTypes.slice(0, 5).map((rt) => (
+                    <button
+                      key={rt}
+                      type="button"
+                      onClick={() => {
+                        if (!formData.panelName.trim()) {
+                          setFormData({ ...formData, panelName: rt });
+                        } else if (!formData.panelName.includes(rt)) {
+                          setFormData({ ...formData, panelName: `${formData.panelName} - ${rt}` });
+                        }
+                      }}
+                      className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 hover:bg-indigo-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium transition-colors"
+                    >
+                      {rt}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <Label className="text-xs">Ölçüm Noktası</Label>
@@ -177,8 +293,9 @@ export const ThermalItemFormModal: React.FC<Props> = ({
               />
             </div>
             <div>
-              <Label className="text-xs">Ekipman / Bağlantı</Label>
+              <Label className="text-xs">Ekipman / Bağlantı (Pano Tipi)</Label>
               <Input
+                list="edit-roomtypes-list"
                 placeholder="Örn: Bakır Bara / TMŞ"
                 value={formData.equipmentConnection}
                 onChange={(e) => setFormData({ ...formData, equipmentConnection: e.target.value })}

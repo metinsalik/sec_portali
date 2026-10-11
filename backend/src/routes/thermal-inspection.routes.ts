@@ -1454,28 +1454,582 @@ router.put('/settings', async (req: AuthRequest, res) => {
 });
 
 // ─────────────────────────────────────────────────────────
-// 13. GET PANEL AUTOCOMPLETE / SUGGESTIONS
+// 14. PANO KODU ÜRETİM MOTORU VE YARDIMCI FONKSİYONLAR
+// ─────────────────────────────────────────────────────────
+
+export function generateLocationCode(facilityName?: string, facilityShortName?: string): string {
+  if (facilityShortName && facilityShortName.trim().length >= 2) {
+    const clean = facilityShortName.trim().toUpperCase().replace(/[^A-ZÇĞİÖŞÜ]/g, '');
+    if (clean.length >= 3) return clean.substring(0, 3);
+    if (clean.length === 2) return clean + '1';
+  }
+  if (!facilityName) return 'GEN';
+
+  const nameUpper = facilityName.trim().toLocaleUpperCase('tr-TR');
+  
+  // Bilinen Tesis / Hastane Lokasyon Haritası
+  if (nameUpper.includes('BAHÇELİEVLER') || nameUpper.includes('BAHCELIEVLER')) return 'BAH';
+  if (nameUpper.includes('ULUS')) return 'ULS';
+  if (nameUpper.includes('ATAŞEHİR') || nameUpper.includes('ATASEHIR')) return 'ATA';
+  if (nameUpper.includes('GÖZTEPE') || nameUpper.includes('GOZTEPE')) return 'GOZ';
+  if (nameUpper.includes('KADIKÖY') || nameUpper.includes('KADIKOY')) return 'KDK';
+  if (nameUpper.includes('BEŞİKTAŞ') || nameUpper.includes('BESIKTAS')) return 'BSK';
+  if (nameUpper.includes('BAKIRKÖY') || nameUpper.includes('BAKIRKOY')) return 'BAK';
+  if (nameUpper.includes('ANKARA')) return 'ANK';
+  if (nameUpper.includes('ANTALYA')) return 'ANT';
+  if (nameUpper.includes('BURSA')) return 'BUR';
+  if (nameUpper.includes('ÇAMLICA') || nameUpper.includes('CAMLICA')) return 'CAM';
+  if (nameUpper.includes('FLORYA')) return 'FLO';
+  if (nameUpper.includes('GAZİOSMANPAŞA') || nameUpper.includes('GOP')) return 'GOP';
+  if (nameUpper.includes('FATİH') || nameUpper.includes('FATIH')) return 'FTH';
+  if (nameUpper.includes('SAMSUN')) return 'SAM';
+  if (nameUpper.includes('TOKAT')) return 'TOK';
+  if (nameUpper.includes('TRABZON')) return 'TRB';
+  if (nameUpper.includes('İZMİR') || nameUpper.includes('IZMIR')) return 'IZM';
+  if (nameUpper.includes('KOCAELİ') || nameUpper.includes('KOCAELI')) return 'KOC';
+  if (nameUpper.includes('MALTEPE')) return 'MLT';
+  if (nameUpper.includes('PENDİK') || nameUpper.includes('PENDIK')) return 'PND';
+  if (nameUpper.includes('ÜMRANİYE') || nameUpper.includes('UMRANIYE')) return 'UMR';
+  if (nameUpper.includes('ÜSKÜDAR') || nameUpper.includes('USKUDAR')) return 'USK';
+  if (nameUpper.includes('SARIYER')) return 'SRY';
+  if (nameUpper.includes('ŞİŞLİ') || nameUpper.includes('SISLI')) return 'SSL';
+
+  // Genel algoritma: Türkçe büyük harflerden ilk 3 harf
+  const cleaned = nameUpper.replace(/[^A-ZÇĞİÖŞÜ0-9]/g, '');
+  return cleaned.substring(0, 3).padEnd(3, 'X');
+}
+
+export function generateFloorCode(floorName?: string): string {
+  if (!floorName) return 'ZMK';
+  const f = floorName.trim().toLocaleLowerCase('tr-TR');
+
+  if (f.includes('çatı') || f.includes('cati') || f.includes('çtk')) return 'ÇTK';
+  if (f.includes('zemin') || f === 'zk' || f === '0' || f === '0. kat') return 'ZMK';
+  if (f.includes('asma')) return 'ASM';
+  if (f.includes('teras')) return 'TRS';
+  if (f.includes('otopark')) return 'OTP';
+
+  // Bodrum kat kontrolleri (örn: "bodrum 1", "b1", "b1. kat", "-1", "-1. kat")
+  const bodrumMatch = f.match(/(?:bodrum|-|b)\s*(\d+)/i) || f.match(/(\d+)\.\s*bodrum/i);
+  if (bodrumMatch) {
+    return `B${bodrumMatch[1]}K`;
+  }
+
+  // Pozitif kat kontrolleri (örn: "1. kat", "kat 1", "2.kat", "kat 12")
+  const katMatch = f.match(/(?:kat\s*)?(\d+)(?:\.\s*kat)?/i);
+  if (katMatch) {
+    const num = parseInt(katMatch[1], 10);
+    return num < 10 ? `K0${num}` : `K${num}`;
+  }
+
+  // Fallback: 3 karakter büyük harf
+  const clean = floorName.toLocaleUpperCase('tr-TR').replace(/[^A-ZÇĞİÖŞÜ0-9]/g, '');
+  return clean.substring(0, 3).padEnd(3, 'K');
+}
+
+export function generateTypeCode(panelTypeName?: string): string {
+  if (!panelTypeName) return 'ELK';
+  const t = panelTypeName.trim().toLocaleLowerCase('tr-TR');
+
+  if (t.includes('adp')) return 'ADP';
+  if (t.includes('kompanzasyon') || t.includes('kmp')) return 'KMP';
+  if (t.includes('mcc')) return 'MCC';
+  if (t.includes('kat pano') || t.includes('kat')) return 'KTP';
+  if (t.includes('trafo')) return 'TRF';
+  if (t.includes('ups')) return 'UPS';
+  if (t.includes('sunucu')) return 'SNC';
+  if (t.includes('sistem')) return 'SST';
+  if (t.includes('jeneratör') || t.includes('jenerator')) return 'JNR';
+  if (t.includes('arşiv') || t.includes('arsiv')) return 'ARS';
+  if (t.includes('radyoloji')) return 'RAD';
+  if (t.includes('hücre') || t.includes('hucre')) return 'HCR';
+  if (t.includes('cctv')) return 'CTV';
+  if (t.includes('bedaş') || t.includes('bedas')) return 'BDS';
+  if (t.includes('anjiyo')) return 'ANJ';
+  if (t.includes('aydınlatma') || t.includes('aydinlatma')) return 'AYD';
+  if (t.includes('mekanik')) return 'MKN';
+  if (t.includes('yangın') || t.includes('yangin')) return 'YNG';
+  if (t.includes('elektrik')) return 'ELK';
+
+  // Fallback: ilk 3 harf
+  const clean = panelTypeName.toLocaleUpperCase('tr-TR').replace(/[^A-ZÇĞİÖŞÜ0-9]/g, '');
+  return clean.substring(0, 3).padEnd(3, 'P');
+}
+
+// ─────────────────────────────────────────────────────────
+// 15. GET PANEL ENVENTORY LIST
+// ─────────────────────────────────────────────────────────
+router.get('/panels', async (req: AuthRequest, res) => {
+  try {
+    const { facilityId, floor, panelType, search } = req.query;
+    if (!facilityId || facilityId === 'all') {
+      return res.status(400).json({ error: 'Lütfen geçerli bir tesis seçin.' });
+    }
+
+    const canonicalFacilityId = await resolveFacilityId(String(facilityId));
+    if (!canonicalFacilityId) {
+      return res.status(404).json({ error: 'Tesis bulunamadı.' });
+    }
+
+    const where: any = {
+      facilityId: canonicalFacilityId,
+      isActive: true
+    };
+
+    if (floor && String(floor).trim()) {
+      where.floor = String(floor).trim();
+    }
+
+    if (panelType && String(panelType).trim()) {
+      where.panelType = String(panelType).trim();
+    }
+
+    if (search && String(search).trim()) {
+      const q = String(search).trim();
+      where.OR = [
+        { panelCode: { contains: q, mode: 'insensitive' } },
+        { panelName: { contains: q, mode: 'insensitive' } },
+        { floor: { contains: q, mode: 'insensitive' } },
+        { building: { contains: q, mode: 'insensitive' } },
+        { block: { contains: q, mode: 'insensitive' } },
+        { description: { contains: q, mode: 'insensitive' } },
+        { equipmentConnection: { contains: q, mode: 'insensitive' } }
+      ];
+    }
+
+    const panels = await prisma.thermalPanel.findMany({
+      where,
+      orderBy: [
+        { floor: 'asc' },
+        { sequenceNumber: 'asc' },
+        { panelCode: 'asc' }
+      ]
+    });
+
+    // Her panel için ölçüm istatistiklerini getir
+    const panelCodesOrNames = panels.flatMap(p => [p.panelCode, p.panelName].filter(Boolean) as string[]);
+
+    // Tesisin tüm ölçümlerini getir
+    const inspectionItems = await prisma.thermalInspectionItem.findMany({
+      where: {
+        session: { facilityId: canonicalFacilityId },
+        panelName: { in: panelCodesOrNames }
+      },
+      select: {
+        panelName: true,
+        measuredTemp: true,
+        ambientTemp: true,
+        deltaTemp: true,
+        status: true,
+        measurementDate: true
+      },
+      orderBy: { measurementDate: 'asc' }
+    });
+
+    // İstatistikleri haritala
+    const statsMap = new Map<string, {
+      count: number;
+      latestTemp: number | null;
+      maxTemp: number | null;
+      latestDelta: number | null;
+      latestDate: string | null;
+      isCritical: boolean;
+      status: string | null;
+    }>();
+
+    inspectionItems.forEach(item => {
+      const key = item.panelName.trim();
+      if (!statsMap.has(key)) {
+        statsMap.set(key, {
+          count: 0,
+          latestTemp: null,
+          maxTemp: null,
+          latestDelta: null,
+          latestDate: null,
+          isCritical: false,
+          status: null
+        });
+      }
+      const s = statsMap.get(key)!;
+      s.count += 1;
+      s.latestTemp = item.measuredTemp;
+      s.latestDelta = item.deltaTemp;
+      s.latestDate = item.measurementDate ? item.measurementDate.toISOString() : null;
+      s.status = item.status || null;
+      if (item.measuredTemp !== null && (s.maxTemp === null || item.measuredTemp > s.maxTemp)) {
+        s.maxTemp = item.measuredTemp;
+      }
+      if ((item.measuredTemp ?? 0) >= 40 || (item.deltaTemp ?? 0) >= 15 || item.status === 'Kritik') {
+        s.isCritical = true;
+      }
+    });
+
+    const enrichedPanels = panels.map(p => {
+      const stats = statsMap.get(p.panelCode) || (p.panelName ? statsMap.get(p.panelName) : null) || {
+        count: 0,
+        latestTemp: null,
+        maxTemp: null,
+        latestDelta: null,
+        latestDate: null,
+        isCritical: false,
+        status: null
+      };
+      return {
+        ...p,
+        measurementCount: stats.count,
+        latestTemp: stats.latestTemp,
+        maxTemp: stats.maxTemp,
+        latestDelta: stats.latestDelta,
+        latestDate: stats.latestDate,
+        isCritical: stats.isCritical,
+        latestStatus: stats.status
+      };
+    });
+
+    res.json({ success: true, data: enrichedPanels });
+  } catch (error: any) {
+    console.error('Error getting thermal panels:', error);
+    res.status(500).json({ error: error.message || 'Pano listesi alınamadı.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────
+// 16. GET NEXT SEQUENCE & SUGGESTED PANEL CODE
+// ─────────────────────────────────────────────────────────
+router.get('/panels/next-sequence', async (req: AuthRequest, res) => {
+  try {
+    const { facilityId, locationCode, floorCode, typeCode } = req.query;
+    if (!facilityId) {
+      return res.status(400).json({ error: 'facilityId gereklidir.' });
+    }
+
+    const canonicalFacilityId = await resolveFacilityId(String(facilityId));
+    if (!canonicalFacilityId) {
+      return res.status(404).json({ error: 'Tesis bulunamadı.' });
+    }
+
+    const loc = String(locationCode || '').trim();
+    const flr = String(floorCode || '').trim();
+    const typ = String(typeCode || '').trim();
+
+    const prefix = `${loc}-${flr}-${typ}-`;
+
+    // Bu prefix ile başlayan panoları bul
+    const existing = await prisma.thermalPanel.findMany({
+      where: {
+        facilityId: canonicalFacilityId,
+        panelCode: { startsWith: prefix }
+      },
+      select: { panelCode: true, sequenceNumber: true }
+    });
+
+    let maxSeq = 0;
+    existing.forEach(p => {
+      if (p.sequenceNumber && p.sequenceNumber > maxSeq) {
+        maxSeq = p.sequenceNumber;
+      }
+      const parts = p.panelCode.split('-');
+      const lastPart = parts[parts.length - 1];
+      const parsedNum = parseInt(lastPart, 10);
+      if (!isNaN(parsedNum) && parsedNum > maxSeq) {
+        maxSeq = parsedNum;
+      }
+    });
+
+    const nextSeq = maxSeq + 1;
+    const formattedSeq = String(nextSeq).padStart(3, '0');
+    const suggestedCode = `${prefix}${formattedSeq}`;
+
+    res.json({
+      success: true,
+      nextSequence: nextSeq,
+      formattedSequence: formattedSeq,
+      suggestedCode
+    });
+  } catch (error: any) {
+    console.error('Error getting next panel sequence:', error);
+    res.status(500).json({ error: error.message || 'Sıra numarası hesaplanamadı.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────
+// 17. CREATE PANEL (PANO ENVANTERİ KAYDI)
+// ─────────────────────────────────────────────────────────
+router.post('/panels', async (req: AuthRequest, res) => {
+  try {
+    const {
+      facilityId,
+      panelCode,
+      panelName,
+      building,
+      block,
+      floor,
+      panelType,
+      description,
+      locationCode,
+      floorCode,
+      typeCode,
+      sequenceNumber,
+      equipmentConnection,
+      measurementPoint
+    } = req.body;
+
+    if (!facilityId) {
+      return res.status(400).json({ error: 'Lütfen bir tesis seçin.' });
+    }
+    if (!floor || !String(floor).trim()) {
+      return res.status(400).json({ error: 'Lütfen bir kat seçin.' });
+    }
+    if (!panelType || !String(panelType).trim()) {
+      return res.status(400).json({ error: 'Lütfen pano tipi seçin.' });
+    }
+
+    const canonicalFacilityId = await resolveFacilityId(String(facilityId));
+    if (!canonicalFacilityId) {
+      return res.status(404).json({ error: 'Tesis bulunamadı.' });
+    }
+
+    // Tesis bilgilerini al
+    const facility = await prisma.facility.findUnique({
+      where: { id: canonicalFacilityId },
+      select: { name: true, shortName: true }
+    });
+
+    // Otomatik kod bileşenlerini türet (eğer verilmemişse)
+    const locCode = locationCode ? String(locationCode).trim().toUpperCase() : generateLocationCode(facility?.name, facility?.shortName || undefined);
+    const flrCode = floorCode ? String(floorCode).trim().toUpperCase() : generateFloorCode(floor);
+    const typCode = typeCode ? String(typeCode).trim().toUpperCase() : generateTypeCode(panelType);
+
+    let finalSeq = sequenceNumber ? parseInt(String(sequenceNumber), 10) : 1;
+    let finalCode = panelCode ? String(panelCode).trim().toUpperCase() : '';
+
+    if (!finalCode) {
+      // Kod otomatik oluştur
+      const prefix = `${locCode}-${flrCode}-${typCode}-`;
+      const existing = await prisma.thermalPanel.findMany({
+        where: {
+          facilityId: canonicalFacilityId,
+          panelCode: { startsWith: prefix }
+        },
+        select: { panelCode: true, sequenceNumber: true }
+      });
+      let maxSeq = 0;
+      existing.forEach(p => {
+        if (p.sequenceNumber && p.sequenceNumber > maxSeq) maxSeq = p.sequenceNumber;
+        const parts = p.panelCode.split('-');
+        const parsed = parseInt(parts[parts.length - 1], 10);
+        if (!isNaN(parsed) && parsed > maxSeq) maxSeq = parsed;
+      });
+      finalSeq = maxSeq + 1;
+      finalCode = `${prefix}${String(finalSeq).padStart(3, '0')}`;
+    }
+
+    // Kodun tekilliğini kontrol et
+    const existingSameCode = await prisma.thermalPanel.findUnique({
+      where: {
+        facilityId_panelCode: {
+          facilityId: canonicalFacilityId,
+          panelCode: finalCode
+        }
+      }
+    });
+
+    if (existingSameCode) {
+      return res.status(400).json({
+        error: `Bu tesis için '${finalCode}' kodlu pano zaten mevcut. Lütfen sıra numarasını veya pano kodunu değiştirin.`
+      });
+    }
+
+    const panel = await prisma.thermalPanel.create({
+      data: {
+        facilityId: canonicalFacilityId,
+        panelCode: finalCode,
+        panelName: panelName && String(panelName).trim() ? String(panelName).trim() : finalCode,
+        building: building ? String(building).trim() : 'Ana Bina',
+        block: block ? String(block).trim() : null,
+        floor: String(floor).trim(),
+        panelType: String(panelType).trim(),
+        description: description && String(description).trim() ? String(description).trim() : null,
+        locationCode: locCode,
+        floorCode: flrCode,
+        typeCode: typCode,
+        sequenceNumber: finalSeq,
+        equipmentConnection: equipmentConnection && String(equipmentConnection).trim() ? String(equipmentConnection).trim() : null,
+        measurementPoint: measurementPoint && String(measurementPoint).trim() ? String(measurementPoint).trim() : null,
+        isActive: true
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `'${panel.panelCode}' panosu başarıyla envantere eklendi.`,
+      data: panel
+    });
+  } catch (error: any) {
+    console.error('Error creating thermal panel:', error);
+    res.status(500).json({ error: error.message || 'Pano kaydedilemedi.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────
+// 18. UPDATE PANEL
+// ─────────────────────────────────────────────────────────
+router.put('/panels/:id', async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      panelCode,
+      panelName,
+      building,
+      block,
+      floor,
+      panelType,
+      description,
+      locationCode,
+      floorCode,
+      typeCode,
+      sequenceNumber,
+      equipmentConnection,
+      measurementPoint,
+      isActive
+    } = req.body;
+
+    const existing = await prisma.thermalPanel.findUnique({
+      where: { id }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Pano bulunamadı.' });
+    }
+
+    // Kod değişiyorsa tekilliği kontrol et
+    if (panelCode && panelCode.trim().toUpperCase() !== existing.panelCode) {
+      const codeDuplicate = await prisma.thermalPanel.findUnique({
+        where: {
+          facilityId_panelCode: {
+            facilityId: existing.facilityId,
+            panelCode: panelCode.trim().toUpperCase()
+          }
+        }
+      });
+      if (codeDuplicate && codeDuplicate.id !== id) {
+        return res.status(400).json({
+          error: `'${panelCode}' kodlu başka bir pano zaten mevcut.`
+        });
+      }
+    }
+
+    const updated = await prisma.thermalPanel.update({
+      where: { id },
+      data: {
+        ...(panelCode ? { panelCode: panelCode.trim().toUpperCase() } : {}),
+        ...(panelName !== undefined ? { panelName: panelName ? panelName.trim() : existing.panelCode } : {}),
+        ...(building !== undefined ? { building: building ? building.trim() : null } : {}),
+        ...(block !== undefined ? { block: block ? block.trim() : null } : {}),
+        ...(floor ? { floor: floor.trim() } : {}),
+        ...(panelType ? { panelType: panelType.trim() } : {}),
+        ...(description !== undefined ? { description: description && description.trim() ? description.trim() : null } : {}),
+        ...(locationCode !== undefined ? { locationCode: locationCode ? locationCode.trim().toUpperCase() : null } : {}),
+        ...(floorCode !== undefined ? { floorCode: floorCode ? floorCode.trim().toUpperCase() : null } : {}),
+        ...(typeCode !== undefined ? { typeCode: typeCode ? typeCode.trim().toUpperCase() : null } : {}),
+        ...(sequenceNumber !== undefined ? { sequenceNumber: sequenceNumber ? parseInt(String(sequenceNumber), 10) : null } : {}),
+        ...(equipmentConnection !== undefined ? { equipmentConnection: equipmentConnection ? equipmentConnection.trim() : null } : {}),
+        ...(measurementPoint !== undefined ? { measurementPoint: measurementPoint ? measurementPoint.trim() : null } : {}),
+        ...(isActive !== undefined ? { isActive: Boolean(isActive) } : {})
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Pano bilgileri güncellendi.',
+      data: updated
+    });
+  } catch (error: any) {
+    console.error('Error updating thermal panel:', error);
+    res.status(500).json({ error: error.message || 'Pano güncellenemedi.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────
+// 19. DELETE PANEL
+// ─────────────────────────────────────────────────────────
+router.delete('/panels/:id', async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const existing = await prisma.thermalPanel.findUnique({
+      where: { id }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Pano bulunamadı.' });
+    }
+
+    await prisma.thermalPanel.delete({
+      where: { id }
+    });
+
+    res.json({
+      success: true,
+      message: `'${existing.panelCode}' panosu envanterden silindi.`
+    });
+  } catch (error: any) {
+    console.error('Error deleting thermal panel:', error);
+    res.status(500).json({ error: error.message || 'Pano silinemedi.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────
+// 20. GET PANEL AUTOCOMPLETE / SUGGESTIONS (ENVANTER + ÖLÇÜMLER)
 // ─────────────────────────────────────────────────────────
 router.get('/panels/suggestions', async (req: AuthRequest, res) => {
   try {
     const { facilityId, search } = req.query;
-    const where: any = {};
-
+    let canonicalFacilityId: string | null = null;
     if (facilityId && facilityId !== 'all') {
-      const canonical = await resolveFacilityId(String(facilityId));
-      where.session = { facilityId: canonical || String(facilityId) };
+      canonicalFacilityId = await resolveFacilityId(String(facilityId));
     }
 
-    if (search && String(search).trim()) {
-      where.panelName = {
-        contains: String(search).trim(),
-        mode: 'insensitive'
-      };
+    const q = search ? String(search).trim() : '';
+
+    // 1. Envanterdeki kayıtlı panolar (Öncelikli)
+    const inventoryPanels = await prisma.thermalPanel.findMany({
+      where: {
+        isActive: true,
+        ...(canonicalFacilityId ? { facilityId: canonicalFacilityId } : {}),
+        ...(q ? {
+          OR: [
+            { panelCode: { contains: q, mode: 'insensitive' } },
+            { panelName: { contains: q, mode: 'insensitive' } }
+          ]
+        } : {})
+      },
+      select: {
+        id: true,
+        panelCode: true,
+        panelName: true,
+        building: true,
+        block: true,
+        floor: true,
+        panelType: true,
+        equipmentConnection: true,
+        measurementPoint: true,
+        description: true
+      },
+      take: 20,
+      orderBy: { panelCode: 'asc' }
+    });
+
+    // 2. Geçmiş ölçümlerde yer alan panolar
+    const whereItems: any = {};
+    if (canonicalFacilityId) {
+      whereItems.session = { facilityId: canonicalFacilityId };
+    }
+    if (q) {
+      whereItems.panelName = { contains: q, mode: 'insensitive' };
     }
 
-    // Tekil pano isimleri ve son konum bilgileri
     const items = await prisma.thermalInspectionItem.findMany({
-      where,
+      where: whereItems,
       select: {
         panelName: true,
         buildingLocation: true,
@@ -1484,15 +2038,240 @@ router.get('/panels/suggestions', async (req: AuthRequest, res) => {
         measurementPoint: true
       },
       distinct: ['panelName'],
-      take: 25,
+      take: 20,
       orderBy: { updatedAt: 'desc' }
     });
 
-    res.json({ success: true, data: items });
+    // Envanter sonuçları ile ölçüm sonuçlarını harmanla (envanter öncelikli)
+    const seenNames = new Set<string>();
+    const combined: any[] = [];
+
+    // Önce envanter panoları
+    inventoryPanels.forEach(p => {
+      seenNames.add(p.panelCode.toUpperCase());
+      if (p.panelName) seenNames.add(p.panelName.toUpperCase());
+
+      combined.push({
+        panelName: p.panelCode,
+        displayName: p.panelName && p.panelName !== p.panelCode ? `${p.panelCode} (${p.panelName})` : p.panelCode,
+        buildingLocation: p.block ? `${p.building || 'Ana Bina'} - ${p.block}` : (p.building || 'Ana Bina'),
+        floorSection: p.floor,
+        panelType: p.panelType,
+        equipmentConnection: p.equipmentConnection,
+        measurementPoint: p.measurementPoint,
+        isInventory: true,
+        panelId: p.id
+      });
+    });
+
+    // Sonra ölçüm geçmişindeki diğerleri
+    items.forEach(item => {
+      const up = item.panelName.trim().toUpperCase();
+      if (!seenNames.has(up)) {
+        seenNames.add(up);
+        combined.push({
+          panelName: item.panelName,
+          displayName: item.panelName,
+          buildingLocation: item.buildingLocation,
+          floorSection: item.floorSection,
+          equipmentConnection: item.equipmentConnection,
+          measurementPoint: item.measurementPoint,
+          isInventory: false
+        });
+      }
+    });
+
+    res.json({ success: true, data: combined.slice(0, 25) });
   } catch (error: any) {
     console.error('Error getting panel suggestions:', error);
     res.status(500).json({ error: error.message || 'Pano önerileri alınamadı.' });
   }
 });
 
+// ─────────────────────────────────────────────────────────
+// 21. EXPORT PANEL INVENTORY TO EXCEL (YÖNETİCİ & KULLANICI ÖZELİNDE)
+// ─────────────────────────────────────────────────────────
+router.get('/panels/export', async (req: AuthRequest, res) => {
+  try {
+    const { facilityId } = req.query;
+    const isAdminOrMgmt = Boolean(
+      req.user?.isAdmin ||
+      req.user?.isManagement ||
+      req.user?.roles?.some(r => ['admin', 'management', 'manager', 'yonetici'].includes(r.toLowerCase()))
+    );
+
+    let where: any = { isActive: true };
+    let exportTitle = 'Pano_Envanteri';
+
+    if (facilityId && facilityId !== 'all') {
+      const canonicalFacilityId = await resolveFacilityId(String(facilityId));
+      if (!canonicalFacilityId) {
+        return res.status(404).json({ error: 'Belirtilen tesis bulunamadı.' });
+      }
+      where.facilityId = canonicalFacilityId;
+      const fac = await prisma.facility.findUnique({
+        where: { id: canonicalFacilityId },
+        select: { name: true, shortName: true }
+      });
+      if (fac) {
+        exportTitle = `${sanitizeFolderName(fac.name)}_Pano_Envanteri`;
+      }
+    } else {
+      // facilityId === 'all' or empty:
+      // Eğer kullanıcı yönetici değilse, sadece kullanıcının erişebildiği tesisleri filtrele
+      if (!isAdminOrMgmt && req.user?.facilities && req.user.facilities.length > 0) {
+        where.facilityId = { in: req.user.facilities };
+      }
+      exportTitle = 'Tum_Tesisler_Pano_Envanteri';
+    }
+
+    const panels = await prisma.thermalPanel.findMany({
+      where,
+      include: {
+        facility: {
+          select: { name: true, shortName: true }
+        }
+      },
+      orderBy: [
+        { facility: { name: 'asc' } },
+        { floor: 'asc' },
+        { sequenceNumber: 'asc' },
+        { panelCode: 'asc' }
+      ]
+    });
+
+    // İlgili panoların ölçüm istatistiklerini getir
+    const panelCodesOrNames = panels.flatMap(p => [p.panelCode, p.panelName].filter(Boolean) as string[]);
+    const inspectionItems = await prisma.thermalInspectionItem.findMany({
+      where: {
+        ...(where.facilityId ? (typeof where.facilityId === 'string' ? { session: { facilityId: where.facilityId } } : { session: { facilityId: where.facilityId } }) : {}),
+        panelName: { in: panelCodesOrNames }
+      },
+      select: {
+        panelName: true,
+        measuredTemp: true,
+        ambientTemp: true,
+        deltaTemp: true,
+        status: true,
+        measurementDate: true
+      },
+      orderBy: { measurementDate: 'asc' }
+    });
+
+    const statsMap = new Map<string, {
+      count: number;
+      latestTemp: number | null;
+      maxTemp: number | null;
+      latestDelta: number | null;
+      latestDate: string | null;
+      isCritical: boolean;
+      status: string | null;
+    }>();
+
+    inspectionItems.forEach(item => {
+      const key = item.panelName.trim();
+      if (!statsMap.has(key)) {
+        statsMap.set(key, {
+          count: 0,
+          latestTemp: null,
+          maxTemp: null,
+          latestDelta: null,
+          latestDate: null,
+          isCritical: false,
+          status: null
+        });
+      }
+      const s = statsMap.get(key)!;
+      s.count += 1;
+      s.latestTemp = item.measuredTemp;
+      s.latestDelta = item.deltaTemp;
+      s.latestDate = item.measurementDate ? item.measurementDate.toLocaleDateString('tr-TR') : null;
+      s.status = item.status || null;
+      if (item.measuredTemp !== null && (s.maxTemp === null || item.measuredTemp > s.maxTemp)) {
+        s.maxTemp = item.measuredTemp;
+      }
+    });
+
+    // Excel satırlarını hazırla
+    const rows = panels.map((p, idx) => {
+      const stats = statsMap.get(p.panelCode) || (p.panelName ? statsMap.get(p.panelName) : null) || {
+        count: 0,
+        latestTemp: null,
+        maxTemp: null,
+        latestDelta: null,
+        latestDate: null,
+        status: null
+      };
+
+      const createdDateStr = p.createdAt ? new Date(p.createdAt).toLocaleDateString('tr-TR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }) : '-';
+
+      return {
+        'Sıra No': idx + 1,
+        'Tesis / Hastane': p.facility?.name || '—',
+        'Pano Kodu': p.panelCode,
+        'Pano Adı / Tanımı': p.panelName || p.panelCode,
+        'Bina': p.building || 'Ana Bina',
+        'Blok': p.block || '-',
+        'Kat': p.floor,
+        'Pano Tipi': p.panelType,
+        'Açıklama': p.description || '-',
+        'Ekipman / Bağlantı': p.equipmentConnection || '-',
+        'Ölçüm Noktası': p.measurementPoint || '-',
+        'Ölçüm Sayısı': stats.count,
+        'Son Sıcaklık (°C)': stats.latestTemp !== null ? Number(stats.latestTemp) : '-',
+        'Maksimum Sıcaklık (°C)': stats.maxTemp !== null ? Number(stats.maxTemp) : '-',
+        'Son Durum': stats.status || (stats.count > 0 ? 'Normal' : 'Ölçüm Yok'),
+        'Son Ölçüm Tarihi': stats.latestDate || '-',
+        'Kayıt Tarihi': createdDateStr
+      };
+    });
+
+    const wb = xlsx.utils.book_new();
+    const ws = xlsx.utils.json_to_sheet(rows.length > 0 ? rows : [{
+      'Bilgi': 'Kayıtlı pano envanteri bulunamadı.'
+    }]);
+
+    // Sütun genişlikleri
+    ws['!cols'] = [
+      { wch: 8 },  // Sıra No
+      { wch: 28 }, // Tesis
+      { wch: 22 }, // Pano Kodu
+      { wch: 26 }, // Pano Adı
+      { wch: 15 }, // Bina
+      { wch: 12 }, // Blok
+      { wch: 14 }, // Kat
+      { wch: 22 }, // Pano Tipi
+      { wch: 38 }, // Açıklama
+      { wch: 22 }, // Ekipman / Bağlantı
+      { wch: 20 }, // Ölçüm Noktası
+      { wch: 14 }, // Ölçüm Sayısı
+      { wch: 18 }, // Son Sıcaklık
+      { wch: 20 }, // Maksimum Sıcaklık
+      { wch: 14 }, // Son Durum
+      { wch: 16 }, // Son Ölçüm Tarihi
+      { wch: 18 }  // Kayıt Tarihi
+    ];
+
+    xlsx.utils.book_append_sheet(wb, ws, 'Pano Envanteri');
+
+    const dateSuffix = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    const filename = `${exportTitle}_${dateSuffix}.xlsx`;
+    const buf = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buf);
+  } catch (error: any) {
+    console.error('Error exporting panel inventory to excel:', error);
+    res.status(500).json({ error: error.message || 'Excel oluşturulamadı.' });
+  }
+});
+
 export default router;
+

@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Standart 16 Elektrik Pano & Mahal Türü
+// Standart 15 Elektrik Pano & Mahal Türü (Diğer kaldırıldı)
 const DEFAULT_ROOM_TYPES = [
   'Sunucu Odası',
   'Sistem Odası',
@@ -51,8 +51,7 @@ const DEFAULT_ROOM_TYPES = [
   'CCTV Odası',
   'Bedaş Odası',
   'Anjiyo Odası',
-  'Jeneratör Odası',
-  'Diğer'
+  'Jeneratör Odası'
 ];
 
 export default function Fm200SettingsPage() {
@@ -254,7 +253,31 @@ export default function Fm200SettingsPage() {
     }
   });
 
-  const roomTypes: string[] = fm200Settings?.roomTypes || DEFAULT_ROOM_TYPES;
+  const roomTypes: string[] = useMemo(() => {
+    const raw = fm200Settings?.roomTypes;
+    let list: string[] = [];
+    if (Array.isArray(raw)) {
+      list = raw;
+    } else if (typeof raw === 'string') {
+      try { list = JSON.parse(raw); } catch { list = []; }
+    } else if (fm200Settings === undefined) {
+      list = DEFAULT_ROOM_TYPES;
+    }
+
+    const seen = new Set<string>();
+    const cleaned: string[] = [];
+    for (const item of list) {
+      if (typeof item === 'string' && item.trim()) {
+        const norm = item.trim().normalize('NFC');
+        const key = norm.toLocaleLowerCase('tr-TR');
+        if (!seen.has(key) && key !== 'diğer' && key !== 'diger') {
+          seen.add(key);
+          cleaned.push(norm);
+        }
+      }
+    }
+    return cleaned;
+  }, [fm200Settings]);
 
   // Ayarları Güncelle
   const updateSettingsMutation = useMutation({
@@ -276,18 +299,22 @@ export default function Fm200SettingsPage() {
   });
 
   const handleAddRoomType = () => {
-    const trimmed = newRoomType.trim();
+    const trimmed = newRoomType.trim().normalize('NFC');
     if (!trimmed) {
       toast.error('Lütfen bir oda veya pano türü adı yazın');
       return;
     }
-    if (roomTypes.some(r => r.toLowerCase() === trimmed.toLowerCase())) {
+    const targetKey = trimmed.toLocaleLowerCase('tr-TR');
+    if (targetKey === 'diğer' || targetKey === 'diger') {
+      toast.error('"Diğer" seçeneği kullanılmamaktadır.');
+      return;
+    }
+    if (roomTypes.some(r => r.normalize('NFC').trim().toLocaleLowerCase('tr-TR') === targetKey)) {
       toast.error('Bu tür listede zaten mevcut');
       return;
     }
 
-    const withoutDiger = roomTypes.filter(r => r !== 'Diğer');
-    const updated = [...withoutDiger, trimmed, 'Diğer'];
+    const updated = [...roomTypes, trimmed];
     updateSettingsMutation.mutate({ roomTypes: updated });
     setNewRoomType('');
   };
@@ -295,27 +322,30 @@ export default function Fm200SettingsPage() {
   const handleEditRoomTypeSave = () => {
     if (!editingRoomType) return;
     const { oldName, newName } = editingRoomType;
-    const trimmed = newName.trim();
+    const trimmed = newName.trim().normalize('NFC');
     if (!trimmed) {
       toast.error('İsim boş bırakılamaz');
       return;
     }
-    if (oldName.toLowerCase() !== trimmed.toLowerCase() && roomTypes.some(r => r.toLowerCase() === trimmed.toLowerCase())) {
+    const oldKey = oldName.normalize('NFC').trim().toLocaleLowerCase('tr-TR');
+    const newKey = trimmed.toLocaleLowerCase('tr-TR');
+    if (newKey === 'diğer' || newKey === 'diger') {
+      toast.error('"Diğer" seçeneği kullanılmamaktadır.');
+      return;
+    }
+    if (oldKey !== newKey && roomTypes.some(r => r.normalize('NFC').trim().toLocaleLowerCase('tr-TR') === newKey)) {
       toast.error('Bu isimde başka bir kayıt zaten var');
       return;
     }
 
-    const updated = roomTypes.map(r => r === oldName ? trimmed : r);
+    const updated = roomTypes.map(r => (r.normalize('NFC').trim().toLocaleLowerCase('tr-TR') === oldKey ? trimmed : r));
     updateSettingsMutation.mutate({ roomTypes: updated });
   };
 
   const handleRemoveRoomType = (typeName: string) => {
-    if (typeName === 'Diğer') {
-      toast.error('"Diğer" seçeneği zorunludur ve silinemez.');
-      return;
-    }
     if (confirm(`"${typeName}" tipini listeden kaldırmak istediğinize emin misiniz?`)) {
-      const updated = roomTypes.filter(r => r !== typeName);
+      const normTarget = typeName.normalize('NFC').trim().toLocaleLowerCase('tr-TR');
+      const updated = roomTypes.filter(r => r.normalize('NFC').trim().toLocaleLowerCase('tr-TR') !== normTarget);
       updateSettingsMutation.mutate({ roomTypes: updated });
     }
   };
@@ -673,22 +703,14 @@ export default function Fm200SettingsPage() {
               <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                 Tanımlı Pano ve Oda Türleri ({roomTypes.length})
               </span>
-              <span className="text-[11px] text-muted-foreground">
-                * "Diğer" seçildiğinde kullanıcının açıklama girmesi zorunludur.
-              </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {roomTypes.map((type, idx) => {
-                const isDiger = type === 'Diğer';
                 return (
                   <div
                     key={type}
-                    className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
-                      isDiger
-                        ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/50 text-amber-900 dark:text-amber-300'
-                        : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800 text-slate-800 dark:text-slate-200 hover:border-primary/40'
-                    }`}
+                    className="flex items-center justify-between p-3.5 rounded-xl border transition-all bg-slate-50 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800 text-slate-800 dark:text-slate-200 hover:border-primary/40"
                   >
                     <div className="flex items-center gap-2.5 truncate">
                       <span className="w-6 h-6 rounded-lg bg-white dark:bg-slate-900 border text-[11px] font-bold text-slate-500 flex items-center justify-center shrink-0">
@@ -698,31 +720,22 @@ export default function Fm200SettingsPage() {
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0 ml-2">
-                      {!isDiger && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => setEditingRoomType({ oldName: type, newName: type })}
-                            className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors"
-                            title="Düzenle"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveRoomType(type)}
-                            className="p-1 text-slate-400 hover:text-red-600 rounded transition-colors"
-                            title="Kaldır"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </>
-                      )}
-                      {isDiger && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200">
-                          Zorunlu
-                        </span>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => setEditingRoomType({ oldName: type, newName: type })}
+                        className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors"
+                        title="Düzenle"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRoomType(type)}
+                        className="p-1 text-slate-400 hover:text-red-600 rounded transition-colors"
+                        title="Kaldır"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 );

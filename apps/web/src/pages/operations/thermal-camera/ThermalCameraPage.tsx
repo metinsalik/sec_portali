@@ -28,6 +28,7 @@ import { ThermalItemFormModal } from './ThermalItemFormModal';
 import { ThermalActionModal } from './ThermalActionModal';
 import { ThermalMergePanelsModal } from './ThermalMergePanelsModal';
 import { ThermalBulkDeleteReportsModal } from './ThermalBulkDeleteReportsModal';
+import { ThermalSettingsView } from './ThermalSettingsView';
 import { toast } from 'sonner';
 
 const API = import.meta.env.VITE_API_URL || '';
@@ -44,8 +45,8 @@ export default function ThermalCameraPage() {
     user?.roles?.includes('management')
   );
 
-  // Active Tab: 'dashboard' | 'table' | 'panels'
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'panels'>(
+  // Active Tab: 'dashboard' | 'table' | 'panels' | 'settings'
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'panels' | 'settings'>(
     (searchParams.get('tab') as any) || 'dashboard'
   );
 
@@ -168,7 +169,7 @@ export default function ThermalCameraPage() {
     });
   };
 
-  const handleTabChange = (tab: 'dashboard' | 'table' | 'panels') => {
+  const handleTabChange = (tab: 'dashboard' | 'table' | 'panels' | 'settings') => {
     setActiveTab(tab);
     setSelectedPanelName(null);
     setSearchParams(prev => {
@@ -227,8 +228,8 @@ export default function ThermalCameraPage() {
 
   // Keep activeTab in sync with URL searchParams (e.g. when clicked from AppLayout sidebar)
   useEffect(() => {
-    const tabParam = searchParams.get('tab') as 'dashboard' | 'table' | 'panels' | null;
-    if (tabParam && ['dashboard', 'table', 'panels'].includes(tabParam)) {
+    const tabParam = searchParams.get('tab') as 'dashboard' | 'table' | 'panels' | 'settings' | null;
+    if (tabParam && ['dashboard', 'table', 'panels', 'settings'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
     const panelParam = searchParams.get('panel');
@@ -245,32 +246,75 @@ export default function ThermalCameraPage() {
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
               {activeTab === 'dashboard' ? 'Termal Kamera & Pano Kontrol Özeti' :
-               activeTab === 'table' ? 'Pano Ölçüm Listesi' : 'Pano Envanteri ve Ölçüm Döngüleri'}
+               activeTab === 'table' ? 'Pano Ölçüm Listesi' :
+               activeTab === 'panels' ? 'Pano Envanteri ve Ölçüm Döngüleri' :
+               'Termal Kamera Modül Ayarları'}
             </h1>
             <Badge variant="outline" className="text-xs font-semibold px-2 border-slate-300">
-              {allItems.length} Kayıt
+              {activeTab === 'settings' ? 'Yönetici Paneli' : `${allItems.length} Kayıt`}
             </Badge>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Elektrik panolarının termal kamera ölçümleri, sıcaklık farkları (ΔT) ve periyodik kontrolleri
+            {activeTab === 'settings'
+              ? 'Bina, blok ve kat konumları, elektrik pano & mahal türleri ve termal risk değerlendirme eşikleri'
+              : 'Elektrik panolarının termal kamera ölçümleri, sıcaklık farkları (ΔT) ve periyodik kontrolleri'}
           </p>
         </div>
 
-        {/* Action Buttons (Header sadeleştirildi) */}
-        <div className="flex items-center gap-2">
-          {/* Settings Button (Sadece Yönetici) */}
-          {isAdminOrMgmt && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowSettingsModal(true)}
-              className="text-xs gap-1.5 font-medium border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-              title="ΔT ve Sıcaklık Eşikleri"
+        {/* Action Buttons & Tab Switchers */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl overflow-x-auto shrink-0">
+            <button
+              type="button"
+              onClick={() => handleTabChange('dashboard')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'dashboard'
+                  ? 'bg-white dark:bg-slate-900 text-orange-600 dark:text-orange-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
             >
-              <Sliders className="w-3.5 h-3.5" />
-              ΔT Ayarları
-            </Button>
-          )}
+              <BarChart3 className="w-3.5 h-3.5" />
+              Dashboard
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTabChange('table')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'table'
+                  ? 'bg-white dark:bg-slate-900 text-orange-600 dark:text-orange-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Thermometer className="w-3.5 h-3.5" />
+              Ölçüm Tablosu
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTabChange('panels')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'panels'
+                  ? 'bg-white dark:bg-slate-900 text-orange-600 dark:text-orange-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              Pano Envanteri
+            </button>
+            {isAdminOrMgmt && (
+              <button
+                type="button"
+                onClick={() => handleTabChange('settings')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  activeTab === 'settings'
+                    ? 'bg-white dark:bg-slate-900 text-orange-600 dark:text-orange-400 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Settings className="w-3.5 h-3.5" />
+                Ayarlar
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -331,12 +375,22 @@ export default function ThermalCameraPage() {
             onDeleteSession={handleDeleteSession}
             onOpenBulkDeleteSessions={() => setShowBulkDeleteModal(true)}
           />
-        ) : (
+        ) : activeTab === 'panels' ? (
           /* Panels Inventory and Cycles View */
           <ThermalPanelsInventoryView
             items={allItems}
             onOpenPanelDetail={handleOpenPanelDetail}
             onOpenMergeModal={() => setShowMergeModal(true)}
+            activeFacilityId={activeFacilityId !== 'all' ? activeFacilityId : facilities[0]?.id}
+            facilities={facilities}
+            isAdminOrMgmt={isAdminOrMgmt}
+          />
+        ) : (
+          /* Settings View (Bina, Blok, Kat, Pano Türleri, Termal Eşikler) */
+          <ThermalSettingsView
+            activeFacilityId={activeFacilityId !== 'all' ? activeFacilityId : facilities[0]?.id}
+            facilities={facilities}
+            onFacilityChange={handleFacilityChange}
           />
         )}
       </div>
@@ -419,6 +473,7 @@ export default function ThermalCameraPage() {
       {editingItem && (
         <ThermalItemFormModal
           item={editingItem}
+          facilityId={activeFacilityId !== 'all' ? activeFacilityId : editingItem.session?.facilityId}
           onClose={() => setEditingItem(null)}
           onSaved={(saved) => {
             setAllItems(prev => prev.map(i => i.id === saved.id ? saved : i));

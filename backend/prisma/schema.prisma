@@ -177,6 +177,7 @@ model Facility {
   electricInfrastructureRecords ElectricInfrastructureRecord[]
   electricInfrastructureStatus  ElectricInfrastructureFacilityStatus?
   thermalInspectionSessions     ThermalInspectionSession[]
+  thermalPanels                 ThermalPanel[]
   fireSafetyAudits              FireSafetyAudit[]
   fm200Locations                Fm200Location[]
   fm200BuildingFloors           Fm200BuildingFloor[]
@@ -2825,6 +2826,39 @@ model ThermalSetting {
   updatedAt         DateTime @updatedAt
   createdAt         DateTime @default(now())
 }
+
+model ThermalPanel {
+  id                  String   @id @default(uuid())
+  facilityId          String
+  panelCode           String   // e.g. "BAH-B1K-ADP-001"
+  panelName           String?  // Görünen pano adı (örn: "B1. Kat ADP Panosu", varsayılan: panelCode)
+  building            String?  // Bina (örn: "Ana Bina")
+  block               String?  // Blok (örn: "A Blok")
+  floor               String   // Kat (örn: "B1. Kat")
+  panelType           String   // Pano Tipi (örn: "ADP Pano Odası")
+  description         String?  // Opsiyonel açıklama
+
+  // 4 segment kodu
+  locationCode        String?  // "BAH"
+  floorCode           String?  // "B1K"
+  typeCode            String?  // "ADP"
+  sequenceNumber      Int?     // 1
+
+  equipmentConnection String?  // Opsiyonel Ekipman / Bağlantı
+  measurementPoint    String?  // Opsiyonel Ölçüm Noktası
+  isActive            Boolean  @default(true)
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  facility            Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@unique([facilityId, panelCode])
+  @@index([facilityId])
+  @@index([floor])
+  @@index([panelType])
+}
+
 
 // ─────────────────────────────────────────────────────────
 // YANGIN GÜVENLİĞİ KONTROL SİSTEMİ MODELLERİ

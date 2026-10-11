@@ -188,11 +188,33 @@ export default function Fm200WizardPage() {
   }, [fm200Settings]);
 
   const availableRoomTypes = useMemo(() => {
-    return fm200Settings?.roomTypes || [
-      'Sunucu Odası', 'Sistem Odası', 'UPS Odası', 'Trafo Odası', 'Arşiv Odası',
-      'MCC Panosu', 'ADP Pano Odası', 'Elektrik Panosu', 'Kat Panosu', 'Radyoloji Odası',
-      'Hücre Odası', 'CCTV Odası', 'Bedaş Odası', 'Anjiyo Odası', 'Jeneratör Odası', 'Diğer'
-    ];
+    const raw = fm200Settings?.roomTypes;
+    let list: string[] = [];
+    if (Array.isArray(raw)) {
+      list = raw;
+    } else if (typeof raw === 'string') {
+      try { list = JSON.parse(raw); } catch { list = []; }
+    }
+    if (!list || list.length === 0) {
+      list = [
+        'Sunucu Odası', 'Sistem Odası', 'UPS Odası', 'Trafo Odası', 'Arşiv Odası',
+        'MCC Panosu', 'ADP Pano Odası', 'Elektrik Panosu', 'Kat Panosu', 'Radyoloji Odası',
+        'Hücre Odası', 'CCTV Odası', 'Bedaş Odası', 'Anjiyo Odası', 'Jeneratör Odası'
+      ];
+    }
+    const seen = new Set<string>();
+    const cleaned: string[] = [];
+    for (const item of list) {
+      if (typeof item === 'string' && item.trim()) {
+        const norm = item.trim().normalize('NFC');
+        const key = norm.toLocaleLowerCase('tr-TR');
+        if (!seen.has(key) && key !== 'diğer' && key !== 'diger') {
+          seen.add(key);
+          cleaned.push(norm);
+        }
+      }
+    }
+    return cleaned;
   }, [fm200Settings]);
 
   // Bu Tesise Ait Denetim Yapılan / Yapılacak Konumları Çek
@@ -265,13 +287,17 @@ export default function Fm200WizardPage() {
       .map((bf: any) => bf.floor);
   }, [buildingFloors, selectedBuilding, selectedBlock]);
 
-  // Seçili Filtrelere Uyan Konumlar
+  // Seçili Filtrelere Uyan Konumlar (Türkçe Normalizasyon ile Sıkı Eşleşme)
   const filteredLocations = useMemo(() => {
     return locations.filter((loc: any) => {
       if (selectedBuilding && loc.building !== selectedBuilding) return false;
       if (selectedBlock && (loc.block || '') !== selectedBlock) return false;
       if (selectedFloor && loc.floor !== selectedFloor) return false;
-      if (selectedRoomType && loc.roomType !== selectedRoomType) return false;
+      if (selectedRoomType) {
+        const normLoc = (loc.roomType || '').normalize('NFC').trim().toLocaleLowerCase('tr-TR');
+        const normSel = selectedRoomType.normalize('NFC').trim().toLocaleLowerCase('tr-TR');
+        if (normLoc !== normSel) return false;
+      }
       return true;
     });
   }, [locations, selectedBuilding, selectedBlock, selectedFloor, selectedRoomType]);
@@ -279,12 +305,14 @@ export default function Fm200WizardPage() {
   // Aynı Seçimde Kaçıncı Mahal Olacağı (#1, #2, #3...)
   const duplicateCount = useMemo(() => {
     if (!selectedFacilityId || !selectedFloor || !selectedRoomType) return 1;
-    const sameCount = locations.filter((l: any) =>
-      l.building === (selectedBuilding || 'Ana Bina') &&
-      (l.block || '') === selectedBlock &&
-      l.floor === selectedFloor &&
-      l.roomType === selectedRoomType
-    ).length;
+    const normSel = selectedRoomType.normalize('NFC').trim().toLocaleLowerCase('tr-TR');
+    const sameCount = locations.filter((l: any) => {
+      const sameB = l.building === (selectedBuilding || 'Ana Bina');
+      const sameBlk = (l.block || '') === selectedBlock;
+      const sameF = l.floor === selectedFloor;
+      const sameRt = (l.roomType || '').normalize('NFC').trim().toLocaleLowerCase('tr-TR') === normSel;
+      return sameB && sameBlk && sameF && sameRt;
+    }).length;
     return sameCount + 1;
   }, [locations, selectedFacilityId, selectedBuilding, selectedBlock, selectedFloor, selectedRoomType]);
 
@@ -305,13 +333,17 @@ export default function Fm200WizardPage() {
     return Array.from(s);
   }, [inspections]);
 
+  // Tüm tanımlı Pano ve Oda türlerini tablo filtresine ekle
   const tableAvailableRoomTypes = useMemo(() => {
     const s = new Set<string>();
-    inspections.forEach((insp: any) => {
-      if (insp.location?.roomType) s.add(insp.location.roomType);
+    availableRoomTypes.forEach((rt: string) => {
+      if (rt) s.add(rt.normalize('NFC').trim());
     });
-    return Array.from(s).sort();
-  }, [inspections]);
+    inspections.forEach((insp: any) => {
+      if (insp.location?.roomType) s.add(insp.location.roomType.normalize('NFC').trim());
+    });
+    return Array.from(s).sort((a, b) => a.localeCompare(b, 'tr'));
+  }, [availableRoomTypes, inspections]);
 
   // Filtrelenmiş Denetim Kayıtları (Blok, Kat, Pano/Mahal, Arama)
   const filteredInspections = useMemo(() => {
@@ -330,8 +362,9 @@ export default function Fm200WizardPage() {
 
       // Pano / Mahal Türü Filtresi
       if (tableFilterRoomType !== 'all') {
-        const rt = insp.location?.roomType || '';
-        if (rt !== tableFilterRoomType) return false;
+        const rt = (insp.location?.roomType || '').normalize('NFC').trim().toLocaleLowerCase('tr-TR');
+        const filterRt = tableFilterRoomType.normalize('NFC').trim().toLocaleLowerCase('tr-TR');
+        if (rt !== filterRt) return false;
       }
 
       // Durum Filtresi (Devam Ediyor / Tamamlandı)
@@ -1175,9 +1208,20 @@ export default function Fm200WizardPage() {
                 {availableRoomTypes.map((type: string) => (
                   <option key={type} value={type}>{type}</option>
                 ))}
+                {selectedRoomType && !availableRoomTypes.some((t: string) => t.normalize('NFC').toLocaleLowerCase('tr-TR') === selectedRoomType.normalize('NFC').toLocaleLowerCase('tr-TR')) && (
+                  <option value={selectedRoomType}>{selectedRoomType}</option>
+                )}
               </select>
             </div>
           </div>
+
+          {/* Kat Seçilmediyse Bilgilendirme */}
+          {selectedRoomType && !selectedFloor && (
+            <div className="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Seçilen mahal türü: <strong>{selectedRoomType}</strong>. Lütfen denetime başlamak için yukarıdan bir <strong>Kat</strong> seçiniz.</span>
+            </div>
+          )}
 
           {/* Aksiyon Satırı: Başlat Butonu & İndeks Bilgisi */}
           {selectedFloor && selectedRoomType && (
@@ -1551,6 +1595,9 @@ export default function Fm200WizardPage() {
                 onChange={(e) => setEditRoomType(e.target.value)}
                 className="w-full mt-1.5 h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-medium focus:ring-2 focus:ring-blue-500"
               >
+                {editRoomType && !availableRoomTypes.some((pt: string) => pt.normalize('NFC').toLocaleLowerCase('tr-TR') === editRoomType.normalize('NFC').toLocaleLowerCase('tr-TR')) && (
+                  <option value={editRoomType}>{editRoomType} (Mevcut Değer)</option>
+                )}
                 {availableRoomTypes.map((pt: string) => (
                   <option key={pt} value={pt}>{pt}</option>
                 ))}

@@ -44,6 +44,35 @@ export interface ThermalInspectionItem {
   };
 }
 
+export interface ThermalPanel {
+  id: string;
+  facilityId: string;
+  panelCode: string;
+  panelName?: string | null;
+  building?: string | null;
+  block?: string | null;
+  floor: string;
+  panelType: string;
+  description?: string | null;
+  locationCode?: string | null;
+  floorCode?: string | null;
+  typeCode?: string | null;
+  sequenceNumber?: number | null;
+  equipmentConnection?: string | null;
+  measurementPoint?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  // Computed stats
+  measurementCount?: number;
+  latestTemp?: number | null;
+  maxTemp?: number | null;
+  latestDelta?: number | null;
+  latestDate?: string | null;
+  isCritical?: boolean;
+  latestStatus?: string | null;
+}
+
 export interface ThermalInspectionSession {
   id: string;
   facilityId: string;
@@ -328,10 +357,14 @@ export const thermalInspectionService = {
   // Pano adı otomatik tamamlama önerileri
   async getPanelSuggestions(facilityId?: string, search?: string): Promise<Array<{
     panelName: string;
+    displayName?: string;
     buildingLocation?: string;
     floorSection?: string;
+    panelType?: string;
     equipmentConnection?: string;
     measurementPoint?: string;
+    isInventory?: boolean;
+    panelId?: string;
   }>> {
     const params = new URLSearchParams();
     if (facilityId && facilityId !== 'all') params.append('facilityId', facilityId);
@@ -340,5 +373,93 @@ export const thermalInspectionService = {
     if (!res.ok) return [];
     const json = await res.json();
     return json.data || [];
+  },
+
+  // Pano Envanteri Listesi
+  async getPanels(params: {
+    facilityId: string;
+    floor?: string;
+    panelType?: string;
+    search?: string;
+  }): Promise<ThermalPanel[]> {
+    const q = new URLSearchParams();
+    if (params.facilityId && params.facilityId !== 'all') q.append('facilityId', params.facilityId);
+    if (params.floor) q.append('floor', params.floor);
+    if (params.panelType) q.append('panelType', params.panelType);
+    if (params.search) q.append('search', params.search);
+    const res = await api.get(`/safety-management/electric-infrastructure/thermal/panels?${q.toString()}`);
+    if (!res.ok) throw new Error('Pano envanteri getirilemedi.');
+    const json = await res.json();
+    return json.data || [];
+  },
+
+  // Sıradaki Pano Kodu ve Sıra Numarası Önerisi
+  async getNextPanelSequence(params: {
+    facilityId: string;
+    locationCode?: string;
+    floorCode?: string;
+    typeCode?: string;
+  }): Promise<{
+    nextSequence: number;
+    formattedSequence: string;
+    suggestedCode: string;
+  }> {
+    const q = new URLSearchParams();
+    q.append('facilityId', params.facilityId);
+    if (params.locationCode) q.append('locationCode', params.locationCode);
+    if (params.floorCode) q.append('floorCode', params.floorCode);
+    if (params.typeCode) q.append('typeCode', params.typeCode);
+    const res = await api.get(`/safety-management/electric-infrastructure/thermal/panels/next-sequence?${q.toString()}`);
+    if (!res.ok) throw new Error('Sıra numarası alınamadı.');
+    return await res.json();
+  },
+
+  // Yeni Pano Ekle
+  async createPanel(data: Partial<ThermalPanel>): Promise<ThermalPanel> {
+    const res = await api.post('/safety-management/electric-infrastructure/thermal/panels', data);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Pano kaydedilemedi.');
+    }
+    const json = await res.json();
+    return json.data;
+  },
+
+  // Pano Güncelle
+  async updatePanel(id: string, data: Partial<ThermalPanel>): Promise<ThermalPanel> {
+    const res = await api.put(`/safety-management/electric-infrastructure/thermal/panels/${id}`, data);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Pano güncellenemedi.');
+    }
+    const json = await res.json();
+    return json.data;
+  },
+
+  // Pano Sil
+  async deletePanel(id: string): Promise<void> {
+    const res = await api.delete(`/safety-management/electric-infrastructure/thermal/panels/${id}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Pano silinemedi.');
+    }
+  },
+
+  // Excel Olarak Pano Envanterini İndir
+  async exportPanelsExcel(facilityId?: string): Promise<{ blob: Blob; filename: string }> {
+    const query = facilityId && facilityId !== 'all' ? `?facilityId=${encodeURIComponent(facilityId)}` : '?facilityId=all';
+    const res = await api.get(`/safety-management/electric-infrastructure/thermal/panels/export${query}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Excel dosyası indirilemedi.');
+    }
+    const blob = await res.blob();
+    const contentDisposition = res.headers.get('content-disposition');
+    let filename = facilityId && facilityId !== 'all' ? 'Pano_Envanteri.xlsx' : 'Tum_Tesisler_Pano_Envanteri.xlsx';
+    if (contentDisposition && contentDisposition.includes('filename=')) {
+      const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (match && match[1]) filename = match[1].replace(/['"]/g, '');
+    }
+    return { blob, filename: decodeURIComponent(filename) };
   }
 };

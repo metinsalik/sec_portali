@@ -200,8 +200,33 @@ export const DEFAULT_ISSUE_TEMPLATES: Record<number, { teknik: string[]; firma: 
 const DEFAULT_ROOM_TYPES = [
   'Sunucu Odası', 'Sistem Odası', 'UPS Odası', 'Trafo Odası', 'Arşiv Odası',
   'MCC Panosu', 'ADP Pano Odası', 'Elektrik Panosu', 'Kat Panosu', 'Radyoloji Odası',
-  'Hücre Odası', 'CCTV Odası', 'Bedaş Odası', 'Anjiyo Odası', 'Jeneratör Odası', 'Diğer'
+  'Hücre Odası', 'CCTV Odası', 'Bedaş Odası', 'Anjiyo Odası', 'Jeneratör Odası'
 ];
+
+function cleanAndNormalizeRoomTypes(types: any): string[] {
+  let list: string[] = [];
+  if (Array.isArray(types)) {
+    list = types;
+  } else if (typeof types === 'string') {
+    try { list = JSON.parse(types); } catch { list = []; }
+  } else if (types === null || types === undefined) {
+    return DEFAULT_ROOM_TYPES;
+  }
+
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const item of list) {
+    if (typeof item === 'string') {
+      const trimmed = item.trim().normalize('NFC');
+      const lower = trimmed.toLocaleLowerCase('tr-TR');
+      if (trimmed && !seen.has(lower) && lower !== 'diğer' && lower !== 'diger') {
+        seen.add(lower);
+        result.push(trimmed);
+      }
+    }
+  }
+  return result;
+}
 
 router.get('/settings', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
@@ -235,7 +260,11 @@ router.get('/settings', authMiddleware, async (req: AuthRequest, res: Response) 
         });
       }
     }
-    res.json(setting);
+    const sanitizedSetting = {
+      ...setting,
+      roomTypes: cleanAndNormalizeRoomTypes(setting.roomTypes)
+    };
+    res.json(sanitizedSetting);
   } catch (error) {
     console.error('FM200 get settings error:', error);
     res.status(500).json({ error: 'Ayarlar getirilemedi' });
@@ -245,23 +274,27 @@ router.get('/settings', authMiddleware, async (req: AuthRequest, res: Response) 
 router.put('/settings', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { roomTypes, systemTypes, checklistQuestions, issueTemplates } = req.body;
+    const cleanedRoomTypes = roomTypes !== undefined ? cleanAndNormalizeRoomTypes(roomTypes) : undefined;
     const updated = await prisma.fm200Setting.upsert({
       where: { id: 'default' },
       update: {
-        ...(roomTypes && { roomTypes }),
-        ...(systemTypes && { systemTypes }),
-        ...(checklistQuestions && { checklistQuestions }),
-        ...(issueTemplates && { issueTemplates })
+        ...(cleanedRoomTypes !== undefined && { roomTypes: cleanedRoomTypes }),
+        ...(systemTypes !== undefined && { systemTypes }),
+        ...(checklistQuestions !== undefined && { checklistQuestions }),
+        ...(issueTemplates !== undefined && { issueTemplates })
       },
       create: {
         id: 'default',
-        roomTypes: roomTypes || DEFAULT_ROOM_TYPES,
+        roomTypes: cleanedRoomTypes !== undefined ? cleanedRoomTypes : DEFAULT_ROOM_TYPES,
         systemTypes: systemTypes || ['FM-200', 'Novec1230', 'CO2', 'Inergen'],
         checklistQuestions: checklistQuestions || (DEFAULT_FM200_QUESTIONS as any),
         issueTemplates: issueTemplates || (DEFAULT_ISSUE_TEMPLATES as any)
       }
     });
-    res.json(updated);
+    res.json({
+      ...updated,
+      roomTypes: cleanAndNormalizeRoomTypes(updated.roomTypes)
+    });
   } catch (error) {
     console.error('FM200 update settings error:', error);
     res.status(500).json({ error: 'Ayarlar kaydedilemedi' });

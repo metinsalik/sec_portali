@@ -404,6 +404,10 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
+                  <Route
+                    path="/operations-management/thermal-camera/settings"
+                    element={<Navigate to="/operations-management/thermal-camera?tab=settings" replace />}
+                  />
                   {/* Eski linklerden gelenler için yönlendirme */}
                   <Route
                     path="/safety-management/thermal-camera"

@@ -189,6 +189,10 @@ const thermalCameraNavItems = (hasAdminAccess: boolean) => [
   { label: 'İŞLEMLER', type: 'group' },
   { label: 'Ölçüm Tablosu', icon: Thermometer, to: '/operations-management/thermal-camera?tab=table' },
   { label: 'Pano Envanteri & Döngüler', icon: Layers, to: '/operations-management/thermal-camera?tab=panels' },
+  ...(hasAdminAccess ? [
+    { label: 'AYARLAR', type: 'group' },
+    { label: 'Ayarlar', icon: Settings, to: '/operations-management/thermal-camera?tab=settings' },
+  ] : []),
 ];
 
 const binaTuruNavItems = [
