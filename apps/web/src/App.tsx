@@ -35,6 +35,7 @@ import FacilityLocationsPage from './pages/settings/FacilityLocationsPage';
 import FacilitiesPage from './pages/settings/FacilitiesPage';
 import FacilityWizardPage from './pages/settings/facility-wizard/FacilityWizard';
 import UsersPage from './pages/settings/UsersPage';
+import UserEditPage from './pages/settings/UserEditPage';
 import DefinitionsPage from './pages/settings/DefinitionsPage';
 import SmtpSettingsPage from './pages/settings/SmtpSettingsPage';
 import TelegramSettingsPage from './pages/settings/TelegramSettingsPage';
@@ -1377,6 +1378,8 @@ function App() {
 
                     <Route path="locations" element={<FacilityLocationsPage />} />
                     <Route path="users" element={<ProtectedRoute requireAdmin><UsersPage /></ProtectedRoute>} />
+                    <Route path="users/new" element={<ProtectedRoute requireAdmin><UserEditPage /></ProtectedRoute>} />
+                    <Route path="users/:username/edit" element={<ProtectedRoute requireAdmin><UserEditPage /></ProtectedRoute>} />
                     <Route path="definitions" element={<ProtectedRoute requireAdmin><DefinitionsPage /></ProtectedRoute>} />
                     <Route path="smtp" element={<ProtectedRoute requireAdmin><SmtpSettingsPage /></ProtectedRoute>} />
                     <Route path="telegram" element={<ProtectedRoute requireAdmin><TelegramSettingsPage /></ProtectedRoute>} />

@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   ResponsiveContainer,
   BarChart,
@@ -9,7 +10,7 @@ import {
   Tooltip,
   Cell,
 } from "recharts";
-import { Users } from "lucide-react";
+import { Users, TrendingUp, TrendingDown } from "lucide-react";
 
 interface EmployeeTrendData {
   month: string;
@@ -44,52 +45,64 @@ export function EmployeeTrendChart({ data, companyName }: TrendChartProps) {
   const isPositive = (latestChange || 0) >= 0;
 
   return (
-    <Card className="col-span-1 md:col-span-2 lg:col-span-3 shadow-sm border-slate-200 dark:border-slate-800 bg-card rounded-xl">
-      <CardHeader className="flex flex-row items-center justify-between pb-6">
+    <Card className="rounded-xl border border-border bg-card shadow-xs transition-all duration-200">
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 gap-4 border-b border-border/40">
         <div className="space-y-1">
-          <CardTitle className="text-xl font-bold flex items-center gap-2 text-foreground">
-            <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300">
-              <Users className="w-5 h-5" />
+          <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <Users className="w-4 h-4" />
             </div>
             {title}
           </CardTitle>
-          <CardDescription className="text-muted-foreground">Aylara göre toplam çalışan sayısındaki değişim</CardDescription>
+          <CardDescription className="text-xs text-muted-foreground">
+            Son 12 ayın toplam çalışan sayısı ve aylık değişim oranları
+          </CardDescription>
         </div>
-        <div className="text-right">
-          <p className="text-3xl font-black text-foreground">{latestCount.toLocaleString('tr-TR')}</p>
+        <div className="flex sm:flex-col items-center sm:items-end justify-between gap-1">
+          <div className="text-2xl font-bold tracking-tight text-foreground">
+            {latestCount.toLocaleString('tr-TR')}
+          </div>
           {latestChange !== 0 && (
-            <p className={`text-sm font-bold ${isPositive ? 'text-emerald-500' : 'text-rose-500'}`}>
+            <Badge
+              variant="outline"
+              className={`h-5 px-2 text-[11px] font-semibold gap-1 ${
+                isPositive
+                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20'
+                  : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20'
+              }`}
+            >
+              {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
               {isPositive ? '+' : ''}{latestChange?.toFixed(1)}% (Son ay)
-            </p>
+            </Badge>
           )}
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="h-[320px] w-full min-h-[320px] overflow-hidden" style={{ minWidth: 0 }}>
-          <ResponsiveContainer width="99%" height="100%" minHeight={320}>
+      <CardContent className="pt-6">
+        <div className="h-[280px] w-full min-h-[280px] overflow-hidden" style={{ minWidth: 0 }}>
+          <ResponsiveContainer width="99%" height="100%" minHeight={280}>
             <BarChart
               data={data}
               margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-              barSize={40}
+              barSize={36}
             >
               <CartesianGrid
                 strokeDasharray="3 3"
                 vertical={false}
                 stroke="hsl(var(--muted))"
-                opacity={0.5}
+                opacity={0.6}
               />
               <XAxis
                 dataKey="month"
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={formatMonth}
-                tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12, fontWeight: 500 }}
-                dy={10}
+                tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: 500 }}
+                dy={8}
               />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12, fontWeight: 500 }}
+                tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: 500 }}
                 tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
               />
               <Tooltip
@@ -98,14 +111,22 @@ export function EmployeeTrendChart({ data, companyName }: TrendChartProps) {
                   if (active && payload && payload.length) {
                     const monthData = payload[0].payload;
                     return (
-                      <div className="bg-popover border border-border p-4 rounded-lg shadow-md">
-                        <p className="text-sm font-semibold text-muted-foreground mb-2">{formatMonth(label)}</p>
-                        <p className="text-2xl font-bold text-foreground">
-                          {monthData.totalCount.toLocaleString('tr-TR')} <span className="text-xs font-normal text-muted-foreground">Çalışan</span>
+                      <div className="bg-popover text-popover-foreground border border-border p-3 rounded-lg shadow-md text-xs space-y-1">
+                        <p className="font-semibold text-muted-foreground">{formatMonth(label)}</p>
+                        <p className="text-xl font-bold text-foreground">
+                          {monthData.totalCount.toLocaleString('tr-TR')}{' '}
+                          <span className="text-xs font-normal text-muted-foreground">Çalışan</span>
                         </p>
                         {monthData.percentChange !== null && (
-                          <div className={`text-xs font-medium mt-1 ${monthData.percentChange >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                            {monthData.percentChange >= 0 ? '↗' : '↘'} {Math.abs(monthData.percentChange).toFixed(1)}% değişim
+                          <div
+                            className={`font-semibold flex items-center gap-1 ${
+                              monthData.percentChange >= 0
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-rose-600 dark:text-rose-400'
+                            }`}
+                          >
+                            {monthData.percentChange >= 0 ? '↗ +' : '↘ '}
+                            {monthData.percentChange.toFixed(1)}% aylık değişim
                           </div>
                         )}
                       </div>
@@ -114,12 +135,12 @@ export function EmployeeTrendChart({ data, companyName }: TrendChartProps) {
                   return null;
                 }}
               />
-              <Bar dataKey="totalCount" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="totalCount" radius={[6, 6, 0, 0]}>
                 {data?.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={index === data.length - 1 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))"} 
-                    fillOpacity={index === data.length - 1 ? 1 : 0.3}
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={index === data.length - 1 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))"}
+                    fillOpacity={index === data.length - 1 ? 0.9 : 0.3}
                   />
                 ))}
               </Bar>

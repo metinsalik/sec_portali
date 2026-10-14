@@ -3,13 +3,15 @@ FROM node:20-bookworm-slim AS builder
 WORKDIR /app
 
 # Copy package descriptors
-COPY package.json ./
+COPY package.json package-lock.json ./
 COPY backend/package.json backend/
 COPY apps/web/package.json apps/web/
-COPY packages/shared/package.json packages/shared/
+COPY packages/ packages/
 
 # Install all dependencies for the monorepo
-RUN npm install --legacy-peer-deps
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+RUN npm ci --legacy-peer-deps --ignore-scripts
+RUN npm install --no-save @rolldown/binding-linux-x64-gnu@1.0.0-rc.15 lightningcss-linux-x64-gnu@1.32.0 @tailwindcss/oxide-linux-x64-gnu@4.2.2
 
 # Copy source
 COPY packages/ packages/
@@ -17,7 +19,6 @@ COPY apps/web/ apps/web/
 
 WORKDIR /app/apps/web
 
-# We use npx vite build to ignore TS compilation errors during the test phase
 RUN npx vite build
 
 FROM nginx:alpine

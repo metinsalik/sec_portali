@@ -84,7 +84,7 @@ export default function BasicInfoStep({ data, update }: any) {
       </div>
 
       {/* 1. Kimlik ve Sınıflandırma */}
-      <div className="bg-card border rounded-2xl p-5 space-y-4 shadow-2xs">
+      <div className="bg-card border border-border/60 rounded-lg p-5 space-y-4 shadow-xs">
         <div className="flex items-center gap-2 pb-2 border-b">
           <Shield className="w-4 h-4 text-primary" />
           <h3 className="text-sm font-semibold">Tesis Kimliği & Sınıflandırma</h3>
@@ -171,7 +171,7 @@ export default function BasicInfoStep({ data, update }: any) {
               Tesis Logosu Yükle
             </Label>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-10 rounded-xl border bg-muted/40 flex items-center justify-center shrink-0 overflow-hidden">
+              <div className="w-12 h-10 rounded-md border border-border/60 bg-muted/40 flex items-center justify-center shrink-0 overflow-hidden">
                 {data.logoUrl ? (
                   <img src={data.logoUrl} alt="Logo" className="w-full h-full object-contain p-0.5" />
                 ) : (
@@ -218,7 +218,7 @@ export default function BasicInfoStep({ data, update }: any) {
       </div>
 
       {/* 2. Ticari, Mali & SGK Bilgileri */}
-      <div className="bg-card border rounded-2xl p-5 space-y-4 shadow-2xs">
+      <div className="bg-card border border-border/60 rounded-lg p-5 space-y-4 shadow-xs">
         <div className="flex items-center gap-2 pb-2 border-b">
           <Landmark className="w-4 h-4 text-primary" />
           <h3 className="text-sm font-semibold">Resmi Ticari & Mali Bilgiler (Vergi & SGK)</h3>
@@ -279,7 +279,7 @@ export default function BasicInfoStep({ data, update }: any) {
       </div>
 
       {/* 3. İletişim ve Konum Bilgileri */}
-      <div className="bg-card border rounded-2xl p-5 space-y-4 shadow-2xs">
+      <div className="bg-card border border-border/60 rounded-lg p-5 space-y-4 shadow-xs">
         <div className="flex items-center gap-2 pb-2 border-b">
           <MapPin className="w-4 h-4 text-primary" />
           <h3 className="text-sm font-semibold">İletişim & Lokasyon Adres Bilgileri</h3>

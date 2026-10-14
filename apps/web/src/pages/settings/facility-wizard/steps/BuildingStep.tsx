@@ -54,14 +54,14 @@ export default function BuildingStep({ data, update }: any) {
           type="button" 
           size="sm" 
           onClick={addBuilding} 
-          className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs h-9 px-4 rounded-xl shadow-xs"
+          className="font-medium text-xs h-9 px-4 rounded-md shadow-xs gap-1.5"
         >
-          <Plus className="w-4 h-4 mr-1.5" /> Yeni Blok Ekle
+          <Plus className="w-4 h-4" /> Yeni Blok Ekle
         </Button>
       </div>
       
       {buildings.length === 0 ? (
-        <div className="text-center py-12 border-2 border-dashed rounded-2xl bg-muted/20">
+        <div className="text-center py-12 border border-dashed border-border/60 rounded-lg bg-muted/10">
           <Building className="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
           <p className="text-sm font-medium text-foreground">Henüz bina veya blok kaydı eklenmedi.</p>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
@@ -80,13 +80,13 @@ export default function BuildingStep({ data, update }: any) {
       ) : (
         <div className="space-y-4">
           {buildings.map((b: any, idx: number) => (
-            <div key={idx} className="border rounded-2xl p-5 bg-card space-y-4 shadow-2xs">
-              <div className="flex justify-between items-center pb-2 border-b">
+            <div key={idx} className="border border-border/60 rounded-lg p-5 bg-card space-y-4 shadow-xs">
+              <div className="flex justify-between items-center pb-2 border-b border-border/40">
                 <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                  <span className="w-6 h-6 rounded-md bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
                     {idx + 1}
                   </span>
-                  <h4 className="font-bold text-sm text-foreground">
+                  <h4 className="font-semibold text-sm text-foreground">
                     {b.name || `Blok ${idx + 1}`}
                   </h4>
                 </div>
@@ -95,7 +95,7 @@ export default function BuildingStep({ data, update }: any) {
                   variant="ghost" 
                   size="icon" 
                   onClick={() => removeBuilding(idx)}
-                  className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg"
+                  className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-md"
                   title="Bloğu Sil"
                 >
                   <Trash2 className="w-4 h-4" />

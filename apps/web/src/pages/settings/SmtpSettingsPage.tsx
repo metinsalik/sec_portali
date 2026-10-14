@@ -103,38 +103,45 @@ const SmtpSettingsPage = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500">
+    <div className="w-full space-y-6 animate-in fade-in duration-200 pb-12">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight">E-posta Ayarları</h1>
-        <p className="text-muted-foreground text-sm">
-          Sistem bildirimleri ve rapor gönderimleri için kullanılacak kurumsal SMTP ayarlarını buradan yapılandırın.
-        </p>
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Mail className="w-4 h-4" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">E-posta Ayarları</h1>
+            <p className="text-xs text-muted-foreground">
+              Sistem bildirimleri ve rapor gönderimleri için kullanılacak kurumsal SMTP ayarlarını yapılandırın.
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Settings Card */}
-        <div className="md:col-span-2">
-          <Card className="shadow-sm border-border/60">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-2 mb-1 text-primary">
-                <Server className="w-5 h-5" />
-                <CardTitle className="text-lg">Sunucu Yapılandırması</CardTitle>
+        <div className="lg:col-span-2">
+          <Card className="shadow-xs border-border/60 rounded-lg">
+            <CardHeader className="pb-3 border-b border-border/40">
+              <div className="flex items-center gap-2 text-foreground font-semibold">
+                <Server className="w-4 h-4 text-primary" />
+                <CardTitle className="text-sm font-semibold">Sunucu Yapılandırması</CardTitle>
               </div>
-              <CardDescription>
-                Kurumsal mail sunucusu (SMTP) detaylarını girin.
+              <CardDescription className="text-xs">
+                Kurumsal e-posta sunucusu (SMTP) bağlantı parametrelerini girin.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-4">
               <form id="smtp-form" onSubmit={handleSave} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="host">SMTP Sunucu (Host)</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="host" className="text-xs font-medium">SMTP Sunucu (Host)</Label>
                     <div className="relative">
                       <Input 
                         id="host"
@@ -142,27 +149,28 @@ const SmtpSettingsPage = () => {
                         value={formData.host}
                         onChange={e => setFormData({ ...formData, host: e.target.value })}
                         required
-                        className="pl-9"
+                        className="pl-9 h-9 text-xs rounded-md"
                       />
-                      <Server className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+                      <Server className="w-4 h-4 absolute left-3 top-2.5 text-muted-foreground" />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="port">Port</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="port" className="text-xs font-medium">Port</Label>
                     <Input 
                       id="port"
                       type="number"
                       placeholder="587"
                       value={formData.port}
-                      onChange={e => setFormData({ ...formData, port: parseInt(e.target.value) })}
+                      onChange={e => setFormData({ ...formData, port: parseInt(e.target.value) || 587 })}
                       required
+                      className="h-9 text-xs rounded-md"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="user">Kullanıcı Adı / E-posta</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="user" className="text-xs font-medium">Kullanıcı Adı / E-posta</Label>
                     <div className="relative">
                       <Input 
                         id="user"
@@ -170,13 +178,13 @@ const SmtpSettingsPage = () => {
                         value={formData.user}
                         onChange={e => setFormData({ ...formData, user: e.target.value })}
                         required
-                        className="pl-9"
+                        className="pl-9 h-9 text-xs rounded-md"
                       />
-                      <AtSign className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+                      <AtSign className="w-4 h-4 absolute left-3 top-2.5 text-muted-foreground" />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="pass">Şifre</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pass" className="text-xs font-medium">Şifre</Label>
                     <div className="relative">
                       <Input 
                         id="pass"
@@ -185,17 +193,17 @@ const SmtpSettingsPage = () => {
                         value={formData.pass}
                         onChange={e => setFormData({ ...formData, pass: e.target.value })}
                         required
-                        className="pl-9"
+                        className="pl-9 h-9 text-xs rounded-md"
                       />
-                      <Lock className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+                      <Lock className="w-4 h-4 absolute left-3 top-2.5 text-muted-foreground" />
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30 mt-4">
+                <div className="flex items-center justify-between p-3 rounded-md border border-border/60 bg-muted/30">
                   <div className="space-y-0.5">
-                    <Label className="text-base">SSL/TLS Güvenli Bağlantı</Label>
-                    <p className="text-xs text-muted-foreground">Port 465 için SSL, diğer portlar için genellikle TLS kullanılır.</p>
+                    <Label className="text-xs font-medium">SSL/TLS Güvenli Bağlantı</Label>
+                    <p className="text-[11px] text-muted-foreground">Port 465 için SSL, 587 için genellikle STARTTLS kullanılır.</p>
                   </div>
                   <Switch 
                     checked={formData.secure}
@@ -203,37 +211,39 @@ const SmtpSettingsPage = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-                  <div className="space-y-2">
-                    <Label htmlFor="fromEmail">Gönderen E-posta (From)</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-border/40">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="fromEmail" className="text-xs font-medium">Gönderen E-posta (From)</Label>
                     <Input 
                       id="fromEmail"
                       placeholder="no-reply@kurum.com"
                       value={formData.fromEmail}
                       onChange={e => setFormData({ ...formData, fromEmail: e.target.value })}
                       required
+                      className="h-9 text-xs rounded-md"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fromName">Gönderen Adı</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="fromName" className="text-xs font-medium">Gönderen Adı</Label>
                     <Input 
                       id="fromName"
                       placeholder="SEC Portalı Bildirim"
                       value={formData.fromName}
                       onChange={e => setFormData({ ...formData, fromName: e.target.value })}
+                      className="h-9 text-xs rounded-md"
                     />
                   </div>
                 </div>
               </form>
             </CardContent>
-            <CardFooter className="bg-muted/10 border-t flex justify-end py-4">
+            <CardFooter className="bg-muted/10 border-t border-border/40 flex justify-end py-3 px-6">
               <Button 
                 type="submit" 
                 form="smtp-form"
                 disabled={updateMutation.isPending}
-                className="gap-2 px-6"
+                className="gap-2 h-9 text-xs px-4 rounded-md"
               >
-                {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {updateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                 Değişiklikleri Kaydet
               </Button>
             </CardFooter>
@@ -241,61 +251,62 @@ const SmtpSettingsPage = () => {
         </div>
 
         {/* Sidebar Cards */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Test Card */}
-          <Card className="shadow-sm border-border/60">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2 mb-1 text-orange-500">
-                <Send className="w-5 h-5" />
-                <CardTitle className="text-lg">Bağlantı Testi</CardTitle>
+          <Card className="shadow-xs border-border/60 rounded-lg">
+            <CardHeader className="pb-3 border-b border-border/40">
+              <div className="flex items-center gap-2 text-foreground font-semibold">
+                <Send className="w-4 h-4 text-primary" />
+                <CardTitle className="text-sm font-semibold">Bağlantı Testi</CardTitle>
               </div>
-              <CardDescription>
-                Yapılandırmanın çalıştığını doğrulamak için bir test maili gönderin.
+              <CardDescription className="text-xs">
+                Yapılandırmanın çalıştığını test etmek için bir e-posta gönderin.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="test-email">Alıcı E-posta</Label>
+            <CardContent className="space-y-3 pt-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="test-email" className="text-xs font-medium">Alıcı E-posta</Label>
                 <Input 
                   id="test-email"
                   type="email"
-                  placeholder="test@örnek.com"
+                  placeholder="test@ornek.com"
                   value={testEmail}
                   onChange={e => setTestEmail(e.target.value)}
+                  className="h-9 text-xs rounded-md"
                 />
               </div>
               <Button 
                 variant="outline" 
-                className="w-full gap-2 border-orange-200 hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-orange-900/20"
+                className="w-full gap-2 h-9 text-xs rounded-md"
                 onClick={handleTestMail}
                 disabled={isTesting || !formData.host}
               >
-                {isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                {isTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
                 Test Maili Gönder
               </Button>
             </CardContent>
           </Card>
 
-          {/* Info/Warning Card */}
-          <Alert variant="default" className="bg-blue-50/50 border-blue-200 dark:bg-blue-900/10 dark:border-blue-900/30">
-            <Info className="h-4 w-4 text-blue-600" />
-            <AlertTitle className="text-blue-700 dark:text-blue-400 font-semibold">Önemli Bilgi</AlertTitle>
-            <AlertDescription className="text-blue-600/80 dark:text-blue-400/70 text-xs">
-              Gmail veya Outlook gibi servisler kullanıyorsanız, "Uygulama Şifreleri" oluşturmanız gerekebilir. TLS bağlantıları için genellikle port 587 tercih edilmelidir.
+          {/* Info Card */}
+          <Alert variant="default" className="bg-muted/40 border-border/60 rounded-lg">
+            <Info className="h-4 w-4 text-primary" />
+            <AlertTitle className="text-xs font-semibold">Yapılandırma İpucu</AlertTitle>
+            <AlertDescription className="text-[11px] text-muted-foreground leading-relaxed mt-1">
+              Office 365 veya Google Workspace için 2FA devredeyse "Uygulama Şifresi" kullanmanız gereklidir. TLS bağlantıları için genellikle port 587 tercih edilir.
             </AlertDescription>
           </Alert>
 
           {/* Status Badge */}
-          <div className="p-4 rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center text-center space-y-2">
+          <div className="p-4 rounded-lg border border-border/60 bg-card flex flex-col items-center justify-center text-center space-y-2">
             <div className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center",
-              settings?.host ? "bg-green-100 text-green-600" : "bg-muted text-muted-foreground"
+              "w-9 h-9 rounded-md flex items-center justify-center",
+              settings?.host ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
             )}>
-              {settings?.host ? <ShieldCheck className="w-6 h-6" /> : <AlertCircle className="w-6 h-6" />}
+              {settings?.host ? <ShieldCheck className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
             </div>
             <div>
-              <p className="text-sm font-semibold">Sistem Durumu</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs font-semibold text-foreground">Sistem Durumu</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
                 {settings?.host ? "SMTP Yapılandırıldı" : "Yapılandırma Bekleniyor"}
               </p>
             </div>

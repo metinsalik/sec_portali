@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
 import { 
   Building2, Calendar, Calculator, Check, 
   AlertCircle, ChevronDown, ChevronUp, Receipt, 
@@ -61,6 +63,15 @@ export default function ReconciliationDetailsPage() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
 
+  // Scroll restoration
+  useEffect(() => {
+    const handleScroll = () => {
+      sessionStorage.setItem('panel_reconciliation_details_scrollY', window.scrollY.toString());
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const { data: allItems = [], isLoading } = useQuery<Reconciliation[]>({
     queryKey: ['reconciliation'],
     queryFn: async () => {
@@ -69,6 +80,18 @@ export default function ReconciliationDetailsPage() {
       return res.json();
     },
   });
+
+  useEffect(() => {
+    if (!isLoading) {
+      const savedY = sessionStorage.getItem('panel_reconciliation_details_scrollY');
+      if (savedY) {
+        const y = parseInt(savedY, 10);
+        if (!isNaN(y) && y > 0) {
+          requestAnimationFrame(() => window.scrollTo({ top: y, behavior: 'instant' }));
+        }
+      }
+    }
+  }, [isLoading]);
 
   const filteredItems = useMemo(() => {
     return allItems.filter(item => item.osgbCompanyId === parseInt(osgbId || '0'));
@@ -96,11 +119,16 @@ export default function ReconciliationDetailsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reconciliation'] });
       setSyncModalOpen(false);
+      toast.success('Dönem hesaplaması başarıyla tamamlandı.');
     },
+    onError: (err: any) => {
+      toast.error(err.message || 'Hesaplama yapılırken bir hata oluştu.');
+    }
   });
 
   const handleExport = async (month?: string) => {
     try {
+      toast.info('Rapor hazırlanıyor...');
       const url = month 
         ? `${import.meta.env.VITE_API_URL || '/api'}/panel/reconciliation/export?osgbId=${osgbId}&month=${month}`
         : `${import.meta.env.VITE_API_URL || '/api'}/panel/reconciliation/export?osgbId=${osgbId}`;
@@ -119,9 +147,9 @@ export default function ReconciliationDetailsPage() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-    } catch (error) {
-      console.error(error);
-      alert('Dışa aktarma başarısız oldu.');
+      toast.success('Mutabakat raporu indirildi.');
+    } catch {
+      toast.error('Dışa aktarma başarısız oldu.');
     }
   };
 
@@ -133,7 +161,11 @@ export default function ReconciliationDetailsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reconciliation'] });
+      toast.success('Mutabakat kaydı güncellendi.');
     },
+    onError: () => {
+      toast.error('Kayıt güncellenemedi.');
+    }
   });
 
   const handleUpdateProfessionalInvoice = (item: Reconciliation, profId: number, value: string) => {
@@ -156,7 +188,27 @@ export default function ReconciliationDetailsPage() {
   };
 
   if (isLoading) {
-    return <div className="space-y-6 animate-pulse"><div className="h-40 bg-muted rounded-lg" /><div className="h-64 bg-muted rounded-lg" /></div>;
+    return (
+      <div className="space-y-6 pb-20">
+        <div className="flex items-center gap-4">
+          <Skeleton className="w-10 h-10 rounded-lg" />
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Skeleton className="h-24 rounded-xl" />
+          <Skeleton className="h-24 rounded-xl" />
+          <Skeleton className="h-24 rounded-xl" />
+        </div>
+        <div className="space-y-4 pt-4">
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-20 rounded-xl" />
+        </div>
+      </div>
+    );
   }
 
   return (

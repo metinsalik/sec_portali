@@ -1,17 +1,31 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { UserPlus, Search, User as UserIcon, ShieldCheck, Loader2, Building2, LayoutGrid, List, Archive, CheckCircle2, ChevronRight, Edit2, Eye, Mail, Phone, MapPin, Building } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import {
+  UserPlus,
+  Search,
+  User as UserIcon,
+  ShieldCheck,
+  Building2,
+  LayoutGrid,
+  List,
+  Archive,
+  CheckCircle2,
+  Edit2,
+  Building,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Separator } from '@/components/ui/separator';
 
 interface User {
   username: string;
@@ -59,30 +73,16 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const UsersPage = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [facilityFilter, setFacilityFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
 
-  // Form state
-  const [form, setForm] = useState({
-    username: '',
-    fullName: '',
-    email: '',
-    phone: '',
-    department: '',
-    title: '',
-    roles: [] as string[],
-    facilities: [] as string[],
-    modules: [] as number[],
-  });
-
   // Queries
-  const { data: users } = useQuery({
+  const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
       const res = await api.get('/settings/users');
@@ -102,15 +102,6 @@ const UsersPage = () => {
     },
   });
 
-  const { data: departments = [] } = useQuery<Department[]>({
-    queryKey: ['departments'],
-    queryFn: async () => {
-      const res = await api.get('/settings/definitions/departments');
-      if (!res.ok) throw new Error('Departmanlar yüklenemedi');
-      return res.json();
-    },
-  });
-
   const { data: facilities = [] } = useQuery<Facility[]>({
     queryKey: ['facilities'],
     queryFn: async () => {
@@ -120,618 +111,410 @@ const UsersPage = () => {
     },
   });
 
-  const { data: systemModules = [] } = useQuery<Module[]>({
-    queryKey: ['modules'],
-    queryFn: async () => {
-      const res = await api.get('/settings/modules');
-      if (!res.ok) throw new Error('Modüller yüklenemedi');
-      return res.json();
-    },
-  });
-
-  // Mutations
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      const res = await api.post('/settings/users', form);
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Hata oluştu');
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Kullanıcı oluşturuldu');
-      closeModal();
-    },
-    onError: (error: any) => {
-      toast.error(error.message);
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async () => {
-      const res = await api.put(`/settings/users/${editingUser?.username}`, form);
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Hata oluştu');
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Kullanıcı güncellendi');
-      closeModal();
-    },
-    onError: (error: any) => {
-      toast.error(error.message);
-    },
-  });
-
+  // Toggle user status mutation
   const toggleUserStatusMutation = useMutation({
     mutationFn: async ({ username, isActive }: { username: string; isActive: boolean }) => {
       const res = await api.put(`/settings/users/${username}`, { isActive });
-      if (!res.ok) throw new Error('Hata');
+      if (!res.ok) throw new Error('Durum güncellenemedi');
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Durum güncellendi');
+      toast.success(vars.isActive ? 'Kullanıcı aktif edildi' : 'Kullanıcı arşivlendi');
+    },
+    onError: () => {
+      toast.error('İşlem sırasında hata oluştu');
     },
   });
 
-  const addFacilityMutation = useMutation({
-    mutationFn: async ({ username, facilityId }: { username: string; facilityId: string }) => {
-      const res = await api.post(`/settings/users/${username}/facilities`, { facilityId, action: 'add' });
-      if (!res.ok) throw new Error('Hata');
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Tesis eklendi');
-    },
-  });
+  const filteredUsers = allUsers
+    .filter((u) => {
+      const matchesSearch =
+        u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.username.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = roleFilter === 'all' || u.roles.some((r) => r.role.name === roleFilter);
+      const matchesFacility = facilityFilter === 'all' || u.facilities.some((f) => f.facilityId === facilityFilter);
+      const matchesStatus = activeTab === 'active' ? u.isActive : !u.isActive;
+      return matchesSearch && matchesRole && matchesFacility && matchesStatus;
+    })
+    .sort((a, b) => a.fullName.localeCompare(b.fullName, 'tr'));
 
-  const removeFacilityMutation = useMutation({
-    mutationFn: async ({ username, facilityId }: { username: string; facilityId: string }) => {
-      const res = await api.post(`/settings/users/${username}/facilities`, { facilityId, action: 'remove' });
-      if (!res.ok) throw new Error('Hata');
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Tesis kaldırıldı');
-    },
-  });
-
-  const filteredUsers = users?.filter(u => {
-    const matchesSearch = u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         u.username.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === 'all' || u.roles.some(r => r.role.name === roleFilter);
-    const matchesFacility = facilityFilter === 'all' || u.facilities.some(f => f.facilityId === facilityFilter);
-    const matchesStatus = activeTab === 'active' ? u.isActive : !u.isActive;
-    return matchesSearch && matchesRole && matchesFacility && matchesStatus;
-  }).sort((a, b) => a.fullName.localeCompare(b.fullName, 'tr'));
-
-  // Rolere göre gruplama (Kullanıcının ilk rolünü grup olarak kabul edelim)
-  const groupedUsers = filteredUsers?.reduce((acc, user) => {
+  // Rolere göre gruplama
+  const groupedUsers = filteredUsers.reduce((acc, user) => {
     const primaryRole = user.roles[0]?.role.name || 'user';
     if (!acc[primaryRole]) acc[primaryRole] = [];
     acc[primaryRole].push(user);
     return acc;
   }, {} as Record<string, User[]>);
 
-  const sortedRoles = Object.keys(groupedUsers || {}).sort((a, b) => {
-    // Admin her zaman en üstte
+  const sortedRoles = Object.keys(groupedUsers).sort((a, b) => {
     if (a === 'admin') return -1;
     if (b === 'admin') return 1;
     return (ROLE_LABELS[a] || a).localeCompare(ROLE_LABELS[b] || b, 'tr');
   });
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingUser(null);
-    setForm({ username: '', fullName: '', email: '', phone: '', department: '', title: '', roles: [], facilities: [], modules: [] });
-  };
-
-  const openEditModal = (user: User) => {
-    setEditingUser(user);
-    setForm({
-      username: user.username,
-      fullName: user.fullName,
-      email: user.email || '',
-      phone: user.phone || '',
-      department: user.department || '',
-      title: user.title || '',
-      roles: user.roles.map(r => r.role.name),
-      facilities: user.facilities.map(f => f.facilityId),
-      modules: user.modules ? user.modules.map(m => m.module.id) : [],
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingUser) {
-      updateMutation.mutate();
-    } else {
-      createMutation.mutate();
-    }
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Tabs for Active/Archive */}
-      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 -mx-6 px-6">
-        <div className="flex gap-8">
-          <button 
-            onClick={() => setActiveTab('active')}
-            className={cn(
-              "px-1 py-4 text-sm font-bold transition-all relative",
-              activeTab === 'active' ? "text-primary" : "text-slate-500 hover:text-slate-700"
-            )}
-          >
-            Aktif Kullanıcılar
-            {activeTab === 'active' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />}
-          </button>
-          <button 
-            onClick={() => setActiveTab('archive')}
-            className={cn(
-              "px-1 py-4 text-sm font-bold transition-all relative",
-              activeTab === 'archive' ? "text-primary" : "text-slate-500 hover:text-slate-700"
-            )}
-          >
-            Arşiv
-            {activeTab === 'archive' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />}
-          </button>
+    <div className="space-y-4 animate-in fade-in duration-200">
+      {/* ── Page Header & Tabs ────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-3">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">Kullanıcı Yönetimi</h1>
+          <p className="text-xs text-muted-foreground">Sistem personelleri, rol tanımları ve erişim yetkileri</p>
         </div>
-      </div>
 
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Kullanıcı Yönetimi</h1>
-            <p className="text-slate-500 text-sm mt-1">Sistem erişimi olan tüm personelleri yönetin ve yetkilendirin.</p>
-          </div>
-          <Button onClick={() => setIsModalOpen(true)} className="bg-primary hover:bg-primary/90 h-11 rounded-xl px-6 font-medium shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
-            <UserPlus className="w-5 h-5 mr-2" /> Kullanıcı Ekle
+        <div className="flex items-center gap-2.5">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'active' | 'archive')}>
+            <TabsList className="h-8 p-1 rounded-md bg-muted">
+              <TabsTrigger
+                value="active"
+                className="text-xs px-3 h-6 rounded-sm data-active:bg-background data-active:text-foreground data-active:shadow-2xs"
+              >
+                Aktif
+                <span className="ml-1.5 text-[10px] text-muted-foreground font-mono">
+                  {allUsers.filter((u) => u.isActive).length}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="archive"
+                className="text-xs px-3 h-6 rounded-sm data-active:bg-background data-active:text-foreground data-active:shadow-2xs"
+              >
+                Arşiv
+                <span className="ml-1.5 text-[10px] text-muted-foreground font-mono">
+                  {allUsers.filter((u) => !u.isActive).length}
+                </span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <Button
+            onClick={() => navigate('/settings/users/new')}
+            size="sm"
+            className="h-8 px-3 text-xs font-medium rounded-md bg-primary text-primary-foreground shadow-xs gap-1.5"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            Kullanıcı Ekle
           </Button>
         </div>
+      </div>
 
-        <div className="flex flex-col lg:flex-row gap-4 bg-white dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="İsim veya kullanıcı adına göre ara..." 
-              className="pl-10 bg-slate-50 dark:bg-slate-800/50 border-none h-11 rounded-xl"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-3">
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-[180px] bg-slate-50 dark:bg-slate-800/50 border-none h-11 rounded-xl">
-                <SelectValue placeholder="Rol Filtrele" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Roller</SelectItem>
-                {roles.map(r => <SelectItem key={r.id} value={r.name}>{ROLE_LABELS[r.name] || r.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+      {/* ── Toolbar: Search, Filters & View Toggle ─────────────────────── */}
+      <div className="flex flex-col md:flex-row gap-2.5 items-stretch md:items-center justify-between p-2.5 rounded-lg border border-border/70 bg-card shadow-xs">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input
+            placeholder="İsim veya kullanıcı adına göre ara..."
+            className="pl-8 h-8 text-xs rounded-md"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
 
-            <Select value={facilityFilter} onValueChange={setFacilityFilter}>
-              <SelectTrigger className="w-[180px] bg-slate-50 dark:bg-slate-800/50 border-none h-11 rounded-xl">
-                <SelectValue placeholder="Tesis Filtrele" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm Tesisler</SelectItem>
-                {facilities.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="w-[140px] h-8 text-xs rounded-md">
+              <SelectValue placeholder="Rol Filtrele" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="text-xs">
+                Tüm Roller
+              </SelectItem>
+              {roles.map((r) => (
+                <SelectItem key={r.id} value={r.name} className="text-xs">
+                  {ROLE_LABELS[r.name] || r.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-            <Separator orientation="vertical" className="h-8 mx-1 hidden md:block" />
+          <Select value={facilityFilter} onValueChange={setFacilityFilter}>
+            <SelectTrigger className="w-[160px] h-8 text-xs rounded-md">
+              <SelectValue placeholder="Tesis Filtrele" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="text-xs">
+                Tüm Tesisler
+              </SelectItem>
+              {facilities.map((f) => (
+                <SelectItem key={f.id} value={f.id} className="text-xs">
+                  {f.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-              <Button 
-                variant={viewMode === 'list' ? 'secondary' : 'ghost'} 
-                size="sm" 
-                onClick={() => setViewMode('list')}
-                className={cn("h-9 w-10 p-0 rounded-lg transition-all", viewMode === 'list' ? "bg-white dark:bg-slate-700 shadow-sm text-primary" : "text-slate-500")}
-              >
-                <List className="w-4 h-4" />
-              </Button>
-              <Button 
-                variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
-                size="sm" 
-                onClick={() => setViewMode('grid')}
-                className={cn("h-9 w-10 p-0 rounded-lg transition-all", viewMode === 'grid' ? "bg-white dark:bg-slate-700 shadow-sm text-primary" : "text-slate-500")}
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </Button>
-            </div>
+          <div className="flex items-center border border-border/70 rounded-md p-0.5 bg-muted/40">
+            <Button
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className={cn(
+                'h-7 w-7 p-0 rounded-sm text-muted-foreground hover:text-foreground',
+                viewMode === 'list' && 'bg-background shadow-2xs text-foreground font-semibold'
+              )}
+              title="Liste Görünümü"
+            >
+              <List className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              className={cn(
+                'h-7 w-7 p-0 rounded-sm text-muted-foreground hover:text-foreground',
+                viewMode === 'grid' && 'bg-background shadow-2xs text-foreground font-semibold'
+              )}
+              title="Kart Görünümü"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </Button>
           </div>
         </div>
       </div>
 
-      <div className="min-h-[400px]">
-        {filteredUsers && filteredUsers.length > 0 ? (
-          viewMode === 'list' ? (
-            <Accordion type="multiple" defaultValue={sortedRoles} className="space-y-4">
-              {sortedRoles.map(roleName => (
-                <AccordionItem key={roleName} value={roleName} className="border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-sm border-b-0">
-                  <AccordionTrigger className="hover:no-underline px-6 py-4 bg-slate-50/40 dark:bg-slate-800/40 group">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center text-primary shadow-sm border border-slate-200/60 dark:border-slate-700 group-hover:scale-105 transition-transform">
-                        <ShieldCheck className="w-5 h-5" />
-                      </div>
-                      <div className="flex flex-col items-start gap-0.5">
-                        <span className="font-bold text-slate-900 dark:text-slate-100 text-base">{ROLE_LABELS[roleName] || roleName}</span>
-                        <span className="text-[10px] text-slate-500 font-medium uppercase tracking-tight">{groupedUsers![roleName].length} Kullanıcı</span>
-                      </div>
+      {/* ── Content: List or Grid ───────────────────────────────────────── */}
+      {usersLoading ? (
+        <div className="space-y-2.5">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-14 w-full rounded-lg" />
+          ))}
+        </div>
+      ) : filteredUsers.length > 0 ? (
+        viewMode === 'list' ? (
+          <Accordion type="multiple" defaultValue={sortedRoles} className="space-y-3">
+            {sortedRoles.map((roleName) => (
+              <AccordionItem
+                key={roleName}
+                value={roleName}
+                className="border border-border/70 rounded-lg bg-card overflow-hidden shadow-xs"
+              >
+                <AccordionTrigger className="px-4 py-2.5 hover:no-underline bg-muted/20 hover:bg-muted/40 transition-colors">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-6 h-6 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                      <ShieldCheck className="w-3.5 h-3.5" />
                     </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="p-0 pb-0">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse min-w-[800px]">
-                        <thead>
-                          <tr className="bg-slate-50/20 dark:bg-slate-900/20 border-t border-b border-slate-100 dark:border-slate-800">
-                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kullanıcı Bilgisi</th>
-                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Departman / Ünvan</th>
-                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tesisler</th>
-                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Durum</th>
-                            <th className="px-6 py-3 text-right px-8 text-[10px] font-bold text-slate-400 uppercase tracking-wider">İşlemler</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {groupedUsers![roleName].map((user) => (
-                            <tr key={user.username} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-colors group">
-                              <td className="px-6 py-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-9 h-9 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400 border border-slate-100 dark:border-slate-700 group-hover:text-primary transition-colors">
-                                    <UserIcon className="w-4 h-4" />
-                                  </div>
-                                  <div>
-                                    <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{user.fullName}</div>
-                                    <div className="text-[10px] font-mono text-slate-400 uppercase tracking-tight">{user.username}</div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4">
-                                <div className="text-xs">
-                                  <div className="font-medium text-slate-700 dark:text-slate-300">{user.department || '-'}</div>
-                                  <div className="text-slate-500">{user.title || '-'}</div>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4">
-                                <div className="flex flex-wrap gap-1 max-w-[200px]">
-                                  {user.facilities.length > 0 ? (
-                                    user.facilities.map(f => (
-                                      <Badge key={f.facilityId} variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium text-[9px] py-0 px-1.5 border-none">
-                                        {f.facility.name}
-                                      </Badge>
-                                    ))
-                                  ) : (
-                                    <span className="text-slate-400 text-[10px]">Erişim Yok</span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4">
-                                <div className="flex items-center gap-2">
-                                  <div className={cn("w-1.5 h-1.5 rounded-full", user.isActive ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-slate-300")} />
-                                  <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400">{user.isActive ? "Aktif" : "Pasif"}</span>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    onClick={() => toggleUserStatusMutation.mutate({ username: user.username, isActive: !user.isActive })}
-                                    className={cn(
-                                      "w-8 h-8 rounded-lg transition-colors",
-                                      user.isActive ? "text-slate-400 hover:text-amber-600 hover:bg-amber-50" : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
-                                    )}
-                                    title={user.isActive ? "Pasife Al (Arşivle)" : "Aktife Al"}
+                    <span className="font-semibold text-xs text-foreground">
+                      {ROLE_LABELS[roleName] || roleName}
+                    </span>
+                    <Badge variant="secondary" className="text-[10px] h-4 px-1.5 font-normal rounded-full">
+                      {groupedUsers[roleName].length}
+                    </Badge>
+                  </div>
+                </AccordionTrigger>
+
+                <AccordionContent className="p-0 border-t border-border/50">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent border-b border-border/50">
+                        <TableHead className="h-8 text-[11px] font-medium text-muted-foreground pl-4">
+                          Kullanıcı
+                        </TableHead>
+                        <TableHead className="h-8 text-[11px] font-medium text-muted-foreground">
+                          Departman & Ünvan
+                        </TableHead>
+                        <TableHead className="h-8 text-[11px] font-medium text-muted-foreground">
+                          Tesis Yetkileri
+                        </TableHead>
+                        <TableHead className="h-8 text-[11px] font-medium text-muted-foreground">
+                          Durum
+                        </TableHead>
+                        <TableHead className="h-8 text-[11px] font-medium text-muted-foreground text-right pr-4">
+                          İşlemler
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {groupedUsers[roleName].map((user) => (
+                        <TableRow key={user.username} className="hover:bg-muted/40 transition-colors">
+                          <TableCell className="py-2.5 pl-4">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-7 h-7 rounded-md bg-muted text-muted-foreground flex items-center justify-center font-medium text-xs">
+                                {user.fullName ? (
+                                  user.fullName.charAt(0).toUpperCase()
+                                ) : (
+                                  <UserIcon className="w-3.5 h-3.5" />
+                                )}
+                              </div>
+                              <div>
+                                <div className="font-medium text-xs text-foreground">{user.fullName}</div>
+                                <div className="text-[10px] font-mono text-muted-foreground">@{user.username}</div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-2.5 text-xs">
+                            <div className="font-medium text-foreground">{user.department || '—'}</div>
+                            <div className="text-[11px] text-muted-foreground">{user.title || '—'}</div>
+                          </TableCell>
+                          <TableCell className="py-2.5">
+                            <div className="flex flex-wrap gap-1 max-w-[280px]">
+                              {user.facilities.length > 0 ? (
+                                user.facilities.slice(0, 3).map((f) => (
+                                  <Badge
+                                    key={f.facilityId}
+                                    variant="secondary"
+                                    className="text-[10px] font-normal px-1.5 py-0 h-4 rounded"
                                   >
-                                    {user.isActive ? <Archive className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                                  </Button>
-                                  <Button variant="ghost" size="icon" onClick={() => openEditModal(user)} className="w-8 h-8 rounded-lg hover:bg-primary/5 text-slate-400 hover:text-primary transition-colors">
-                                    <Edit2 className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredUsers.map((user) => (
-                <Card key={user.username} className="hover:shadow-xl transition-all border border-slate-200/60 shadow-sm group overflow-hidden rounded-2xl bg-white dark:bg-slate-900 flex flex-col hover:-translate-y-1 duration-300">
-                   <CardHeader className="p-5 pb-0">
-                     <div className="flex justify-between items-start">
-                       <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-primary/70 border border-slate-100 dark:border-slate-800 group-hover:scale-110 transition-transform">
-                         <UserIcon className="w-6 h-6" />
-                       </div>
-                       <div className="flex items-center gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => toggleUserStatusMutation.mutate({ username: user.username, isActive: !user.isActive })}
-                          className={cn(
-                            "w-8 h-8 rounded-lg transition-colors",
-                            user.isActive ? "text-slate-400 hover:text-amber-600 hover:bg-amber-50" : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
-                          )}
-                          title={user.isActive ? "Pasife Al (Arşivle)" : "Aktife Al"}
-                        >
-                          {user.isActive ? <Archive className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                        </Button>
-                        <Badge variant={user.isActive ? "outline" : "secondary"} className={cn(
-                          "font-medium text-[10px] px-2 py-0",
-                          user.isActive ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
-                        )}>
-                          {user.isActive ? "Aktif" : "Pasif"}
-                        </Badge>
-                       </div>
-                     </div>
-                   </CardHeader>
-                   <CardContent className="p-5 flex-1 flex flex-col">
-                      <div className="mb-4">
-                         <h3 className="font-bold text-slate-800 dark:text-slate-100 line-clamp-1">{user.fullName}</h3>
-                         <p className="text-[10px] font-mono text-slate-400 uppercase tracking-wider mt-0.5">{user.username}</p>
-                      </div>
-                      
-                      <div className="space-y-3 mb-6 flex-1">
-                         <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-400 font-medium">
-                           <div className="w-7 h-7 bg-primary/5 rounded-lg flex items-center justify-center text-primary/60">
-                             <ShieldCheck className="w-3.5 h-3.5" />
-                           </div>
-                           <span className="line-clamp-1">{user.roles.map(r => ROLE_LABELS[r.role.name] || r.role.name).join(', ')}</span>
-                         </div>
-                         <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-400">
-                           <div className="w-7 h-7 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center text-slate-400">
-                             <Building className="w-3.5 h-3.5" />
-                           </div>
-                           <span className="line-clamp-1">{user.department || '-'}</span>
-                         </div>
-                         <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-400">
-                           <div className="w-7 h-7 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center text-slate-400">
-                             <Building2 className="w-3.5 h-3.5" />
-                           </div>
-                           <span className="line-clamp-1">{user.facilities.length} Tesis Erişimi</span>
-                         </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 pt-4 border-t border-slate-100 dark:border-slate-800 mt-auto">
-                         <Button onClick={() => openEditModal(user)} className="flex-1 bg-slate-50 hover:bg-primary hover:text-white text-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-primary h-10 rounded-xl transition-all font-medium text-xs">
-                           Düzenle
-                         </Button>
-                      </div>
-                   </CardContent>
-                </Card>
-              ))}
-            </div>
-          )
+                                    {f.facility.name}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-[11px] text-muted-foreground">Yetki yok</span>
+                              )}
+                              {user.facilities.length > 3 && (
+                                <Badge variant="outline" className="text-[9px] font-mono px-1 py-0 h-4">
+                                  +{user.facilities.length - 3}
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-2.5">
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className={cn(
+                                  'w-1.5 h-1.5 rounded-full',
+                                  user.isActive ? 'bg-emerald-500' : 'bg-muted-foreground/40'
+                                )}
+                              />
+                              <span className="text-[11px] text-muted-foreground">
+                                {user.isActive ? 'Aktif' : 'Pasif'}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-2.5 pr-4 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                  toggleUserStatusMutation.mutate({
+                                    username: user.username,
+                                    isActive: !user.isActive,
+                                  })
+                                }
+                                className="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
+                                title={user.isActive ? 'Arşive Al' : 'Aktife Al'}
+                              >
+                                {user.isActive ? (
+                                  <Archive className="w-3.5 h-3.5" />
+                                ) : (
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => navigate(`/settings/users/${user.username}/edit`)}
+                                className="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
+                                title="Düzenle"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         ) : (
-          <div className="text-center py-24 bg-background/50 rounded-3xl border-2 border-dashed border-muted">
-            <div className="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Archive className="w-10 h-10 text-muted-foreground" />
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Kullanıcı Bulunamadı</h3>
-            <p className="text-muted-foreground max-w-xs mx-auto">Bu bölümde gösterilecek kullanıcı bulunmuyor.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {filteredUsers.map((user) => (
+              <Card
+                key={user.username}
+                className="rounded-lg border border-border/70 bg-card hover:border-border hover:shadow-xs transition-all duration-200 flex flex-col justify-between"
+              >
+                <CardHeader className="p-3.5 pb-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center font-semibold text-xs shrink-0">
+                        {user.fullName ? user.fullName.charAt(0).toUpperCase() : <UserIcon className="w-4 h-4" />}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-semibold text-xs text-foreground truncate">{user.fullName}</h4>
+                        <p className="text-[10px] font-mono text-muted-foreground">@{user.username}</p>
+                      </div>
+                    </div>
+
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'text-[9px] px-1.5 py-0 h-4 rounded font-medium shrink-0 border',
+                        user.isActive
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900'
+                          : 'bg-muted text-muted-foreground border-border'
+                      )}
+                    >
+                      {user.isActive ? 'Aktif' : 'Pasif'}
+                    </Badge>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="p-3.5 pt-0 space-y-2 text-xs">
+                  <div className="space-y-1.5 pt-2 border-t border-border/50 text-[11px] text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-foreground/70" />
+                      <span className="truncate text-foreground font-medium">
+                        {user.roles.map((r) => ROLE_LABELS[r.role.name] || r.role.name).join(', ')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">
+                        {user.department || '—'} • {user.title || '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Building className="w-3.5 h-3.5 shrink-0" />
+                      <span>{user.facilities.length} Tesis Erişimi</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/settings/users/${user.username}/edit`)}
+                      className="flex-1 h-7 text-xs rounded-md"
+                    >
+                      Düzenle
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() =>
+                        toggleUserStatusMutation.mutate({
+                          username: user.username,
+                          isActive: !user.isActive,
+                        })
+                      }
+                      className="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
+                      title={user.isActive ? 'Arşive Al' : 'Aktife Al'}
+                    >
+                      {user.isActive ? (
+                        <Archive className="w-3.5 h-3.5" />
+                      ) : (
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        )}
-      </div>
-
-      {/* Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[525px] max-h-[90vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="p-4 sm:p-6 border-b shrink-0">
-            <DialogTitle>{editingUser ? 'Kullanıcı Düzenle' : 'Yeni Kullanıcı'}</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-            <form onSubmit={handleSubmit} id="user-form" className="space-y-4">
-              {/* Kişisel Bilgiler */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Kullanıcı Adı *</label>
-                <Input
-                  placeholder="ör: metin.salik"
-                  value={form.username}
-                  onChange={(e) => setForm({ ...form, username: e.target.value })}
-                  required
-                  disabled={!!editingUser}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Ad Soyad *</label>
-                <Input
-                  placeholder="Ör: Metin Salık"
-                  value={form.fullName}
-                  onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">E-posta</label>
-                <Input
-                  type="email"
-                  placeholder="metin@ornek.com"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Telefon</label>
-                <Input
-                  type="tel"
-                  placeholder="0532..."
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Departman *</label>
-                <Select
-                  value={form.department}
-                  onValueChange={(v) => setForm({ ...form, department: v || '' })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Departman seçin..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((d) => (
-                      <SelectItem key={d.id} value={d.name}>
-                        {d.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Ünvan</label>
-                <Input
-                  placeholder="Ör: İş Güvenliği Uzmanı"
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* Roller */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Roller *</label>
-              <div className="flex flex-wrap gap-2">
-                {roles.map((role) => (
-                  <button
-                    key={role.id}
-                    type="button"
-                    onClick={() => {
-                      const newRoles = form.roles.includes(role.name)
-                        ? form.roles.filter((r) => r !== role.name)
-                        : [...form.roles, role.name];
-                      setForm({ ...form, roles: newRoles });
-                    }}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                      form.roles.includes(role.name)
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-muted text-muted-foreground border-transparent hover:border-border'
-                    }`}
-                  >
-                    {ROLE_LABELS[role.name] || role.name}
-                  </button>
-                ))}
-              </div>
-              {form.roles.length === 0 && (
-                <p className="text-xs text-muted-foreground">En az bir rol seçilmelidir.</p>
-              )}
-            </div>
-
-            {/* Departman Hatırlatıcı */}
-            {departments.length === 0 && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-lg">
-                <p className="text-xs text-amber-800 dark:text-amber-400 flex gap-2">
-                  <Building2 className="w-3.5 h-3.5 shrink-0" />
-                  <span>Sistemde departman bulunamadı. Kullanıcı eklemeden önce <b>Tanım Yönetimi</b> sayfasından departman eklemelisiniz.</span>
-                </p>
-              </div>
-            )}
-
-            {/* Tesisler */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tesis Erişimi</label>
-              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                {facilities.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => {
-                      const newFacilities = form.facilities.includes(f.id)
-                        ? form.facilities.filter((id) => id !== f.id)
-                        : [...form.facilities, f.id];
-                      setForm({ ...form, facilities: newFacilities });
-                    }}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                      form.facilities.includes(f.id)
-                        ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700'
-                        : 'bg-muted text-muted-foreground border-transparent hover:border-border'
-                    }`}
-                  >
-                    {f.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Modüller */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Özel Modül Erişimi</label>
-              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-800">
-                {systemModules.map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => {
-                      const newModules = form.modules.includes(m.id)
-                        ? form.modules.filter((id) => id !== m.id)
-                        : [...form.modules, m.id];
-                      setForm({ ...form, modules: newModules });
-                    }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex flex-col items-start text-left gap-0.5 ${
-                      form.modules.includes(m.id)
-                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300 shadow-sm dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-700/50'
-                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 dark:hover:border-slate-600'
-                    }`}
-                  >
-                    <span className="font-semibold">{m.name}</span>
-                    {m.description && <span className="text-[10px] opacity-80">{m.description}</span>}
-                  </button>
-                ))}
-                {systemModules.length === 0 && (
-                  <p className="text-xs text-muted-foreground p-2">Sistemde tanımlı modül bulunamadı.</p>
-                )}
-              </div>
-            </div>
-
-            <div className="p-4 bg-muted rounded-lg border">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                <ShieldCheck className="w-3.5 h-3.5 inline mr-1.5 align-text-bottom text-foreground" />
-                Zorunlu alanlar: Kullanıcı adı, ad soyad, e-posta, telefon, departman ve ünvan.
-                Kullanıcı sisteme giriş yaptığında kendi tesislerini görebilir.
-              </p>
-            </div>
-            </form>
-          </div>
-
-          <DialogFooter className="p-4 sm:p-6 border-t shrink-0">
-            <Button type="button" variant="outline" onClick={closeModal}>Vazgeç</Button>
-            <Button
-              type="submit"
-              form="user-form"
-              disabled={
-                !form.username || !form.fullName || !form.email || !form.phone ||
-                !form.department || !form.title || form.roles.length === 0 ||
-                createMutation.isPending || updateMutation.isPending
-              }
-            >
-              {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              {editingUser ? 'Güncelle' : 'Oluştur'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        )
+      ) : (
+        <div className="text-center py-16 border border-dashed border-border/70 rounded-lg bg-card">
+          <Archive className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+          <h3 className="text-xs font-semibold text-foreground">Kullanıcı Bulunamadı</h3>
+          <p className="text-[11px] text-muted-foreground mt-0.5 max-w-xs mx-auto">
+            {searchTerm || roleFilter !== 'all' || facilityFilter !== 'all'
+              ? 'Arama ve filtre kriterlerinize uygun kullanıcı bulunamadı.'
+              : 'Bu bölümde gösterilecek kayıtlı kullanıcı bulunmuyor.'}
+          </p>
+        </div>
+      )}
     </div>
   );
 };

@@ -112,21 +112,21 @@ export default function FacilityWizardPage() {
   if (isLoading) return <div>Yükleniyor...</div>;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-16 animate-in fade-in duration-300">
+    <div className="min-h-screen bg-background flex flex-col pb-16 animate-in fade-in duration-200">
       {/* Wizard Top Bar */}
-      <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-md border-b border-border/60 px-6 py-3.5 shadow-2xs">
+      <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-md border-b border-border/60 px-6 py-3 shadow-2xs">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Button 
               variant="outline" 
               size="icon" 
               onClick={() => navigate('/settings/facilities')}
-              className="h-9 w-9 rounded-xl border-border/80 hover:bg-muted"
+              className="h-8 w-8 rounded-md border-border/60 hover:bg-muted"
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
             <div>
-              <h1 className="text-base font-bold text-foreground flex items-center gap-2">
+              <h1 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-primary" />
                 {isEditing ? 'Tesis Bilgilerini Düzenle' : 'Yeni Tesis Kurulum Sihirbazı'}
               </h1>
@@ -137,7 +137,7 @@ export default function FacilityWizardPage() {
           </div>
 
           {/* Stepper Pill Indicators */}
-          <div className="flex items-center gap-2 bg-muted/40 p-1.5 rounded-2xl border border-border/50">
+          <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-md border border-border/60">
             {STEPS.map((step, idx) => {
               const Icon = step.icon;
               const isActive = currentStep === idx;
@@ -148,8 +148,8 @@ export default function FacilityWizardPage() {
                   type="button"
                   onClick={() => setCurrentStep(idx)}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all",
-                    isActive && "bg-primary text-primary-foreground shadow-xs shadow-primary/20",
+                    "flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all duration-200",
+                    isActive && "bg-background text-foreground shadow-xs font-semibold",
                     isPast && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20",
                     !isActive && !isPast && "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                   )}
@@ -164,8 +164,8 @@ export default function FacilityWizardPage() {
       </header>
       
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <Card className="border-border/60 rounded-3xl p-6 sm:p-8 shadow-xs bg-card">
+        <div className="max-w-4xl mx-auto space-y-5">
+          <Card className="border-border/60 rounded-lg p-6 sm:p-7 shadow-xs bg-card">
             {currentStep === 0 && <BasicInfoStep data={formData} update={(d: any) => setFormData((p: any) => ({ ...p, ...d }))} />}
             {currentStep === 1 && <BuildingStep data={formData} update={(d: any) => setFormData((p: any) => ({ ...p, ...d }))} />}
             {currentStep === 2 && <TeamStep data={formData} update={(d: any) => setFormData((p: any) => ({ ...p, ...d }))} />}
@@ -179,17 +179,17 @@ export default function FacilityWizardPage() {
               variant="outline"
               disabled={currentStep === 0}
               onClick={handlePrev}
-              className="h-10 px-5 text-xs font-semibold rounded-xl gap-2"
+              className="h-9 px-4 text-xs font-medium rounded-md gap-2"
             >
               <ChevronLeft className="w-4 h-4" /> Önceki Adım
             </Button>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               {currentStep < STEPS.length - 1 ? (
                 <Button
                   type="button"
                   onClick={handleNext}
-                  className="h-10 px-6 text-xs font-semibold rounded-xl gap-2 bg-primary hover:bg-primary/90 shadow-sm"
+                  className="h-9 px-4 text-xs font-medium rounded-md gap-2"
                 >
                   Sonraki Adım <ChevronRight className="w-4 h-4" />
                 </Button>
@@ -198,15 +198,15 @@ export default function FacilityWizardPage() {
                   type="button"
                   onClick={handleSave}
                   disabled={saveMutation.isPending}
-                  className="h-10 px-7 text-xs font-bold rounded-xl gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                  className="h-9 px-5 text-xs font-medium rounded-md gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
                 >
                   {saveMutation.isPending ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" /> Kaydediliyor...
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Kaydediliyor...
                     </>
                   ) : (
                     <>
-                      <Save className="w-4 h-4" /> Kurulumu Tamamla ve Kaydet
+                      <Save className="w-3.5 h-3.5" /> Kurulumu Tamamla ve Kaydet
                     </>
                   )}
                 </Button>

@@ -228,50 +228,48 @@ export default function FacilityLocationsPage() {
   }, [locations, searchQuery]);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto animate-in fade-in duration-300 pb-16">
+    <div className="space-y-6 w-full animate-in fade-in duration-200 pb-16">
       {/* Üst Başlık & Aksiyon Kartı */}
-      <div className="bg-card border rounded-2xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-              <Building className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-foreground">
-                Tesis Bina, Blok & Kat Lokasyon Yönetimi
-              </h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Tesislerin Bina, Blok ve Kat bilgilerini Excel şablonuyla toplu yükleyebilir veya pratik form ile ekleyebilirsiniz.
-              </p>
-            </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Building className="w-4 h-4" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
+              Tesis Lokasyon Yönetimi
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              Bina, blok ve kat hiyerarşisini yapılandırın veya Excel ile toplu yükleyin.
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center flex-wrap gap-2.5">
+        <div className="flex items-center flex-wrap gap-2">
           <Button
             variant="outline"
             onClick={handleDownloadTemplate}
-            className="flex items-center gap-2 text-xs h-10 rounded-xl border-slate-200 dark:border-slate-800"
+            className="flex items-center gap-1.5 text-xs h-9 rounded-md"
           >
-            <Download className="w-4 h-4 text-emerald-600" />
-            Excel Şablonu İndir
+            <Download className="w-3.5 h-3.5 text-muted-foreground" />
+            Şablon İndir
           </Button>
 
           <Button
             variant="outline"
             onClick={() => setIsExcelModalOpen(true)}
-            className="flex items-center gap-2 text-xs h-10 rounded-xl border-slate-200 dark:border-slate-800"
+            className="flex items-center gap-1.5 text-xs h-9 rounded-md"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <FileSpreadsheet className="w-3.5 h-3.5 text-muted-foreground" />
             Excel'den Yükle
           </Button>
 
-          <div className="w-64">
+          <div className="w-56">
             <Select value={facilityId} onValueChange={v => {
               setFacilityId(v);
               localStorage.setItem('activeFacilityId', v);
             }}>
-              <SelectTrigger className="h-10 bg-background text-xs font-semibold rounded-xl">
+              <SelectTrigger className="h-9 bg-background text-xs font-medium rounded-md">
                 <div className="flex items-center gap-2 truncate">
                   <Building className="w-3.5 h-3.5 text-primary shrink-0" />
                   <SelectValue placeholder="Tesis Seçiniz..." />
@@ -290,56 +288,56 @@ export default function FacilityLocationsPage() {
       </div>
       
       {(!facilityId || facilityId === 'all') ? (
-        <div className="flex flex-col items-center justify-center p-16 text-center border-2 border-dashed rounded-3xl bg-muted/20">
-          <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-3">
-            <Building className="w-7 h-7 text-muted-foreground/60" />
+        <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-border/60 rounded-lg bg-muted/10">
+          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center mb-2.5 text-muted-foreground">
+            <Building className="w-5 h-5" />
           </div>
-          <h3 className="text-base font-bold text-foreground">Tesis Seçimi Bekleniyor</h3>
+          <h3 className="text-sm font-semibold text-foreground">Tesis Seçimi Bekleniyor</h3>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-            Lokasyon ağacını görüntülemek veya Excel'den toplu bina, blok ve kat yüklemek için lütfen üst menüden bir tesis seçiniz.
+            Lokasyon ağacını görüntülemek veya Excel'den toplu bina, blok ve kat yüklemek için lütfen üstten bir tesis seçiniz.
           </p>
         </div>
       ) : (
         <>
-          {/* Kolay & Yalın Manuel Ekleme Formu (Kullanıcının İstediği: Bina, Blok, Kat) */}
-          <div className="bg-card border rounded-2xl p-5 shadow-xs space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-                <Plus className="w-4 h-4 text-primary" /> Hızlı Konum Ekle (Bina &gt; Blok &gt; Kat)
+          {/* Kolay & Yalın Manuel Ekleme Formu */}
+          <div className="bg-card border border-border/60 rounded-lg p-4 shadow-xs space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-border/40">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                <Plus className="w-3.5 h-3.5 text-primary" /> Hızlı Konum Ekle
               </h3>
               <span className="text-[11px] text-muted-foreground">
-                Örn: Tesis: MP Adana | Bina: Ana Bina | Blok: A Blok | Kat: Zemin Kat
+                Örn: Bina: Ana Bina | Blok: A Blok | Kat: Zemin Kat
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
               <div className="space-y-1">
-                <Label className="text-xs font-semibold">Bina Adı <span className="text-rose-500">*</span></Label>
+                <Label className="text-xs font-medium">Bina Adı *</Label>
                 <Input 
                   value={newLocation.building} 
                   onChange={e => setNewLocation({...newLocation, building: e.target.value})} 
-                  placeholder="Örn: Ana Bina, Tek Blok" 
-                  className="h-10 text-xs rounded-xl" 
+                  placeholder="Örn: Ana Bina" 
+                  className="h-9 text-xs rounded-md" 
                 />
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs font-semibold">Blok (Opsiyonel)</Label>
+                <Label className="text-xs font-medium">Blok (Opsiyonel)</Label>
                 <Input 
                   value={newLocation.block} 
                   onChange={e => setNewLocation({...newLocation, block: e.target.value})} 
-                  placeholder="Örn: A Blok, B Blok" 
-                  className="h-10 text-xs rounded-xl" 
+                  placeholder="Örn: A Blok" 
+                  className="h-9 text-xs rounded-md" 
                 />
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs font-semibold">Kat <span className="text-rose-500">*</span></Label>
+                <Label className="text-xs font-medium">Kat *</Label>
                 <Input 
                   value={newLocation.floor} 
                   onChange={e => setNewLocation({...newLocation, floor: e.target.value})} 
-                  placeholder="Örn: Zemin Kat, 1.Kat, B1.Kat" 
-                  className="h-10 text-xs rounded-xl" 
+                  placeholder="Örn: Zemin Kat" 
+                  className="h-9 text-xs rounded-md" 
                 />
               </div>
 
@@ -347,9 +345,9 @@ export default function FacilityLocationsPage() {
                 <Button 
                   onClick={addLoc} 
                   disabled={!newLocation.building || !newLocation.floor || addMutation.isPending}
-                  className="w-full h-10 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-xs hover:bg-primary/90"
+                  className="w-full h-9 rounded-md text-xs font-medium gap-1.5"
                 >
-                  {addMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4 mr-1.5" />}
+                  {addMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                   Konumu Ekle
                 </Button>
               </div>
@@ -357,58 +355,58 @@ export default function FacilityLocationsPage() {
           </div>
 
           {/* Arama & Hiyerarşik Ağaç Kartı */}
-          <div className="bg-card border rounded-2xl p-6 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b">
+          <div className="bg-card border border-border/60 rounded-lg p-5 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/40">
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-primary" />
-                <h3 className="text-sm font-bold text-foreground">
+                <h3 className="text-sm font-semibold text-foreground">
                   Tanımlı Konumlar ({locations.length})
                 </h3>
               </div>
 
-              <div className="relative w-full sm:w-72">
-                <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+              <div className="relative w-full sm:w-64">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-muted-foreground" />
                 <Input
                   placeholder="Bina, blok veya kat ara..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-9 text-xs rounded-xl"
+                  className="pl-8 h-8 text-xs rounded-md"
                 />
               </div>
             </div>
 
             {isLoading ? (
               <div className="p-8 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-primary" /> Lokasyonlar yükleniyor...
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /> Lokasyonlar yükleniyor...
               </div>
             ) : Object.keys(tree).length === 0 ? (
-              <div className="p-12 text-center border border-dashed rounded-xl bg-muted/10">
+              <div className="p-10 text-center border border-dashed border-border/60 rounded-lg bg-muted/10">
                 <Building className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
                 <p className="text-xs font-semibold text-foreground">Henüz Konum Eklenmemiş</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Yukarıdaki "Hızlı Konum Ekle" formunu kullanabilir veya "Excel'den Yükle" ile tek tıkla aktarabilirsiniz.
+                  Yukarıdaki "Hızlı Konum Ekle" formunu kullanabilir veya "Excel'den Yükle" ile aktarabilirsiniz.
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {Object.values(tree).map((buildingNode: any) => {
-                  const isExpanded = expandedNodes[buildingNode.id] !== false; // varsayılan açık
+                  const isExpanded = expandedNodes[buildingNode.id] !== false;
                   return (
-                    <div key={buildingNode.id} className="border rounded-xl overflow-hidden bg-background">
+                    <div key={buildingNode.id} className="border border-border/60 rounded-lg overflow-hidden bg-background">
                       {/* Bina Başlığı */}
                       <div
                         onClick={() => toggleNode(buildingNode.id)}
-                        className="px-4 py-3 bg-muted/40 hover:bg-muted/70 cursor-pointer flex items-center justify-between transition-colors"
+                        className="px-3.5 py-2.5 bg-muted/30 hover:bg-muted/60 cursor-pointer flex items-center justify-between transition-colors"
                       >
                         <div className="flex items-center gap-2">
-                          {isExpanded ? <ChevronDown className="w-4 h-4 text-primary" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
-                          <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                          {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-primary" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
+                          <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                             <Building className="w-3.5 h-3.5 text-primary" />
                             {buildingNode.name}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">
+                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-primary/10 text-primary font-medium">
                             {Object.keys(buildingNode.children).length} Kat
                           </span>
                           <button
@@ -417,7 +415,7 @@ export default function FacilityLocationsPage() {
                               e.stopPropagation();
                               removeNode('building', buildingNode.name);
                             }}
-                            className="p-1 text-muted-foreground hover:text-rose-600 transition-colors"
+                            className="p-1 text-muted-foreground hover:text-destructive transition-colors rounded"
                             title="Binayı ve Alt Katları Sil"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -431,18 +429,18 @@ export default function FacilityLocationsPage() {
                           {Object.values(buildingNode.children).map((floorNode: any) => (
                             <div
                               key={floorNode.id}
-                              className="p-2.5 rounded-lg bg-card border flex items-center justify-between gap-2 shadow-2xs"
+                              className="p-2 rounded-md bg-card border border-border/60 flex items-center justify-between gap-2 shadow-2xs"
                             >
                               <div className="flex items-center gap-1.5 truncate">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-                                <span className="text-xs font-semibold text-foreground truncate">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                                <span className="text-xs font-medium text-foreground truncate">
                                   {floorNode.name}
                                 </span>
                               </div>
                               <button
                                 type="button"
                                 onClick={() => removeNode('floor', floorNode.name, buildingNode.name)}
-                                className="p-1 text-muted-foreground hover:text-rose-600 transition-colors shrink-0"
+                                className="p-1 text-muted-foreground hover:text-destructive transition-colors shrink-0 rounded"
                                 title="Bu Katı Sil"
                               >
                                 <Trash2 className="w-3 h-3" />
@@ -460,22 +458,21 @@ export default function FacilityLocationsPage() {
         </>
       )}
 
-      {/* Excel İle Yükleme Modalı (Tesis Adı, Bina, Blok, Kat) */}
+      {/* Excel İle Yükleme Modalı */}
       <Dialog open={isExcelModalOpen} onOpenChange={setIsExcelModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md rounded-lg">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
-              Excel ile Bina, Blok ve Kat Yükleme
+            <DialogTitle className="text-base font-semibold flex items-center gap-2">
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              Excel ile Lokasyon Yükleme
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Excel tablonuzda <b>Tesis Adı</b>, <b>Bina</b>, <b>Blok</b> ve <b>Kat</b> sütunlarını içerecek şekilde toplu yükleme yapabilirsiniz.
+              Excel tablonuzda <b>Tesis Adı</b>, <b>Bina</b>, <b>Blok</b> ve <b>Kat</b> sütunlarını içerecek şekilde yükleme yapabilirsiniz.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            {/* Şablon Görseli Rehberi */}
-            <div className="p-3 bg-muted/50 rounded-xl border text-[11px] space-y-1.5 text-muted-foreground">
+          <div className="space-y-3.5 py-2">
+            <div className="p-3 bg-muted/40 rounded-md border border-border/60 text-[11px] space-y-1.5 text-muted-foreground">
               <div className="font-semibold text-foreground flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                 Desteklenen Sütun Formatı:
@@ -483,14 +480,14 @@ export default function FacilityLocationsPage() {
               <ul className="list-disc list-inside space-y-0.5 pl-1">
                 <li><b>Tesis Adı:</b> MP Adana, Liv Gaziantep vb.</li>
                 <li><b>Bina:</b> Ana Bina, Tek Blok vb.</li>
-                <li><b>Blok:</b> A Blok, B Blok veya Tek Blok ise Ana Bina</li>
-                <li><b>Kat:</b> 1.Kat, 2.Kat, Zemin Kat, B1.Kat vb.</li>
+                <li><b>Blok:</b> A Blok, B Blok vb.</li>
+                <li><b>Kat:</b> 1.Kat, 2.Kat, Zemin Kat vb.</li>
               </ul>
             </div>
 
             <div>
-              <Label className="text-xs font-semibold">Excel Dosyası (.xlsx) *</Label>
-              <div className="mt-1 flex items-center justify-center border-2 border-dashed rounded-xl p-6 text-center hover:border-primary/80 transition-colors">
+              <Label className="text-xs font-medium">Excel Dosyası (.xlsx) *</Label>
+              <div className="mt-1 flex items-center justify-center border-2 border-dashed border-border/60 rounded-md p-5 text-center hover:border-primary/80 transition-colors">
                 <input
                   type="file"
                   accept=".xlsx, .xls"
@@ -503,7 +500,7 @@ export default function FacilityLocationsPage() {
                   id="locations-excel-input"
                 />
                 <label htmlFor="locations-excel-input" className="cursor-pointer">
-                  <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                  <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-1.5" />
                   <span className="text-xs font-semibold text-primary">
                     {excelFile ? excelFile.name : 'Dosya Seç veya Sürükle'}
                   </span>
@@ -513,28 +510,29 @@ export default function FacilityLocationsPage() {
             </div>
 
             <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Şablon dosyanız yok mu?</span>
+              <span className="text-muted-foreground text-[11px]">Şablon dosyanız yok mu?</span>
               <button
                 type="button"
                 onClick={handleDownloadTemplate}
-                className="text-primary font-semibold hover:underline flex items-center gap-1"
+                className="text-primary font-medium hover:underline flex items-center gap-1 text-xs"
               >
-                <Download className="w-3.5 h-3.5" /> Şablonu İndir
+                <Download className="w-3 h-3" /> Şablonu İndir
               </button>
             </div>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" size="sm" onClick={() => setIsExcelModalOpen(false)}>
+            <Button variant="outline" size="sm" onClick={() => setIsExcelModalOpen(false)} className="h-8 text-xs rounded-md">
               İptal
             </Button>
             <Button
               size="sm"
               onClick={handleExcelImport}
               disabled={isImporting || !excelFile}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="h-8 text-xs rounded-md gap-1.5"
             >
-              {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Yükle ve Aktar'}
+              {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+              Yükle ve Aktar
             </Button>
           </DialogFooter>
         </DialogContent>

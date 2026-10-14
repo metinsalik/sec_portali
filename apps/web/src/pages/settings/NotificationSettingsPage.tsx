@@ -2,8 +2,7 @@ import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { 
-  Bell, Save, Loader2, Mail, Layout, Plus,
-  Settings2, ShieldAlert, AlertTriangle, Info, CheckCircle, X
+  Bell, Loader2, Plus, Settings2, ShieldAlert, AlertTriangle, Info, CheckCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -14,6 +13,7 @@ import {
   DialogHeader, DialogTitle, DialogTrigger 
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -29,10 +29,10 @@ interface NotificationConfig {
 
 const PriorityIcon = ({ priority }: { priority: string }) => {
   switch (priority) {
-    case 'critical': return <ShieldAlert className="w-4 h-4 text-red-600" />;
-    case 'high': return <AlertTriangle className="w-4 h-4 text-orange-500" />;
-    case 'normal': return <Info className="w-4 h-4 text-blue-500" />;
-    case 'low': return <CheckCircle className="w-4 h-4 text-slate-400" />;
+    case 'critical': return <ShieldAlert className="w-3.5 h-3.5 text-destructive" />;
+    case 'high': return <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />;
+    case 'normal': return <Info className="w-3.5 h-3.5 text-primary" />;
+    case 'low': return <CheckCircle className="w-3.5 h-3.5 text-muted-foreground" />;
     default: return null;
   }
 };
@@ -99,7 +99,7 @@ const NotificationSettingsPage = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -123,78 +123,87 @@ const NotificationSettingsPage = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500 pb-10">
+    <div className="w-full space-y-6 animate-in fade-in duration-200 pb-12">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <Bell className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight">Bildirim Ayarları</h1>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <Bell className="w-4 h-4" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold tracking-tight text-foreground">Bildirim Ayarları</h1>
+              <p className="text-xs text-muted-foreground">
+                Sistem genelindeki bildirimlerin kanallarını ve öncelik seviyelerini yönetin.
+              </p>
+            </div>
           </div>
-          <p className="text-muted-foreground text-sm">
-            Sistem genelindeki bildirimlerin kanallarını ve öncelik seviyelerini yönetin.
-          </p>
         </div>
 
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
+            <Button className="gap-2 h-9 text-xs px-3.5 rounded-md">
+              <Plus className="w-3.5 h-3.5" />
               Yeni Bildirim Türü
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[480px] rounded-lg">
             <form onSubmit={handleCreate}>
               <DialogHeader>
-                <DialogTitle>Yeni Bildirim Tanımla</DialogTitle>
-                <DialogDescription>
-                  Sisteme yeni bir bildirim tetikleyicisi ekleyin. Bu işlem otomatik olarak bir e-posta şablonu da oluşturur.
+                <DialogTitle className="text-base font-semibold">Yeni Bildirim Tanımla</DialogTitle>
+                <DialogDescription className="text-xs">
+                  Sisteme yeni bir bildirim tetikleyicisi ekleyin.
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right text-xs">Kod</Label>
-                  <Input name="code" placeholder="MISSING_DOC_REMINDER" className="col-span-3" required />
+              <div className="grid gap-3.5 py-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Kod</Label>
+                  <Input name="code" placeholder="MISSING_DOC_REMINDER" className="h-9 text-xs rounded-md" required />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right text-xs">Başlık/Ad</Label>
-                  <Input name="name" placeholder="Eksik Belge Hatırlatıcı" className="col-span-3" required />
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Başlık / Ad</Label>
+                  <Input name="name" placeholder="Eksik Belge Hatırlatıcı" className="h-9 text-xs rounded-md" required />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right text-xs">Modül</Label>
-                  <Select name="module" defaultValue="OPERATIONS">
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="OPERATIONS">Operasyonlar</SelectItem>
-                      <SelectItem value="FACILITIES">Tesis Yönetimi</SelectItem>
-                      <SelectItem value="PANEL">Yönetim Paneli</SelectItem>
-                      <SelectItem value="SYSTEM">Sistem</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Modül</Label>
+                    <Select name="module" defaultValue="OPERATIONS">
+                      <SelectTrigger className="h-9 text-xs rounded-md">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="OPERATIONS">Operasyonlar</SelectItem>
+                        <SelectItem value="FACILITIES">Tesis Yönetimi</SelectItem>
+                        <SelectItem value="PANEL">Yönetim Paneli</SelectItem>
+                        <SelectItem value="SYSTEM">Sistem</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Öncelik</Label>
+                    <Select name="priority" defaultValue="normal">
+                      <SelectTrigger className="h-9 text-xs rounded-md">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Düşük</SelectItem>
+                        <SelectItem value="normal">Normal</SelectItem>
+                        <SelectItem value="high">Yüksek</SelectItem>
+                        <SelectItem value="critical">Kritik</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right text-xs">Öncelik</Label>
-                  <Select name="priority" defaultValue="normal">
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Düşük</SelectItem>
-                      <SelectItem value="normal">Normal</SelectItem>
-                      <SelectItem value="high">Yüksek</SelectItem>
-                      <SelectItem value="critical">Kritik</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-4 items-start gap-4">
-                  <Label className="text-right text-xs pt-2">Açıklama</Label>
-                  <Textarea name="description" placeholder="Örn: İSG defteri yüklenmeyen tesisler için periyodik uyarı." className="col-span-3 min-h-[80px]" />
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Açıklama</Label>
+                  <Textarea name="description" placeholder="Örn: İSG defteri yüklenmeyen tesisler için periyodik uyarı." className="min-h-[70px] text-xs rounded-md" />
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)} className="h-9 text-xs rounded-md">
+                  Vazgeç
+                </Button>
+                <Button type="submit" disabled={createMutation.isPending} className="h-9 text-xs rounded-md">
+                  {createMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : null}
                   Oluştur
                 </Button>
               </DialogFooter>
@@ -204,57 +213,57 @@ const NotificationSettingsPage = () => {
       </div>
 
       {groupedConfigs && Object.entries(groupedConfigs).map(([module, moduleConfigs]) => (
-        <Card key={module} className="shadow-sm border-border/60 overflow-hidden">
-          <CardHeader className="bg-muted/30 border-b py-4">
+        <Card key={module} className="shadow-xs border-border/60 rounded-lg overflow-hidden">
+          <CardHeader className="bg-muted/30 border-b border-border/40 py-3 px-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Settings2 className="w-5 h-5 text-primary" />
-                <CardTitle className="text-lg">{getModuleLabel(module)}</CardTitle>
+                <Settings2 className="w-4 h-4 text-primary" />
+                <CardTitle className="text-sm font-semibold">{getModuleLabel(module)}</CardTitle>
               </div>
-              <Badge variant="outline" className="bg-background">{moduleConfigs.length} Bildirim Türü</Badge>
+              <Badge variant="outline" className="text-[10px] font-normal px-2 py-0.5 rounded-md">{moduleConfigs.length} Bildirim Türü</Badge>
             </div>
-            <CardDescription>
+            <CardDescription className="text-xs">
               {getModuleLabel(module)} modülü için bildirim tercihlerini özelleştirin.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="divide-y">
+            <div className="divide-y divide-border/50">
               {moduleConfigs.map((config) => (
-                <div key={config.code} className="p-4 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-muted/5 transition-colors">
-                  <div className="space-y-1 flex-1">
+                <div key={config.code} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-muted/20 transition-colors">
+                  <div className="space-y-1 flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-sm md:text-base">{config.code.replace(/_/g, ' ')}</span>
+                      <span className="font-medium text-xs text-foreground">{config.code.replace(/_/g, ' ')}</span>
                       <PriorityIcon priority={config.priority} />
                     </div>
-                    <p className="text-xs md:text-sm text-muted-foreground leading-relaxed max-w-xl">
+                    <p className="text-xs text-muted-foreground leading-relaxed max-w-xl">
                       {config.description}
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-6 md:gap-8 self-end md:self-center bg-background/50 p-2 md:p-0 rounded-lg">
+                  <div className="flex items-center gap-5 self-end md:self-center shrink-0">
                     <div className="flex items-center gap-2">
-                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">E-posta</Label>
+                      <Label className="text-xs text-muted-foreground">E-posta</Label>
                       <Switch 
                         checked={config.emailEnabled} 
                         onCheckedChange={(checked) => updateMutation.mutate({ code: config.code, data: { emailEnabled: checked } })}
                         disabled={updateMutation.isPending}
                       />
                     </div>
-                    <div className="flex items-center gap-2 border-l pl-6">
-                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Uygulama</Label>
+                    <div className="flex items-center gap-2 border-l border-border/60 pl-5">
+                      <Label className="text-xs text-muted-foreground">Uygulama</Label>
                       <Switch 
                         checked={config.appEnabled} 
                         onCheckedChange={(checked) => updateMutation.mutate({ code: config.code, data: { appEnabled: checked } })}
                         disabled={updateMutation.isPending}
                       />
                     </div>
-                    <div className="flex items-center gap-2 border-l pl-6 min-w-[140px]">
+                    <div className="border-l border-border/60 pl-5 min-w-[120px]">
                       <Select 
                         value={config.priority} 
                         onValueChange={(val) => updateMutation.mutate({ code: config.code, data: { priority: val as any } })}
                         disabled={updateMutation.isPending}
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-8 text-xs rounded-md">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -274,20 +283,15 @@ const NotificationSettingsPage = () => {
       ))}
 
       {Object.keys(groupedConfigs || {}).length === 0 && (
-        <div className="p-12 text-center border-2 border-dashed rounded-xl space-y-3">
-          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
-            <Info className="w-6 h-6 text-muted-foreground" />
+        <div className="p-10 text-center border border-dashed border-border/60 rounded-lg space-y-2">
+          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
+            <Info className="w-5 h-5" />
           </div>
-          <p className="text-muted-foreground">Henüz yapılandırılmış bildirim bulunmuyor.</p>
+          <p className="text-xs text-muted-foreground">Henüz yapılandırılmış bildirim bulunmuyor.</p>
         </div>
       )}
     </div>
   );
 };
-
-// Helper for Label if not imported correctly
-const Label = ({ children, className }: { children: React.ReactNode, className?: string }) => (
-  <span className={className}>{children}</span>
-);
 
 export default NotificationSettingsPage;

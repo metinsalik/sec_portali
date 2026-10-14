@@ -1,91 +1,191 @@
+import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { UserPlus, Calendar, MapPin, Building2, UserCheck, AlertCircle, LayoutGrid, ArrowRight } from "lucide-react";
+import { 
+  UserPlus, Calendar, MapPin, Building2, UserCheck, 
+  AlertCircle, LayoutGrid, ArrowRight, Search, X, Filter 
+} from "lucide-react";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SERTİFİKA YENİLEME DİYALOĞU
+// ─────────────────────────────────────────────────────────────────────────────
 interface CertificateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   data: any[];
 }
 
-export function CertificateRenewalDialog({ open, onOpenChange, data }: CertificateDialogProps) {
+export function CertificateRenewalDialog({ open, onOpenChange, data = [] }: CertificateDialogProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  const filteredData = useMemo(() => {
+    return data.filter((p) => {
+      const matchesSearch = p.fullName?.toLowerCase().includes(searchQuery.toLowerCase());
+      if (!matchesSearch) return false;
+
+      if (statusFilter === "expired") return p.status?.isExpired;
+      if (statusFilter === "critical") return p.status?.isCritical;
+      if (statusFilter === "warning") return p.status?.isWarning && !p.status?.isCritical && !p.status?.isExpired;
+
+      return true;
+    });
+  }, [data, searchQuery, statusFilter]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-6xl w-[95vw] h-[85vh] p-0 overflow-hidden border-none shadow-lg rounded-xl flex flex-col">
-        <DialogHeader className="px-10 py-8 bg-slate-900 text-white shrink-0 relative overflow-hidden">
-           <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
-              <Calendar className="w-32 h-32" />
-           </div>
-           <div className="flex items-center gap-6 relative">
-             <div className="w-16 h-16 rounded-lg bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-               <Calendar className="w-8 h-8 text-white" />
-             </div>
-             <div>
-               <DialogTitle className="text-2xl font-bold tracking-tight">Sertifika Yenileme Takvimi</DialogTitle>
-               <DialogDescription className="text-white/40 text-[10px] uppercase tracking-widest mt-1 font-bold">
-                 Profesyonel Yetkinlik Takibi • 2026 Q2
-               </DialogDescription>
-             </div>
-           </div>
+      <DialogContent className="sm:max-w-5xl w-[96vw] max-h-[88vh] p-0 overflow-hidden rounded-xl border border-border bg-card flex flex-col shadow-lg">
+        {/* Header */}
+        <DialogHeader className="p-6 bg-muted/40 border-b border-border shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
+                  Sertifika Yenileme Takvimi
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  Sertifika geçerlilik süresi yaklaşan veya dolmuş İSG profesyonelleri
+                </DialogDescription>
+              </div>
+            </div>
+
+            <Badge variant="outline" className="h-7 px-3 text-xs font-semibold bg-background border-border w-fit">
+              {filteredData.length} / {data.length} Profesyonel
+            </Badge>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="flex flex-wrap items-center gap-2.5 mt-4 pt-3 border-t border-border/50">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Profesyonel adı ara..."
+                className="pl-8 h-8 text-xs bg-background rounded-lg border-border"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger size="sm" className="h-8 min-w-[140px] text-xs bg-background rounded-lg border-border">
+                <SelectValue placeholder="Durum Filtresi" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm Durumlar</SelectItem>
+                <SelectItem value="critical">Kritik Süre (&lt;30 Gün)</SelectItem>
+                <SelectItem value="warning">Uyarı (&lt;90 Gün)</SelectItem>
+                <SelectItem value="expired">Süresi Dolmuş</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {(searchQuery || statusFilter !== "all") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery("");
+                  setStatusFilter("all");
+                }}
+                className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
+              >
+                <X className="w-3.5 h-3.5" /> Filtreyi Temizle
+              </Button>
+            )}
+          </div>
         </DialogHeader>
-        
-        <div className="flex-1 overflow-y-auto p-10 bg-slate-50/30 dark:bg-slate-950 custom-scrollbar">
-          <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm overflow-hidden">
+
+        {/* Content Table */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-muted/10">
+          <div className="rounded-lg border border-border bg-card shadow-xs overflow-hidden">
             <Table>
-              <TableHeader className="bg-muted sticky top-0 z-10">
-                <TableRow className="hover:bg-transparent border-b">
-                  <TableHead className="py-4 px-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Profesyonel Ad Soyad</TableHead>
-                  <TableHead className="py-4 px-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sertifika Tarihi</TableHead>
-                  <TableHead className="py-4 px-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kalan Süre</TableHead>
-                  <TableHead className="py-4 px-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Durum</TableHead>
+              <TableHeader className="bg-muted/70 sticky top-0 z-10 border-b border-border">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="py-3 px-4 text-xs font-semibold text-muted-foreground">Profesyonel Ad Soyad</TableHead>
+                  <TableHead className="py-3 px-4 text-xs font-semibold text-muted-foreground">Sertifika Bitiş Tarihi</TableHead>
+                  <TableHead className="py-3 px-4 text-xs font-semibold text-muted-foreground">Kalan Süre</TableHead>
+                  <TableHead className="py-3 px-4 text-xs font-semibold text-muted-foreground text-right">Durum</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.map((p) => (
-                  <TableRow key={p.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b last:border-0">
-                    <TableCell className="py-5 px-8 font-bold text-foreground">{p.fullName}</TableCell>
-                    <TableCell className="py-5 px-8 text-sm text-slate-500 font-medium">
-                      {p.certificateDate ? format(new Date(p.certificateDate), 'dd MMMM yyyy', { locale: tr }) : '-'}
-                    </TableCell>
-                    <TableCell className="py-5 px-8">
-                      <div className="flex flex-col">
-                        <span className={cn(
-                          "text-sm font-bold",
-                          p.status.isCritical || p.status.isExpired ? 'text-destructive' : 'text-amber-600'
-                        )}>
-                          {p.status.daysLeft} Gün Kaldı
-                        </span>
-                        <div className="w-24 h-1 bg-muted text-muted-foreground rounded-full mt-1.5 overflow-hidden">
-                          <div 
-                            className={cn("h-full", p.status.isCritical || p.status.isExpired ? 'bg-destructive text-destructive-foreground' : 'bg-amber-500')} 
-                            style={{ width: `${Math.max(10, Math.min(100, 100 - (p.status.daysLeft / 3.65)))}%` }}
-                          />
+                {filteredData.map((p) => {
+                  const isExpired = p.status?.isExpired;
+                  const isCritical = p.status?.isCritical;
+
+                  return (
+                    <TableRow key={p.id} className="hover:bg-muted/40 transition-colors border-b border-border/50 last:border-0">
+                      <TableCell className="py-3.5 px-4 font-semibold text-sm text-foreground">
+                        {p.fullName}
+                      </TableCell>
+                      <TableCell className="py-3.5 px-4 text-xs text-muted-foreground font-medium">
+                        {p.certificateDate ? format(new Date(p.certificateDate), "dd MMMM yyyy", { locale: tr }) : "-"}
+                      </TableCell>
+                      <TableCell className="py-3.5 px-4">
+                        <div className="flex flex-col gap-1">
+                          <span className={cn(
+                            "text-xs font-bold",
+                            isExpired || isCritical ? "text-destructive" : "text-amber-600 dark:text-amber-400"
+                          )}>
+                            {isExpired ? "Süresi Doldu" : `${p.status?.daysLeft} Gün Kaldı`}
+                          </span>
+                          {!isExpired && p.status?.daysLeft !== undefined && (
+                            <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className={cn("h-full transition-all", isCritical ? "bg-destructive" : "bg-amber-500")}
+                                style={{ width: `${Math.max(10, Math.min(100, 100 - (p.status.daysLeft / 3.65)))}%` }}
+                              />
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-5 px-8 text-right">
-                      <Badge className={cn(
-                        "rounded-xl px-4 h-7 text-[10px] font-black uppercase tracking-tighter shadow-sm",
-                        p.status.isExpired ? "bg-slate-900 text-white" : 
-                        p.status.isCritical ? "bg-destructive text-destructive-foreground text-white" : "bg-amber-500 text-white"
-                      )}>
-                        {p.status.isExpired ? "Süresi Dolmuş" : p.status.isCritical ? "Kritik" : "Yenileme Bekliyor"}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {data.length === 0 && (
+                      </TableCell>
+                      <TableCell className="py-3.5 px-4 text-right">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[10px] font-bold uppercase tracking-tight h-6 px-2.5",
+                            isExpired
+                              ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent"
+                              : isCritical
+                              ? "bg-destructive/10 text-destructive border-destructive/20"
+                              : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
+                          )}
+                        >
+                          {isExpired ? "Süresi Dolmuş" : isCritical ? "Kritik" : "Yenileme Bekliyor"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+
+                {filteredData.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-32 text-slate-400 font-bold tracking-widest text-xs opacity-40 italic">
-                      <div className="flex flex-col items-center gap-4">
-                        <UserCheck className="w-12 h-12" />
-                        KRİTİK SERTİFİKA YENİLEME BULUNMUYOR
+                    <TableCell colSpan={4} className="text-center py-16 text-muted-foreground">
+                      <div className="flex flex-col items-center gap-2">
+                        <UserCheck className="w-10 h-10 opacity-30 text-emerald-500" />
+                        <p className="text-sm font-semibold text-foreground">Kayıt Bulunamadı</p>
+                        <p className="text-xs text-muted-foreground">
+                          {searchQuery || statusFilter !== "all"
+                            ? "Filtre kriterlerine uyan profesyonel bulunamadı."
+                            : "Kritik veya süresi yaklaşan sertifika yenilemesi bulunmuyor."}
+                        </p>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -99,153 +199,237 @@ export function CertificateRenewalDialog({ open, onOpenChange, data }: Certifica
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// KAYNAK EKSİKLİĞİ DİYALOĞU
+// ─────────────────────────────────────────────────────────────────────────────
 interface GapDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   data: any[];
-  type: 'IGU' | 'Hekim' | 'DSP';
-  onAssign?: (facility: any, type: 'IGU' | 'Hekim' | 'DSP') => void;
+  type: "IGU" | "Hekim" | "DSP";
+  onAssign?: (facility: any, type: "IGU" | "Hekim" | "DSP") => void;
 }
 
-export function ResourceGapDialog({ open, onOpenChange, title, data, type, onAssign }: GapDialogProps) {
-  const Icon = type === 'IGU' ? UserPlus : type === 'Hekim' ? UserCheck : Building2;
-  const color = type === 'IGU' ? 'blue' : type === 'Hekim' ? 'emerald' : 'purple';
-  
+export function ResourceGapDialog({ open, onOpenChange, title, data = [], type, onAssign }: GapDialogProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dangerFilter, setDangerFilter] = useState<string>("all");
+
+  const filteredData = useMemo(() => {
+    return data.filter((r) => {
+      const matchesSearch = r.facilityName?.toLowerCase().includes(searchQuery.toLowerCase());
+      if (!matchesSearch) return false;
+
+      if (dangerFilter !== "all" && r.dangerClass !== dangerFilter) return false;
+
+      return true;
+    });
+  }, [data, searchQuery, dangerFilter]);
+
+  const Icon = type === "IGU" ? UserPlus : type === "Hekim" ? UserCheck : Building2;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-7xl w-[95vw] h-[85vh] p-0 overflow-hidden border-none shadow-lg rounded-xl flex flex-col">
-        <DialogHeader className={cn(
-          "px-10 py-8 text-white shrink-0 relative overflow-hidden",
-          color === 'blue' ? 'bg-blue-600' : color === 'emerald' ? 'bg-emerald-600' : 'bg-purple-600'
-        )}>
-           <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
-              <Icon className="w-48 h-48" />
-           </div>
-           <div className="flex items-center gap-6 relative">
-             <div className="w-16 h-16 rounded-lg bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-               <Icon className="w-8 h-8 text-white" />
-             </div>
-             <div>
-               <DialogTitle className="text-3xl font-black tracking-tight">{title}</DialogTitle>
-               <DialogDescription className="text-white/70 text-sm mt-1 max-w-xl font-medium">
-                 Yasal mevzuat gereği atama eksiği veya sertifika sınıfı uyumsuzluğu olan tesisler.
-               </DialogDescription>
-             </div>
-           </div>
+      <DialogContent className="sm:max-w-6xl w-[96vw] max-h-[88vh] p-0 overflow-hidden rounded-xl border border-border bg-card flex flex-col shadow-lg">
+        {/* Header */}
+        <DialogHeader className="p-6 bg-muted/40 border-b border-border shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                <Icon className="w-5 h-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
+                  {title}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  Yasal mevzuat gereği atama eksiği veya sertifika sınıfı uyumsuzluğu olan tesisler
+                </DialogDescription>
+              </div>
+            </div>
+
+            <Badge variant="outline" className="h-7 px-3 text-xs font-semibold bg-background border-border w-fit">
+              {filteredData.length} / {data.length} Eksik Tesis
+            </Badge>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="flex flex-wrap items-center gap-2.5 mt-4 pt-3 border-t border-border/50">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Tesis adı ile ara..."
+                className="pl-8 h-8 text-xs bg-background rounded-lg border-border"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            <Select value={dangerFilter} onValueChange={setDangerFilter}>
+              <SelectTrigger size="sm" className="h-8 min-w-[150px] text-xs bg-background rounded-lg border-border">
+                <SelectValue placeholder="Tehlike Sınıfı" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm Tehlike Sınıfları</SelectItem>
+                <SelectItem value="Çok Tehlikeli">Çok Tehlikeli</SelectItem>
+                <SelectItem value="Tehlikeli">Tehlikeli</SelectItem>
+                <SelectItem value="Az Tehlikeli">Az Tehlikeli</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {(searchQuery || dangerFilter !== "all") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery("");
+                  setDangerFilter("all");
+                }}
+                className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
+              >
+                <X className="w-3.5 h-3.5" /> Filtreyi Temizle
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-10 bg-slate-50/30 dark:bg-slate-950 custom-scrollbar">
-          <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm overflow-hidden overflow-x-auto">
+        {/* Content Table */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-muted/10">
+          <div className="rounded-lg border border-border bg-card shadow-xs overflow-hidden overflow-x-auto">
             <Table>
-              <TableHeader className="bg-muted sticky top-0 z-10 border-b">
+              <TableHeader className="bg-muted/70 sticky top-0 z-10 border-b border-border">
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="py-4 px-10 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Tesis Bilgileri</TableHead>
-                  <TableHead className="py-4 px-10 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Durum Analizi</TableHead>
-                  <TableHead className="py-4 px-10 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Uyumluluk Oranı</TableHead>
-                  <TableHead className="py-4 px-10 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">İşlem</TableHead>
+                  <TableHead className="py-3 px-4 text-xs font-semibold text-muted-foreground">Tesis Tanımı</TableHead>
+                  <TableHead className="py-3 px-4 text-xs font-semibold text-muted-foreground">Durum Analizi</TableHead>
+                  <TableHead className="py-3 px-4 text-xs font-semibold text-muted-foreground">Uyumluluk Oranı</TableHead>
+                  <TableHead className="py-3 px-4 text-xs font-semibold text-muted-foreground text-right">Aksiyon</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.map((r) => {
-                  const metric = type === 'IGU' ? r.igu : type === 'Hekim' ? r.hekim : r.dsp;
-                  const deficit = metric.requiredMinutes - metric.assignedMinutes;
-                  
+                {filteredData.map((r) => {
+                  const metric = type === "IGU" ? r.igu : type === "Hekim" ? r.hekim : r.dsp;
+                  const deficit = (metric?.requiredMinutes || 0) - (metric?.assignedMinutes || 0);
+
                   let statusLabel = "";
                   let subLabel = "";
 
-                  if (type === 'DSP') {
-                    statusLabel = "DSP ATAMASI EKSİK";
-                    subLabel = "Çok tehlikeli sınıfta DSP zorunludur.";
+                  if (type === "DSP") {
+                    statusLabel = "DSP Ataması Eksik";
+                    subLabel = "Çok tehlikeli sınıfta DSP görevlendirilmesi yasal zorunluluktur.";
                   } else {
                     if (deficit > 0) {
-                      statusLabel = `${deficit} DK SÜRE EKSİK`;
-                      subLabel = `Gerekli: ${metric.requiredMinutes} / Atanan: ${metric.assignedMinutes}`;
-                    } else if (type === 'IGU' && !metric.hasValidClass) {
-                      statusLabel = "SINIF UYUMSUZLUĞU";
-                      subLabel = `${r.dangerClass} için gerekli sınıf atanmamış.`;
-                    } else if (metric.isFullTimeRequired && metric.assignedMinutes < 11700) {
-                      statusLabel = "TAM ZAMANLI GEREKLİ";
-                      subLabel = "Mevzuat gereği tam zamanlı uzman atanmalıdır.";
+                      statusLabel = `${deficit} Dakika Eksik`;
+                      subLabel = `Gerekli: ${metric?.requiredMinutes} dk / Atanan: ${metric?.assignedMinutes || 0} dk`;
+                    } else if (type === "IGU" && !metric?.hasValidClass) {
+                      statusLabel = "Sertifika Sınıf Uyumsuzluğu";
+                      subLabel = `${r.dangerClass} sınıf için uygun İSG uzmanı atanmamış.`;
+                    } else if (metric?.isFullTimeRequired && (metric?.assignedMinutes || 0) < 11700) {
+                      statusLabel = "Tam Zamanlı Zorunluluğu";
+                      subLabel = "Mevzuat gereği tam zamanlı sözleşme yapılmalıdır.";
                     } else {
-                      statusLabel = "KRİTER HATASI";
-                      subLabel = "Lütfen atama detaylarını kontrol edin.";
+                      statusLabel = "Eksik / Hatalı Atama";
+                      subLabel = "Atama detaylarını ve sözleşme saatlerini kontrol ediniz.";
                     }
                   }
 
+                  const coveragePercent = metric?.requiredMinutes > 0
+                    ? Math.round(((metric.assignedMinutes || 0) / metric.requiredMinutes) * 100)
+                    : 0;
+
                   return (
-                    <TableRow key={r.facilityId} className="group hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b last:border-0">
-                      <TableCell className="py-6 px-10">
+                    <TableRow key={r.facilityId} className="hover:bg-muted/40 transition-colors border-b border-border/50 last:border-0">
+                      <TableCell className="py-4 px-4">
                         <div className="flex flex-col">
-                          <span className="font-bold text-slate-900 dark:text-slate-100 text-lg group-hover:text-primary transition-colors">{r.facilityName}</span>
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <Badge variant="outline" className={cn(
-                              "rounded-lg px-2.5 py-0 text-[10px] font-black uppercase",
-                              r.dangerClass === 'Çok Tehlikeli' ? 'border-destructive/30 bg-rose-50 text-rose-700' :
-                              r.dangerClass === 'Tehlikeli' ? 'border-amber-200 bg-amber-50 text-amber-700' :
-                              'border-emerald-200 bg-emerald-50 text-emerald-700'
-                            )}>
+                          <Link 
+                            to={`/panel/facilities/${r.facilityId}`}
+                            className="font-semibold text-sm text-foreground hover:text-primary transition-colors inline-flex items-center gap-1.5"
+                          >
+                            {r.facilityName}
+                            <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                          </Link>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-[10px] h-5 px-1.5 font-bold uppercase",
+                                r.dangerClass === "Çok Tehlikeli"
+                                  ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20"
+                                  : r.dangerClass === "Tehlikeli"
+                                  ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
+                                  : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
+                              )}
+                            >
                               {r.dangerClass}
                             </Badge>
-                            <span className="text-[11px] text-slate-400 font-bold uppercase tracking-tighter">{r.employeeCount} PERSONEL</span>
-                          </div>
-                        </div>
-                      </TableCell>
-                      
-                      <TableCell className="py-6 px-10">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-lg bg-rose-50 dark:bg-rose-900/10 flex items-center justify-center text-destructive shadow-inner">
-                            <AlertCircle className="w-6 h-6" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-black text-destructive text-[11px] tracking-wide uppercase">{statusLabel}</span>
-                            <span className="text-xs text-slate-500 font-medium mt-1 leading-tight">{subLabel}</span>
+                            <span className="text-[11px] text-muted-foreground font-medium">
+                              {r.employeeCount} Personel
+                            </span>
                           </div>
                         </div>
                       </TableCell>
 
-                      <TableCell className="py-6 px-10">
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center justify-between">
-                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kapsama</span>
-                             <span className="text-xs font-black text-destructive">%{Math.round((metric.assignedMinutes / metric.requiredMinutes) * 100) || 0}</span>
+                      <TableCell className="py-4 px-4">
+                        <div className="flex items-start gap-2.5">
+                          <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                          <div className="space-y-0.5">
+                            <span className="font-semibold text-destructive text-xs">
+                              {statusLabel}
+                            </span>
+                            <p className="text-[11px] text-muted-foreground leading-snug">
+                              {subLabel}
+                            </p>
                           </div>
-                          <div className="w-48 h-2 bg-muted text-muted-foreground rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-destructive text-destructive-foreground transition-all duration-700" 
-                              style={{ width: `${Math.min(100, (metric.assignedMinutes / metric.requiredMinutes) * 100)}%` }}
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="py-4 px-4">
+                        <div className="space-y-1.5 min-w-[140px]">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground text-[11px]">Kapsama:</span>
+                            <span className="font-bold text-destructive">%{coveragePercent}</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-destructive transition-all duration-300"
+                              style={{ width: `${Math.min(100, coveragePercent)}%` }}
                             />
                           </div>
                         </div>
                       </TableCell>
 
-                      <TableCell className="py-6 px-10 text-right">
-                        <Button 
+                      <TableCell className="py-4 px-4 text-right">
+                        <Button
+                          size="sm"
                           onClick={() => onAssign?.(r, type)}
-                          className={cn(
-                            "rounded-lg px-8 h-12 font-black text-xs shadow-xl transition-all active:scale-95 text-white",
-                            color === 'blue' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20' :
-                            color === 'emerald' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20' :
-                            'bg-purple-600 hover:bg-purple-700 shadow-purple-500/20'
-                          )}
+                          className="h-8 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs"
                         >
-                          HIZLI ATAMA YAP <ArrowRight className="w-4 h-4 ml-2" />
+                          <UserPlus className="w-3.5 h-3.5" />
+                          Atama Yap
                         </Button>
                       </TableCell>
                     </TableRow>
                   );
                 })}
-                {data.length === 0 && (
+
+                {filteredData.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-32 bg-background">
-                      <div className="flex flex-col items-center gap-6 opacity-40">
-                        <div className="w-24 h-24 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500 shadow-inner">
-                          <UserCheck className="w-12 h-12" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-xl font-black text-foreground tracking-widest uppercase">EKSİK ATAMA BULUNMUYOR</p>
-                          <p className="text-sm font-medium text-slate-500">Tüm tesisler mevzuata uygun şekilde atandı.</p>
-                        </div>
+                    <TableCell colSpan={4} className="text-center py-16 text-muted-foreground">
+                      <div className="flex flex-col items-center gap-2">
+                        <UserCheck className="w-10 h-10 opacity-30 text-emerald-500" />
+                        <p className="text-sm font-semibold text-foreground">Eksik Atama Bulunmuyor</p>
+                        <p className="text-xs text-muted-foreground">
+                          {searchQuery || dangerFilter !== "all"
+                            ? "Filtre kriterlerine uyan tesis bulunamadı."
+                            : "Tüm tesislerde ilgili atama şartları mevzuata uygun şekilde karşılanmıştır."}
+                        </p>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -259,6 +443,9 @@ export function ResourceGapDialog({ open, onOpenChange, title, data, type, onAss
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ŞEHİR DETAY RAPORU DİYALOĞU
+// ─────────────────────────────────────────────────────────────────────────────
 interface CityDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -267,125 +454,250 @@ interface CityDetailDialogProps {
 }
 
 export function CityDetailDialog({ open, onOpenChange, cityName, data }: CityDetailDialogProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dangerFilter, setDangerFilter] = useState<string>("all");
+  const [selectedDistrict, setSelectedDistrict] = useState<string>("all");
+
   if (!data) return null;
 
-  const maxFacilityCount = Math.max(...Object.values(data.districts).map((d: any) => d.count));
+  const districts = data.districts || {};
+  const districtNames = Object.keys(districts);
+  const maxFacilityCount = Math.max(...Object.values(districts).map((d: any) => d.count), 1);
+
+  // Collect all facilities with their district name
+  const allFacilities = useMemo(() => {
+    const list: any[] = [];
+    Object.entries(districts).forEach(([district, distData]: any) => {
+      (distData.facilities || []).forEach((f: any) => {
+        list.push({ ...f, district });
+      });
+    });
+    return list;
+  }, [districts]);
+
+  const filteredFacilities = useMemo(() => {
+    return allFacilities.filter((f) => {
+      const matchesSearch = f.name?.toLowerCase().includes(searchQuery.toLowerCase());
+      if (!matchesSearch) return false;
+
+      if (dangerFilter !== "all" && f.dangerClass !== dangerFilter) return false;
+      if (selectedDistrict !== "all" && f.district !== selectedDistrict) return false;
+
+      return true;
+    });
+  }, [allFacilities, searchQuery, dangerFilter, selectedDistrict]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-7xl w-[95vw] h-[85vh] p-0 overflow-hidden border-none shadow-lg rounded-xl flex flex-col">
-        <DialogHeader className="px-10 py-10 bg-slate-900 text-white shrink-0 relative overflow-hidden">
-           <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
-              <MapPin className="w-32 h-32" />
-           </div>
-           <div className="flex items-center gap-6 relative">
-             <div className="p-4 bg-primary/10 backdrop-blur-md rounded-lg border border-white/10">
-               <MapPin className="w-8 h-8 text-primary" />
-             </div>
-             <div>
-               <DialogTitle className="text-3xl font-black tracking-tight uppercase">
-                 <span className="text-primary">{cityName}</span> Portföy Raporu
-               </DialogTitle>
-               <DialogDescription className="text-white/40 text-xs mt-1 font-bold uppercase tracking-widest">
-                 Bölgesel Dağılım ve Operasyonel Yoğunluk Analizi
-               </DialogDescription>
-             </div>
-           </div>
-        </DialogHeader>
-
-        <div className="flex-1 overflow-y-auto p-10 bg-slate-50/30 dark:bg-slate-950 custom-scrollbar">
-          <div className="space-y-16">
-            {/* Heatmap Grid */}
-            <div className="space-y-8">
-               <div className="flex items-center justify-between border-b border-border pb-4">
-                 <div className="flex items-center gap-3">
-                    <LayoutGrid className="w-5 h-5 text-primary" />
-                    <h3 className="text-xl font-black tracking-tight text-foreground uppercase">İlçe Bazlı Yoğunluk</h3>
-                 </div>
-                 <Badge className="bg-slate-100 text-slate-500 font-bold uppercase text-[10px] tracking-widest px-4 h-7">{Object.keys(data.districts).length} İLÇE ANALİZİ</Badge>
-               </div>
-               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                 {Object.entries(data.districts).map(([district, distData]: any) => {
-                    const intensity = (distData.count / maxFacilityCount) * 100;
-                    return (
-                      <div 
-                        key={district} 
-                        className="relative group p-6 rounded-xl border transition-all hover:-translate-y-1 hover:shadow-xl cursor-default overflow-hidden bg-card text-card-foreground"
-                        style={{ 
-                          borderColor: intensity > 50 ? 'hsl(var(--primary) / 0.3)' : 'hsl(var(--slate-100))'
-                        }}
-                      >
-                         <div className="absolute inset-0 opacity-[0.03] transition-opacity group-hover:opacity-[0.08]" 
-                              style={{ backgroundColor: 'hsl(var(--primary))' }} />
-                         
-                         <div className="relative z-10">
-                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-primary transition-colors">{district}</p>
-                           <div className="flex items-baseline gap-1 mt-2">
-                             <span className="text-3xl font-black tracking-tighter text-foreground">{distData.count}</span>
-                             <span className="text-[10px] font-bold text-slate-400 uppercase">Tesis</span>
-                           </div>
-                         </div>
-                         <div className="absolute -bottom-3 -right-3 opacity-5 group-hover:opacity-10 transition-all group-hover:rotate-12">
-                            <Building2 className="w-16 h-16" />
-                         </div>
-                      </div>
-                    );
-                 })}
-               </div>
+      <DialogContent className="sm:max-w-6xl w-[96vw] max-h-[88vh] p-0 overflow-hidden rounded-xl border border-border bg-card flex flex-col shadow-lg">
+        {/* Header */}
+        <DialogHeader className="p-6 bg-muted/40 border-b border-border shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                <MapPin className="w-5 h-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold tracking-tight text-foreground uppercase">
+                  <span className="text-primary">{cityName}</span> Portföy Raporu
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  İlçe bazlı tesis yoğunluğu ve operasyonel tesis detayları
+                </DialogDescription>
+              </div>
             </div>
 
-            {/* List Detail */}
-            <div className="space-y-10">
-              <div className="flex items-center gap-3 border-b border-border pb-4">
-                 <Building2 className="w-5 h-5 text-primary" />
-                 <h3 className="text-xl font-black tracking-tight text-foreground uppercase">Operasyonel Tesis Listesi</h3>
-               </div>
-              {Object.entries(data.districts).map(([district, distData]: any) => (
-                <div key={district} className="space-y-4">
-                  <div className="flex justify-between items-center bg-slate-900 dark:bg-slate-800 p-3 rounded-lg px-8 shadow-lg">
-                    <h3 className="font-black text-xs uppercase tracking-[0.2em] text-white flex items-center gap-4">
-                      <div className="w-1.5 h-6 bg-primary rounded-full"></div>
-                      {district}
-                    </h3>
-                    <Badge className="bg-primary/20 text-primary border-none font-black text-[10px] px-4 h-6 tracking-widest">
-                      {distData.count} AKTİF KAYIT
-                    </Badge>
-                  </div>
-                  
-                  <div className="rounded-lg border border-border bg-card text-card-foreground shadow-sm overflow-hidden">
-                    <Table>
-                      <TableHeader className="bg-muted border-b">
-                        <TableRow className="hover:bg-transparent">
-                          <TableHead className="py-4 px-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tesis Tanımı</TableHead>
-                          <TableHead className="py-4 px-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tehlike Sınıfı</TableHead>
-                          <TableHead className="py-4 px-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Çalışan</TableHead>
-                          <TableHead className="py-4 px-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Aksiyon</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {distData.facilities.map((f: any) => (
-                          <TableRow key={f.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b last:border-0">
-                            <TableCell className="py-5 px-8 font-bold text-foreground">{f.name}</TableCell>
-                            <TableCell className="py-5 px-8">
-                              <Badge variant="outline" className="rounded-lg px-3 h-6 text-[10px] bg-muted font-bold border-border uppercase">
-                                {f.dangerClass}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="py-5 px-8 text-center text-xs font-bold text-primary">{f.employeeCount} PERSONEL</TableCell>
-                            <TableCell className="py-5 px-8 text-right">
-                              <Button asChild variant="ghost" className="h-9 px-6 hover:bg-primary/10 hover:text-primary rounded-xl transition-all">
-                                <Link to={`/panel/facilities/${f.id}`} className="flex items-center gap-2 font-black text-[10px] uppercase tracking-tighter">
-                                  LİFE CARD GÖRÜNTÜLE <ArrowRight className="w-3.5 h-3.5" />
-                                </Link>
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="h-7 px-3 text-xs font-semibold bg-background border-border">
+                {data.count || 0} Aktif Tesis
+              </Badge>
+              <Badge variant="secondary" className="h-7 px-3 text-xs font-semibold">
+                {districtNames.length} İlçe
+              </Badge>
+            </div>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="flex flex-wrap items-center gap-2.5 mt-4 pt-3 border-t border-border/50">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Tesis adı ile ara..."
+                className="pl-8 h-8 text-xs bg-background rounded-lg border-border"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            <Select value={selectedDistrict} onValueChange={setSelectedDistrict}>
+              <SelectTrigger size="sm" className="h-8 min-w-[140px] text-xs bg-background rounded-lg border-border">
+                <SelectValue placeholder="İlçe Seç" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm İlçeler ({districtNames.length})</SelectItem>
+                {districtNames.map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {d} ({districts[d]?.count})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={dangerFilter} onValueChange={setDangerFilter}>
+              <SelectTrigger size="sm" className="h-8 min-w-[150px] text-xs bg-background rounded-lg border-border">
+                <SelectValue placeholder="Tehlike Sınıfı" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm Tehlike Sınıfları</SelectItem>
+                <SelectItem value="Çok Tehlikeli">Çok Tehlikeli</SelectItem>
+                <SelectItem value="Tehlikeli">Tehlikeli</SelectItem>
+                <SelectItem value="Az Tehlikeli">Az Tehlikeli</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {(searchQuery || dangerFilter !== "all" || selectedDistrict !== "all") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery("");
+                  setDangerFilter("all");
+                  setSelectedDistrict("all");
+                }}
+                className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
+              >
+                <X className="w-3.5 h-3.5" /> Filtreyi Temizle
+              </Button>
+            )}
+          </div>
+        </DialogHeader>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-muted/10 space-y-6">
+          {/* District Density Cards */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <LayoutGrid className="w-3.5 h-3.5 text-primary" />
+                İlçe Yoğunluk Haritası
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+              {Object.entries(districts).map(([district, distData]: any) => {
+                const isSelected = selectedDistrict === district;
+                return (
+                  <button
+                    key={district}
+                    type="button"
+                    onClick={() => setSelectedDistrict(isSelected ? "all" : district)}
+                    className={cn(
+                      "p-3 rounded-lg border text-left transition-all duration-200 cursor-pointer relative overflow-hidden",
+                      isSelected
+                        ? "border-primary bg-primary/10 shadow-xs ring-1 ring-primary"
+                        : "border-border/70 bg-card hover:border-primary/50 hover:bg-muted/40"
+                    )}
+                  >
+                    <div className="flex justify-between items-start">
+                      <span className="text-[11px] font-semibold text-muted-foreground uppercase truncate">
+                        {district}
+                      </span>
+                      <span className="text-xs font-bold text-foreground">
+                        {distData.count}
+                      </span>
+                    </div>
+                    <div className="w-full h-1 bg-muted rounded-full mt-2 overflow-hidden">
+                      <div
+                        className="h-full bg-primary"
+                        style={{ width: `${Math.round((distData.count / maxFacilityCount) * 100)}%` }}
+                      />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Facility List Table */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-primary" />
+                Tesis Listesi ({filteredFacilities.length})
+              </h3>
+            </div>
+
+            <div className="rounded-lg border border-border bg-card shadow-xs overflow-hidden">
+              <Table>
+                <TableHeader className="bg-muted/70 sticky top-0 z-10 border-b border-border">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="py-3 px-4 text-xs font-semibold text-muted-foreground">Tesis Adı</TableHead>
+                    <TableHead className="py-3 px-4 text-xs font-semibold text-muted-foreground">İlçe</TableHead>
+                    <TableHead className="py-3 px-4 text-xs font-semibold text-muted-foreground">Tehlike Sınıfı</TableHead>
+                    <TableHead className="py-3 px-4 text-xs font-semibold text-muted-foreground text-center">Çalışan</TableHead>
+                    <TableHead className="py-3 px-4 text-xs font-semibold text-muted-foreground text-right">Aksiyon</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredFacilities.map((f: any) => (
+                    <TableRow key={f.id} className="hover:bg-muted/40 transition-colors border-b border-border/50 last:border-0">
+                      <TableCell className="py-3.5 px-4 font-semibold text-sm text-foreground">
+                        {f.name}
+                      </TableCell>
+                      <TableCell className="py-3.5 px-4 text-xs text-muted-foreground font-medium">
+                        {f.district}
+                      </TableCell>
+                      <TableCell className="py-3.5 px-4">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[10px] h-5 px-1.5 font-bold uppercase",
+                            f.dangerClass === "Çok Tehlikeli"
+                              ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20"
+                              : f.dangerClass === "Tehlikeli"
+                              ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
+                              : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
+                          )}
+                        >
+                          {f.dangerClass}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="py-3.5 px-4 text-center text-xs font-semibold text-foreground">
+                        {f.employeeCount} Personel
+                      </TableCell>
+                      <TableCell className="py-3.5 px-4 text-right">
+                        <Button asChild variant="outline" size="sm" className="h-7 px-2.5 text-xs rounded-lg gap-1">
+                          <Link to={`/panel/facilities/${f.id}`}>
+                            Life Card <ArrowRight className="w-3 h-3" />
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+
+                  {filteredFacilities.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-16 text-muted-foreground">
+                        <div className="flex flex-col items-center gap-2">
+                          <Building2 className="w-10 h-10 opacity-30 text-muted-foreground" />
+                          <p className="text-sm font-semibold text-foreground">Tesis Bulunamadı</p>
+                          <p className="text-xs text-muted-foreground">
+                            Arama kriterlerine uygun tesis kaydı bulunamadı.
+                          </p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </div>
         </div>

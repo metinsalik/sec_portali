@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { Bot, Save, AlertCircle, Users, Trash2 } from 'lucide-react';
+import { Bot, Save, AlertCircle, Users, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
 
 interface TelegramSettings {
@@ -72,35 +74,46 @@ const TelegramSettingsPage = () => {
   };
 
   if (isLoading) {
-    return <div className="p-8 text-center text-muted-foreground">Yükleniyor...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div>
-        <h3 className="text-2xl font-bold tracking-tight">Telegram Bot Ayarları</h3>
-        <p className="text-muted-foreground">
-          Sisteme bağlı olan Telegram botunu yönetin. Kullanıcılar bu bot üzerinden bildirim alabilir.
-        </p>
+    <div className="space-y-6 w-full animate-in fade-in duration-200 pb-12">
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Bot className="w-4 h-4" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">Telegram Bot Ayarları</h1>
+            <p className="text-xs text-muted-foreground">
+              Sisteme bağlı olan Telegram botunu yönetin. Kullanıcılar bu bot üzerinden bildirim alabilir.
+            </p>
+          </div>
+        </div>
       </div>
 
       <form onSubmit={handleSave}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bot className="w-5 h-5 text-blue-500" />
-              Bot Konfigürasyonu
-            </CardTitle>
-            <CardDescription>
-              BotFather üzerinden aldığınız token ve bot adını buraya girin.
+        <Card className="shadow-xs border-border/60 rounded-lg">
+          <CardHeader className="pb-3 border-b border-border/40">
+            <div className="flex items-center gap-2 text-foreground font-semibold">
+              <Bot className="w-4 h-4 text-primary" />
+              <CardTitle className="text-sm font-semibold">Bot Konfigürasyonu</CardTitle>
+            </div>
+            <CardDescription className="text-xs">
+              BotFather üzerinden aldığınız API token ve bot kullanıcı adını girin.
             </CardDescription>
           </CardHeader>
           
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
+          <CardContent className="space-y-4 pt-4">
+            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-md border border-border/60">
               <div className="space-y-0.5">
-                <Label>Telegram Botu Aktif</Label>
-                <p className="text-sm text-muted-foreground">
+                <Label className="text-xs font-medium">Telegram Botu Aktif</Label>
+                <p className="text-[11px] text-muted-foreground">
                   Botu geçici olarak devre dışı bırakmak için kapatın.
                 </p>
               </div>
@@ -111,8 +124,8 @@ const TelegramSettingsPage = () => {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="botToken">Bot Token</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="botToken" className="text-xs font-medium">Bot Token</Label>
                 <Input
                   id="botToken"
                   type="password"
@@ -120,77 +133,80 @@ const TelegramSettingsPage = () => {
                   value={formData.botToken}
                   onChange={(e) => setFormData({ ...formData, botToken: e.target.value })}
                   required
+                  className="h-9 text-xs rounded-md"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="botUsername">Bot Kullanıcı Adı</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="botUsername" className="text-xs font-medium">Bot Kullanıcı Adı</Label>
                 <Input
                   id="botUsername"
                   placeholder="SecPortaliBot"
                   value={formData.botUsername}
                   onChange={(e) => setFormData({ ...formData, botUsername: e.target.value })}
                   required
+                  className="h-9 text-xs rounded-md"
                 />
               </div>
             </div>
 
-            <div className="p-4 bg-blue-50/50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded-lg border border-blue-200 dark:border-blue-800 flex gap-3 text-sm">
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              <p>
-                <strong>Not:</strong> Kaydet butonuna bastıktan sonra arka planda bot servisi yeniden başlatılacaktır. Eğer bilgiler doğruysa saniyeler içerisinde sisteminiz Telegram bildirimlerine hazır hale gelecektir.
-              </p>
-            </div>
+            <Alert variant="default" className="bg-muted/40 border-border/60 rounded-lg">
+              <AlertCircle className="h-4 w-4 text-primary" />
+              <AlertTitle className="text-xs font-semibold">Önemli Not</AlertTitle>
+              <AlertDescription className="text-[11px] text-muted-foreground leading-relaxed mt-1">
+                Kaydet butonuna bastıktan sonra arka planda bot servisi yeniden başlatılacaktır. Bilgiler doğruysa sisteminiz anında Telegram bildirimlerine hazır hale gelecektir.
+              </AlertDescription>
+            </Alert>
           </CardContent>
 
-          <CardFooter className="bg-muted/50 py-4 border-t px-6">
-            <div className="flex justify-end w-full">
-              <Button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
-                {!updateMutation.isPending && <Save className="w-4 h-4 ml-2" />}
-              </Button>
-            </div>
+          <CardFooter className="bg-muted/10 py-3 border-t border-border/40 px-6 flex justify-end">
+            <Button type="submit" disabled={updateMutation.isPending} className="h-9 text-xs px-4 rounded-md gap-2">
+              {updateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              {updateMutation.isPending ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
+            </Button>
           </CardFooter>
         </Card>
       </form>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-indigo-500" />
-            Bağlı Kullanıcılar
-          </CardTitle>
-          <CardDescription>
+      <Card className="shadow-xs border-border/60 rounded-lg">
+        <CardHeader className="pb-3 border-b border-border/40">
+          <div className="flex items-center gap-2 text-foreground font-semibold">
+            <Users className="w-4 h-4 text-primary" />
+            <CardTitle className="text-sm font-semibold">Bağlı Kullanıcılar</CardTitle>
+          </div>
+          <CardDescription className="text-xs">
             Telegram hesabını sisteme bağlamış olan kullanıcıların listesi.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4">
           {usersLoading ? (
-            <div className="text-center p-4 text-muted-foreground">Kullanıcılar yükleniyor...</div>
+            <div className="flex items-center justify-center p-8">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
           ) : !connectedUsers || connectedUsers.length === 0 ? (
-            <div className="text-center p-8 bg-muted/20 border rounded-lg border-dashed">
-              <p className="text-muted-foreground">Henüz Telegram'ı bağlamış bir kullanıcı yok.</p>
+            <div className="text-center p-8 bg-muted/20 border border-dashed border-border/60 rounded-md">
+              <p className="text-xs text-muted-foreground">Henüz Telegram'ı bağlamış bir kullanıcı yok.</p>
             </div>
           ) : (
-            <div className="border rounded-md">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 border-b">
-                  <tr>
-                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">Kullanıcı Adı</th>
-                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">Ad Soyad</th>
-                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">Chat ID</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {connectedUsers.map((user: any) => (
-                    <tr key={user.username} className="border-b last:border-0 hover:bg-muted/30">
-                      <td className="p-4">{user.username}</td>
-                      <td className="p-4">{user.fullName}</td>
-                      <td className="p-4 font-mono text-xs">{user.telegramChatId}</td>
-                    </tr>
+            <div className="border border-border/60 rounded-md overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40 hover:bg-muted/40">
+                    <TableHead className="h-9 text-xs font-medium">Kullanıcı Adı</TableHead>
+                    <TableHead className="h-9 text-xs font-medium">Ad Soyad</TableHead>
+                    <TableHead className="h-9 text-xs font-medium">Chat ID</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {connectedUsers.map((u: any) => (
+                    <TableRow key={u.username} className="hover:bg-muted/30">
+                      <TableCell className="py-2.5 text-xs font-medium">{u.username}</TableCell>
+                      <TableCell className="py-2.5 text-xs text-muted-foreground">{u.fullName}</TableCell>
+                      <TableCell className="py-2.5 font-mono text-xs text-muted-foreground">{u.telegramChatId}</TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>

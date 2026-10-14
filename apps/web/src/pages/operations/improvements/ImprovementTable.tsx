@@ -128,12 +128,87 @@ export const ImprovementTable: React.FC<Props> = ({
   const [filterPos, setFilterPos] = useState<{ top: number; left: number } | null>(null);
 
   const filterPopoverRef = useRef<HTMLDivElement>(null);
+  const activeButtonElRef = useRef<HTMLButtonElement | null>(null);
+
+  // Akıllı Konum Hesaplama (Üst / Alt / Ekran Sınırları)
+  const calculateFilterPosition = (targetEl: HTMLButtonElement, popoverEl?: HTMLElement | null) => {
+    const rect = targetEl.getBoundingClientRect();
+    const popoverWidth = popoverEl?.offsetWidth || 320;
+    const popoverHeight = popoverEl?.offsetHeight || 440;
+
+    // Yatay Konumlandırma
+    let left = rect.left;
+    if (left + popoverWidth > window.innerWidth - 16) {
+      left = Math.max(16, window.innerWidth - popoverWidth - 16);
+    }
+    if (left < 16) left = 16;
+
+    // Dikey Konumlandırma (Akıllı Flip / Yukarı ya da Aşağı Açılma)
+    const spaceBelow = window.innerHeight - rect.bottom - 12;
+    const spaceAbove = rect.top - 12;
+
+    let top: number;
+    if (spaceBelow >= popoverHeight) {
+      // Altta yeterli alan var -> Aşağıya aç
+      top = rect.bottom + 6;
+    } else if (spaceAbove >= popoverHeight) {
+      // Altta alan yetersiz, üstte yeterli alan var -> Üste aç
+      top = rect.top - popoverHeight - 6;
+    } else if (spaceBelow >= spaceAbove) {
+      // İki tarafta da tam sığmıyor ama alt taraf daha geniş
+      top = Math.max(12, window.innerHeight - popoverHeight - 12);
+    } else {
+      // Üst taraf daha geniş
+      top = Math.max(12, 12);
+    }
+
+    return { top, left };
+  };
+
+  // Popover açıldığında ve pencere/tablo kaydırıldığında konumu anlık güncelle
+  useEffect(() => {
+    if (!activeFilterCol || !activeButtonElRef.current) return;
+
+    const updatePosition = () => {
+      if (!activeButtonElRef.current) return;
+      const targetEl = activeButtonElRef.current;
+      const rect = targetEl.getBoundingClientRect();
+
+      // Buton tamamen ekran dışındaysa kapat
+      if (rect.bottom < 0 || rect.top > window.innerHeight) {
+        setActiveFilterCol(null);
+        setFilterPos(null);
+        return;
+      }
+
+      const pos = calculateFilterPosition(targetEl, filterPopoverRef.current);
+      setFilterPos(pos);
+    };
+
+    updatePosition();
+    const frameId = requestAnimationFrame(updatePosition);
+
+    window.addEventListener('resize', updatePosition);
+    // useCapture: true sayesinde tablonun iç scroll hareketleri de yakalanır
+    window.addEventListener('scroll', updatePosition, true);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [activeFilterCol]);
 
   // Dışarı tıklandığında popover kapat
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (filterPopoverRef.current && !filterPopoverRef.current.contains(e.target as Node)) {
+      if (
+        filterPopoverRef.current && 
+        !filterPopoverRef.current.contains(e.target as Node) &&
+        !activeButtonElRef.current?.contains(e.target as Node)
+      ) {
         setActiveFilterCol(null);
+        setFilterPos(null);
       }
     };
     if (activeFilterCol) {
@@ -251,18 +326,14 @@ export const ImprovementTable: React.FC<Props> = ({
     if (activeFilterCol === colKey) {
       setActiveFilterCol(null);
       setFilterPos(null);
+      activeButtonElRef.current = null;
       return;
     }
 
-    const rect = e.currentTarget.getBoundingClientRect();
-    const popoverWidth = 320; // w-80 (20rem = 320px)
-    let left = rect.left;
-    if (left + popoverWidth > window.innerWidth - 16) {
-      left = Math.max(16, window.innerWidth - popoverWidth - 16);
-    }
-    const top = rect.bottom + 6;
-
-    setFilterPos({ top, left });
+    const buttonEl = e.currentTarget;
+    activeButtonElRef.current = buttonEl;
+    const initialPos = calculateFilterPosition(buttonEl);
+    setFilterPos(initialPos);
 
     const currentFilter = columnFilters[colKey];
     const uniqueVals = getUniqueColumnValues(colKey);
@@ -636,15 +707,15 @@ export const ImprovementTable: React.FC<Props> = ({
             position: 'fixed',
             top: `${filterPos.top}px`,
             left: `${filterPos.left}px`,
-            zIndex: 60,
+            zIndex: 9999,
           }}
-          className="bg-card text-card-foreground border border-border rounded-xl shadow-2xl w-80 p-3.5 space-y-3 animate-in fade-in zoom-in-95 duration-150"
+          className="bg-card text-card-foreground border border-border/80 rounded-lg shadow-2xl w-80 p-3.5 flex flex-col max-h-[min(520px,calc(100vh-24px))] animate-in fade-in zoom-in-95 duration-150"
         >
-          {/* Popover Header */}
-          <div className="flex items-center justify-between border-b pb-2">
+          {/* Popover Header (Sabit - shrink-0) */}
+          <div className="flex items-center justify-between border-b pb-2 shrink-0">
             <div className="flex items-center gap-1.5 min-w-0 pr-2">
               <Filter className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span className="text-xs font-bold text-foreground truncate">
+              <span className="text-xs font-semibold text-foreground truncate">
                 {getColHeaderName(activeFilterCol)}
               </span>
             </div>
@@ -655,17 +726,18 @@ export const ImprovementTable: React.FC<Props> = ({
                   type="button"
                   onClick={() => handleClearColumnFilter(activeFilterCol)}
                   title="Filtreyi Temizle"
-                  className="text-[11px] text-red-600 dark:text-red-400 hover:underline px-1.5 py-0.5 rounded font-medium"
+                  className="text-[11px] text-destructive hover:underline px-1.5 py-0.5 rounded font-medium"
                 >
                   Temizle
                 </button>
               )}
               <button 
+                type="button"
                 onClick={() => {
                   setActiveFilterCol(null);
                   setFilterPos(null);
                 }}
-                className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted"
+                className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted"
                 title="Kapat"
               >
                 <X className="w-4 h-4" />
@@ -673,119 +745,127 @@ export const ImprovementTable: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Sıralama Hızlı Seçenekleri */}
-          <div className="space-y-1 border-b pb-2 text-xs">
-            <button
-              type="button"
-              onClick={() => {
-                setSortField(activeFilterCol);
-                setSortOrder('asc');
-                setActiveFilterCol(null);
-              }}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted text-foreground text-left transition-colors"
-            >
-              <ArrowUp className="w-3.5 h-3.5 text-primary" />
-              <span>Artan sırala (A'dan Z'ye)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSortField(activeFilterCol);
-                setSortOrder('desc');
-                setActiveFilterCol(null);
-              }}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted text-foreground text-left transition-colors"
-            >
-              <ArrowDown className="w-3.5 h-3.5 text-primary" />
-              <span>Azalan sırala (Z'den A'ya)</span>
-            </button>
-          </div>
+          {/* Popover Scrollable Body (flex-1 overflow-y-auto space-y-3 min-h-0 py-2 pr-1) */}
+          <div className="flex-1 overflow-y-auto space-y-3 min-h-0 py-1 pr-1">
+            {/* Sıralama Hızlı Seçenekleri */}
+            <div className="space-y-1 border-b pb-2 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setSortField(activeFilterCol);
+                  setSortOrder('asc');
+                  setActiveFilterCol(null);
+                  setFilterPos(null);
+                }}
+                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted text-foreground text-left transition-colors font-medium"
+              >
+                <ArrowUp className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span>Artan sırala (A'dan Z'ye)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSortField(activeFilterCol);
+                  setSortOrder('desc');
+                  setActiveFilterCol(null);
+                  setFilterPos(null);
+                }}
+                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted text-foreground text-left transition-colors font-medium"
+              >
+                <ArrowDown className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span>Azalan sırala (Z'den A'ya)</span>
+              </button>
+            </div>
 
-          {/* Metin İçerir Araması */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold text-muted-foreground block">
-              Metin içerir
-            </label>
-            <input
-              type="text"
-              value={popoverTextFilter}
-              onChange={(e) => setPopoverTextFilter(e.target.value)}
-              placeholder="Arama yapın..."
-              className="w-full h-8 px-2.5 rounded-lg border bg-background text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
+            {/* Metin İçerir Araması */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-muted-foreground block">
+                Metin içerir
+              </label>
+              <input
+                type="text"
+                value={popoverTextFilter}
+                onChange={(e) => setPopoverTextFilter(e.target.value)}
+                placeholder="Arama yapın..."
+                className="w-full h-8 px-2.5 rounded-md border border-input bg-background text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
 
-          {/* Değerlerde Arama & Checkbox Listesi */}
-          <div className="space-y-1.5">
-            <input
-              type="text"
-              value={popoverSearch}
-              onChange={(e) => setPopoverSearch(e.target.value)}
-              placeholder="Seçenekleri filtrele..."
-              className="w-full h-8 px-2.5 rounded-lg border bg-background text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
-            />
+            {/* Değerlerde Arama & Checkbox Listesi */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-medium text-muted-foreground block">
+                Seçenek filtresi
+              </label>
+              <input
+                type="text"
+                value={popoverSearch}
+                onChange={(e) => setPopoverSearch(e.target.value)}
+                placeholder="Seçenekleri filtrele..."
+                className="w-full h-8 px-2.5 rounded-md border border-input bg-background text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
+              />
 
-            {/* Değerler Listesi & Checkbox */}
-            {(() => {
-              const allVals = getUniqueColumnValues(activeFilterCol);
-              const filteredVals = allVals.filter(v => 
-                v.toLowerCase().includes(popoverSearch.toLowerCase())
-              );
-              const isAllSelected = filteredVals.length > 0 && filteredVals.every(v => popoverSelectedValues.has(v));
+              {/* Değerler Listesi & Checkbox */}
+              {(() => {
+                const allVals = getUniqueColumnValues(activeFilterCol);
+                const filteredVals = allVals.filter(v => 
+                  v.toLowerCase().includes(popoverSearch.toLowerCase())
+                );
+                const isAllSelected = filteredVals.length > 0 && filteredVals.every(v => popoverSelectedValues.has(v));
 
-              return (
-                <div className="space-y-1">
-                  {/* Tümünü Seç Checkbox */}
-                  <label className="flex items-center gap-2 px-2 py-1 rounded hover:bg-muted/60 cursor-pointer text-xs font-semibold text-foreground border-b pb-1.5 select-none">
-                    <input
-                      type="checkbox"
-                      checked={isAllSelected}
-                      onChange={() => toggleSelectAll(filteredVals)}
-                      className="rounded border-border text-primary focus:ring-primary w-3.5 h-3.5"
-                    />
-                    <span>Tümünü Seç ({filteredVals.length})</span>
-                  </label>
+                return (
+                  <div className="space-y-1 border rounded-md p-1.5 bg-muted/20">
+                    {/* Tümünü Seç Checkbox */}
+                    <label className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-muted/60 cursor-pointer text-xs font-semibold text-foreground border-b pb-1 select-none">
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        onChange={() => toggleSelectAll(filteredVals)}
+                        className="rounded border-border text-primary focus:ring-primary w-3.5 h-3.5"
+                      />
+                      <span>Tümünü Seç ({filteredVals.length})</span>
+                    </label>
 
-                  {/* Değer Elemanları */}
-                  <div className="max-h-40 overflow-y-auto space-y-0.5 pr-1">
-                    {filteredVals.length === 0 ? (
-                      <div className="p-2 text-center text-xs text-muted-foreground">
-                        Değer bulunamadı
-                      </div>
-                    ) : (
-                      filteredVals.map(val => {
-                        const isChecked = popoverSelectedValues.has(val);
-                        return (
-                          <label
-                            key={val}
-                            className="flex items-center gap-2 px-2 py-1 rounded hover:bg-muted cursor-pointer text-xs text-foreground truncate select-none"
-                            title={val}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => toggleValueSelect(val)}
-                              className="rounded border-border text-primary focus:ring-primary w-3.5 h-3.5 shrink-0"
-                            />
-                            <span className="truncate">{val}</span>
-                          </label>
-                        );
-                      })
-                    )}
+                    {/* Değer Elemanları */}
+                    <div className="max-h-36 overflow-y-auto space-y-0.5 pr-1">
+                      {filteredVals.length === 0 ? (
+                        <div className="p-2 text-center text-xs text-muted-foreground">
+                          Değer bulunamadı
+                        </div>
+                      ) : (
+                        filteredVals.map(val => {
+                          const isChecked = popoverSelectedValues.has(val);
+                          return (
+                            <label
+                              key={val}
+                              className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-muted cursor-pointer text-xs text-foreground truncate select-none"
+                              title={val}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => toggleValueSelect(val)}
+                                className="rounded border-border text-primary focus:ring-primary w-3.5 h-3.5 shrink-0"
+                              />
+                              <span className="truncate">{val}</span>
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })()}
+                );
+              })()}
+            </div>
           </div>
 
-          {/* Popover Butonları */}
-          <div className="flex items-center justify-between pt-2 border-t">
+          {/* Popover Butonları (Sabit - shrink-0) */}
+          <div className="flex items-center justify-between pt-2.5 border-t shrink-0 mt-auto">
             {columnFilters[activeFilterCol] ? (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => handleClearColumnFilter(activeFilterCol)}
-                className="h-8 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 p-1.5"
+                className="h-8 text-xs text-destructive hover:bg-destructive/10 p-1.5 rounded-md"
               >
                 Filtreyi Kaldır
               </Button>
@@ -799,14 +879,14 @@ export const ImprovementTable: React.FC<Props> = ({
                   setActiveFilterCol(null);
                   setFilterPos(null);
                 }}
-                className="h-8 text-xs"
+                className="h-8 text-xs rounded-md"
               >
                 Vazgeç
               </Button>
               <Button
                 size="sm"
                 onClick={handleApplyFilter}
-                className="h-8 text-xs bg-primary text-primary-foreground hover:bg-primary/90"
+                className="h-8 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 Uygula
               </Button>

@@ -13,6 +13,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Building2, Settings, User, LogOut, ArrowRight,
+  ShieldCheck, Wrench, HardHat, Flame, Building, 
+  Compass, Activity, CheckCircle2, AlertCircle, LayoutGrid
+} from 'lucide-react';
 
 export default function PortalPage() {
   const { user, logout } = useAuth();
@@ -25,7 +33,7 @@ export default function PortalPage() {
       const res = await api.get('/auth/active-count');
       return res.json();
     },
-    refetchInterval: 15000, // 15 saniyede bir güncelle
+    refetchInterval: 15000,
   });
   const activeCount = activeData?.count ?? 0;
 
@@ -34,102 +42,78 @@ export default function PortalPage() {
 
   // Kullanıcı isminin baş harflerini alma
   const getInitials = (name: string) => {
-    if (!name) return 'MS';
+    if (!name) return 'U';
     const parts = name.trim().split(/\s+/);
     if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
-  const userInitials = getInitials(user?.fullName || user?.username || 'Metin Salık');
+  const userInitials = getInitials(user?.fullName || user?.username || 'Kullanıcı');
 
   return (
-    <div className="min-h-screen flex flex-col font-sans bg-[#f8f9ff] dark:bg-[#171c20] bg-[radial-gradient(#d3e4fe_1px,transparent_1px)] dark:bg-[radial-gradient(#2c3135_1px,transparent_1px)] bg-[size:32px_32px] text-[#171c20] dark:text-[#edf1f6] transition-colors duration-300">
-
-      {/* Desktop Header (hidden on mobile) */}
-      <header className="hidden md:block bg-white dark:bg-[#171c20] border-b border-[#c2c7cc] dark:border-[#73787c] shadow-sm sticky top-0 z-50">
-        <div className="flex justify-between items-center h-16 px-6 w-full max-w-[1440px] mx-auto">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center justify-center h-10">
-              <img src="/mlpcare.jpg" alt="MLP Care Logo" className="h-full object-contain rounded-md" />
+    <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-200">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b border-border/60">
+        <div className="flex justify-between items-center h-14 px-4 sm:px-6 lg:px-8 w-full max-w-[1600px] mx-auto">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+              <img src="/mlpcare.jpg" alt="MLP Care Logo" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-2xl font-bold text-[#0051d5] dark:text-[#b4c5ff]">HSE Portalı</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-semibold tracking-tight text-foreground">HSE Portalı</h1>
+              <Badge variant="outline" className="hidden sm:inline-flex text-[10px] font-normal rounded-md border-border/60">
+                Kurumsal Portal
+              </Badge>
+            </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 text-[#42474b] dark:text-[#949899] text-sm">
-              <span>Hoş geldin, <span className="font-bold text-[#171c20] dark:text-[#edf1f6]">{user?.fullName || user?.username || 'Metin Salık'}</span></span>
-            </div>
-
+          <div className="flex items-center gap-2 sm:gap-3">
             {hasAdminAccess && (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => navigate('/settings')}
-                className="flex items-center gap-1.5 text-[#42474b] dark:text-[#949899] hover:text-[#0051d5] dark:hover:text-[#b4c5ff] transition-colors text-sm font-medium active:scale-95 duration-150"
+                className="hidden md:flex items-center gap-1.5 h-8 text-xs rounded-md text-muted-foreground hover:text-foreground"
               >
-                <span className="material-symbols-outlined text-[18px]">settings</span>
+                <Settings className="w-3.5 h-3.5" />
                 <span>Sistem Ayarları</span>
-              </button>
+              </Button>
             )}
 
-            <div className="flex items-center gap-3">
-              <ThemeToggle />
-              <NotificationBell />
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="px-4 py-2 border border-[#c2c7cc] dark:border-[#73787c] rounded-lg text-sm font-medium text-[#171c20] dark:text-[#edf1f6] hover:bg-[#f0f4f9] dark:hover:bg-[#181c1d] transition-all active:scale-95">
-                    Hesabım
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel>{user?.fullName || user?.username || 'Metin Salık'}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
-                      <span className="material-symbols-outlined text-[18px] mr-2">person</span>
-                      Profil
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={logout} className="text-red-600 cursor-pointer">
-                    <span className="material-symbols-outlined text-[18px] mr-2">logout</span>
-                    Çıkış Yap
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Mobile Header (hidden on desktop) */}
-      <header className="md:hidden sticky top-0 z-50 bg-white dark:bg-[#171c20] border-b border-[#c2c7cc] dark:border-[#73787c] w-full">
-        <div className="flex justify-between items-center w-full px-4 py-4 max-w-[1440px] mx-auto">
-          <div className="flex items-center gap-2">
-            <img src="/mlpcare.jpg" alt="MLP Care Logo" className="h-8 object-contain rounded" />
-            <span className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] tracking-tight">HSE Portalı</span>
-          </div>
-
-          <div className="flex items-center gap-3">
             <ThemeToggle />
             <NotificationBell />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="h-10 w-10 rounded-full bg-[#346cef] text-white flex items-center justify-center font-bold cursor-pointer active:scale-95 transition-transform">
-                  {userInitials}
+                <button 
+                  className="flex items-center gap-2 h-8 px-2 rounded-md hover:bg-muted text-xs font-medium text-foreground transition-colors border border-border/60"
+                  title={user?.fullName || user?.username || ''}
+                >
+                  <div className="w-5 h-5 rounded bg-primary/10 text-primary flex items-center justify-center text-[10px] font-semibold">
+                    {userInitials}
+                  </div>
+                  <span className="hidden sm:inline-block max-w-[120px] truncate">
+                    {user?.fullName || user?.username || 'Hesabım'}
+                  </span>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>{user?.fullName || user?.username || 'Metin Salık'}</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-48 rounded-lg shadow-sm">
+                <DropdownMenuLabel className="text-xs font-semibold">{user?.fullName || user?.username || 'Kullanıcı'}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
-                    <span className="material-symbols-outlined text-[18px] mr-2">person</span>
+                  <DropdownMenuItem onClick={() => navigate('/profile')} className="text-xs cursor-pointer rounded-md">
+                    <User className="w-3.5 h-3.5 mr-2" />
                     Profil
                   </DropdownMenuItem>
+                  {hasAdminAccess && (
+                    <DropdownMenuItem onClick={() => navigate('/settings')} className="text-xs cursor-pointer rounded-md">
+                      <Settings className="w-3.5 h-3.5 mr-2" />
+                      Sistem Ayarları
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="text-red-600 cursor-pointer">
-                  <span className="material-symbols-outlined text-[18px] mr-2">logout</span>
+                <DropdownMenuItem onClick={logout} className="text-xs text-destructive focus:text-destructive cursor-pointer rounded-md">
+                  <LogOut className="w-3.5 h-3.5 mr-2" />
                   Çıkış Yap
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -139,360 +123,221 @@ export default function PortalPage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-6 py-8 md:py-10 flex flex-col pb-36 md:pb-10">
+      <main className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex flex-col justify-between">
+        <div className="space-y-6">
+          {/* Header Title Section */}
+          <div className="space-y-1">
+            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
+              Uygulamalar ve Yönetim Modülleri
+            </h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Yetkili olduğunuz iş sağlığı, güvenlik ve operasyon modüllerine doğrudan erişin.
+            </p>
+          </div>
 
-        {/* Header Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">Uygulamalar</h2>
-          <p className="text-[#42474b] dark:text-[#949899] text-base md:text-lg">Lütfen işlem yapmak istediğiniz modülü seçin.</p>
-        </div>
-
-        {/* Bento Grid layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-          {/* Card 1: Operasyon Yönetim Sistemi */}
-          {(hasAdminAccess || user?.modules?.includes('PANEL') || user?.modules?.includes('RENOVATION_REPORT') || user?.modules?.includes('FIRE_SAFETY_CONTROL') || user?.modules?.includes('FM200_TRACKING') || user?.modules?.includes('IMPROVEMENTS_TRACKING')) && (
-            <div
-              onClick={() => navigate('/operations-management')}
-              className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
-            >
-              {/* Mobile Card Layout */}
-              <div className="flex md:hidden items-start gap-4">
-                <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#e5eeff] dark:bg-[#0051d5]/20 flex items-center justify-center text-[#0051d5] dark:text-[#b4c5ff]">
-                  <span className="material-symbols-outlined text-[28px]">settings_suggest</span>
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">Operasyon Yönetim Sistemi</h2>
-                  <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
-                    İSG Atama Paneli ve Entegre Risk ve Güvenlik Denetimi modüllerine buradan erişebilirsiniz.
-                  </p>
-                  <div className="flex items-center gap-2 text-[#0051d5] dark:text-[#b4c5ff] text-sm font-medium group-hover:underline">
-                    Uygulamaya Git
-                    <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Desktop Card Layout */}
-              <div className="hidden md:flex flex-col justify-between h-full">
+          {/* Module Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {/* Card 1: Operasyon Yönetim Sistemi */}
+            {(hasAdminAccess || user?.modules?.includes('PANEL') || user?.modules?.includes('RENOVATION_REPORT') || user?.modules?.includes('FIRE_SAFETY_CONTROL') || user?.modules?.includes('FM200_TRACKING') || user?.modules?.includes('IMPROVEMENTS_TRACKING')) && (
+              <Card
+                onClick={() => navigate('/operations-management')}
+                className="group border border-border/60 hover:border-primary/50 shadow-xs hover:shadow-sm transition-all duration-200 rounded-lg p-5 flex flex-col justify-between cursor-pointer bg-card"
+              >
                 <div>
-                  <div className="w-14 h-14 rounded-xl bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center mb-6 text-[#0051d5] dark:text-[#b4c5ff] transition-transform group-hover:scale-110">
-                    <span className="material-symbols-outlined text-[32px]">settings_suggest</span>
+                  <div className="w-10 h-10 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3.5 transition-colors group-hover:bg-blue-600 group-hover:text-white">
+                    <Wrench className="w-5 h-5" />
                   </div>
-                  <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">Operasyon Yönetim Sistemi</h3>
-                  <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
-                    İSG Atama Paneli ve Entegre Risk ve Güvenlik Denetimi modüllerine buradan erişebilirsiniz.
+                  <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                    Operasyon Yönetim Sistemi
+                  </h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
+                    İSG Atama Paneli, renovasyon risk denetimleri, yangın güvenliği ve saha operasyonları.
                   </p>
                 </div>
-                <div className="inline-flex items-center gap-2 text-[#0051d5] dark:text-[#b4c5ff] text-sm font-medium group-hover:gap-4 transition-all">
-                  Uygulamaya Git
-                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/40 text-xs font-medium text-primary">
+                  <span>Modüle Git</span>
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                 </div>
-              </div>
-            </div>
-          )}
+              </Card>
+            )}
 
-          {/* Card 2: İş Güvenliği Yönetim Modülü */}
-          {(hasAdminAccess || user?.modules?.includes('OPERATIONS') || user?.modules?.includes('RISKS') || user?.modules?.includes('HAZMAT') || user?.modules?.includes('CHECKLISTS') || user?.modules?.includes('ISG_KURUL')) && (
-          <div
-            onClick={() => navigate('/safety-management')}
-            className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
-          >
-            {/* Mobile Card Layout */}
-            <div className="flex md:hidden items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#fff3e0] dark:bg-[#e65100]/20 flex items-center justify-center text-[#ef6c00] dark:text-orange-400">
-                <span className="material-symbols-outlined text-[28px]">health_and_safety</span>
-              </div>
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">İş Güvenliği Yönetim Modülü</h2>
-                <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
-                  Aylık Veriler, Risk Değerlendirmesi, Tehlikeli Madde Yönetimi ve İSG Kontrolleri.
-                </p>
-                <div className="flex items-center gap-2 text-[#ef6c00] dark:text-orange-400 text-sm font-medium group-hover:underline">
-                  Uygulamaya Git
-                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+            {/* Card 2: İş Güvenliği Yönetim Modülü */}
+            {(hasAdminAccess || user?.modules?.includes('OPERATIONS') || user?.modules?.includes('RISKS') || user?.modules?.includes('HAZMAT') || user?.modules?.includes('CHECKLISTS') || user?.modules?.includes('ISG_KURUL')) && (
+              <Card
+                onClick={() => navigate('/safety-management')}
+                className="group border border-border/60 hover:border-primary/50 shadow-xs hover:shadow-sm transition-all duration-200 rounded-lg p-5 flex flex-col justify-between cursor-pointer bg-card"
+              >
+                <div>
+                  <div className="w-10 h-10 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-3.5 transition-colors group-hover:bg-amber-600 group-hover:text-white">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                    İş Güvenliği Yönetim Modülü
+                  </h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
+                    Aylık veriler, Fine-Kinney risk değerlendirmesi, tehlikeli madde yönetimi ve İSG kontrolleri.
+                  </p>
                 </div>
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/40 text-xs font-medium text-primary">
+                  <span>Modüle Git</span>
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                </div>
+              </Card>
+            )}
+
+            {/* Card 3: İş Takip */}
+            {(hasAdminAccess || user?.modules?.includes('WORKFLOW')) && (
+              <Card
+                onClick={() => navigate('/workflow')}
+                className="group border border-border/60 hover:border-primary/50 shadow-xs hover:shadow-sm transition-all duration-200 rounded-lg p-5 flex flex-col justify-between cursor-pointer bg-card"
+              >
+                <div>
+                  <div className="w-10 h-10 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-3.5 transition-colors group-hover:bg-purple-600 group-hover:text-white">
+                    <Activity className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                    İş Akışı ve Görev Takibi
+                  </h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
+                    İş atamaları, görev durum takibi, ekip koordinasyonu ve anlık bildirim yönetimi.
+                  </p>
+                </div>
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/40 text-xs font-medium text-primary">
+                  <span>Modüle Git</span>
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                </div>
+              </Card>
+            )}
+
+            {/* Card 4: Yangın Envanter Yönetimi */}
+            {(hasAdminAccess || user?.modules?.includes('FIRE_EQUIPMENT')) && (
+              <Card
+                onClick={() => navigate('/fire-equipment')}
+                className="group border border-border/60 hover:border-primary/50 shadow-xs hover:shadow-sm transition-all duration-200 rounded-lg p-5 flex flex-col justify-between cursor-pointer bg-card"
+              >
+                <div>
+                  <div className="w-10 h-10 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-3.5 transition-colors group-hover:bg-rose-600 group-hover:text-white">
+                    <Flame className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                    Yangın Envanter Yönetimi
+                  </h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
+                    Yangın tüpü, dolap, hidrant, alarm ve algılama ekipmanları periyodik kontrol takibi.
+                  </p>
+                </div>
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/40 text-xs font-medium text-primary">
+                  <span>Modüle Git</span>
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                </div>
+              </Card>
+            )}
+
+            {/* Card 5: İnşaat ve Renovasyon Yönetimi */}
+            {(hasAdminAccess || user?.modules?.includes('BUILD_MANAGEMENT')) && (
+              <Card
+                onClick={() => navigate('/build-management')}
+                className="group border border-border/60 hover:border-primary/50 shadow-xs hover:shadow-sm transition-all duration-200 rounded-lg p-5 flex flex-col justify-between cursor-pointer bg-card"
+              >
+                <div>
+                  <div className="w-10 h-10 rounded-md bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center mb-3.5 transition-colors group-hover:bg-sky-600 group-hover:text-white">
+                    <HardHat className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                    İnşaat ve Renovasyon
+                  </h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
+                    İnşaat, tadilat ve renovasyon projelerinin ICRA analizleri, risk matrisleri ve onay süreçleri.
+                  </p>
+                </div>
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/40 text-xs font-medium text-primary">
+                  <span>Modüle Git</span>
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                </div>
+              </Card>
+            )}
+
+            {/* Card 6: Bina Turu Yönetimi */}
+            {(hasAdminAccess || user?.modules?.includes('BUILDING_TOUR')) && (
+              <Card
+                onClick={() => navigate('/bina-turu')}
+                className="group border border-border/60 hover:border-primary/50 shadow-xs hover:shadow-sm transition-all duration-200 rounded-lg p-5 flex flex-col justify-between cursor-pointer bg-card"
+              >
+                <div>
+                  <div className="w-10 h-10 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3.5 transition-colors group-hover:bg-emerald-600 group-hover:text-white">
+                    <Building className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                    Bina Turu Yönetimi
+                  </h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
+                    Hastanelerde periyodik bina turları planlama, saha bulguları ve aksiyon takip süreçleri.
+                  </p>
+                </div>
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/40 text-xs font-medium text-primary">
+                  <span>Modüle Git</span>
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                </div>
+              </Card>
+            )}
+          </div>
+
+          {/* Active User Count & System Summary Card */}
+          <div className="rounded-lg border border-border/60 bg-card p-4 sm:p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <h4 className="text-xs font-semibold text-foreground">Canlı Sistem Durumu</h4>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Şu an portal üzerinde aktif <span className="font-semibold text-emerald-600 dark:text-emerald-400">{activeCount}</span> kullanıcı oturumu bulunuyor.
+              </p>
             </div>
 
-            {/* Desktop Card Layout */}
-            <div className="hidden md:flex flex-col justify-between h-full">
-              <div>
-                <div className="w-14 h-14 rounded-xl bg-orange-50 dark:bg-orange-950/20 flex items-center justify-center mb-6 text-[#ef6c00] dark:text-orange-400 transition-transform group-hover:scale-110">
-                  <span className="material-symbols-outlined text-[32px]">health_and_safety</span>
-                </div>
-                <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">İş Güvenliği Yönetim Modülü</h3>
-                <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
-                  Aylık Veriler, Risk Değerlendirmesi, Tehlikeli Madde Yönetimi ve İSG Kontrolleri modüllerine buradan erişebilirsiniz.
-                </p>
-              </div>
-              <div className="inline-flex items-center gap-2 text-[#ef6c00] dark:text-orange-400 text-sm font-medium group-hover:gap-4 transition-all">
-                Uygulamaya Git
-                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-              </div>
+            <div className="flex items-center gap-2.5 w-full md:w-auto">
+              {hasAdminAccess && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/settings/facilities')}
+                  className="h-8 text-xs rounded-md border-border/60"
+                >
+                  <Building2 className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                  Tesis Bilgileri
+                </Button>
+              )}
+              {hasAdminAccess && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/settings/users')}
+                  className="h-8 text-xs rounded-md border-border/60"
+                >
+                  <User className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                  Kullanıcılar
+                </Button>
+              )}
             </div>
           </div>
-          )}
-
-          {/* Card 3: İş Takip */}
-          {(hasAdminAccess || user?.modules?.includes('WORKFLOW')) && (
-          <div
-            onClick={() => navigate('/workflow')}
-            className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
-          >
-            {/* Mobile Card Layout */}
-            <div className="flex md:hidden items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#f3e5f5] dark:bg-[#4a148c]/20 flex items-center justify-center text-[#7b1fa2] dark:text-purple-400">
-                <span className="material-symbols-outlined text-[28px]">account_tree</span>
-              </div>
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">İş Takip</h2>
-                <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
-                  İş atama, durum takibi, ekip yönetimi ve bildirim sistemi.
-                </p>
-                <div className="flex items-center gap-2 text-[#7b1fa2] dark:text-purple-400 text-sm font-medium group-hover:underline">
-                  Uygulamaya Git
-                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Desktop Card Layout */}
-            <div className="hidden md:flex flex-col justify-between h-full">
-              <div>
-                <div className="w-14 h-14 rounded-xl bg-purple-50 dark:bg-purple-950/20 flex items-center justify-center mb-6 text-[#7b1fa2] dark:text-purple-400 transition-transform group-hover:scale-110">
-                  <span className="material-symbols-outlined text-[32px]">account_tree</span>
-                </div>
-                <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">İş Takip</h3>
-                <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
-                  İş atama, durum takibi, ekip yönetimi ve bildirim sistemi.
-                </p>
-              </div>
-              <div className="inline-flex items-center gap-2 text-[#7b1fa2] dark:text-purple-400 text-sm font-medium group-hover:gap-4 transition-all">
-                Uygulamaya Git
-                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-              </div>
-            </div>
-          </div>
-          )}
-
-
-
-
-
-          {/* Card 6: Fire Equipment */}
-          {(hasAdminAccess || user?.modules?.includes('FIRE_EQUIPMENT')) && (
-          <div
-            onClick={() => navigate('/fire-equipment')}
-            className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
-          >
-            {/* Mobile Card Layout */}
-            <div className="flex md:hidden items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#ffebee] dark:bg-[#d32f2f]/20 flex items-center justify-center text-[#d32f2f] dark:text-red-500">
-                <span className="material-symbols-outlined text-[28px]">local_fire_department</span>
-              </div>
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">Yangın Envanteri</h2>
-                <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
-                  Yangın ekipmanları envanter, lokasyon ve bakım yönetimi.
-                </p>
-                <div className="flex items-center gap-2 text-[#d32f2f] dark:text-red-500 text-sm font-medium group-hover:underline">
-                  Uygulamaya Git
-                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Desktop Card Layout */}
-            <div className="hidden md:flex flex-col justify-between h-full">
-              <div>
-                <div className="w-14 h-14 rounded-xl bg-red-50 dark:bg-red-950/20 flex items-center justify-center mb-6 text-[#d32f2f] dark:text-red-500 transition-transform group-hover:scale-110">
-                  <span className="material-symbols-outlined text-[32px]">local_fire_department</span>
-                </div>
-                <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">Yangın Envanter Yönetimi</h3>
-                <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
-                  Yangın ekipmanları envanter, lokasyon ve periyodik bakım yönetimi.
-                </p>
-              </div>
-              <div className="inline-flex items-center gap-2 text-[#d32f2f] dark:text-red-500 text-sm font-medium group-hover:gap-4 transition-all">
-                Uygulamaya Git
-                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-              </div>
-            </div>
-          </div>
-          )}
-
-
-          {/* Card 7: İnşaat ve Renovasyon Yönetimi */}
-          {(hasAdminAccess || user?.modules?.includes('BUILD_MANAGEMENT')) && (
-          <div
-            onClick={() => navigate('/build-management')}
-            className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
-          >
-            {/* Mobile Card Layout */}
-            <div className="flex md:hidden items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#e3f2fd] dark:bg-[#1565c0]/20 flex items-center justify-center text-[#1565c0] dark:text-blue-400">
-                <span className="material-symbols-outlined text-[28px]">construction</span>
-              </div>
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">İnşaat ve Renovasyon</h2>
-                <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
-                  İnşaat, renovasyon projelerinin ICRA, risk ve onay süreçleri yönetimi.
-                </p>
-                <div className="flex items-center gap-2 text-[#1565c0] dark:text-blue-400 text-sm font-medium group-hover:underline">
-                  Uygulamaya Git
-                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Desktop Card Layout */}
-            <div className="hidden md:flex flex-col justify-between h-full">
-              <div>
-                <div className="w-14 h-14 rounded-xl bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center mb-6 text-[#1565c0] dark:text-blue-400 transition-transform group-hover:scale-110">
-                  <span className="material-symbols-outlined text-[32px]">construction</span>
-                </div>
-                <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">İnşaat ve Renovasyon Yönetimi</h3>
-                <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
-                  İnşaat, renovasyon projelerinin ICRA, risk ve onay süreçleri yönetimi.
-                </p>
-              </div>
-              <div className="inline-flex items-center gap-2 text-[#1565c0] dark:text-blue-400 text-sm font-medium group-hover:gap-4 transition-all">
-                Uygulamaya Git
-                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-              </div>
-            </div>
-          </div>
-          )}
-
-
-
-          {/* Card 8: Bina Turu Yönetimi */}
-          {(hasAdminAccess || user?.modules?.includes('BUILDING_TOUR')) && (
-          <div
-            onClick={() => navigate('/bina-turu')}
-            className="group bg-white dark:bg-[#2c3135] border border-slate-200/80 dark:border-[#73787c]/30 rounded-xl p-6 md:p-8 form-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between cursor-pointer active:scale-98"
-          >
-            {/* Mobile Card Layout */}
-            <div className="flex md:hidden items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#e3f2fd] dark:bg-[#1565c0]/20 flex items-center justify-center text-[#0d47a1] dark:text-blue-500">
-                <span className="material-symbols-outlined text-[28px]">apartment</span>
-              </div>
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">Bina Turu Yönetimi</h2>
-                <p className="text-sm text-[#42474b] dark:text-[#949899] mb-4">
-                  Bina turlarını planlayın, denetimleri yürütün, uygunsuzlukları takip edin.
-                </p>
-                <div className="flex items-center gap-2 text-[#0d47a1] dark:text-blue-500 text-sm font-medium group-hover:underline">
-                  Uygulamaya Git
-                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Desktop Card Layout */}
-            <div className="hidden md:flex flex-col justify-between h-full">
-              <div>
-                <div className="w-14 h-14 rounded-xl bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center mb-6 text-[#0d47a1] dark:text-blue-500 transition-transform group-hover:scale-110">
-                  <span className="material-symbols-outlined text-[32px]">apartment</span>
-                </div>
-                <h3 className="text-xl font-bold text-[#011d2b] dark:text-[#cbe6fa] mb-2">Bina Turu Yönetimi</h3>
-                <p className="text-[#42474b] dark:text-[#949899] text-base mb-8 leading-relaxed">
-                  Bina turlarını planlayın, denetimleri yürütün, uygunsuzlukları takip edin.
-                </p>
-              </div>
-              <div className="inline-flex items-center gap-2 text-[#0d47a1] dark:text-blue-500 text-sm font-medium group-hover:gap-4 transition-all">
-                Uygulamaya Git
-                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-              </div>
-            </div>
-          </div>
-          )}
         </div>
-
-        {/* Active User Count Summary (hidden on mobile, visible on desktop) */}
-        <section className="hidden md:flex mt-12 bg-[#eaeef3] dark:bg-[#2c3031] p-6 rounded-xl border border-[#c2c7cc] dark:border-[#73787c]/30 flex-col md:flex-row gap-6 items-center">
-          <div className="flex-grow">
-            <h4 className="text-sm font-bold text-[#171c20] dark:text-[#edf1f6] mb-1">O An Aktif Kullanıcı Sayısı</h4>
-            <div className="flex items-center gap-2 text-xs text-[#42474b] dark:text-[#949899]">
-              <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></span>
-              Şu an sistemde aktif <span className="font-bold text-emerald-600 dark:text-emerald-400">{activeCount}</span> kullanıcı bulunuyor.
-            </div>
-          </div>
-          <div className="flex gap-4">
-            <div className="bg-white dark:bg-[#2c3135] px-4 py-2 rounded-lg border border-[#c2c7cc] dark:border-[#73787c]/30 text-center min-w-[120px]">
-              <div className="text-[10px] font-bold text-[#42474b] dark:text-[#949899] uppercase tracking-wider">Aktif Atamalar</div>
-              <div className="text-2xl font-bold text-[#011d2b] dark:text-[#cbe6fa]">124</div>
-            </div>
-            <div className="bg-white dark:bg-[#2c3135] px-4 py-2 rounded-lg border border-[#c2c7cc] dark:border-[#73787c]/30 text-center min-w-[120px]">
-              <div className="text-[10px] font-bold text-[#42474b] dark:text-[#949899] uppercase tracking-wider">Bekleyen Görevler</div>
-              <div className="text-2xl font-bold text-[#0051d5] dark:text-[#b4c5ff]">8</div>
-            </div>
-          </div>
-        </section>
-
       </main>
 
-      {/* Desktop Footer (hidden on mobile) */}
-      <footer className="hidden md:block bg-white dark:bg-[#171c20] border-t border-[#c2c7cc] dark:border-[#73787c] py-6 px-6 w-full max-w-[1440px] mx-auto mt-auto">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex flex-col md:flex-row items-center gap-4">
-            <span className="text-sm font-semibold text-[#171c20] dark:text-[#edf1f6]">MLP-CARE</span>
-            <span className="text-xs text-[#42474b] dark:text-[#949899]">© 2026 MLP-CARE Healthcare Portal. All rights reserved.</span>
+      {/* Footer */}
+      <footer className="border-t border-border/60 py-4 px-4 sm:px-6 lg:px-8 w-full max-w-[1600px] mx-auto mt-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-foreground">MLP Care</span>
+            <span>•</span>
+            <span>HSE Portalı © {new Date().getFullYear()}</span>
           </div>
-          <div className="flex flex-wrap justify-center gap-6">
-            <a className="text-xs text-[#42474b] dark:text-[#949899] hover:text-[#0051d5] dark:hover:text-[#b4c5ff] transition-colors" href="#">Privacy Policy</a>
-            <a className="text-xs text-[#42474b] dark:text-[#949899] hover:text-[#0051d5] dark:hover:text-[#b4c5ff] transition-colors" href="#">Terms of Service</a>
-            <a className="text-xs text-[#42474b] dark:text-[#949899] hover:text-[#0051d5] dark:hover:text-[#b4c5ff] transition-colors" href="#">Security</a>
-            <a className="text-xs text-[#42474b] dark:text-[#949899] hover:text-[#0051d5] dark:hover:text-[#b4c5ff] transition-colors" href="#">Cookie Settings</a>
-          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Sağlık, Emniyet ve Çevre Yönetim Portalı
+          </p>
         </div>
       </footer>
-
-      {/* Mobile Bottom Nav Bar */}
-      <nav className="md:hidden fixed bottom-[72px] left-0 w-full z-40 bg-[#f0f4f9] dark:bg-[#2c3031] border-t border-[#c2c7cc] dark:border-[#73787c]/30 flex justify-around py-2.5 px-2 shadow-md">
-        <button
-          onClick={() => navigate('/portal')}
-          className="flex flex-col items-center gap-0.5 text-[#0051d5] dark:text-[#b4c5ff] font-bold active:scale-95 transition-transform"
-        >
-          <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>grid_view</span>
-          <span className="text-[10px] uppercase tracking-tighter">Modüller</span>
-        </button>
-        <button
-          onClick={() => navigate('/notifications')}
-          className="flex flex-col items-center gap-0.5 text-[#42474b] dark:text-[#949899] hover:text-[#0051d5] dark:hover:text-[#b4c5ff] active:scale-95 transition-transform"
-        >
-          <span className="material-symbols-outlined">notifications</span>
-          <span className="text-[10px] uppercase tracking-tighter">Bildirimler</span>
-        </button>
-        {hasAdminAccess && (
-          <button
-            onClick={() => navigate('/settings')}
-            className="flex flex-col items-center gap-0.5 text-[#42474b] dark:text-[#949899] hover:text-[#0051d5] dark:hover:text-[#b4c5ff] active:scale-95 transition-transform"
-          >
-            <span className="material-symbols-outlined">settings</span>
-            <span className="text-[10px] uppercase tracking-tighter">Ayarlar</span>
-          </button>
-        )}
-        <button
-          onClick={() => navigate('/profile')}
-          className="flex flex-col items-center gap-0.5 text-[#42474b] dark:text-[#949899] hover:text-[#0051d5] dark:hover:text-[#b4c5ff] active:scale-95 transition-transform"
-        >
-          <span className="material-symbols-outlined">account_circle</span>
-          <span className="text-[10px] uppercase tracking-tighter">Profil</span>
-        </button>
-      </nav>
-
-      {/* Mobile Footer */}
-      <footer className="md:hidden fixed bottom-0 left-0 w-full z-40 bg-white dark:bg-[#2c3135] border-t border-[#c2c7cc] dark:border-[#73787c]/50 flex flex-col justify-center items-center py-3 px-4 gap-1">
-        <span className="text-[10px] font-bold text-[#0051d5] dark:text-[#b4c5ff] uppercase tracking-tight text-center">
-          HSE PORTALI GÜVENLİĞİ YÖNETİM SİSTEMİ
-        </span>
-        <span className="text-[10px] text-[#42474b] dark:text-[#949899] text-center">
-          © 2026 MLP-CARE. Tüm hakları saklıdır.
-        </span>
-      </footer>
-
     </div>
   );
 }
