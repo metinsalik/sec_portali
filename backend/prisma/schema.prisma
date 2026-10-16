@@ -182,6 +182,7 @@ model Facility {
   fm200Locations                Fm200Location[]
   fm200BuildingFloors           Fm200BuildingFloor[]
   improvementRecords            ImprovementRecord[]
+  improvementReports            ImprovementOperationReport[]
 }
 
 model IncidentCategory {
@@ -3228,49 +3229,138 @@ model Fm200BuildingFloor {
 // İYİLEŞTİRME VE AKSİYON TAKİP MODÜLÜ (DENETİMLER & ELEKTRİK ALTYAPI / PK)
 // ============================================================================
 
+enum ImprovementSheetType {
+  DENETIMLER
+  ELEKTRIK_PK
+  TOPRAKLAMA_PK
+  PARATONER_PK
+  JENERATOR_PK
+  ELEKTRIK_PANO_KONTROLLERI
+  ELEKTRIK_PANO_BAKIMLARI
+  TRAFO
+  UPS
+}
+
+enum ImprovementOperationType {
+  INSPECTION
+  MAINTENANCE
+}
+
+enum ImprovementReportResult {
+  CLEAR
+  FINDINGS
+  UNCONFIRMED
+  PLANNED
+}
+
+model ImprovementOperationReport {
+  id                String                   @id @default(uuid())
+  facilityId        String
+  facility          Facility                 @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  sheetType         ImprovementSheetType
+  operationType     ImprovementOperationType @default(INSPECTION)
+
+  reportDate        DateTime                 // Kontrol / Denetim Tarihi
+  nextScheduledDate DateTime?                // Gelecek Planlanan Kontrol Tarihi
+  resultStatus      ImprovementReportResult  @default(UNCONFIRMED)
+
+  companyName       String?                  // Kontrolü yapan firma / kurum
+  inspectorName     String?                  // Kontrolü yapan uzman / ekip
+  reportNo          String?                  // Rapor numarası
+  summaryNotes      String?                  @db.Text
+
+  findings          ImprovementRecord[]      @relation("ReportFindings")
+
+  isDeleted         Boolean                  @default(false)
+  deletedAt         DateTime?
+  deletedById       String?
+
+  createdById       String?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  @@index([facilityId, sheetType, operationType, isDeleted])
+  @@index([reportDate])
+}
+
 model ImprovementRecord {
-  id              String   @id @default(uuid())
+  id              String                      @id @default(uuid())
   facilityId      String
-  facility        Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  facility        Facility                    @relation(fields: [facilityId], references: [id], onDelete: Cascade)
 
-  // Modül Ana Grubu: "DENETIMLER" veya "ELEKTRIK"
-  moduleGroup     String
+  moduleGroup     String                      // 'DENETIM' | 'ELEKTRIK_BAKIM_KONTROL'
+  sheetType       ImprovementSheetType
 
-  // Sekme Tipi (8 Alt Sekme)
-  // "DENETIMLER", "ELEKTRIK_PK", "TOPRAKLAMA_PK", "PARATONER_PK", "JENERATOR_PK", "ELEKTRIK_PANO_KONTROLLERI", "TRAFO", "UPS"
-  sheetType       String
+  rowNo           Int?                        // Sıra No (#)
 
-  rowNo           Int?      // Kaynak Excel Sıra No (#)
-  location        String?   // Mahal
-  equipment       String?   // Ekipman (PK'lar, Pano, Trafo, UPS)
-  finding         String    // Tespitler
-  riskScore       String?   // "Kritik", "Yüksek", "Önemli", "Olası", "Önemsiz"
-  assignedTo      String?   // Sorumlusu
-  status          String    @default("Başlamadı") // "Tamamlandı", "Devam Ediyor", "Başlamadı", "İptal Edildi"
-  actionPlan      String?   // İş Planı (Orijinal plan metni)
-  currentNote     String?   // Aksiyon / Açıklama (Güncel durum / sahadan girilen not)
+  reportId        String?
+  report          ImprovementOperationReport? @relation("ReportFindings", fields: [reportId], references: [id], onDelete: SetNull)
 
-  // Sekmeye Özel Alanlar
-  auditName       String?   // Denetim Adı (Denetimler için)
-  category        String?   // Kategori (Denetimler için: Yangın Güvenliği, Elektrik Güvenliği vb.)
-  recordDate      DateTime? // Tespit Tarihi / PK Tarihi / Rapor Tarihi / Tarih
-  dueDate         DateTime? // Termin Tarihi (Hedef Tamamlanma Tarihi)
-  applicationType String?   // Uygulama (Trafo ve UPS için)
+  location        String?                     // Mahal / Lokasyon
+  equipment       String?                     // Ekipman / Trafo / UPS / Pano
+  finding         String                      @db.Text // Tespitler / Uygunsuzluk Açıklaması
+  riskScore       String?                     // 'Kritik', 'Yüksek', 'Önemli', 'Olası', 'Önemsiz', 'Çok Yüksek'
+  assignedTo      String?                     // Sorumlu Kişi / Birim
+  status          String                      @default("Başlamadı") // 'Tamamlandı', 'Devam Ediyor', 'Başlamadı', 'İptal Edildi', 'Açık'
+  actionPlan      String?                     @db.Text // Orijinal plan / yapılan işlem
+  currentNote     String?                     @db.Text // Son güncel not
 
-  sourceFileName  String?   // Kaynak Excel dosyasının adı
-  isArchived      Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  createdBy       String?
-  updatedBy       String?
+  auditName       String?                     // Denetim Adı
+  category        String?                     // Kategori / Bölüm / Alt Sistem
+  recordDate      DateTime?                   // Tespit Tarihi / Kontrol Tarihi
+  dueDate         DateTime?                   // Termin Tarihi
+  applicationType String?                     // Kontrol / Bakım
 
+  legacyBudget    Decimal?                    @db.Decimal(12, 2)
+  currency        String                      @default("TRY")
+
+  extraFields     Json?                       // Dinamik ek alanlar: recommendation, equipmentSpec, companyName vb.
+  photos          Json                        @default("[]") // [{ id, url, name, size, originalSize, uploadedAt, uploadedBy }]
+
+  sourceFileName  String?
+  isArchived      Boolean                     @default(false)
+  deletedAt       DateTime?
+  deletedById     String?
+  deleteReason    String?
+
+  actions         ImprovementAction[]
   histories       ImprovementRecordHistory[]
 
-  @@index([facilityId])
-  @@index([moduleGroup])
-  @@index([sheetType])
-  @@index([status])
-  @@index([riskScore])
+  createdBy       String?
+  updatedBy       String?
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+
+  @@index([facilityId, sheetType, isArchived])
+  @@index([riskScore, status])
+}
+
+model ImprovementAction {
+  id                String            @id @default(uuid())
+  recordId          String
+  record            ImprovementRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  actionDescription String            @db.Text
+  statusAfterAction String?
+  responsiblePerson String?
+  actionDate        DateTime          @default(now())
+  dueDate           DateTime?
+
+  costAmount        Decimal?          @db.Decimal(12, 2)
+  currency          String            @default("TRY")
+
+  extraDetails      Json?
+  origin            String            @default("MANUAL")
+
+  isDeleted         Boolean           @default(false)
+  deletedAt         DateTime?
+  deletedById       String?
+
+  createdById       String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([recordId, isDeleted])
 }
 
 model ImprovementRecordHistory {
@@ -3282,8 +3372,8 @@ model ImprovementRecordHistory {
   newNote         String
   previousStatus  String?
   newStatus       String?
-  changedBy       String            // Kullanıcı username
-  changedByName   String?           // Kullanıcı Ad Soyad
+  changedBy       String
+  changedByName   String?
   createdAt       DateTime          @default(now())
 
   @@index([recordId])

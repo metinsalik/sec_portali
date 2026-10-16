@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { thermalInspectionService } from '@/services/thermal-inspection.service';
@@ -33,7 +34,11 @@ import {
   FileSpreadsheet,
   Building,
   ShieldAlert,
-  Thermometer
+  Thermometer,
+  UploadCloud,
+  Check,
+  ArrowRight,
+  Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -65,7 +70,7 @@ interface Props {
   activeFacilityId?: string;
   facilities?: Array<{ id: string; name: string }>;
   onFacilityChange?: (facilityId: string) => void;
-  initialTab?: 'floors' | 'rooms' | 'thresholds';
+  initialTab?: 'floors' | 'rooms' | 'thresholds' | 'bulk-import';
 }
 
 export const ThermalSettingsView: React.FC<Props> = ({
@@ -74,8 +79,117 @@ export const ThermalSettingsView: React.FC<Props> = ({
   onFacilityChange,
   initialTab = 'floors'
 }) => {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'floors' | 'rooms' | 'thresholds'>(initialTab);
+
+  const urlSubtab = useMemo(() => {
+    const s = searchParams.get('subtab');
+    if (s === 'bulk-import' || s === 'konsolide' || s === 'import') return 'bulk-import';
+    if (s === 'rooms' || s === 'panolar') return 'rooms';
+    if (s === 'thresholds' || s === 'esikler') return 'thresholds';
+    if (s === 'floors') return 'floors';
+    return initialTab;
+  }, [searchParams, initialTab]);
+
+  const [activeTab, setActiveTabState] = useState<'floors' | 'rooms' | 'thresholds' | 'bulk-import'>(urlSubtab);
+
+  useEffect(() => {
+    if (urlSubtab && urlSubtab !== activeTab) {
+      setActiveTabState(urlSubtab);
+    }
+  }, [urlSubtab]);
+
+  const setActiveTab = (tab: 'floors' | 'rooms' | 'thresholds' | 'bulk-import') => {
+    setActiveTabState(tab);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (tab === 'floors') {
+        next.delete('subtab');
+      } else {
+        next.set('subtab', tab);
+      }
+      return next;
+    }, { replace: true });
+  };
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // KONSOLİDE RAPOR AKTARIMI STATE (Tüm Hastaneler & Ölçüm 1, 2, 3)
+  // ────────────────────────────────────────────────────────────────────────────
+  const [consolidatedFile, setConsolidatedFile] = useState<File | null>(null);
+  const [isPreviewingConsolidated, setIsPreviewingConsolidated] = useState(false);
+  const [consolidatedPreview, setConsolidatedPreview] = useState<{
+    fileName: string;
+    totalValidRows: number;
+    totalFacilities: number;
+    facilities: Array<{
+      excelName: string;
+      matchType: 'EXACT' | 'FUZZY' | 'NONE';
+      matchedFacilityId: string | null;
+      matchedFacilityName: string | null;
+      matchedFacilityCity: string | null;
+      rowCount: number;
+      measurements: Array<{ name: string; count: number; sampleDate: string | null }>;
+    }>;
+    allDbFacilities: Array<{ id: string; name: string; shortName?: string | null; city?: string | null }>;
+  } | null>(null);
+  const [facilityOverrides, setFacilityOverrides] = useState<Record<string, string>>({});
+  const [isImportingConsolidated, setIsImportingConsolidated] = useState(false);
+  const [importResult, setImportResult] = useState<{
+    message: string;
+    stats: {
+      totalFacilities: number;
+      totalSessions: number;
+      totalItems: number;
+      totalPanelsRegistered: number;
+    };
+    details: any[];
+  } | null>(null);
+
+  const handleSelectConsolidatedFile = async (selectedFile: File) => {
+    setConsolidatedFile(selectedFile);
+    setImportResult(null);
+    setIsPreviewingConsolidated(true);
+    try {
+      const preview = await thermalInspectionService.previewConsolidatedExcel(selectedFile);
+      setConsolidatedPreview(preview);
+      const initialOverrides: Record<string, string> = {};
+      preview.facilities.forEach(f => {
+        if (f.matchedFacilityId) {
+          initialOverrides[f.excelName] = f.matchedFacilityId;
+        }
+      });
+      setFacilityOverrides(initialOverrides);
+      toast.success(`${preview.totalFacilities} tesis ve ${preview.totalValidRows} ölçüm satırı tespit edildi.`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Excel dosyası önizlenirken bir hata oluştu.');
+      setConsolidatedPreview(null);
+    } finally {
+      setIsPreviewingConsolidated(false);
+    }
+  };
+
+  const handleExecuteConsolidatedImport = async () => {
+    if (!consolidatedFile) {
+      toast.error('Lütfen önce bir Excel dosyası seçin.');
+      return;
+    }
+    try {
+      setIsImportingConsolidated(true);
+      const res = await thermalInspectionService.importConsolidatedExcel(consolidatedFile, facilityOverrides);
+      setImportResult(res);
+      queryClient.invalidateQueries({ queryKey: ['thermalDashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['thermalSessions'] });
+      queryClient.invalidateQueries({ queryKey: ['thermalPanels'] });
+      toast.success(res.message);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Konsolide aktarım sırasında hata oluştu.');
+    } finally {
+      setIsImportingConsolidated(false);
+    }
+  };
 
   // ────────────────────────────────────────────────────────────────────────────
   // TESİS SEÇİMİ
@@ -544,6 +658,22 @@ export const ThermalSettingsView: React.FC<Props> = ({
             <Thermometer className="w-4 h-4" />
             Termal & ΔT Eşikleri
           </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('bulk-import')}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all shrink-0 ${
+              activeTab === 'bulk-import'
+                ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            Konsolide Rapor Aktarımı
+            <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border-0 text-[10px] px-1.5 py-0 h-4">
+              Toplu
+            </Badge>
+          </button>
         </div>
       </div>
 
@@ -986,8 +1116,413 @@ export const ThermalSettingsView: React.FC<Props> = ({
       )}
 
       {/* ───────────────────────────────────────────────────────────── */}
+      {/* SEKME 4: KONSOLİDE RAPOR AKTARIMI (Tüm Hastaneler & Ölçümler) */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {activeTab === 'bulk-import' && (
+        <div className="space-y-6">
+          {/* Üst Bilgilendirme Kartı */}
+          <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent p-6 rounded-2xl border border-emerald-200/80 dark:border-emerald-900/40 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-xs">
+                <FileSpreadsheet className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Konsolide Termal Rapor Aktarımı
+                  </h3>
+                  <Badge className="bg-emerald-600 text-white border-0 text-[10px] px-2 py-0.5">
+                    Toplu İçe Aktarım
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                  Tüm hastanelerin tek bir Excel dosyasında yer aldığı konsolide ölçüm tablosunu (Kolon A: Hastane, Kolon E: Ölçüm 1, Ölçüm 2 vb.) tek seferde sisteme yükleyin. Sistem tesisleri otomatik eşleştirir ve her ölçüm periyodu için ayrı rapor oturumu açar.
+                </p>
+              </div>
+            </div>
+
+            {consolidatedPreview && !importResult && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setConsolidatedFile(null);
+                  setConsolidatedPreview(null);
+                }}
+                className="text-xs h-9 gap-1.5 text-slate-600 dark:text-slate-300"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Farklı Dosya Seç
+              </Button>
+            )}
+          </div>
+
+          {/* DURUM 1: AKTARIM TAMAMLANDI VE SONUÇ GÖSTERİLİYOR */}
+          {importResult && (
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-emerald-200 dark:border-emerald-800 shadow-lg text-center space-y-6">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-inner">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
+
+              <div className="space-y-1.5 max-w-lg mx-auto">
+                <h4 className="text-lg font-bold text-slate-900 dark:text-white">
+                  Konsolide Raporlar Başarıyla Aktarıldı!
+                </h4>
+                <p className="text-xs text-slate-500">
+                  {importResult.message}
+                </p>
+              </div>
+
+              {/* İstatistik Kutucukları */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto pt-2">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                  <div className="text-2xl font-black text-slate-900 dark:text-white">
+                    {importResult.stats.totalFacilities}
+                  </div>
+                  <div className="text-[11px] font-medium text-slate-500 mt-1">
+                    Aktarılan Tesis
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                  <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                    {importResult.stats.totalSessions}
+                  </div>
+                  <div className="text-[11px] font-medium text-slate-500 mt-1">
+                    Rapor Oturumu
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                  <div className="text-2xl font-black text-orange-600 dark:text-orange-400">
+                    {importResult.stats.totalItems.toLocaleString('tr-TR')}
+                  </div>
+                  <div className="text-[11px] font-medium text-slate-500 mt-1">
+                    Pano Ölçüm Satırı
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                  <div className="text-2xl font-black text-blue-600 dark:text-blue-400">
+                    {importResult.stats.totalPanelsRegistered}
+                  </div>
+                  <div className="text-[11px] font-medium text-slate-500 mt-1">
+                    Yeni Eklenen Pano
+                  </div>
+                </div>
+              </div>
+
+              {/* Hızlı Erişim Butonları */}
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
+                <Button
+                  onClick={() => navigate('/operations-management/thermal-camera?tab=table')}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-10 px-5 gap-2 font-medium"
+                >
+                  <Layers className="w-4 h-4" />
+                  Pano Ölçüm Tablosuna Git
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/operations-management/thermal-camera?tab=dashboard')}
+                  className="text-xs h-10 px-5 gap-2"
+                >
+                  <Building2 className="w-4 h-4" />
+                  Termal Dashboard'a Git
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setConsolidatedFile(null);
+                    setConsolidatedPreview(null);
+                    setImportResult(null);
+                  }}
+                  className="text-xs h-10 px-4 text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                >
+                  Yeni Bir Dosya Yükle
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* DURUM 2: HENÜZ DOSYA SEÇİLMEDİ */}
+          {!consolidatedPreview && !importResult && (
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-emerald-500/50 transition-colors text-center relative">
+                <input
+                  type="file"
+                  accept=".xlsx, .xls"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleSelectConsolidatedFile(f);
+                  }}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  id="consolidated-excel-input"
+                  disabled={isPreviewingConsolidated}
+                />
+                <div className="flex flex-col items-center justify-center gap-3 py-6 pointer-events-none">
+                  <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-xs">
+                    {isPreviewingConsolidated ? (
+                      <RefreshCw className="w-8 h-8 animate-spin" />
+                    ) : (
+                      <UploadCloud className="w-8 h-8" />
+                    )}
+                  </div>
+                  <div>
+                    <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                      {isPreviewingConsolidated
+                        ? 'Excel Dosyası Taranıyor...'
+                        : 'Konsolide Excel Dosyasını Sürükleyin veya Seçmek İçin Tıklayın'}
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                      {isPreviewingConsolidated
+                        ? 'Tesis isimleri ve ölçüm sütunları analiz ediliyor, lütfen bekleyiniz.'
+                        : 'Örnek: "Konsolide_Termal Kamera Ölçüm Değerlendirme ve Aksiyon Takip Tablosu_15.10.2026.xlsx" (.xlsx, .xls)'}
+                    </p>
+                  </div>
+                  {!isPreviewingConsolidated && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs mt-2 pointer-events-auto"
+                      onClick={() => document.getElementById('consolidated-excel-input')?.click()}
+                    >
+                      <FileSpreadsheet className="w-4 h-4 mr-1.5" />
+                      Dosya Seç
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Bilgi Kartları */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-2">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center">
+                    <Building2 className="w-4 h-4" />
+                  </div>
+                  <h5 className="text-xs font-bold text-slate-900 dark:text-white">
+                    1. Otomatik Tesis Eşleme
+                  </h5>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    A sütunundaki hastane isimleri sistemdeki tesisler ile eşleştirilir. Önizleme ekranında gerekirse açılır listeden kolayca müdahale edebilirsiniz.
+                  </p>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-2">
+                  <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-950/60 text-orange-600 flex items-center justify-center">
+                    <Layers className="w-4 h-4" />
+                  </div>
+                  <h5 className="text-xs font-bold text-slate-900 dark:text-white">
+                    2. Rapor Periyotları (Ölçüm 1, 2, 3)
+                  </h5>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    E sütunundaki her ölçüm periyodu ('Ölçüm 1', 'Ölçüm 2' vb.) ilgili tesis için bağımsız birer termal kontrol oturumu olarak kaydedilir.
+                  </p>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-2">
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <h5 className="text-xs font-bold text-slate-900 dark:text-white">
+                    3. Pano Envanteri Senkronizasyonu
+                  </h5>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Ölçümlerde yer alan panolar, tesisinizin Elektrik Pano Envanterine henüz eklenmemişse otomatik olarak oluşturulur ve kodlanır.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* DURUM 3: ÖNİZLEME YÜKLENDİ VE KULLANICI ONAYI BEKLENİYOR */}
+          {consolidatedPreview && !importResult && (
+            <div className="space-y-6">
+              {/* Özet Şerit */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+                  <div className="text-xs text-slate-500 font-medium">Toplam Geçerli Satır</div>
+                  <div className="text-xl font-black text-slate-900 dark:text-white mt-1">
+                    {consolidatedPreview.totalValidRows.toLocaleString('tr-TR')}
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">Pano ölçüm kaydı</div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+                  <div className="text-xs text-slate-500 font-medium">Tespit Edilen Tesis</div>
+                  <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                    {consolidatedPreview.totalFacilities} Hastane
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">Kolon A analizi</div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+                  <div className="text-xs text-slate-500 font-medium">Açılacak Rapor Sayısı</div>
+                  <div className="text-xl font-black text-orange-600 dark:text-orange-400 mt-1">
+                    {consolidatedPreview.facilities.reduce((acc, f) => acc + f.measurements.length, 0)} Oturum
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">Ölçüm 1, 2, 3 toplamı</div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+                  <div className="text-xs text-slate-500 font-medium">Eşleşme Durumu</div>
+                  <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1.5">
+                    <Check className="w-5 h-5" />
+                    %100 Eşleşti
+                  </div>
+                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    {consolidatedPreview.facilities.filter(f => f.matchType === 'EXACT').length} / {consolidatedPreview.totalFacilities} Tesis Tam Uyumlu
+                  </div>
+                </div>
+              </div>
+
+              {/* Tesis Eşleme Tablosu */}
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
+                <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-emerald-600" />
+                      Tesis Eşleştirmeleri ve Ölçüm Dağılımı ({consolidatedPreview.facilities.length} Tesis)
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Excel'deki tesis adının sistemde hangi tesise aktarılacağını buradan kontrol edebilir veya değiştirebilirsiniz.
+                    </p>
+                  </div>
+
+                  <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg">
+                    Dosya: <span className="text-slate-900 dark:text-white font-mono">{consolidatedPreview.fileName}</span>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold">
+                        <th className="py-3 px-4 w-12 text-center">#</th>
+                        <th className="py-3 px-4">Excel Tesis Adı (Kolon A)</th>
+                        <th className="py-3 px-4 min-w-[240px]">Sistemdeki Eşleşen Tesis</th>
+                        <th className="py-3 px-4">Raporlar / Ölçümler (Kolon E)</th>
+                        <th className="py-3 px-4 text-center">Kayıt Sayısı</th>
+                        <th className="py-3 px-4 text-center">Durum</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {consolidatedPreview.facilities.map((fac, idx) => {
+                        const currentTargetId = facilityOverrides[fac.excelName] || fac.matchedFacilityId || '';
+                        return (
+                          <tr key={fac.excelName} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                            <td className="py-3.5 px-4 text-center text-slate-400 font-mono">
+                              {idx + 1}
+                            </td>
+                            <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white">
+                              {fac.excelName}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <select
+                                value={currentTargetId}
+                                onChange={(e) => {
+                                  setFacilityOverrides(prev => ({
+                                    ...prev,
+                                    [fac.excelName]: e.target.value
+                                  }));
+                                }}
+                                className="w-full text-xs h-9 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-medium"
+                              >
+                                <option value="">-- Tesis Seçiniz --</option>
+                                {consolidatedPreview.allDbFacilities.map(db => (
+                                  <option key={db.id} value={db.id}>
+                                    {db.name} {db.city ? `(${db.city})` : ''}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {fac.measurements.map(m => (
+                                  <Badge
+                                    key={m.name}
+                                    variant="outline"
+                                    className="text-[10px] bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 font-medium"
+                                  >
+                                    <span className="font-semibold text-slate-700 dark:text-slate-300 mr-1">{m.name}:</span>
+                                    {m.count} satır
+                                    {m.sampleDate && <span className="text-slate-400 ml-1">({m.sampleDate})</span>}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4 text-center font-bold text-slate-700 dark:text-slate-300">
+                              {fac.rowCount}
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              {fac.matchType === 'EXACT' ? (
+                                <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border-0 text-[10px]">
+                                  Tam Eşleşti
+                                </Badge>
+                              ) : fac.matchType === 'FUZZY' ? (
+                                <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border-0 text-[10px]">
+                                  Öneri Eşleşti
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border-0 text-[10px]">
+                                  Seçim Gerekli
+                                </Badge>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Alt Eylem ve Başlat Butonu */}
+                <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="text-xs text-slate-500">
+                    Toplam <strong className="text-slate-900 dark:text-white font-semibold">{consolidatedPreview.facilities.length} tesis</strong> için <strong className="text-slate-900 dark:text-white font-semibold">{consolidatedPreview.totalValidRows.toLocaleString('tr-TR')} pano ölçümü</strong> aktarılacaktır.
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setConsolidatedFile(null);
+                        setConsolidatedPreview(null);
+                      }}
+                      className="text-xs h-10 px-4"
+                      disabled={isImportingConsolidated}
+                    >
+                      Vazgeç / Sıfırla
+                    </Button>
+                    <Button
+                      onClick={handleExecuteConsolidatedImport}
+                      disabled={isImportingConsolidated}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-10 px-6 gap-2 shadow-xs"
+                    >
+                      {isImportingConsolidated ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          Raporlar ve Ölçümler Aktarılıyor...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          Tüm Raporları ve Ölçümleri Sisteme Aktar
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────── */}
       {/* MODALLER                                                      */}
       {/* ───────────────────────────────────────────────────────────── */}
+
 
       {/* MODAL 1: MANUEL BİNA / KAT EKLEME */}
       <Dialog open={isManualModalOpen} onOpenChange={setIsManualModalOpen}>

@@ -202,6 +202,59 @@ export const thermalInspectionService = {
     return await res.json();
   },
 
+  // Konsolide Excel Önizleme (Tüm Hastaneler ve Ölçümler)
+  async previewConsolidatedExcel(file: File): Promise<{
+    success: boolean;
+    fileName: string;
+    totalValidRows: number;
+    totalFacilities: number;
+    facilities: Array<{
+      excelName: string;
+      matchType: 'EXACT' | 'FUZZY' | 'NONE';
+      matchedFacilityId: string | null;
+      matchedFacilityName: string | null;
+      matchedFacilityCity: string | null;
+      rowCount: number;
+      measurements: Array<{ name: string; count: number; sampleDate: string | null }>;
+    }>;
+    allDbFacilities: Array<{ id: string; name: string; shortName?: string | null; city?: string | null }>;
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await api.post('/safety-management/electric-infrastructure/thermal/preview-consolidated-excel', formData);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Excel önizlemesi alınamadı.');
+    }
+    return await res.json();
+  },
+
+  // Konsolide Excel Toplu Aktarım
+  async importConsolidatedExcel(file: File, mappings?: Record<string, string>): Promise<{
+    success: boolean;
+    message: string;
+    stats: {
+      totalFacilities: number;
+      totalSessions: number;
+      totalItems: number;
+      totalPanelsRegistered: number;
+    };
+    details: any[];
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (mappings && Object.keys(mappings).length > 0) {
+      formData.append('mappings', JSON.stringify(mappings));
+    }
+    const res = await api.post('/safety-management/electric-infrastructure/thermal/import-consolidated-excel', formData);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Konsolide Excel yüklenemedi.');
+    }
+    return await res.json();
+  },
+
+
   // Ölçüm maddesi oluştur (Manuel satır ekleme)
   async createItem(data: Partial<ThermalInspectionItem> & { sessionId: string }): Promise<ThermalInspectionItem> {
     const res = await api.post('/safety-management/electric-infrastructure/thermal/items', data);

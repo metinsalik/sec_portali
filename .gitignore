@@ -39,3 +39,6 @@ backend/uploads/
 
 # Database dump
 backend/database_dump.sql
+packages/shared/src/generated/generated/
+packages/shared/dist/
+backend/analyze_thermal_excel.js

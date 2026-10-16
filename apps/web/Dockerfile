@@ -2,6 +2,8 @@ FROM node:20-bookworm-slim AS builder
 
 WORKDIR /app
 
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 # Copy package descriptors
 COPY package.json package-lock.json ./
 COPY backend/package.json backend/
@@ -9,7 +11,6 @@ COPY apps/web/package.json apps/web/
 COPY packages/ packages/
 
 # Install all dependencies for the monorepo
-ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm ci --legacy-peer-deps --ignore-scripts
 RUN npm install --no-save @rolldown/binding-linux-x64-gnu@1.0.0-rc.15 lightningcss-linux-x64-gnu@1.32.0 @tailwindcss/oxide-linux-x64-gnu@4.2.2
 

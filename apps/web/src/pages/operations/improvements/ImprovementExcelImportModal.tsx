@@ -7,7 +7,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import toast from 'react-hot-toast';
-import { type FacilityOption, SHEET_MAP } from './types';
+import { type FacilityOption } from './types';
 
 const API = import.meta.env.VITE_API_URL || '';
 

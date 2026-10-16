@@ -4,7 +4,7 @@ import {
   LayoutDashboard, AlertOctagon, ClipboardList, Zap, 
   ChevronDown, ChevronRight, Settings, Upload, ArrowLeft,
   Building2, Activity, Menu, X, PanelLeftClose, PanelLeftOpen,
-  User, LogOut
+  User, LogOut, Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,8 +15,13 @@ import {
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
-import { type FacilityOption, ELECTRICAL_SHEETS } from './types';
+import { 
+  type FacilityOption, 
+  IMPROVEMENT_SHEET_DEFINITIONS, 
+  ELECTRICAL_SHEET_KEYS 
+} from './types';
 import { ImprovementExcelImportModal } from './ImprovementExcelImportModal';
+import { DeletedRecordsDialog } from './components/dialogs/DeletedRecordsDialog';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -44,8 +49,9 @@ export const ImprovementsLayout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Excel Import modalı
+  // Excel Import & Çöp Kutusu modalları
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showTrashModal, setShowTrashModal] = useState(false);
 
   // Hastaneleri çek (Yalnızca Hastane olanlar)
   const fetchFacilities = async () => {
@@ -103,7 +109,8 @@ export const ImprovementsLayout: React.FC = () => {
   }, [user]);
 
   const currentPath = location.pathname;
-  const isElectricalActive = currentPath.startsWith('/operations-management/improvements/electrical');
+  const isElectricalGroupActive = currentPath === '/operations-management/improvements/group/electrical';
+  const isElectricalSubActive = currentPath.startsWith('/operations-management/improvements/electrical');
 
   return (
     <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
@@ -117,7 +124,7 @@ export const ImprovementsLayout: React.FC = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* SOL YAN MENÜ (SIDEBAR) - SHADCN / APP-LAYOUT TASARIMI               */}
+      {/* SOL YAN MENÜ (SIDEBAR)                                              */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       <aside className={cn(
         "fixed inset-y-0 left-0 z-50 flex flex-col bg-card border-r border-border transition-all duration-300 lg:static",
@@ -258,7 +265,7 @@ export const ImprovementsLayout: React.FC = () => {
               "w-full flex items-center rounded-lg text-sm font-medium transition-colors",
               isCollapsed ? "justify-center h-10 px-0" : "gap-3 px-3 py-2",
               currentPath === '/operations-management/improvements'
-                ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900"
+                ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900 font-semibold"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
@@ -277,7 +284,7 @@ export const ImprovementsLayout: React.FC = () => {
               "w-full flex items-center rounded-lg text-sm font-medium transition-colors",
               isCollapsed ? "justify-center h-10 px-0" : "gap-3 px-3 py-2",
               currentPath === '/operations-management/improvements/critical'
-                ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900"
+                ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900 font-semibold"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
@@ -311,7 +318,7 @@ export const ImprovementsLayout: React.FC = () => {
               "w-full flex items-center rounded-lg text-sm font-medium transition-colors",
               isCollapsed ? "justify-center h-10 px-0" : "gap-3 px-3 py-2",
               currentPath === '/operations-management/improvements/denetimler'
-                ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900"
+                ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900 font-semibold"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
@@ -319,17 +326,17 @@ export const ImprovementsLayout: React.FC = () => {
             {!isCollapsed && <span className="text-left">Denetimler</span>}
           </button>
 
-          {/* 4. Elektrik Emniyet Raporu (Açılır Grup) */}
+          {/* 4. Elektrik & Periyodik Kontroller Grubu (Açılır Grup & Grup Dashboard) */}
           {isCollapsed ? (
             <button
               onClick={() => {
-                navigate('/operations-management/improvements/electrical/elektrik-pk');
+                navigate('/operations-management/improvements/group/electrical');
                 setIsSidebarOpen(false);
               }}
-              title="Elektrik Emniyet Raporu"
+              title="Elektrik & PK Grubu"
               className={cn(
                 "w-full flex items-center justify-center h-10 rounded-lg text-sm font-medium transition-colors",
-                isElectricalActive
+                isElectricalGroupActive || isElectricalSubActive
                   ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
@@ -339,36 +346,58 @@ export const ImprovementsLayout: React.FC = () => {
           ) : (
             <div className="space-y-1">
               <div
-                onClick={() => setIsElectricalOpen(!isElectricalOpen)}
                 className={cn(
-                  "flex items-center justify-between rounded-lg text-sm font-medium transition-colors px-3 py-2 cursor-pointer select-none group",
-                  isElectricalActive
+                  "flex items-center justify-between rounded-lg text-sm font-medium transition-colors px-3 py-2 select-none group",
+                  isElectricalGroupActive
+                    ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900 font-semibold"
+                    : isElectricalSubActive
                     ? "bg-muted/80 text-foreground font-semibold"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
+                {/* Grup Başlığına Tıklandığında GroupDashboardPage açılır */}
+                <div 
+                  onClick={() => {
+                    navigate('/operations-management/improvements/group/electrical');
+                    setIsSidebarOpen(false);
+                  }}
+                  className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+                  title="Grup İcmal Paneline Git"
+                >
                   <Zap className="w-4 h-4 shrink-0 text-amber-500" />
-                  <span className="truncate">Elektrik Emniyet Raporu</span>
+                  <span className="truncate">Elektrik & PK</span>
                 </div>
-                <ChevronDown
-                  className={cn(
-                    "w-4 h-4 text-muted-foreground transition-transform duration-200",
-                    isElectricalOpen ? "rotate-0" : "-rotate-90"
-                  )}
-                />
+
+                {/* Oka Tıklandığında 8 Alt Sekme Açılır / Kapanır */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsElectricalOpen(!isElectricalOpen);
+                  }}
+                  className="p-1 hover:bg-background/20 rounded transition-colors text-muted-foreground hover:text-foreground"
+                  title="Alt sekmeleri göster/gizle"
+                >
+                  <ChevronDown
+                    className={cn(
+                      "w-4 h-4 transition-transform duration-200",
+                      isElectricalOpen ? "rotate-0" : "-rotate-90"
+                    )}
+                  />
+                </button>
               </div>
 
-              {/* Alt Sekmeler */}
+              {/* 8 Alt Sekme */}
               {isElectricalOpen && (
                 <div className="pl-4 pr-1 space-y-0.5 border-l-2 border-amber-500/30 ml-4 animate-in slide-in-from-top-1 duration-200">
-                  {ELECTRICAL_SHEETS.map(item => {
-                    const targetUrl = `/operations-management/improvements/electrical/${item.path}`;
+                  {ELECTRICAL_SHEET_KEYS.map((key) => {
+                    const def = IMPROVEMENT_SHEET_DEFINITIONS[key];
+                    const targetUrl = `/operations-management/improvements/${def.path}`;
                     const isActive = currentPath === targetUrl;
 
                     return (
                       <button
-                        key={item.key}
+                        key={def.key}
                         onClick={() => {
                           navigate(targetUrl);
                           setIsSidebarOpen(false);
@@ -381,7 +410,7 @@ export const ImprovementsLayout: React.FC = () => {
                         )}
                       >
                         <ChevronRight className="w-3 h-3 shrink-0 opacity-70" />
-                        <span className="truncate">{item.name}</span>
+                        <span className="truncate">{def.label}</span>
                       </button>
                     );
                   })}
@@ -390,13 +419,29 @@ export const ImprovementsLayout: React.FC = () => {
             </div>
           )}
 
-          {/* SİSTEM & AYARLAR GRUBU */}
+          {/* SİSTEM & YÖNETİM GRUBU */}
           <div className={cn(
             "text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pt-4 pb-1",
             isCollapsed && "text-center px-0"
           )}>
             {isCollapsed ? "—" : "YÖNETİM"}
           </div>
+
+          {/* Çöp Kutusu / Silinenler */}
+          <button
+            onClick={() => {
+              setShowTrashModal(true);
+              setIsSidebarOpen(false);
+            }}
+            title={isCollapsed ? "Silinenler (Çöp Kutusu)" : undefined}
+            className={cn(
+              "w-full flex items-center rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:bg-muted hover:text-foreground",
+              isCollapsed ? "justify-center h-10 px-0" : "gap-3 px-3 py-2"
+            )}
+          >
+            <Trash2 className="w-4 h-4 shrink-0 text-rose-500" />
+            {!isCollapsed && <span className="text-left">Silinen Kayıtlar</span>}
+          </button>
 
           {/* 5. Ayarlar (Settings) */}
           <button
@@ -409,7 +454,7 @@ export const ImprovementsLayout: React.FC = () => {
               "w-full flex items-center rounded-lg text-sm font-medium transition-colors",
               isCollapsed ? "justify-center h-10 px-0" : "gap-3 px-3 py-2",
               currentPath === '/operations-management/improvements/settings'
-                ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900"
+                ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900 font-semibold"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
@@ -419,7 +464,7 @@ export const ImprovementsLayout: React.FC = () => {
 
         </div>
 
-        {/* User Section (Diğer Modüllerle Birebir Aynı Tasarım) */}
+        {/* User Section */}
         <div className={cn("border-t border-border transition-all duration-300", isCollapsed ? "p-2 flex justify-center" : "p-3")}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -470,7 +515,7 @@ export const ImprovementsLayout: React.FC = () => {
       {/* ─────────────────────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         
-        {/* Üst Bar (Topbar) - Shadcn Card/Border stili */}
+        {/* Üst Bar (Topbar) */}
         <header className="h-16 bg-card border-b border-border px-4 lg:px-6 flex items-center justify-between shrink-0 shadow-xs z-10">
           
           {/* Sol: Menü Aç (Mobil) & Breadcrumb */}
@@ -498,7 +543,7 @@ export const ImprovementsLayout: React.FC = () => {
             </div>
           </div>
 
-          {/* Sağ: Hastane Filtresi & Excel Yükle & Theme */}
+          {/* Sağ: Hastane Filtresi & Excel Yükle & Çöp Kutusu & Theme */}
           <div className="flex items-center gap-2 sm:gap-3">
             
             {/* Hastane Seçici Dropdown */}
@@ -526,6 +571,17 @@ export const ImprovementsLayout: React.FC = () => {
                 ))}
               </select>
             </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowTrashModal(true)}
+              className="h-9 text-xs font-medium text-muted-foreground hover:text-destructive"
+              title="Silinen Kayıtlar"
+            >
+              <Trash2 className="w-3.5 h-3.5 sm:mr-1.5 text-rose-500" />
+              <span className="hidden sm:inline">Silinenler</span>
+            </Button>
 
             <Button
               variant="outline"
@@ -561,6 +617,13 @@ export const ImprovementsLayout: React.FC = () => {
           }}
         />
       )}
+
+      {/* Çöp Kutusu Modalı */}
+      <DeletedRecordsDialog
+        facilityId={selectedFacilityId === 'ALL' ? undefined : selectedFacilityId}
+        open={showTrashModal}
+        onOpenChange={setShowTrashModal}
+      />
 
     </div>
   );

@@ -1,16 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { 
   CheckCircle2, Clock, AlertTriangle, ShieldAlert, 
-  BarChart3, TrendingUp, Building2, ChevronRight, ChevronDown, Layers,
-  RefreshCw, FileSpreadsheet, Activity, AlertOctagon, Zap, ClipboardList, Shield
+  TrendingUp, Building2, ChevronRight, Layers,
+  RefreshCw, Activity, AlertOctagon, Zap, ClipboardList, Shield,
+  ArrowRight, Eye, Calendar, DollarSign, UserCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { type DashboardStats, type FacilityOption, type ImprovementRecord, ELECTRICAL_SHEETS } from './types';
-import { ImprovementTable } from './ImprovementTable';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { 
+  type FacilityOption, 
+  type ImprovementRecord, 
+  IMPROVEMENT_SHEET_DEFINITIONS 
+} from './types';
+import { 
+  useDashboardStatsQuery, 
+  useCriticalRecordsQuery 
+} from './hooks/useImprovementsQueries';
 
-const API = import.meta.env.VITE_API_URL || '';
+import { DataQualityNotice } from './components/DataQualityNotice';
+import { HospitalFindingAccordion } from './components/HospitalFindingAccordion';
+import { CompactInspectDialog } from './components/dialogs/CompactInspectDialog';
+import { ActionWorkspaceDialog } from './components/dialogs/ActionWorkspaceDialog';
 
 export const ImprovementsDashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -19,438 +31,537 @@ export const ImprovementsDashboardPage: React.FC = () => {
     facilities: FacilityOption[];
   }>();
 
-  // Dashboard Stats
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loadingStats, setLoadingStats] = useState(true);
+  // Dashboard Stats & Kritik Kayıtlar
+  const { 
+    data: stats, 
+    isLoading: isStatsLoading, 
+    refetch: refetchStats 
+  } = useDashboardStatsQuery(selectedFacilityId);
 
-  // Kritik Maddeler Listesi (Dashboard Altında)
-  const [criticalRecords, setCriticalRecords] = useState<ImprovementRecord[]>([]);
-  const [loadingCritical, setLoadingCritical] = useState(true);
+  const { 
+    data: criticalRecords = [], 
+    isLoading: isCriticalLoading, 
+    refetch: refetchCritical 
+  } = useCriticalRecordsQuery({
+    facilityId: selectedFacilityId === 'ALL' ? undefined : selectedFacilityId,
+  });
 
-  // Akordiyon (Açık hastaneler kümesi)
-  const [expandedHospitals, setExpandedHospitals] = useState<Record<string, boolean>>({});
+  // Dialog State
+  const [inspectRecord, setInspectRecord] = useState<ImprovementRecord | null>(null);
+  const [actionRecord, setActionRecord] = useState<ImprovementRecord | null>(null);
 
-  // 1. Dashboard İstatistiklerini Çek
-  const fetchStats = async () => {
-    try {
-      setLoadingStats(true);
-      const token = localStorage.getItem('token');
-      const url = `${API}/api/operations/improvements/dashboard-stats?facilityId=${selectedFacilityId}`;
-      const res = await fetch(url, {
-        headers: { 'Authorization': token ? `Bearer ${token}` : '' }
-      });
-      const data = await res.json();
-      if (data.success) {
-        setStats(data.data);
-        // İlk hastaneyi varsayılan olarak açık getir
-        if (data.data.hospitals && data.data.hospitals.length > 0) {
-          setExpandedHospitals(prev => ({
-            ...prev,
-            [data.data.hospitals[0].hospitalId]: true,
-          }));
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching dashboard stats:', err);
-    } finally {
-      setLoadingStats(false);
-    }
+  const handleRefresh = () => {
+    refetchStats();
+    refetchCritical();
   };
 
-  // 2. Kritik Maddeleri Çek
-  const fetchCriticalRecords = async () => {
-    try {
-      setLoadingCritical(true);
-      const token = localStorage.getItem('token');
-      const url = `${API}/api/operations/improvements/critical?facilityId=${selectedFacilityId}`;
-      const res = await fetch(url, {
-        headers: { 'Authorization': token ? `Bearer ${token}` : '' }
-      });
-      const data = await res.json();
-      if (data.success) {
-        setCriticalRecords(data.data);
-      }
-    } catch (err) {
-      console.error('Error fetching critical records:', err);
-    } finally {
-      setLoadingCritical(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStats();
-    fetchCriticalRecords();
-  }, [selectedFacilityId]);
-
-  const toggleHospitalExpand = (hospId: string) => {
-    setExpandedHospitals(prev => ({
-      ...prev,
-      [hospId]: !prev[hospId],
-    }));
-  };
-
-  const summary = stats?.summary || {
-    total: 0,
+  const kpis = stats?.kpis || {
+    totalFindings: 0,
     completed: 0,
-    inProgress: 0,
-    notStarted: 0,
-    cancelled: 0,
-    open: 0,
-    completionPercentage: 0,
+    completionRateDisplay: '0%',
+    completionRate: 0,
+    hasIncompleteStatus: false,
     openCritical: 0,
     openHigh: 0,
-    risks: { critical: 0, high: 0, medium: 0, low: 0, negligible: 0 }
+    missingStatusCount: 0,
+    missingRiskCount: 0,
+    missingOwnerCount: 0,
   };
 
-  // Takip Alanları Listesi (Sol menüdeki 8 sekme ile birebir aynı sırada)
-  const ALL_TRACKING_SHEETS = [
-    { key: 'DENETIMLER', name: 'Denetimler', path: '/operations-management/improvements/denetimler', icon: ClipboardList },
-    { key: 'ELEKTRIK_PK', name: 'Elektrik PK', path: '/operations-management/improvements/electrical/elektrik-pk', icon: Zap },
-    { key: 'TOPRAKLAMA_PK', name: 'Topraklama PK', path: '/operations-management/improvements/electrical/topraklama-pk', icon: Zap },
-    { key: 'PARATONER_PK', name: 'Paratoner PK', path: '/operations-management/improvements/electrical/paratoner-pk', icon: Zap },
-    { key: 'JENERATOR_PK', name: 'Jeneratör PK', path: '/operations-management/improvements/electrical/jenerator-pk', icon: Zap },
-    { key: 'ELEKTRIK_PANO_KONTROLLERI', name: 'Elektrik Pano Kontrolleri', path: '/operations-management/improvements/electrical/pano-kontrol', icon: Zap },
-    { key: 'TRAFO', name: 'Trafo', path: '/operations-management/improvements/electrical/trafo', icon: Zap },
-    { key: 'UPS', name: 'UPS', path: '/operations-management/improvements/electrical/ups', icon: Zap },
-  ];
+  const qualityGrid = stats?.qualityGrid || {
+    emptyStatus: 0,
+    undefinedStatus: 0,
+    emptyRisk: 0,
+    undefinedRisk: 0,
+    emptyOwner: 0,
+    emptyAction: 0,
+    emptyDate: 0,
+    emptyFacility: 0,
+  };
+
+  const areaMatrix = stats?.areaSummaryMatrix || [];
+  const hospitalMatrix = stats?.hospitalComparisonMatrix || [];
+  const accordionItems = stats?.hospitalFindingAccordion || [];
+
+  const selectedFacilityName = React.useMemo(() => {
+    if (selectedFacilityId === 'ALL') return 'Tüm Hastaneler Konsolide';
+    const found = facilities.find((f) => f.id === selectedFacilityId);
+    return found ? found.name : 'Seçili Hastane';
+  }, [selectedFacilityId, facilities]);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 font-sans">
-      
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 1. ÜST BAŞLIK VE YENİLE                                             */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* ── ÜST BAŞLIK & YENİLE ──────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card border border-border rounded-xl p-5 shadow-sm">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-foreground">
-            İyileştirme ve Aksiyon Takip Dashboard
-          </h2>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
+              İyileştirme ve Aksiyon Takip Dashboard
+            </h1>
+            <Badge variant="outline" className="text-xs font-semibold">
+              9 Takip Alanı
+            </Badge>
+          </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {selectedFacilityId === 'ALL' ? (
-              <span>Grup Geneli konsolide denetim, elektrik altyapı ve aksiyon takip göstergeleri.</span>
-            ) : (
-              <span>Seçili hastanenin iyileştirme ve aksiyon takip performansı.</span>
-            )}
+            Kapsam: <span className="font-semibold text-foreground">{selectedFacilityName}</span> • Denetimler ve elektrik/PK altyapı bulguları yönetim merkezi.
           </p>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            fetchStats();
-            fetchCriticalRecords();
-          }}
-          className="self-start sm:self-auto text-xs"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loadingStats ? 'animate-spin' : ''}`} />
-          Yenile
-        </Button>
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 2. KPI KARTLARI (Agent Devir Dokümanı Standartları)                */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
-        
-        {/* Toplam Tespit */}
-        <div className="bg-card text-card-foreground border rounded-xl p-4 shadow-xs">
-          <span className="text-[11px] font-semibold text-muted-foreground block mb-1">
-            Toplam Tespit
-          </span>
-          <div className="text-2xl font-bold font-mono text-foreground">
-            {summary.total.toLocaleString('tr-TR')}
-          </div>
-          <span className="text-[10px] text-muted-foreground mt-1 block">8 Takip Alanı</span>
-        </div>
-
-        {/* Tamamlanan */}
-        <div className="bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-4 shadow-xs">
-          <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 block mb-1">
-            Tamamlanan
-          </span>
-          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-            {summary.completed.toLocaleString('tr-TR')}
-          </div>
-          <span className="text-[10px] text-emerald-600/80 mt-1 block">Kapatılan Bulgular</span>
-        </div>
-
-        {/* Açık Kayıt */}
-        <div className="bg-blue-50/40 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 rounded-xl p-4 shadow-xs">
-          <span className="text-[11px] font-semibold text-blue-700 dark:text-blue-400 block mb-1">
-            Açık Kayıt
-          </span>
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 font-mono">
-            {summary.open.toLocaleString('tr-TR')}
-          </div>
-          <span className="text-[10px] text-blue-600/80 mt-1 block">
-            {summary.notStarted} Başlamadı + {summary.inProgress} Devam
-          </span>
-        </div>
-
-        {/* Tamamlanma Oranı */}
-        <div className="bg-card text-card-foreground border rounded-xl p-4 shadow-xs">
-          <span className="text-[11px] font-semibold text-muted-foreground block mb-1">
-            Tamamlanma Oranı
-          </span>
-          <div className="text-2xl font-bold font-mono text-foreground">
-            %{summary.completionPercentage.toFixed(2)}
-          </div>
-          <div className="w-full bg-muted h-1.5 rounded-full mt-2 overflow-hidden">
-            <div 
-              className="bg-emerald-500 h-full rounded-full transition-all duration-500"
-              style={{ width: `${Math.min(summary.completionPercentage, 100)}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Açık Kritik */}
-        <div className="bg-red-50/40 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl p-4 shadow-xs">
-          <span className="text-[11px] font-semibold text-red-700 dark:text-red-400 block mb-1 flex items-center justify-between">
-            Açık Kritik
-            <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
-          </span>
-          <div className="text-2xl font-bold text-red-600 dark:text-red-400 font-mono">
-            {summary.openCritical.toLocaleString('tr-TR')}
-          </div>
-          <span className="text-[10px] text-red-600/80 mt-1 block">
-            Toplam: {summary.risks.critical} Kritik
-          </span>
-        </div>
-
-        {/* Açık Yüksek */}
-        <div className="bg-orange-50/40 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/50 rounded-xl p-4 shadow-xs">
-          <span className="text-[11px] font-semibold text-orange-700 dark:text-orange-400 block mb-1">
-            Açık Yüksek
-          </span>
-          <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 font-mono">
-            {summary.openHigh.toLocaleString('tr-TR')}
-          </div>
-          <span className="text-[10px] text-orange-600/80 mt-1 block">
-            Toplam: {summary.risks.high} Yüksek
-          </span>
-        </div>
-
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 3. HASTANELERE GÖRE BULGU DAĞILIMI (GÖRSEL 1 & 2 AKORDİYON TASARIMI)*/}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="bg-card text-card-foreground border rounded-2xl shadow-xs overflow-hidden">
-        
-        {/* Akordiyon Konteyner Başlığı */}
-        <div className="p-5 border-b flex flex-wrap items-center justify-between gap-3 bg-muted/20">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center font-bold">
-              <Building2 className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold tracking-tight text-foreground">
-                Hastanelere Göre Bulgu Dağılımı
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                Hastaneyi açın → kaynak sekmeyi ve durum dağılımını (Başlamadı / Devam Ediyor / Tamamlandı) görün
-              </p>
-            </div>
-          </div>
-
-          <Badge variant="secondary" className="text-xs font-mono px-3 py-1 bg-muted">
-            {summary.total} bulgu
-          </Badge>
-        </div>
-
-        {/* Hastane Listesi (Akordiyonlar) */}
-        <div className="divide-y divide-border/60">
-          {stats?.hospitals && stats.hospitals.length > 0 ? (
-            stats.hospitals.map(hosp => {
-              const isOpen = !!expandedHospitals[hosp.hospitalId];
-              const sheets = hosp.sheets || {};
-              const sheetKeys = Object.keys(sheets);
-
-              return (
-                <div key={hosp.hospitalId} className="transition-colors">
-                  
-                  {/* Hastane Başlık Satırı (Tıklanınca Açılır/Kapanır) */}
-                  <div
-                    onClick={() => toggleHospitalExpand(hosp.hospitalId)}
-                    className="p-4 flex flex-wrap items-center justify-between gap-3 cursor-pointer hover:bg-muted/40 select-none group"
-                  >
-                    {/* Sol: Hastane Adı */}
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-primary shrink-0" />
-                      <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                        {hosp.hospitalName}
-                      </span>
-                    </div>
-
-                    {/* Sağ: İstatistik Rozetleri (Başlamadı, Devam Ediyor, Tamamlandı, Toplam) */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs text-muted-foreground mr-1 hidden sm:inline">
-                        8 sekme
-                      </span>
-
-                      {/* Başlamadı Rozeti */}
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-800">
-                        Başlamadı: <strong>{hosp.notStarted || 0}</strong>
-                      </span>
-
-                      {/* Devam Ediyor Rozeti */}
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-800">
-                        Devam Ediyor: <strong>{hosp.inProgress || 0}</strong>
-                      </span>
-
-                      {/* Tamamlandı Rozeti */}
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">
-                        Tamamlandı: <strong>{hosp.completed || 0}</strong>
-                      </span>
-
-                      {/* Toplam Bulgu Sayısı Badge */}
-                      <Badge className="font-mono text-xs px-2.5 py-0.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900">
-                        {hosp.total}
-                      </Badge>
-
-                      <ChevronDown
-                        className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
-                          isOpen ? 'rotate-180' : ''
-                        }`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Hastane Açılır İçeriği: Kaynak Sekmeler Tablosu (Görsel 2) */}
-                  {isOpen && (
-                    <div className="bg-muted/15 border-t px-6 py-4 animate-in slide-in-from-top-2 duration-150">
-                      <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center justify-between">
-                        <span>Kaynak Sekme</span>
-                        <div className="flex items-center gap-8 mr-6">
-                          <span>Bulgu</span>
-                          <span>Tamamlanma</span>
-                        </div>
-                      </div>
-
-                      <div className="divide-y divide-border/40 border rounded-xl overflow-hidden bg-card">
-                        {ALL_TRACKING_SHEETS.map(item => {
-                          const sheetData = sheets[item.key] || {
-                            total: 0,
-                            completed: 0,
-                            inProgress: 0,
-                            notStarted: 0,
-                            cancelled: 0,
-                            open: 0,
-                          };
-                          const IconComponent = item.icon;
-                          const activeTotal = sheetData.total - (sheetData.cancelled || 0);
-                          const compRatio = activeTotal > 0 ? ((sheetData.completed / activeTotal) * 100).toFixed(2) : '0,00';
-
-                          return (
-                            <div
-                              key={item.key}
-                              onClick={() => navigate(item.path)}
-                              className="p-3.5 flex items-center justify-between hover:bg-muted/40 cursor-pointer transition-colors group"
-                            >
-                              {/* Sol: Sekme Başlığı & Kategori Grubu */}
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-muted text-muted-foreground group-hover:text-primary flex items-center justify-center shrink-0">
-                                  <IconComponent className="w-4 h-4" />
-                                </div>
-                                <div>
-                                  <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors block">
-                                    {item.name}
-                                  </span>
-                                  <span className="text-[10px] text-muted-foreground">
-                                    {sheetData.total > 0 ? (
-                                      `${sheetData.notStarted} Başlamadı · ${sheetData.inProgress} Devam · ${sheetData.completed} Bitti`
-                                    ) : (
-                                      '0 Başlamadı · 0 Devam · 0 Bitti'
-                                    )}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Sağ: Sayı, Oran ve Git Oku */}
-                              <div className="flex items-center gap-8">
-                                <span className={`text-xs font-mono font-bold w-12 text-right ${sheetData.total > 0 ? 'text-foreground' : 'text-muted-foreground/60'}`}>
-                                  {sheetData.total}
-                                </span>
-                                
-                                <span className={`text-xs font-mono font-bold w-16 text-right ${sheetData.total > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground/50'}`}>
-                                  %{compRatio}
-                                </span>
-
-                                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-transform group-hover:translate-x-0.5" />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                </div>
-              );
-            })
-          ) : (
-            <div className="p-8 text-center text-xs text-muted-foreground">
-              Henüz bulgu kaydı bulunan hastane bulunamadı.
-            </div>
-          )}
-        </div>
-
-        {/* Alt Bilgi Dipnotu (Görsel 1 & 2'deki metin) */}
-        <div className="px-5 py-3 border-t bg-muted/20 text-[11px] text-muted-foreground">
-          {stats?.hospitals?.length || 0} hastane · 8 kaynak sekme · tamamlanma: tamamlanan / (bulgu - iptal). Eksik veya tanımsız durumlarda oran gösterilmez.
-        </div>
-
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 4. MERKEZİ KRİTİK MADDELER (DASHBOARD ALTINDA TABLO VE ESKALASYON) */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="space-y-3 pt-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center font-bold">
-              <AlertOctagon className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
-                Merkezi Kritik Maddeler Konsolu
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-red-500 text-white font-mono font-bold">
-                  {criticalRecords.length}
-                </span>
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                Tüm hastanelerin ve sekmelerin anlık kritik riskli bulguları ve hızlı aksiyon takibi.
-              </p>
-            </div>
-          </div>
-
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={fetchCriticalRecords}
-            className="text-xs"
+            onClick={handleRefresh}
+            className="h-8 text-xs gap-1.5"
           >
-            <RefreshCw className={`w-3 h-3 mr-1 ${loadingCritical ? 'animate-spin' : ''}`} />
-            Kritikleri Yenile
+            <RefreshCw className={`w-3.5 h-3.5 ${isStatsLoading || isCriticalLoading ? 'animate-spin' : ''}`} />
+            Yenile
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={() => navigate('/operations-management/improvements/critical')}
+            className="h-8 text-xs gap-1.5 shadow-sm bg-rose-600 hover:bg-rose-700 text-white"
+          >
+            <AlertTriangle className="w-3.5 h-3.5" />
+            Kritik Bulgular ({kpis.openCritical})
           </Button>
         </div>
-
-        {/* Kritik Maddeler Tablosu (Excel Filtreleri ve Aksiyon Butonlarıyla) */}
-        <ImprovementTable
-          records={criticalRecords}
-          loading={loadingCritical}
-          sheetTitle="Kritik Maddeler"
-          sheetType="KRITIK"
-          onRefresh={() => {
-            fetchStats();
-            fetchCriticalRecords();
-          }}
-          facilities={facilities}
-          selectedFacilityId={selectedFacilityId}
-        />
       </div>
 
+      {/* ── 6 KPI KARTLARI (ŞARTNAME STANDARDI) ───────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        {/* 1. Toplam Bulgu */}
+        <Card className="border-border bg-card shadow-xs">
+          <CardHeader className="p-3.5 pb-1 flex flex-row items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Toplam Bulgu</span>
+            <Activity className="w-4 h-4 text-blue-500" />
+          </CardHeader>
+          <CardContent className="p-3.5 pt-0">
+            <div className="text-2xl font-bold text-foreground">
+              {kpis.totalFindings.toLocaleString()}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">tüm takip alanları</p>
+          </CardContent>
+        </Card>
+
+        {/* 2. Tamamlanan */}
+        <Card className="border-border bg-card shadow-xs">
+          <CardHeader className="p-3.5 pb-1 flex flex-row items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Tamamlanan</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+          </CardHeader>
+          <CardContent className="p-3.5 pt-0">
+            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+              {kpis.completed.toLocaleString()}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">kapatılan aksiyon</p>
+          </CardContent>
+        </Card>
+
+        {/* 3. Tamamlanma Oranı */}
+        <Card className="border-border bg-card shadow-xs">
+          <CardHeader className="p-3.5 pb-1 flex flex-row items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Başarı Oranı</span>
+            <TrendingUp className="w-4 h-4 text-primary" />
+          </CardHeader>
+          <CardContent className="p-3.5 pt-0">
+            <div className="text-2xl font-bold text-primary">
+              {kpis.completionRateDisplay}
+            </div>
+            <div className="w-full bg-muted h-1.5 rounded-full mt-1.5 overflow-hidden">
+              <div 
+                className="bg-primary h-full rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(kpis.completionRate || 0, 100)}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 4. Açık Kritik */}
+        <Card className="border-border bg-card shadow-xs">
+          <CardHeader className="p-3.5 pb-1 flex flex-row items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Açık Kritik</span>
+            <AlertTriangle className="w-4 h-4 text-rose-500" />
+          </CardHeader>
+          <CardContent className="p-3.5 pt-0">
+            <div className="text-2xl font-bold text-rose-600 dark:text-rose-400">
+              {kpis.openCritical.toLocaleString()}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">yüksek riskli açık</p>
+          </CardContent>
+        </Card>
+
+        {/* 5. Açık Yüksek */}
+        <Card className="border-border bg-card shadow-xs">
+          <CardHeader className="p-3.5 pb-1 flex flex-row items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Açık Yüksek</span>
+            <AlertOctagon className="w-4 h-4 text-amber-500" />
+          </CardHeader>
+          <CardContent className="p-3.5 pt-0">
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+              {kpis.openHigh.toLocaleString()}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">önemli açık kayıt</p>
+          </CardContent>
+        </Card>
+
+        {/* 6. Eksik / Boş Bilgi */}
+        <Card className="border-border bg-card shadow-xs">
+          <CardHeader className="p-3.5 pb-1 flex flex-row items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Eksik Veri</span>
+            <ShieldAlert className="w-4 h-4 text-orange-500" />
+          </CardHeader>
+          <CardContent className="p-3.5 pt-0">
+            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+              {kpis.missingStatusCount + kpis.missingRiskCount + kpis.missingOwnerCount}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">durum/risk/sorumlu</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── VERİ KALİTESİ VE UYARI BANNERI ───────────────────────── */}
+      <DataQualityNotice
+        notice={stats?.notice || null}
+        qualityGrid={qualityGrid}
+      />
+
+      {/* ── 9 TAKİP ALANI İCMAL MATRİSİ ──────────────────────────── */}
+      <Card className="border-border bg-card shadow-sm overflow-hidden">
+        <CardHeader className="p-4 pb-2 border-b border-border bg-muted/30 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-sm font-semibold text-foreground">
+              9 Takip Alanı İcmal Matrisi
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Denetim ve 8 elektrik tablosundaki bulguların durum, oran ve kritik dağılımı
+            </p>
+          </div>
+          <Badge variant="secondary" className="text-xs">
+            9 Alan
+          </Badge>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-muted/50 border-b border-border text-[11px] font-semibold text-muted-foreground uppercase">
+                <tr>
+                  <th className="py-2.5 px-3">Takip Alanı</th>
+                  <th className="py-2.5 px-3 text-center">Grup</th>
+                  <th className="py-2.5 px-3 text-center">Toplam</th>
+                  <th className="py-2.5 px-3 text-center">Tamamlanan</th>
+                  <th className="py-2.5 px-3 text-center">Devam Eden</th>
+                  <th className="py-2.5 px-3 text-center">Başlamadı</th>
+                  <th className="py-2.5 px-3 text-center">İptal</th>
+                  <th className="py-2.5 px-3 text-center">Başarı Oranı</th>
+                  <th className="py-2.5 px-3 text-center">Kritik</th>
+                  <th className="py-2.5 px-3 text-center">Aksiyon</th>
+                  <th className="py-2.5 px-3 text-right">Git</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {areaMatrix.map((row) => (
+                  <tr key={row.sheetType} className="hover:bg-muted/40 transition-colors">
+                    <td className="py-2.5 px-3 font-medium text-foreground">
+                      <div className="flex items-center gap-2">
+                        {row.moduleGroup === 'DENETIM' ? (
+                          <ClipboardList className="w-3.5 h-3.5 text-emerald-600" />
+                        ) : (
+                          <Zap className="w-3.5 h-3.5 text-amber-500" />
+                        )}
+                        <span>{row.label}</span>
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      <Badge variant="outline" className="text-[10px]">
+                        {row.moduleGroup === 'DENETIM' ? 'Denetim' : 'Elektrik/PK'}
+                      </Badge>
+                    </td>
+                    <td className="py-2.5 px-3 text-center font-semibold text-foreground">
+                      {row.total}
+                    </td>
+                    <td className="py-2.5 px-3 text-center text-emerald-600 dark:text-emerald-400 font-semibold">
+                      {row.completed}
+                    </td>
+                    <td className="py-2.5 px-3 text-center text-blue-600 dark:text-blue-400">
+                      {row.inProgress}
+                    </td>
+                    <td className="py-2.5 px-3 text-center text-slate-500">
+                      {row.notStarted}
+                    </td>
+                    <td className="py-2.5 px-3 text-center text-muted-foreground">
+                      {row.cancelled}
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      <Badge
+                        variant="secondary"
+                        className={`text-[10px] font-bold ${
+                          row.completionRateDisplay.includes('%100')
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                            : row.completionRateDisplay === 'n.a.'
+                            ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                            : 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+                        }`}
+                      >
+                        {row.completionRateDisplay}
+                      </Badge>
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      {row.openCritical > 0 ? (
+                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0.5">
+                          {row.openCritical}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </td>
+                    <td className="py-2.5 px-3 text-center text-muted-foreground">
+                      {row.actionsCount}
+                    </td>
+                    <td className="py-2.5 px-3 text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/operations-management/improvements/${row.path}`)}
+                        className="h-6 text-[11px] gap-1 px-2 text-primary hover:text-primary hover:bg-primary/10"
+                      >
+                        Aç
+                        <ArrowRight className="w-3 h-3" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── HASTANELER KARŞILAŞTIRMA MATRİSİ ──────────────────────── */}
+      {selectedFacilityId === 'ALL' && hospitalMatrix.length > 0 && (
+        <Card className="border-border bg-card shadow-sm overflow-hidden">
+          <CardHeader className="p-4 pb-2 border-b border-border bg-muted/30 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-sm font-semibold text-foreground">
+                Hastaneler Karşılaştırma Matrisi
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Grup geneli hastanelerin bulgu sayıları ve tamamlanma başarı oranları
+              </p>
+            </div>
+            <Badge variant="secondary" className="text-xs">
+              {hospitalMatrix.length} Hastane
+            </Badge>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-muted/50 border-b border-border text-[11px] font-semibold text-muted-foreground uppercase">
+                  <tr>
+                    <th className="py-2.5 px-3">Hastane</th>
+                    <th className="py-2.5 px-3 text-center">Şehir</th>
+                    <th className="py-2.5 px-3 text-center">Toplam</th>
+                    <th className="py-2.5 px-3 text-center">Tamamlanan</th>
+                    <th className="py-2.5 px-3 text-center">Devam Eden</th>
+                    <th className="py-2.5 px-3 text-center">Başlamadı</th>
+                    <th className="py-2.5 px-3 text-center">Başarı Oranı</th>
+                    <th className="py-2.5 px-3 text-center">Kritik</th>
+                    <th className="py-2.5 px-3 text-center">Yüksek</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {hospitalMatrix.map((h) => (
+                    <tr key={h.facilityId} className="hover:bg-muted/40 transition-colors">
+                      <td className="py-2.5 px-3 font-medium text-foreground">
+                        <div className="flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span>{h.facilityName}</span>
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-3 text-center text-muted-foreground">
+                        {h.city || '-'}
+                      </td>
+                      <td className="py-2.5 px-3 text-center font-semibold text-foreground">
+                        {h.total}
+                      </td>
+                      <td className="py-2.5 px-3 text-center text-emerald-600 dark:text-emerald-400 font-semibold">
+                        {h.completed}
+                      </td>
+                      <td className="py-2.5 px-3 text-center text-blue-600 dark:text-blue-400">
+                        {h.inProgress}
+                      </td>
+                      <td className="py-2.5 px-3 text-center text-slate-500">
+                        {h.notStarted}
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <Badge
+                          variant="secondary"
+                          className={`text-[10px] font-bold ${
+                            h.completionRateDisplay.includes('%100')
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              : h.completionRateDisplay === 'n.a.'
+                              ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                              : 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+                          }`}
+                        >
+                          {h.completionRateDisplay}
+                        </Badge>
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        {h.openCritical > 0 ? (
+                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0.5">
+                            {h.openCritical}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        {h.openHigh > 0 ? (
+                          <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300 px-1.5 py-0.5">
+                            {h.openHigh}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── 3 SEVİYELİ AKORDİYON (HASTANE -> TAKİP ALANI -> KATEGORİ) */}
+      <HospitalFindingAccordion items={accordionItems} />
+
+      {/* ── KRİTİK KALEMLER ÖNİZLEMESİ ───────────────────────────── */}
+      <Card className="border-border bg-card shadow-sm overflow-hidden">
+        <CardHeader className="p-4 pb-2 border-b border-border bg-rose-500/5 flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+            <div>
+              <CardTitle className="text-sm font-semibold text-foreground">
+                Açık Kritik ve Yüksek Riskli Bulgular
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Kapatılmamış en acil {Math.min(criticalRecords.length, 10)} bulgu
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/operations-management/improvements/critical')}
+            className="h-7 text-xs gap-1 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+          >
+            Tümünü Gör ({criticalRecords.length})
+            <ArrowRight className="w-3 h-3" />
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          {criticalRecords.length === 0 ? (
+            <div className="p-8 text-center text-xs text-muted-foreground">
+              Açık kritik veya yüksek riskli bulgu bulunmamaktadır. Tebrikler!
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-muted/50 border-b border-border text-[11px] font-semibold text-muted-foreground uppercase">
+                  <tr>
+                    <th className="py-2 px-3">Hastane</th>
+                    <th className="py-2 px-3">Alan</th>
+                    <th className="py-2 px-3">Risk</th>
+                    <th className="py-2 px-3">Tespit / Uygunsuzluk</th>
+                    <th className="py-2 px-3">Sorumlu</th>
+                    <th className="py-2 px-3">Durum</th>
+                    <th className="py-2 px-3 text-right">İşlem</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {criticalRecords.slice(0, 10).map((r) => (
+                    <tr key={r.id} className="hover:bg-muted/40 transition-colors">
+                      <td className="py-2.5 px-3 font-medium text-foreground whitespace-nowrap">
+                        {r.facility?.name || '-'}
+                      </td>
+                      <td className="py-2.5 px-3 text-muted-foreground whitespace-nowrap">
+                        {IMPROVEMENT_SHEET_DEFINITIONS[r.sheetType]?.label || r.sheetType}
+                      </td>
+                      <td className="py-2.5 px-3 whitespace-nowrap">
+                        <Badge
+                          variant="destructive"
+                          className="text-[10px] font-bold"
+                        >
+                          {r.riskScore}
+                        </Badge>
+                      </td>
+                      <td className="py-2.5 px-3 text-foreground line-clamp-2 max-w-md">
+                        {r.finding}
+                      </td>
+                      <td className="py-2.5 px-3 text-muted-foreground whitespace-nowrap">
+                        {r.assignedTo || '-'}
+                      </td>
+                      <td className="py-2.5 px-3 whitespace-nowrap">
+                        <Badge
+                          variant="secondary"
+                          className={`text-[10px] ${
+                            r.status === 'Tamamlandı'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              : 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+                          }`}
+                        >
+                          {r.status || 'Açık'}
+                        </Badge>
+                      </td>
+                      <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setInspectRecord(r)}
+                            className="h-6 text-[11px] px-2 text-primary"
+                          >
+                            İncele
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setActionRecord(r)}
+                            className="h-6 text-[11px] px-2"
+                          >
+                            Aksiyon
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── DİALOGLAR ─────────────────────────────────────────── */}
+      <CompactInspectDialog
+        record={inspectRecord}
+        open={!!inspectRecord}
+        onOpenChange={(open) => !open && setInspectRecord(null)}
+        onOpenActionWorkspace={() => {
+          const rec = inspectRecord;
+          setInspectRecord(null);
+          setActionRecord(rec);
+        }}
+      />
+
+      <ActionWorkspaceDialog
+        record={actionRecord}
+        open={!!actionRecord}
+        onOpenChange={(open) => !open && setActionRecord(null)}
+      />
     </div>
   );
 };

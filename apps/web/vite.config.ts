@@ -10,7 +10,8 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "./src")
+      "@": path.resolve(import.meta.dirname, "./src"),
+      "@sec-portali/shared": path.resolve(import.meta.dirname, "../../packages/shared/src/index.ts")
     },
   },
   server: {

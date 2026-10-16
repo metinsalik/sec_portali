@@ -1,3 +1,32 @@
+import {
+  ImprovementSheetType,
+  ImprovementOperationType,
+  ImprovementReportResult,
+  type ImprovementPhoto,
+  IMPROVEMENT_SHEET_DEFINITIONS,
+  ELECTRICAL_SHEET_KEYS,
+  VALID_STATUSES,
+  VALID_RISKS,
+  CRITICAL_RISKS,
+  MAX_PHOTOS_PER_RECORD,
+  type ValidStatus,
+  type ValidRisk,
+} from '@sec-portali/shared';
+
+export {
+  ImprovementSheetType,
+  ImprovementOperationType,
+  ImprovementReportResult,
+  IMPROVEMENT_SHEET_DEFINITIONS,
+  ELECTRICAL_SHEET_KEYS,
+  VALID_STATUSES,
+  VALID_RISKS,
+  CRITICAL_RISKS,
+  MAX_PHOTOS_PER_RECORD,
+};
+
+export type { ImprovementPhoto, ValidStatus, ValidRisk };
+
 export interface FacilityOption {
   id: string;
   name: string;
@@ -6,8 +35,20 @@ export interface FacilityOption {
   recordCount: number;
 }
 
-export type RiskScoreType = 'Kritik' | 'Yüksek' | 'Önemli' | 'Olası' | 'Önemsiz';
-export type RecordStatusType = 'Tamamlandı' | 'Devam Ediyor' | 'Başlamadı' | 'İptal Edildi';
+export interface ImprovementActionItem {
+  id: string;
+  recordId: string;
+  actionDescription: string;
+  statusAfterAction?: string | null;
+  responsiblePerson?: string | null;
+  actionDate: string;
+  dueDate?: string | null;
+  costAmount?: number | string | null;
+  currency?: string;
+  extraDetails?: any;
+  createdById?: string;
+  createdAt?: string;
+}
 
 export interface ImprovementRecordHistory {
   id: string;
@@ -21,6 +62,18 @@ export interface ImprovementRecordHistory {
   createdAt: string;
 }
 
+export interface ImprovementOperationReportSummary {
+  id: string;
+  reportDate: string;
+  nextScheduledDate?: string | null;
+  operationType: ImprovementOperationType;
+  resultStatus: ImprovementReportResult;
+  companyName?: string | null;
+  inspectorName?: string | null;
+  reportNo?: string | null;
+  summaryNotes?: string | null;
+}
+
 export interface ImprovementRecord {
   id: string;
   facilityId: string;
@@ -29,97 +82,206 @@ export interface ImprovementRecord {
     name: string;
     shortName: string;
   };
-  moduleGroup: string; // 'DENETIMLER' | 'ELEKTRIK'
-  sheetType: string;
+  moduleGroup: string; // 'DENETIM' | 'ELEKTRIK_BAKIM_KONTROL'
+  sheetType: ImprovementSheetType;
   rowNo?: number | null;
+  reportId?: string | null;
+  report?: ImprovementOperationReportSummary | null;
+
   location?: string | null;
   equipment?: string | null;
   finding: string;
-  riskScore?: RiskScoreType | string | null;
+  riskScore?: string | null;
   assignedTo?: string | null;
-  status: RecordStatusType | string;
+  status: string;
   actionPlan?: string | null;
   currentNote?: string | null;
+
   auditName?: string | null;
   category?: string | null;
   recordDate?: string | null;
-  dueDate?: string | null; // Termin Tarihi
+  dueDate?: string | null;
   applicationType?: string | null;
+
+  legacyBudget?: number | string | null;
+  currency?: string;
+  extraFields?: Record<string, any> | null;
+  photos?: ImprovementPhoto[];
+
   sourceFileName?: string | null;
+  isArchived?: boolean;
   createdAt: string;
   updatedAt: string;
   createdBy?: string | null;
   updatedBy?: string | null;
+
+  actions?: ImprovementActionItem[];
   histories?: ImprovementRecordHistory[];
 }
 
-export interface DashboardStats {
-  summary: {
-    total: number;
-    completed: number;
-    inProgress: number;
-    notStarted: number;
-    cancelled: number;
-    open: number;
-    completionPercentage: number;
-    openCritical: number;
-    openHigh: number;
-    risks: {
-      critical: number;
-      high: number;
-      medium: number;
-      low: number;
-      negligible: number;
-    };
-  };
-  sheets: Record<string, {
-    total: number;
-    completed: number;
-    open: number;
-    inProgress: number;
-    notStarted: number;
-  }>;
-  hospitals: Array<{
-    hospitalId: string;
-    hospitalName: string;
-    total: number;
-    completed: number;
-    inProgress: number;
-    notStarted: number;
-    cancelled: number;
-    open: number;
-    sheets?: Record<string, {
-      total: number;
-      completed: number;
-      inProgress: number;
-      notStarted: number;
-      cancelled: number;
-      open: number;
-    }>;
-  }>;
-  categories: Record<string, number>;
+export interface DashboardKPIs {
+  totalFindings: number;
+  completed: number;
+  completionRateDisplay: string;
+  completionRate: number | null;
+  hasIncompleteStatus: boolean;
+  openCritical: number;
+  openHigh: number;
+  missingStatusCount: number;
+  missingRiskCount: number;
+  missingOwnerCount: number;
 }
 
-export const ELECTRICAL_SHEETS = [
-  { key: 'ELEKTRIK_PK', name: 'Elektrik PK', path: 'elektrik-pk' },
-  { key: 'TOPRAKLAMA_PK', name: 'Topraklama PK', path: 'topraklama-pk' },
-  { key: 'PARATONER_PK', name: 'Paratoner PK', path: 'paratoner-pk' },
-  { key: 'JENERATOR_PK', name: 'Jeneratör PK', path: 'jenerator-pk' },
-  { key: 'ELEKTRIK_PANO_KONTROLLERI', name: 'Elektrik Pano Kontrolleri', path: 'pano-kontrol' },
-  { key: 'TRAFO', name: 'Trafo', path: 'trafo' },
-  { key: 'UPS', name: 'UPS', path: 'ups' },
-];
+export interface QualityGridData {
+  emptyStatus: number;
+  undefinedStatus: number;
+  emptyRisk: number;
+  undefinedRisk: number;
+  emptyOwner: number;
+  emptyAction: number;
+  emptyDate: number;
+  emptyFacility: number;
+}
 
-export const SHEET_MAP: Record<string, { sheetType: string; moduleGroup: string; label: string }> = {
-  'Denetimler': { sheetType: 'DENETIMLER', moduleGroup: 'DENETIMLER', label: 'Denetimler' },
-  'Elektrik PK': { sheetType: 'ELEKTRIK_PK', moduleGroup: 'ELEKTRIK', label: 'Elektrik PK' },
-  'Topraklama PK': { sheetType: 'TOPRAKLAMA_PK', moduleGroup: 'ELEKTRIK', label: 'Topraklama PK' },
-  'Paratoner PK': { sheetType: 'PARATONER_PK', moduleGroup: 'ELEKTRIK', label: 'Paratoner PK' },
-  'Jeneratör PK': { sheetType: 'JENERATOR_PK', moduleGroup: 'ELEKTRIK', label: 'Jeneratör PK' },
-  'Jenerator PK': { sheetType: 'JENERATOR_PK', moduleGroup: 'ELEKTRIK', label: 'Jeneratör PK' },
-  'Elektrik Pano Kontrolleri': { sheetType: 'ELEKTRIK_PANO_KONTROLLERI', moduleGroup: 'ELEKTRIK', label: 'Elektrik Pano Kontrolleri' },
-  'Elektrik Pano Kontolleri': { sheetType: 'ELEKTRIK_PANO_KONTROLLERI', moduleGroup: 'ELEKTRIK', label: 'Elektrik Pano Kontrolleri' },
-  'Pano Kontrolleri': { sheetType: 'ELEKTRIK_PANO_KONTROLLERI', moduleGroup: 'ELEKTRIK', label: 'Elektrik Pano Kontrolleri' },
-  'Trafo': { sheetType: 'TRAFO', moduleGroup: 'ELEKTRIK', label: 'Trafo' },
-  'UPS': { sheetType: 'UPS', moduleGroup: 'ELEKTRIK', label: 'UPS' },
-};
+export interface AreaSummaryMatrixRow {
+  sheetType: ImprovementSheetType;
+  label: string;
+  moduleGroup: string;
+  path: string;
+  total: number;
+  completed: number;
+  inProgress: number;
+  notStarted: number;
+  cancelled: number;
+  completionRate: number | null;
+  completionRateDisplay: string;
+  openCritical: number;
+  openHigh: number;
+  actionsCount: number;
+  reportsCount: number;
+  overdueReportsCount: number;
+}
+
+export interface HospitalComparisonMatrixRow {
+  facilityId: string;
+  facilityName: string;
+  shortName: string;
+  city: string;
+  total: number;
+  completed: number;
+  inProgress: number;
+  notStarted: number;
+  cancelled: number;
+  completionRate: number | null;
+  completionRateDisplay: string;
+  openCritical: number;
+  openHigh: number;
+}
+
+export interface HospitalAccordionCategory {
+  categoryName: string;
+  total: number;
+  completed: number;
+  completionRateDisplay: string;
+}
+
+export interface HospitalAccordionSheet {
+  sheetType: string;
+  sheetLabel: string;
+  total: number;
+  completed: number;
+  completionRateDisplay: string;
+  categories: HospitalAccordionCategory[];
+}
+
+export interface HospitalAccordionItem {
+  hospitalId: string;
+  hospitalName: string;
+  total: number;
+  completed: number;
+  completionRateDisplay: string;
+  sheets: HospitalAccordionSheet[];
+}
+
+export interface DashboardStatsResponse {
+  kpis: DashboardKPIs;
+  notice: { type: 'amber' | 'neutral'; message: string } | null;
+  qualityGrid: QualityGridData;
+  statusDistribution: Array<{ status: string; count: number }>;
+  riskDistribution: Array<{ risk: string; count: number }>;
+  areaSummaryMatrix: AreaSummaryMatrixRow[];
+  hospitalComparisonMatrix: HospitalComparisonMatrixRow[];
+  hospitalFindingAccordion: HospitalAccordionItem[];
+}
+
+export interface CompactReportOperationDetail {
+  id: string;
+  reportDate: string;
+  nextScheduledDate?: string | null;
+  resultStatus: ImprovementReportResult;
+  isOverdue: boolean;
+  companyName?: string | null;
+  reportNo?: string | null;
+  hasConflict: boolean;
+}
+
+export interface CompactReportOverviewRow {
+  facilityId: string;
+  facilityName: string;
+  inspection: CompactReportOperationDetail | null;
+  maintenance: CompactReportOperationDetail | null;
+  openFindingsCount: number;
+  criticalFindingsCount: number;
+  hasConflict: boolean;
+  conflictMessage?: string | null;
+}
+
+export interface GroupDashboardStatsResponse {
+  groupKpis: {
+    totalFindings: number;
+    completed: number;
+    completionRateDisplay: string;
+    openCritical: number;
+    totalActionsCost: number;
+  };
+  operationMetrics: {
+    totalHospitals: number;
+    facilitiesWithReports: number;
+    overdueReports: number;
+    clearReports: number;
+    findingsReports: number;
+  };
+  groupSummaryTable: Array<{
+    sheetType: ImprovementSheetType;
+    label: string;
+    path: string;
+    total: number;
+    completed: number;
+    open: number;
+    completionRateDisplay: string;
+    openCritical: number;
+  }>;
+  hospitalOperationTable: Array<{
+    facilityId: string;
+    facilityName: string;
+    latestInspectionDate?: string | null;
+    nextInspectionDate?: string | null;
+    inspectionResult?: string | null;
+    isInspectionOverdue: boolean;
+    latestMaintenanceDate?: string | null;
+    nextMaintenanceDate?: string | null;
+    maintenanceResult?: string | null;
+    isMaintenanceOverdue: boolean;
+    openCount: number;
+    criticalCount: number;
+  }>;
+}
+
+export interface TrashItem {
+  id: string;
+  type: 'RECORD' | 'REPORT' | 'ACTION';
+  title: string;
+  detail?: string | null;
+  deletedAt?: string | null;
+  deletedBy?: string | null;
+}

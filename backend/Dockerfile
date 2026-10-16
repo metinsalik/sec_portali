@@ -17,6 +17,10 @@ RUN npm ci --legacy-peer-deps
 COPY backend/ backend/
 COPY packages/ packages/
 
+# Build shared package
+WORKDIR /app/packages/shared
+RUN /app/backend/node_modules/.bin/tsc
+
 WORKDIR /app/backend
 
 # Fix windows line endings
@@ -25,7 +29,7 @@ RUN chmod +x entrypoint.sh
 
 # Generate prisma client & build
 RUN npx prisma generate --generator client
-RUN npx tsc
+RUN /app/backend/node_modules/.bin/tsc
 
 EXPOSE 3005
 

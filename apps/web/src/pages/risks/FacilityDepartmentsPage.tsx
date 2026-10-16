@@ -15,6 +15,8 @@ import { toast } from 'sonner';
 import RiskExcelImport from './RiskExcelImport';
 import { FacilityRiskPrintModal } from '@/components/risks/FacilityRiskPrintModal';
 import RiskLocationPage from './RiskLocationPage';
+import { IsometricFacilityViewer } from '@/components/risks/isometric/IsometricFacilityViewer';
+import { Box, Cuboid } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -126,6 +128,19 @@ export default function FacilityDepartmentsPage() {
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<{ id: string; name: string } | null>(null);
   const [viewMode, setViewMode] = useState<'overview' | 'location'>('location');
+  const [scopeViewMode, setScopeViewMode] = useState<'both' | 'isometric' | 'hierarchy'>('both');
+
+  const handleIsometricSelectScope = (scope: { 
+    building?: string | null; 
+    floor?: string | null; 
+    dept?: string | null; 
+    unit?: { id: string; name: string } | null 
+  }) => {
+    if (scope.building !== undefined) setSelectedBuilding(scope.building);
+    if (scope.floor !== undefined) setSelectedFloor(scope.floor);
+    if (scope.dept !== undefined) setSelectedDept(scope.dept);
+    if (scope.unit !== undefined) setSelectedUnit(scope.unit);
+  };
 
   // Table filters & sorting
   const [riskSearch, setRiskSearch] = useState('');
@@ -392,18 +407,63 @@ export default function FacilityDepartmentsPage() {
         </div>
       </div>
 
-      {/* ─── ULTRA PREMİUM ADIM GEZGİNİ (COMMAND-CENTER STEP SELECTOR) ────── */}
+      {/* ─── ULTRA PREMİUM ADIM GEZGİNİ & 2.5D İZOMETRİK MODEL ────── */}
       <div className="bg-card border rounded-2xl shadow-xs overflow-hidden">
         {/* Adım İlerleme Başlığı */}
         <div className="p-4 border-b bg-muted/20 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Compass className="w-4 h-4 text-primary" />
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Hiyerarşik Kapsam Seçici
+              Fiziksel Kapsam & Lokasyon Gezgini
             </span>
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Görünüm Modu Seçici */}
+            <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border/60">
+              <button
+                type="button"
+                onClick={() => setScopeViewMode('isometric')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                  scopeViewMode === 'isometric'
+                    ? 'bg-background text-foreground shadow-2xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="2.5D İzometrik Dijital İkiz Görünümü"
+              >
+                <Cuboid className="w-3.5 h-3.5 text-primary" />
+                2.5D İzometrik
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setScopeViewMode('both')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                  scopeViewMode === 'both'
+                    ? 'bg-background text-foreground shadow-2xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="İzometrik Model ve Adım Seçici Birlikte"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                İkili Görünüm
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setScopeViewMode('hierarchy')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                  scopeViewMode === 'hierarchy'
+                    ? 'bg-background text-foreground shadow-2xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Klasik Hiyerarşik Adım Seçici"
+              >
+                <Layers className="w-3.5 h-3.5 text-blue-500" />
+                Adım Seçici
+              </button>
+            </div>
+
             <Button
               variant={!selectedBuilding && !selectedFloor && !selectedDept ? 'default' : 'ghost'}
               size="sm"
@@ -420,8 +480,24 @@ export default function FacilityDepartmentsPage() {
           </div>
         </div>
 
-        {/* Çok Kademeli Segmentli Kontrol Paneli */}
-        <div className="p-4 space-y-4">
+        {/* 2.5D İzometrik Dijital İkiz Modeli */}
+        {(scopeViewMode === 'isometric' || scopeViewMode === 'both') && (
+          <div className={`animate-in fade-in duration-200 ${scopeViewMode === 'both' ? 'border-b' : ''}`}>
+            <IsometricFacilityViewer
+              tree={tree}
+              selectedBuilding={selectedBuilding}
+              selectedFloor={selectedFloor}
+              selectedDept={selectedDept}
+              scopedRisks={scopedRisks}
+              isEmbedded={true}
+              onSelectScope={handleIsometricSelectScope}
+            />
+          </div>
+        )}
+
+        {/* Çok Kademeli Segmentli Kontrol Paneli (Klasik Hiyerarşik Seçici) */}
+        {(scopeViewMode === 'hierarchy' || scopeViewMode === 'both') && (
+        <div className="p-4 space-y-4 animate-in fade-in duration-200">
           {/* 1. SEVİYE: BİNALAR */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
@@ -617,7 +693,9 @@ export default function FacilityDepartmentsPage() {
             </div>
           )}
         </div>
+        )}
       </div>
+
 
       {/* ─── GÖRÜNÜM MODU SEÇİCİ & AKTİF KAPSAM GEÇİŞİ ─────────────────────── */}
       {activeLocationInfo && (

@@ -681,9 +681,536 @@ router.post('/import-excel', tempUpload.single('file'), async (req: AuthRequest,
 });
 
 // ─────────────────────────────────────────────────────────
+// 6.1 PREVIEW CONSOLIDATED EXCEL (Tüm Hastaneler & Ölçüm 1, 2, 3)
+// ─────────────────────────────────────────────────────────
+router.post('/preview-consolidated-excel', tempUpload.single('file'), async (req: AuthRequest, res) => {
+  try {
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ error: 'Excel dosyası yüklenmedi.' });
+    }
+
+    const workbook = xlsx.read(file.buffer, { type: 'buffer', cellDates: true });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const rawRows = xlsx.utils.sheet_to_json<any[]>(worksheet, { header: 1 });
+
+    if (!rawRows || rawRows.length < 2) {
+      return res.status(400).json({ error: 'Excel içeriği geçerli bir formatta değil.' });
+    }
+
+    const normalizeCell = (c: any) =>
+      String(c || '')
+        .toLocaleLowerCase('tr-TR')
+        .replace(/ı/g, 'i')
+        .replace(/ğ/g, 'g')
+        .replace(/ü/g, 'u')
+        .replace(/ş/g, 's')
+        .replace(/ö/g, 'o')
+        .replace(/ç/g, 'c')
+        .trim();
+
+    const normalizeForMatch = (s: string) =>
+      (s || '')
+        .normalize('NFC')
+        .toLowerCase()
+        .replace(/İ/g, 'i').replace(/I/g, 'ı').replace(/ı/g, 'i')
+        .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
+        .replace(/[^a-z0-9]/g, '');
+
+    // Başlık satırını bul
+    let headerRowIndex = 0;
+    for (let i = 0; i < Math.min(10, rawRows.length); i++) {
+      const row = rawRows[i] || [];
+      if (row.some(cell => typeof cell === 'string' && (cell.includes('Hastane') || cell.includes('Tesis') || cell.includes('Ölçüm')))) {
+        headerRowIndex = i;
+        break;
+      }
+    }
+
+    const header = (rawRows[headerRowIndex] as any[]).map(normalizeCell);
+    const findCol = (keywords: string[]) => {
+      const normalizedKeywords = keywords.map(normalizeCell);
+      return header.findIndex(h => normalizedKeywords.some(k => h.includes(k)));
+    };
+
+    let colFac = findCol(['hastane', 'tesis', 'kurum', 'birim']);
+    let colMeas = findCol(['olcum no', 'olcum', 'rapor']);
+    let colDate = findCol(['tarih']);
+    let colPanel = findCol(['pano no', 'pano adi', 'pano', 'panel']);
+
+    if (colFac === -1) colFac = 0; // Kolon A
+    if (colMeas === -1) colMeas = 4; // Kolon E
+    if (colDate === -1) colDate = 5; // Kolon F
+    if (colPanel === -1) colPanel = 7; // Kolon H
+
+    const dbFacilities = await prisma.facility.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, shortName: true, city: true },
+      orderBy: { name: 'asc' }
+    });
+
+    const facilityGroups: { [facName: string]: { totalRows: number; measurements: { [measName: string]: { count: number; sampleDate?: string } } } } = {};
+    let totalValidRows = 0;
+
+    for (let r = headerRowIndex + 1; r < rawRows.length; r++) {
+      const row = rawRows[r] as any[];
+      if (!row || row.length === 0) continue;
+
+      const facVal = colFac !== -1 && row[colFac] != null ? String(row[colFac]).trim() : '';
+      const panelVal = colPanel !== -1 && row[colPanel] != null ? String(row[colPanel]).trim() : '';
+      if (!facVal || !panelVal) continue;
+
+      const measVal = colMeas !== -1 && row[colMeas] != null ? String(row[colMeas]).trim() : 'Ölçüm 1';
+      
+      let dateStr: string | undefined;
+      if (colDate !== -1 && row[colDate] != null) {
+        const rawDate = row[colDate];
+        if (rawDate instanceof Date && !isNaN(rawDate.getTime())) {
+          dateStr = rawDate.toISOString().split('T')[0];
+        } else if (typeof rawDate === 'number') {
+          const d = new Date((rawDate - (25567 + 2)) * 86400 * 1000);
+          if (!isNaN(d.getTime())) dateStr = d.toISOString().split('T')[0];
+        } else if (typeof rawDate === 'string' && rawDate.trim()) {
+          dateStr = rawDate.trim();
+        }
+      }
+
+      if (!facilityGroups[facVal]) {
+        facilityGroups[facVal] = { totalRows: 0, measurements: {} };
+      }
+
+      facilityGroups[facVal].totalRows++;
+      totalValidRows++;
+
+      if (!facilityGroups[facVal].measurements[measVal]) {
+        facilityGroups[facVal].measurements[measVal] = { count: 0, sampleDate: dateStr };
+      }
+      facilityGroups[facVal].measurements[measVal].count++;
+      if (!facilityGroups[facVal].measurements[measVal].sampleDate && dateStr) {
+        facilityGroups[facVal].measurements[measVal].sampleDate = dateStr;
+      }
+    }
+
+    // Tesisleri eşleştir
+    const facilityPreviews = Object.entries(facilityGroups).map(([excelName, info]) => {
+      const normExcel = normalizeForMatch(excelName);
+
+      // 1. Tam eşleşme
+      let matched = dbFacilities.find(db =>
+        normalizeForMatch(db.name) === normExcel ||
+        (db.shortName && normalizeForMatch(db.shortName) === normExcel)
+      );
+
+      // 2. Kısmi eşleşme
+      let matchType: 'EXACT' | 'FUZZY' | 'NONE' = 'NONE';
+      if (matched) {
+        matchType = 'EXACT';
+      } else {
+        matched = dbFacilities.find(db => {
+          const normDb = normalizeForMatch(db.name);
+          const normShort = normalizeForMatch(db.shortName || '');
+          return normDb.includes(normExcel) || normExcel.includes(normDb) ||
+                 (normShort && (normShort.includes(normExcel) || normExcel.includes(normShort)));
+        });
+        if (matched) matchType = 'FUZZY';
+      }
+
+      return {
+        excelName,
+        matchType,
+        matchedFacilityId: matched?.id || null,
+        matchedFacilityName: matched?.name || null,
+        matchedFacilityCity: matched?.city || null,
+        rowCount: info.totalRows,
+        measurements: Object.entries(info.measurements).map(([mName, mData]) => ({
+          name: mName,
+          count: mData.count,
+          sampleDate: mData.sampleDate || null
+        }))
+      };
+    });
+
+    res.json({
+      success: true,
+      fileName: file.originalname,
+      totalValidRows,
+      totalFacilities: facilityPreviews.length,
+      facilities: facilityPreviews,
+      allDbFacilities: dbFacilities
+    });
+  } catch (error: any) {
+    console.error('Error previewing consolidated excel:', error);
+    res.status(500).json({ error: error.message || 'Konsolide Excel önizlemesi yapılırken hata oluştu.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────
+// 6.2 IMPORT CONSOLIDATED EXCEL (Tüm Hastaneler & Ölçüm 1, 2, 3)
+// ─────────────────────────────────────────────────────────
+router.post('/import-consolidated-excel', tempUpload.single('file'), async (req: AuthRequest, res) => {
+  try {
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ error: 'Excel dosyası yüklenmedi.' });
+    }
+
+    let manualMappings: { [excelName: string]: string } = {};
+    if (req.body.mappings) {
+      try {
+        manualMappings = typeof req.body.mappings === 'string' ? JSON.parse(req.body.mappings) : req.body.mappings;
+      } catch (e) {
+        console.warn('Could not parse mappings:', e);
+      }
+    }
+
+    const workbook = xlsx.read(file.buffer, { type: 'buffer', cellDates: true });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const rawRows = xlsx.utils.sheet_to_json<any[]>(worksheet, { header: 1 });
+
+    if (!rawRows || rawRows.length < 2) {
+      return res.status(400).json({ error: 'Excel içeriği geçerli bir formatta değil.' });
+    }
+
+    const normalizeCell = (c: any) =>
+      String(c || '')
+        .toLocaleLowerCase('tr-TR')
+        .replace(/ı/g, 'i')
+        .replace(/ğ/g, 'g')
+        .replace(/ü/g, 'u')
+        .replace(/ş/g, 's')
+        .replace(/ö/g, 'o')
+        .replace(/ç/g, 'c')
+        .trim();
+
+    const normalizeForMatch = (s: string) =>
+      (s || '')
+        .normalize('NFC')
+        .toLowerCase()
+        .replace(/İ/g, 'i').replace(/I/g, 'ı').replace(/ı/g, 'i')
+        .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
+        .replace(/[^a-z0-9]/g, '');
+
+    // Başlık satırını bul
+    let headerRowIndex = 0;
+    for (let i = 0; i < Math.min(10, rawRows.length); i++) {
+      const row = rawRows[i] || [];
+      if (row.some(cell => typeof cell === 'string' && (cell.includes('Hastane') || cell.includes('Tesis') || cell.includes('Ölçüm')))) {
+        headerRowIndex = i;
+        break;
+      }
+    }
+
+    const header = (rawRows[headerRowIndex] as any[]).map(normalizeCell);
+    const findCol = (keywords: string[]) => {
+      const normalizedKeywords = keywords.map(normalizeCell);
+      return header.findIndex(h => normalizedKeywords.some(k => h.includes(k)));
+    };
+
+    let colFac = findCol(['hastane', 'tesis', 'kurum', 'birim']);
+    let colNo = findCol(['no', 'sira']);
+    let colLoc = findCol(['lokasyon', 'bina', 'yer', 'blok', 'kat/blok']);
+    let colFloor = findCol(['konum', 'mahal', 'kat', 'bolum', 'alan', 'kisim']);
+    let colMeas = findCol(['olcum no', 'olcum', 'rapor']);
+    let colDate = findCol(['tarih']);
+    let colTime = findCol(['saat', 'kontrol saati', 'zaman']);
+    let colPanel = findCol(['pano no', 'pano adi', 'pano', 'panel']);
+    let colPoint = findCol(['olcum noktasi', 'nokta', 'olcum yeri']);
+    let colEquip = findCol(['ekipman', 'baglanti', 'cihaz']);
+    let colMeasTemp = findCol(['olculen', 'olculen sicaklik', 'sicaklik']);
+    let colAmbTemp = findCol(['ortam', 'ortam sicakligi']);
+    let colStatus = findCol(['durum']);
+    let colPriority = findCol(['oncelik']);
+    let colDesc = findCol(['tespit', 'aciklama', 'not']);
+    let colAction = findCol(['aksiyon', 'onlem', 'yapilan']);
+
+    // Fallbacks
+    if (colFac === -1) colFac = 0;
+    if (colNo === -1) colNo = 1;
+    if (colLoc === -1) colLoc = 2;
+    if (colFloor === -1) colFloor = 3;
+    if (colMeas === -1) colMeas = 4;
+    if (colDate === -1) colDate = 5;
+    if (colTime === -1) colTime = 6;
+    if (colPanel === -1) colPanel = 7;
+    if (colPoint === -1) colPoint = 8;
+    if (colEquip === -1) colEquip = 9;
+    if (colMeasTemp === -1) colMeasTemp = 10;
+    if (colAmbTemp === -1) colAmbTemp = 11;
+    if (colStatus === -1) colStatus = 12;
+    if (colPriority === -1) colPriority = 13;
+    if (colDesc === -1) colDesc = 14;
+    if (colAction === -1) colAction = 15;
+
+    const dbFacilities = await prisma.facility.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, shortName: true }
+    });
+
+    // Grupla: facilityId -> measName -> rows
+    type ParsedRow = {
+      orderIndex: number;
+      buildingLocation: string | null;
+      floorSection: string | null;
+      measurementDate: Date | null;
+      controlTime: string | null;
+      panelName: string;
+      measurementPoint: string | null;
+      equipmentConnection: string | null;
+      measuredTemp: number | null;
+      ambientTemp: number | null;
+      deltaTemp: number | null;
+      status: string | null;
+      priority: string | null;
+      detectedRisk: string | null;
+      actionTaken: string | null;
+    };
+
+    const groupedData: {
+      [facilityId: string]: {
+        facilityName: string;
+        measurements: {
+          [measName: string]: {
+            reportDate: Date;
+            rows: ParsedRow[];
+          };
+        };
+      };
+    } = {};
+
+    for (let r = headerRowIndex + 1; r < rawRows.length; r++) {
+      const row = rawRows[r] as any[];
+      if (!row || row.length === 0) continue;
+
+      const rawFacName = colFac !== -1 && row[colFac] != null ? String(row[colFac]).trim() : '';
+      const panelVal = colPanel !== -1 && row[colPanel] != null ? String(row[colPanel]).trim() : '';
+      if (!rawFacName || !panelVal) continue;
+
+      // Hedef tesisi bul
+      let targetFacilityId = manualMappings[rawFacName];
+      if (!targetFacilityId) {
+        const normExcel = normalizeForMatch(rawFacName);
+        const match = dbFacilities.find(db =>
+          normalizeForMatch(db.name) === normExcel ||
+          (db.shortName && normalizeForMatch(db.shortName) === normExcel)
+        ) || dbFacilities.find(db => {
+          const normDb = normalizeForMatch(db.name);
+          const normShort = normalizeForMatch(db.shortName || '');
+          return normDb.includes(normExcel) || normExcel.includes(normDb) ||
+                 (normShort && (normShort.includes(normExcel) || normExcel.includes(normShort)));
+        });
+        if (match) {
+          targetFacilityId = match.id;
+        }
+      }
+
+      if (!targetFacilityId) {
+        console.warn(`Atlanıyor: "${rawFacName}" tesisi eşleşmedi.`);
+        continue;
+      }
+
+      const measName = colMeas !== -1 && row[colMeas] != null ? String(row[colMeas]).trim() : 'Ölçüm 1';
+
+      // Tarih çözümle
+      let itemDate: Date | null = null;
+      if (colDate !== -1 && row[colDate] != null) {
+        const rawDate = row[colDate];
+        if (rawDate instanceof Date && !isNaN(rawDate.getTime())) {
+          itemDate = rawDate;
+        } else if (typeof rawDate === 'number') {
+          const d = new Date((rawDate - (25567 + 2)) * 86400 * 1000);
+          if (!isNaN(d.getTime())) itemDate = d;
+        } else if (typeof rawDate === 'string' && rawDate.trim()) {
+          const parts = rawDate.trim().split(/[./-]/);
+          if (parts.length === 3) {
+            const d = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10) - 1;
+            const y = parseInt(parts[2].length === 2 ? '20' + parts[2] : parts[2], 10);
+            const parsed = new Date(y, m, d);
+            if (!isNaN(parsed.getTime())) itemDate = parsed;
+          }
+        }
+      }
+
+      // Sayısal sıcaklıklar
+      const parseTemp = (val: any) => {
+        if (val == null) return null;
+        const cleaned = String(val).replace(',', '.').replace(/[^0-9.-]/g, '').trim();
+        const num = parseFloat(cleaned);
+        return isNaN(num) ? null : num;
+      };
+
+      const measuredTemp = colMeasTemp !== -1 ? parseTemp(row[colMeasTemp]) : null;
+      const ambientTemp = colAmbTemp !== -1 ? parseTemp(row[colAmbTemp]) : null;
+      const deltaTemp = measuredTemp != null && ambientTemp != null ? parseFloat((measuredTemp - ambientTemp).toFixed(1)) : null;
+
+      const orderNoVal = colNo !== -1 && row[colNo] != null && !isNaN(parseInt(String(row[colNo]), 10))
+        ? parseInt(String(row[colNo]), 10)
+        : null;
+
+      const parsedRow: ParsedRow = {
+        orderIndex: orderNoVal || 1,
+        buildingLocation: colLoc !== -1 && row[colLoc] != null ? String(row[colLoc]).trim() : null,
+        floorSection: colFloor !== -1 && row[colFloor] != null ? String(row[colFloor]).trim() : null,
+        measurementDate: itemDate,
+        controlTime: colTime !== -1 && row[colTime] != null ? String(row[colTime]).trim() : null,
+        panelName: panelVal,
+        measurementPoint: colPoint !== -1 && row[colPoint] != null ? String(row[colPoint]).trim() : null,
+        equipmentConnection: colEquip !== -1 && row[colEquip] != null ? String(row[colEquip]).trim() : null,
+        measuredTemp,
+        ambientTemp,
+        deltaTemp,
+        status: colStatus !== -1 && row[colStatus] != null && String(row[colStatus]).trim() !== '' ? String(row[colStatus]).trim() : null,
+        priority: colPriority !== -1 && row[colPriority] != null && String(row[colPriority]).trim() !== '' ? String(row[colPriority]).trim() : null,
+        detectedRisk: colDesc !== -1 && row[colDesc] != null ? String(row[colDesc]).trim() : null,
+        actionTaken: colAction !== -1 && row[colAction] != null ? String(row[colAction]).trim() : null
+      };
+
+      if (!groupedData[targetFacilityId]) {
+        const facObj = dbFacilities.find(f => f.id === targetFacilityId);
+        groupedData[targetFacilityId] = {
+          facilityName: facObj ? facObj.name : rawFacName,
+          measurements: {}
+        };
+      }
+
+      if (!groupedData[targetFacilityId].measurements[measName]) {
+        groupedData[targetFacilityId].measurements[measName] = {
+          reportDate: itemDate || new Date(),
+          rows: []
+        };
+      }
+
+      const measGroup = groupedData[targetFacilityId].measurements[measName];
+      if (itemDate && !measGroup.reportDate) {
+        measGroup.reportDate = itemDate;
+      }
+      measGroup.rows.push(parsedRow);
+    }
+
+    // Şimdi veritabanına aktar
+    let totalSessionsCreated = 0;
+    let totalItemsCreated = 0;
+    let totalPanelsRegistered = 0;
+    const summaryDetails: any[] = [];
+
+    const uploader = req.user?.fullName || req.user?.username || 'Kullanıcı';
+
+    for (const [facilityId, facData] of Object.entries(groupedData)) {
+      const facilitySessionsSummary: any[] = [];
+
+      for (const [measName, measData] of Object.entries(facData.measurements)) {
+        if (measData.rows.length === 0) continue;
+
+        // 1. Session oluştur
+        const session = await prisma.thermalInspectionSession.create({
+          data: {
+            facilityId,
+            reportDate: measData.reportDate || new Date(),
+            status: 'TAMAMLANDI',
+            notes: `${measName} - ${file.originalname}`,
+            uploadedBy: uploader
+          }
+        });
+
+        // 2. Kalemleri hazırla ve ekle
+        const itemsToInsert = measData.rows.map((r, idx) => ({
+          sessionId: session.id,
+          orderIndex: r.orderIndex || idx + 1,
+          buildingLocation: r.buildingLocation,
+          floorSection: r.floorSection,
+          measurementDate: r.measurementDate || measData.reportDate,
+          controlTime: r.controlTime,
+          panelName: r.panelName,
+          measurementPoint: r.measurementPoint,
+          equipmentConnection: r.equipmentConnection,
+          measuredTemp: r.measuredTemp,
+          ambientTemp: r.ambientTemp,
+          deltaTemp: r.deltaTemp,
+          status: r.status,
+          priority: r.priority,
+          detectedRisk: r.detectedRisk,
+          actionTaken: r.actionTaken,
+          actionPlan: r.actionTaken,
+          photoUrls: []
+        }));
+
+        await prisma.thermalInspectionItem.createMany({
+          data: itemsToInsert
+        });
+
+        // 3. Pano envanterine otomatik ekle (eksik panolar için)
+        const uniquePanelsInBatch = new Map<string, { building?: string | null; floor?: string | null }>();
+        measData.rows.forEach(r => {
+          if (r.panelName && !uniquePanelsInBatch.has(r.panelName)) {
+            uniquePanelsInBatch.set(r.panelName, {
+              building: r.buildingLocation,
+              floor: r.floorSection
+            });
+          }
+        });
+
+        for (const [pCode, pMeta] of uniquePanelsInBatch.entries()) {
+          const existingPanel = await prisma.thermalPanel.findFirst({
+            where: { facilityId, panelCode: pCode }
+          });
+          if (!existingPanel) {
+            await prisma.thermalPanel.create({
+              data: {
+                facilityId,
+                panelCode: pCode,
+                panelName: pCode,
+                building: pMeta.building || 'Ana Bina',
+                floor: pMeta.floor || 'Zemin Kat',
+                panelType: 'Elektrik Panosu',
+                description: `${file.originalname} dosyasından otomatik envantere eklendi.`
+              }
+            });
+            totalPanelsRegistered++;
+          }
+        }
+
+        totalSessionsCreated++;
+        totalItemsCreated += itemsToInsert.length;
+
+        facilitySessionsSummary.push({
+          measurement: measName,
+          sessionId: session.id,
+          itemCount: itemsToInsert.length,
+          date: measData.reportDate.toISOString().split('T')[0]
+        });
+      }
+
+      summaryDetails.push({
+        facilityId,
+        facilityName: facData.facilityName,
+        sessions: facilitySessionsSummary
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: `Konsolide Excel başarıyla aktarıldı. Toplam ${Object.keys(groupedData).length} tesiste ${totalSessionsCreated} rapor oturumu ve ${totalItemsCreated} pano ölçümü oluşturuldu.`,
+      stats: {
+        totalFacilities: Object.keys(groupedData).length,
+        totalSessions: totalSessionsCreated,
+        totalItems: totalItemsCreated,
+        totalPanelsRegistered
+      },
+      details: summaryDetails
+    });
+  } catch (error: any) {
+    console.error('Error importing consolidated excel:', error);
+    res.status(500).json({ error: error.message || 'Konsolide Excel aktarılırken hata oluştu.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────
 // 7. ITEM CRUD (Elle ekleme, düzenleme, silme)
 // ─────────────────────────────────────────────────────────
 router.post('/items', async (req: AuthRequest, res) => {
+
   try {
     const {
       sessionId,

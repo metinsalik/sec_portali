@@ -345,6 +345,25 @@ router.get('/users', auth_1.adminMiddleware, async (req, res) => {
         res.status(500).json({ error: 'Kullanıcılar getirilemedi.' });
     }
 });
+router.get('/users/:username', auth_1.adminMiddleware, async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { username: req.params.username },
+            include: {
+                roles: { include: { role: true } },
+                facilities: { include: { facility: true } },
+                modules: { include: { module: true } },
+            },
+        });
+        if (!user) {
+            return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+        }
+        res.json(user);
+    }
+    catch {
+        res.status(500).json({ error: 'Kullanıcı getirilemedi.' });
+    }
+});
 router.post('/users', auth_1.adminMiddleware, async (req, res) => {
     const { username, fullName, email, phone, department, title, roles, facilities, modules } = req.body;
     if (!username || !fullName) {

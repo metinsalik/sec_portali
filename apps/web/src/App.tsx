@@ -50,6 +50,7 @@ import { DenetimlerPage } from './pages/operations/improvements/DenetimlerPage';
 import { ElectricalTrackingPage } from './pages/operations/improvements/ElectricalTrackingPage';
 import { CriticalItemsPage } from './pages/operations/improvements/CriticalItemsPage';
 import { ImprovementsSettingsPage } from './pages/operations/improvements/ImprovementsSettingsPage';
+import { GroupDashboardPage } from './pages/operations/improvements/GroupDashboardPage';
 
 // Panel
 import PanelDashboard from './pages/panel/PanelDashboard';
@@ -261,6 +262,7 @@ function App() {
                     <Route index element={<ImprovementsDashboardPage />} />
                     <Route path="critical" element={<CriticalItemsPage />} />
                     <Route path="denetimler" element={<DenetimlerPage />} />
+                    <Route path="group/electrical" element={<GroupDashboardPage />} />
                     <Route path="electrical/:subCategory" element={<ElectricalTrackingPage />} />
                     <Route path="settings" element={<ImprovementsSettingsPage />} />
                   </Route>
