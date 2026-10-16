@@ -8,5 +8,8 @@ until nc -z postgres 5432; do
 done
 
 echo "Database is ready."
+echo "Syncing database schema (prisma db push)..."
+npx prisma db push --skip-generate
+
 echo "Starting application..."
 exec node dist/index.js
