@@ -10,8 +10,7 @@ COPY apps/web/package.json apps/web/
 COPY packages/ packages/
 
 # Install dependencies (workspaces will link)
-ENV NODE_OPTIONS="--max-old-space-size=4096"
-RUN npm ci --legacy-peer-deps
+RUN NODE_OPTIONS="--max-old-space-size=4096" npm ci --legacy-peer-deps
 
 # Copy source code
 COPY backend/ backend/
