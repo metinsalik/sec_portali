@@ -372,7 +372,7 @@ export const ImprovementExcelImportModal: React.FC<Props> = ({
                   Excel dosyasını buraya sürükleyin veya tıklayarak seçin
                 </p>
                 <p className="text-xs text-slate-500">
-                  Desteklenen şablonlar: İyilestirme Takip Tablosu_v3.xlsx, ANT-MP-İyilestirme Takip Tablosu vb.
+                  Desteklenen şablonlar: İyilestirme Takip Tablosu_v4 - Taslak.xlsx, İyilestirme Takip Tablosu_v3.xlsx, ANT-MP-İyilestirme Takip Tablosu vb.
                 </p>
               </div>
             ) : (
@@ -497,7 +497,7 @@ export const ImprovementExcelImportModal: React.FC<Props> = ({
                 <table className="w-full text-[11px] text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
-                      {Object.keys(previewRows[0] || {}).slice(0, 7).map(col => (
+                      {Object.keys(previewRows[0] || {}).slice(0, 12).map(col => (
                         <th key={col} className="p-2 font-semibold whitespace-nowrap">{col}</th>
                       ))}
                     </tr>
@@ -505,7 +505,7 @@ export const ImprovementExcelImportModal: React.FC<Props> = ({
                   <tbody>
                     {previewRows.map((row, i) => (
                       <tr key={i} className="border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-700/40">
-                        {Object.keys(previewRows[0] || {}).slice(0, 7).map(col => (
+                        {Object.keys(previewRows[0] || {}).slice(0, 12).map(col => (
                           <td key={col} className="p-2 truncate max-w-[200px]" title={String(row[col] || '')}>
                             {String(row[col] ?? '-')}
                           </td>

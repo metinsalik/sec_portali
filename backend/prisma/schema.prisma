@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 generator zod {
@@ -182,6 +183,7 @@ model Facility {
   fm200Locations                Fm200Location[]
   fm200BuildingFloors           Fm200BuildingFloor[]
   improvementRecords            ImprovementRecord[]
+  improvementPeriodicReports    ImprovementPeriodicReport[]
 }
 
 model IncidentCategory {
@@ -3242,11 +3244,14 @@ model ImprovementRecord {
 
   rowNo           Int?      // Kaynak Excel Sıra No (#)
   location        String?   // Mahal
-  equipment       String?   // Ekipman (PK'lar, Pano, Trafo, UPS)
+  equipment       String?   // Ekipman (PK'lar, Pano, Trafo, UPS) - birleşik / geriye uyumluluk
+  equipmentNo     String?   // Ekipman No
+  equipmentName   String?   // Ekipman Adı
   finding         String    // Tespitler
   riskScore       String?   // "Kritik", "Yüksek", "Önemli", "Olası", "Önemsiz"
   assignedTo      String?   // Sorumlusu
   status          String    @default("Başlamadı") // "Tamamlandı", "Devam Ediyor", "Başlamadı", "İptal Edildi"
+  progress        Int       @default(0)           // İlerleme Yüzdesi (%0 - %100)
   actionPlan      String?   // İş Planı (Orijinal plan metni)
   currentNote     String?   // Aksiyon / Açıklama (Güncel durum / sahadan girilen not)
 
@@ -3256,6 +3261,21 @@ model ImprovementRecord {
   recordDate      DateTime? // Tespit Tarihi / PK Tarihi / Rapor Tarihi / Tarih
   dueDate         DateTime? // Termin Tarihi (Hedef Tamamlanma Tarihi)
   applicationType String?   // Uygulama (Trafo ve UPS için)
+
+  // Yeni Eklenen Sütunlar (Excel Takip Tablosu Güncellemesi)
+  technicalManagerDesc String?   // Teknik Müdür Açıklaması
+  discoveryNotes       String?   // Yapılan Keşif Notları
+  estimatedBudget      Float?    // Tahmini Bütçe
+  actualBudget         Float?    // Gerçekleşen Bütçe
+  currency             String?   @default("TRY") // "TRY" | "USD" | "EUR"
+
+  // Fotoğraf ve Doküman Ekleri (WebP sıkıştırmalı)
+  findingPhotos        Json      @default("[]") // [{ url, name, type, size, uploadedAt }] - Maksimum 3 fotoğraf
+  documents            Json      @default("[]") // [{ url, name, type, size, uploadedAt }] - PDF ve Dokümanlar
+
+  periodicReportId     String?
+  periodicReport       ImprovementPeriodicReport? @relation(fields: [periodicReportId], references: [id], onDelete: SetNull)
+  standardNoteCode     String?   // "Not-1" .. "Not-11"
 
   sourceFileName  String?   // Kaynak Excel dosyasının adı
   isArchived      Boolean   @default(false)
@@ -3271,6 +3291,7 @@ model ImprovementRecord {
   @@index([sheetType])
   @@index([status])
   @@index([riskScore])
+  @@index([periodicReportId])
 }
 
 model ImprovementRecordHistory {
@@ -3282,6 +3303,11 @@ model ImprovementRecordHistory {
   newNote         String
   previousStatus  String?
   newStatus       String?
+  progress        Int?              // Güncel yüzde (0-100)
+  progressAdded   Int?              // Bu işlemde eklenen yüzde (+10, +20 vb.)
+  stepType        String?           // Şablon kodu (TALEP_ACILDI vb.)
+  stepTitle       String?           // Şablon başlığı
+  evidencePhotos  Json              @default("[]") // [{ url, name, type, size, uploadedAt }] - Aksiyon Kanıt Fotoğrafları ve Belgeleri
   changedBy       String            // Kullanıcı username
   changedByName   String?           // Kullanıcı Ad Soyad
   createdAt       DateTime          @default(now())
@@ -3296,4 +3322,35 @@ model ImprovementSetting {
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model ImprovementPeriodicReport {
+  id                    String              @id @default(uuid())
+  facilityId            String
+  facility              Facility            @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  moduleGroup           String              @default("ELEKTRIK") // "ELEKTRIK", "MEKANIK", "YANGIN"
+  sheetType             String              @default("TOPRAKLAMA_PK") // "TOPRAKLAMA_PK", "ELEKTRIK_PK", vb.
+  reportNo              String?             // Rapor No (örn: 26-1478-141)
+  reportDate            DateTime?           // Rapor Tarihi
+  isgKatipId            String?             // İSG-KATİP Sözleşme ID (örn: 27058219)
+  actionType            String              @default("Periyodik Kontrol") // "Periyodik Kontrol", "Ara Kontrol", "Bakım"
+  startDate             DateTime?           // Başlangıç Tarihi ve Saati
+  endDate               DateTime?           // Bitiş Tarihi ve Saati
+  inspectionDate        DateTime?           // Gerçekleşme Tarihi
+  nextInspectionDate    DateTime?           // Sonraki Kontrol Tarihi (1 yıl)
+  firmName              String?             // Yapan Firma / Kişi
+  inspectorName         String?             // Kontrol Eden Kişi / Uzman
+  result                String              @default("Uygun") // "Uygun" | "Uygun Değil"
+  notes                 String?
+  documents             Json                @default("[]") // Rapor Belgeleri (PDF/Görsel)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  createdBy             String?
+
+  records               ImprovementRecord[]
+
+  @@index([facilityId])
+  @@index([moduleGroup])
+  @@index([sheetType])
+  @@index([result])
 }

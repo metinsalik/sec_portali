@@ -1,7 +1,10 @@
 FROM node:20-bookworm-slim
 
 WORKDIR /app
-RUN apt-get update && apt-get install -y openssl netcat-openbsd && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y openssl ca-certificates netcat-openbsd procps && rm -rf /var/lib/apt/lists/*
+
+# Add node_modules bins to PATH for direct execution
+ENV PATH="/app/node_modules/.bin:/app/backend/node_modules/.bin:$PATH"
 
 # Copy package descriptors for all workspaces
 COPY package.json package-lock.json ./
@@ -16,9 +19,12 @@ RUN NODE_OPTIONS="--max-old-space-size=4096" npm ci --legacy-peer-deps
 COPY backend/ backend/
 COPY packages/ packages/
 
+# Ensure uploads directory exists
+RUN mkdir -p /app/backend/uploads
+
 # Build shared package
 WORKDIR /app/packages/shared
-RUN /app/backend/node_modules/.bin/tsc
+RUN NODE_OPTIONS="--max-old-space-size=4096" /app/backend/node_modules/.bin/tsc
 
 WORKDIR /app/backend
 
@@ -27,8 +33,8 @@ RUN sed -i 's/\r$//' entrypoint.sh
 RUN chmod +x entrypoint.sh
 
 # Generate prisma client & build
-RUN npx prisma generate --generator client
-RUN /app/backend/node_modules/.bin/tsc
+RUN NODE_OPTIONS="--max-old-space-size=4096" node /app/node_modules/prisma/build/index.js generate --generator client
+RUN NODE_OPTIONS="--max-old-space-size=4096" /app/backend/node_modules/.bin/tsc
 
 EXPOSE 3005
 

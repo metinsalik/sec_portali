@@ -18,3 +18,16 @@ apps/web/dist
 backend/dist
 packages/shared/dist
 packages/shared/src/generated
+
+# Runtime volumes and assets (mounted at runtime, not needed in image build)
+backend/uploads
+backend/database_dump.sql
+ssl
+harici_sayfalar
+temp_backup_skills
+*.xlsx
+*.html
+.vscode
+.claude
+.kilo
+.agents

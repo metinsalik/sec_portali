@@ -1,13 +1,15 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { 
   Search, ArrowUpDown, ArrowUp, ArrowDown, Download, RefreshCw, X, Calendar, 
-  Tag, Shield, AlertTriangle, CheckCircle2, Building2, Filter, Plus, Check, Trash2, ListOrdered 
+  Tag, Shield, AlertTriangle, CheckCircle2, Building2, Filter, Plus, Check, Trash2, ListOrdered,
+  Camera, FileText, ExternalLink 
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { type ImprovementRecord, type FacilityOption } from './types';
+import { type ImprovementRecord, type FacilityOption, formatCurrency } from './types';
 import { 
   InspectRecordDialog, EditRecordDialog, ActionNoteDialog, CreateRecordDialog 
 } from './ImprovementRecordDialogs';
@@ -40,6 +42,7 @@ export const ImprovementTable: React.FC<Props> = ({
   facilities = [],
   selectedFacilityId,
 }) => {
+  const navigate = useNavigate();
   // Modal states
   const [inspectRecord, setInspectRecord] = useState<ImprovementRecord | null>(null);
   const [editRecord, setEditRecord] = useState<ImprovementRecord | null>(null);
@@ -223,16 +226,28 @@ export const ImprovementTable: React.FC<Props> = ({
   const getSheetLabel = (sType?: string): string => {
     switch (sType) {
       case 'DENETIMLER': return 'Denetimler';
+      case 'HASTANE_IC_DENETIMLERI': return 'Hastane İç Denetimleri';
+      case 'MERKEZI_DENETIMLER': return 'Merkezi Denetimler';
+      case 'SAGLIK_DENETIMLERI': return 'Sağlık Denetimleri';
+      case 'ITFAIYE_YANGIN_DENETIMLERI': return 'İtfaiye/Yangın Komisyonu Denetimleri';
       case 'ELEKTRIK_PK': return 'Elektrik PK';
       case 'TOPRAKLAMA_PK': return 'Topraklama PK';
       case 'PARATONER_PK': return 'Paratoner PK';
-      case 'JENERATOR_PK': return 'Jeneratör PK';
+      case 'JENERATOR_PK': return 'Jeneratör PK & Bakım';
       case 'ELEKTRIK_PANO_KONTROLLERI': return 'Elektrik Pano Kontrolleri';
-      case 'TRAFO': return 'Trafo';
-      case 'UPS': return 'UPS';
+      case 'TRAFO': return 'Trafo PK & Bakım';
+      case 'UPS': return 'UPS PK & Bakım';
+      case 'KAZANLAR': return 'Kazanlar';
+      case 'CHILLERLER': return 'Chillerler';
+      case 'KLIMA_SANTRALLERI': return 'Klima Santralleri';
+      case 'SULU_SONDURME_PK_BAKIM': return 'Sulu Söndürme PK & Bakım';
+      case 'GAZLI_SONDURME_PK_BAKIM': return 'Gazlı Söndürme PK & Bakım';
+      case 'BASINCLANDIRMA_PK_BAKIM': return 'Basınçlandırma Sistemleri PK & Bakım';
+      case 'YANGIN_ALGILAMA_PK_BAKIM': return 'Yangın Algılama ve Uyarı Sistemleri PK & Bakım';
       default: return sType || '-';
     }
   };
+
 
   // Sütun Değerini Getir
   const getColValue = (r: ImprovementRecord, colKey: string): string => {
@@ -263,10 +278,16 @@ export const ImprovementTable: React.FC<Props> = ({
         return r.location || '';
       case 'equipment':
         return r.equipment || '';
+      case 'equipmentNo':
+        return r.equipmentNo || '';
+      case 'equipmentName':
+        return r.equipmentName || r.equipment || '';
       case 'applicationType':
         return r.applicationType || '';
       case 'finding':
         return r.finding || '';
+      case 'actionPlan':
+        return r.actionPlan || '';
       case 'category':
         return r.category || 'Belirtilmemiş';
       case 'riskScore':
@@ -275,6 +296,16 @@ export const ImprovementTable: React.FC<Props> = ({
         return r.assignedTo || '';
       case 'status':
         return r.status || '';
+      case 'currentNote':
+        return r.currentNote || '';
+      case 'technicalManagerDesc':
+        return r.technicalManagerDesc || '';
+      case 'discoveryNotes':
+        return r.discoveryNotes || '';
+      case 'estimatedBudget':
+        return r.estimatedBudget !== undefined && r.estimatedBudget !== null ? String(r.estimatedBudget) : '';
+      case 'actualBudget':
+        return r.actualBudget !== undefined && r.actualBudget !== null ? String(r.actualBudget) : '';
       default:
         return String((r as any)[colKey] || '');
     }
@@ -282,7 +313,9 @@ export const ImprovementTable: React.FC<Props> = ({
 
   // Dinamik Tarih Başlığı
   const getDateColumnHeader = () => {
-    if (sheetType === 'DENETIMLER') return 'Tespit Tarihi';
+    if (['DENETIMLER', 'HASTANE_IC_DENETIMLERI', 'MERKEZI_DENETIMLER', 'SAGLIK_DENETIMLERI', 'ITFAIYE_YANGIN_DENETIMLERI'].includes(sheetType)) {
+      return 'Tespit Tarihi';
+    }
     if (sheetType === 'ELEKTRIK_PANO_KONTROLLERI') return 'Rapor Tarihi';
     if (sheetType === 'TRAFO' || sheetType === 'UPS') return 'Tarih';
     return 'PK / Tespit Tarihi';
@@ -298,12 +331,20 @@ export const ImprovementTable: React.FC<Props> = ({
       case 'dueDate': return 'Termin Tarihi';
       case 'location': return 'Mahal';
       case 'equipment': return 'Ekipman';
+      case 'equipmentNo': return 'Ekipman No';
+      case 'equipmentName': return 'Ekipman Adı';
       case 'applicationType': return 'Uygulama';
       case 'finding': return 'Tespitler';
       case 'category': return 'Kategori';
       case 'riskScore': return 'Risk Skoru';
+      case 'actionPlan': return 'İş Planı';
       case 'assignedTo': return 'Sorumlusu';
       case 'status': return 'Durum';
+      case 'currentNote': return 'Aksiyon / Açıklama';
+      case 'technicalManagerDesc': return 'Teknik Hizmetler Açıklaması';
+      case 'discoveryNotes': return 'Yapılan Keşif Notları';
+      case 'estimatedBudget': return 'Tahmini Bütçe';
+      case 'actualBudget': return 'Gerçekleşen Bütçe';
       default: return colKey;
     }
   };
@@ -434,14 +475,16 @@ export const ImprovementTable: React.FC<Props> = ({
         const q = searchTerm.toLowerCase();
         const matchFinding = r.finding?.toLowerCase().includes(q);
         const matchLoc = r.location?.toLowerCase().includes(q);
-        const matchEquip = r.equipment?.toLowerCase().includes(q);
+        const matchEquip = r.equipment?.toLowerCase().includes(q) || r.equipmentNo?.toLowerCase().includes(q) || r.equipmentName?.toLowerCase().includes(q);
         const matchOwner = r.assignedTo?.toLowerCase().includes(q);
         const matchPlan = r.actionPlan?.toLowerCase().includes(q);
         const matchNote = r.currentNote?.toLowerCase().includes(q);
         const matchHosp = r.facility?.name?.toLowerCase().includes(q);
         const matchCat = r.category?.toLowerCase().includes(q);
         const matchAudit = r.auditName?.toLowerCase().includes(q);
-        if (!matchFinding && !matchLoc && !matchEquip && !matchOwner && !matchPlan && !matchNote && !matchHosp && !matchCat && !matchAudit) {
+        const matchTech = r.technicalManagerDesc?.toLowerCase().includes(q);
+        const matchDisc = r.discoveryNotes?.toLowerCase().includes(q);
+        if (!matchFinding && !matchLoc && !matchEquip && !matchOwner && !matchPlan && !matchNote && !matchHosp && !matchCat && !matchAudit && !matchTech && !matchDisc) {
           return false;
         }
       }
@@ -494,12 +537,16 @@ export const ImprovementTable: React.FC<Props> = ({
     let openCritical = 0;
     let openHigh = 0;
     let completed = 0;
+    let cancelled = 0;
+    let totalProgressSum = 0;
 
     filteredRecords.forEach(r => {
       const isOpen = r.status === 'Başlamadı' || r.status === 'Devam Ediyor';
       const isCompleted = r.status === 'Tamamlandı';
+      const isCancelled = r.status === 'İptal Edildi';
       if (isOpen) open++;
       if (isCompleted) completed++;
+      if (isCancelled) cancelled++;
       if (r.riskScore === 'Kritik') {
         critical++;
         if (isOpen) openCritical++;
@@ -507,30 +554,53 @@ export const ImprovementTable: React.FC<Props> = ({
       if (r.riskScore === 'Yüksek' && isOpen) {
         openHigh++;
       }
+      if (!isCancelled) {
+        totalProgressSum += isCompleted ? 100 : (r.status === 'Devam Ediyor' ? Math.min(100, Math.max(0, r.progress || 0)) : 0);
+      }
     });
 
-    return { open, critical, openCritical, openHigh, completed };
+    const active = filteredRecords.length - cancelled;
+    const avgProgress = active > 0 ? Math.round(totalProgressSum / active) : 0;
+
+    return { open, critical, openCritical, openHigh, completed, avgProgress };
   }, [filteredRecords]);
 
   // Excel Export
   const handleExport = () => {
-    const exportData = filteredRecords.map((r, idx) => ({
-      '#': r.rowNo || idx + 1,
-      'Hastane Adı': r.facility?.name || '',
-      ...(sheetType === 'KRITIK' ? { 'Nereden Geliyor': getSheetLabel(r.sheetType) } : {}),
-      ...(sheetType === 'DENETIMLER' ? { 'Denetim Adı': r.auditName || '' } : {}),
-      [getDateColumnHeader()]: r.recordDate ? new Date(r.recordDate).toLocaleDateString('tr-TR') : '',
-      'Termin Tarihi': r.dueDate ? new Date(r.dueDate).toLocaleDateString('tr-TR') : '',
-      'Mahal': r.location || '',
-      ...(sheetType !== 'DENETIMLER' ? { 'Ekipman': r.equipment || '' } : {}),
-      'Tespitler': r.finding,
-      'Kategori': r.category || 'Belirtilmemiş',
-      'Risk Skoru': r.riskScore || '',
-      'Sorumlusu': r.assignedTo || '',
-      'Durum': r.status,
-      'İş Planı': r.actionPlan || '',
-      'Aksiyon / Açıklama': r.currentNote || '',
-    }));
+    const exportData = filteredRecords.map((r, idx) => {
+      const row: any = {
+        '#': r.rowNo || idx + 1,
+        'Hastane Adı': r.facility?.name || '',
+      };
+
+      if (isKritik) row['Nereden Geliyor'] = getSheetLabel(r.sheetType);
+      if (isDenetimler) row['Denetim Adı'] = r.auditName || '';
+      if (isTrafoOrUps) row['Uygulama'] = r.applicationType || '';
+      if (isDenetimler) row['Tespit Tarihi'] = r.recordDate ? new Date(r.recordDate).toLocaleDateString('tr-TR') : '';
+      if (!isDenetimler && !isTrafoOrUps) row[getDateColumnHeader()] = r.recordDate ? new Date(r.recordDate).toLocaleDateString('tr-TR') : '';
+      if (isTrafoOrUps) row['Tarih'] = r.recordDate ? new Date(r.recordDate).toLocaleDateString('tr-TR') : '';
+      row['Mahal'] = r.location || '';
+      if (!isDenetimler) {
+        row['Ekipman No'] = r.equipmentNo || '';
+        row['Ekipman Adı'] = r.equipmentName || r.equipment || '';
+      }
+      row['Tespitler'] = r.finding;
+      row['Kategori'] = r.category || 'Belirtilmemiş';
+      row['Risk Skoru'] = r.riskScore || '';
+      row['İş Planı'] = r.actionPlan || '';
+      row['Termin'] = r.dueDate ? new Date(r.dueDate).toLocaleDateString('tr-TR') : '';
+      row['Sorumlusu'] = r.assignedTo || '';
+      row['Durum'] = r.status;
+      row['Aksiyon / Açıklama'] = r.currentNote || '';
+
+      // Yeni Eklenen Sütunlar (Excel Takip Tablosu Güncellemesi)
+      row['Teknik Müdür Açıklaması'] = r.technicalManagerDesc || '';
+      row['Yapılan Keşif Notları'] = r.discoveryNotes || '';
+      row['Tahmini Bütçe'] = r.estimatedBudget ?? '';
+      row['Gerçekleşen Bütçe'] = r.actualBudget ?? '';
+
+      return row;
+    });
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
@@ -538,7 +608,13 @@ export const ImprovementTable: React.FC<Props> = ({
     XLSX.writeFile(wb, `${sheetTitle}_Export.xlsx`);
   };
 
-  const isDenetimler = sheetType === 'DENETIMLER';
+  const isDenetimler = [
+    'DENETIMLER',
+    'HASTANE_IC_DENETIMLERI',
+    'MERKEZI_DENETIMLER',
+    'SAGLIK_DENETIMLERI',
+    'ITFAIYE_YANGIN_DENETIMLERI',
+  ].includes(sheetType);
   const isKritik = sheetType === 'KRITIK';
   const isTrafoOrUps = sheetType === 'TRAFO' || sheetType === 'UPS';
   const hasActiveFilters = Object.keys(columnFilters).length > 0 || !!searchTerm;
@@ -611,6 +687,10 @@ export const ImprovementTable: React.FC<Props> = ({
           <span>Açık Yüksek: <strong className="text-orange-600 dark:text-orange-400 font-bold">{metrics.openHigh}</strong></span>
           <span className="text-border">|</span>
           <span>Tamamlanan: <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{metrics.completed}</strong></span>
+          <span className="text-border">|</span>
+          <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-md font-bold">
+            Ağırlıklı İlerleme: %{metrics.avgProgress}
+          </span>
         </div>
 
         {/* Sağ: Genel Arama, Temizle, Yeni Kayıt, Export */}
@@ -910,19 +990,23 @@ export const ImprovementTable: React.FC<Props> = ({
                 {renderColumnHeader('facility', 'Hastane Adı', 'w-36')}
                 {isKritik && renderColumnHeader('sheetType', 'Nereden Geliyor', 'w-36')}
                 {isDenetimler && renderColumnHeader('auditName', 'Denetim Adı', 'w-32')}
-                {renderColumnHeader('location', 'Mahal', 'w-32')}
-                {!isDenetimler && renderColumnHeader('equipment', 'Ekipman', 'w-32')}
                 {isTrafoOrUps && renderColumnHeader('applicationType', 'Uygulama', 'w-28')}
+                {renderColumnHeader('status', 'Durum', 'w-32 text-center', true)}
+                {renderColumnHeader('location', 'Mahal', 'w-32')}
+                {!isDenetimler && renderColumnHeader('equipmentNo', 'Ekipman No', 'w-28')}
+                {!isDenetimler && renderColumnHeader('equipmentName', 'Ekipman Adı', 'w-36')}
                 {renderColumnHeader('finding', 'Tespitler', 'min-w-[280px] max-w-[400px]')}
-                {renderColumnHeader('recordDate', getDateColumnHeader(), 'w-28')}
-                {renderColumnHeader('dueDate', 'Termin Tarihi', 'w-28 text-primary font-bold')}
                 {renderColumnHeader('category', 'Kategori', 'w-32')}
                 {renderColumnHeader('riskScore', 'Risk Skoru', 'w-28 text-center', true)}
+                {renderColumnHeader('actionPlan', 'İş Planı', 'min-w-[170px] max-w-[240px]')}
+                {renderColumnHeader('dueDate', 'Termin Tarihi', 'w-28 text-primary font-bold')}
                 {renderColumnHeader('assignedTo', 'Sorumlusu', 'w-32')}
-                {renderColumnHeader('status', 'Durum', 'w-28 text-center', true)}
-                <th className="p-2.5 min-w-[180px] max-w-[280px] text-primary">
-                  Aksiyon / Açıklama
-                </th>
+                {renderColumnHeader('recordDate', getDateColumnHeader(), 'w-28')}
+                {renderColumnHeader('currentNote', 'Aksiyon / Açıklama', 'min-w-[180px] max-w-[280px] text-primary')}
+                {renderColumnHeader('technicalManagerDesc', 'Teknik Hizmetler Açıklaması', 'min-w-[170px] max-w-[240px]')}
+                {renderColumnHeader('discoveryNotes', 'Yapılan Keşif Notları', 'min-w-[170px] max-w-[240px]')}
+                {renderColumnHeader('estimatedBudget', 'Tahmini Bütçe', 'w-28 text-right font-medium')}
+                {renderColumnHeader('actualBudget', 'Gerçekleşen Bütçe', 'w-28 text-right font-medium')}
                 <th className="p-2.5 w-24 text-center sticky right-0 bg-muted/95 border-l">
                   İşlem
                 </th>
@@ -933,14 +1017,14 @@ export const ImprovementTable: React.FC<Props> = ({
             <tbody className="divide-y divide-border/60">
               {loading ? (
                 <tr>
-                  <td colSpan={16} className="p-12 text-center text-muted-foreground">
+                  <td colSpan={25} className="p-12 text-center text-muted-foreground">
                     <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
                     Kayıtlar yükleniyor...
                   </td>
                 </tr>
               ) : filteredRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={16} className="p-12 text-center text-muted-foreground">
+                  <td colSpan={25} className="p-12 text-center text-muted-foreground">
                     Gösterilecek kayıt bulunamadı.
                   </td>
                 </tr>
@@ -980,18 +1064,6 @@ export const ImprovementTable: React.FC<Props> = ({
                         </td>
                       )}
 
-                      {/* Mahal */}
-                      <td className="p-2.5 text-muted-foreground truncate max-w-[130px]" title={record.location || ''}>
-                        {record.location || '-'}
-                      </td>
-
-                      {/* Ekipman */}
-                      {!isDenetimler && (
-                        <td className="p-2.5 text-muted-foreground truncate max-w-[130px]" title={record.equipment || ''}>
-                          {record.equipment || '-'}
-                        </td>
-                      )}
-
                       {/* Trafo/UPS Uygulama */}
                       {isTrafoOrUps && (
                         <td className="p-2.5 text-muted-foreground truncate max-w-[100px]">
@@ -999,30 +1071,102 @@ export const ImprovementTable: React.FC<Props> = ({
                         </td>
                       )}
 
-                      {/* Tespitler */}
-                      <td className="p-2.5 text-foreground">
-                        <div className="line-clamp-4 leading-[16px] max-h-[64px] overflow-hidden whitespace-pre-wrap" title={record.finding}>
-                          {record.finding}
-                        </div>
-                      </td>
-
-                      {/* TESPİT / PK TARİHİ */}
-                      <td className="p-2.5 text-muted-foreground whitespace-nowrap font-mono text-[11px]">
-                        {record.recordDate ? new Date(record.recordDate).toLocaleDateString('tr-TR') : '-'}
-                      </td>
-
-                      {/* TERMİN TARİHİ */}
-                      <td className="p-2.5 whitespace-nowrap font-mono text-[11px] font-semibold text-primary">
-                        {record.dueDate ? (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                            {new Date(record.dueDate).toLocaleDateString('tr-TR')}
+                      {/* Durum */}
+                      <td className="p-2.5 text-center whitespace-nowrap">
+                        {record.status === 'Tamamlandı' ? (
+                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50">
+                            Tamamlandı (%100)
+                          </span>
+                        ) : record.status === 'Devam Ediyor' ? (
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-900/50">
+                              Devam Ediyor (%{record.progress ?? 0})
+                            </span>
+                            <div className="w-16 bg-muted rounded-full h-1.5 overflow-hidden">
+                              <div 
+                                className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                                style={{ width: `${Math.min(100, Math.max(0, record.progress ?? 0))}%` }}
+                                title={`İlerleme: %${record.progress ?? 0}`}
+                              />
+                            </div>
+                          </div>
+                        ) : record.status === 'İptal Edildi' ? (
+                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-muted text-muted-foreground border line-through">
+                            İptal Edildi
                           </span>
                         ) : (
-                          <span className="text-muted-foreground/60 italic font-normal">-</span>
+                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50">
+                            Başlamadı (%0)
+                          </span>
                         )}
                       </td>
 
-                      {/* KATEGORİ (Risk Skoru Öncesinde) */}
+                      {/* Mahal */}
+                      <td className="p-2.5 text-muted-foreground truncate max-w-[130px]" title={record.location || ''}>
+                        {record.location || '-'}
+                      </td>
+
+                      {/* Ekipman No & Adı (PK'lar, Pano, Trafo, UPS) */}
+                      {!isDenetimler && (
+                        <>
+                          <td className="p-2.5 text-foreground font-mono font-medium truncate max-w-[110px]" title={record.equipmentNo || ''}>
+                            {record.equipmentNo ? (
+                              <span className="px-1.5 py-0.5 rounded bg-muted text-[11px]">
+                                {record.equipmentNo}
+                              </span>
+                            ) : '-'}
+                          </td>
+                          <td className="p-2.5 text-muted-foreground truncate max-w-[140px]" title={record.equipmentName || record.equipment || ''}>
+                            {record.equipmentName || record.equipment || '-'}
+                          </td>
+                        </>
+                      )}
+
+                      {/* Tespitler */}
+                      <td className="p-2.5 text-foreground">
+                        <div 
+                          onClick={() => navigate(`/operations-management/improvements/records/${record.id}`)}
+                          className="line-clamp-4 leading-[16px] max-h-[64px] overflow-hidden whitespace-pre-wrap cursor-pointer hover:text-primary transition-colors font-medium" 
+                          title="Detaylı sayfaya gitmek için tıklayın"
+                        >
+                          {record.finding}
+                        </div>
+                        {((Array.isArray(record.findingPhotos) && record.findingPhotos.length > 0) ||
+                          (Array.isArray(record.documents) && record.documents.length > 0)) && (
+                          <div className="flex items-center gap-1.5 mt-1 pt-1 border-t border-border/40">
+                            {Array.isArray(record.findingPhotos) && record.findingPhotos.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/operations-management/improvements/records/${record.id}`);
+                                }}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-medium border border-blue-200 dark:border-blue-800 transition-colors"
+                                title={`${record.findingPhotos.length} fotoğrafı sayfada görüntüle`}
+                              >
+                                <Camera className="w-3 h-3" />
+                                <span>{record.findingPhotos.length} Foto</span>
+                              </button>
+                            )}
+                            {Array.isArray(record.documents) && record.documents.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/operations-management/improvements/records/${record.id}`);
+                                }}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-medium border border-amber-200 dark:border-amber-800 transition-colors"
+                                title={`${record.documents.length} dokümanı sayfada görüntüle`}
+                              >
+                                <FileText className="w-3 h-3" />
+                                <span>{record.documents.length} Belge</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* KATEGORİ */}
                       <td className="p-2.5 text-foreground">
                         <Badge variant="outline" className="text-[10px] truncate max-w-[130px] font-normal" title={record.category || 'Belirtilmemiş'}>
                           {record.category || 'Belirtilmemiş'}
@@ -1036,6 +1180,8 @@ export const ImprovementTable: React.FC<Props> = ({
                             isCrit ? 'bg-red-500/15 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/50' :
                             isHigh ? 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-900/50' :
                             record.riskScore === 'Önemli' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50' :
+                            record.riskScore === 'Olası' ? 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-900/50' :
+                            record.riskScore === 'Önemsiz' ? 'bg-slate-500/15 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-800' :
                             'bg-muted text-muted-foreground border'
                           }`}
                         >
@@ -1043,23 +1189,36 @@ export const ImprovementTable: React.FC<Props> = ({
                         </span>
                       </td>
 
+                      {/* İŞ PLANI */}
+                      <td className="p-2.5 text-foreground">
+                        {record.actionPlan ? (
+                          <div className="line-clamp-3 text-[11px] leading-[15px] text-slate-700 dark:text-slate-300" title={record.actionPlan}>
+                            {record.actionPlan}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground/50 text-[11px]">-</span>
+                        )}
+                      </td>
+
+                      {/* TERMİN TARİHİ */}
+                      <td className="p-2.5 whitespace-nowrap font-mono text-[11px] font-semibold text-primary">
+                        {record.dueDate ? (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                            {new Date(record.dueDate).toLocaleDateString('tr-TR')}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/60 italic font-normal">-</span>
+                        )}
+                      </td>
+
                       {/* Sorumlusu */}
                       <td className="p-2.5 text-muted-foreground truncate max-w-[120px]" title={record.assignedTo || ''}>
                         {record.assignedTo || '-'}
                       </td>
 
-                      {/* Durum */}
-                      <td className="p-2.5 text-center whitespace-nowrap">
-                        <span 
-                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
-                            record.status === 'Tamamlandı' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50' :
-                            record.status === 'Devam Ediyor' ? 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-900/50' :
-                            record.status === 'İptal Edildi' ? 'bg-muted text-muted-foreground border line-through' :
-                            'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50'
-                          }`}
-                        >
-                          {record.status}
-                        </span>
+                      {/* TESPİT / PK TARİHİ */}
+                      <td className="p-2.5 text-muted-foreground whitespace-nowrap font-mono text-[11px]">
+                        {record.recordDate ? new Date(record.recordDate).toLocaleDateString('tr-TR') : '-'}
                       </td>
 
                       {/* Aksiyon / Açıklama */}
@@ -1073,9 +1232,61 @@ export const ImprovementTable: React.FC<Props> = ({
                         )}
                       </td>
 
-                      {/* İşlem Butonları (İncele, Düzenle, Aksiyon Gir, Sil) */}
+                      {/* Teknik Müdür Açıklaması */}
+                      <td className="p-2.5 text-foreground">
+                        {record.technicalManagerDesc ? (
+                          <div className="line-clamp-3 text-[11px] leading-[15px] text-slate-700 dark:text-slate-300" title={record.technicalManagerDesc}>
+                            {record.technicalManagerDesc}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground/50 text-[11px]">-</span>
+                        )}
+                      </td>
+
+                      {/* Yapılan Keşif Notları */}
+                      <td className="p-2.5 text-foreground">
+                        {record.discoveryNotes ? (
+                          <div className="line-clamp-3 text-[11px] leading-[15px] text-slate-700 dark:text-slate-300" title={record.discoveryNotes}>
+                            {record.discoveryNotes}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground/50 text-[11px]">-</span>
+                        )}
+                      </td>
+
+                      {/* Tahmini Bütçe */}
+                      <td className="p-2.5 text-right font-mono text-[11px] whitespace-nowrap">
+                        {record.estimatedBudget !== undefined && record.estimatedBudget !== null ? (
+                          <span className="font-semibold text-blue-600 dark:text-blue-400">
+                            {formatCurrency(record.estimatedBudget, record.currency)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/50">-</span>
+                        )}
+                      </td>
+
+                      {/* Gerçekleşen Bütçe */}
+                      <td className="p-2.5 text-right font-mono text-[11px] whitespace-nowrap">
+                        {record.actualBudget !== undefined && record.actualBudget !== null ? (
+                          <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                            {formatCurrency(record.actualBudget, record.currency)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/50">-</span>
+                        )}
+                      </td>
+
+                      {/* İşlem Butonları (Detay, İncele, Düzenle, Aksiyon Gir, Sil) */}
                       <td className="p-2 text-center sticky right-0 bg-card/95 group-hover:bg-muted/95 border-l">
                         <div className="flex flex-col gap-1 items-center">
+                          <button
+                            onClick={() => navigate(`/operations-management/improvements/records/${record.id}`)}
+                            className="w-20 py-0.5 rounded border border-primary/40 bg-primary/10 hover:bg-primary/20 text-[11px] font-bold text-primary transition-colors shadow-2xs flex items-center justify-center gap-1"
+                            title="Tüm detayları, fotoğrafları ve işlem geçmişini sayfada aç"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            Detay
+                          </button>
                           <button
                             onClick={() => setInspectRecord(record)}
                             className="w-20 py-0.5 rounded border border-border bg-background hover:bg-muted text-[11px] font-medium text-foreground transition-colors shadow-2xs"

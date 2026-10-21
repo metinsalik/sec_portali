@@ -9,7 +9,7 @@ done
 
 echo "Database is ready."
 echo "Syncing database schema (prisma db push)..."
-npx prisma db push --skip-generate || echo "Schema sync notice: continuing application startup..."
+prisma db push --skip-generate || echo "Schema sync notice: continuing application startup..."
 
 echo "Starting application..."
 exec node dist/index.js

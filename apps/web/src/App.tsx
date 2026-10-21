@@ -46,10 +46,14 @@ import ReportEditorPage from './pages/settings/ReportEditorPage';
 import OperationsSettings from './pages/operations/OperationsSettings';
 import { ImprovementsLayout } from './pages/operations/improvements/ImprovementsLayout';
 import { ImprovementsDashboardPage } from './pages/operations/improvements/ImprovementsDashboardPage';
+import { ReportModuleDashboard } from './pages/operations/improvements/ReportModuleDashboard';
 import { DenetimlerPage } from './pages/operations/improvements/DenetimlerPage';
 import { ElectricalTrackingPage } from './pages/operations/improvements/ElectricalTrackingPage';
+import { MechanicalTrackingPage } from './pages/operations/improvements/MechanicalTrackingPage';
+import { FireSafetyTrackingPage } from './pages/operations/improvements/FireSafetyTrackingPage';
 import { CriticalItemsPage } from './pages/operations/improvements/CriticalItemsPage';
 import { ImprovementsSettingsPage } from './pages/operations/improvements/ImprovementsSettingsPage';
+import { ImprovementDetailPage } from './pages/operations/improvements/ImprovementDetailPage';
 
 // Panel
 import PanelDashboard from './pages/panel/PanelDashboard';
@@ -260,8 +264,19 @@ function App() {
                   >
                     <Route index element={<ImprovementsDashboardPage />} />
                     <Route path="critical" element={<CriticalItemsPage />} />
-                    <Route path="denetimler" element={<DenetimlerPage />} />
+                    <Route path="denetimler/dashboard" element={<ReportModuleDashboard moduleGroup="DENETIMLER" />} />
+                    <Route path="electrical/dashboard" element={<ReportModuleDashboard moduleGroup="ELEKTRIK" />} />
+                    <Route path="mechanical/dashboard" element={<ReportModuleDashboard moduleGroup="MEKANIK" />} />
+                    <Route path="fire-safety/dashboard" element={<ReportModuleDashboard moduleGroup="YANGIN" />} />
+                    <Route path="denetimler" element={<Navigate to="/operations-management/improvements/denetimler/dashboard" replace />} />
+                    <Route path="denetimler/:subCategory" element={<DenetimlerPage />} />
+                    <Route path="electrical" element={<Navigate to="/operations-management/improvements/electrical/dashboard" replace />} />
                     <Route path="electrical/:subCategory" element={<ElectricalTrackingPage />} />
+                    <Route path="mechanical" element={<Navigate to="/operations-management/improvements/mechanical/dashboard" replace />} />
+                    <Route path="mechanical/:subCategory" element={<MechanicalTrackingPage />} />
+                    <Route path="fire-safety" element={<Navigate to="/operations-management/improvements/fire-safety/dashboard" replace />} />
+                    <Route path="fire-safety/:subCategory" element={<FireSafetyTrackingPage />} />
+                    <Route path="records/:id" element={<ImprovementDetailPage />} />
                     <Route path="settings" element={<ImprovementsSettingsPage />} />
                   </Route>
 

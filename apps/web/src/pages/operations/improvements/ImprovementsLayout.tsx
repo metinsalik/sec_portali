@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  LayoutDashboard, AlertOctagon, ClipboardList, Zap, 
+  LayoutDashboard, AlertOctagon, ClipboardList, Zap, Wrench, Flame,
   ChevronDown, ChevronRight, Settings, Upload, ArrowLeft,
   Building2, Activity, Menu, X, PanelLeftClose, PanelLeftOpen,
   User, LogOut
@@ -15,7 +15,13 @@ import {
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
-import { type FacilityOption, ELECTRICAL_SHEETS } from './types';
+import { 
+  type FacilityOption, 
+  AUDIT_SHEETS, 
+  ELECTRICAL_SHEETS, 
+  MECHANICAL_SHEETS, 
+  FIRE_SYSTEMS_SHEETS 
+} from './types';
 import { ImprovementExcelImportModal } from './ImprovementExcelImportModal';
 
 const API = import.meta.env.VITE_API_URL || '';
@@ -37,8 +43,11 @@ export const ImprovementsLayout: React.FC = () => {
   const [selectedFacilityId, setSelectedFacilityId] = useState<string>('ALL');
   const [loadingFacilities, setLoadingFacilities] = useState(true);
 
-  // Accordion durumu (Elektrik grubu)
+  // Accordion durumları (Takip Alanları)
+  const [isAuditsOpen, setIsAuditsOpen] = useState(true);
   const [isElectricalOpen, setIsElectricalOpen] = useState(true);
+  const [isMechanicalOpen, setIsMechanicalOpen] = useState(true);
+  const [isFireSystemsOpen, setIsFireSystemsOpen] = useState(true);
 
   // Sidebar responsive & collapse
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -92,6 +101,8 @@ export const ImprovementsLayout: React.FC = () => {
       const activeLocal = localStorage.getItem('activeFacilityId');
       if (activeLocal) {
         setSelectedFacilityId(activeLocal);
+      } else {
+        setSelectedFacilityId('ALL');
       }
       fetchFacilities();
     };
@@ -103,7 +114,10 @@ export const ImprovementsLayout: React.FC = () => {
   }, [user]);
 
   const currentPath = location.pathname;
+  const isAuditsActive = currentPath.startsWith('/operations-management/improvements/denetimler');
   const isElectricalActive = currentPath.startsWith('/operations-management/improvements/electrical');
+  const isMechanicalActive = currentPath.startsWith('/operations-management/improvements/mechanical');
+  const isFireSystemsActive = currentPath.startsWith('/operations-management/improvements/fire-safety');
 
   return (
     <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
@@ -300,33 +314,116 @@ export const ImprovementsLayout: React.FC = () => {
             {isCollapsed ? "—" : "TAKİP ALANLARI"}
           </div>
 
-          {/* 3. Denetimler (Ayrı Başlık / Sekme) */}
-          <button
-            onClick={() => {
-              navigate('/operations-management/improvements/denetimler');
-              setIsSidebarOpen(false);
-            }}
-            title={isCollapsed ? "Denetimler" : undefined}
-            className={cn(
-              "w-full flex items-center rounded-lg text-sm font-medium transition-colors",
-              isCollapsed ? "justify-center h-10 px-0" : "gap-3 px-3 py-2",
-              currentPath === '/operations-management/improvements/denetimler'
-                ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            <ClipboardList className="w-4 h-4 shrink-0 text-emerald-500" />
-            {!isCollapsed && <span className="text-left">Denetimler</span>}
-          </button>
-
-          {/* 4. Elektrik Emniyet Raporu (Açılır Grup) */}
+          {/* 1. DENETİMLER (Açılır Grup) */}
           {isCollapsed ? (
             <button
               onClick={() => {
-                navigate('/operations-management/improvements/electrical/elektrik-pk');
+                navigate('/operations-management/improvements/denetimler/dashboard');
                 setIsSidebarOpen(false);
               }}
-              title="Elektrik Emniyet Raporu"
+              title="Denetimler Dashboard"
+              className={cn(
+                "w-full flex items-center justify-center h-10 rounded-lg text-sm font-medium transition-colors",
+                isAuditsActive
+                  ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <ClipboardList className="w-4 h-4 shrink-0 text-emerald-500" />
+            </button>
+          ) : (
+            <div className="space-y-1">
+              <div
+                className={cn(
+                  "flex items-center justify-between rounded-lg text-sm font-medium transition-colors px-3 py-2 select-none group",
+                  isAuditsActive
+                    ? "bg-muted/80 text-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <div 
+                  onClick={() => {
+                    navigate('/operations-management/improvements/denetimler/dashboard');
+                    setIsAuditsOpen(true);
+                    setIsSidebarOpen(false);
+                  }}
+                  className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+                >
+                  <ClipboardList className="w-4 h-4 shrink-0 text-emerald-500" />
+                  <span className="truncate">Denetimler</span>
+                </div>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsAuditsOpen(!isAuditsOpen);
+                  }}
+                  className="p-1 cursor-pointer hover:bg-muted/80 rounded"
+                >
+                  <ChevronDown
+                    className={cn(
+                      "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                      isAuditsOpen ? "rotate-0" : "-rotate-90"
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Alt Sekmeler */}
+              {isAuditsOpen && (
+                <div className="pl-4 pr-1 space-y-0.5 border-l-2 border-emerald-500/30 ml-4 animate-in slide-in-from-top-1 duration-200">
+                  {/* Denetimler Dashboard Linki */}
+                  <button
+                    onClick={() => {
+                      navigate('/operations-management/improvements/denetimler/dashboard');
+                      setIsSidebarOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-2 rounded-md text-xs font-medium px-2.5 py-1.5 transition-colors text-left",
+                      currentPath === '/operations-management/improvements/denetimler/dashboard'
+                        ? "bg-slate-900 text-white shadow-xs dark:bg-slate-50 dark:text-slate-900 font-semibold"
+                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                    )}
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
+                    <span className="truncate font-semibold">Denetimler Dashboard</span>
+                  </button>
+
+                  {AUDIT_SHEETS.map(item => {
+                    const targetUrl = `/operations-management/improvements/denetimler/${item.path}`;
+                    const isActive = currentPath === targetUrl;
+
+                    return (
+                      <button
+                        key={item.key}
+                        onClick={() => {
+                          navigate(targetUrl);
+                          setIsSidebarOpen(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-2 rounded-md text-xs font-medium px-2.5 py-1.5 transition-colors text-left",
+                          isActive
+                            ? "bg-slate-900 text-white shadow-xs dark:bg-slate-50 dark:text-slate-900 font-semibold"
+                            : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                        )}
+                      >
+                        <ChevronRight className="w-3 h-3 shrink-0 opacity-70" />
+                        <span className="truncate">{item.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 2. ELEKTRİK EMNİYET RAPORU (Açılır Grup) */}
+          {isCollapsed ? (
+            <button
+              onClick={() => {
+                navigate('/operations-management/improvements/electrical/dashboard');
+                setIsSidebarOpen(false);
+              }}
+              title="Elektrik Emniyet Dashboard"
               className={cn(
                 "w-full flex items-center justify-center h-10 rounded-lg text-sm font-medium transition-colors",
                 isElectricalActive
@@ -339,31 +436,266 @@ export const ImprovementsLayout: React.FC = () => {
           ) : (
             <div className="space-y-1">
               <div
-                onClick={() => setIsElectricalOpen(!isElectricalOpen)}
                 className={cn(
-                  "flex items-center justify-between rounded-lg text-sm font-medium transition-colors px-3 py-2 cursor-pointer select-none group",
+                  "flex items-center justify-between rounded-lg text-sm font-medium transition-colors px-3 py-2 select-none group",
                   isElectricalActive
                     ? "bg-muted/80 text-foreground font-semibold"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div 
+                  onClick={() => {
+                    navigate('/operations-management/improvements/electrical/dashboard');
+                    setIsElectricalOpen(true);
+                    setIsSidebarOpen(false);
+                  }}
+                  className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+                >
                   <Zap className="w-4 h-4 shrink-0 text-amber-500" />
                   <span className="truncate">Elektrik Emniyet Raporu</span>
                 </div>
-                <ChevronDown
-                  className={cn(
-                    "w-4 h-4 text-muted-foreground transition-transform duration-200",
-                    isElectricalOpen ? "rotate-0" : "-rotate-90"
-                  )}
-                />
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsElectricalOpen(!isElectricalOpen);
+                  }}
+                  className="p-1 cursor-pointer hover:bg-muted/80 rounded"
+                >
+                  <ChevronDown
+                    className={cn(
+                      "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                      isElectricalOpen ? "rotate-0" : "-rotate-90"
+                    )}
+                  />
+                </div>
               </div>
 
               {/* Alt Sekmeler */}
               {isElectricalOpen && (
                 <div className="pl-4 pr-1 space-y-0.5 border-l-2 border-amber-500/30 ml-4 animate-in slide-in-from-top-1 duration-200">
+                  {/* Elektrik Dashboard Linki */}
+                  <button
+                    onClick={() => {
+                      navigate('/operations-management/improvements/electrical/dashboard');
+                      setIsSidebarOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-2 rounded-md text-xs font-medium px-2.5 py-1.5 transition-colors text-left",
+                      currentPath === '/operations-management/improvements/electrical/dashboard'
+                        ? "bg-slate-900 text-white shadow-xs dark:bg-slate-50 dark:text-slate-900 font-semibold"
+                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                    )}
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                    <span className="truncate font-semibold">Elektrik Dashboard</span>
+                  </button>
+
                   {ELECTRICAL_SHEETS.map(item => {
                     const targetUrl = `/operations-management/improvements/electrical/${item.path}`;
+                    const isActive = currentPath === targetUrl;
+
+                    return (
+                      <button
+                        key={item.key}
+                        onClick={() => {
+                          navigate(targetUrl);
+                          setIsSidebarOpen(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-2 rounded-md text-xs font-medium px-2.5 py-1.5 transition-colors text-left",
+                          isActive
+                            ? "bg-slate-900 text-white shadow-xs dark:bg-slate-50 dark:text-slate-900 font-semibold"
+                            : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                        )}
+                      >
+                        <ChevronRight className="w-3 h-3 shrink-0 opacity-70" />
+                        <span className="truncate">{item.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 3. MEKANİK EMNİYET RAPORU (Açılır Grup) */}
+          {isCollapsed ? (
+            <button
+              onClick={() => {
+                navigate('/operations-management/improvements/mechanical/dashboard');
+                setIsSidebarOpen(false);
+              }}
+              title="Mekanik Emniyet Dashboard"
+              className={cn(
+                "w-full flex items-center justify-center h-10 rounded-lg text-sm font-medium transition-colors",
+                isMechanicalActive
+                  ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <Wrench className="w-4 h-4 shrink-0 text-cyan-500" />
+            </button>
+          ) : (
+            <div className="space-y-1">
+              <div
+                className={cn(
+                  "flex items-center justify-between rounded-lg text-sm font-medium transition-colors px-3 py-2 select-none group",
+                  isMechanicalActive
+                    ? "bg-muted/80 text-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <div 
+                  onClick={() => {
+                    navigate('/operations-management/improvements/mechanical/dashboard');
+                    setIsMechanicalOpen(true);
+                    setIsSidebarOpen(false);
+                  }}
+                  className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+                >
+                  <Wrench className="w-4 h-4 shrink-0 text-cyan-500" />
+                  <span className="truncate">Mekanik Emniyet Raporu</span>
+                </div>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsMechanicalOpen(!isMechanicalOpen);
+                  }}
+                  className="p-1 cursor-pointer hover:bg-muted/80 rounded"
+                >
+                  <ChevronDown
+                    className={cn(
+                      "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                      isMechanicalOpen ? "rotate-0" : "-rotate-90"
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Alt Sekmeler */}
+              {isMechanicalOpen && (
+                <div className="pl-4 pr-1 space-y-0.5 border-l-2 border-cyan-500/30 ml-4 animate-in slide-in-from-top-1 duration-200">
+                  {/* Mekanik Dashboard Linki */}
+                  <button
+                    onClick={() => {
+                      navigate('/operations-management/improvements/mechanical/dashboard');
+                      setIsSidebarOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-2 rounded-md text-xs font-medium px-2.5 py-1.5 transition-colors text-left",
+                      currentPath === '/operations-management/improvements/mechanical/dashboard'
+                        ? "bg-slate-900 text-white shadow-xs dark:bg-slate-50 dark:text-slate-900 font-semibold"
+                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                    )}
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5 shrink-0 text-cyan-500" />
+                    <span className="truncate font-semibold">Mekanik Dashboard</span>
+                  </button>
+
+                  {MECHANICAL_SHEETS.map(item => {
+                    const targetUrl = `/operations-management/improvements/mechanical/${item.path}`;
+                    const isActive = currentPath === targetUrl;
+
+                    return (
+                      <button
+                        key={item.key}
+                        onClick={() => {
+                          navigate(targetUrl);
+                          setIsSidebarOpen(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-2 rounded-md text-xs font-medium px-2.5 py-1.5 transition-colors text-left",
+                          isActive
+                            ? "bg-slate-900 text-white shadow-xs dark:bg-slate-50 dark:text-slate-900 font-semibold"
+                            : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                        )}
+                      >
+                        <ChevronRight className="w-3 h-3 shrink-0 opacity-70" />
+                        <span className="truncate">{item.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 4. YANGIN SİSTEMLERİ EMNİYET RAPORU (Açılır Grup) */}
+          {isCollapsed ? (
+            <button
+              onClick={() => {
+                navigate('/operations-management/improvements/fire-safety/dashboard');
+                setIsSidebarOpen(false);
+              }}
+              title="Yangın Sistemleri Dashboard"
+              className={cn(
+                "w-full flex items-center justify-center h-10 rounded-lg text-sm font-medium transition-colors",
+                isFireSystemsActive
+                  ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <Flame className="w-4 h-4 shrink-0 text-rose-500" />
+            </button>
+          ) : (
+            <div className="space-y-1">
+              <div
+                className={cn(
+                  "flex items-center justify-between rounded-lg text-sm font-medium transition-colors px-3 py-2 select-none group",
+                  isFireSystemsActive
+                    ? "bg-muted/80 text-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <div 
+                  onClick={() => {
+                    navigate('/operations-management/improvements/fire-safety/dashboard');
+                    setIsFireSystemsOpen(true);
+                    setIsSidebarOpen(false);
+                  }}
+                  className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+                >
+                  <Flame className="w-4 h-4 shrink-0 text-rose-500" />
+                  <span className="truncate">Yangın Sistemleri Emniyet Raporu</span>
+                </div>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsFireSystemsOpen(!isFireSystemsOpen);
+                  }}
+                  className="p-1 cursor-pointer hover:bg-muted/80 rounded"
+                >
+                  <ChevronDown
+                    className={cn(
+                      "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                      isFireSystemsOpen ? "rotate-0" : "-rotate-90"
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Alt Sekmeler */}
+              {isFireSystemsOpen && (
+                <div className="pl-4 pr-1 space-y-0.5 border-l-2 border-rose-500/30 ml-4 animate-in slide-in-from-top-1 duration-200">
+                  {/* Yangın Dashboard Linki */}
+                  <button
+                    onClick={() => {
+                      navigate('/operations-management/improvements/fire-safety/dashboard');
+                      setIsSidebarOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-2 rounded-md text-xs font-medium px-2.5 py-1.5 transition-colors text-left",
+                      currentPath === '/operations-management/improvements/fire-safety/dashboard'
+                        ? "bg-slate-900 text-white shadow-xs dark:bg-slate-50 dark:text-slate-900 font-semibold"
+                        : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                    )}
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5 shrink-0 text-rose-500" />
+                    <span className="truncate font-semibold">Yangın Dashboard</span>
+                  </button>
+
+                  {FIRE_SYSTEMS_SHEETS.map(item => {
+                    const targetUrl = `/operations-management/improvements/fire-safety/${item.path}`;
                     const isActive = currentPath === targetUrl;
 
                     return (
@@ -545,7 +877,7 @@ export const ImprovementsLayout: React.FC = () => {
 
         {/* Sayfa Gövdesi (Router Outlet) */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-background">
-          <Outlet context={{ selectedFacilityId, facilities, onRefreshFacilities: fetchFacilities }} />
+          <Outlet context={{ selectedFacilityId, setSelectedFacilityId, facilities, onRefreshFacilities: fetchFacilities }} />
         </main>
 
       </div>

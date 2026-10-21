@@ -20,6 +20,7 @@ COPY apps/web/ apps/web/
 
 WORKDIR /app/apps/web
 
+ENV RUST_BACKTRACE=full
 RUN npx vite build
 
 FROM nginx:alpine

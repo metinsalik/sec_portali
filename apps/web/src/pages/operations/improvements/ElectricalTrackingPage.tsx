@@ -3,6 +3,8 @@ import { useParams, useOutletContext, useNavigate } from 'react-router-dom';
 import { Zap } from 'lucide-react';
 import { type ImprovementRecord, type FacilityOption, ELECTRICAL_SHEETS } from './types';
 import { ImprovementTable } from './ImprovementTable';
+import { PeriodicControlPanel } from './PeriodicControlPanel';
+import { CreateRecordDialog } from './ImprovementRecordDialogs';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -10,8 +12,9 @@ export const ElectricalTrackingPage: React.FC = () => {
   const { subCategory } = useParams<{ subCategory: string }>();
   const navigate = useNavigate();
   
-  const { selectedFacilityId, facilities } = useOutletContext<{
+  const { selectedFacilityId, setSelectedFacilityId, facilities } = useOutletContext<{
     selectedFacilityId: string;
+    setSelectedFacilityId?: (id: string) => void;
     facilities: FacilityOption[];
   }>();
 
@@ -20,6 +23,18 @@ export const ElectricalTrackingPage: React.FC = () => {
 
   const [records, setRecords] = useState<ImprovementRecord[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Periyodik Kontrol ve Bulgu Ekleme Durumları
+  const [showAddFindingModal, setShowAddFindingModal] = useState(false);
+  const [findingFacilityId, setFindingFacilityId] = useState<string | undefined>();
+  const [findingReportId, setFindingReportId] = useState<string | undefined>();
+  const [pkRefreshTrigger, setPkRefreshTrigger] = useState(0);
+
+  const handleOpenAddFinding = (facId?: string, repId?: string) => {
+    setFindingFacilityId(facId);
+    setFindingReportId(repId);
+    setShowAddFindingModal(true);
+  };
 
   const fetchRecords = async () => {
     try {
@@ -38,6 +53,11 @@ export const ElectricalTrackingPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRefreshAll = () => {
+    fetchRecords();
+    setPkRefreshTrigger(prev => prev + 1);
   };
 
   useEffect(() => {
@@ -81,16 +101,45 @@ export const ElectricalTrackingPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Topraklama PK için Periyodik Kontrol Takip Paneli (Görsel 3 Tasarımı) */}
+      {activeSheet.key === 'TOPRAKLAMA_PK' && (
+        <PeriodicControlPanel
+          sheetType={activeSheet.key}
+          sheetTitle={activeSheet.name}
+          facilities={facilities}
+          selectedFacilityId={selectedFacilityId}
+          onFacilityChange={setSelectedFacilityId}
+          onOpenAddFinding={handleOpenAddFinding}
+          refreshTrigger={pkRefreshTrigger}
+        />
+      )}
+
       {/* Tablo Bileşeni */}
       <ImprovementTable
         records={records}
         loading={loading}
         sheetTitle={activeSheet.name}
         sheetType={activeSheet.key}
-        onRefresh={fetchRecords}
+        onRefresh={handleRefreshAll}
         facilities={facilities}
         selectedFacilityId={selectedFacilityId}
       />
+
+      {/* Bulgu Ekleme Modalı (Görsel 3'teki + Bulgu veya Rapor Sonucu Uygun Değil Durumunda) */}
+      {showAddFindingModal && (
+        <CreateRecordDialog
+          sheetType={activeSheet.key}
+          defaultFacilityId={findingFacilityId || selectedFacilityId}
+          initialPeriodicReportId={findingReportId}
+          facilities={facilities}
+          onClose={() => {
+            setShowAddFindingModal(false);
+            setFindingFacilityId(undefined);
+            setFindingReportId(undefined);
+          }}
+          onSuccess={handleRefreshAll}
+        />
+      )}
 
     </div>
   );
