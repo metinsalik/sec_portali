@@ -6,7 +6,7 @@ import {
   Download, ExternalLink, Printer, Edit3, MessageSquarePlus, 
   Building2, TrendingUp, DollarSign, History, 
   ChevronRight, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, RefreshCw, ZoomIn, Layers, FileCheck, Eye, Sparkles,
-  Scale, ShoppingCart, HardHat, Package, MoreHorizontal, ArrowRight, Check
+  Scale, ShoppingCart, HardHat, Package, MoreHorizontal, ArrowRight, Check, Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +20,12 @@ import {
   formatAttachmentName
 } from './types';
 import { ImprovementMediaLightbox, formatBytes } from './ImprovementMediaManager';
-import { ActionNoteDialog, EditRecordDialog } from './ImprovementRecordDialogs';
+import { 
+  ActionNoteDialog, 
+  EditRecordDialog, 
+  EditActionHistoryDialog, 
+  DeleteActionHistoryDialog 
+} from './ImprovementRecordDialogs';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -38,6 +43,8 @@ export const ImprovementDetailPage: React.FC = () => {
   // Modallar
   const [showActionModal, setShowActionModal] = useState<boolean>(false);
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
+  const [editingHistory, setEditingHistory] = useState<ImprovementRecordHistory | null>(null);
+  const [deletingHistory, setDeletingHistory] = useState<ImprovementRecordHistory | null>(null);
 
   // Lightbox Önizleme
   const [lightboxState, setLightboxState] = useState<{
@@ -1188,6 +1195,32 @@ export const ImprovementDetailPage: React.FC = () => {
                                 </span>
                               </div>
 
+                              {/* Hızlı Düzenle & Sil Butonları */}
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingHistory(h);
+                                  }}
+                                  title="Aksiyon Adımını Düzenle"
+                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeletingHistory(h);
+                                  }}
+                                  title="Aksiyon Adımını Sil"
+                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+
                               <div className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-all duration-200 ${
                                 isStepOpen 
                                   ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-300 dark:border-indigo-800 rotate-180' 
@@ -1328,6 +1361,35 @@ export const ImprovementDetailPage: React.FC = () => {
                                 </div>
                               )}
 
+                              {/* Adım Alt Aksiyon Çubuğu (Düzenle & Sil) */}
+                              <div className="pt-2.5 mt-2 border-t border-border/50 flex items-center justify-between gap-2 text-xs">
+                                <span className="text-[11px] text-muted-foreground">
+                                  Adım ID: <code className="font-mono text-foreground font-semibold">{h.id.slice(0, 8)}</code> • {new Date(h.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setEditingHistory(h)}
+                                    className="h-7 text-xs px-2.5 gap-1.5 border-border hover:border-indigo-500 hover:text-indigo-600 font-semibold"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5 text-indigo-500" />
+                                    Adımı Düzenle
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setDeletingHistory(h)}
+                                    className="h-7 text-xs px-2.5 gap-1.5 border-border hover:border-red-500 hover:text-red-600 font-semibold"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                    Adımı Sil
+                                  </Button>
+                                </div>
+                              </div>
+
                             </div>
                           )}
 
@@ -1391,6 +1453,24 @@ export const ImprovementDetailPage: React.FC = () => {
                       <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
                         <Clock className="w-3.5 h-3.5" />
                         <span>{new Date(h.createdAt).toLocaleString('tr-TR')}</span>
+                        <div className="flex items-center gap-1 ml-2">
+                          <button
+                            type="button"
+                            onClick={() => setEditingHistory(h)}
+                            title="Aksiyonu Düzenle"
+                            className="p-1 rounded-md text-muted-foreground hover:text-indigo-600 hover:bg-muted transition-colors"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeletingHistory(h)}
+                            title="Aksiyonu Sil"
+                            className="p-1 rounded-md text-muted-foreground hover:text-red-600 hover:bg-muted transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -1699,6 +1779,38 @@ export const ImprovementDetailPage: React.FC = () => {
           onSuccess={() => {
             fetchRecordDetail();
             toast.success('Bulgu ve ekler başarıyla güncellendi.');
+          }}
+        />
+      )}
+
+      {editingHistory && record && (
+        <EditActionHistoryDialog
+          record={record}
+          history={editingHistory}
+          onClose={() => setEditingHistory(null)}
+          onSuccess={(updatedRecord) => {
+            setEditingHistory(null);
+            if (updatedRecord) {
+              setRecord(updatedRecord);
+            } else {
+              fetchRecordDetail();
+            }
+          }}
+        />
+      )}
+
+      {deletingHistory && record && (
+        <DeleteActionHistoryDialog
+          record={record}
+          history={deletingHistory}
+          onClose={() => setDeletingHistory(null)}
+          onSuccess={(updatedRecord) => {
+            setDeletingHistory(null);
+            if (updatedRecord) {
+              setRecord(updatedRecord);
+            } else {
+              fetchRecordDetail();
+            }
           }}
         />
       )}

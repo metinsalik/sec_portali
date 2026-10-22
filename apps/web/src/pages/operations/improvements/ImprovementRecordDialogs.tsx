@@ -2099,3 +2099,505 @@ export const CreateRecordDialog: React.FC<CreateProps> = ({
     </div>
   );
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. AKSİYON ADIMINI DÜZENLE (Edit Action Step Dialog)
+// ─────────────────────────────────────────────────────────────────────────────
+interface EditActionHistoryProps {
+  record: ImprovementRecord;
+  history: ImprovementRecordHistory;
+  onClose: () => void;
+  onSuccess: (updatedRecord?: ImprovementRecord) => void;
+}
+
+export const EditActionHistoryDialog: React.FC<EditActionHistoryProps> = ({
+  record,
+  history,
+  onClose,
+  onSuccess,
+}) => {
+  const [stepTitle, setStepTitle] = useState(history.stepTitle || 'Aksiyon Notu');
+  const [stepType, setStepType] = useState(history.stepType || 'DIGER');
+  const [newStatus, setNewStatus] = useState(history.newStatus || 'Devam Ediyor');
+  const [progressAdded, setProgressAdded] = useState<number>(history.progressAdded ?? 0);
+  const [progress, setProgress] = useState<number>(history.progress ?? 0);
+  const [newNote, setNewNote] = useState(history.newNote || '');
+  const [stepFields, setStepFields] = useState<Record<string, any>>(history.stepFields || {});
+  const [evidencePhotos, setEvidencePhotos] = useState<ImprovementFileAttachment[]>(
+    Array.isArray(history.evidencePhotos) ? history.evidencePhotos : []
+  );
+  const [documents, setDocuments] = useState<ImprovementFileAttachment[]>(
+    Array.isArray(history.documents) ? history.documents : []
+  );
+  const [createdAt, setCreatedAt] = useState<string>(
+    history.createdAt ? new Date(history.createdAt).toISOString().slice(0, 16) : ''
+  );
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Dosya Yükleme (Fotoğraf & Belge)
+  const handleFileUpload = async (files: FileList | null, isDoc: boolean) => {
+    if (!files || files.length === 0) return;
+    setUploadingFiles(true);
+    try {
+      const fileArr = Array.from(files);
+      const res = await uploadImprovementFiles(fileArr, isDoc ? 'documents' : 'evidence');
+      if (res.length > 0) {
+        if (isDoc) {
+          setDocuments(prev => [...prev, ...res]);
+          toast.success(`${res.length} doküman eklendi.`);
+        } else {
+          setEvidencePhotos(prev => [...prev, ...res]);
+          toast.success(`${res.length} fotoğraf eklendi.`);
+        }
+      }
+    } catch (err: any) {
+      toast.error('Dosya yükleme hatası: ' + err.message);
+    } finally {
+      setUploadingFiles(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newNote.trim()) {
+      toast.error('Lütfen bir aksiyon açıklaması giriniz.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/api/operations/improvements/records/${record.id}/history/${history.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({
+          newNote: newNote.trim(),
+          stepTitle: stepTitle.trim(),
+          stepType,
+          newStatus,
+          progress: Number(progress),
+          progressAdded: Number(progressAdded),
+          stepFields,
+          evidencePhotos,
+          documents,
+          createdAt: createdAt ? new Date(createdAt).toISOString() : undefined,
+        })
+      });
+
+      const d = await res.json();
+      if (!res.ok || !d.success) throw new Error(d.message || 'Aksiyon adımı güncellenemedi.');
+
+      toast.success(d.message || 'Aksiyon adımı başarıyla güncellendi.');
+      onSuccess(d.data);
+      onClose();
+    } catch (err: any) {
+      toast.error('Hata: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-card text-card-foreground border rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-6">
+        
+        {/* Başlık */}
+        <div className="px-6 py-4 border-b flex items-center justify-between bg-muted/40">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-foreground">Aksiyon Adımını Düzenle</h3>
+              <p className="text-[11px] text-muted-foreground">{record.facility?.shortName || record.facility?.name} - Kayıt #{record.rowNo}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs max-h-[calc(100vh-160px)] overflow-y-auto">
+          
+          {/* Adım Başlığı ve Durum */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-foreground block mb-1">
+                Adım Başlığı:
+              </label>
+              <input
+                type="text"
+                value={stepTitle}
+                onChange={e => setStepTitle(e.target.value)}
+                placeholder="Örn: SS / Sipariş Verildi"
+                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none focus:ring-1 focus:ring-primary font-medium"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-foreground block mb-1">
+                Aksiyonun Durumu:
+              </label>
+              <select
+                value={newStatus}
+                onChange={e => {
+                  const val = e.target.value;
+                  setNewStatus(val);
+                  if (val === 'Tamamlandı') {
+                    setProgress(100);
+                  }
+                }}
+                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none focus:ring-1 focus:ring-primary font-bold cursor-pointer"
+              >
+                <option value="Devam Ediyor">Devam Ediyor</option>
+                <option value="Tamamlandı">Tamamlandı (%100)</option>
+                <option value="Başlamadı">Başlamadı (%0)</option>
+                <option value="İptal Edildi">İptal Edildi</option>
+              </select>
+            </div>
+          </div>
+
+          {/* İlerleme Yüzdeleri (Bu Adımın Katkısı & Toplam Ulaşılan Yüzde) */}
+          <div className="p-4 bg-muted/20 border border-blue-500/20 rounded-xl space-y-3">
+            <div className="flex justify-between items-center text-xs font-bold text-foreground">
+              <span>İlerleme Katkısı & Toplam Yüzde</span>
+              <span className="font-mono text-blue-600 dark:text-blue-400">
+                +{progressAdded}% Katkı ➔ Toplam %{progress}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">
+                  Bu Adımın Katkısı (+%):
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={progressAdded}
+                  onChange={e => {
+                    const val = Number(e.target.value);
+                    setProgressAdded(val);
+                  }}
+                  className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs outline-none font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">
+                  Toplam Ulaşılan İlerleme (%):
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={progress}
+                  onChange={e => {
+                    const val = Number(e.target.value);
+                    setProgress(val);
+                    if (val >= 100) {
+                      setNewStatus('Tamamlandı');
+                    }
+                  }}
+                  className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs outline-none font-mono font-bold"
+                />
+              </div>
+            </div>
+
+            {/* Hızlı Butonlar */}
+            <div className="flex gap-1.5 flex-wrap pt-1">
+              {[10, 20, 30, 50, 70, 80, 100].map(pct => (
+                <button
+                  key={pct}
+                  type="button"
+                  onClick={() => {
+                    setProgress(pct);
+                    if (pct >= 100) setNewStatus('Tamamlandı');
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold border cursor-pointer transition-all ${
+                    progress === pct
+                      ? 'bg-primary text-primary-foreground border-primary font-bold'
+                      : 'bg-background hover:bg-muted text-muted-foreground'
+                  }`}
+                >
+                  %{pct}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Aksiyon Notu / Açıklama */}
+          <div>
+            <label className="text-xs font-semibold text-foreground block mb-1">
+              Aksiyon Açıklaması / Detay Notu:
+            </label>
+            <textarea
+              rows={4}
+              required
+              placeholder="Yapılan işlemi ve aksiyon detaylarını açıklayınız..."
+              value={newNote}
+              onChange={e => setNewNote(e.target.value)}
+              className="w-full p-3 rounded-lg border bg-background text-foreground text-xs outline-none focus:ring-1 focus:ring-primary leading-relaxed resize-none font-medium"
+            />
+          </div>
+
+          {/* Tarih / Saat */}
+          <div>
+            <label className="text-xs font-semibold text-foreground block mb-1">
+              İşlem Tarihi & Saati:
+            </label>
+            <input
+              type="datetime-local"
+              value={createdAt}
+              onChange={e => setCreatedAt(e.target.value)}
+              className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none font-mono cursor-pointer"
+            />
+          </div>
+
+          {/* Dinamik Alanlar (Varsa) */}
+          {stepFields && Object.keys(stepFields).length > 0 && (
+            <div className="p-3.5 bg-muted/20 border rounded-xl space-y-2.5">
+              <span className="text-xs font-semibold text-foreground block">
+                Şablon Özel Alanları (Parametreler):
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {Object.entries(stepFields).map(([key, val]) => (
+                  <div key={key}>
+                    <label className="text-[10px] font-medium text-muted-foreground uppercase block mb-0.5">
+                      {key}:
+                    </label>
+                    <input
+                      type="text"
+                      value={String(val || '')}
+                      onChange={e => setStepFields({ ...stepFields, [key]: e.target.value })}
+                      className="w-full h-8 px-2.5 rounded border bg-background text-foreground text-xs outline-none"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Kanıt Fotoğrafları & Ekli Belgeler */}
+          <div className="space-y-3 pt-2 border-t">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <Camera className="w-3.5 h-3.5 text-blue-500" />
+                Ekli Kanıt Fotoğrafları ({evidencePhotos.length}):
+              </span>
+              <label className="cursor-pointer text-[11px] font-bold text-primary hover:underline flex items-center gap-1">
+                <Upload className="w-3 h-3" /> Fotoğraf Ekle
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={e => handleFileUpload(e.target.files, false)}
+                  className="hidden"
+                  disabled={uploadingFiles}
+                />
+              </label>
+            </div>
+
+            {evidencePhotos.length > 0 && (
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                {evidencePhotos.map((photo, pIdx) => (
+                  <div key={pIdx} className="relative group aspect-square rounded-lg overflow-hidden border bg-muted">
+                    <img src={photo.url} alt={photo.name} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setEvidencePhotos(prev => prev.filter((_, idx) => idx !== pIdx))}
+                      className="absolute top-1 right-1 p-1 rounded-full bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-xs"
+                      title="Fotoğrafı Kaldır"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Belgeler */}
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-red-500" />
+                Ekli Belgeler ({documents.length}):
+              </span>
+              <label className="cursor-pointer text-[11px] font-bold text-primary hover:underline flex items-center gap-1">
+                <Paperclip className="w-3 h-3" /> Belge Ekle
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.xls,.xlsx"
+                  onChange={e => handleFileUpload(e.target.files, true)}
+                  className="hidden"
+                  disabled={uploadingFiles}
+                />
+              </label>
+            </div>
+
+            {documents.length > 0 && (
+              <div className="space-y-1">
+                {documents.map((doc, dIdx) => (
+                  <div key={dIdx} className="p-2 bg-muted/30 border rounded-lg flex items-center justify-between text-xs">
+                    <span className="truncate max-w-[280px] font-medium text-foreground">{doc.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => setDocuments(prev => prev.filter((_, idx) => idx !== dIdx))}
+                      className="p-1 text-muted-foreground hover:text-red-500"
+                      title="Belgeyi Kaldır"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Alt Butonlar */}
+          <div className="pt-4 border-t flex justify-end gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading || uploadingFiles}>
+              Vazgeç
+            </Button>
+            <Button 
+              type="submit" 
+              size="sm" 
+              disabled={loading || uploadingFiles} 
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold gap-1.5"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Güncelleniyor...
+                </>
+              ) : (
+                <>
+                  <Check className="w-3.5 h-3.5" />
+                  Değişiklikleri Kaydet
+                </>
+              )}
+            </Button>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. AKSİYON ADIMINI SİL (Delete Action Step Confirmation Dialog)
+// ─────────────────────────────────────────────────────────────────────────────
+interface DeleteActionHistoryProps {
+  record: ImprovementRecord;
+  history: ImprovementRecordHistory;
+  onClose: () => void;
+  onSuccess: (updatedRecord?: ImprovementRecord) => void;
+}
+
+export const DeleteActionHistoryDialog: React.FC<DeleteActionHistoryProps> = ({
+  record,
+  history,
+  onClose,
+  onSuccess,
+}) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleDelete = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/api/operations/improvements/records/${record.id}/history/${history.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+
+      const d = await res.json();
+      if (!res.ok || !d.success) throw new Error(d.message || 'Aksiyon adımı silinemedi.');
+
+      toast.success(d.message || 'Aksiyon adımı başarıyla silindi.');
+      onSuccess(d.data);
+      onClose();
+    } catch (err: any) {
+      toast.error('Hata: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-card text-card-foreground border rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="px-5 py-4 border-b flex items-center justify-between bg-red-500/10 dark:bg-red-950/20">
+          <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+            <Trash2 className="w-5 h-5" />
+            <h3 className="text-sm font-bold">Aksiyon Adımını Sil</h3>
+          </div>
+          <button onClick={onClose} className="p-1 rounded-lg text-muted-foreground hover:text-foreground">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4 text-xs">
+          <p className="text-foreground leading-relaxed">
+            Bu aksiyon adımını sistemden silmek istediğinize emin misiniz?
+          </p>
+
+          <div className="p-3 bg-muted/40 border rounded-xl space-y-1">
+            <div className="font-bold text-foreground text-xs flex items-center gap-1.5">
+              <span>{history.stepTitle || 'Aksiyon Adımı'}</span>
+              {history.progressAdded ? (
+                <Badge variant="outline" className="text-[10px] text-emerald-600 font-mono">
+                  +{history.progressAdded}%
+                </Badge>
+              ) : null}
+            </div>
+            <p className="line-clamp-2 italic text-muted-foreground text-[11px]">
+              "{history.newNote}"
+            </p>
+            <div className="text-[10px] text-muted-foreground font-mono pt-1">
+              Tarih: {new Date(history.createdAt).toLocaleString('tr-TR')}
+            </div>
+          </div>
+
+          <div className="p-3 bg-amber-500/10 border border-amber-300 dark:border-amber-800 rounded-xl text-amber-800 dark:text-amber-300 text-[11px] leading-relaxed">
+            ⚠️ <strong>Otomatik Güncelleme:</strong> Bu adım silindiğinde, kaydın durumu ve ilerleme yüzdesi otomatik olarak bir önceki kalan adıma geri dönecektir.
+          </div>
+
+          <div className="pt-2 flex justify-end gap-2 border-t">
+            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading}>
+              Vazgeç
+            </Button>
+            <Button 
+              type="button" 
+              size="sm" 
+              onClick={handleDelete} 
+              disabled={loading} 
+              className="bg-red-600 hover:bg-red-700 text-white font-bold gap-1.5"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Siliniyor...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Evet, Adımı Sil
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

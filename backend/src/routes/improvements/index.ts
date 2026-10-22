@@ -1478,6 +1478,178 @@ router.get('/records/:id/history', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// 9.1 AKSİYON ADIMINI / GEÇMİŞİ DÜZENLE (Edit Action History Step)
+router.put('/records/:recordId/history/:historyId', async (req: AuthRequest, res: Response) => {
+  try {
+    const user = getUser(req);
+    const { recordId, historyId } = req.params;
+    const { 
+      newNote, 
+      stepTitle, 
+      stepType, 
+      newStatus, 
+      progress, 
+      progressAdded, 
+      stepFields, 
+      evidencePhotos, 
+      documents,
+      createdAt 
+    } = req.body;
+
+    const existingHistory = await prisma.improvementRecordHistory.findUnique({
+      where: { id: historyId }
+    });
+
+    if (!existingHistory || existingHistory.recordId !== recordId) {
+      return res.status(404).json({ success: false, message: 'Aksiyon geçmiş kaydı bulunamadı.' });
+    }
+
+    const currentPhotos = (existingHistory.evidencePhotos as any) || {};
+    const validPhotos = Array.isArray(evidencePhotos) ? evidencePhotos : (Array.isArray(currentPhotos.photos) ? currentPhotos.photos : []);
+    const validDocs = Array.isArray(documents) ? documents : (Array.isArray(currentPhotos.documents) ? currentPhotos.documents : []);
+    const updatedPayload = {
+      photos: validPhotos,
+      documents: validDocs,
+      stepType: stepType !== undefined ? stepType : (existingHistory.stepType || currentPhotos.stepType || null),
+      stepTitle: stepTitle !== undefined ? stepTitle : (existingHistory.stepTitle || currentPhotos.stepTitle || null),
+      stepFields: stepFields !== undefined ? stepFields : (currentPhotos.stepFields || null),
+    };
+
+    const updateHistoryData: any = {
+      evidencePhotos: updatedPayload,
+    };
+
+    if (newNote !== undefined) updateHistoryData.newNote = String(newNote).trim();
+    if (stepTitle !== undefined) updateHistoryData.stepTitle = stepTitle ? String(stepTitle).trim() : null;
+    if (stepType !== undefined) updateHistoryData.stepType = stepType ? String(stepType).trim() : null;
+    if (newStatus !== undefined) updateHistoryData.newStatus = String(newStatus).trim();
+    if (progress !== undefined) updateHistoryData.progress = Number(progress);
+    if (progressAdded !== undefined) updateHistoryData.progressAdded = Number(progressAdded);
+    if (createdAt) updateHistoryData.createdAt = new Date(createdAt);
+
+    const updatedHistory = await prisma.improvementRecordHistory.update({
+      where: { id: historyId },
+      data: updateHistoryData,
+    });
+
+    // Kaydın tüm geçmişini çekip en son adıma göre ana kaydı güncelle
+    const allHistories = await prisma.improvementRecordHistory.findMany({
+      where: { recordId },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const latest = allHistories[0];
+    if (latest && latest.id === historyId) {
+      const parentUpdate: any = {
+        updatedBy: user.username,
+      };
+      if (updatedHistory.newNote !== undefined) {
+        parentUpdate.currentNote = updatedHistory.newNote;
+      }
+      if (updatedHistory.newStatus) {
+        parentUpdate.status = updatedHistory.newStatus;
+      }
+      if (updatedHistory.progress !== undefined && updatedHistory.progress !== null) {
+        parentUpdate.progress = updatedHistory.progress;
+      }
+      await prisma.improvementRecord.update({
+        where: { id: recordId },
+        data: parentUpdate,
+      });
+    }
+
+    // Güncel kaydı ve formatlanmış tarihçeyi döndür
+    const fullRecord = await prisma.improvementRecord.findUnique({
+      where: { id: recordId },
+      include: {
+        facility: { select: { id: true, name: true, shortName: true, city: true } },
+        histories: { orderBy: { createdAt: 'desc' } }
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Aksiyon adımı başarıyla güncellendi.',
+      data: fullRecord ? {
+        ...fullRecord,
+        histories: fullRecord.histories.map(formatHistoryItem)
+      } : null
+    });
+  } catch (error: any) {
+    console.error('Error updating action history:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 9.2 AKSİYON ADIMINI / GEÇMİŞİ SİL (Delete Action History Step & Revert/Recalculate)
+router.delete('/records/:recordId/history/:historyId', async (req: AuthRequest, res: Response) => {
+  try {
+    const user = getUser(req);
+    const { recordId, historyId } = req.params;
+
+    const existingHistory = await prisma.improvementRecordHistory.findUnique({
+      where: { id: historyId }
+    });
+
+    if (!existingHistory || existingHistory.recordId !== recordId) {
+      return res.status(404).json({ success: false, message: 'Silinecek aksiyon adımı bulunamadı.' });
+    }
+
+    // 1. İlgili geçmiş adımını sil
+    await prisma.improvementRecordHistory.delete({
+      where: { id: historyId }
+    });
+
+    // 2. Kalan adımları tarihe göre en yeni başta olacak şekilde sıralı al
+    const remaining = await prisma.improvementRecordHistory.findMany({
+      where: { recordId },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // 3. Ana kaydın durum, ilerleme ve son notunu en güncel kalan adıma göre geriye al
+    const parentUpdate: any = {
+      updatedBy: user.username,
+    };
+
+    if (remaining.length > 0) {
+      const latestRemaining = remaining[0];
+      parentUpdate.currentNote = latestRemaining.newNote || null;
+      parentUpdate.status = latestRemaining.newStatus || (
+        latestRemaining.progress === 100 ? 'Tamamlandı' : (latestRemaining.progress && latestRemaining.progress > 0 ? 'Devam Ediyor' : 'Başlamadı')
+      );
+      parentUpdate.progress = latestRemaining.progress !== undefined && latestRemaining.progress !== null
+        ? latestRemaining.progress
+        : (parentUpdate.status === 'Tamamlandı' ? 100 : 0);
+    } else {
+      // Başka hiçbir aksiyon adımı kalmadıysa kaydı başlangıç haline döndür
+      parentUpdate.currentNote = null;
+      parentUpdate.status = 'Başlamadı';
+      parentUpdate.progress = 0;
+    }
+
+    const updatedRecord = await prisma.improvementRecord.update({
+      where: { id: recordId },
+      data: parentUpdate,
+      include: {
+        facility: { select: { id: true, name: true, shortName: true, city: true } },
+        histories: { orderBy: { createdAt: 'desc' } }
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Aksiyon adımı silindi ve süreç başarıyla bir önceki adıma güncellendi.',
+      data: {
+        ...updatedRecord,
+        histories: updatedRecord.histories.map(formatHistoryItem)
+      }
+    });
+  } catch (error: any) {
+    console.error('Error deleting action history step:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // 9. EXCEL İÇE AKTARMA (Sheet Seçimli Toplu Aktarım - `risks` modülü tarzında)
 router.post('/import-sheet', async (req: AuthRequest, res: Response) => {
   try {
