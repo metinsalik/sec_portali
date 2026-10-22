@@ -5,9 +5,13 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import * as XLSX from 'xlsx';
+import fm200FieldReportRoutes, { getConsolidatedFieldReport, cleanKey } from './fm200FieldReport';
 
 const router = Router();
 const prisma = new PrismaClient();
+
+// Saha Raporu Excel ve Detay Alt Modülü
+router.use('/', fm200FieldReportRoutes);
 
 // ──────────────────────────────────────────────────────────────────────────────
 // DİNAMİK KLASÖRLÜ DOSYA YÜKLEME (uploads/fm200/<facilitySlug>/...)
@@ -2597,6 +2601,8 @@ export async function calculateHospitalConsolidatedMatrix() {
     orderBy: { name: 'asc' }
   });
 
+  const fieldReport = await getConsolidatedFieldReport();
+
   return facilities.map((fac) => {
     const locations = fac.fm200Locations || [];
     const locationCount = locations.length;
@@ -2672,6 +2678,107 @@ export async function calculateHospitalConsolidatedMatrix() {
       }
     }
 
+    // Saha Raporu Excel Verisiyle Eşleştir
+    const facKey = cleanKey(fac.id);
+    const facNameKey = cleanKey(fac.name);
+    let frSummary = fieldReport.facilitySummaries[fac.id];
+    if (!frSummary) {
+      for (const [k, s] of Object.entries(fieldReport.facilitySummaries)) {
+        if (cleanKey(k) === facKey || cleanKey(k) === facNameKey || (s.facilityId && cleanKey(s.facilityId) === facKey)) {
+          frSummary = s;
+          break;
+        }
+      }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // KULLANICI TALEBİ ENTEGRASYONU:
+    // 1. "Mahal yani oda sayılarını sistemden al onlar orada kalsın. Birde mahallerde birden çok işlem olabilir oda adlarına göre onları da yazabilirsin birden çok işi de olsa oda 1 tane yapabilirsin."
+    // 2. Doorfan, Önleyici Bakım, Periyodik Kontrol, Sızdırmazlık, Genel Toplam, Başarı Skoru ve Durum sütunları saha raporundan veya denetimden doldurulur.
+    // ──────────────────────────────────────────────────────────────────────────
+    const effectiveLocationCount = locationCount > 0
+      ? locationCount
+      : (frSummary?.uniqueRoomCount || 0);
+
+    const effectiveDoorfan = inspectedLocationsCount > 0 && doorfan > 0
+      ? doorfan
+      : (frSummary?.doorfanCount || 0);
+
+    const effectivePreventiveMaintenance = inspectedLocationsCount > 0 && preventiveMaintenance > 0
+      ? preventiveMaintenance
+      : (frSummary?.preventiveMaintenanceCount || 0);
+
+    const effectivePeriodicControl = inspectedLocationsCount > 0 && periodicControl > 0
+      ? periodicControl
+      : (frSummary?.periodicControlCount || 0);
+
+    const effectiveTightness = inspectedLocationsCount > 0 && tightness > 0
+      ? tightness
+      : (frSummary?.tightnessCount || 0);
+
+    const effectiveTotal = inspectedLocationsCount > 0 && total > 0
+      ? total
+      : (frSummary?.totalItems || (effectiveDoorfan + effectivePreventiveMaintenance + effectivePeriodicControl + effectiveTightness));
+
+    // Başarı Skoru: Denetim skoru yoksa Saha Güvenlik Raporu yüzdesi (Devam=0.5, Bitti=1.0)
+    const effectiveScore = inspectedLocationsCount > 0 && avgScore > 0
+      ? avgScore
+      : (frSummary && frSummary.totalItems > 0 ? frSummary.securityReportRate : 0);
+
+    // Durum Belirleme:
+    let effectiveStatus = 'Mahal Girilmedi';
+    if (inspectedLocationsCount > 0) {
+      if (hasVeto) effectiveStatus = 'Kritik Risk (Veto)';
+      else if (avgScore < 85) effectiveStatus = 'İyileştirme Gerekli';
+      else effectiveStatus = 'Uygun';
+    } else if (frSummary && frSummary.totalItems > 0) {
+      if (frSummary.securityReportRate >= 80) effectiveStatus = 'Uygun';
+      else if (frSummary.securityReportRate >= 40) effectiveStatus = 'Devam Ediyor';
+      else effectiveStatus = 'Aksiyon Gerekli';
+    } else if (effectiveLocationCount > 0) {
+      effectiveStatus = 'Denetim Bekliyor';
+    }
+
+    const fieldReportData = frSummary ? {
+      hasData: true,
+      totalItems: frSummary.totalItems,
+      uniqueRoomCount: frSummary.uniqueRoomCount || 0,
+      doorfanCount: frSummary.doorfanCount || 0,
+      preventiveMaintenanceCount: frSummary.preventiveMaintenanceCount || 0,
+      periodicControlCount: frSummary.periodicControlCount || 0,
+      tightnessCount: frSummary.tightnessCount || 0,
+      securityReportRate: frSummary.securityReportRate,
+      completedCount: frSummary.completedCount,
+      inProgressCount: frSummary.inProgressCount,
+      notStartedCount: frSummary.notStartedCount,
+      detectedCount: frSummary.detectedCount,
+      cancelledCount: frSummary.cancelledCount,
+      effectiveCompletedPoints: frSummary.effectiveCompletedPoints,
+      iletilmeDurumu: frSummary.iletilmeDurumu,
+      hastaneNotu: frSummary.hastaneNotu,
+      categories: frSummary.categories,
+      risks: frSummary.risks
+    } : {
+      hasData: false,
+      totalItems: 0,
+      uniqueRoomCount: 0,
+      doorfanCount: 0,
+      preventiveMaintenanceCount: 0,
+      periodicControlCount: 0,
+      tightnessCount: 0,
+      securityReportRate: 0,
+      completedCount: 0,
+      inProgressCount: 0,
+      notStartedCount: 0,
+      detectedCount: 0,
+      cancelledCount: 0,
+      effectiveCompletedPoints: 0,
+      iletilmeDurumu: null,
+      hastaneNotu: null,
+      categories: {},
+      risks: {}
+    };
+
     return {
       facilityId: fac.id,
       name: fac.name,
@@ -2679,19 +2786,22 @@ export async function calculateHospitalConsolidatedMatrix() {
       city: fac.city,
       district: fac.district,
       type: fac.type,
-      locationCount,
+      locationCount: effectiveLocationCount,
+      dbLocationCount: locationCount,
+      uniqueRoomCount: frSummary?.uniqueRoomCount || 0,
       totalCylinders,
       inspectedLocationsCount,
       openWorkOrdersCount,
-      doorfan,
-      preventiveMaintenance,
-      periodicControl,
-      tightness,
-      total,
-      score: avgScore,
-      status,
+      doorfan: effectiveDoorfan,
+      preventiveMaintenance: effectivePreventiveMaintenance,
+      periodicControl: effectivePeriodicControl,
+      tightness: effectiveTightness,
+      total: effectiveTotal,
+      score: effectiveScore,
+      status: effectiveStatus,
       hasVeto,
-      isConfigured: locationCount > 0
+      isConfigured: effectiveLocationCount > 0 || (frSummary && frSummary.totalItems > 0),
+      fieldReport: fieldReportData
     };
   });
 }

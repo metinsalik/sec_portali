@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import * as XLSX from 'xlsx';
+import HospitalFieldDetailDialog from '@/components/fm200/HospitalFieldDetailDialog';
+import FieldReportUploadModal from '@/components/fm200/FieldReportUploadModal';
 import {
   Flame,
   CheckCircle2,
@@ -30,7 +32,10 @@ import {
   Download,
   Check,
   Filter,
-  Sparkles
+  Sparkles,
+  Upload,
+  Clock,
+  ExternalLink
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -45,6 +50,10 @@ export default function Fm200DashboardPage() {
   const [filterMode, setFilterMode] = useState<'all' | 'inspected' | 'missing'>('all');
   const [detailSubTab, setDetailSubTab] = useState<'locations' | 'workOrders'>('locations');
 
+  // Saha Raporu Detay Modalı ve Excel Yükleme Modalı State'leri
+  const [detailModalFacility, setDetailModalFacility] = useState<{ id: string; name: string } | null>(null);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+
   // ──────────────────────────────────────────────────────────────────────────
   // 1. DİNAMİK KONSOLİDE HASTANE DENETİM MATRİSİ (VERİTABANINDAN CANLI)
   // ──────────────────────────────────────────────────────────────────────────
@@ -53,6 +62,16 @@ export default function Fm200DashboardPage() {
     queryFn: async () => {
       const res = await api.get('/fm200/hospital-audit-matrix');
       if (!res.ok) throw new Error('Konsolide matris yüklenemedi');
+      return res.json();
+    }
+  });
+
+  // 1.1 SAHA DURUM RAPORU GENEL ÖZETİ
+  const { data: fieldReportSummary, refetch: refetchFieldReport } = useQuery<any>({
+    queryKey: ['fm200FieldReport'],
+    queryFn: async () => {
+      const res = await api.get('/fm200/field-report');
+      if (!res.ok) return null;
       return res.json();
     }
   });
@@ -131,16 +150,35 @@ export default function Fm200DashboardPage() {
   // Konsolide Toplamlar
   const totals = useMemo(() => {
     return matrix.reduce(
-      (acc, r) => ({
-        doorfan: acc.doorfan + (r.doorfan || 0),
-        preventiveMaintenance: acc.preventiveMaintenance + (r.preventiveMaintenance || 0),
-        periodicControl: acc.periodicControl + (r.periodicControl || 0),
-        tightness: acc.tightness + (r.tightness || 0),
-        total: acc.total + (r.total || 0),
-        locations: acc.locations + (r.locationCount || 0),
-        openWorks: acc.openWorks + (r.openWorkOrdersCount || 0)
-      }),
-      { doorfan: 0, preventiveMaintenance: 0, periodicControl: 0, tightness: 0, total: 0, locations: 0, openWorks: 0 }
+      (acc, r) => {
+        const fr = r.fieldReport || {};
+        return {
+          doorfan: acc.doorfan + (r.doorfan || 0),
+          preventiveMaintenance: acc.preventiveMaintenance + (r.preventiveMaintenance || 0),
+          periodicControl: acc.periodicControl + (r.periodicControl || 0),
+          tightness: acc.tightness + (r.tightness || 0),
+          total: acc.total + (r.total || 0),
+          locations: acc.locations + (r.locationCount || 0),
+          openWorks: acc.openWorks + (r.openWorkOrdersCount || 0),
+          fieldItems: acc.fieldItems + (fr.totalItems || 0),
+          fieldCompleted: acc.fieldCompleted + (fr.completedCount || 0),
+          fieldInProgress: acc.fieldInProgress + (fr.inProgressCount || 0),
+          fieldEffectivePoints: acc.fieldEffectivePoints + (fr.effectiveCompletedPoints || 0)
+        };
+      },
+      {
+        doorfan: 0,
+        preventiveMaintenance: 0,
+        periodicControl: 0,
+        tightness: 0,
+        total: 0,
+        locations: 0,
+        openWorks: 0,
+        fieldItems: 0,
+        fieldCompleted: 0,
+        fieldInProgress: 0,
+        fieldEffectivePoints: 0
+      }
     );
   }, [matrix]);
 
@@ -154,29 +192,47 @@ export default function Fm200DashboardPage() {
       ? Math.round(inspectedWithScore.reduce((acc, r) => acc + r.score, 0) / inspectedWithScore.length)
       : 100;
 
+  // Saha Güvenlik Raporu Genel Yüzdesi (Devam Ediyor = 0.5, Tamamlandı = 1.0)
+  const overallSecurityRate = totals.fieldItems > 0
+    ? Number(((totals.fieldEffectivePoints / totals.fieldItems) * 100).toFixed(1))
+    : (fieldReportSummary?.overallSecurityReportRate || 0);
+
   // Excel (.xlsx) Olarak İndir
   const handleExportExcel = () => {
     try {
-      const exportData = filteredMatrix.map((r, idx) => ({
-        'No': idx + 1,
-        'Hastaneler': r.name,
-        'İl': r.city || '-',
-        'Mahal Sayısı': r.locationCount || 0,
-        'Doorfan Testi': r.doorfan || 0,
-        'Önleyici Bakım Uygunluğu': r.preventiveMaintenance || 0,
-        'Periyodik Kontrol Uygunluğu': r.periodicControl || 0,
-        'Sızdırmazlık': r.tightness || 0,
-        'Genel Toplam': r.total || 0,
-        'Başarı Skoru (%)': r.score ? `%${r.score}` : '-',
-        'Açık İş Sayısı': r.openWorkOrdersCount || 0,
-        'Durum': r.status
-      }));
+      const exportData = filteredMatrix.map((r, idx) => {
+        const fr = r.fieldReport || {};
+        return {
+          'No': idx + 1,
+          'Hastaneler': r.name,
+          'İl': r.city || '-',
+          'Saha Güvenlik Raporu (%)': fr.hasData ? `%${fr.securityReportRate}` : '-',
+          'Saha Aksiyon Sayısı': fr.totalItems || 0,
+          'Devam Eden İş (0.5x)': fr.inProgressCount || 0,
+          'Tamamlanan İş (1.0x)': fr.completedCount || 0,
+          'Rapor İletilme Durumu': fr.iletilmeDurumu || '-',
+          'Mahal Sayısı': r.locationCount || 0,
+          'Doorfan Testi': r.doorfan || 0,
+          'Önleyici Bakım Uygunluğu': r.preventiveMaintenance || 0,
+          'Periyodik Kontrol Uygunluğu': r.periodicControl || 0,
+          'Sızdırmazlık': r.tightness || 0,
+          'Genel Toplam': r.total || 0,
+          'Başarı Skoru (%)': r.score ? `%${r.score}` : '-',
+          'Açık İş Sayısı': r.openWorkOrdersCount || 0,
+          'Durum': r.status
+        };
+      });
 
       // Toplam satırı
       exportData.push({
         'No': 999 as any,
         'Hastaneler': 'GENEL TOPLAM',
         'İl': '-',
+        'Saha Güvenlik Raporu (%)': `%${overallSecurityRate}`,
+        'Saha Aksiyon Sayısı': totals.fieldItems,
+        'Devam Eden İş (0.5x)': totals.fieldInProgress,
+        'Tamamlanan İş (1.0x)': totals.fieldCompleted,
+        'Rapor İletilme Durumu': 'Konsolide',
         'Mahal Sayısı': totals.locations,
         'Doorfan Testi': totals.doorfan,
         'Önleyici Bakım Uygunluğu': totals.preventiveMaintenance,
@@ -528,6 +584,15 @@ export default function Fm200DashboardPage() {
 
         <div className="flex items-center flex-wrap gap-2.5 shrink-0">
           <Button
+            onClick={() => setIsUploadModalOpen(true)}
+            className="flex items-center gap-2 text-xs h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm px-3.5"
+            title="Saha raporu Excelini sisteme yükleyin (.xlsx)"
+          >
+            <Upload className="w-4 h-4" />
+            Saha Raporu Yükle (.xlsx)
+          </Button>
+
+          <Button
             variant="outline"
             onClick={() => syncMutation.mutate()}
             disabled={syncMutation.isPending}
@@ -579,7 +644,25 @@ export default function Fm200DashboardPage() {
           </div>
         </div>
 
-        {/* 2. Doorfan Testi Toplamı */}
+        {/* 2. Saha Güvenlik Raporu Konsolide Ortalama (Devam Eden = 0.5, Tamamlandı = 1.0) */}
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              Saha Güvenlik Raporu
+            </span>
+            <div className="text-2xl font-black text-emerald-600 mt-0.5">
+              %{overallSecurityRate}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">
+              Devam: <b>{totals.fieldInProgress}</b> (0.5x) · Biten: <b>{totals.fieldCompleted}</b> (1.0x)
+            </p>
+          </div>
+          <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40">
+            <ShieldCheck className="w-6 h-6 stroke-[2.2]" />
+          </div>
+        </div>
+
+        {/* 3. Doorfan Testi Toplamı */}
         <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
@@ -597,35 +680,17 @@ export default function Fm200DashboardPage() {
           </div>
         </div>
 
-        {/* 3. Konsolide Güvenlik Skoru */}
+        {/* 4. Toplam Saha Aksiyonları */}
         <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-              Genel Başarı Ortalaması
-            </span>
-            <div className="text-2xl font-black text-emerald-600 mt-0.5">
-              %{avgOverallScore}
-            </div>
-            <p className="text-[11px] text-slate-400 mt-1">
-              25 denetim kriteri ağırlıklı skoru
-            </p>
-          </div>
-          <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40">
-            <ShieldCheck className="w-6 h-6 stroke-[2.2]" />
-          </div>
-        </div>
-
-        {/* 4. Açık Saha İş Listesi */}
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-              Bekleyen Saha İşleri
+              Toplam Saha Aksiyonları
             </span>
             <div className="text-2xl font-black text-purple-600 mt-0.5">
-              {totals.openWorks} <span className="text-xs font-normal text-slate-400">Aksiyon</span>
+              {totals.fieldItems > 0 ? totals.fieldItems : totals.openWorks} <span className="text-xs font-normal text-slate-400">Kalem</span>
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
-              Sızdırmazlık ve bakım işleri
+              31 tesis saha listesi raporu
             </p>
           </div>
           <div className="p-3 rounded-2xl bg-purple-50 text-purple-600 dark:bg-purple-950/40">
@@ -691,13 +756,25 @@ export default function Fm200DashboardPage() {
               />
             </div>
 
+            {/* KULLANICI TALEBİ: Excel Yükle butonu (canlıda saha excelini yükleme) */}
+            <Button
+              size="sm"
+              onClick={() => setIsUploadModalOpen(true)}
+              className="h-9 text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm flex items-center gap-1.5 px-3.5 rounded-xl cursor-pointer"
+              title="Saha raporu Excelini sisteme yükleyin (.xlsx)"
+            >
+              <Upload className="w-3.5 h-3.5 stroke-[2.5]" />
+              Excel Yükle (.xlsx)
+            </Button>
+
             <Button
               variant="outline"
               size="sm"
               onClick={handleExportExcel}
-              className="h-9 text-xs font-bold text-slate-700 dark:text-slate-300 border-slate-200 hover:bg-slate-100"
+              className="h-9 text-xs font-bold text-slate-700 dark:text-slate-300 border-slate-200 hover:bg-slate-100 flex items-center gap-1.5 px-3 rounded-xl"
+              title="Mevcut matrisi Excel olarak indir"
             >
-              <Download className="w-3.5 h-3.5 mr-1 text-slate-500" />
+              <Download className="w-3.5 h-3.5 text-slate-500" />
               Excel İndir
             </Button>
           </div>
@@ -710,13 +787,19 @@ export default function Fm200DashboardPage() {
               <tr className="bg-slate-800 text-white font-bold border-b border-slate-700">
                 <th className="py-3 px-4 text-xs font-extrabold">Hastaneler</th>
                 <th className="py-3 px-3 text-center text-xs font-extrabold">Mahal</th>
-                <th className="py-3 px-3 text-center text-xs font-extrabold bg-slate-700/60">Doorfan Testi</th>
+                <th className="py-3 px-3 text-center text-xs font-extrabold bg-blue-900/60 text-blue-200">
+                  Saha Güvenlik Raporu (%)
+                </th>
+                <th className="py-3 px-3 text-center text-xs font-extrabold bg-purple-950/40 text-purple-200">
+                  Saha Aksiyonları
+                </th>
+                <th className="py-3 px-2 text-center text-xs font-extrabold">İletilme</th>
+                <th className="py-3 px-3 text-center text-xs font-extrabold bg-slate-700/60">Doorfan</th>
                 <th className="py-3 px-3 text-center text-xs font-extrabold">Önleyici Bakım</th>
                 <th className="py-3 px-3 text-center text-xs font-extrabold">Periyodik Kontrol</th>
                 <th className="py-3 px-3 text-center text-xs font-extrabold">Sızdırmazlık</th>
                 <th className="py-3 px-3 text-center text-xs font-extrabold bg-slate-700/80">Genel Toplam</th>
                 <th className="py-3 px-3 text-center text-xs font-extrabold">Başarı Skoru</th>
-                <th className="py-3 px-3 text-center text-xs font-extrabold">Açık İş</th>
                 <th className="py-3 px-3 text-center text-xs font-extrabold">Durum</th>
                 <th className="py-3 px-3 text-right text-xs font-extrabold">İşlem</th>
               </tr>
@@ -724,18 +807,21 @@ export default function Fm200DashboardPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredMatrix.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-12 text-center text-slate-400">
+                  <td colSpan={13} className="py-12 text-center text-slate-400">
                     Aramaya veya filtreye uygun hastane bulunamadı.
                   </td>
                 </tr>
               ) : (
                 filteredMatrix.map((row, idx) => {
-                  const hasLocs = row.locationCount > 0;
+                  const hasLocs = (row.locationCount ?? 0) > 0;
+                  const fr = row.fieldReport || {};
+                  const hasFieldData = fr.hasData && (fr.totalItems ?? 0) > 0;
+                  const secRate = fr.securityReportRate ?? row.score ?? 0;
 
                   return (
                     <tr
                       key={row.facilityId || idx}
-                      onClick={() => setSelectedHospital(row)}
+                      onClick={() => setDetailModalFacility({ id: row.facilityId, name: row.name })}
                       className="hover:bg-blue-50/50 dark:hover:bg-blue-950/20 cursor-pointer transition-colors group"
                     >
                       <td className="py-3 px-4">
@@ -746,85 +832,152 @@ export default function Fm200DashboardPage() {
                         <span className="text-[10px] text-slate-400 block">{row.city || 'Tesis'}</span>
                       </td>
 
+                      {/* Mahal (Oda Sayısı: Sistemdeki oda sayısı veya sahadaki tekil mahal sayısı) */}
                       <td className="py-3 px-3 text-center">
                         {hasLocs ? (
-                          <span className="font-bold text-slate-800 dark:text-slate-200">
+                          <span className="font-black text-slate-900 dark:text-white text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg">
                             {row.locationCount} Oda
                           </span>
                         ) : (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                            Mahal Yok
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+                            0 Oda
                           </span>
                         )}
                       </td>
 
-                      <td className="py-3 px-3 text-center font-bold text-blue-700 dark:text-blue-300 bg-blue-50/30 dark:bg-blue-950/20">
-                        {row.doorfan || (hasLocs ? 0 : '-')}
+                      {/* Saha Güvenlik Raporu Yüzdesi (Devam Ediyor = 0.5, Tamamlandı = 1.0) */}
+                      <td className="py-3 px-3 text-center bg-blue-50/30 dark:bg-blue-950/20">
+                        {hasFieldData ? (
+                          <div className="inline-flex flex-col items-center gap-0.5">
+                            <span className={`px-2.5 py-0.5 rounded-lg text-xs font-black ${
+                              secRate >= 60
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                : secRate >= 35
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                                : secRate > 0
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                                : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                            }`}>
+                              %{secRate}
+                            </span>
+                            <span className="text-[9px] text-slate-400 font-medium">
+                              {fr.effectiveCompletedPoints}/{fr.totalItems} Puan
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 font-bold text-xs">%0</span>
+                        )}
                       </td>
 
-                      <td className="py-3 px-3 text-center font-semibold text-slate-700 dark:text-slate-300">
-                        {row.preventiveMaintenance || (hasLocs ? 0 : '-')}
+                      {/* Saha Aksiyonları Özeti */}
+                      <td className="py-3 px-3 text-center bg-purple-50/20 dark:bg-purple-950/10">
+                        {hasFieldData ? (
+                          <div className="inline-flex flex-col items-center">
+                            <span className="font-bold text-purple-700 dark:text-purple-300 text-xs">
+                              {fr.totalItems} Kalem
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-medium">
+                              {fr.inProgressCount} Devam · {fr.completedCount} Bitti
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs">0 Kalem</span>
+                        )}
                       </td>
 
-                      <td className="py-3 px-3 text-center font-semibold text-slate-700 dark:text-slate-300">
-                        {row.periodicControl || (hasLocs ? 0 : '-')}
-                      </td>
-
-                      <td className="py-3 px-3 text-center font-semibold text-slate-700 dark:text-slate-300">
-                        {row.tightness || (hasLocs ? 0 : '-')}
-                      </td>
-
-                      <td className="py-3 px-3 text-center font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/40 text-sm">
-                        {row.total || (hasLocs ? 0 : '-')}
-                      </td>
-
-                      <td className="py-3 px-3 text-center">
-                        {row.score > 0 ? (
-                          <span className={`px-2 py-0.5 rounded-lg text-xs font-black ${
-                            row.score >= 85 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' :
-                            row.score >= 60 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' :
-                            'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                      {/* İletilme Durumu */}
+                      <td className="py-3 px-2 text-center">
+                        {fr.iletilmeDurumu ? (
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                            fr.iletilmeDurumu.toLowerCase() === 'evet'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
                           }`}>
-                            %{row.score}
+                            {fr.iletilmeDurumu}
                           </span>
                         ) : (
                           <span className="text-slate-300">-</span>
                         )}
                       </td>
 
-                      <td className="py-3 px-3 text-center">
-                        {row.openWorkOrdersCount > 0 ? (
-                          <span className="px-2 py-0.5 rounded-lg text-[11px] font-black bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300">
-                            {row.openWorkOrdersCount} İş
-                          </span>
-                        ) : (
-                          <span className="text-slate-300">0</span>
-                        )}
+                      {/* Doorfan */}
+                      <td className="py-3 px-3 text-center font-bold text-blue-700 dark:text-blue-300 text-xs">
+                        {row.doorfan ?? 0}
                       </td>
 
+                      {/* Önleyici Bakım */}
+                      <td className="py-3 px-3 text-center font-semibold text-slate-700 dark:text-slate-300 text-xs">
+                        {row.preventiveMaintenance ?? 0}
+                      </td>
+
+                      {/* Periyodik Kontrol */}
+                      <td className="py-3 px-3 text-center font-semibold text-slate-700 dark:text-slate-300 text-xs">
+                        {row.periodicControl ?? 0}
+                      </td>
+
+                      {/* Sızdırmazlık */}
+                      <td className="py-3 px-3 text-center font-semibold text-slate-700 dark:text-slate-300 text-xs">
+                        {row.tightness ?? 0}
+                      </td>
+
+                      {/* Genel Toplam */}
+                      <td className="py-3 px-3 text-center font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/40 text-xs">
+                        {row.total ?? 0}
+                      </td>
+
+                      {/* Başarı Skoru */}
+                      <td className="py-3 px-3 text-center">
+                        <span className={`px-2 py-0.5 rounded-lg text-xs font-black ${
+                          (row.score ?? 0) >= 80 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' :
+                          (row.score ?? 0) >= 40 ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' :
+                          (row.score ?? 0) > 0 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' :
+                          'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                        }`}>
+                          %{(row.score ?? 0).toFixed ? (row.score).toFixed(1) : row.score}
+                        </span>
+                      </td>
+
+                      {/* Durum */}
                       <td className="py-3 px-3 text-center">
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
-                          row.status === 'Uygun' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                          row.status === 'Kritik Risk (Veto)' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
-                          row.status === 'İyileştirme Gerekli' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                          'bg-slate-100 text-slate-600'
+                          row.status === 'Uygun' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300' :
+                          row.status === 'Devam Ediyor' ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300' :
+                          row.status === 'Kritik Risk (Veto)' ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300' :
+                          row.status === 'Aksiyon Gerekli' || row.status === 'İyileştirme Gerekli' ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300' :
+                          'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
                         }`}>
                           {row.status}
                         </span>
                       </td>
 
                       <td className="py-3 px-3 text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedHospital(row);
-                          }}
-                          className="h-7 text-xs font-bold text-[#0051d5] hover:bg-blue-50"
-                        >
-                          Detay ➔
-                        </Button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDetailModalFacility({ id: row.facilityId, name: row.name });
+                            }}
+                            className="h-7 text-xs font-bold bg-[#0051d5] hover:bg-[#0042b0] text-white shadow-xs px-2.5"
+                          >
+                            Detay ➔
+                          </Button>
+
+                          {hasLocs && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedHospital(row);
+                              }}
+                              className="h-7 text-[11px] font-semibold text-slate-500 hover:text-slate-800 px-2"
+                              title="Hastanenin oda yapılandırmasını aç"
+                            >
+                              Odalar
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -838,6 +991,13 @@ export default function Fm200DashboardPage() {
                   GENEL TOPLAM ({filteredMatrix.length} Hastane)
                 </td>
                 <td className="py-3.5 px-3 text-center">{totals.locations} Mahal</td>
+                <td className="py-3.5 px-3 text-center text-emerald-300 bg-blue-950 font-black">
+                  %{overallSecurityRate}
+                </td>
+                <td className="py-3.5 px-3 text-center text-purple-300 bg-purple-950 font-black">
+                  {totals.fieldItems} Kalem
+                </td>
+                <td className="py-3.5 px-2 text-center">-</td>
                 <td className="py-3.5 px-3 text-center text-cyan-300 bg-slate-700/60 font-black">{totals.doorfan}</td>
                 <td className="py-3.5 px-3 text-center">{totals.preventiveMaintenance}</td>
                 <td className="py-3.5 px-3 text-center">{totals.periodicControl}</td>
@@ -846,7 +1006,6 @@ export default function Fm200DashboardPage() {
                   {totals.total}
                 </td>
                 <td className="py-3.5 px-3 text-center text-emerald-400">%{avgOverallScore}</td>
-                <td className="py-3.5 px-3 text-center text-purple-300">{totals.openWorks} Açık</td>
                 <td className="py-3.5 px-3 text-center">-</td>
                 <td className="py-3.5 px-3 text-right"></td>
               </tr>
@@ -854,6 +1013,34 @@ export default function Fm200DashboardPage() {
           </table>
         </div>
       </div>
+
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {/* 4. MODALLAR VE DİALOG PENCERELERİ                                         */}
+      {/* ────────────────────────────────────────────────────────────────────────── */}
+      {/* Saha Raporu Excel Yükleme Modalı */}
+      <FieldReportUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        activeReportInfo={fieldReportSummary ? {
+          fileName: fieldReportSummary.fileName,
+          uploadedAt: fieldReportSummary.uploadedAt,
+          totalFacilities: fieldReportSummary.totalFacilities,
+          totalItems: fieldReportSummary.totalItems,
+          overallSecurityReportRate: fieldReportSummary.overallSecurityReportRate
+        } : undefined}
+      />
+
+      {/* Hastane Saha Detayı ve Güvenlik Raporu Dialog Penceresi */}
+      <HospitalFieldDetailDialog
+        isOpen={!!detailModalFacility}
+        onClose={() => setDetailModalFacility(null)}
+        facilityId={detailModalFacility?.id || null}
+        facilityName={detailModalFacility?.name || undefined}
+        onGoToRooms={(facId) => {
+          const fac = matrix.find((m) => m.facilityId === facId);
+          if (fac) setSelectedHospital(fac);
+        }}
+      />
     </div>
   );
 }
