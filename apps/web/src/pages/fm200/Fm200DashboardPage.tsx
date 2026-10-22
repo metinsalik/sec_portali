@@ -623,20 +623,38 @@ export default function Fm200DashboardPage() {
       </div>
 
       {/* ────────────────────────────────────────────────────────────────────────── */}
-      {/* 2. SADE 4 KPI KARTI (İLK BAKIŞ ÖZETİ)                                     */}
+      {/* 2. 5 KPI KARTI (TOPLAM MAHAL SAYISI VE İLK BAKIŞ ÖZETİ)                   */}
       {/* ────────────────────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* 1. Hastane Kapsamı */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* 1. Toplam Mahal Sayısı (Kullanıcı Talebi) */}
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-indigo-100 dark:border-indigo-950/60 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">
+              Toplam Mahal Sayısı
+            </span>
+            <div className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">
+              {totals.locations} <span className="text-xs font-normal text-slate-400">Mahal / Oda</span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">
+              <b>{configuredHospitals}</b> hastanede tanımlı oda
+            </p>
+          </div>
+          <div className="p-3 rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40">
+            <DoorOpen className="w-6 h-6 stroke-[2.2]" />
+          </div>
+        </div>
+
+        {/* 2. Hastane Kapsamı */}
         <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
               Hastane Kapsamı
             </span>
             <div className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">
-              {configuredHospitals} <span className="text-xs font-normal text-slate-400">/ {totalHospitals} Hastane</span>
+              {configuredHospitals} <span className="text-xs font-normal text-slate-400">/ {totalHospitals} Tesis</span>
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
-              <b>{totals.locations}</b> korunan mahal tanımlandı
+              %{Math.round((configuredHospitals / (totalHospitals || 1)) * 100)} kapsama oranı
             </p>
           </div>
           <div className="p-3 rounded-2xl bg-blue-50 text-[#0051d5] dark:bg-blue-950/40">
@@ -644,7 +662,7 @@ export default function Fm200DashboardPage() {
           </div>
         </div>
 
-        {/* 2. Saha Güvenlik Raporu Konsolide Ortalama (Devam Eden = 0.5, Tamamlandı = 1.0) */}
+        {/* 3. Saha Güvenlik Raporu Konsolide Ortalama (Devam Eden = 0.5, Tamamlandı = 1.0) */}
         <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
@@ -654,7 +672,7 @@ export default function Fm200DashboardPage() {
               %{overallSecurityRate}
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
-              Devam: <b>{totals.fieldInProgress}</b> (0.5x) · Biten: <b>{totals.fieldCompleted}</b> (1.0x)
+              Devam: <b>{totals.fieldInProgress}</b> · Biten: <b>{totals.fieldCompleted}</b>
             </p>
           </div>
           <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40">
@@ -662,25 +680,25 @@ export default function Fm200DashboardPage() {
           </div>
         </div>
 
-        {/* 3. Doorfan Testi Toplamı */}
+        {/* 4. Doorfan Testi Toplamı */}
         <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
               Doorfan Test Başarısı
             </span>
             <div className="text-2xl font-black text-cyan-600 mt-0.5">
-              {totals.doorfan} <span className="text-xs font-normal text-slate-400">Oda Geçti</span>
+              {totals.doorfan} <span className="text-xs font-normal text-slate-400">Oda</span>
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
               NFPA 2001 gaz tutulum standardı
             </p>
           </div>
           <div className="p-3 rounded-2xl bg-cyan-50 text-cyan-600 dark:bg-cyan-950/40">
-            <DoorOpen className="w-6 h-6 stroke-[2.2]" />
+            <Activity className="w-6 h-6 stroke-[2.2]" />
           </div>
         </div>
 
-        {/* 4. Toplam Saha Aksiyonları */}
+        {/* 5. Toplam Saha Aksiyonları */}
         <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
@@ -742,6 +760,11 @@ export default function Fm200DashboardPage() {
               <AlertTriangle className="w-3.5 h-3.5" />
               Mahal Girilmemiş Hastaneler ({missingHospitals})
             </button>
+
+            <span className="px-3.5 py-1.5 rounded-xl text-xs font-black bg-indigo-50 text-indigo-700 border border-indigo-200/80 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900/40 flex items-center gap-1.5">
+              <DoorOpen className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              Toplam Mahal: <b>{totals.locations} Oda</b>
+            </span>
           </div>
 
           <div className="flex items-center gap-2.5">
@@ -990,7 +1013,9 @@ export default function Fm200DashboardPage() {
                 <td className="py-3.5 px-4 font-black">
                   GENEL TOPLAM ({filteredMatrix.length} Hastane)
                 </td>
-                <td className="py-3.5 px-3 text-center">{totals.locations} Mahal</td>
+                <td className="py-3.5 px-3 text-center text-indigo-300 font-black text-sm bg-slate-900 border-x border-slate-700/60">
+                  {totals.locations} Oda
+                </td>
                 <td className="py-3.5 px-3 text-center text-emerald-300 bg-blue-950 font-black">
                   %{overallSecurityRate}
                 </td>

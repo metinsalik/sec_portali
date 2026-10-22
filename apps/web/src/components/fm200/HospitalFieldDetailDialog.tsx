@@ -269,6 +269,9 @@ export default function HospitalFieldDetailDialog({
                   <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                     {displayName}
                   </DialogTitle>
+                  <Badge className="text-[11px] font-black bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200 border border-indigo-200">
+                    Toplam: {detail?.uniqueRoomCount || facilityRooms.length} Mahal / Oda
+                  </Badge>
                   {detail?.iletilmeDurumu && (
                     <Badge className={`text-[11px] font-bold ${
                       detail.iletilmeDurumu.toLowerCase() === 'evet'
@@ -373,8 +376,13 @@ export default function HospitalFieldDetailDialog({
                     </div>
                   </div>
 
-                  {/* Sağ: 4 Özet Durum Sayacı */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {/* Sağ: 5 Özet Durum Sayacı (Toplam Mahal Dahil) */}
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                    <div className="p-3 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 text-center">
+                      <span className="text-[10px] font-bold text-indigo-200 uppercase tracking-wider block">Toplam Mahal</span>
+                      <span className="text-lg font-black text-white">{detail.uniqueRoomCount || facilityRooms.length} Oda</span>
+                    </div>
+
                     <div className="p-3 rounded-2xl bg-white/5 border border-white/10 text-center">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tamamlandı (1.0x)</span>
                       <span className="text-lg font-black text-emerald-400">{detail.completedCount}</span>
@@ -834,7 +842,7 @@ export default function HospitalFieldDetailDialog({
         {/* Alt Butonlar */}
         <DialogFooter className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-between sm:justify-between w-full">
           <div className="text-xs text-slate-500 font-medium">
-            Gösterilen: <b>{filteredItems.length}</b> / {detail?.totalItems || 0} Saha Aksiyonu
+            Toplam: <b className="text-slate-800 dark:text-slate-200">{detail?.uniqueRoomCount || facilityRooms.length} Mahal / Oda</b> · Gösterilen: <b>{viewMode === 'rooms' ? `${facilityRooms.length} Oda` : `${filteredItems.length} Kalem`}</b> ({detail?.totalItems || 0} Saha Aksiyonu)
           </div>
 
           <div className="flex items-center gap-2">
