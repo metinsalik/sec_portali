@@ -329,6 +329,7 @@ export interface FacilityFieldSummary {
   facilityName: string | null;
   totalItems: number;
   uniqueRoomCount: number; // Tekil mahal / oda sayısı (Pano / Mahal Adı UID deduplication)
+  actionedRoomCount: number; // İşlem yapılan oda sayısı (completedCount > 0 olan odalar)
   rooms: FacilityRoomGroup[]; // Mahale göre gruplanmış aksiyonlar
   doorfanCount: number; // Kriter 8 / Doorfan testleri
   preventiveMaintenanceCount: number; // Bakım / Tüp / Donanım kontrolleri
@@ -513,6 +514,7 @@ export async function parseFieldReportExcel(
         facilityName: facName,
         totalItems: 0,
         uniqueRoomCount: 0,
+        actionedRoomCount: 0,
         rooms: [],
         doorfanCount: 0,
         preventiveMaintenanceCount: 0,
@@ -639,6 +641,7 @@ export async function parseFieldReportExcel(
     }
     sum.rooms = rgs;
     sum.uniqueRoomCount = rgs.length;
+    sum.actionedRoomCount = rgs.filter((rg) => rg.completedCount > 0).length;
   }
 
   const overallSecurityReportRate = totalItems > 0
@@ -680,6 +683,13 @@ export async function getConsolidatedFieldReport(): Promise<ConsolidatedFieldRep
     try {
       const raw = fs.readFileSync(jsonPath, 'utf8');
       inMemoryCache = JSON.parse(raw);
+      if (inMemoryCache?.facilitySummaries) {
+        for (const sum of Object.values(inMemoryCache.facilitySummaries)) {
+          if (sum.actionedRoomCount === undefined && sum.rooms) {
+            sum.actionedRoomCount = sum.rooms.filter((r) => r.completedCount > 0).length;
+          }
+        }
+      }
       return inMemoryCache!;
     } catch (e) {
       console.error('Error reading field_report_latest.json:', e);
@@ -771,6 +781,7 @@ router.get('/field-report', authMiddleware, async (req: AuthRequest, res: Respon
         facilityName: sum.facilityName,
         totalItems: sum.totalItems,
         uniqueRoomCount: sum.uniqueRoomCount || 0,
+        actionedRoomCount: sum.actionedRoomCount || 0,
         doorfanCount: sum.doorfanCount || 0,
         preventiveMaintenanceCount: sum.preventiveMaintenanceCount || 0,
         periodicControlCount: sum.periodicControlCount || 0,

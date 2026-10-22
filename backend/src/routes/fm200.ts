@@ -2739,10 +2739,19 @@ export async function calculateHospitalConsolidatedMatrix() {
       effectiveStatus = 'Denetim Bekliyor';
     }
 
+    const frActioned = frSummary?.actionedRoomCount ?? (
+      frSummary?.rooms ? (frSummary.rooms as any[]).filter((r: any) => r.completedCount > 0).length : 0
+    );
+
+    const effectiveActionedRoomCount = inspectedLocationsCount > 0
+      ? inspectedLocationsCount
+      : frActioned;
+
     const fieldReportData = frSummary ? {
       hasData: true,
       totalItems: frSummary.totalItems,
       uniqueRoomCount: frSummary.uniqueRoomCount || 0,
+      actionedRoomCount: frActioned,
       doorfanCount: frSummary.doorfanCount || 0,
       preventiveMaintenanceCount: frSummary.preventiveMaintenanceCount || 0,
       periodicControlCount: frSummary.periodicControlCount || 0,
@@ -2762,6 +2771,7 @@ export async function calculateHospitalConsolidatedMatrix() {
       hasData: false,
       totalItems: 0,
       uniqueRoomCount: 0,
+      actionedRoomCount: 0,
       doorfanCount: 0,
       preventiveMaintenanceCount: 0,
       periodicControlCount: 0,
@@ -2789,6 +2799,7 @@ export async function calculateHospitalConsolidatedMatrix() {
       locationCount: effectiveLocationCount,
       dbLocationCount: locationCount,
       uniqueRoomCount: frSummary?.uniqueRoomCount || 0,
+      actionedRoomCount: effectiveActionedRoomCount,
       totalCylinders,
       inspectedLocationsCount,
       openWorkOrdersCount,

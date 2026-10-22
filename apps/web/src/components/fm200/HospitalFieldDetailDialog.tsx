@@ -73,8 +73,8 @@ interface FacilityFieldSummary {
   tesis: string;
   facilityId: string | null;
   facilityName: string | null;
-  totalItems: number;
   uniqueRoomCount?: number;
+  actionedRoomCount?: number;
   rooms?: FacilityRoomGroup[];
   doorfanCount?: number;
   preventiveMaintenanceCount?: number;
@@ -253,6 +253,8 @@ export default function HospitalFieldDetailDialog({
   };
 
   const displayName = detail?.facilityName || detail?.tesis || facilityName || 'Hastane Detayı';
+  const totalRoomCount = detail?.uniqueRoomCount || facilityRooms.length;
+  const actionedRoomCount = detail?.actionedRoomCount ?? facilityRooms.filter((r) => r.completedCount > 0).length;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -270,7 +272,7 @@ export default function HospitalFieldDetailDialog({
                     {displayName}
                   </DialogTitle>
                   <Badge className="text-[11px] font-black bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200 border border-indigo-200">
-                    Toplam: {detail?.uniqueRoomCount || facilityRooms.length} Mahal / Oda
+                    Mahal: {totalRoomCount}/{actionedRoomCount} oda
                   </Badge>
                   {detail?.iletilmeDurumu && (
                     <Badge className={`text-[11px] font-bold ${
@@ -379,8 +381,9 @@ export default function HospitalFieldDetailDialog({
                   {/* Sağ: 5 Özet Durum Sayacı (Toplam Mahal Dahil) */}
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                     <div className="p-3 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 text-center">
-                      <span className="text-[10px] font-bold text-indigo-200 uppercase tracking-wider block">Toplam Mahal</span>
-                      <span className="text-lg font-black text-white">{detail.uniqueRoomCount || facilityRooms.length} Oda</span>
+                      <span className="text-[10px] font-bold text-indigo-200 uppercase tracking-wider block">Mahal Sayısı</span>
+                      <span className="text-lg font-black text-white">{totalRoomCount}/{actionedRoomCount} oda</span>
+                      <span className="text-[9px] text-indigo-200/80 block mt-0.5">Toplam / İşlem</span>
                     </div>
 
                     <div className="p-3 rounded-2xl bg-white/5 border border-white/10 text-center">
@@ -842,7 +845,7 @@ export default function HospitalFieldDetailDialog({
         {/* Alt Butonlar */}
         <DialogFooter className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-between sm:justify-between w-full">
           <div className="text-xs text-slate-500 font-medium">
-            Toplam: <b className="text-slate-800 dark:text-slate-200">{detail?.uniqueRoomCount || facilityRooms.length} Mahal / Oda</b> · Gösterilen: <b>{viewMode === 'rooms' ? `${facilityRooms.length} Oda` : `${filteredItems.length} Kalem`}</b> ({detail?.totalItems || 0} Saha Aksiyonu)
+            Toplam: <b className="text-slate-800 dark:text-slate-200">{totalRoomCount}/{actionedRoomCount} oda</b> · Gösterilen: <b>{viewMode === 'rooms' ? `${facilityRooms.length} Oda` : `${filteredItems.length} Kalem`}</b> ({detail?.totalItems || 0} Saha Aksiyonu)
           </div>
 
           <div className="flex items-center gap-2">

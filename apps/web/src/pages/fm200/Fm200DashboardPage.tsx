@@ -152,6 +152,7 @@ export default function Fm200DashboardPage() {
     return matrix.reduce(
       (acc, r) => {
         const fr = r.fieldReport || {};
+        const actioned = r.actionedRoomCount ?? fr.actionedRoomCount ?? (r.inspectedLocationsCount ?? 0);
         return {
           doorfan: acc.doorfan + (r.doorfan || 0),
           preventiveMaintenance: acc.preventiveMaintenance + (r.preventiveMaintenance || 0),
@@ -159,6 +160,7 @@ export default function Fm200DashboardPage() {
           tightness: acc.tightness + (r.tightness || 0),
           total: acc.total + (r.total || 0),
           locations: acc.locations + (r.locationCount || 0),
+          actionedRooms: acc.actionedRooms + (actioned || 0),
           openWorks: acc.openWorks + (r.openWorkOrdersCount || 0),
           fieldItems: acc.fieldItems + (fr.totalItems || 0),
           fieldCompleted: acc.fieldCompleted + (fr.completedCount || 0),
@@ -173,6 +175,7 @@ export default function Fm200DashboardPage() {
         tightness: 0,
         total: 0,
         locations: 0,
+        actionedRooms: 0,
         openWorks: 0,
         fieldItems: 0,
         fieldCompleted: 0,
@@ -211,7 +214,7 @@ export default function Fm200DashboardPage() {
           'Devam Eden İş (0.5x)': fr.inProgressCount || 0,
           'Tamamlanan İş (1.0x)': fr.completedCount || 0,
           'Rapor İletilme Durumu': fr.iletilmeDurumu || '-',
-          'Mahal Sayısı': r.locationCount || 0,
+          'Mahal (Toplam/İşlem)': `${r.locationCount || 0}/${r.actionedRoomCount ?? (fr.actionedRoomCount ?? 0)} oda`,
           'Doorfan Testi': r.doorfan || 0,
           'Önleyici Bakım Uygunluğu': r.preventiveMaintenance || 0,
           'Periyodik Kontrol Uygunluğu': r.periodicControl || 0,
@@ -233,7 +236,7 @@ export default function Fm200DashboardPage() {
         'Devam Eden İş (0.5x)': totals.fieldInProgress,
         'Tamamlanan İş (1.0x)': totals.fieldCompleted,
         'Rapor İletilme Durumu': 'Konsolide',
-        'Mahal Sayısı': totals.locations,
+        'Mahal (Toplam/İşlem)': `${totals.locations}/${totals.actionedRooms} oda`,
         'Doorfan Testi': totals.doorfan,
         'Önleyici Bakım Uygunluğu': totals.preventiveMaintenance,
         'Periyodik Kontrol Uygunluğu': totals.periodicControl,
@@ -633,10 +636,10 @@ export default function Fm200DashboardPage() {
               Toplam Mahal Sayısı
             </span>
             <div className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">
-              {totals.locations} <span className="text-xs font-normal text-slate-400">Mahal / Oda</span>
+              {totals.locations}/{totals.actionedRooms} <span className="text-xs font-normal text-slate-400">oda</span>
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
-              <b>{configuredHospitals}</b> hastanede tanımlı oda
+              <b>{totals.locations}</b> Toplam · <b>{totals.actionedRooms}</b> İşlem Yapılan Oda
             </p>
           </div>
           <div className="p-3 rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40">
@@ -763,7 +766,7 @@ export default function Fm200DashboardPage() {
 
             <span className="px-3.5 py-1.5 rounded-xl text-xs font-black bg-indigo-50 text-indigo-700 border border-indigo-200/80 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900/40 flex items-center gap-1.5">
               <DoorOpen className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-              Toplam Mahal: <b>{totals.locations} Oda</b>
+              Mahal: <b>{totals.locations}/{totals.actionedRooms} oda</b>
             </span>
           </div>
 
@@ -855,15 +858,20 @@ export default function Fm200DashboardPage() {
                         <span className="text-[10px] text-slate-400 block">{row.city || 'Tesis'}</span>
                       </td>
 
-                      {/* Mahal (Oda Sayısı: Sistemdeki oda sayısı veya sahadaki tekil mahal sayısı) */}
+                      {/* Mahal (Toplam / İşlem Yapılan Oda - Örn: 7/1 oda) */}
                       <td className="py-3 px-3 text-center">
                         {hasLocs ? (
-                          <span className="font-black text-slate-900 dark:text-white text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg">
-                            {row.locationCount} Oda
-                          </span>
+                          <div className="inline-flex flex-col items-center">
+                            <span className="font-black text-slate-900 dark:text-white text-xs bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-lg tracking-tight">
+                              {row.locationCount}/{row.actionedRoomCount ?? (fr.actionedRoomCount ?? 0)} oda
+                            </span>
+                            <span className="text-[9px] text-slate-400 font-medium mt-0.5">
+                              {row.locationCount} Toplam · {row.actionedRoomCount ?? (fr.actionedRoomCount ?? 0)} İşlem
+                            </span>
+                          </div>
                         ) : (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
-                            0 Oda
+                            0/0 oda
                           </span>
                         )}
                       </td>
@@ -1013,8 +1021,11 @@ export default function Fm200DashboardPage() {
                 <td className="py-3.5 px-4 font-black">
                   GENEL TOPLAM ({filteredMatrix.length} Hastane)
                 </td>
-                <td className="py-3.5 px-3 text-center text-indigo-300 font-black text-sm bg-slate-900 border-x border-slate-700/60">
-                  {totals.locations} Oda
+                <td className="py-3.5 px-3 text-center text-indigo-300 font-black text-xs bg-slate-900 border-x border-slate-700/60">
+                  <div className="flex flex-col items-center">
+                    <span className="text-sm font-black">{totals.locations}/{totals.actionedRooms} oda</span>
+                    <span className="text-[9px] font-normal text-indigo-300/70">Toplam / İşlem Yapılan</span>
+                  </div>
                 </td>
                 <td className="py-3.5 px-3 text-center text-emerald-300 bg-blue-950 font-black">
                   %{overallSecurityRate}
