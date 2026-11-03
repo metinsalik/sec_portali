@@ -25,7 +25,7 @@ export const MechanicalTrackingPage: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const url = `${API}/api/operations/improvements/records?sheetType=${activeSheet.key}&facilityId=${selectedFacilityId}&limit=2000`;
+      const url = `${API}/api/operations/improvements/records?sheetType=${activeSheet.key}&facilityId=${selectedFacilityId}&limit=all`;
       const res = await fetch(url, {
         headers: { 'Authorization': token ? `Bearer ${token}` : '' }
       });

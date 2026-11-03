@@ -299,7 +299,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
     try {
       setLoadingRecords(true);
       const token = localStorage.getItem('token');
-      const url = `${API}/api/operations/improvements/records?limit=2500`;
+      const url = `${API}/api/operations/improvements/records?limit=all`;
       const res = await fetch(url, {
         headers: { 'Authorization': token ? `Bearer ${token}` : '' }
       });
@@ -467,12 +467,13 @@ export const ExecutiveSummaryPage: React.FC = () => {
 
   // Hastane Kartı Canlı Hesaplayıcı (Seçili Risk Seviyesine Duyarlı)
   const getHospitalComputedStats = (hospitalId: string) => {
+    const hospFromStats = stats?.hospitals?.find(h => h.hospitalId === hospitalId);
     const hospRecords = records.filter(r => r.facilityId === hospitalId);
-    const overallTotal = hospRecords.length;
-    const overallCompleted = hospRecords.filter(r => r.status === 'Tamamlandı').length;
-    const overallInProgress = hospRecords.filter(r => r.status === 'Devam Ediyor').length;
-    const overallNotStarted = hospRecords.filter(r => r.status === 'Başlamadı' || !r.status).length;
-    const overallCancelled = hospRecords.filter(r => r.status === 'İptal Edildi').length;
+    const overallTotal = hospRecords.length > 0 ? hospRecords.length : (hospFromStats?.total || 0);
+    const overallCompleted = hospRecords.length > 0 ? hospRecords.filter(r => r.status === 'Tamamlandı').length : (hospFromStats?.completed || 0);
+    const overallInProgress = hospRecords.length > 0 ? hospRecords.filter(r => r.status === 'Devam Ediyor').length : (hospFromStats?.inProgress || 0);
+    const overallNotStarted = hospRecords.length > 0 ? hospRecords.filter(r => r.status === 'Başlamadı' || !r.status).length : (hospFromStats?.notStarted || 0);
+    const overallCancelled = hospRecords.length > 0 ? hospRecords.filter(r => r.status === 'İptal Edildi').length : (hospFromStats?.cancelled || 0);
     const overallActive = overallTotal - overallCancelled;
     const overallProgress = overallActive > 0 ? Math.round((overallCompleted / overallActive) * 100) : 0;
 
@@ -514,6 +515,13 @@ export const ExecutiveSummaryPage: React.FC = () => {
 
   // Toplam risk sayıları (Risk Filtre Butonları için)
   const getFilterTotalCount = (opt: RiskOption): number => {
+    if (records.length === 0 && stats?.summary) {
+      if (opt.key === 'ALL') return stats.summary.total;
+      if (opt.key === 'Kritik') return stats.summary.risks?.critical || 0;
+      if (opt.key === 'Yüksek') return stats.summary.risks?.high || 0;
+      if (opt.key === 'Önemli') return stats.summary.risks?.medium || 0;
+      if (opt.key === 'OLASI_ONEMSIZ') return (stats.summary.risks?.low || 0) + (stats.summary.risks?.negligible || 0);
+    }
     if (opt.key === 'ALL') return records.length;
     if (opt.key === 'OLASI_ONEMSIZ') {
       return records.filter(r => r.riskScore === 'Olası' || r.riskScore === 'Önemsiz').length;
@@ -526,6 +534,16 @@ export const ExecutiveSummaryPage: React.FC = () => {
   // Odaklı hastane varsa onun sayıları, ALL ise tüm zincir sayıları gösterilir.
   // ─────────────────────────────────────────────────────────────────────────
   const kpiData = useMemo(() => {
+    if (records.length === 0 && stats?.summary && (!selectedFacilityId || selectedFacilityId === 'ALL')) {
+      const s = stats.summary;
+      return {
+        total: { notStarted: s.notStarted, inProgress: s.inProgress, completed: s.completed, total: s.total },
+        critical: { notStarted: 0, inProgress: 0, completed: 0, total: s.risks?.critical || 0 },
+        high: { notStarted: 0, inProgress: 0, completed: 0, total: s.risks?.high || 0 },
+        medium: { notStarted: 0, inProgress: 0, completed: 0, total: s.risks?.medium || 0 },
+        lowAndNegligible: { notStarted: 0, inProgress: 0, completed: 0, total: (s.risks?.low || 0) + (s.risks?.negligible || 0) },
+      };
+    }
     const relevantRecords = selectedFacilityId && selectedFacilityId !== 'ALL'
       ? records.filter(r => r.facilityId === selectedFacilityId)
       : records;

@@ -783,8 +783,10 @@ router.get('/records', async (req: AuthRequest, res: Response) => {
     }
 
     const p = parseInt(page as string, 10) || 1;
-    const l = Math.min(parseInt(limit as string, 10) || 500, 3000);
-    const skip = (p - 1) * l;
+    const rawLimit = String(limit || '').toLowerCase().trim();
+    const isUnlimited = rawLimit === 'all' || rawLimit === '0' || rawLimit === '-1';
+    const l = isUnlimited ? 50000 : Math.min(parseInt(limit as string, 10) || 500, 50000);
+    const skip = isUnlimited ? 0 : (p - 1) * l;
 
     const [total, records] = await Promise.all([
       prisma.improvementRecord.count({ where: whereClause }),
