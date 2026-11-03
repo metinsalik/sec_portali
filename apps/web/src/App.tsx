@@ -52,6 +52,7 @@ import { ElectricalTrackingPage } from './pages/operations/improvements/Electric
 import { MechanicalTrackingPage } from './pages/operations/improvements/MechanicalTrackingPage';
 import { FireSafetyTrackingPage } from './pages/operations/improvements/FireSafetyTrackingPage';
 import { CriticalItemsPage } from './pages/operations/improvements/CriticalItemsPage';
+import { ExecutiveSummaryPage } from './pages/operations/improvements/ExecutiveSummaryPage';
 import { ImprovementsSettingsPage } from './pages/operations/improvements/ImprovementsSettingsPage';
 import { ImprovementDetailPage } from './pages/operations/improvements/ImprovementDetailPage';
 
@@ -263,6 +264,7 @@ function App() {
                     }
                   >
                     <Route index element={<ImprovementsDashboardPage />} />
+                    <Route path="executive-summary" element={<ExecutiveSummaryPage />} />
                     <Route path="critical" element={<CriticalItemsPage />} />
                     <Route path="denetimler/dashboard" element={<ReportModuleDashboard moduleGroup="DENETIMLER" />} />
                     <Route path="electrical/dashboard" element={<ReportModuleDashboard moduleGroup="ELEKTRIK" />} />

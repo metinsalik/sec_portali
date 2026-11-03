@@ -4,7 +4,7 @@ import {
   LayoutDashboard, AlertOctagon, ClipboardList, Zap, Wrench, Flame,
   ChevronDown, ChevronRight, Settings, Upload, ArrowLeft,
   Building2, Activity, Menu, X, PanelLeftClose, PanelLeftOpen,
-  User, LogOut
+  User, LogOut, ShieldAlert
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -278,6 +278,32 @@ export const ImprovementsLayout: React.FC = () => {
           >
             <LayoutDashboard className="w-4 h-4 shrink-0 text-blue-500" />
             {!isCollapsed && <span>Dashboard</span>}
+          </button>
+
+          {/* 2. Yönetici Özeti */}
+          <button
+            onClick={() => {
+              navigate('/operations-management/improvements/executive-summary');
+              setIsSidebarOpen(false);
+            }}
+            title={isCollapsed ? "Yönetici Özeti" : undefined}
+            className={cn(
+              "w-full flex items-center rounded-lg text-sm font-medium transition-colors",
+              isCollapsed ? "justify-center h-10 px-0" : "gap-3 px-3 py-2",
+              currentPath === '/operations-management/improvements/executive-summary'
+                ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <ShieldAlert className="w-4 h-4 shrink-0 text-indigo-500" />
+            {!isCollapsed && (
+              <>
+                <span className="flex-1 text-left">Yönetici Özeti</span>
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-indigo-300 text-indigo-600 dark:border-indigo-800 dark:text-indigo-400">
+                  Özet
+                </Badge>
+              </>
+            )}
           </button>
 
           {/* 2. Kritik Maddeler */}

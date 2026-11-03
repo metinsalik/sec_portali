@@ -4,7 +4,8 @@ import {
   Building2, ChevronRight, ChevronDown, RefreshCw, 
   AlertTriangle, Zap, ClipboardList, Wrench, Flame, TrendingUp,
   Layers, ArrowUpDown, ArrowUp, ArrowDown, FileText, ClipboardCheck, Activity,
-  LayoutDashboard
+  LayoutDashboard, Filter, Search, ShieldAlert, CheckCircle2, Clock, Eye,
+  SlidersHorizontal, Check, Sparkles, XCircle, ArrowRight, ShieldCheck, PieChart, Info
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, 
@@ -180,6 +181,8 @@ const getRiskColor = (risk: string): string => {
   }
 };
 
+
+
 // Rapor Seçici Sekmeleri
 const MODULE_NAV_ITEMS = [
   { key: 'ALL', label: 'Tüm Raporlar', path: '/operations-management/improvements', icon: LayoutDashboard },
@@ -310,20 +313,7 @@ export const ImprovementsDashboardPage: React.FC<ImprovementsDashboardPageProps>
     fetchStats();
   }, [selectedFacilityId, currentModule]);
 
-  const toggleHospitalExpand = (hospId: string) => {
-    setExpandedHospitals(prev => ({
-      ...prev,
-      [hospId]: !prev[hospId],
-    }));
-  };
 
-  const toggleGroupExpand = (hospId: string, groupKey: string) => {
-    const key = `${hospId}_${groupKey}`;
-    setExpandedGroups(prev => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
 
   // Takip Alanları Akordiyon State (DEFAULT KAPALI)
   const [isMatrixOpen, setIsMatrixOpen] = useState(false);
@@ -500,6 +490,12 @@ export const ImprovementsDashboardPage: React.FC<ImprovementsDashboardPageProps>
     risks: { critical: 0, high: 0, medium: 0, low: 0, negligible: 0 }
   };
 
+  const getFilterTotalCount = (opt: RiskFilterOption): number => {
+    if (opt.key === 'ALL') return summary.total;
+    if (!opt.countKey) return 0;
+    return summary.risks?.[opt.countKey] || 0;
+  };
+
   const openCount = (summary.inProgress || 0) + (summary.notStarted || 0) + (stats?.statusDistribution?.['Açık'] || 0);
   const criticalCount = summary.risks?.critical || summary.critical || 0;
   const unspecifiedStatusCount = summary.unspecifiedStatus || (stats?.statusDistribution?.['Girilmemiş'] || 0) + (stats?.statusDistribution?.['Tanımsız durum'] || 0);
@@ -562,8 +558,10 @@ export const ImprovementsDashboardPage: React.FC<ImprovementsDashboardPageProps>
   const maxRisk = Math.max(...riskData.map(d => d.value), 10);
   const riskYMax = Math.ceil((maxRisk * 1.25) / 10) * 10;
 
+
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 font-sans">
+    <div className="space-y-6 max-w-[1700px] mx-auto pb-12 font-sans px-4 sm:px-6">
       
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* 1. ÜST BAŞLIK, MODÜL SEÇİCİ SEKMELER VE YENİLE                     */}
@@ -592,15 +590,29 @@ export const ImprovementsDashboardPage: React.FC<ImprovementsDashboardPageProps>
           </div>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchStats}
-          className="self-start sm:self-auto text-xs shrink-0 cursor-pointer"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loadingStats ? 'animate-spin' : ''}`} />
-          Yenile
-        </Button>
+        <div className="flex items-center gap-2">
+          {selectedFacilityId !== 'ALL' && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => handleHospitalSelect('ALL')}
+              className="text-xs cursor-pointer"
+            >
+              <Building2 className="w-3.5 h-3.5 mr-1.5" />
+              Tüm Hastaneler (Grup Geneli)
+            </Button>
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchStats}
+            className="self-start sm:self-auto text-xs shrink-0 cursor-pointer"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loadingStats ? 'animate-spin' : ''}`} />
+            Yenile
+          </Button>
+        </div>
       </div>
 
       {/* 5'Lİ RAPOR SEÇİCİ SEKMELERİ (TÜMÜ / DENETİMLER / ELEKTRİK / MEKANİK / YANGIN) */}
@@ -629,413 +641,91 @@ export const ImprovementsDashboardPage: React.FC<ImprovementsDashboardPageProps>
         })}
       </div>
 
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* YÖNETİCİ İLERLEME VE SAHA OLGUNLUK KOKPİTİ (KPI KARTLARI ÜSTÜNDE)   */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <ExecutiveProgressCockpit
-        stats={stats}
-        mode="MAIN"
-      />
 
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 7'Lİ KPI KARTLARI GRİDİ (KONSOLİDE RAPORLAR & AĞIRLIKLI İLERLEME)   */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3.5">
-        {/* 1. Toplam Bulgu */}
-        <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-          <div className="text-xs font-medium text-muted-foreground">Toplam bulgu</div>
-          <div className="text-3xl font-bold font-mono text-foreground mt-1.5">{summary.total}</div>
-          <div className="text-[11px] text-muted-foreground mt-2 truncate">Tüm takip alanları</div>
-        </div>
 
-        {/* 2. Açık Bulgu */}
-        <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-          <div className="text-xs font-medium text-muted-foreground">Açık bulgu</div>
-          <div className="text-3xl font-bold font-mono text-foreground mt-1.5">{openCount}</div>
-          <div className="text-[11px] text-muted-foreground mt-2 truncate">Başlamadı, Devam, Açık</div>
-        </div>
+          {/* 1. YÖNETİCİ İLERLEME VE SAHA OLGUNLUK KOKPİTİ */}
+          <ExecutiveProgressCockpit
+            stats={stats}
+            mode="MAIN"
+          />
 
-        {/* 3. Tamamlanan */}
-        <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-          <div className="text-xs font-medium text-muted-foreground">Tamamlanan</div>
-          <div className="text-3xl font-bold font-mono text-foreground mt-1.5">{summary.completed}</div>
-          <div className="text-[11px] text-muted-foreground mt-2 truncate">Tamamlandı durumundakiler</div>
-        </div>
-
-        {/* 4. Tamamlanma Oranı */}
-        <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-          <div className="text-xs font-medium text-muted-foreground">Tamamlanma</div>
-          <div className="text-3xl font-bold font-mono text-foreground mt-1.5">
-            {hasDurumEksik ? '—' : (summary.total - summary.cancelled > 0 ? `%${(((summary.completed) / (summary.total - summary.cancelled)) * 100).toFixed(1).replace('.', ',')}` : '—')}
-          </div>
-          <div className="text-[11px] text-muted-foreground mt-2 truncate">Kesin kapananlar (%100)</div>
-        </div>
-
-        {/* 5. Ağırlıklı İlerleme / Gerçekleşme (Devam Edenler Dahil) */}
-        <div className="bg-card border-2 border-primary/30 bg-primary/5 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-          <div className="text-xs font-bold text-primary flex items-center justify-between">
-            <span>Ağırlıklı İlerleme</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded bg-primary/20 text-primary font-mono font-semibold">Süreç Dahil</span>
-          </div>
-          <div className="text-3xl font-bold font-mono text-primary mt-1.5">
-            {summary.total - summary.cancelled > 0 
-              ? `%${(summary.weightedCompletionPercentage ?? 0).toFixed(1).replace('.', ',')}` 
-              : '—'}
-          </div>
-          <div className="text-[11px] text-muted-foreground mt-2 truncate" title="Talep, ihale, sipariş, malzeme, saha adımları dahil">
-            Talep, sipariş, saha adımları dahil
-          </div>
-        </div>
-
-        {/* 6. Kritik Bulgu */}
-        <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-          <div className="text-xs font-medium text-muted-foreground">Kritik bulgu</div>
-          <div className="text-3xl font-bold font-mono text-[#991b1b] dark:text-red-400 mt-1.5">
-            {criticalCount}
-          </div>
-          <div className="text-[11px] text-muted-foreground mt-2 truncate">Tamamlananlar dahil</div>
-        </div>
-
-        {/* 7. Durumu Belirsiz */}
-        <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-          <div className="text-xs font-medium text-muted-foreground">Durumu belirsiz</div>
-          <div className="text-3xl font-bold font-mono text-[#d97706] dark:text-amber-400 mt-1.5">
-            {unspecifiedStatusCount}
-          </div>
-          <div className="text-[11px] text-muted-foreground mt-2 truncate">Boş veya tanımsız durum</div>
-        </div>
-      </div>
-
-      {/* UYARI / BİLGİLENDİRME BANTI */}
-      {hasWarning && (
-        <div className="bg-[#fff9eb] border border-[#fde68a] dark:bg-amber-950/30 dark:border-amber-800/50 rounded-xl p-3.5 px-4 text-xs text-[#92400e] dark:text-amber-300">
-          <span>
-            {unspecifiedStatusCount > 0 ? `${unspecifiedStatusCount} bulgunun durumu boş veya tanımsız; tamamlanma oranı hesaplanmadı.` : ''}
-            {unspecifiedStatusCount > 0 && missingAssigneeCount > 0 ? ' ' : ''}
-            {missingAssigneeCount > 0 ? `${missingAssigneeCount} bulgunun sorumlusu belirtilmemiş.` : ''}
-          </span>
-        </div>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 2. HASTANELERE GÖRE BULGU DAĞILIMI (EN ÜSTTE VE SIDE MENÜ YAPISINDA) */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="bg-card text-card-foreground border rounded-2xl shadow-xs overflow-hidden">
-        
-        {/* Akordiyon Konteyner Başlığı */}
-        <div className="p-5 border-b flex flex-wrap items-center justify-between gap-3 bg-muted/20">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center font-bold">
-              <Building2 className="w-5 h-5" />
+          {/* 2. 7'Lİ KPI KARTLARI GRİDİ (KONSOLİDE RAPORLAR & AĞIRLIKLI İLERLEME) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3.5">
+            {/* 1. Toplam Bulgu */}
+            <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+              <div className="text-xs font-medium text-muted-foreground">Toplam bulgu</div>
+              <div className="text-3xl font-bold font-mono text-foreground mt-1.5">{summary.total}</div>
+              <div className="text-[11px] text-muted-foreground mt-2 truncate">Tüm takip alanları</div>
             </div>
-            <div>
-              <h3 className="text-base font-bold tracking-tight text-foreground">
-                Hastanelere Göre Bulgu Dağılımı
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {currentModule === 'ALL'
-                  ? 'Hastaneyi açın → Denetimler, Elektrik, Mekanik ve Yangın Sistemleri ana başlıklarından alt sekmeleri inceleyin.'
-                  : `Hastaneyi açın → ${currentConfig.title} alt sekmelerini inceleyin.`}
-              </p>
+
+            {/* 2. Açık Bulgu */}
+            <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+              <div className="text-xs font-medium text-muted-foreground">Açık bulgu</div>
+              <div className="text-3xl font-bold font-mono text-foreground mt-1.5">{openCount}</div>
+              <div className="text-[11px] text-muted-foreground mt-2 truncate">Başlamadı, Devam, Açık</div>
+            </div>
+
+            {/* 3. Tamamlanan */}
+            <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+              <div className="text-xs font-medium text-muted-foreground">Tamamlanan</div>
+              <div className="text-3xl font-bold font-mono text-foreground mt-1.5">{summary.completed}</div>
+              <div className="text-[11px] text-muted-foreground mt-2 truncate">Tamamlandı durumundakiler</div>
+            </div>
+
+            {/* 4. Tamamlanma Oranı */}
+            <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+              <div className="text-xs font-medium text-muted-foreground">Tamamlanma</div>
+              <div className="text-3xl font-bold font-mono text-foreground mt-1.5">
+                {hasDurumEksik ? '—' : (summary.total - summary.cancelled > 0 ? `%${(((summary.completed) / (summary.total - summary.cancelled)) * 100).toFixed(1).replace('.', ',')}` : '—')}
+              </div>
+              <div className="text-[11px] text-muted-foreground mt-2 truncate">Kesin kapananlar (%100)</div>
+            </div>
+
+            {/* 5. Ağırlıklı İlerleme / Gerçekleşme (Devam Edenler Dahil) */}
+            <div className="bg-card border-2 border-primary/30 bg-primary/5 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+              <div className="text-xs font-bold text-primary flex items-center justify-between">
+                <span>Ağırlıklı İlerleme</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-primary/20 text-primary font-mono font-semibold">Süreç Dahil</span>
+              </div>
+              <div className="text-3xl font-bold font-mono text-primary mt-1.5">
+                {summary.total - summary.cancelled > 0 
+                  ? `%${(summary.weightedCompletionPercentage ?? 0).toFixed(1).replace('.', ',')}` 
+                  : '—'}
+              </div>
+              <div className="text-[11px] text-muted-foreground mt-2 truncate" title="Talep, ihale, sipariş, malzeme, saha adımları dahil">
+                Talep, sipariş, saha adımları dahil
+              </div>
+            </div>
+
+            {/* 6. Kritik Bulgu */}
+            <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+              <div className="text-xs font-medium text-muted-foreground">Kritik bulgu</div>
+              <div className="text-3xl font-bold font-mono text-[#991b1b] dark:text-red-400 mt-1.5">
+                {criticalCount}
+              </div>
+              <div className="text-[11px] text-muted-foreground mt-2 truncate">Tamamlananlar dahil</div>
+            </div>
+
+            {/* 7. Durumu Belirsiz */}
+            <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+              <div className="text-xs font-medium text-muted-foreground">Durumu belirsiz</div>
+              <div className="text-3xl font-bold font-mono text-[#d97706] dark:text-amber-400 mt-1.5">
+                {unspecifiedStatusCount}
+              </div>
+              <div className="text-[11px] text-muted-foreground mt-2 truncate">Boş veya tanımsız durum</div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs font-mono px-2.5 py-1">
-              {displayedTrackingGroups.length} Rapor Grubu · {totalDisplayedSheets} Alt Sekme
-            </Badge>
-            <Badge variant="secondary" className="text-xs font-mono px-3 py-1 bg-muted">
-              {summary.total} bulgu
-            </Badge>
-          </div>
-        </div>
-
-        {/* Hastane Listesi (Akordiyonlar - Default olarak kapalı) */}
-        <div className="divide-y divide-border/60">
-          {stats?.hospitals && stats.hospitals.length > 0 ? (
-            stats.hospitals.map(hosp => {
-              const isHospOpen = !!expandedHospitals[hosp.hospitalId];
-              const sheets = hosp.sheets || {};
-
-              return (
-                <div key={hosp.hospitalId} className="transition-colors">
-                  
-                  {/* Hastane Başlık Satırı (Tıklanınca Açılır/Kapanır) */}
-                  <div
-                    onClick={() => toggleHospitalExpand(hosp.hospitalId)}
-                    className="p-4 flex flex-wrap items-center justify-between gap-3 cursor-pointer hover:bg-muted/40 select-none group"
-                  >
-                    {/* Sol: Hastane Adı */}
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-primary shrink-0" />
-                      <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                        {hosp.hospitalName}
-                      </span>
-                    </div>
-
-                    {/* Sağ: İstatistik Rozetleri */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs text-muted-foreground mr-1 hidden sm:inline">
-                        {TOTAL_TRACKING_SHEETS} sekme
-                      </span>
-
-                      {/* Başlamadı Rozeti */}
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-800">
-                        Başlamadı: <strong>{hosp.notStarted || 0}</strong>
-                      </span>
-
-                      {/* Devam Ediyor Rozeti */}
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-800">
-                        Devam Ediyor: <strong>{hosp.inProgress || 0}</strong>
-                      </span>
-
-                      {/* Tamamlandı Rozeti */}
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">
-                        Tamamlandı: <strong>{hosp.completed || 0}</strong>
-                      </span>
-
-                      {/* Ağırlıklı İlerleme Rozeti */}
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-primary/10 text-primary border border-primary/25">
-                        İlerleme: <strong>%{hosp.weightedCompletionPercentage ?? hosp.completionPercentage ?? 0}</strong>
-                      </span>
-
-                      {/* Toplam Bulgu Sayısı Badge */}
-                      <Badge className="font-mono text-xs px-2.5 py-0.5 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900">
-                        {hosp.total}
-                      </Badge>
-
-                      <ChevronDown
-                        className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
-                          isHospOpen ? 'rotate-180' : ''
-                        }`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Hastane Açılır İçeriği: Alt Başlıklar */}
-                  {isHospOpen && (
-                    <div className="bg-muted/15 border-t px-4 sm:px-6 py-4 space-y-3 animate-in slide-in-from-top-2 duration-150">
-                      {displayedTrackingGroups.map(group => {
-                        const groupKey = `${hosp.hospitalId}_${group.key}`;
-                        const isGroupOpen = !!expandedGroups[groupKey];
-                        const groupStats = getGroupStats(sheets, group.items);
-                        const GroupIcon = group.icon;
-
-                        return (
-                          <div 
-                            key={group.key} 
-                            className="border border-border/70 rounded-xl overflow-hidden bg-card shadow-xs transition-all"
-                          >
-                            {/* Grup Başlık Satırı (Akordiyon Toggle - Default Kapalı) */}
-                            <div
-                              onClick={() => toggleGroupExpand(hosp.hospitalId, group.key)}
-                              className="p-3.5 flex flex-wrap items-center justify-between gap-3 cursor-pointer hover:bg-muted/30 select-none group/item"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center border shrink-0 ${group.accentColor}`}>
-                                  <GroupIcon className="w-4 h-4" />
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold text-foreground group-hover/item:text-primary transition-colors">
-                                      {group.name}
-                                    </span>
-                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${group.badgeColor}`}>
-                                      {group.items.length} Alt Sekme
-                                    </span>
-                                  </div>
-                                  <span className="text-[10px] text-muted-foreground">
-                                    {groupStats.total > 0 ? (
-                                      `${groupStats.notStarted} Başlamadı · ${groupStats.inProgress} Devam · ${groupStats.completed} Bitti`
-                                    ) : (
-                                      '0 Başlamadı · 0 Devam · 0 Bitti'
-                                    )}
-                                  </span>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-4 sm:gap-6">
-                                <div className="text-right">
-                                  <span className={`text-xs font-mono font-bold block ${groupStats.total > 0 ? 'text-foreground' : 'text-muted-foreground/60'}`}>
-                                    {groupStats.total} bulgu
-                                  </span>
-                                  <span className={`text-[11px] font-mono font-semibold ${groupStats.total > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground/50'}`}>
-                                    %{groupStats.ratio}
-                                  </span>
-                                </div>
-
-                                <ChevronDown
-                                  className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
-                                    isGroupOpen ? 'rotate-180' : ''
-                                  }`}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Grup Açılır İçeriği: Alt Sekmeler Tablosu / Listesi */}
-                            {isGroupOpen && (
-                              <div className="border-t divide-y divide-border/50 bg-muted/10 animate-in slide-in-from-top-1 duration-150">
-                                {group.items.map(subItem => {
-                                  const sheetData = sheets[subItem.key] || {
-                                    total: 0,
-                                    completed: 0,
-                                    inProgress: 0,
-                                    notStarted: 0,
-                                    cancelled: 0,
-                                    open: 0,
-                                  };
-                                  const SubIcon = subItem.icon;
-                                  const activeTotal = sheetData.total - (sheetData.cancelled || 0);
-                                  const compRatio = activeTotal > 0 ? ((sheetData.completed / activeTotal) * 100).toFixed(2) : '0,00';
-
-                                  return (
-                                    <div
-                                      key={subItem.key}
-                                      onClick={() => navigate(subItem.path)}
-                                      className="p-3 pl-8 flex items-center justify-between hover:bg-muted/40 cursor-pointer transition-colors group/sub"
-                                    >
-                                      {/* Sol: İkon & Sekme İsmi */}
-                                      <div className="flex items-center gap-2.5">
-                                        <div className="w-6 h-6 rounded-md bg-muted text-muted-foreground group-hover/sub:text-primary flex items-center justify-center shrink-0">
-                                          <SubIcon className="w-3.5 h-3.5" />
-                                        </div>
-                                        <div>
-                                          <span className="text-xs font-medium text-foreground group-hover/sub:text-primary transition-colors block">
-                                            {subItem.name}
-                                          </span>
-                                          <span className="text-[10px] text-muted-foreground">
-                                            {sheetData.total > 0 ? (
-                                              `${sheetData.notStarted} Başlamadı · ${sheetData.inProgress} Devam · ${sheetData.completed} Bitti`
-                                            ) : (
-                                              '0 Başlamadı · 0 Devam · 0 Bitti'
-                                            )}
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      {/* Sağ: Sayı, Oran ve Git */}
-                                      <div className="flex items-center gap-6">
-                                        <span className={`text-xs font-mono font-bold w-10 text-right ${sheetData.total > 0 ? 'text-foreground' : 'text-muted-foreground/60'}`}>
-                                          {sheetData.total}
-                                        </span>
-                                        <span className={`text-xs font-mono font-bold w-14 text-right ${sheetData.total > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground/50'}`}>
-                                          %{compRatio}
-                                        </span>
-                                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover/sub:text-foreground transition-transform group-hover/sub:translate-x-0.5" />
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                </div>
-              );
-            })
-          ) : (
-            <div className="p-8 text-center text-xs text-muted-foreground">
-              Henüz bulgu kaydı bulunan hastane bulunamadı.
+          {/* 3. UYARI / BİLGİLENDİRME BANTI */}
+          {hasWarning && (
+            <div className="bg-[#fff9eb] border border-[#fde68a] dark:bg-amber-950/30 dark:border-amber-800/50 rounded-xl p-3.5 px-4 text-xs text-[#92400e] dark:text-amber-300">
+              <span>
+                {unspecifiedStatusCount > 0 ? `${unspecifiedStatusCount} bulgunun durumu boş veya tanımsız; tamamlanma oranı hesaplanmadı.` : ''}
+                {unspecifiedStatusCount > 0 && missingAssigneeCount > 0 ? ' ' : ''}
+                {missingAssigneeCount > 0 ? `${missingAssigneeCount} bulgunun sorumlusu belirtilmemiş.` : ''}
+              </span>
             </div>
           )}
-        </div>
-
-        {/* Alt Bilgi Dipnotu */}
-        <div className="px-5 py-3 border-t bg-muted/20 text-[11px] text-muted-foreground">
-          {stats?.hospitals?.length || 0} hastane · 4 ana rapor grubu · {TOTAL_TRACKING_SHEETS} kaynak sekme · tamamlanma: tamamlanan / (bulgu - iptal).
-        </div>
-
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 3. KPI KARTLARI (HASTANELERE GÖRE BULGU DAĞILIMI ALTINDA)           */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
-        
-        {/* Toplam Tespit */}
-        <div className="bg-card text-card-foreground border rounded-xl p-4 shadow-xs">
-          <span className="text-[11px] font-semibold text-muted-foreground block mb-1">
-            Toplam Tespit
-          </span>
-          <div className="text-2xl font-bold font-mono text-foreground">
-            {summary.total.toLocaleString('tr-TR')}
-          </div>
-          <span className="text-[10px] text-muted-foreground mt-1 block">{TOTAL_TRACKING_SHEETS} Takip Alanı</span>
-        </div>
-
-        {/* Tamamlanan */}
-        <div className="bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-4 shadow-xs">
-          <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 block mb-1">
-            Tamamlanan
-          </span>
-          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-            {summary.completed.toLocaleString('tr-TR')}
-          </div>
-          <span className="text-[10px] text-emerald-600/80 mt-1 block">Kapatılan Bulgular</span>
-        </div>
-
-        {/* Açık Kayıt */}
-        <div className="bg-blue-50/40 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 rounded-xl p-4 shadow-xs">
-          <span className="text-[11px] font-semibold text-blue-700 dark:text-blue-400 block mb-1">
-            Açık Kayıt
-          </span>
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 font-mono">
-            {summary.open.toLocaleString('tr-TR')}
-          </div>
-          <span className="text-[10px] text-blue-600/80 mt-1 block">
-            {summary.notStarted} Başlamadı + {summary.inProgress} Devam
-          </span>
-        </div>
-
-        {/* Tamamlanma Oranı */}
-        <div className="bg-card text-card-foreground border rounded-xl p-4 shadow-xs">
-          <span className="text-[11px] font-semibold text-muted-foreground block mb-1">
-            Tamamlanma Oranı
-          </span>
-          <div className="text-2xl font-bold font-mono text-foreground">
-            %{summary.completionPercentage.toFixed(2)}
-          </div>
-          <div className="w-full bg-muted h-1.5 rounded-full mt-2 overflow-hidden">
-            <div 
-              className="bg-emerald-500 h-full rounded-full transition-all duration-500"
-              style={{ width: `${Math.min(summary.completionPercentage, 100)}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Açık Kritik */}
-        <div className="bg-red-50/40 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl p-4 shadow-xs">
-          <span className="text-[11px] font-semibold text-red-700 dark:text-red-400 block mb-1 flex items-center justify-between">
-            Açık Kritik
-            <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
-          </span>
-          <div className="text-2xl font-bold text-red-600 dark:text-red-400 font-mono">
-            {summary.openCritical.toLocaleString('tr-TR')}
-          </div>
-          <span className="text-[10px] text-red-600/80 mt-1 block">
-            Toplam: {summary.risks.critical} Kritik
-          </span>
-        </div>
-
-        {/* Açık Yüksek */}
-        <div className="bg-orange-50/40 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/50 rounded-xl p-4 shadow-xs">
-          <span className="text-[11px] font-semibold text-orange-700 dark:text-orange-400 block mb-1">
-            Açık Yüksek
-          </span>
-          <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 font-mono">
-            {summary.openHigh.toLocaleString('tr-TR')}
-          </div>
-          <span className="text-[10px] text-orange-600/80 mt-1 block">
-            Toplam: {summary.risks.high} Yüksek
-          </span>
-        </div>
-
-      </div>
 
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* 4. DURUM VE RİSK DAĞILIMI GRAFİKLERİ (KULLANICI GÖRSELİ STANDARDI)  */}
@@ -1061,7 +751,7 @@ export const ImprovementsDashboardPage: React.FC<ImprovementsDashboardPageProps>
             </div>
 
             {/* Recharts Bar Chart */}
-            <div className="w-full h-72">
+            <div className="w-full min-w-0 h-72">
               <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={288}>
                 <BarChart
                   data={durumData}
@@ -1158,7 +848,7 @@ export const ImprovementsDashboardPage: React.FC<ImprovementsDashboardPageProps>
             </div>
 
             {/* Recharts Bar Chart */}
-            <div className="w-full h-72">
+            <div className="w-full min-w-0 h-72">
               <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={288}>
                 <BarChart
                   data={riskData}

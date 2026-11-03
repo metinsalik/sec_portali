@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { 
   X, Check, AlertCircle, Clock, Calendar, Building2, 
   MapPin, Wrench, Shield, User, FileText, CheckCircle2, Tag, Plus, Trash2, Camera, Eye, Download,
-  Scale, ShoppingCart, HardHat, Package, Sparkles, Upload, Paperclip, ExternalLink, Loader2, MoreHorizontal
+  Scale, ShoppingCart, HardHat, Package, Sparkles, Upload, Paperclip, ExternalLink, Loader2, MoreHorizontal,
+  RefreshCw, Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import toast from 'react-hot-toast';
+import { cn } from '@/lib/utils';
 import { 
   type ImprovementRecord, 
   type ImprovementRecordHistory, 
@@ -363,8 +365,110 @@ export const QuickStatusDialog: React.FC<QuickStatusProps> = ({ record, onClose,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 2. HIZLI AKSİYON GİR ("Aksiyon Gir" Penceresi - Step-by-Step Kalıplı Sihirbaz)
+// 2. HIZLI AKSİYON GİR ("Aksiyon Gir" Penceresi - Süreç Zinciri & Kademeli İlerleme Sihirbazı)
 // ─────────────────────────────────────────────────────────────────────────────
+
+interface ProcessChainStep {
+  id: string;
+  order: number;
+  title: string;
+  shortTitle: string;
+  baseProgress: number; // Kümülatif hedef taban ilerleme
+  prerequisites: string[]; // Bu adıma gelindiğinde otomatik tamamlanmış sayılan önceki adımlar
+  requiresPrereqInputs?: boolean; // Talep No ve SS No alanlarını formda da göstersin mi?
+}
+
+const PROCESS_CHAIN_MAP: Record<string, ProcessChainStep> = {
+  TALEP_ACILDI: {
+    id: 'TALEP_ACILDI',
+    order: 1,
+    title: 'Talep Açıldı',
+    shortTitle: 'Talep Açıldı',
+    baseProgress: 15,
+    prerequisites: [],
+  },
+  IHALE_SURECINDE: {
+    id: 'IHALE_SURECINDE',
+    order: 2,
+    title: 'İhale Sürecinde',
+    shortTitle: 'İhale / Teklif',
+    baseProgress: 30,
+    prerequisites: ['Talep Açıldı'],
+  },
+  SS_VERILDI: {
+    id: 'SS_VERILDI',
+    order: 3,
+    title: 'SS / Sipariş Verildi',
+    shortTitle: 'SS Sipariş',
+    baseProgress: 50,
+    prerequisites: ['Talep Açıldı', 'İhale / Satınalma Onayı'],
+    requiresPrereqInputs: true,
+  },
+  MALZEME_TEMINI: {
+    id: 'MALZEME_TEMINI',
+    order: 4,
+    title: 'Malzeme Temini / Bekleniyor',
+    shortTitle: 'Malzeme Temini',
+    baseProgress: 65,
+    prerequisites: ['Talep Açıldı', 'SS Sipariş Verildi'],
+    requiresPrereqInputs: true,
+  },
+  FIRMA_BEKLENIYOR: {
+    id: 'FIRMA_BEKLENIYOR',
+    order: 5,
+    title: 'Firma Sahaya Bekleniyor',
+    shortTitle: 'Firma Bekleniyor',
+    baseProgress: 70,
+    prerequisites: ['Talep Açıldı', 'SS Sipariş Verildi', 'Randevu Alındı'],
+    requiresPrereqInputs: true,
+  },
+  SAHA_CALISMASI: {
+    id: 'SAHA_CALISMASI',
+    order: 6,
+    title: 'Saha Çalışması Devam Ediyor',
+    shortTitle: 'Saha Çalışması',
+    baseProgress: 80,
+    prerequisites: ['Talep Açıldı', 'SS Sipariş Verildi', 'Firma Sahaya Giriş Yaptı'],
+    requiresPrereqInputs: true,
+  },
+  TAMAMLANDI: {
+    id: 'TAMAMLANDI',
+    order: 7,
+    title: 'Giderim & Test Tamamlandı',
+    shortTitle: 'Giderim & Test',
+    baseProgress: 100,
+    prerequisites: ['Tüm Süreç Adımları ve Sahada İşlemler Tamamlandı'],
+  },
+  DIGER: {
+    id: 'DIGER',
+    order: 0,
+    title: 'Diğer / Serbest Aksiyon',
+    shortTitle: 'Serbest',
+    baseProgress: 10,
+    prerequisites: [],
+  }
+};
+
+const CHAIN_STEPS_DISPLAY = [
+  { id: 'TALEP_ACILDI', order: 1, shortTitle: '1. Talep', baseProgress: 15 },
+  { id: 'IHALE_SURECINDE', order: 2, shortTitle: '2. İhale', baseProgress: 30 },
+  { id: 'SS_VERILDI', order: 3, shortTitle: '3. SS Sipariş', baseProgress: 50 },
+  { id: 'MALZEME_TEMINI', order: 4, shortTitle: '4. Malzeme', baseProgress: 65 },
+  { id: 'FIRMA_BEKLENIYOR', order: 5, shortTitle: '5. Randevu', baseProgress: 70 },
+  { id: 'SAHA_CALISMASI', order: 6, shortTitle: '6. Saha İşi', baseProgress: 80 },
+  { id: 'TAMAMLANDI', order: 7, shortTitle: '7. Bitti', baseProgress: 100 },
+];
+
+const parseExistingChainInfo = (text?: string | null) => {
+  if (!text) return { talepNo: '', siparisNo: '', firma: '' };
+  const talepMatch = text.match(/(?:Talep\s*(?:No|Numaras[ıi])?[:#\s]*)([A-Za-z0-9_-]+)/i);
+  const ssMatch = text.match(/(?:SS|Sipari[şs])\s*(?:No|Numaras[ıi])?[:#\s]*([A-Za-z0-9_-]+)/i);
+  return {
+    talepNo: talepMatch ? talepMatch[1] : '',
+    siparisNo: ssMatch ? ssMatch[1] : ''
+  };
+};
+
 interface ActionNoteProps {
   record: ImprovementRecord | null;
   onClose: () => void;
@@ -381,6 +485,10 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
     ? new Date(record.dueDate).toISOString().split('T')[0]
     : '';
 
+  const existingChain = useMemo(() => {
+    return parseExistingChainInfo(`${record.currentNote || ''} ${record.actionPlan || ''}`);
+  }, [record.currentNote, record.actionPlan]);
+
   const [note, setNote] = useState(record.currentNote || '');
   const [actionPlan, setActionPlan] = useState(record.actionPlan || '');
   const [recordDate, setRecordDate] = useState(initialRecordDate);
@@ -396,7 +504,10 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
   // Aksiyon Kalıpları State
   const [templates, setTemplates] = useState<ImprovementActionTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('TALEP_ACILDI');
-  const [stepFields, setStepFields] = useState<Record<string, any>>({});
+  const [stepFields, setStepFields] = useState<Record<string, any>>(() => ({
+    talepNo: existingChain.talepNo || '',
+    siparisNo: existingChain.siparisNo || '',
+  }));
   const [customRemark, setCustomRemark] = useState<string>('');
   const [customProgress, setCustomProgress] = useState<number | null>(null);
 
@@ -423,8 +534,9 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
     fetchTemplates();
   }, []);
 
-  // Aktif Şablon
+  // Aktif Şablon ve Süreç Zincir Bilgisi
   const activeTemplate = templates.find(t => t.id === selectedTemplateId) || templates[0];
+  const activeChainStep = PROCESS_CHAIN_MAP[selectedTemplateId] || PROCESS_CHAIN_MAP.DIGER;
 
   // Şablon değişince
   const handleSelectTemplate = (tpl: ImprovementActionTemplate) => {
@@ -435,20 +547,33 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
       setStatus(tpl.suggestedStatus);
     }
     setCustomProgress(null);
-    const initialFields: Record<string, any> = {};
+
+    // Mevcut talep ve sipariş numaralarını koruyarak yeni şablon alanlarını hazırla
+    const newFields: Record<string, any> = {
+      ...stepFields,
+      talepNo: stepFields.talepNo || existingChain.talepNo || '',
+      siparisNo: stepFields.siparisNo || existingChain.siparisNo || '',
+    };
+
     if (tpl.fields) {
       tpl.fields.forEach(f => {
-        if (f.type === 'date') {
-          initialFields[f.key] = new Date().toISOString().split('T')[0];
-        } else {
-          initialFields[f.key] = '';
+        if (f.type === 'date' && !newFields[f.key]) {
+          newFields[f.key] = new Date().toISOString().split('T')[0];
+        } else if (newFields[f.key] === undefined) {
+          newFields[f.key] = '';
         }
       });
     }
-    setStepFields(initialFields);
+    setStepFields(newFields);
   };
 
-  // İlerleme Yüzdesi Hesaplamaları (Kademeli Sistem)
+  // ─────────────────────────────────────────────────────────────────────────
+  // KULLANICI İSTEĞİ: SÜREÇ ZİNCİRİ & KÜMÜLATİF OTOMATİK İLERLEME
+  // "Misal Saha Çalışması Devam Ediyor seçtiysem, diğerleri işleri bitmiş olmalı.
+  // Yani Talep açma İhale yapılması veya SS sipariş verildi, Firma sahaya bekleniyor gibi.
+  // Bunları düşünerek bir zincir yapmak lazım. Talep ve SS numarasını isteyip
+  // otomatik olarak onları da yapılmış gösterip %'liği ona göre verdirelim."
+  // ─────────────────────────────────────────────────────────────────────────
   const baseProgress = record.progress || 0;
   const isCompletionStep = status === 'Tamamlandı' || selectedTemplateId === 'TAMAMLANDI';
   const isNotStartedStep = status === 'Başlamadı';
@@ -465,28 +590,93 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
   } else if (customProgress !== null) {
     calcProgress = customProgress;
     calcAdded = Math.max(0, customProgress - baseProgress);
+  } else if (activeChainStep && activeChainStep.baseProgress > 0) {
+    // ⚡ Süreç Zinciri Kuralı:
+    // Eğer mevcut ilerleme bu aşamanın taban ilerlemesinden düşükse doğrudan aşama tabanına zıplat
+    if (baseProgress < activeChainStep.baseProgress) {
+      calcProgress = activeChainStep.baseProgress;
+      calcAdded = activeChainStep.baseProgress - baseProgress;
+    } else {
+      const weight = activeTemplate?.progressWeight !== undefined ? activeTemplate.progressWeight : 10;
+      calcAdded = weight;
+      calcProgress = Math.min(99, baseProgress + weight);
+    }
   } else {
     const weight = activeTemplate?.progressWeight !== undefined ? activeTemplate.progressWeight : 10;
     calcAdded = weight;
     calcProgress = Math.min(99, baseProgress + weight);
   }
 
-  // Cümleyi otomatik oluştur
+  // Cümleyi ve referansları otomatik oluştur
   useEffect(() => {
     if (!activeTemplate) return;
 
-    let sentence = activeTemplate.sentenceTemplate || '';
-    if (activeTemplate.fields) {
-      activeTemplate.fields.forEach(f => {
-        const val = stepFields[f.key];
-        const strVal = (val !== undefined && val !== null && String(val).trim() !== '')
-          ? (f.type === 'date' ? new Date(val).toLocaleDateString('tr-TR') : String(val).trim())
-          : '';
-        sentence = sentence.replace(new RegExp(`\\{${f.key}\\}`, 'g'), strVal);
-      });
+    let sentence = '';
+
+    if (selectedTemplateId === 'SAHA_CALISMASI') {
+      const ekipStr = (stepFields.ekip || '').trim() || 'Yetkili ekip / firma';
+      const islemStr = (stepFields.yapilanIslem || '').trim() || 'fiziki montaj ve onarım çalışmaları';
+      const talepStr = (stepFields.talepNo || '').trim();
+      const ssStr = (stepFields.siparisNo || '').trim();
+
+      let refPrefix = '';
+      if (talepStr && ssStr) {
+        refPrefix = `Talep No: #${talepStr} ve SS No: #${ssStr} siparişi kapsamında; `;
+      } else if (talepStr) {
+        refPrefix = `Talep No: #${talepStr} kapsamında; `;
+      } else if (ssStr) {
+        refPrefix = `SS No: #${ssStr} siparişi kapsamında; `;
+      }
+
+      sentence = `${refPrefix}${ekipStr} tarafından sahada fiziki çalışma başlatılmış olup işlemler devam etmektedir. Yapılan çalışma: ${islemStr}.`;
+      if (stepFields.aciklama && stepFields.aciklama.trim()) {
+        sentence += ` (${stepFields.aciklama.trim()})`;
+      }
+    } else if (selectedTemplateId === 'SS_VERILDI') {
+      const firmaStr = (stepFields.firma || '').trim() || 'ilgili yüklenici';
+      const ssStr = (stepFields.siparisNo || '').trim() || 'SS-Belirleniyor';
+      const talepStr = (stepFields.talepNo || '').trim();
+      const dateStr = stepFields.siparisTarihi ? new Date(stepFields.siparisTarihi).toLocaleDateString('tr-TR') : '';
+
+      let refPrefix = talepStr ? `Talep No: #${talepStr} kapsamında; ` : '';
+      let datePart = dateStr ? `${dateStr} tarihinde ` : '';
+      sentence = `${refPrefix}${datePart}${firmaStr} firmasına #${ssStr} nolu satınalma siparişi (SS) iletilmiştir.`;
+      if (stepFields.aciklama && stepFields.aciklama.trim()) {
+        sentence += ` (${stepFields.aciklama.trim()})`;
+      }
+    } else if (selectedTemplateId === 'FIRMA_BEKLENIYOR') {
+      const firmaStr = (stepFields.firma || '').trim() || 'Yüklenici firma';
+      const beklenenStr = stepFields.beklenenTarih ? new Date(stepFields.beklenenTarih).toLocaleDateString('tr-TR') : 'belirlenen tarihte';
+      const talepStr = (stepFields.talepNo || '').trim();
+      const ssStr = (stepFields.siparisNo || '').trim();
+
+      let refPrefix = '';
+      if (talepStr && ssStr) {
+        refPrefix = `Talep No: #${talepStr}, SS No: #${ssStr} siparişi kapsamında; `;
+      } else if (ssStr) {
+        refPrefix = `SS No: #${ssStr} siparişi kapsamında; `;
+      } else if (talepStr) {
+        refPrefix = `Talep No: #${talepStr} kapsamında; `;
+      }
+
+      sentence = `${refPrefix}${firmaStr} firması ile mutabakat sağlanmış olup, ${beklenenStr} tarihinde sahada müdahaleye başlaması beklenmektedir.`;
+      if (stepFields.aciklama && stepFields.aciklama.trim()) {
+        sentence += ` (${stepFields.aciklama.trim()})`;
+      }
+    } else {
+      // Standart şablon mekanizması
+      sentence = activeTemplate.sentenceTemplate || '';
+      if (activeTemplate.fields) {
+        activeTemplate.fields.forEach(f => {
+          const val = stepFields[f.key];
+          const strVal = (val !== undefined && val !== null && String(val).trim() !== '')
+            ? (f.type === 'date' ? new Date(val).toLocaleDateString('tr-TR') : String(val).trim())
+            : '';
+          sentence = sentence.replace(new RegExp(`\\{${f.key}\\}`, 'g'), strVal);
+        });
+      }
+      sentence = sentence.replace(/\{[a-zA-Z0-9_-]+\}/g, '').replace(/\s+/g, ' ').trim();
     }
-    // Süslü parantezleri temizle
-    sentence = sentence.replace(/\{[a-zA-Z0-9_-]+\}/g, '').replace(/\s+/g, ' ').trim();
 
     if (customRemark.trim()) {
       sentence = sentence ? `${sentence} (Not: ${customRemark.trim()})` : customRemark.trim();
@@ -568,7 +758,7 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
       const d = await res.json();
       if (!res.ok || !d.success) throw new Error(d.message || 'Güncellenemedi');
 
-      toast.success('Aksiyon adımı ve kanıtlar başarıyla kaydedildi.');
+      toast.success('Aksiyon adımı ve süreç zinciri başarıyla kaydedildi.');
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -593,7 +783,7 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
               {record.facility?.shortName || record.facility?.name} — {record.sheetType} #{record.rowNo}
             </p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -606,6 +796,63 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
             <p className="text-foreground line-clamp-2 italic">
               "{record.finding}"
             </p>
+          </div>
+
+          {/* 🔗 SÜREÇ ZİNCİRİ GÖRSEL TAKİBİ (PIPELINE TRACKER) */}
+          <div className="p-3 bg-muted/30 border border-border/80 rounded-xl space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-foreground flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-amber-500" />
+                Aksiyon Süreç Zinciri (Otomatik Kademeli İlerleme):
+              </span>
+              <Badge variant="outline" className="font-mono text-[10px] bg-primary/10 text-primary border-primary/20 font-bold">
+                Aşama: {activeChainStep.shortTitle} (%{calcProgress})
+              </Badge>
+            </div>
+
+            {/* 7 Aşamalı Yatay Durum Çubuğu */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1">
+              {CHAIN_STEPS_DISPLAY.map((step) => {
+                const isPast = activeChainStep && activeChainStep.order > step.order;
+                const isCurrent = activeChainStep && activeChainStep.order === step.order;
+
+                return (
+                  <div
+                    key={step.id}
+                    className={cn(
+                      "p-1.5 rounded-lg border text-[10px] flex flex-col justify-between transition-all select-none",
+                      isCurrent
+                        ? "bg-primary text-primary-foreground font-bold border-primary shadow-xs ring-1 ring-primary/40"
+                        : isPast
+                        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 font-medium"
+                        : "bg-background text-muted-foreground/60 border-border/60"
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[9px] opacity-80">%{step.baseProgress}</span>
+                      {isPast ? (
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                      ) : isCurrent ? (
+                        <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                      ) : null}
+                    </div>
+                    <span className="truncate block font-semibold mt-0.5 leading-tight">
+                      {step.shortTitle}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Zincir Tamamlama Bildirisi */}
+            {activeChainStep.prerequisites.length > 0 && selectedTemplateId !== 'TAMAMLANDI' && (
+              <div className="text-[11px] text-muted-foreground pt-1 flex items-start gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Otomatik Zincir Tamamlama:</strong> "{activeChainStep.title}" seçildiği için önceki aşamalar (<em>{activeChainStep.prerequisites.join(' ➔ ')}</em>) tamamlanmış kabul edilerek taban ilerleme <strong>%{activeChainStep.baseProgress}</strong> olarak belirlendi.
+                </span>
+              </div>
+            )}
           </div>
 
           {/* 🎯 1. ADIM: AKSİYON KALIBI SEÇİMİ (ŞABLON LİSTESİ) */}
@@ -625,19 +872,26 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
                 const isSelected = selectedTemplateId === tpl.id;
                 const isTamam = tpl.id === 'TAMAMLANDI';
                 const isDiger = tpl.id === 'DIGER';
+                const chainItem = PROCESS_CHAIN_MAP[tpl.id];
+                const milestonePct = chainItem?.baseProgress ?? tpl.progressWeight;
+
                 return (
                   <button
                     key={tpl.id}
                     type="button"
                     onClick={() => handleSelectTemplate(tpl)}
-                    className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between gap-1.5 ${
+                    className={cn(
+                      "p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between gap-1.5 cursor-pointer",
                       isSelected
-                        ? 'bg-primary/10 border-primary shadow-xs ring-1 ring-primary text-foreground font-bold scale-[1.01]'
-                        : 'bg-card border-border/70 hover:border-border hover:bg-muted/40 text-muted-foreground'
-                    }`}
+                        ? "bg-primary/10 border-primary shadow-xs ring-1 ring-primary text-foreground font-bold scale-[1.01]"
+                        : "bg-card border-border/70 hover:border-border hover:bg-muted/40 text-muted-foreground"
+                    )}
                   >
                     <div className="flex items-center justify-between w-full">
-                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${isSelected ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}`}>
+                      <div className={cn(
+                        "w-6 h-6 rounded-lg flex items-center justify-center",
+                        isSelected ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+                      )}>
                         {getStepIcon(tpl.icon)}
                       </div>
                       {isTamam ? (
@@ -650,7 +904,7 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
                         </span>
                       ) : (
                         <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
-                          +{tpl.progressWeight ?? 10}%
+                          %{milestonePct}
                         </span>
                       )}
                     </div>
@@ -672,16 +926,17 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
                   Mevcut: <strong className="text-foreground">%{baseProgress}</strong>
                 </span>
                 <span className="text-primary font-bold">
-                  ➔ {calcAdded > 0 ? `+ %${calcAdded} Eklenecek` : 'Değişmedi'}
+                  ➔ {calcAdded > 0 ? `+ % ${calcAdded} Eklenecek` : 'Değişmedi'}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 <span className="text-[11px] text-muted-foreground">Yeni Hedef:</span>
-                <span className={`text-xs font-black px-2 py-0.5 rounded-lg font-mono ${
+                <span className={cn(
+                  "text-xs font-black px-2 py-0.5 rounded-lg font-mono",
                   calcProgress === 100 
-                    ? 'bg-emerald-600 text-white shadow-xs' 
-                    : 'bg-primary text-primary-foreground'
-                }`}>
+                    ? "bg-emerald-600 text-white shadow-xs" 
+                    : "bg-primary text-primary-foreground"
+                )}>
                   %{calcProgress}
                 </span>
               </div>
@@ -703,75 +958,138 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
               )}
             </div>
 
-            {/* Bilgilendirme / Serbest Ayar Satırı */}
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-0.5">
-              <span>
-                {isCompletionStep
-                  ? '✅ Giderim & Test Tamamlandı seçildiği için kalan yüzde eklenip %100 kapatılıyor.'
-                  : activeTemplate?.id === 'DIGER'
-                    ? '✏️ Serbest aksiyon: Serbest metin yazıp hedef yüzdeyi manuel belirleyebilirsiniz.'
-                    : `⚡ "${activeTemplate?.title || 'Adım'}" için +%${calcAdded} ilerleme ekleniyor.`}
-              </span>
-              {activeTemplate?.id === 'DIGER' && (
-                <div className="flex items-center gap-1 shrink-0">
-                  <label className="text-[11px] font-semibold text-foreground">Hedef %:</label>
-                  <input 
-                    type="number" 
-                    min={0} 
-                    max={100} 
-                    value={calcProgress}
-                    onChange={(e) => setCustomProgress(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                    className="w-14 h-6 text-center border rounded bg-background text-foreground text-xs font-bold"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 🎯 2. ADIM: SEÇİLEN KALIBIN DİNAMİK ALANLARI */}
-          {activeTemplate && activeTemplate.fields && activeTemplate.fields.length > 0 && (
-            <div className="p-3.5 bg-primary/5 border border-primary/20 rounded-xl space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-primary flex items-center gap-1.5">
-                  <span className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-black">2</span>
-                  "{activeTemplate.title}" İçin Detay Bilgileri:
-                </span>
-                <span className="text-[10px] text-muted-foreground">Alanlar değiştikçe cümle otomatik üretilir</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {activeTemplate.fields.map((field) => (
-                  <div key={field.key} className="space-y-1">
-                    <label className="text-[11px] font-semibold text-foreground flex items-center gap-1">
-                      {field.label} {field.required ? <span className="text-red-500">*</span> : ''}
-                    </label>
-                    <input
-                      type={field.type}
-                      value={stepFields[field.key] || ''}
-                      onChange={(e) => setStepFields({ ...stepFields, [field.key]: e.target.value })}
-                      placeholder={field.placeholder || `${field.label} giriniz...`}
-                      className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs outline-none focus:ring-1 focus:ring-primary"
-                      required={field.required}
-                    />
-                  </div>
+            {/* Hızlı Yüzde Ayar Çipleri & Serbest Giriş */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-muted-foreground pt-1 gap-2">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-semibold text-foreground">Hızlı Ayarla:</span>
+                {[50, 70, 80, 85, 90, 100].map(p => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setCustomProgress(p)}
+                    className={cn(
+                      "px-2 py-0.5 rounded border text-[10px] font-mono font-bold transition-all cursor-pointer",
+                      calcProgress === p
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background hover:bg-muted text-muted-foreground border-border"
+                    )}
+                  >
+                    %{p}
+                  </button>
                 ))}
               </div>
 
-              {/* Ek Açıklama / Not */}
-              <div className="space-y-1 pt-1">
-                <label className="text-[11px] font-medium text-muted-foreground block">
-                  İlave Serbest Not (Opsiyonel):
-                </label>
-                <input
-                  type="text"
-                  value={customRemark}
-                  onChange={(e) => setCustomRemark(e.target.value)}
-                  placeholder="Sahadan eklemek istediğiniz diğer detaylar..."
-                  className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs outline-none"
+              <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                <label className="text-[11px] font-semibold text-foreground">Hedef %:</label>
+                <input 
+                  type="number" 
+                  min={0} 
+                  max={100} 
+                  value={calcProgress}
+                  onChange={(e) => setCustomProgress(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                  className="w-14 h-6 text-center border rounded-md bg-background text-foreground text-xs font-bold"
                 />
               </div>
             </div>
-          )}
+          </div>
+
+          {/* 🎯 2. ADIM: AŞAMA BİLGİLERİ & ÖNCEKİ SÜREÇ NUMARALARI */}
+          <div className="space-y-3">
+            
+            {/* ÖNCEKİ SÜREÇ NUMARALARI (TALEP NO & SS NO OTOMATİK BAĞLAMA) */}
+            {activeChainStep.requiresPrereqInputs && (
+              <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                    <Zap className="w-4 h-4 text-amber-600 shrink-0" />
+                    Önceki Süreç Bilgileri (Talep & SS No Otomatik Bağlantı):
+                  </span>
+                  <span className="text-[10px] text-muted-foreground font-medium">
+                    Geçmişe dönük adım açmanıza gerek kalmaz
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-muted-foreground">
+                  Firma sahada olduğu için Talep Açma ve SS Sipariş adımları tamamlanmış kabul edilir. Varsa numaralarını buraya girerek kayda otomatik bağlayabilirsiniz:
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-foreground flex items-center gap-1">
+                      <span>Satınalma Talep Numarası:</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={stepFields.talepNo || ''}
+                      onChange={(e) => setStepFields({ ...stepFields, talepNo: e.target.value })}
+                      placeholder="Örn: 2026-9481"
+                      className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs font-mono outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-foreground flex items-center gap-1">
+                      <span>Sipariş / SS Numarası:</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={stepFields.siparisNo || ''}
+                      onChange={(e) => setStepFields({ ...stepFields, siparisNo: e.target.value })}
+                      placeholder="Örn: SS-84210"
+                      className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs font-mono outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SEÇİLEN KALIBIN DİNAMİK ALANLARI */}
+            {activeTemplate && activeTemplate.fields && activeTemplate.fields.length > 0 && (
+              <div className="p-3.5 bg-primary/5 border border-primary/20 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-primary flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-black">2</span>
+                    "{activeTemplate.title}" Aşaması İçin Bilgiler:
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">Alanlar değiştikçe cümle otomatik üretilir</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {activeTemplate.fields
+                    .filter(f => f.key !== 'talepNo' && f.key !== 'siparisNo') // Zaten yukarıdaki özel kutuda var
+                    .map((field) => (
+                    <div key={field.key} className="space-y-1">
+                      <label className="text-[11px] font-semibold text-foreground flex items-center gap-1">
+                        {field.label} {field.required ? <span className="text-red-500">*</span> : ''}
+                      </label>
+                      <input
+                        type={field.type}
+                        value={stepFields[field.key] || ''}
+                        onChange={(e) => setStepFields({ ...stepFields, [field.key]: e.target.value })}
+                        placeholder={field.placeholder || `${field.label} giriniz...`}
+                        className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs outline-none focus:ring-1 focus:ring-primary"
+                        required={field.required}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Ek Açıklama / Not */}
+                <div className="space-y-1 pt-1">
+                  <label className="text-[11px] font-medium text-muted-foreground block">
+                    İlave Serbest Not (Opsiyonel):
+                  </label>
+                  <input
+                    type="text"
+                    value={customRemark}
+                    onChange={(e) => setCustomRemark(e.target.value)}
+                    placeholder="Sahadan eklemek istediğiniz diğer detaylar..."
+                    className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs outline-none"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* 🎯 3. ADIM: OLUŞTURULAN CÜMLE & DÜZENLEME */}
           <div className="space-y-1">
@@ -801,7 +1119,7 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as any)}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs focus:ring-2 focus:ring-primary outline-none font-semibold"
+                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs focus:ring-2 focus:ring-primary outline-none font-semibold cursor-pointer"
               >
                 <option value="Başlamadı">⏳ Başlamadı</option>
                 <option value="Devam Ediyor">🔄 Devam Ediyor</option>
@@ -838,50 +1156,46 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
             />
           </div>
 
-          {/* 🎯 5. ADIM: EKLİ BELGELER & TEKLİF / TUTANAK (PDF DOKÜMANLARI) */}
+          {/* 🎯 5. ADIM: DOKÜMAN EKLEME */}
           <div className="space-y-2 pt-2 border-t">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-amber-500" />
-                Aksiyona Ait Belgeler & PDF Ekleri ({attachedDocs.length}):
+                <Paperclip className="w-3.5 h-3.5 text-primary" />
+                Aksiyona Ait Ek Dokümanlar (PDF, Rapor, Servis Formu vb.):
               </span>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={uploadingDoc}
                 onClick={() => docInputRef.current?.click()}
-                className="h-7 text-[11px] gap-1"
+                disabled={uploadingDoc}
+                className="h-7 text-xs font-semibold cursor-pointer"
               >
-                {uploadingDoc ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
-                {uploadingDoc ? 'Yükleniyor...' : '+ PDF / Belge Ekle'}
+                <Upload className="w-3.5 h-3.5 mr-1" />
+                {uploadingDoc ? 'Yükleniyor...' : 'Doküman Ekle'}
               </Button>
               <input
                 ref={docInputRef}
                 type="file"
                 multiple
-                accept=".pdf,.doc,.docx,.xls,.xlsx"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.zip"
                 className="hidden"
                 onChange={handleDocUpload}
               />
             </div>
 
             {attachedDocs.length > 0 && (
-              <div className="space-y-1.5">
-                {attachedDocs.map((doc, dIdx) => (
-                  <div key={dIdx} className="p-2 bg-muted/40 border rounded-lg flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2 truncate pr-2">
-                      <FileText className="w-4 h-4 text-red-500 shrink-0" />
-                      <span className="font-semibold truncate text-foreground" title={doc.name}>
-                        {formatAttachmentName(doc.name)}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground font-mono">({formatBytes(doc.size)})</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                {attachedDocs.map((doc, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 rounded-lg border bg-muted/30 text-xs">
+                    <div className="flex items-center gap-2 truncate">
+                      <FileText className="w-4 h-4 text-primary shrink-0" />
+                      <span className="truncate font-medium">{doc.name}</span>
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleRemoveDoc(dIdx)}
-                      className="text-muted-foreground hover:text-red-500 p-1"
-                      title="Belgeyi Kaldır"
+                      onClick={() => handleRemoveDoc(idx)}
+                      className="text-muted-foreground hover:text-destructive p-1 cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -891,16 +1205,15 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
             )}
           </div>
 
-          {/* Butonlar */}
-          <div className="pt-3 flex justify-end gap-2 border-t">
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading}>
+          {/* Kaydet ve Vazgeç Butonları */}
+          <div className="pt-3 border-t flex justify-end gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading} className="cursor-pointer">
               Vazgeç
             </Button>
-            <Button type="submit" size="sm" disabled={loading} className="bg-primary text-primary-foreground font-bold hover:bg-primary/90">
-              {loading ? 'Kaydediliyor...' : `Aksiyonu ve İlerlemeyi (%${calcProgress}) Kaydet`}
+            <Button type="submit" size="sm" disabled={loading} className="bg-primary text-primary-foreground font-bold cursor-pointer">
+              {loading ? 'Kaydediliyor...' : 'Aksiyonu ve İlerlemeyi Kaydet'}
             </Button>
           </div>
-
         </form>
 
       </div>
@@ -908,7 +1221,6 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
   );
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
 // 3. TAM DÜZENLE FORM MODALI (Tarih ve Ayarlardaki Kategoriler Dahil)
 // ─────────────────────────────────────────────────────────────────────────────
 interface EditProps {

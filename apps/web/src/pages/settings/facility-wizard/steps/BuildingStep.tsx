@@ -2,7 +2,9 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, Building, Ruler, Bed, Car, Trees, Layers } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Trash2, Building, Ruler, Bed, Car, Trees, Layers, Sparkles } from 'lucide-react';
+import { STANDARD_BLOCKS, getBlockCode } from '@/data/locationStandards';
 
 export default function BuildingStep({ data, update }: any) {
   const buildings = data.buildings || [];
@@ -59,13 +61,57 @@ export default function BuildingStep({ data, update }: any) {
           <Plus className="w-4 h-4" /> Yeni Blok Ekle
         </Button>
       </div>
+
+      {/* Standart Blok Hızlı Seçim Butonları */}
+      <div className="bg-muted/30 p-3 rounded-lg border border-border/50 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold flex items-center gap-1.5 text-foreground shrink-0">
+          <Sparkles className="w-3.5 h-3.5 text-primary" />
+          Standart Blok Ekle:
+        </span>
+        {STANDARD_BLOCKS.map(sb => {
+          const isAdded = buildings.some((b: any) => b.name?.toLowerCase().includes(sb.name.toLowerCase()));
+          return (
+            <Button
+              key={sb.code}
+              type="button"
+              variant={isAdded ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => {
+                update({
+                  buildings: [
+                    ...buildings,
+                    {
+                      name: sb.name,
+                      constructionYear: '',
+                      closedArea: '',
+                      bedCapacity: '',
+                      buildingFloors: '',
+                      structureFloors: '',
+                      buildingHeight: '',
+                      structureHeight: '',
+                      parkingArea: '',
+                      gardenArea: ''
+                    }
+                  ]
+                });
+              }}
+              className="h-7 text-xs px-2.5 rounded-md gap-1 font-medium"
+            >
+              <span>{sb.name}</span>
+              <Badge variant="outline" className="text-[9px] font-mono py-0 px-1 font-bold">
+                {sb.code}
+              </Badge>
+            </Button>
+          );
+        })}
+      </div>
       
       {buildings.length === 0 ? (
         <div className="text-center py-12 border border-dashed border-border/60 rounded-lg bg-muted/10">
           <Building className="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
           <p className="text-sm font-medium text-foreground">Henüz bina veya blok kaydı eklenmedi.</p>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-            "Yeni Blok Ekle" butonuna tıklayarak tesisinize ait ilk bina bloğunun fiziksel parametrelerini girebilirsiniz.
+            Yukarıdaki standart blok butonlarına tıklayarak veya "Yeni Blok Ekle" butonu ile blok oluşturabilirsiniz.
           </p>
           <Button 
             type="button" 
@@ -79,39 +125,53 @@ export default function BuildingStep({ data, update }: any) {
         </div>
       ) : (
         <div className="space-y-4">
-          {buildings.map((b: any, idx: number) => (
-            <div key={idx} className="border border-border/60 rounded-lg p-5 bg-card space-y-4 shadow-xs">
-              <div className="flex justify-between items-center pb-2 border-b border-border/40">
-                <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-md bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
-                    {idx + 1}
-                  </span>
-                  <h4 className="font-semibold text-sm text-foreground">
-                    {b.name || `Blok ${idx + 1}`}
-                  </h4>
-                </div>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => removeBuilding(idx)}
-                  className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-md"
-                  title="Bloğu Sil"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
+          <datalist id="standard-blocks-list">
+            {STANDARD_BLOCKS.map(sb => (
+              <option key={sb.code} value={sb.name}>{`${sb.name} (${sb.code})`}</option>
+            ))}
+          </datalist>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Blok / Yapı Adı <span className="text-rose-500">*</span></Label>
-                  <Input 
-                    placeholder="Örn: Ana Bina (A Blok)" 
-                    value={b.name || ''} 
-                    onChange={e => updateBuilding(idx, 'name', e.target.value)} 
-                    className="h-9 text-xs font-medium"
-                  />
+          {buildings.map((b: any, idx: number) => {
+            const blockCode = getBlockCode(b.name);
+            return (
+              <div key={idx} className="border border-border/60 rounded-lg p-5 bg-card space-y-4 shadow-xs">
+                <div className="flex justify-between items-center pb-2 border-b border-border/40">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-md bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                      {idx + 1}
+                    </span>
+                    <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                      {b.name || `Blok ${idx + 1}`}
+                      {blockCode && (
+                        <Badge variant="outline" className="text-[10px] font-mono bg-primary/10 text-primary border-primary/20 font-bold px-1.5 py-0">
+                          {blockCode}
+                        </Badge>
+                      )}
+                    </h4>
+                  </div>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => removeBuilding(idx)}
+                    className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-md"
+                    title="Bloğu Sil"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Blok / Yapı Adı <span className="text-rose-500">*</span></Label>
+                    <Input 
+                      placeholder="Örn: Ana Bina, A Blok..." 
+                      value={b.name || ''} 
+                      list="standard-blocks-list"
+                      onChange={e => updateBuilding(idx, 'name', e.target.value)} 
+                      className="h-9 text-xs font-medium"
+                    />
+                  </div>
 
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Yapım Yılı</Label>
@@ -230,7 +290,8 @@ export default function BuildingStep({ data, update }: any) {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

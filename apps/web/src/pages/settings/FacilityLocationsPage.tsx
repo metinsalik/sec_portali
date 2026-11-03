@@ -28,17 +28,24 @@ import {
   Sparkles,
   Search,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  BookOpen
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/context/AuthContext';
+import { STANDARD_BLOCKS, STANDARD_FLOORS, getBlockCode, getFloorCode, generateLocationCode } from '@/data/locationStandards';
+import StandardCodesModal from '@/components/shared/StandardCodesModal';
 
 export default function FacilityLocationsPage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [facilityId, setFacilityId] = useState(localStorage.getItem('activeFacilityId') || '');
   
+  // Standard Codes Modal State
+  const [isCodesModalOpen, setIsCodesModalOpen] = useState(false);
+
   // Excel Modal State
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [excelFile, setExcelFile] = useState<File | null>(null);
@@ -227,6 +234,16 @@ export default function FacilityLocationsPage() {
     return root;
   }, [locations, searchQuery]);
 
+  const currentFacility = useMemo(() => {
+    return facilities.find((f: any) => f.id === facilityId);
+  }, [facilities, facilityId]);
+
+  const generatedCode = useMemo(() => {
+    const blockOrBuilding = newLocation.block || newLocation.building;
+    if (!blockOrBuilding && !newLocation.floor) return '';
+    return generateLocationCode(blockOrBuilding, newLocation.floor, currentFacility?.shortName);
+  }, [newLocation.block, newLocation.building, newLocation.floor, currentFacility?.shortName]);
+
   return (
     <div className="space-y-6 w-full animate-in fade-in duration-200 pb-16">
       {/* Üst Başlık & Aksiyon Kartı */}
@@ -240,12 +257,21 @@ export default function FacilityLocationsPage() {
               Tesis Lokasyon Yönetimi
             </h1>
             <p className="text-xs text-muted-foreground">
-              Bina, blok ve kat hiyerarşisini yapılandırın veya Excel ile toplu yükleyin.
+              Bina, blok ve kat hiyerarşisini kurumsal kod standartlarına göre yapılandırın veya Excel ile toplu yükleyin.
             </p>
           </div>
         </div>
 
         <div className="flex items-center flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsCodesModalOpen(true)}
+            className="flex items-center gap-1.5 text-xs h-9 rounded-md"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-primary" />
+            Standart Kodlar Rehberi
+          </Button>
+
           <Button
             variant="outline"
             onClick={handleDownloadTemplate}
@@ -278,7 +304,7 @@ export default function FacilityLocationsPage() {
               <SelectContent className="max-h-72">
                 {facilities.map((f: any) => (
                   <SelectItem key={f.id} value={f.id} className="text-xs font-medium">
-                    {f.name}
+                    {f.name} {f.shortName ? `[${f.shortName}]` : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -305,9 +331,18 @@ export default function FacilityLocationsPage() {
               <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground flex items-center gap-1.5">
                 <Plus className="w-3.5 h-3.5 text-primary" /> Hızlı Konum Ekle
               </h3>
-              <span className="text-[11px] text-muted-foreground">
-                Örn: Bina: Ana Bina | Blok: A Blok | Kat: Zemin Kat
-              </span>
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                {generatedCode ? (
+                  <span className="flex items-center gap-1">
+                    <span>Kurumsal Kod:</span>
+                    <Badge variant="outline" className="font-mono font-bold bg-primary/10 text-primary border-primary/20 text-[10px] py-0 px-1.5">
+                      {generatedCode}
+                    </Badge>
+                  </span>
+                ) : (
+                  <span>Örn: Bina: Ana Bina | Blok: A Blok | Kat: 1.Kat</span>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
@@ -318,7 +353,12 @@ export default function FacilityLocationsPage() {
                   onChange={e => setNewLocation({...newLocation, building: e.target.value})} 
                   placeholder="Örn: Ana Bina" 
                   className="h-9 text-xs rounded-md" 
+                  list="fac-buildings-list"
                 />
+                <datalist id="fac-buildings-list">
+                  <option value="Ana Bina">Ana Bina [ANB]</option>
+                  <option value="Ek Bina">Ek Bina [EKB]</option>
+                </datalist>
               </div>
 
               <div className="space-y-1">
@@ -328,7 +368,13 @@ export default function FacilityLocationsPage() {
                   onChange={e => setNewLocation({...newLocation, block: e.target.value})} 
                   placeholder="Örn: A Blok" 
                   className="h-9 text-xs rounded-md" 
+                  list="fac-blocks-list"
                 />
+                <datalist id="fac-blocks-list">
+                  {STANDARD_BLOCKS.map(sb => (
+                    <option key={sb.code} value={sb.name}>{`${sb.name} [${sb.code}]`}</option>
+                  ))}
+                </datalist>
               </div>
 
               <div className="space-y-1">
@@ -336,9 +382,15 @@ export default function FacilityLocationsPage() {
                 <Input 
                   value={newLocation.floor} 
                   onChange={e => setNewLocation({...newLocation, floor: e.target.value})} 
-                  placeholder="Örn: Zemin Kat" 
+                  placeholder="Örn: 1.Kat, Z.Kat..." 
                   className="h-9 text-xs rounded-md" 
+                  list="fac-floors-list"
                 />
+                <datalist id="fac-floors-list">
+                  {STANDARD_FLOORS.map(sf => (
+                    <option key={sf.code} value={sf.name}>{`${sf.name} [${sf.code}]`}</option>
+                  ))}
+                </datalist>
               </div>
 
               <div>
@@ -403,6 +455,14 @@ export default function FacilityLocationsPage() {
                           <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                             <Building className="w-3.5 h-3.5 text-primary" />
                             {buildingNode.name}
+                            {(() => {
+                              const bCode = getBlockCode(buildingNode.name);
+                              return bCode ? (
+                                <Badge variant="outline" className="text-[10px] font-mono py-0 px-1 bg-background text-foreground/80 font-bold border-border/80">
+                                  {bCode}
+                                </Badge>
+                              ) : null;
+                            })()}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -426,27 +486,35 @@ export default function FacilityLocationsPage() {
                       {/* Katlar Listesi */}
                       {isExpanded && (
                         <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 bg-muted/10">
-                          {Object.values(buildingNode.children).map((floorNode: any) => (
-                            <div
-                              key={floorNode.id}
-                              className="p-2 rounded-md bg-card border border-border/60 flex items-center justify-between gap-2 shadow-2xs"
-                            >
-                              <div className="flex items-center gap-1.5 truncate">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-                                <span className="text-xs font-medium text-foreground truncate">
-                                  {floorNode.name}
-                                </span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => removeNode('floor', floorNode.name, buildingNode.name)}
-                                className="p-1 text-muted-foreground hover:text-destructive transition-colors shrink-0 rounded"
-                                title="Bu Katı Sil"
+                          {Object.values(buildingNode.children).map((floorNode: any) => {
+                            const fCode = getFloorCode(floorNode.name);
+                            return (
+                              <div
+                                key={floorNode.id}
+                                className="p-2 rounded-md bg-card border border-border/60 flex items-center justify-between gap-2 shadow-2xs"
                               >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          ))}
+                                <div className="flex items-center gap-1.5 truncate">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                                  <span className="text-xs font-medium text-foreground truncate">
+                                    {floorNode.name}
+                                  </span>
+                                  {fCode && (
+                                    <Badge variant="outline" className="text-[9px] font-mono py-0 px-1 bg-background text-primary font-bold border-primary/20 shrink-0">
+                                      {fCode}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeNode('floor', floorNode.name, buildingNode.name)}
+                                  className="p-1 text-muted-foreground hover:text-destructive transition-colors shrink-0 rounded"
+                                  title="Bu Katı Sil"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -537,6 +605,12 @@ export default function FacilityLocationsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Standart Kodlar Rehberi Modalı */}
+      <StandardCodesModal
+        isOpen={isCodesModalOpen}
+        onClose={() => setIsCodesModalOpen(false)}
+      />
     </div>
   );
 }

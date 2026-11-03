@@ -351,6 +351,14 @@ export interface DashboardStats {
     openHighCritical?: number;
     completionPercentage?: number;
     weightedCompletionPercentage?: number;
+    risks?: {
+      critical: number;
+      high: number;
+      medium: number;
+      low: number;
+      negligible: number;
+      unspecified?: number;
+    };
     sheets?: Record<string, {
       total: number;
       completed: number;
@@ -362,6 +370,14 @@ export interface DashboardStats {
       openHighCritical?: number;
       completionPercentage?: number;
       weightedCompletionPercentage?: number;
+      risks?: {
+        critical: number;
+        high: number;
+        medium: number;
+        low: number;
+        negligible: number;
+        unspecified?: number;
+      };
     }>;
   }>;
   hospitalComparison?: Array<{
@@ -377,6 +393,14 @@ export interface DashboardStats {
     openHighCritical?: number;
     completionPercentage?: number;
     weightedCompletionPercentage?: number;
+    risks?: {
+      critical: number;
+      high: number;
+      medium: number;
+      low: number;
+      negligible: number;
+      unspecified?: number;
+    };
   }>;
   categories: Record<string, number>;
 }

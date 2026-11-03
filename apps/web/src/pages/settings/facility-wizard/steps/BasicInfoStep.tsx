@@ -9,8 +9,10 @@ import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { 
   Building2, Landmark, Phone, Mail, Globe, MapPin, 
-  Shield, Users, Image as ImageIcon, Upload, Loader2, CheckCircle2, Lock
+  Shield, Users, Image as ImageIcon, Upload, Loader2, CheckCircle2, Lock, Sparkles
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { STANDARD_FACILITY_CODES, findStandardFacility } from '@/data/locationStandards';
 
 const FACILITY_TYPES = [
   "Hastane", 
@@ -106,22 +108,49 @@ export default function BasicInfoStep({ data, update }: any) {
           </div>
 
           <div className="space-y-1.5 lg:col-span-2">
-            <Label className="text-xs font-semibold">Tesis Resmi Adı <span className="text-rose-500">*</span></Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold">Tesis Resmi Adı <span className="text-rose-500">*</span></Label>
+              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <Sparkles className="w-2.5 h-2.5 text-primary" /> 35 Standart Tesis Tanımlı
+              </span>
+            </div>
             <Input 
-              placeholder="Örn: Medical Park Göztepe Hastanesi" 
+              placeholder="Örn: MP Göztepe, Liv Ulus..." 
               value={data.name || ''} 
-              onChange={e => update({ name: e.target.value })} 
+              list="standard-facilities-list"
+              onChange={e => {
+                const val = e.target.value;
+                const match = findStandardFacility(val);
+                if (match && (!data.shortName || STANDARD_FACILITY_CODES.some(s => s.code === data.shortName))) {
+                  update({ name: val, shortName: match.code });
+                } else {
+                  update({ name: val });
+                }
+              }} 
               className="h-9 text-xs font-medium"
             />
+            <datalist id="standard-facilities-list">
+              {STANDARD_FACILITY_CODES.map(sf => (
+                <option key={sf.code} value={sf.name}>{`${sf.name} (${sf.code})`}</option>
+              ))}
+            </datalist>
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Kısa Kod / Kısaltma</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold">Kısa Kod / Kısaltma</Label>
+              {data.shortName && STANDARD_FACILITY_CODES.some(s => s.code === data.shortName?.toUpperCase()) && (
+                <Badge variant="outline" className="text-[9px] py-0 px-1 bg-primary/10 text-primary border-primary/20 font-mono font-bold">
+                  Standart
+                </Badge>
+              )}
+            </div>
             <Input 
-              placeholder="Örn: MP-GOZTEPE" 
+              placeholder="Örn: GOZ, ULS, TPK..." 
               value={data.shortName || ''} 
-              onChange={e => update({ shortName: e.target.value })} 
-              className="h-9 text-xs"
+              onChange={e => update({ shortName: e.target.value.toUpperCase() })} 
+              className="h-9 text-xs font-mono font-bold tracking-wider"
+              maxLength={10}
             />
           </div>
 

@@ -8,7 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Building2, MapPin, ChevronRight, Loader2, Save, Trash2, Building, Info, Phone, Mail, Globe, Briefcase, Shield, Ruler, Users, ClipboardList, Edit2, Eye, FileText, Activity, ChevronLeft, LayoutGrid, List, Archive, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { 
+  Plus, Search, Building2, MapPin, ChevronRight, Loader2, Save, Trash2, 
+  Building, Info, Phone, Mail, Globe, Briefcase, Shield, Ruler, Users, 
+  ClipboardList, Edit2, Eye, FileText, Activity, ChevronLeft, LayoutGrid, 
+  List, Archive, CheckCircle2, AlertTriangle, BookOpen, Sparkles, Layers,
+  ExternalLink, Check
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { IL_ILCE_DATA } from '@/data/turkiye';
@@ -17,6 +23,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { STANDARD_FACILITY_CODES, findStandardFacility } from '@/data/locationStandards';
+import StandardCodesModal from '@/components/shared/StandardCodesModal';
 
 import type { Facility as BaseFacility } from '@sec-portali/shared';
 
@@ -125,6 +133,7 @@ const FacilitiesPage = () => {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [dangerClassFilter, setDangerClassFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
+  const [isCodesModalOpen, setIsCodesModalOpen] = useState(false);
 
   const { data: facilities, isLoading } = useQuery<Facility[]>({
     queryKey: ['facilities'],
@@ -143,6 +152,22 @@ const FacilitiesPage = () => {
       return res.json();
     }
   });
+
+  // Kurumsal KPI İstatistikleri (30-design-system standartlarında özet kartlar için)
+  const kpiStats = useMemo(() => {
+    if (!facilities) return { total: 0, active: 0, archive: 0, hospitals: 0, others: 0, complianceRate: 0, compliantCount: 0, assessedCount: 0 };
+    const total = facilities.length;
+    const active = facilities.filter(f => f.isActive).length;
+    const archive = facilities.filter(f => !f.isActive).length;
+    const hospitals = facilities.filter(f => f.isActive && f.type === 'Hastane').length;
+    const others = facilities.filter(f => f.isActive && f.type !== 'Hastane').length;
+    
+    const compliantCount = complianceData?.filter(c => c.overallCompliant).length || 0;
+    const assessedCount = complianceData?.length || 0;
+    const complianceRate = assessedCount > 0 ? Math.round((compliantCount / assessedCount) * 100) : 0;
+
+    return { total, active, archive, hospitals, others, complianceRate, compliantCount, assessedCount };
+  }, [facilities, complianceData]);
 
   const getComplianceForFacility = (id: string) => {
     return complianceData?.find(c => c.facilityId === id);
@@ -312,8 +337,11 @@ const FacilitiesPage = () => {
   };
 
   const filteredFacilities = facilities?.filter(f => {
-    const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         f.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const q = searchTerm.toLowerCase();
+    const matchesSearch = f.name.toLowerCase().includes(q) || 
+                         f.id.toLowerCase().includes(q) ||
+                         (f.shortName && f.shortName.toLowerCase().includes(q)) ||
+                         (f.city && f.city.toLowerCase().includes(q));
     const matchesType = typeFilter === 'all' || f.type === typeFilter;
     const matchesDanger = dangerClassFilter === 'all' || f.dangerClass === dangerClassFilter;
     const matchesStatus = activeTab === 'active' ? f.isActive : !f.isActive;
@@ -366,29 +394,137 @@ const FacilitiesPage = () => {
   }
 
   return (
-    <div className="space-y-5 w-full animate-in fade-in duration-200 pb-12">
+    <div className="space-y-6 w-full animate-in fade-in duration-200 pb-12">
+      {/* 1. Üst Başlık & Global Aksiyon Butonları */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <Building2 className="w-4 h-4" />
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20 shadow-2xs">
+            <Building2 className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">Tesis Yönetimi</h1>
-            <p className="text-xs text-muted-foreground">Organizasyon yapınızdaki tüm tesisleri yönetin ve izleyin.</p>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">Tesis Yönetimi</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Organizasyon bünyesindeki 35 kurumsal tesis, bina, blok ve kat standartlarını yönetin.
+            </p>
           </div>
         </div>
-        {hasAdminAccess && (
-          <Button onClick={() => navigate('/settings/facilities/new')} className="h-9 text-xs font-medium rounded-md px-3.5 gap-1.5 shrink-0">
-            <Plus className="w-3.5 h-3.5" /> Yeni Tesis Ekle
+
+        <div className="flex items-center flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsCodesModalOpen(true)}
+            className="h-9 text-xs font-medium rounded-md gap-1.5 border-border/80"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-primary" />
+            Standart Kodlar Rehberi
           </Button>
-        )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/settings/facilities/locations')}
+            className="h-9 text-xs font-medium rounded-md gap-1.5 border-border/80"
+          >
+            <Layers className="w-3.5 h-3.5 text-muted-foreground" />
+            Lokasyon Ağacı
+          </Button>
+
+          {hasAdminAccess && (
+            <Button 
+              onClick={() => navigate('/settings/facilities/new')} 
+              className="h-9 text-xs font-medium rounded-md px-3.5 gap-1.5 shrink-0 shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" /> Yeni Tesis Ekle
+            </Button>
+          )}
+        </div>
       </div>
 
+      {/* 2. Kurumsal KPI Özet Metrik Kartları (30-design-system standartlarında) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <Card className="border border-border/60 shadow-xs rounded-lg bg-card">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Toplam Tesis</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-foreground tracking-tight">{kpiStats.total}</span>
+                <span className="text-[10px] text-muted-foreground font-medium">Kayıtlı</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground pt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span>{kpiStats.active} Aktif</span>
+                <span>•</span>
+                <span>{kpiStats.archive} Arşiv</span>
+              </div>
+            </div>
+            <div className="w-9 h-9 rounded-md bg-muted/60 text-muted-foreground flex items-center justify-center border border-border/40">
+              <Building2 className="w-4 h-4 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-border/60 shadow-xs rounded-lg bg-card">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Hastaneler</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-foreground tracking-tight">{kpiStats.hospitals}</span>
+                <span className="text-[10px] text-muted-foreground font-medium">Büyük Tesis</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground">Sağlık Kompleksleri</p>
+            </div>
+            <div className="w-9 h-9 rounded-md bg-muted/60 text-muted-foreground flex items-center justify-center border border-border/40">
+              <Building className="w-4 h-4 text-primary/80" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-border/60 shadow-xs rounded-lg bg-card">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Tıp & Diğer Merkezler</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-foreground tracking-tight">{kpiStats.others}</span>
+                <span className="text-[10px] text-muted-foreground font-medium">Şube</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground">Tıp, Diyaliz & Ofisler</p>
+            </div>
+            <div className="w-9 h-9 rounded-md bg-muted/60 text-muted-foreground flex items-center justify-center border border-border/40">
+              <Activity className="w-4 h-4 text-primary/80" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-border/60 shadow-xs rounded-lg bg-card">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">İSG Atama Uyumu</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-foreground tracking-tight">%{kpiStats.complianceRate}</span>
+                <span className="text-[10px] text-muted-foreground font-medium">Yasal Uyum</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                {kpiStats.compliantCount} / {kpiStats.assessedCount} Tesis Tam Uyumlu
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-md bg-muted/60 text-muted-foreground flex items-center justify-center border border-border/40">
+              <Shield className="w-4 h-4 text-emerald-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 3. Filtreleme, Sekmeler ve Görünüm Değiştirici */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'active' | 'archive')} className="w-auto">
           <TabsList className="h-9 p-1 rounded-lg">
-            <TabsTrigger value="active" className="text-xs rounded-md">Aktif Tesisler</TabsTrigger>
-            <TabsTrigger value="archive" className="text-xs rounded-md">Arşiv</TabsTrigger>
+            <TabsTrigger value="active" className="text-xs rounded-md">
+              Aktif Tesisler ({kpiStats.active})
+            </TabsTrigger>
+            <TabsTrigger value="archive" className="text-xs rounded-md">
+              Arşiv ({kpiStats.archive})
+            </TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -398,6 +534,7 @@ const FacilitiesPage = () => {
             size="sm" 
             onClick={() => setViewMode('list')}
             className={cn("h-7 w-8 p-0 rounded-sm transition-all", viewMode === 'list' ? "bg-background shadow-xs text-foreground font-semibold" : "text-muted-foreground")}
+            title="Tablo / Liste Görünümü"
           >
             <List className="w-3.5 h-3.5" />
           </Button>
@@ -406,17 +543,19 @@ const FacilitiesPage = () => {
             size="sm" 
             onClick={() => setViewMode('grid')}
             className={cn("h-7 w-8 p-0 rounded-sm transition-all", viewMode === 'grid' ? "bg-background shadow-xs text-foreground font-semibold" : "text-muted-foreground")}
+            title="Kart / Grid Görünümü"
           >
             <LayoutGrid className="w-3.5 h-3.5" />
           </Button>
         </div>
       </div>
 
+      {/* 4. Arama ve Filtre Kartı */}
       <div className="flex flex-col lg:flex-row gap-3 bg-card p-3 rounded-lg border border-border/60 shadow-xs">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
           <Input 
-            placeholder="Tesis adı veya koduna göre ara..." 
+            placeholder="Tesis adı, kurumsal kısa kod (Örn: GOZ, ULS) veya ile göre ara..." 
             className="pl-8.5 h-9 text-xs rounded-md"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -450,6 +589,7 @@ const FacilitiesPage = () => {
         </div>
       </div>
 
+      {/* 5. Liste / Grid Gösterimi */}
       <div className="min-h-[400px]">
         {filteredFacilities && filteredFacilities.length > 0 ? (
           viewMode === 'list' ? (
@@ -469,85 +609,109 @@ const FacilitiesPage = () => {
                   </AccordionTrigger>
                   <AccordionContent className="p-0 pb-0">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse min-w-[700px] text-xs">
+                      <table className="w-full text-left border-collapse min-w-[760px] text-xs">
                         <thead>
                           <tr className="bg-muted/40 border-t border-b border-border/40">
-                            <th className="px-4 py-2.5 font-medium text-muted-foreground">Tesis Bilgisi</th>
+                            <th className="px-4 py-2.5 font-medium text-muted-foreground">Tesis & Kurumsal Kod</th>
                             <th className="px-4 py-2.5 font-medium text-muted-foreground">Lokasyon</th>
                             <th className="px-4 py-2.5 font-medium text-muted-foreground">Tehlike Sınıfı</th>
-                            <th className="px-4 py-2.5 font-medium text-muted-foreground">Atama Durumu</th>
+                            <th className="px-4 py-2.5 font-medium text-muted-foreground">İSG Atama Uyumu</th>
                             <th className="px-4 py-2.5 font-medium text-muted-foreground">Durum</th>
                             <th className="px-4 py-2.5 text-right font-medium text-muted-foreground">İşlemler</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/40">
-                          {groupedFacilities![type].map((facility) => (
-                            <tr key={facility.id} className="hover:bg-muted/20 transition-colors">
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-2.5">
-                                  <div className="w-7 h-7 bg-muted/50 rounded-md flex items-center justify-center text-muted-foreground border border-border/40 shrink-0">
-                                    <Building2 className="w-3.5 h-3.5" />
+                          {groupedFacilities![type].map((facility) => {
+                            const shortCode = facility.shortName || findStandardFacility(facility.name)?.code || '';
+                            return (
+                              <tr key={facility.id} className="hover:bg-muted/20 transition-colors">
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 bg-muted/50 rounded-md flex items-center justify-center text-muted-foreground border border-border/40 shrink-0 overflow-hidden">
+                                      {facility.logoUrl ? (
+                                        <img src={facility.logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                                      ) : (
+                                        <Building2 className="w-4 h-4" />
+                                      )}
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="font-semibold text-foreground text-xs">{facility.name}</span>
+                                        {shortCode && (
+                                          <Badge variant="outline" className="font-mono text-[9px] font-bold bg-primary/10 text-primary border-primary/20 px-1 py-0">
+                                            {shortCode}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="text-[10px] font-mono text-muted-foreground uppercase">{facility.id}</div>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <div className="font-medium text-foreground text-xs line-clamp-1">{facility.name}</div>
-                                    <div className="text-[10px] font-mono text-muted-foreground uppercase">{facility.id}</div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="text-xs text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
+                                    <MapPin className="w-3 h-3 opacity-60" /> {facility.city} / {facility.district}
                                   </div>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="text-xs text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
-                                  <MapPin className="w-3 h-3 opacity-60" /> {facility.city} / {facility.district}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                 <Badge variant="outline" className={cn(
-                                   "text-[10px] py-0 font-normal rounded-md",
-                                   facility.dangerClass === 'Çok Tehlikeli' ? "border-destructive/30 text-destructive bg-destructive/10" : 
-                                   facility.dangerClass === 'Tehlikeli' ? "border-amber-500/30 text-amber-600 bg-amber-500/10" : 
-                                   "border-emerald-500/30 text-emerald-600 bg-emerald-500/10"
-                                 )}>
-                                   {facility.dangerClass}
-                                 </Badge>
-                              </td>
-                              <td className="px-4 py-3">
-                                 {(() => {
-                                   const comp = getComplianceForFacility(facility.id);
-                                   if (!comp) return <span className="text-[10px] text-muted-foreground italic">Yükleniyor...</span>;
-                                   
-                                   if (comp.overallCompliant) return <Badge className="bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-[9px] py-0 font-medium rounded-md">TAM UYGUN</Badge>;
-                                   if (comp.category === 'none') return <Badge variant="outline" className="text-muted-foreground text-[9px] py-0 font-normal rounded-md">ATAMA YOK</Badge>;
-                                   return <Badge className="bg-destructive/10 text-destructive border border-destructive/20 text-[9px] py-0 font-medium rounded-md">EKSİK ATAMA</Badge>;
-                                 })()}
-                               </td>
-                               <td className="px-4 py-3">
-                                 <div className="flex items-center gap-2">
-                                   <div className={cn("w-1.5 h-1.5 rounded-full", facility.isActive ? "bg-emerald-500" : "bg-muted-foreground/40")} />
-                                   <span className="text-xs text-muted-foreground">{facility.isActive ? "Aktif" : "Pasif"}</span>
-                                 </div>
-                               </td>
-                              <td className="px-4 py-3 text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                  {hasAdminAccess && (
+                                </td>
+                                <td className="px-4 py-3">
+                                   <Badge variant="outline" className={cn(
+                                     "text-[10px] py-0 font-normal rounded-md",
+                                     facility.dangerClass === 'Çok Tehlikeli' ? "border-destructive/30 text-destructive bg-destructive/10" : 
+                                     facility.dangerClass === 'Tehlikeli' ? "border-amber-500/30 text-amber-600 bg-amber-500/10" : 
+                                     "border-emerald-500/30 text-emerald-600 bg-emerald-500/10"
+                                   )}>
+                                     {facility.dangerClass}
+                                   </Badge>
+                                </td>
+                                <td className="px-4 py-3">
+                                   {(() => {
+                                     const comp = getComplianceForFacility(facility.id);
+                                     if (!comp) return <span className="text-[10px] text-muted-foreground italic">Yükleniyor...</span>;
+                                     
+                                     if (comp.overallCompliant) return <Badge className="bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-[9px] py-0 font-medium rounded-md">TAM UYGUN</Badge>;
+                                     if (comp.category === 'none') return <Badge variant="outline" className="text-muted-foreground text-[9px] py-0 font-normal rounded-md">ATAMA YOK</Badge>;
+                                     return <Badge className="bg-destructive/10 text-destructive border border-destructive/20 text-[9px] py-0 font-medium rounded-md">EKSİK ATAMA</Badge>;
+                                   })()}
+                                 </td>
+                                 <td className="px-4 py-3">
+                                   <div className="flex items-center gap-2">
+                                     <div className={cn("w-1.5 h-1.5 rounded-full", facility.isActive ? "bg-emerald-500" : "bg-muted-foreground/40")} />
+                                     <span className="text-xs text-muted-foreground">{facility.isActive ? "Aktif" : "Pasif"}</span>
+                                   </div>
+                                 </td>
+                                <td className="px-4 py-3 text-right">
+                                  <div className="flex items-center justify-end gap-1">
                                     <Button 
                                       variant="ghost" 
                                       size="icon" 
-                                      onClick={(e) => { e.stopPropagation(); deactivateMutation.mutate({ id: facility.id, isActive: facility.isActive }); }}
+                                      onClick={() => navigate(`/settings/facilities/locations?facilityId=${facility.id}`)}
                                       className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground"
-                                      title={facility.isActive ? "Pasife Al (Arşivle)" : "Aktife Al"}
+                                      title="Lokasyonları Yönet"
                                     >
-                                      {facility.isActive ? <Archive className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                                      <Layers className="w-3.5 h-3.5" />
                                     </Button>
-                                  )}
-                                  <Button variant="ghost" size="icon" onClick={() => handleView(facility)} className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground" title="Detay">
-                                    <Eye className="w-3.5 h-3.5" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" onClick={() => navigate(`/settings/facilities/${facility.id}/edit`)} className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground" title="Düzenle">
-                                    <Edit2 className="w-3.5 h-3.5" />
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
+
+                                    {hasAdminAccess && (
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        onClick={(e) => { e.stopPropagation(); deactivateMutation.mutate({ id: facility.id, isActive: facility.isActive }); }}
+                                        className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground"
+                                        title={facility.isActive ? "Pasife Al (Arşivle)" : "Aktife Al"}
+                                      >
+                                        {facility.isActive ? <Archive className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                                      </Button>
+                                    )}
+                                    <Button variant="ghost" size="icon" onClick={() => handleView(facility)} className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground" title="Detay">
+                                      <Eye className="w-3.5 h-3.5" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => navigate(`/settings/facilities/${facility.id}/edit`)} className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground" title="Düzenle">
+                                      <Edit2 className="w-3.5 h-3.5" />
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -557,63 +721,82 @@ const FacilitiesPage = () => {
             </Accordion>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredFacilities.map((facility) => (
-                <Card key={facility.id} className="border border-border/60 shadow-xs hover:border-border transition-all duration-200 rounded-lg bg-card flex flex-col">
-                   <CardHeader className="p-4 pb-2">
-                     <div className="flex justify-between items-start">
-                       <div className="w-10 h-10 bg-muted/40 rounded-md flex items-center justify-center text-primary/70 border border-border/40 overflow-hidden">
-                         {facility.logoUrl ? <img src={facility.logoUrl} alt="Logo" className="w-full h-full object-contain" /> : <Building2 className="w-5 h-5" />}
+              {filteredFacilities.map((facility) => {
+                const shortCode = facility.shortName || findStandardFacility(facility.name)?.code || '';
+                return (
+                  <Card key={facility.id} className="border border-border/60 shadow-xs hover:border-border transition-all duration-200 rounded-lg bg-card flex flex-col">
+                     <CardHeader className="p-4 pb-2">
+                       <div className="flex justify-between items-start">
+                         <div className="flex items-center gap-2">
+                           <div className="w-10 h-10 bg-muted/40 rounded-md flex items-center justify-center text-primary/70 border border-border/40 overflow-hidden">
+                             {facility.logoUrl ? <img src={facility.logoUrl} alt="Logo" className="w-full h-full object-contain" /> : <Building2 className="w-5 h-5" />}
+                           </div>
+                           {shortCode && (
+                             <Badge variant="outline" className="font-mono text-[10px] font-bold bg-primary/10 text-primary border-primary/20 px-1.5 py-0.5">
+                               {shortCode}
+                             </Badge>
+                           )}
+                         </div>
+                         <div className="flex items-center gap-1">
+                          {hasAdminAccess && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={(e) => { e.stopPropagation(); deactivateMutation.mutate({ id: facility.id, isActive: facility.isActive }); }}
+                              className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground"
+                              title={facility.isActive ? "Pasife Al (Arşivle)" : "Aktife Al"}
+                            >
+                              {facility.isActive ? <Archive className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                            </Button>
+                          )}
+                          <Badge variant={facility.isActive ? "outline" : "secondary"} className="font-normal text-[10px] px-2 py-0.5 rounded-md">
+                            {facility.isActive ? "Aktif" : "Pasif"}
+                          </Badge>
+                         </div>
                        </div>
-                       <div className="flex items-center gap-1">
-                        {hasAdminAccess && (
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={(e) => { e.stopPropagation(); deactivateMutation.mutate({ id: facility.id, isActive: facility.isActive }); }}
-                            className="w-7 h-7 rounded-md text-muted-foreground hover:text-foreground"
-                            title={facility.isActive ? "Pasife Al (Arşivle)" : "Aktife Al"}
-                          >
-                            {facility.isActive ? <Archive className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                          </Button>
-                        )}
-                        <Badge variant={facility.isActive ? "outline" : "secondary"} className="font-normal text-[10px] px-2 py-0.5 rounded-md">
-                          {facility.isActive ? "Aktif" : "Pasif"}
-                        </Badge>
-                       </div>
-                     </div>
-                   </CardHeader>
-                   <CardContent className="p-4 pt-1 flex-1 flex flex-col">
-                      <div className="mb-3">
-                         <h3 className="font-semibold text-foreground text-xs line-clamp-1">{facility.name}</h3>
-                         <p className="text-[10px] font-mono text-muted-foreground uppercase mt-0.5">{facility.id}</p>
-                      </div>
-                      
-                      <div className="space-y-2 mb-4 flex-1">
-                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                           <Building className="w-3.5 h-3.5 shrink-0 opacity-70" />
-                           <span className="truncate">{facility.type}</span>
-                         </div>
-                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                           <MapPin className="w-3.5 h-3.5 shrink-0 opacity-70" />
-                           <span className="truncate">{facility.city} / {facility.district}</span>
-                         </div>
-                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                           <Shield className="w-3.5 h-3.5 shrink-0 opacity-70" />
-                           <span className="truncate">{facility.dangerClass}</span>
-                         </div>
-                      </div>
+                     </CardHeader>
+                     <CardContent className="p-4 pt-1 flex-1 flex flex-col">
+                        <div className="mb-3">
+                           <h3 className="font-semibold text-foreground text-xs line-clamp-1">{facility.name}</h3>
+                           <p className="text-[10px] font-mono text-muted-foreground uppercase mt-0.5">{facility.id}</p>
+                        </div>
+                        
+                        <div className="space-y-2 mb-4 flex-1">
+                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                             <Building className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                             <span className="truncate">{facility.type}</span>
+                           </div>
+                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                             <MapPin className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                             <span className="truncate">{facility.city} / {facility.district}</span>
+                           </div>
+                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                             <Shield className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                             <span className="truncate">{facility.dangerClass}</span>
+                           </div>
+                        </div>
 
-                      <div className="flex items-center gap-2 pt-3 border-t border-border/40 mt-auto">
-                         <Button onClick={() => handleView(facility)} variant="outline" className="flex-1 h-8 rounded-md text-xs font-medium">
-                           Detayı Gör
-                         </Button>
-                         <Button variant="ghost" size="icon" onClick={() => navigate(`/settings/facilities/${facility.id}/edit`)} className="w-8 h-8 rounded-md text-muted-foreground hover:text-foreground" title="Düzenle">
-                           <Edit2 className="w-3.5 h-3.5" />
-                         </Button>
-                      </div>
-                   </CardContent>
-                </Card>
-              ))}
+                        <div className="flex items-center gap-2 pt-3 border-t border-border/40 mt-auto">
+                           <Button onClick={() => handleView(facility)} variant="outline" className="flex-1 h-8 rounded-md text-xs font-medium">
+                             Detayı Gör
+                           </Button>
+                           <Button 
+                             variant="outline" 
+                             size="icon" 
+                             onClick={() => navigate(`/settings/facilities/locations?facilityId=${facility.id}`)}
+                             className="w-8 h-8 rounded-md text-muted-foreground hover:text-foreground"
+                             title="Lokasyonları Yönet"
+                           >
+                             <Layers className="w-3.5 h-3.5" />
+                           </Button>
+                           <Button variant="ghost" size="icon" onClick={() => navigate(`/settings/facilities/${facility.id}/edit`)} className="w-8 h-8 rounded-md text-muted-foreground hover:text-foreground" title="Düzenle">
+                             <Edit2 className="w-3.5 h-3.5" />
+                           </Button>
+                        </div>
+                     </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )
         ) : (
@@ -624,6 +807,12 @@ const FacilitiesPage = () => {
           </div>
         )}
       </div>
+
+      {/* Standart Kodlar Rehberi Modalı */}
+      <StandardCodesModal
+        isOpen={isCodesModalOpen}
+        onClose={() => setIsCodesModalOpen(false)}
+      />
     </div>
   );
 };

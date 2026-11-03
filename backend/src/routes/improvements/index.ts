@@ -175,6 +175,24 @@ router.get('/facilities', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// Risk seviyesi normalizasyon yardımcısı
+function normalizeRiskKey(riskScore?: string | null): 'critical' | 'high' | 'medium' | 'low' | 'negligible' | 'unspecified' {
+  const rs = (riskScore || '').trim();
+  if (!rs) return 'unspecified';
+  if (rs === 'Kritik') return 'critical';
+  if (rs === 'Yüksek') return 'high';
+  if (rs === 'Önemli') return 'medium';
+  if (rs === 'Olası') return 'low';
+  if (rs === 'Önemsiz') return 'negligible';
+  const lower = rs.toLowerCase();
+  if (lower === 'kritik') return 'critical';
+  if (lower.includes('yüksek') || lower.includes('yuksek')) return 'high';
+  if (lower === 'önemli' || lower === 'onemli' || lower === 'orta') return 'medium';
+  if (lower === 'olası' || lower === 'olasi' || lower === 'düşük' || lower === 'dusuk') return 'low';
+  if (lower === 'önemsiz' || lower === 'onemsiz') return 'negligible';
+  return 'unspecified';
+}
+
 // 2. DASHBOARD ÖZET VERİLERİ (Grup ve Hastane Kırılımı)
 router.get('/dashboard-stats', async (req: AuthRequest, res: Response) => {
   try {
@@ -457,7 +475,10 @@ router.get('/dashboard-stats', async (req: AuthRequest, res: Response) => {
       }
 
       // Hastane
+      // Hastane ve Risk Kırılımı
       const hospName = r.facility?.shortName || r.facility?.name || 'Bilinmeyen';
+      const rk = normalizeRiskKey(r.riskScore);
+
       if (!hospitalCounts[r.facilityId]) {
         hospitalCounts[r.facilityId] = { 
           hospitalId: r.facilityId, 
@@ -473,10 +494,21 @@ router.get('/dashboard-stats', async (req: AuthRequest, res: Response) => {
           completionPercentage: 0,
           weightedCompletionPercentage: 0,
           open: 0,
+          risks: {
+            critical: 0,
+            high: 0,
+            medium: 0,
+            low: 0,
+            negligible: 0,
+            unspecified: 0,
+          },
           sheets: {}
         };
       }
       hospitalCounts[r.facilityId].total++;
+      if (hospitalCounts[r.facilityId].risks[rk] !== undefined) {
+        hospitalCounts[r.facilityId].risks[rk]++;
+      }
       if (isCompleted) hospitalCounts[r.facilityId].completed++;
       if (isInProgress) hospitalCounts[r.facilityId].inProgress++;
       if (isNotStarted) hospitalCounts[r.facilityId].notStarted++;
@@ -500,9 +532,20 @@ router.get('/dashboard-stats', async (req: AuthRequest, res: Response) => {
           progressSum: 0,
           completionPercentage: 0,
           weightedCompletionPercentage: 0,
+          risks: {
+            critical: 0,
+            high: 0,
+            medium: 0,
+            low: 0,
+            negligible: 0,
+            unspecified: 0,
+          },
         };
       }
       hospitalCounts[r.facilityId].sheets[r.sheetType].total++;
+      if (hospitalCounts[r.facilityId].sheets[r.sheetType].risks[rk] !== undefined) {
+        hospitalCounts[r.facilityId].sheets[r.sheetType].risks[rk]++;
+      }
       if (isCompleted) hospitalCounts[r.facilityId].sheets[r.sheetType].completed++;
       if (isInProgress) hospitalCounts[r.facilityId].sheets[r.sheetType].inProgress++;
       if (isNotStarted) hospitalCounts[r.facilityId].sheets[r.sheetType].notStarted++;
@@ -578,6 +621,8 @@ router.get('/dashboard-stats', async (req: AuthRequest, res: Response) => {
         const recProgress = isComp ? 100 : (isProg ? Math.min(100, Math.max(0, r.progress || 0)) : 0);
 
         const hName = r.facility?.shortName || r.facility?.name || 'Bilinmeyen';
+        const rk = normalizeRiskKey(r.riskScore);
+
         if (!ghCounts[r.facilityId]) {
           ghCounts[r.facilityId] = {
             hospitalId: r.facilityId,
@@ -593,9 +638,20 @@ router.get('/dashboard-stats', async (req: AuthRequest, res: Response) => {
             progressSum: 0,
             completionPercentage: 0,
             weightedCompletionPercentage: 0,
+            risks: {
+              critical: 0,
+              high: 0,
+              medium: 0,
+              low: 0,
+              negligible: 0,
+              unspecified: 0,
+            },
           };
         }
         ghCounts[r.facilityId].total++;
+        if (ghCounts[r.facilityId].risks[rk] !== undefined) {
+          ghCounts[r.facilityId].risks[rk]++;
+        }
         if (isComp) ghCounts[r.facilityId].completed++;
         if (isProg) ghCounts[r.facilityId].inProgress++;
         if (isNotSt) ghCounts[r.facilityId].notStarted++;
@@ -1384,7 +1440,7 @@ router.patch('/records/:id/action-note', async (req: AuthRequest, res: Response)
       data: updateData,
     });
 
-    const validEvidence = Array.isArray(evidencePhotos) ? evidencePhotos : [];
+    const validEvidence = Array.isArray(evidencePhotos) ? evidencePhotos.slice(0, 3) : [];
     const validDocs = Array.isArray(documents) ? documents : [];
 
     const historyPayload = {
@@ -1957,7 +2013,7 @@ export const DEFAULT_ACTION_TEMPLATES = [
     icon: 'FileText',
     color: 'blue',
     suggestedStatus: 'Devam Ediyor',
-    progressWeight: 10,
+    progressWeight: 15,
     fields: [
       { key: 'talepNo', label: 'Talep Numarası', type: 'text', placeholder: 'Örn: 2026-9481', required: true },
       { key: 'tarih', label: 'Talep Tarihi', type: 'date', required: false },
@@ -1974,7 +2030,7 @@ export const DEFAULT_ACTION_TEMPLATES = [
     icon: 'Scale',
     color: 'purple',
     suggestedStatus: 'Devam Ediyor',
-    progressWeight: 10,
+    progressWeight: 30,
     fields: [
       { key: 'ihaleTarihi', label: 'İhale / Toplantı Tarihi', type: 'date', required: false },
       { key: 'teklifSayisi', label: 'Alınan Teklif Sayısı / Detay', type: 'text', placeholder: 'Örn: 3 firma teklifi toplandı', required: false },
@@ -1991,7 +2047,7 @@ export const DEFAULT_ACTION_TEMPLATES = [
     icon: 'ShoppingCart',
     color: 'emerald',
     suggestedStatus: 'Devam Ediyor',
-    progressWeight: 20,
+    progressWeight: 50,
     fields: [
       { key: 'siparisNo', label: 'Sipariş (SS) Numarası', type: 'text', placeholder: 'Örn: SS-84210', required: true },
       { key: 'firma', label: 'Yüklenici / Tedarikçi Firma', type: 'text', placeholder: 'Örn: ABC İklimlendirme Ltd.', required: true },
@@ -2009,7 +2065,7 @@ export const DEFAULT_ACTION_TEMPLATES = [
     icon: 'Package',
     color: 'indigo',
     suggestedStatus: 'Devam Ediyor',
-    progressWeight: 10,
+    progressWeight: 65,
     fields: [
       { key: 'malzeme', label: 'Malzeme / Parça Adı', type: 'text', placeholder: 'Örn: Danfoss Genleşme Valfi', required: true },
       { key: 'terminTarihi', label: 'Tahmini Teslim Tarihi', type: 'date', required: false },
@@ -2026,7 +2082,7 @@ export const DEFAULT_ACTION_TEMPLATES = [
     icon: 'HardHat',
     color: 'amber',
     suggestedStatus: 'Devam Ediyor',
-    progressWeight: 10,
+    progressWeight: 70,
     fields: [
       { key: 'firma', label: 'Firma Adı', type: 'text', placeholder: 'Örn: Güven Yangın Sistemleri', required: true },
       { key: 'beklenenTarih', label: 'Sahaya Geliş Tarihi', type: 'date', required: false },
@@ -2043,7 +2099,7 @@ export const DEFAULT_ACTION_TEMPLATES = [
     icon: 'Wrench',
     color: 'cyan',
     suggestedStatus: 'Devam Ediyor',
-    progressWeight: 10,
+    progressWeight: 80,
     fields: [
       { key: 'ekip', label: 'Müdahale Eden Ekip / Firma', type: 'text', placeholder: 'Örn: Hastane Biyomedikal / Dış Servis', required: true },
       { key: 'yapilanIslem', label: 'Yapılan Müdahale', type: 'text', placeholder: 'Örn: Kablo çekimi ve montaj', required: true },

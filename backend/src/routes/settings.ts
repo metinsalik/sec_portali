@@ -160,25 +160,43 @@ router.post('/facilities', managementMiddleware, async (req: AuthRequest, res: R
     taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings, locations 
   } = req.body;
 
+  if (!id || !name) {
+    return res.status(400).json({ error: 'Tesis kodu ve tesis adı zorunludur.' });
+  }
+
   try {
     const facility = await prisma.facility.create({
       data: {
-        id, name, shortName, type, city, district, fullAddress,
-        phone, email, website, logoUrl: logoUrl || '/mlpcare.jpg', commercialTitle, taxOffice,
-        taxNumber, sgkNumber, naceCode, dangerClass, 
+        id: id.trim(),
+        name: name.trim(),
+        shortName: shortName?.trim() || null,
+        type: type || null,
+        city: city || null,
+        district: district || null,
+        fullAddress: fullAddress || null,
+        phone: phone || null,
+        email: email || null,
+        website: website || null,
+        logoUrl: logoUrl || '/mlpcare.jpg',
+        commercialTitle: commercialTitle || null,
+        taxOffice: taxOffice || null,
+        taxNumber: taxNumber || null,
+        sgkNumber: sgkNumber || null,
+        naceCode: naceCode || null,
+        dangerClass: dangerClass || 'Az Tehlikeli', 
         employeeCount: parseInt(employeeCount) || 0,
         buildings: {
           create: buildings?.map((b: any) => ({
-            name: b.name,
-            constructionYear: parseInt(b.constructionYear) || null,
-            buildingHeight: parseFloat(b.buildingHeight) || null,
-            structureHeight: parseFloat(b.structureHeight) || null,
-            buildingFloors: parseInt(b.buildingFloors) || null,
-            structureFloors: parseInt(b.structureFloors) || null,
-            closedArea: parseFloat(b.closedArea) || null,
-            parkingArea: parseFloat(b.parkingArea) || null,
-            gardenArea: parseFloat(b.gardenArea) || null,
-            bedCapacity: parseInt(b.bedCapacity) || null
+            name: b.name || 'İsimsiz Blok',
+            constructionYear: b.constructionYear ? parseInt(b.constructionYear) || null : null,
+            buildingHeight: b.buildingHeight ? parseFloat(b.buildingHeight) || null : null,
+            structureHeight: b.structureHeight ? parseFloat(b.structureHeight) || null : null,
+            buildingFloors: b.buildingFloors ? parseInt(b.buildingFloors) || null : null,
+            structureFloors: b.structureFloors ? parseInt(b.structureFloors) || null : null,
+            closedArea: b.closedArea ? parseFloat(b.closedArea) || null : null,
+            parkingArea: b.parkingArea ? parseFloat(b.parkingArea) || null : null,
+            gardenArea: b.gardenArea ? parseFloat(b.gardenArea) || null : null,
+            bedCapacity: b.bedCapacity ? parseInt(b.bedCapacity) || null : null
           })) || []
         },
         locations: {
@@ -206,48 +224,104 @@ router.post('/facilities', managementMiddleware, async (req: AuthRequest, res: R
 router.put('/facilities/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
   const oldId = (req.params as Record<string, string>).id as any;
   const { 
-    id: newId, name, shortName, type, city, district, fullAddress, 
+    name, shortName, type, city, district, fullAddress, 
     phone, email, website, logoUrl, commercialTitle, taxOffice, 
     taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings, locations 
   } = req.body;
 
   try {
-    // Once binalari temizle (basit yaklasim)
-    await prisma.facilityLocation.deleteMany({ where: { facilityId: oldId } as any });
-    await prisma.facilityBuilding.deleteMany({ where: { facilityId: oldId } as any });
+    const existingFacility = await prisma.facility.findUnique({
+      where: { id: oldId },
+      include: { buildings: true }
+    });
+    if (!existingFacility) {
+      return res.status(404).json({ error: 'Tesis bulunamadı.' });
+    }
 
-    const facility = await prisma.facility.update({
-      where: { id: oldId } as any,
-      data: {
-        id: (newId as string) || oldId,
-        name, shortName, type, city, district, fullAddress,
-        phone, email, website, logoUrl, commercialTitle, taxOffice,
-        taxNumber, sgkNumber, naceCode, dangerClass,
-        employeeCount: parseInt(employeeCount) || 0,
-        isActive: req.body.isActive !== undefined ? req.body.isActive : true,
-        buildings: {
-          create: buildings?.map((b: any) => ({
-            name: b.name,
-            constructionYear: parseInt(b.constructionYear) || null,
-            buildingHeight: parseFloat(b.buildingHeight) || null,
-            structureHeight: parseFloat(b.structureHeight) || null,
-            buildingFloors: parseInt(b.buildingFloors) || null,
-            structureFloors: parseInt(b.structureFloors) || null,
-            closedArea: parseFloat(b.closedArea) || null,
-            parkingArea: parseFloat(b.parkingArea) || null,
-            gardenArea: parseFloat(b.gardenArea) || null,
-            bedCapacity: parseInt(b.bedCapacity) || null
-          })) || []
-        },
-        locations: {
-          create: locations?.map((l: any) => ({
+    // Binaları güvenli şekilde güncelle
+    if (Array.isArray(buildings)) {
+      const incomingIds = buildings.filter((b: any) => b.id).map((b: any) => b.id);
+      const existingIds = existingFacility.buildings.map(b => b.id);
+      const toDeleteIds = existingIds.filter(bid => !incomingIds.includes(bid));
+
+      if (toDeleteIds.length > 0) {
+        // Silinecek binalara bağlı lokasyonların referansını temizle
+        await prisma.facilityLocation.updateMany({
+          where: { buildingId: { in: toDeleteIds } },
+          data: { buildingId: null }
+        });
+        await prisma.facilityBuilding.deleteMany({
+          where: { id: { in: toDeleteIds } }
+        });
+      }
+
+      for (const b of buildings) {
+        const buildingData = {
+          name: b.name || 'İsimsiz Blok',
+          constructionYear: b.constructionYear ? parseInt(b.constructionYear) || null : null,
+          buildingHeight: b.buildingHeight ? parseFloat(b.buildingHeight) || null : null,
+          structureHeight: b.structureHeight ? parseFloat(b.structureHeight) || null : null,
+          buildingFloors: b.buildingFloors ? parseInt(b.buildingFloors) || null : null,
+          structureFloors: b.structureFloors ? parseInt(b.structureFloors) || null : null,
+          closedArea: b.closedArea ? parseFloat(b.closedArea) || null : null,
+          parkingArea: b.parkingArea ? parseFloat(b.parkingArea) || null : null,
+          gardenArea: b.gardenArea ? parseFloat(b.gardenArea) || null : null,
+          bedCapacity: b.bedCapacity ? parseInt(b.bedCapacity) || null : null
+        };
+        if (b.id && existingIds.includes(b.id)) {
+          await prisma.facilityBuilding.update({
+            where: { id: b.id },
+            data: buildingData
+          });
+        } else {
+          await prisma.facilityBuilding.create({
+            data: {
+              ...buildingData,
+              facilityId: oldId
+            }
+          });
+        }
+      }
+    }
+
+    // Lokasyonlar: Mevcut lokasyonları ASLA silme; sadece id'si olmayan yeni lokasyonlar varsa ekle
+    if (Array.isArray(locations) && locations.length > 0) {
+      const newLocations = locations.filter((l: any) => !l.id);
+      if (newLocations.length > 0) {
+        await prisma.facilityLocation.createMany({
+          data: newLocations.map((l: any) => ({
+            facilityId: oldId,
             name: l.name || l.department || l.description || l.floor || l.building || 'İsimsiz',
             building: l.building || null,
             floor: l.floor || null,
             department: l.department || null,
             description: l.description || null
-          })) || []
-        }
+          }))
+        });
+      }
+    }
+
+    const facility = await prisma.facility.update({
+      where: { id: oldId } as any,
+      data: {
+        name: name !== undefined ? name : existingFacility.name,
+        shortName: shortName !== undefined ? shortName : existingFacility.shortName,
+        type: type !== undefined ? type : existingFacility.type,
+        city: city !== undefined ? city : existingFacility.city,
+        district: district !== undefined ? district : existingFacility.district,
+        fullAddress: fullAddress !== undefined ? fullAddress : existingFacility.fullAddress,
+        phone: phone !== undefined ? phone : existingFacility.phone,
+        email: email !== undefined ? email : existingFacility.email,
+        website: website !== undefined ? website : existingFacility.website,
+        logoUrl: logoUrl !== undefined ? logoUrl : existingFacility.logoUrl,
+        commercialTitle: commercialTitle !== undefined ? commercialTitle : existingFacility.commercialTitle,
+        taxOffice: taxOffice !== undefined ? taxOffice : existingFacility.taxOffice,
+        taxNumber: taxNumber !== undefined ? taxNumber : existingFacility.taxNumber,
+        sgkNumber: sgkNumber !== undefined ? sgkNumber : existingFacility.sgkNumber,
+        naceCode: naceCode !== undefined ? naceCode : existingFacility.naceCode,
+        dangerClass: dangerClass || existingFacility.dangerClass,
+        employeeCount: employeeCount !== undefined ? (parseInt(employeeCount) || 0) : existingFacility.employeeCount,
+        isActive: req.body.isActive !== undefined ? req.body.isActive : existingFacility.isActive
       },
       include: { buildings: true, locations: true }
     });
