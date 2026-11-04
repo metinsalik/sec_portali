@@ -205,9 +205,22 @@ router.get('/dashboard-stats', async (req: AuthRequest, res: Response) => {
       YANGIN: ['SULU_SONDURME_PK_BAKIM', 'GAZLI_SONDURME_PK_BAKIM', 'BASINCLANDIRMA_PK_BAKIM', 'YANGIN_ALGILAMA_PK_BAKIM'],
     };
 
+    const user = getUser(req);
+    const isAdmin = !!(user.isAdmin || user.isManagement || user.roles?.includes('admin') || user.roles?.includes('management'));
+
     const whereAnd: any[] = [{ isArchived: false }];
 
-    if (facilityId && facilityId !== 'ALL') {
+    if (!isAdmin && user.facilities && user.facilities.length > 0) {
+      if (facilityId && facilityId !== 'ALL') {
+        if (user.facilities.includes(facilityId as string)) {
+          whereAnd.push({ facilityId: facilityId as string });
+        } else {
+          whereAnd.push({ facilityId: 'UNAUTHORIZED_NONE' });
+        }
+      } else {
+        whereAnd.push({ facilityId: { in: user.facilities } });
+      }
+    } else if (facilityId && facilityId !== 'ALL') {
       whereAnd.push({ facilityId: facilityId as string });
     }
 
@@ -591,6 +604,9 @@ router.get('/dashboard-stats', async (req: AuthRequest, res: Response) => {
     let groupHospitals: any[] = [];
     if (facilityId && facilityId !== 'ALL') {
       const compWhere: any = { isArchived: false };
+      if (!isAdmin && user.facilities && user.facilities.length > 0) {
+        compWhere.facilityId = { in: user.facilities };
+      }
       if (moduleGroup && moduleGroup !== 'ALL') {
         const allowedSheets = MODULE_SHEET_MAP[moduleGroup as string] || [];
         compWhere.OR = [
@@ -745,9 +761,22 @@ router.get('/records', async (req: AuthRequest, res: Response) => {
       limit = '500',
     } = req.query;
 
+    const user = getUser(req);
+    const isAdmin = !!(user.isAdmin || user.isManagement || user.roles?.includes('admin') || user.roles?.includes('management'));
+
     const whereClause: any = { isArchived: false };
 
-    if (facilityId && facilityId !== 'ALL') {
+    if (!isAdmin && user.facilities && user.facilities.length > 0) {
+      if (facilityId && facilityId !== 'ALL') {
+        if (user.facilities.includes(facilityId as string)) {
+          whereClause.facilityId = facilityId as string;
+        } else {
+          whereClause.facilityId = 'UNAUTHORIZED_NONE';
+        }
+      } else {
+        whereClause.facilityId = { in: user.facilities };
+      }
+    } else if (facilityId && facilityId !== 'ALL') {
       whereClause.facilityId = facilityId as string;
     }
     if (moduleGroup && moduleGroup !== 'ALL') {
@@ -831,12 +860,25 @@ router.get('/critical', async (req: AuthRequest, res: Response) => {
   try {
     const { facilityId, status, sheetType } = req.query;
 
+    const user = getUser(req);
+    const isAdmin = !!(user.isAdmin || user.isManagement || user.roles?.includes('admin') || user.roles?.includes('management'));
+
     const whereClause: any = {
       isArchived: false,
       riskScore: 'Kritik',
     };
 
-    if (facilityId && facilityId !== 'ALL') {
+    if (!isAdmin && user.facilities && user.facilities.length > 0) {
+      if (facilityId && facilityId !== 'ALL') {
+        if (user.facilities.includes(facilityId as string)) {
+          whereClause.facilityId = facilityId as string;
+        } else {
+          whereClause.facilityId = 'UNAUTHORIZED_NONE';
+        }
+      } else {
+        whereClause.facilityId = { in: user.facilities };
+      }
+    } else if (facilityId && facilityId !== 'ALL') {
       whereClause.facilityId = facilityId as string;
     }
     if (status && status !== 'ALL') {

@@ -261,26 +261,7 @@ export const ImprovementsLayout: React.FC = () => {
             {isCollapsed ? "—" : "GENEL"}
           </div>
 
-          {/* 1. Dashboard */}
-          <button
-            onClick={() => {
-              navigate('/operations-management/improvements');
-              setIsSidebarOpen(false);
-            }}
-            title={isCollapsed ? "Dashboard" : undefined}
-            className={cn(
-              "w-full flex items-center rounded-lg text-sm font-medium transition-colors",
-              isCollapsed ? "justify-center h-10 px-0" : "gap-3 px-3 py-2",
-              currentPath === '/operations-management/improvements'
-                ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            <LayoutDashboard className="w-4 h-4 shrink-0 text-blue-500" />
-            {!isCollapsed && <span>Dashboard</span>}
-          </button>
-
-          {/* 2. Yönetici Özeti */}
+          {/* 1. Yönetici Özeti (Ana Panel) */}
           <button
             onClick={() => {
               navigate('/operations-management/improvements/executive-summary');
@@ -290,7 +271,7 @@ export const ImprovementsLayout: React.FC = () => {
             className={cn(
               "w-full flex items-center rounded-lg text-sm font-medium transition-colors",
               isCollapsed ? "justify-center h-10 px-0" : "gap-3 px-3 py-2",
-              currentPath === '/operations-management/improvements/executive-summary'
+              currentPath === '/operations-management/improvements/executive-summary' || currentPath === '/operations-management/improvements'
                 ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
@@ -301,32 +282,6 @@ export const ImprovementsLayout: React.FC = () => {
                 <span className="flex-1 text-left">Yönetici Özeti</span>
                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-indigo-300 text-indigo-600 dark:border-indigo-800 dark:text-indigo-400">
                   Özet
-                </Badge>
-              </>
-            )}
-          </button>
-
-          {/* 2. Kritik Maddeler */}
-          <button
-            onClick={() => {
-              navigate('/operations-management/improvements/critical');
-              setIsSidebarOpen(false);
-            }}
-            title={isCollapsed ? "Kritik Maddeler" : undefined}
-            className={cn(
-              "w-full flex items-center rounded-lg text-sm font-medium transition-colors",
-              isCollapsed ? "justify-center h-10 px-0" : "gap-3 px-3 py-2",
-              currentPath === '/operations-management/improvements/critical'
-                ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            <AlertOctagon className="w-4 h-4 shrink-0 text-red-500" />
-            {!isCollapsed && (
-              <>
-                <span className="flex-1 text-left">Kritik Maddeler</span>
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-red-300 text-red-600 dark:border-red-800 dark:text-red-400">
-                  Kritik
                 </Badge>
               </>
             )}

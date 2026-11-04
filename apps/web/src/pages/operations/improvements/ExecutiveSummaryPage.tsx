@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 import { ImprovementTable } from './ImprovementTable';
 import { AuditProgressTrendChart } from './AuditProgressTrendChart';
 import type { ImprovementRecord } from './types';
@@ -229,6 +230,16 @@ export const ExecutiveSummaryPage: React.FC = () => {
     facilities?: FacilityOption[];
   }>() || {};
 
+  // Kullanıcı Yetki & Tesis Kontrolü
+  const { user } = useAuth();
+  const hasAdminAccess = !!(
+    user?.isAdmin || 
+    user?.isManagement || 
+    user?.roles?.includes('admin') || 
+    user?.roles?.includes('management')
+  );
+  const userFacilities = useMemo(() => user?.facilities || [], [user?.facilities]);
+
   const [selectedFacilityId, setSelectedFacilityIdState] = useState<string>(() => {
     return outletCtx.selectedFacilityId || localStorage.getItem('activeFacilityId') || 'ALL';
   });
@@ -239,8 +250,14 @@ export const ExecutiveSummaryPage: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
 
-  // Tablo Kayıtları (Tüm kayıtlar canlı filtreleme için çekilir)
-  const [records, setRecords] = useState<ImprovementRecord[]>([]);
+  // Tablo Kayıtları (Tüm kayıtlar çekilir, yetkiye göre süzülür)
+  const [rawRecords, setRawRecords] = useState<ImprovementRecord[]>([]);
+
+  // Kullanıcı yetkisine göre yetkili kayıtlar
+  const records = useMemo(() => {
+    if (hasAdminAccess || userFacilities.length === 0) return rawRecords;
+    return rawRecords.filter(r => userFacilities.includes(r.facilityId));
+  }, [rawRecords, hasAdminAccess, userFacilities]);
   const [loadingRecords, setLoadingRecords] = useState(true);
 
   // Akordiyon durumları (Hastaneler ve Takip Grubu Barları)
@@ -275,6 +292,12 @@ export const ExecutiveSummaryPage: React.FC = () => {
 
   // KULLANICI İSTEĞİ: Tesisler Özeti Akordiyonu (Default kapalı)
   const [isFacilitySummaryOpen, setIsFacilitySummaryOpen] = useState<boolean>(false);
+
+  // KULLANICI İSTEĞİ: Trend Grafiği (Default KAPALI, istendiğinde açılır)
+  const [isTrendChartOpen, setIsTrendChartOpen] = useState<boolean>(false);
+
+  // KULLANICI İSTEĞİ: Hastanelere Göre Bulgu Dağılımı Bölümü (Katlanabilir)
+  const [isHospitalsListOpen, setIsHospitalsListOpen] = useState<boolean>(true);
 
   // Seçili Denetim Başlığı / Takip Alanı Filtresi (ALL, DENETIMLER, ELEKTRIK_PK vb.)
   const [selectedSheetFilter, setSelectedSheetFilter] = useState<string>(() => {
@@ -358,7 +381,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
       });
       const data = await res.json();
       if (data.success) {
-        setRecords(data.data || []);
+        setRawRecords(data.data || []);
       }
     } catch (err) {
       console.error('Error fetching executive records:', err);
@@ -366,6 +389,16 @@ export const ExecutiveSummaryPage: React.FC = () => {
       setLoadingRecords(false);
     }
   };
+
+    useEffect(() => {
+    if (!hasAdminAccess && userFacilities.length === 1) {
+      const myFac = userFacilities[0];
+      if (selectedFacilityId !== myFac) {
+        setSelectedFacilityIdState(myFac);
+        localStorage.setItem('activeFacilityId', myFac);
+      }
+    }
+  }, [hasAdminAccess, userFacilities, selectedFacilityId]);
 
   useEffect(() => {
     fetchStats();
@@ -654,9 +687,17 @@ export const ExecutiveSummaryPage: React.FC = () => {
     };
   }, [records, selectedFacilityId]);
 
-  // Filtrelenmiş ve sıralanmış hastane listesi
+  // Yetkili Tesisler Listesi (Yetkisiz hastaneler filtrelenir)
+  const authorizedFacilities = useMemo(() => {
+    if (hasAdminAccess || userFacilities.length === 0) return facilities;
+    return facilities.filter(f => userFacilities.includes(f.id));
+  }, [facilities, hasAdminAccess, userFacilities]);
+  // Filtrelenmiş ve sıralanmış hastane listesi (Yetkili tesislerle sınırlandırılmış)
   const filteredHospitals = useMemo(() => {
-    const list = stats?.hospitals || [];
+    const rawList = stats?.hospitals || [];
+    const list = (hasAdminAccess || userFacilities.length === 0)
+      ? rawList
+      : rawList.filter(h => userFacilities.includes(h.hospitalId));
     return list.filter(hosp => {
       // İsim filtresi
       if (searchQuery.trim()) {
@@ -815,15 +856,51 @@ export const ExecutiveSummaryPage: React.FC = () => {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 2.5 DENETİM İLERLEME & KAPSAM DEĞİŞİMİ TREND GRAFİĞİ               */}
-      {/* (KULLANICI İSTEĞİ: KPI ALTINDA, HASTANELER DAĞILIMI ÜSTÜNDE)        */}
+      {/* 2.5 DENETİM İLERLEME & KAPSAM DEĞİŞİMİ TREND GRAFİĞİ (KATLANABİLİR) */}
+      {/* (KULLANICI İSTEĞİ: DEFAULT KAPALI, İSTENDİĞİNDE AÇILIR)             */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      <AuditProgressTrendChart
-        records={records}
-        facilities={facilities}
-        selectedFacilityId={selectedFacilityId}
-        onFacilityChange={handleHospitalSelect}
-      />
+      <div className="bg-card text-card-foreground border border-border/80 rounded-2xl shadow-xs overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setIsTrendChartOpen(prev => !prev)}
+          className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-muted/30 transition-colors text-left cursor-pointer select-none"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center font-bold shrink-0">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h3 className="text-sm sm:text-base font-bold text-foreground tracking-tight">
+                  Denetim İlerleme & Kapsam Değişimi Trend Grafiği
+                </h3>
+                <Badge variant="outline" className="text-[10px] font-mono bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
+                  {isTrendChartOpen ? 'Grafik Açık' : 'Tıklayarak Açın (Kapalı)'}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Bulgu eklenme ve ağırlıklı ilerleme hızını zaman serisinde inceleyin (Earned Value / Burnup Modeli)
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground shrink-0">
+            <span className="hidden sm:inline">{isTrendChartOpen ? 'Grafiği Gizle' : 'Grafiği Göster'}</span>
+            <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", isTrendChartOpen ? "rotate-180" : "")} />
+          </div>
+        </button>
+
+        {isTrendChartOpen && (
+          <div className="border-t border-border/70 p-4 sm:p-6 bg-background animate-in slide-in-from-top-1 duration-150">
+            <AuditProgressTrendChart
+              records={records}
+              facilities={authorizedFacilities}
+              selectedFacilityId={selectedFacilityId}
+              onFacilityChange={handleHospitalSelect}
+            />
+          </div>
+        )}
+      </div>
 
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* 3. ANA BÖLÜM: HASTANELERE GÖRE BULGU DAĞILIMI                       */}
@@ -853,6 +930,17 @@ export const ExecutiveSummaryPage: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
+              {/* KULLANICI İSTEĞİ: Bölümü Aç / Kapa Butonu */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsHospitalsListOpen(prev => !prev)}
+                className="text-xs h-8 gap-1.5 cursor-pointer font-medium"
+              >
+                <span>{isHospitalsListOpen ? 'Bölümü Daralt' : 'Bölümü Aç'}</span>
+                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-200", isHospitalsListOpen && "rotate-180")} />
+              </Button>
+
               {selectedFacilityId !== 'ALL' && (
                 <div className="px-3.5 py-1.5 rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-2 text-xs text-primary font-medium">
                   <span>
@@ -883,6 +971,8 @@ export const ExecutiveSummaryPage: React.FC = () => {
           </div>
         </div>
 
+        {isHospitalsListOpen && (
+          <>
         {/* RİSK VE DURUM KPI GÖSTERGELERİ & FİLTRELEME ALANI */}
         <div className="p-5 border-b bg-background/50 space-y-4">
           
@@ -1746,6 +1836,14 @@ export const ExecutiveSummaryPage: React.FC = () => {
             )}
           </div>
         </div>
+          </>
+        )}
+
+        {!isHospitalsListOpen && (
+          <div className="p-4 px-6 text-center text-xs text-muted-foreground flex items-center justify-center gap-2 bg-muted/10">
+            <span>Hastane dağılım listesi gizlendi ({filteredHospitals.length} Tesis). Görüntülemek için yukarıdaki <strong>Bölümü Aç</strong> butonuna tıklayabilirsiniz.</span>
+          </div>
+        )}
 
       </div>
 

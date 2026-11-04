@@ -263,7 +263,7 @@ function App() {
                       </ProtectedRoute>
                     }
                   >
-                    <Route index element={<ImprovementsDashboardPage />} />
+                    <Route index element={<Navigate to="/operations-management/improvements/executive-summary" replace />} />
                     <Route path="executive-summary" element={<ExecutiveSummaryPage />} />
                     <Route path="critical" element={<CriticalItemsPage />} />
                     <Route path="denetimler/dashboard" element={<ReportModuleDashboard moduleGroup="DENETIMLER" />} />
