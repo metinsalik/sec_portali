@@ -471,7 +471,11 @@ export const AuditProgressTrendChart: React.FC<AuditProgressTrendChartProps> = (
                   onChange={(e) => handleFacilitySelect(e.target.value)}
                   className="w-full bg-background border border-border rounded-xl px-3 py-2 text-xs font-medium text-foreground focus:ring-1 focus:ring-primary cursor-pointer shadow-2xs"
                 >
-                  <option value="ALL">Tüm Hastaneler (Konsolide)</option>
+                  <option value="ALL">
+                    {facilities.length > 1 
+                      ? `Tüm Tesisler (${facilities.length} Tesis Toplu)` 
+                      : 'Tüm Hastaneler (Konsolide)'}
+                  </option>
                   {facilities.map(fac => (
                     <option key={fac.id} value={fac.id}>
                       {fac.name} {fac.shortName ? `(${fac.shortName})` : ''}

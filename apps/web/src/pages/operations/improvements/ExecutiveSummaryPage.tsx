@@ -390,12 +390,20 @@ export const ExecutiveSummaryPage: React.FC = () => {
     }
   };
 
-    useEffect(() => {
-    if (!hasAdminAccess && userFacilities.length === 1) {
-      const myFac = userFacilities[0];
-      if (selectedFacilityId !== myFac) {
-        setSelectedFacilityIdState(myFac);
-        localStorage.setItem('activeFacilityId', myFac);
+  useEffect(() => {
+    if (!hasAdminAccess) {
+      if (userFacilities.length === 1) {
+        const myFac = userFacilities[0];
+        if (selectedFacilityId !== myFac) {
+          setSelectedFacilityIdState(myFac);
+          localStorage.setItem('activeFacilityId', myFac);
+        }
+      } else if (userFacilities.length > 1) {
+        // Birden çok tesisi olan kullanıcı: Geçersiz bir tesis seçilmişse ALL (kendi yetkisindeki tesisler toplu) moduna çek
+        if (selectedFacilityId !== 'ALL' && !userFacilities.includes(selectedFacilityId)) {
+          setSelectedFacilityIdState('ALL');
+          localStorage.removeItem('activeFacilityId');
+        }
       }
     }
   }, [hasAdminAccess, userFacilities, selectedFacilityId]);
@@ -949,8 +957,9 @@ export const ExecutiveSummaryPage: React.FC = () => {
                   <button 
                     onClick={() => handleHospitalSelect('ALL')}
                     className="text-xs underline hover:text-primary/80 ml-1.5 cursor-pointer font-bold"
+                    title={userFacilities.length > 1 && !hasAdminAccess ? "Yetkili tüm tesislerinizi toplu görün" : "Tüm hastaneleri göster"}
                   >
-                    Kaldır
+                    {userFacilities.length > 1 && !hasAdminAccess ? "Toplu Görünüme Dön" : "Kaldır"}
                   </button>
                 </div>
               )}
@@ -1229,7 +1238,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
               <div className="flex items-center gap-2.5 flex-wrap">
                 <Building2 className="w-4 h-4 text-primary shrink-0" />
                 <span className="text-xs sm:text-sm font-bold text-foreground">
-                  Tüm Tesislerin Dağılım Özeti ({filteredHospitals.length} Tesis)
+                  {userFacilities.length > 0 && !hasAdminAccess ? `Yetkili Tesislerin Dağılım Özeti (${filteredHospitals.length} Tesis)` : `Tüm Tesislerin Dağılım Özeti (${filteredHospitals.length} Tesis)`}
                 </span>
                 <Badge variant="outline" className="text-[11px] font-mono font-bold bg-muted/60">
                   {selectedRiskFilter === 'ALL' ? 'Tüm Riskler' : (selectedRiskFilter === 'OLASI_ONEMSIZ' ? 'Olası ve Önemsiz' : `${selectedRiskFilter} Risk`)}

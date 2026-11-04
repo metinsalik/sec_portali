@@ -78,10 +78,17 @@ export const ImprovementsLayout: React.FC = () => {
         // Kullanıcı yönetici değilse veya önceden seçilmiş bir tesis varsa ayarla
         const activeLocal = localStorage.getItem('activeFacilityId');
         if (!hasAdminAccess) {
-          if (facs.length > 0) {
-            const defaultId = activeLocal && facs.some(f => f.id === activeLocal) ? activeLocal : facs[0].id;
-            setSelectedFacilityId(defaultId);
-            localStorage.setItem('activeFacilityId', defaultId);
+          if (facs.length === 1) {
+            setSelectedFacilityId(facs[0].id);
+            localStorage.setItem('activeFacilityId', facs[0].id);
+          } else if (facs.length > 1) {
+            if (activeLocal && facs.some(f => f.id === activeLocal)) {
+              setSelectedFacilityId(activeLocal);
+            } else {
+              // Birden çok tesisi varsa varsayılan olarak ALL (yetkili tesisler toplu)
+              setSelectedFacilityId('ALL');
+              localStorage.removeItem('activeFacilityId');
+            }
           }
         } else if (activeLocal && facs.some(f => f.id === activeLocal)) {
           setSelectedFacilityId(activeLocal);
@@ -231,13 +238,19 @@ export const ImprovementsLayout: React.FC = () => {
                     setSelectedFacilityId(newId);
                     if (newId !== 'ALL') {
                       localStorage.setItem('activeFacilityId', newId);
-                      window.dispatchEvent(new Event('facilityChanged'));
+                    } else {
+                      localStorage.removeItem('activeFacilityId');
                     }
+                    window.dispatchEvent(new Event('facilityChanged'));
                   }}
                   className="w-full h-8 pl-8 pr-2 rounded-lg border bg-background text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-primary truncate cursor-pointer"
                 >
-                  {hasAdminAccess && (
-                    <option value="ALL">Tüm Hastaneler (Grup Geneli)</option>
+                  {(hasAdminAccess || facilities.length > 1) && (
+                    <option value="ALL">
+                      {hasAdminAccess 
+                        ? "Tüm Hastaneler (Grup Geneli)" 
+                        : `Yetkili Tesisler (Toplu - ${facilities.length} Tesis)`}
+                    </option>
                   )}
                   {facilities.map(fac => (
                     <option key={fac.id} value={fac.id}>
@@ -824,13 +837,19 @@ export const ImprovementsLayout: React.FC = () => {
                   setSelectedFacilityId(newId);
                   if (newId !== 'ALL') {
                     localStorage.setItem('activeFacilityId', newId);
-                    window.dispatchEvent(new Event('facilityChanged'));
+                  } else {
+                    localStorage.removeItem('activeFacilityId');
                   }
+                  window.dispatchEvent(new Event('facilityChanged'));
                 }}
                 className="bg-transparent font-medium text-foreground outline-none cursor-pointer max-w-[180px] sm:max-w-[240px] truncate"
               >
-                {hasAdminAccess && (
-                  <option value="ALL">Tüm Hastaneler (Grup Geneli)</option>
+                {(hasAdminAccess || facilities.length > 1) && (
+                  <option value="ALL">
+                    {hasAdminAccess 
+                      ? "Tüm Hastaneler (Grup Geneli)" 
+                      : `Yetkili Tesisler (Toplu - ${facilities.length} Tesis)`}
+                  </option>
                 )}
                 {facilities.map(fac => (
                   <option key={fac.id} value={fac.id}>
