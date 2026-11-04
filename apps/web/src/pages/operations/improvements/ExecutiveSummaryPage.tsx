@@ -473,6 +473,20 @@ export const ExecutiveSummaryPage: React.FC = () => {
 
     const overallTotal = hospRecords.length;
 
+    // Aktif Durum Filtresiyle Birebir Eşleşen Kayıt Sayısı
+    let matchingFilterCount = 0;
+    if (hasStatusFilter) {
+      matchingFilterCount = riskFiltered.filter(r => {
+        const s = r.status?.trim() || 'Başlamadı';
+        if (selectedStatuses.includes('Başlamadı') && (s === 'Başlamadı' || !r.status || r.status.trim() === '')) return true;
+        if (selectedStatuses.includes('Devam Ediyor') && s === 'Devam Ediyor') return true;
+        if (selectedStatuses.includes('Tamamlandı') && s === 'Tamamlandı') return true;
+        return false;
+      }).length;
+    } else {
+      matchingFilterCount = total;
+    }
+
     return { 
       total, 
       notStarted, 
@@ -481,6 +495,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
       cancelled, 
       progress, 
       overallTotal,
+      matchingFilterCount,
       hasRecords: total > 0 
     };
   };
@@ -493,6 +508,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
     let notStarted = 0;
     let cancelled = 0;
     let overallTotal = 0;
+    let matchingFilterCount = 0;
 
     items.forEach(it => {
       const s = getSubItemStats(hospitalId, it.key);
@@ -502,6 +518,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
       notStarted += s.notStarted;
       cancelled += s.cancelled;
       overallTotal += s.overallTotal;
+      matchingFilterCount += s.matchingFilterCount;
     });
 
     const activeTotal = total - cancelled;
@@ -516,6 +533,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
       activeTotal, 
       progress, 
       overallTotal,
+      matchingFilterCount,
       hasRecords: total > 0 
     };
   };
@@ -1210,8 +1228,8 @@ export const ExecutiveSummaryPage: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-3 self-end sm:self-auto flex-wrap">
-              {/* Sadece Seçili Riski Olanlar Toggle */}
-              {selectedRiskFilter !== 'ALL' && (
+              {/* Sadece Seçili Filtresi Olanlar Toggle */}
+              {(selectedRiskFilter !== 'ALL' || hasStatusFilter) && (
                 <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
                   <input
                     type="checkbox"
@@ -1219,7 +1237,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
                     onChange={(e) => setOnlyWithSelectedRisk(e.target.checked)}
                     className="rounded border-border text-primary focus:ring-primary w-3.5 h-3.5"
                   />
-                  <span>Sadece {selectedRiskFilter} riski olan hastaneler</span>
+                  <span>Sadece seçili filtreye uygun bulgusu olan hastaneler</span>
                 </label>
               )}
 
@@ -1295,40 +1313,15 @@ export const ExecutiveSummaryPage: React.FC = () => {
                         {/* Canlı Kırılım ve Durum Satırı */}
                         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
                           {hasStatusFilter ? (
-                            <>
-                              <span className="font-extrabold text-foreground px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">
-                                {hospStats.matchingFilterCount} {selectedRiskFilter !== 'ALL' ? (selectedRiskFilter === 'OLASI_ONEMSIZ' ? 'Olası/Önemsiz' : selectedRiskFilter) : ''} ({selectedStatuses.join(' + ')})
-                              </span>
-                              <span>•</span>
-                              <span className="text-muted-foreground">
-                                {selectedRiskFilter !== 'ALL' 
-                                  ? `${hospStats.riskTotal} ${selectedRiskFilter} (${hospStats.riskNotStarted} başlamadı • ${hospStats.riskInProgress} devam • ${hospStats.riskCompleted} tamamlandı)`
-                                  : `${hospStats.overallTotal} Toplam (${hospStats.overallNotStarted} başlamadı • ${hospStats.overallInProgress} devam • ${hospStats.overallCompleted} tamamlandı)`}
-                              </span>
-                              <span>•</span>
-                              <span className="font-mono text-muted-foreground">(Genel Toplam: {hospStats.overallTotal})</span>
-                            </>
+                            <span className="font-extrabold text-foreground px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">
+                              {hospStats.matchingFilterCount} {selectedRiskFilter !== 'ALL' ? (selectedRiskFilter === 'OLASI_ONEMSIZ' ? 'Olası ve Önemsiz' : selectedRiskFilter) : ''} ({selectedStatuses.join(' + ')}) Bulgu
+                            </span>
                           ) : selectedRiskFilter !== 'ALL' ? (
-                            <>
-                              <span className="font-bold text-foreground">{hospStats.riskTotal} {selectedRiskFilter === 'OLASI_ONEMSIZ' ? 'Olası ve Önemsiz' : selectedRiskFilter} Bulgu</span>
-                              <span>•</span>
-                              <span className="text-amber-600 dark:text-amber-400 font-medium">{hospStats.riskNotStarted} başlamadı</span>
-                              <span>•</span>
-                              <span className="text-blue-600 dark:text-blue-400 font-medium">{hospStats.riskInProgress} devam ediyor</span>
-                              <span>•</span>
-                              <span className="text-emerald-600 dark:text-emerald-400 font-medium">{hospStats.riskCompleted} tamamlandı</span>
-                              <span>(Genel Toplam: {hospStats.overallTotal})</span>
-                            </>
+                            <span className="font-bold text-foreground">
+                              {hospStats.riskTotal} {selectedRiskFilter === 'OLASI_ONEMSIZ' ? 'Olası ve Önemsiz' : selectedRiskFilter} Bulgu
+                            </span>
                           ) : (
-                            <>
-                              <span className="font-mono font-medium text-foreground">{hospStats.overallTotal} toplam bulgu</span>
-                              <span>•</span>
-                              <span className="text-amber-600 dark:text-amber-400">{hospStats.overallNotStarted} başlamadı</span>
-                              <span>•</span>
-                              <span className="text-blue-600 dark:text-blue-400">{hospStats.overallInProgress} devam</span>
-                              <span>•</span>
-                              <span className="text-emerald-600 dark:text-emerald-400 font-medium">{hospStats.overallCompleted} tamamlandı</span>
-                            </>
+                            <span className="font-mono font-medium text-foreground">{hospStats.overallTotal} Toplam Bulgu</span>
                           )}
                         </div>
                       </div>
@@ -1364,55 +1357,82 @@ export const ExecutiveSummaryPage: React.FC = () => {
                       </div>
 
                       {/* İlerleme ve Mini Risk Dağılımı */}
-                      <div className="w-full sm:w-48 space-y-1.5">
-                        <div className="flex items-center justify-between text-xs font-mono">
-                          <span className="text-muted-foreground text-[11px]">
-                            {selectedRiskFilter !== 'ALL' ? `${selectedRiskFilter} İlerlemesi` : 'Genel İlerleme'}
-                          </span>
-                          <span className="font-bold text-foreground">
-                            %{selectedRiskFilter !== 'ALL' ? hospStats.riskProgress : hospStats.overallProgress}
+                      {hasStatusFilter ? (
+                        <div className="w-full sm:w-44 text-right flex items-center justify-end">
+                          <span className="text-xs font-mono text-muted-foreground">
+                            Eşleşen: <strong className="text-foreground text-sm font-black">{hospStats.matchingFilterCount}</strong> Bulgu
                           </span>
                         </div>
-                        <div className="w-full bg-muted/60 h-2 rounded-full overflow-hidden">
-                          <div 
-                            className={cn(
-                              "h-full rounded-full transition-all duration-300",
-                              selectedRiskFilter === 'Kritik' 
-                                ? "bg-red-600" 
-                                : selectedRiskFilter === 'Yüksek'
-                                ? "bg-rose-600"
-                                : "bg-primary"
-                            )}
-                            style={{ 
-                              width: `${Math.min(100, Math.max(0, selectedRiskFilter !== 'ALL' ? hospStats.riskProgress : hospStats.overallProgress))}%` 
-                            }}
-                          />
+                      ) : selectedRiskFilter !== 'ALL' ? (
+                        <div className="w-full sm:w-48 space-y-1.5">
+                          <div className="flex items-center justify-between text-xs font-mono">
+                            <span className="text-muted-foreground text-[11px]">
+                              {selectedRiskFilter} İlerlemesi
+                            </span>
+                            <span className="font-bold text-foreground">
+                              %{hospStats.riskProgress}
+                            </span>
+                          </div>
+                          <div className="w-full bg-muted/60 h-2 rounded-full overflow-hidden">
+                            <div 
+                              className={cn(
+                                "h-full rounded-full transition-all duration-300",
+                                selectedRiskFilter === 'Kritik' 
+                                  ? "bg-red-600" 
+                                  : selectedRiskFilter === 'Yüksek'
+                                  ? "bg-rose-600"
+                                  : "bg-primary"
+                              )}
+                              style={{ 
+                                width: `${Math.min(100, Math.max(0, hospStats.riskProgress))}%` 
+                              }}
+                            />
+                          </div>
                         </div>
+                      ) : (
+                        <div className="w-full sm:w-48 space-y-1.5">
+                          <div className="flex items-center justify-between text-xs font-mono">
+                            <span className="text-muted-foreground text-[11px]">
+                              Genel İlerleme
+                            </span>
+                            <span className="font-bold text-foreground">
+                              %{hospStats.overallProgress}
+                            </span>
+                          </div>
+                          <div className="w-full bg-muted/60 h-2 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full rounded-full transition-all duration-300 bg-primary"
+                              style={{ 
+                                width: `${Math.min(100, Math.max(0, hospStats.overallProgress))}%` 
+                              }}
+                            />
+                          </div>
 
-                        {/* 5 Risk Seviyesi Mini Noktalar */}
-                        <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground pt-0.5">
-                          <span title="Kritik Risk Sayısı" className="flex items-center gap-0.5 text-red-700 dark:text-red-400 font-bold">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-600 inline-block" />
-                            {hospStats.critical}
-                          </span>
-                          <span title="Yüksek Risk Sayısı" className="flex items-center gap-0.5 text-rose-600 dark:text-rose-400 font-bold">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
-                            {hospStats.high}
-                          </span>
-                          <span title="Önemli Risk Sayısı" className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400 font-bold">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
-                            {hospStats.medium}
-                          </span>
-                          <span title="Olası Risk Sayısı" className="flex items-center gap-0.5 text-yellow-600 dark:text-yellow-400">
-                            <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 inline-block" />
-                            {hospStats.low}
-                          </span>
-                          <span title="Önemsiz Risk Sayısı" className="flex items-center gap-0.5 text-slate-500">
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block" />
-                            {hospStats.negligible}
-                          </span>
+                          {/* 5 Risk Seviyesi Mini Noktalar (Sadece Konsolide Tüm Riskler görünümünde gösterilir) */}
+                          <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground pt-0.5">
+                            <span title="Kritik Risk Sayısı" className="flex items-center gap-0.5 text-red-700 dark:text-red-400 font-bold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-red-600 inline-block" />
+                              {hospStats.critical}
+                            </span>
+                            <span title="Yüksek Risk Sayısı" className="flex items-center gap-0.5 text-rose-600 dark:text-rose-400 font-bold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
+                              {hospStats.high}
+                            </span>
+                            <span title="Önemli Risk Sayısı" className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400 font-bold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+                              {hospStats.medium}
+                            </span>
+                            <span title="Olası Risk Sayısı" className="flex items-center gap-0.5 text-yellow-600 dark:text-yellow-400">
+                              <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 inline-block" />
+                              {hospStats.low}
+                            </span>
+                            <span title="Önemsiz Risk Sayısı" className="flex items-center gap-0.5 text-slate-500">
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block" />
+                              {hospStats.negligible}
+                            </span>
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       {/* Aksiyon Butonları */}
                       <div className="flex items-center gap-2 self-end sm:self-center">
@@ -1454,8 +1474,12 @@ export const ExecutiveSummaryPage: React.FC = () => {
                         <div className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
                           <Building2 className="w-3.5 h-3.5 text-primary" />
                           <span>{hosp.hospitalName} — Takip Alanları Dağılımı (4 Ana Modül):</span>
-                          {selectedRiskFilter !== 'ALL' ? (
-                            <Badge variant="outline" className="text-[11px] bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20 font-bold">
+                          {hasStatusFilter ? (
+                            <Badge variant="outline" className="text-[11px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 font-bold uppercase">
+                              {selectedRiskFilter === 'ALL' ? 'Tüm Riskler' : selectedRiskFilter} • {selectedStatuses.join(' + ')} Gösteriliyor
+                            </Badge>
+                          ) : selectedRiskFilter !== 'ALL' ? (
+                            <Badge variant="outline" className="text-[11px] bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20 font-bold uppercase">
                               {selectedRiskFilter} Seviyesi Gösteriliyor
                             </Badge>
                           ) : (
@@ -1503,49 +1527,60 @@ export const ExecutiveSummaryPage: React.FC = () => {
                                       {group.name}
                                     </h4>
                                     <span className="text-[10px] text-muted-foreground">
-                                      {selectedRiskFilter !== 'ALL' ? (
-                                        <>
-                                          <strong className="text-foreground">{groupStats.total} {selectedRiskFilter}</strong> bulgu (Toplam: {groupStats.overallTotal})
-                                        </>
+                                      {hasStatusFilter ? (
+                                        <strong className="text-foreground font-bold">{groupStats.matchingFilterCount} {selectedRiskFilter !== 'ALL' ? (selectedRiskFilter === 'OLASI_ONEMSIZ' ? 'Olası' : selectedRiskFilter) : ''} ({selectedStatuses.join(' + ')}) bulgu</strong>
+                                      ) : selectedRiskFilter !== 'ALL' ? (
+                                        <strong className="text-foreground font-bold">{groupStats.total} {selectedRiskFilter === 'OLASI_ONEMSIZ' ? 'Olası ve Önemsiz' : selectedRiskFilter} bulgu</strong>
                                       ) : (
-                                        <>
-                                          {group.items.length} Alt Başlık • {groupStats.total} toplam bulgu
-                                        </>
+                                        <>{group.items.length} Alt Başlık • <strong className="text-foreground font-bold">{groupStats.total}</strong> toplam bulgu</>
                                       )}
                                     </span>
                                   </div>
                                 </div>
 
-                                {/* Orta: İlerleme Barı (Progress Bar) */}
-                                <div className="flex-1 max-w-md w-full space-y-1">
-                                  <div className="flex items-center justify-between text-xs font-mono">
-                                    <span className="text-[11px] text-muted-foreground font-sans">
-                                      {selectedRiskFilter !== 'ALL' ? `${selectedRiskFilter} İlerlemesi` : 'İlerleme Oranı'}
-                                    </span>
-                                    <span className="font-bold text-foreground">
-                                      %{groupStats.progress}
+                                {/* Orta: İlerleme Barı (Progress Bar) veya Filtrelenen Sayı */}
+                                {hasStatusFilter ? (
+                                  <div className="flex-1 max-w-md w-full flex items-center justify-center">
+                                    <span className="text-xs font-mono text-muted-foreground">
+                                      Eşleşen: <strong className="text-foreground font-bold">{groupStats.matchingFilterCount}</strong> Bulgu
                                     </span>
                                   </div>
-                                  <div className="w-full bg-muted/70 h-2 rounded-full overflow-hidden">
-                                    <div 
-                                      className={cn("h-full rounded-full transition-all duration-300", group.barColor)}
-                                      style={{ width: `${Math.min(100, Math.max(0, groupStats.progress))}%` }}
-                                      title={`Tamamlanma: %${groupStats.progress}`}
-                                    />
+                                ) : (
+                                  <div className="flex-1 max-w-md w-full space-y-1">
+                                    <div className="flex items-center justify-between text-xs font-mono">
+                                      <span className="text-[11px] text-muted-foreground font-sans">
+                                        {selectedRiskFilter !== 'ALL' ? `${selectedRiskFilter} İlerlemesi` : 'İlerleme Oranı'}
+                                      </span>
+                                      <span className="font-bold text-foreground">
+                                        %{groupStats.progress}
+                                      </span>
+                                    </div>
+                                    <div className="w-full bg-muted/70 h-2 rounded-full overflow-hidden">
+                                      <div 
+                                        className={cn("h-full rounded-full transition-all duration-300", group.barColor)}
+                                        style={{ width: `${Math.min(100, Math.max(0, groupStats.progress))}%` }}
+                                        title={`Tamamlanma: %${groupStats.progress}`}
+                                      />
+                                    </div>
                                   </div>
-                                </div>
+                                )}
 
-                                {/* Sağ: Üçlü Dağılım + Filtrele Butonu + Aç/Kapa İkonu */}
+                                {/* Sağ: Üçlü Dağılım veya Filtrelenmiş Sayı + Filtrele Butonu + Aç/Kapa İkonu */}
                                 <div className="flex items-center gap-3 shrink-0 self-end md:self-auto">
-                                  {/* Üçlü Sayı */}
-                                  <div className="font-mono text-xs flex items-center gap-1.5 font-bold">
-                                    <span className="text-amber-600 dark:text-amber-400" title="Başlamadı">{groupStats.notStarted}</span>
-                                    <span className="text-muted-foreground/40 font-normal">/</span>
-                                    <span className="text-blue-600 dark:text-blue-400" title="Devam">{groupStats.inProgress}</span>
-                                    <span className="text-muted-foreground/40 font-normal">/</span>
-                                    <span className="text-emerald-600 dark:text-emerald-400" title="Tamam">{groupStats.completed}</span>
-                                    <span className="text-foreground ml-1 font-bold">({groupStats.total})</span>
-                                  </div>
+                                  {hasStatusFilter ? (
+                                    <div className="font-mono text-xs font-bold text-foreground bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/20">
+                                      <span>{groupStats.matchingFilterCount} Bulgu</span>
+                                    </div>
+                                  ) : (
+                                    <div className="font-mono text-xs flex items-center gap-1.5 font-bold">
+                                      <span className="text-amber-600 dark:text-amber-400" title="Başlamadı">{groupStats.notStarted}</span>
+                                      <span className="text-muted-foreground/40 font-normal">/</span>
+                                      <span className="text-blue-600 dark:text-blue-400" title="Devam">{groupStats.inProgress}</span>
+                                      <span className="text-muted-foreground/40 font-normal">/</span>
+                                      <span className="text-emerald-600 dark:text-emerald-400" title="Tamam">{groupStats.completed}</span>
+                                      <span className="text-foreground ml-1 font-bold">({groupStats.total})</span>
+                                    </div>
+                                  )}
 
                                   {/* Bu Grubu Tabloda Filtrele Butonu */}
                                   <Button
@@ -1596,46 +1631,64 @@ export const ExecutiveSummaryPage: React.FC = () => {
                                           <span className="font-semibold truncate">
                                             {subItem.name}
                                           </span>
-                                          {selectedRiskFilter !== 'ALL' && (
+                                          {hasStatusFilter ? (
                                             <span className="text-[10px] font-mono text-muted-foreground shrink-0 font-medium">
-                                              ({subStats.total} {selectedRiskFilter})
+                                              ({subStats.matchingFilterCount} {selectedRiskFilter !== 'ALL' ? (selectedRiskFilter === 'OLASI_ONEMSIZ' ? 'Olası' : selectedRiskFilter) : ''} {selectedStatuses.join('+')})
                                             </span>
-                                          )}
+                                          ) : selectedRiskFilter !== 'ALL' ? (
+                                            <span className="text-[10px] font-mono text-muted-foreground shrink-0 font-medium">
+                                              ({subStats.total} {selectedRiskFilter === 'OLASI_ONEMSIZ' ? 'Olası' : selectedRiskFilter})
+                                            </span>
+                                          ) : null}
                                         </div>
 
-                                        {/* Orta: Alt İlerleme Çubuğu */}
-                                        <div className="flex-1 max-w-xs w-full space-y-1">
-                                          <div className="flex items-center justify-between text-[11px] font-mono">
-                                            <span className="text-muted-foreground text-[10px]">
-                                              {selectedRiskFilter !== 'ALL' ? `${selectedRiskFilter} İlerlemesi` : 'Tamamlanma'}
+                                        {/* Orta: Alt İlerleme Çubuğu veya Eşleşen Sayı */}
+                                        {hasStatusFilter ? (
+                                          <div className="flex-1 max-w-xs w-full text-center">
+                                            <span className="text-[10px] font-mono text-muted-foreground">
+                                              Eşleşen: <strong className="text-foreground font-bold">{subStats.matchingFilterCount}</strong> Bulgu
                                             </span>
-                                            <span className="font-bold">%{subStats.progress}</span>
                                           </div>
-                                          <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
-                                            <div 
-                                              className={cn(
-                                                "h-full rounded-full transition-all", 
-                                                subStats.progress === 100 
-                                                  ? "bg-emerald-500" 
-                                                  : selectedRiskFilter === 'Kritik'
-                                                  ? "bg-red-500"
-                                                  : group.barColor
-                                              )}
-                                              style={{ width: `${Math.min(100, Math.max(0, subStats.progress))}%` }}
-                                            />
+                                        ) : (
+                                          <div className="flex-1 max-w-xs w-full space-y-1">
+                                            <div className="flex items-center justify-between text-[11px] font-mono">
+                                              <span className="text-muted-foreground text-[10px]">
+                                                {selectedRiskFilter !== 'ALL' ? `${selectedRiskFilter} İlerlemesi` : 'Tamamlanma'}
+                                              </span>
+                                              <span className="font-bold">%{subStats.progress}</span>
+                                            </div>
+                                            <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
+                                              <div 
+                                                className={cn(
+                                                  "h-full rounded-full transition-all", 
+                                                  subStats.progress === 100 
+                                                    ? "bg-emerald-500" 
+                                                    : selectedRiskFilter === 'Kritik'
+                                                    ? "bg-red-500"
+                                                    : group.barColor
+                                                )}
+                                                style={{ width: `${Math.min(100, Math.max(0, subStats.progress))}%` }}
+                                              />
+                                            </div>
                                           </div>
-                                        </div>
+                                        )}
 
-                                        {/* Sağ: Üçlü Dağılım + Durum Rozeti + Link */}
+                                        {/* Sağ: Üçlü Dağılım veya Filtrelenmiş Sayı + Durum Rozeti + Link */}
                                         <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto font-mono text-[11px]">
-                                          <div className="flex items-center gap-1 font-bold">
-                                            <span className="text-amber-600 dark:text-amber-400" title="Başlamadı">{subStats.notStarted}</span>
-                                            <span className="text-muted-foreground/40 font-normal">/</span>
-                                            <span className="text-blue-600 dark:text-blue-400" title="Devam">{subStats.inProgress}</span>
-                                            <span className="text-muted-foreground/40 font-normal">/</span>
-                                            <span className="text-emerald-600 dark:text-emerald-400" title="Tamam">{subStats.completed}</span>
-                                            <span className="text-foreground ml-1.5 font-bold">({subStats.total})</span>
-                                          </div>
+                                          {hasStatusFilter ? (
+                                            <div className="font-mono text-xs font-bold text-foreground bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
+                                              <span>{subStats.matchingFilterCount} Bulgu</span>
+                                            </div>
+                                          ) : (
+                                            <div className="flex items-center gap-1 font-bold">
+                                              <span className="text-amber-600 dark:text-amber-400" title="Başlamadı">{subStats.notStarted}</span>
+                                              <span className="text-muted-foreground/40 font-normal">/</span>
+                                              <span className="text-blue-600 dark:text-blue-400" title="Devam">{subStats.inProgress}</span>
+                                              <span className="text-muted-foreground/40 font-normal">/</span>
+                                              <span className="text-emerald-600 dark:text-emerald-400" title="Tamam">{subStats.completed}</span>
+                                              <span className="text-foreground ml-1.5 font-bold">({subStats.total})</span>
+                                            </div>
+                                          )}
 
                                           <Badge 
                                             variant={isSubFiltered ? "default" : "outline"}
