@@ -2,6 +2,10 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - db
     environment:
       POSTGRES_DB: isgdb
       POSTGRES_USER: isguser
