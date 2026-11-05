@@ -148,4 +148,8 @@ httpServer.listen(Number(PORT), '0.0.0.0', () => {
   // Sistem açıldığında/güncellendiğinde (canlıda dahil) boş ve anlamsız termal ölçüm satırlarını otomatik temizle
   const { cleanupEmptyThermalItems } = require('./scripts/cleanup_thermal_empty');
   cleanupEmptyThermalItems();
+
+  // Sistem acildiginda baglantisiz kalan LIV-VADI risk kayitlarini otomatik bagla
+  const { syncUnlinkedRisks } = require('./scripts/sync_unlinked_risks');
+  syncUnlinkedRisks();
 });
