@@ -34,7 +34,7 @@ RUN chmod +x entrypoint.sh
 
 # Generate prisma client & build
 RUN node /app/node_modules/prisma/build/index.js generate --generator client
-RUN /app/backend/node_modules/.bin/tsc
+RUN NODE_OPTIONS="--max-old-space-size=4096" /app/backend/node_modules/.bin/tsc
 
 EXPOSE 3005
 

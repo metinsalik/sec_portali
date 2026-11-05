@@ -12,9 +12,124 @@ export async function syncUnlinkedRisks() {
       return;
     }
 
-    console.log(`[Risks] ${unlinkedCount} adet bağlantısız risk kaydı tespit edildi, LIV-VADI lokasyonlarına bağlanıyor...`);
+    console.log(`[Risks] ${unlinkedCount} adet bağlantısız risk kaydı tespit edildi. Kapsamlı lokasyon kurtarma ve eşleme başlatılıyor...`);
 
-    // 1. LIV-VADI lokasyonlarını garantiye al
+    // ── ADIM 1: Eski RiskDepartment ve departmentId üzerinden çoklu tesis aktarımı ──
+    try {
+      const checkCol: any = await prisma.$queryRawUnsafe(`
+        SELECT column_name FROM information_schema.columns 
+        WHERE lower(table_name) = 'risklifecycle' AND lower(column_name) = 'departmentid';
+      `);
+      const hasDepartmentIdCol = checkCol && checkCol.length > 0;
+
+      if (hasDepartmentIdCol) {
+        // 1a. RiskDepartment tablosu var mı?
+        const checkTable: any = await prisma.$queryRawUnsafe(`
+          SELECT to_regclass('public."RiskDepartment"') as tbl;
+        `);
+        const hasRiskDepartment = checkTable && checkTable[0] && checkTable[0].tbl !== null;
+
+        if (hasRiskDepartment) {
+          console.log('[Risks] Eski RiskDepartment tablosundan tesis ve departmanlar taranıyor...');
+          const oldDepts: any = await prisma.$queryRawUnsafe(`
+            SELECT id, "facilityId", name FROM "RiskDepartment";
+          `);
+
+          for (const d of oldDepts) {
+            if (!d.facilityId || !d.name) continue;
+
+            const fac = await prisma.facility.findUnique({ where: { id: d.facilityId } });
+            if (!fac) continue;
+
+            let loc = await prisma.facilityLocation.findFirst({
+              where: {
+                facilityId: d.facilityId,
+                department: d.name,
+              }
+            });
+
+            if (!loc) {
+              loc = await prisma.facilityLocation.create({
+                data: {
+                  facilityId: d.facilityId,
+                  name: `Ana Bina - Genel - ${d.name}`,
+                  building: 'Ana Bina',
+                  floor: 'Genel',
+                  department: d.name,
+                  type: 'DEPARTMAN',
+                  isActive: true
+                }
+              });
+            }
+
+            const updated: any = await prisma.$executeRawUnsafe(`
+              UPDATE "RiskLifecycle"
+              SET "locationId" = '${loc.id}'
+              WHERE "departmentId" = ${d.id} AND "locationId" IS NULL;
+            `);
+
+            if (updated > 0) {
+              console.log(`[Risks] RiskDepartment: ${d.facilityId} - ${d.name} -> ${updated} adet risk bağlandı.`);
+            }
+          }
+        }
+
+        // 1b. RiskDepartmentSetting tablosu var mı?
+        const checkSettingTable: any = await prisma.$queryRawUnsafe(`
+          SELECT to_regclass('public."RiskDepartmentSetting"') as tbl;
+        `);
+        const hasSettingTable = checkSettingTable && checkSettingTable[0] && checkSettingTable[0].tbl !== null;
+
+        if (hasSettingTable) {
+          console.log('[Risks] RiskDepartmentSetting tablosu kontrol ediliyor...');
+          const oldSettingDepts: any = await prisma.$queryRawUnsafe(`
+            SELECT id, "facilityId", name FROM "RiskDepartmentSetting";
+          `);
+
+          for (const d of oldSettingDepts) {
+            if (!d.facilityId || !d.name) continue;
+
+            const fac = await prisma.facility.findUnique({ where: { id: d.facilityId } });
+            if (!fac) continue;
+
+            let loc = await prisma.facilityLocation.findFirst({
+              where: {
+                facilityId: d.facilityId,
+                department: d.name,
+              }
+            });
+
+            if (!loc) {
+              loc = await prisma.facilityLocation.create({
+                data: {
+                  facilityId: d.facilityId,
+                  name: `Ana Bina - Genel - ${d.name}`,
+                  building: 'Ana Bina',
+                  floor: 'Genel',
+                  department: d.name,
+                  type: 'DEPARTMAN',
+                  isActive: true
+                }
+              });
+            }
+
+            const updated: any = await prisma.$executeRawUnsafe(`
+              UPDATE "RiskLifecycle"
+              SET "locationId" = '${loc.id}'
+              WHERE "departmentId" = ${d.id} AND "locationId" IS NULL;
+            `);
+
+            if (updated > 0) {
+              console.log(`[Risks] RiskDepartmentSetting: ${d.facilityId} - ${d.name} -> ${updated} adet risk bağlandı.`);
+            }
+          }
+        }
+      }
+    } catch (oldErr: any) {
+      console.warn('[Risks] Eski RiskDepartment kontrolü:', oldErr.message);
+    }
+
+    // ── ADIM 2: LIV-VADI'ye ait belirgin alanlar (Radyoloji, FAZ-1, Acil Servis, İSG vb.) ──
     const targetLocations = [
       {
         department: 'Radyoloji',
@@ -73,19 +188,6 @@ export async function syncUnlinkedRisks() {
       locMap[loc.department] = existing.id;
     }
 
-    // 2. Risk kayıtlarını eşle
-    if (locMap['Radyoloji']) {
-      await prisma.riskLifecycle.updateMany({
-        where: {
-          locationId: null,
-          area: { in: ['Radyoloji', 'MR'] }
-        },
-        data: {
-          locationId: locMap['Radyoloji']
-        }
-      });
-    }
-
     if (locMap['FAZ-1 Klinik Araştırmalar Merkezi']) {
       await prisma.riskLifecycle.updateMany({
         where: {
@@ -95,6 +197,18 @@ export async function syncUnlinkedRisks() {
         data: {
           locationId: locMap['FAZ-1 Klinik Araştırmalar Merkezi'],
           area: 'FAZ-1 Klinik Araştırmalar Merkezi'
+        }
+      });
+    }
+
+    if (locMap['Radyoloji']) {
+      await prisma.riskLifecycle.updateMany({
+        where: {
+          locationId: null,
+          area: { in: ['Radyoloji', 'MR'] }
+        },
+        data: {
+          locationId: locMap['Radyoloji']
         }
       });
     }
@@ -123,16 +237,66 @@ export async function syncUnlinkedRisks() {
       });
     }
 
-    // Eğer halen herhangi bir sebeple boşta kalan kayıt varsa varsayılan olarak Radyolojiye ata
-    const remaining = await prisma.riskLifecycle.count({ where: { locationId: null } });
-    if (remaining > 0 && locMap['Radyoloji']) {
-      await prisma.riskLifecycle.updateMany({
-        where: { locationId: null },
-        data: { locationId: locMap['Radyoloji'] }
-      });
+    // ── ADIM 3: Halen bağlantısız kalan riskler için Genel / Tanımlanmamış Lokasyon Kurtarma ──
+    const stillUnlinked = await prisma.riskLifecycle.findMany({
+      where: { locationId: null },
+      select: { id: true, createdBy: true, area: true }
+    });
+
+    if (stillUnlinked.length > 0) {
+      console.log(`[Risks] Halen bağlantısız ${stillUnlinked.length} kayıt için kullanıcı/varsayılan tesis eşlemesi yapılıyor...`);
+
+      // Tesis ve lokasyon önbelleği
+      const defaultLocCache: Record<string, string> = {};
+
+      for (const r of stillUnlinked) {
+        let targetFacilityId = 'LIV-VADI'; // Varsayılan
+
+        // createdBy kullanıcısının tesisini bulmaya çalış
+        if (r.createdBy) {
+          const userFacility = await prisma.userFacility.findFirst({
+            where: { username: r.createdBy },
+            select: { facilityId: true }
+          });
+          if (userFacility?.facilityId) {
+            targetFacilityId = userFacility.facilityId;
+          }
+        }
+
+        if (!defaultLocCache[targetFacilityId]) {
+          let fallbackLoc = await prisma.facilityLocation.findFirst({
+            where: {
+              facilityId: targetFacilityId,
+              name: { contains: 'Genel / Aktarılan Eski Riskler' }
+            }
+          });
+
+          if (!fallbackLoc) {
+            fallbackLoc = await prisma.facilityLocation.create({
+              data: {
+                facilityId: targetFacilityId,
+                name: 'Ana Bina - Genel - Aktarılan Eski Riskler',
+                building: 'Ana Bina',
+                floor: 'Genel',
+                department: r.area || 'Genel Departman',
+                type: 'DEPARTMAN',
+                isActive: true,
+                description: 'Lokasyon modernizasyonu sırasında otomatik bağlanan kayıtlar'
+              }
+            });
+          }
+          defaultLocCache[targetFacilityId] = fallbackLoc.id;
+        }
+
+        await prisma.riskLifecycle.update({
+          where: { id: r.id },
+          data: { locationId: defaultLocCache[targetFacilityId] }
+        });
+      }
     }
 
-    console.log(`[Risks] LIV-VADI risk kayıtları başarıyla bağlandı. Kalan bağlantısız: 0`);
+    const finalRemaining = await prisma.riskLifecycle.count({ where: { locationId: null } });
+    console.log(`[Risks] Risk senkronizasyonu tamamlandı. Kalan bağlantısız: ${finalRemaining}`);
   } catch (err: any) {
     console.error('[Risks] Otomatik risk lokasyon eşleme hatası:', err.message);
   }
