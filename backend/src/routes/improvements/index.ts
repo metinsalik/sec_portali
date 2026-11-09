@@ -422,14 +422,14 @@ router.get('/dashboard-stats', async (req: AuthRequest, res: Response) => {
 
       // Sekme
       if (!sheetCounts[r.sheetType]) {
-        sheetCounts[r.sheetType] = { 
-          total: 0, 
-          completed: 0, 
-          open: 0, 
-          inProgress: 0, 
-          notStarted: 0, 
-          openStatus: 0, 
-          cancelled: 0, 
+        sheetCounts[r.sheetType] = {
+          total: 0,
+          completed: 0,
+          open: 0,
+          inProgress: 0,
+          notStarted: 0,
+          openStatus: 0,
+          cancelled: 0,
           openHighCritical: 0,
           critical: 0,
           durumEksik: 0,
@@ -466,7 +466,7 @@ router.get('/dashboard-stats', async (req: AuthRequest, res: Response) => {
       }
 
       // Modül Kırılımı (Denetimler, Elektrik, Mekanik, Yangın)
-      const matchedMod = Object.keys(MODULE_SHEET_MAP).find(mg => 
+      const matchedMod = Object.keys(MODULE_SHEET_MAP).find(mg =>
         r.moduleGroup === mg || MODULE_SHEET_MAP[mg].includes(r.sheetType)
       ) || (r.moduleGroup && moduleCounts[r.moduleGroup] ? r.moduleGroup : null);
 
@@ -489,15 +489,15 @@ router.get('/dashboard-stats', async (req: AuthRequest, res: Response) => {
 
       // Hastane
       // Hastane ve Risk Kırılımı
-      const hospName = r.facility?.shortName || r.facility?.name || 'Bilinmeyen';
+      const hospName = r.facility?.name || r.facility?.shortName || 'Bilinmeyen';
       const rk = normalizeRiskKey(r.riskScore);
 
       if (!hospitalCounts[r.facilityId]) {
-        hospitalCounts[r.facilityId] = { 
-          hospitalId: r.facilityId, 
-          hospitalName: hospName, 
-          total: 0, 
-          completed: 0, 
+        hospitalCounts[r.facilityId] = {
+          hospitalId: r.facilityId,
+          hospitalName: hospName,
+          total: 0,
+          completed: 0,
           inProgress: 0,
           notStarted: 0,
           openStatus: 0,
@@ -1124,6 +1124,11 @@ router.post('/records', async (req: AuthRequest, res: Response) => {
         periodicReportId: periodicReportId || null,
         standardNoteCode: standardNoteCode || null,
         createdBy: user.username,
+      },
+      include: {
+        facility: {
+          select: { id: true, name: true, shortName: true }
+        }
       }
     });
 
@@ -1262,10 +1267,10 @@ router.put('/records/:id', async (req: AuthRequest, res: Response) => {
       finalEquip = [finalEquipNo, finalEquipName].filter(Boolean).join(' - ');
     }
 
-    const validPhotos = findingPhotos !== undefined 
+    const validPhotos = findingPhotos !== undefined
       ? (Array.isArray(findingPhotos) ? findingPhotos.slice(0, 3) : [])
       : ((existing.findingPhotos as any) ?? []);
-    const validDocs = documents !== undefined 
+    const validDocs = documents !== undefined
       ? (Array.isArray(documents) ? documents : [])
       : ((existing.documents as any) ?? []);
 
@@ -1307,6 +1312,11 @@ router.put('/records/:id', async (req: AuthRequest, res: Response) => {
         periodicReportId: periodicReportId !== undefined ? (periodicReportId || null) : existing.periodicReportId,
         standardNoteCode: standardNoteCode !== undefined ? (standardNoteCode || null) : existing.standardNoteCode,
         updatedBy: user.username,
+      },
+      include: {
+        facility: {
+          select: { id: true, name: true, shortName: true }
+        }
       }
     });
 
@@ -1358,6 +1368,11 @@ router.patch('/records/:id/status', async (req: AuthRequest, res: Response) => {
         status,
         progress: newProg,
         updatedBy: user.username,
+      },
+      include: {
+        facility: {
+          select: { id: true, name: true, shortName: true }
+        }
       }
     });
 
@@ -1388,16 +1403,16 @@ router.patch('/records/:id/action-note', async (req: AuthRequest, res: Response)
   try {
     const user = getUser(req);
     const { id } = req.params;
-    const { 
-      currentNote, 
-      status, 
-      actionPlan, 
-      dueDate, 
-      recordDate, 
-      evidencePhotos, 
-      documents, 
-      stepType, 
-      stepTitle, 
+    const {
+      currentNote,
+      status,
+      actionPlan,
+      dueDate,
+      recordDate,
+      evidencePhotos,
+      documents,
+      stepType,
+      stepTitle,
       stepFields,
       progress,
       progressAdded
@@ -1583,17 +1598,17 @@ router.put('/records/:recordId/history/:historyId', async (req: AuthRequest, res
   try {
     const user = getUser(req);
     const { recordId, historyId } = req.params;
-    const { 
-      newNote, 
-      stepTitle, 
-      stepType, 
-      newStatus, 
-      progress, 
-      progressAdded, 
-      stepFields, 
-      evidencePhotos, 
+    const {
+      newNote,
+      stepTitle,
+      stepType,
+      newStatus,
+      progress,
+      progressAdded,
+      stepFields,
+      evidencePhotos,
       documents,
-      createdAt 
+      createdAt
     } = req.body;
 
     const existingHistory = await prisma.improvementRecordHistory.findUnique({
@@ -1802,7 +1817,7 @@ router.post('/import-sheet', async (req: AuthRequest, res: Response) => {
       const rawHospName = (r['Hastane Adı'] || r['Hastane Adi'] || r['Hastane'] || r.facilityName || '').toString().trim();
       let targetFacilityId = facilityId;
       if (rawHospName) {
-        const found = allFacilities.find(f => 
+        const found = allFacilities.find(f =>
           f.name.toLowerCase() === rawHospName.toLowerCase() ||
           (f.shortName && f.shortName.toLowerCase() === rawHospName.toLowerCase()) ||
           f.name.toLowerCase().includes(rawHospName.toLowerCase()) ||
@@ -1864,20 +1879,20 @@ router.post('/import-sheet', async (req: AuthRequest, res: Response) => {
 
       // Ekipman No & Ekipman Adı (v4 Excel standartı)
       const equipmentNo = (
-        r.equipmentNo || 
-        r['Ekipman No'] || 
-        r['Ekipman No.'] || 
-        r['Ekipman no'] || 
-        r['Ekipman Numarası'] || 
+        r.equipmentNo ||
+        r['Ekipman No'] ||
+        r['Ekipman No.'] ||
+        r['Ekipman no'] ||
+        r['Ekipman Numarası'] ||
         ''
       ).toString().trim() || null;
 
       const equipmentName = (
-        r.equipmentName || 
-        r['Ekipman Adı'] || 
-        r['Ekipman Adi'] || 
-        r['Ekipman Tanımı'] || 
-        r['Ekipman Tanimi'] || 
+        r.equipmentName ||
+        r['Ekipman Adı'] ||
+        r['Ekipman Adi'] ||
+        r['Ekipman Tanımı'] ||
+        r['Ekipman Tanimi'] ||
         ''
       ).toString().trim() || null;
 
@@ -1888,40 +1903,40 @@ router.post('/import-sheet', async (req: AuthRequest, res: Response) => {
 
       // İş Planı
       const actionPlan = (
-        r.actionPlan || 
-        r['İş Planı'] || 
-        r['Is Plani'] || 
-        r['İş planı'] || 
+        r.actionPlan ||
+        r['İş Planı'] ||
+        r['Is Plani'] ||
+        r['İş planı'] ||
         ''
       ).toString().trim() || null;
 
       // Aksiyon / Açıklama
       const currentNote = (
-        r.currentNote || 
-        r['Aksiyon / Açıklama'] || 
-        r['Aksiyon/Açıklama'] || 
-        r['Aksiyon / Aciklama'] || 
-        r['Aksiyon/Aciklama'] || 
-        r['Aksiyon Açıklama'] || 
-        r['Aksiyon'] || 
+        r.currentNote ||
+        r['Aksiyon / Açıklama'] ||
+        r['Aksiyon/Açıklama'] ||
+        r['Aksiyon / Aciklama'] ||
+        r['Aksiyon/Aciklama'] ||
+        r['Aksiyon Açıklama'] ||
+        r['Aksiyon'] ||
         ''
       ).toString().trim() || null;
 
       // Yeni Eklenen Sütunlar (Teknik Müdür Açıklaması, Keşif Notları, Tahmini/Gerçekleşen Bütçe)
       const technicalManagerDesc = (
-        r.technicalManagerDesc || 
-        r['Teknik Müdür Açıklaması'] || 
-        r['Teknik Mudur Aciklamasi'] || 
-        r['Teknik Müdür Açıklaması '] || 
+        r.technicalManagerDesc ||
+        r['Teknik Müdür Açıklaması'] ||
+        r['Teknik Mudur Aciklamasi'] ||
+        r['Teknik Müdür Açıklaması '] ||
         ''
       ).toString().trim() || null;
 
       const discoveryNotes = (
-        r.discoveryNotes || 
-        r['Yapılan Keşif Notları'] || 
-        r['Yapilan Kesif Notlari'] || 
-        r['Keşif Notları'] || 
-        r['Yapılan Keşif Notları '] || 
+        r.discoveryNotes ||
+        r['Yapılan Keşif Notları'] ||
+        r['Yapilan Kesif Notlari'] ||
+        r['Keşif Notları'] ||
+        r['Yapılan Keşif Notları '] ||
         ''
       ).toString().trim() || null;
 

@@ -271,13 +271,7 @@ export const AuditProgressTrendChart: React.FC<AuditProgressTrendChartProps> = (
                 <CardTitle className="text-base sm:text-lg font-bold tracking-tight text-foreground">
                   Denetim İlerleme & Kapsam Değişimi Trend Grafiği
                 </CardTitle>
-                <Badge variant="outline" className="text-[11px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
-                  Earned Value / Burnup Modeli
-                </Badge>
               </div>
-              <CardDescription className="text-xs text-muted-foreground mt-0.5">
-                Yeni bulgular eklendikçe genişleyen kapsamı ve devam eden işlerin yüzde ağırlıklı ilerleme hızını gösterir.
-              </CardDescription>
             </div>
           </div>
 

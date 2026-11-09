@@ -341,7 +341,7 @@ export const ImprovementDetailPage: React.FC = () => {
             <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
             <span className="font-semibold text-foreground flex items-center gap-1">
               <Building2 className="w-3.5 h-3.5 text-primary" />
-              {record.facility?.shortName || record.facility?.name}
+              {record.facility?.name || record.facility?.shortName || record.facilityId}
             </span>
             <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
             <span>{getSheetLabel(record.sheetType)}</span>

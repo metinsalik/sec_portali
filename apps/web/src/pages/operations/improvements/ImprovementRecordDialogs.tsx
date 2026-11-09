@@ -25,6 +25,51 @@ import { ImprovementAttachmentManager, ImprovementMediaLightbox, uploadImproveme
 
 const API = import.meta.env.VITE_API_URL || '';
 
+const getRecordFacilityName = (
+  facility?: { name?: string; shortName?: string } | null, 
+  fallbackId?: string, 
+  facilityList?: FacilityOption[]
+): string => {
+  if (facility?.name && facility.name.trim()) return facility.name;
+  if (fallbackId && facilityList && facilityList.length > 0) {
+    const f = facilityList.find(fac => 
+      fac.id === fallbackId || 
+      fac.id.replace(/İ/g, 'I').replace(/İ/g, 'I') === fallbackId.replace(/İ/g, 'I').replace(/İ/g, 'I') ||
+      (fac.shortName && fac.shortName.toUpperCase() === fallbackId.toUpperCase())
+    );
+    if (f?.name && f.name.trim()) return f.name;
+  }
+  const idOrCode = (fallbackId || facility?.shortName || '').replace(/İ/g, 'I').replace(/İ/g, 'I').toUpperCase();
+  if (idOrCode.includes('TOPKAP') || idOrCode.includes('LIV-TPK') || idOrCode === 'TPK') return 'İSÜ Liv Topkapı';
+  if (idOrCode.includes('BAHCES') || idOrCode.includes('LIV-BHC') || idOrCode === 'BHC') return 'İSÜ Liv Bahçeşehir';
+  if (idOrCode.includes('GAZIOSM') || idOrCode.includes('MP-GOP') || idOrCode === 'GOP') return 'İSÜ MP Gaziosmanpaşa';
+  if (idOrCode.includes('FAKULT') || idOrCode.includes('TIP-FAK') || idOrCode === 'TFK') return 'İSÜ Tıp Fakültesi';
+  if (idOrCode.includes('VADI') || idOrCode.includes('LIV-VAD') || idOrCode === 'VAD') return 'Liv Vadi';
+  if (idOrCode.includes('BAHCELIEVLER') || idOrCode === 'BAH') return 'MP Bahçelievler';
+  if (idOrCode.includes('ANKARA') || idOrCode === 'ANL') return 'Liv Ankara';
+  if (idOrCode.includes('GAZIANTEP') || idOrCode === 'GZN') return 'Liv Gaziantep';
+  if (idOrCode.includes('SAMSUN-LIV') || idOrCode === 'SML') return 'Liv Samsun';
+  if (idOrCode.includes('ULUS') || idOrCode === 'ULS') return 'Liv Ulus';
+  if (idOrCode.includes('ADANA') || idOrCode === 'ADN') return 'MP Adana';
+  if (idOrCode.includes('ANTALYA') || idOrCode === 'ANT') return 'MP Antalya';
+  if (idOrCode.includes('ATASEHIR') || idOrCode === 'ATS') return 'MP Ataşehir';
+  if (idOrCode.includes('GEBZE') || idOrCode === 'GBZ') return 'MP Gebze';
+  if (idOrCode.includes('GOZTEPE') || idOrCode === 'GOZ') return 'MP Göztepe';
+  if (idOrCode.includes('IZMIR') || idOrCode === 'IZM') return 'MP İzmir';
+  if (idOrCode.includes('KARADENIZ') || idOrCode === 'KAR') return 'MP Karadeniz';
+  if (idOrCode.includes('ORDU') || idOrCode === 'ORD') return 'MP Ordu';
+  if (idOrCode.includes('TEM') || idOrCode === 'TEM') return 'MP Tem';
+  if (idOrCode.includes('TOKAT') || idOrCode === 'TKT') return 'MP Tokat';
+  if (idOrCode.includes('PENDIK') || idOrCode === 'PEN') return 'VM MP Pendik';
+  if (idOrCode.includes('FLORYA') || idOrCode === 'FLR') return 'VM MP Florya';
+  if (idOrCode.includes('KOCAELI') || idOrCode === 'KOC') return 'VM MP Kocaeli';
+  if (idOrCode.includes('MALTEPE') || idOrCode === 'MLT') return 'VM MP Maltepe';
+  if (idOrCode.includes('MERSIN') || idOrCode === 'MRS') return 'VM MP Mersin';
+  if (idOrCode.includes('BURSA') || idOrCode === 'BUR') return 'VM MP Bursa';
+
+  return facility?.name || facility?.shortName || fallbackId || '';
+};
+
 const isAuditSheet = (sheetType: string) => 
   ['DENETIMLER', 'HASTANE_IC_DENETIMLERI', 'MERKEZI_DENETIMLER', 'SAGLIK_DENETIMLERI', 'ITFAIYE_YANGIN_DENETIMLERI'].includes(sheetType);
 
@@ -214,7 +259,7 @@ export const InspectRecordDialog: React.FC<InspectProps> = ({ record, onClose })
               <label className="text-xs font-bold text-foreground">Bulgu Fotoğrafları & Dokümanlar:</label>
               <ImprovementAttachmentManager
                 facilityId={record.facilityId}
-                facilityName={record.facility?.shortName || record.facility?.name}
+                facilityName={getRecordFacilityName(record.facility, record.facilityId)}
                 photos={Array.isArray(record.findingPhotos) ? record.findingPhotos : []}
                 onPhotosChange={() => {}}
                 documents={Array.isArray(record.documents) ? record.documents : []}
@@ -293,7 +338,7 @@ export const QuickStatusDialog: React.FC<QuickStatusProps> = ({ record, onClose,
             <RefreshCw className="w-4 h-4 text-primary" />
             <div>
               <h3 className="text-sm font-bold text-foreground">Durumu Değiştir</h3>
-              <p className="text-[11px] text-muted-foreground">{record.facility?.shortName || record.facility?.name} - #{record.rowNo}</p>
+              <p className="text-[11px] text-muted-foreground">{getRecordFacilityName(record.facility, record.facilityId)} - #{record.rowNo}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1 rounded-lg text-muted-foreground hover:text-foreground">
@@ -694,7 +739,7 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
       const uploaded = await uploadImprovementFiles(
         Array.from(files),
         record.facilityId,
-        record.facility?.shortName || record.facility?.name
+        getRecordFacilityName(record.facility, record.facilityId)
       );
       setAttachedDocs(prev => [...prev, ...uploaded]);
       toast.success(`${uploaded.length} adet doküman eklendi.`);
@@ -780,7 +825,7 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
               Süreç Adımı & Aksiyon Girişi
             </h3>
             <p className="text-xs text-muted-foreground truncate max-w-md">
-              {record.facility?.shortName || record.facility?.name} — {record.sheetType} #{record.rowNo}
+              {getRecordFacilityName(record.facility, record.facilityId)} — {record.sheetType} #{record.rowNo}
             </p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer">
@@ -1149,7 +1194,7 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
             </span>
             <ImprovementAttachmentManager
               facilityId={record.facilityId}
-              facilityName={record.facility?.shortName || record.facility?.name}
+              facilityName={getRecordFacilityName(record.facility, record.facilityId)}
               photos={evidencePhotos}
               onPhotosChange={setEvidencePhotos}
               maxPhotos={3}
@@ -1664,7 +1709,7 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
             </label>
             <ImprovementAttachmentManager
               facilityId={record.facilityId}
-              facilityName={record.facility?.shortName || record.facility?.name}
+              facilityName={getRecordFacilityName(record.facility, record.facilityId)}
               photos={findingPhotos}
               onPhotosChange={setFindingPhotos}
               documents={documents}
@@ -2289,7 +2334,7 @@ export const CreateRecordDialog: React.FC<CreateProps> = ({
             </label>
             <ImprovementAttachmentManager
               facilityId={formData.facilityId}
-              facilityName={facilities.find(f => f.id === formData.facilityId)?.shortName || facilities.find(f => f.id === formData.facilityId)?.name}
+              facilityName={getRecordFacilityName(null, formData.facilityId, facilities)}
               photos={findingPhotos}
               onPhotosChange={setFindingPhotos}
               documents={documents}
@@ -2525,7 +2570,7 @@ export const EditActionHistoryDialog: React.FC<EditActionHistoryProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-bold text-foreground">Aksiyon Adımını Düzenle</h3>
-              <p className="text-[11px] text-muted-foreground">{record.facility?.shortName || record.facility?.name} - Kayıt #{record.rowNo}</p>
+              <p className="text-[11px] text-muted-foreground">{getRecordFacilityName(record.facility, record.facilityId)} - Kayıt #{record.rowNo}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground">

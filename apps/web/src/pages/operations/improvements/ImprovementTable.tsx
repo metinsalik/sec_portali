@@ -26,6 +26,9 @@ interface Props {
   facilityName?: string;
   facilities?: FacilityOption[];
   selectedFacilityId?: string;
+  hideCreateButton?: boolean;
+  totalRecordsCount?: number;
+  headerContent?: React.ReactNode;
 }
 
 type ColumnFilterState = {
@@ -42,6 +45,9 @@ export const ImprovementTable: React.FC<Props> = ({
   facilityName,
   facilities = [],
   selectedFacilityId,
+  hideCreateButton,
+  totalRecordsCount,
+  headerContent,
 }) => {
   const navigate = useNavigate();
   // Modal states
@@ -147,10 +153,28 @@ export const ImprovementTable: React.FC<Props> = ({
     }
   };
 
-  // Genel Arama
-  // Sayfalama (Pagination) - Varsayılan 25 kayıt
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(25);
+  // Sayfalama (Pagination) - Varsayılan 25 kayıt (Geri dönüldüğünde kalınan sayfa korunur)
+  const [currentPage, setCurrentPage] = useState<number>(() => {
+    try {
+      const saved = sessionStorage.getItem('improvement_table_page');
+      if (saved) {
+        const p = parseInt(saved, 10);
+        if (p > 0) return p;
+      }
+    } catch {}
+    return 1;
+  });
+  const [pageSize, setPageSize] = useState<number>(() => {
+    try {
+      const saved = sessionStorage.getItem('improvement_table_page_size');
+      if (saved) {
+        const ps = parseInt(saved, 10);
+        if (ps > 0) return ps;
+      }
+    } catch {}
+    return 25;
+  });
+  const isFirstMount = useRef(true);
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // Genel Arama
@@ -289,13 +313,41 @@ export const ImprovementTable: React.FC<Props> = ({
   };
 
 
+  // Tesisin tam görünen adını (Örn: "İSÜ Liv Topkapı") getiren güvenli yardımcı fonksiyon
+  const getFacilityDisplayName = (record: ImprovementRecord): string => {
+    // 1. İlişkili facility nesnesindeki tam isim
+    if (record.facility?.name && record.facility.name.trim()) {
+      return record.facility.name;
+    }
+    // 2. facilities prop'undan eşleşen tesisin adını bul
+    const targetId = record.facilityId || record.facility?.id;
+    if (targetId && facilities && facilities.length > 0) {
+      const found = facilities.find(f => 
+        f.id === targetId || 
+        f.id.replace(/İ/g, 'I').replace(/İ/g, 'I') === targetId.replace(/İ/g, 'I').replace(/İ/g, 'I') ||
+        (f.shortName && f.shortName.toUpperCase() === targetId.toUpperCase())
+      );
+      if (found?.name) return found.name;
+    }
+    // 3. Bilinen kodlar için eşleştirme (Örn: ISU-LIV-TPK -> İSÜ Liv Topkapı)
+    if (targetId) {
+      const normalized = targetId.replace(/İ/g, 'I').replace(/İ/g, 'I').toUpperCase();
+      if (normalized.includes('TOPKAP') || normalized.includes('LIV-TPK') || normalized === 'TPK') return 'İSÜ Liv Topkapı';
+      if (normalized.includes('BAHCES') || normalized.includes('LIV-BHC') || normalized === 'BHC') return 'İSÜ Liv Bahçeşehir';
+      if (normalized.includes('GAZIOSM') || normalized.includes('MP-GOP') || normalized === 'GOP') return 'İSÜ MP Gaziosmanpaşa';
+      if (normalized.includes('FAKULT') || normalized.includes('TIP-FAK') || normalized === 'TFK') return 'İSÜ Tıp Fakültesi';
+      if (normalized.includes('VADI') || normalized.includes('LIV-VAD') || normalized === 'VAD') return 'Liv Vadi';
+    }
+    return record.facility?.name || record.facility?.shortName || record.facilityId || '-';
+  };
+
   // Sütun Değerini Getir
   const getColValue = (r: ImprovementRecord, colKey: string): string => {
     switch (colKey) {
       case 'rowNo':
         return String(r.rowNo || '');
       case 'facility':
-        return r.facility?.shortName || r.facility?.name || '';
+        return getFacilityDisplayName(r);
       case 'sheetType':
         return getSheetLabel(r.sheetType);
       case 'auditName':
@@ -579,9 +631,14 @@ export const ImprovementTable: React.FC<Props> = ({
     return filteredRecords.slice(start, start + pageSize);
   }, [filteredRecords, currentPage, pageSize]);
 
-  // Filtre, arama, sıralama veya tesis değiştiğinde 1. sayfaya dön
+  // Filtre, arama, sıralama veya tesis DEĞİŞTİĞİNDE (ilk açılış hariç) 1. sayfaya dön
   useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
     setCurrentPage(1);
+    sessionStorage.removeItem('improvement_table_page');
   }, [searchTerm, columnFilters, sortField, sortOrder, sheetType, selectedFacilityId]);
 
   // Sayfa taşması engelleme
@@ -594,10 +651,49 @@ export const ImprovementTable: React.FC<Props> = ({
   const handlePageChange = (newPage: number) => {
     const target = Math.max(1, Math.min(newPage, totalPages));
     setCurrentPage(target);
+    sessionStorage.setItem('improvement_table_page', target.toString());
     if (tableContainerRef.current) {
       tableContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
+
+  // Detay sayfasına giderken mevcut konumu ve kalınan satırı kaydet
+  const handleNavigateToDetail = (record: ImprovementRecord) => {
+    const mainEl = document.querySelector('main');
+    if (mainEl) {
+      sessionStorage.setItem('improvement_table_scroll_top', mainEl.scrollTop.toString());
+    }
+    sessionStorage.setItem('improvement_last_clicked_row', record.id);
+    sessionStorage.setItem('improvement_table_page', currentPage.toString());
+    navigate(`/operations-management/improvements/records/${record.id}`);
+  };
+
+  // Detay sayfasından geri dönüldüğünde kalınan satıra ve kaydırma konumuna anında odaklan
+  useEffect(() => {
+    const lastRowId = sessionStorage.getItem('improvement_last_clicked_row');
+    if (!lastRowId || paginatedRecords.length === 0) return;
+
+    const timer = setTimeout(() => {
+      const rowEl = document.getElementById(`record-row-${lastRowId}`);
+      const mainEl = document.querySelector('main');
+      if (rowEl) {
+        rowEl.scrollIntoView({ behavior: 'instant', block: 'center' });
+        rowEl.classList.add('bg-primary/20', 'transition-colors');
+        setTimeout(() => {
+          rowEl.classList.remove('bg-primary/20');
+        }, 2500);
+      } else {
+        const savedScroll = sessionStorage.getItem('improvement_table_scroll_top');
+        if (savedScroll && mainEl) {
+          mainEl.scrollTop = parseInt(savedScroll, 10);
+        }
+      }
+      sessionStorage.removeItem('improvement_last_clicked_row');
+      sessionStorage.removeItem('improvement_table_scroll_top');
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [paginatedRecords]);
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
@@ -632,21 +728,27 @@ export const ImprovementTable: React.FC<Props> = ({
     let totalProgressSum = 0;
 
     filteredRecords.forEach(r => {
-      const isOpen = r.status === 'Başlamadı' || r.status === 'Devam Ediyor';
-      const isCompleted = r.status === 'Tamamlandı';
-      const isCancelled = r.status === 'İptal Edildi';
+      const s = (r.status || '').trim();
+      const isCompleted = s === 'Tamamlandı' || s === 'Kapalı';
+      const isCancelled = s === 'İptal Edildi' || s === 'İptal';
+      const isOpen = !isCompleted && !isCancelled;
+
       if (isOpen) open++;
       if (isCompleted) completed++;
       if (isCancelled) cancelled++;
-      if (r.riskScore === 'Kritik') {
+
+      const isCrit = r.riskScore === 'Kritik';
+      const isHigh = r.riskScore === 'Yüksek';
+
+      if (isCrit) {
         critical++;
         if (isOpen) openCritical++;
       }
-      if (r.riskScore === 'Yüksek' && isOpen) {
+      if (isHigh && isOpen) {
         openHigh++;
       }
       if (!isCancelled) {
-        totalProgressSum += isCompleted ? 100 : (r.status === 'Devam Ediyor' ? Math.min(100, Math.max(0, r.progress || 0)) : 0);
+        totalProgressSum += isCompleted ? 100 : (s === 'Devam Ediyor' ? Math.min(100, Math.max(0, r.progress || 0)) : 0);
       }
     });
 
@@ -661,7 +763,7 @@ export const ImprovementTable: React.FC<Props> = ({
     const exportData = filteredRecords.map((r, idx) => {
       const row: any = {
         '#': r.rowNo || idx + 1,
-        'Hastane Adı': r.facility?.name || '',
+        'Hastane Adı': getFacilityDisplayName(r),
       };
 
       if (isKritik) row['Nereden Geliyor'] = getSheetLabel(r.sheetType);
@@ -756,17 +858,27 @@ export const ImprovementTable: React.FC<Props> = ({
   };
 
   return (
-    <div className="space-y-3 font-sans">
+    <>
+      <div className="bg-card text-card-foreground border border-border/80 rounded-2xl overflow-hidden shadow-xs font-sans">
       
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* ÜST BİLGİ VE ARAMA BARI (Canlı Metrikler + Search + Filtre Temizle) */}
+      {/* 1. ÜST BAŞLIK ALANI (varsa headerContent)                           */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="bg-card text-card-foreground border rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+      {headerContent && (
+        <div className="p-4 sm:p-5 border-b border-border/60 bg-muted/20">
+          {headerContent}
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* 2. CANLI METRİKLER VE ARAMA/EYLEM BARI                              */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      <div className="p-3 sm:px-4 bg-muted/10 border-b border-border/60 flex flex-wrap items-center justify-between gap-3">
         
         {/* Sol: Canlı İstatistikler & Metrik Barı */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground font-medium">
           <span className="text-foreground">
-            <strong>{filteredRecords.length}</strong> / {records.length} kayıt gösteriliyor
+            <strong>{filteredRecords.length}</strong> / {totalRecordsCount ?? records.length} kayıt gösteriliyor
           </span>
           <span className="text-border">|</span>
           <span>Açık: <strong className="text-foreground">{metrics.open}</strong></span>
@@ -855,14 +967,16 @@ export const ImprovementTable: React.FC<Props> = ({
           </Button>
 
           {/* Yeni Kayıt Ekle Butonu */}
-          <Button
-            size="sm"
-            onClick={() => setShowCreateModal(true)}
-            className="h-8 text-xs bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
-          >
-            <Plus className="w-3.5 h-3.5 mr-1" />
-            Yeni Kayıt
-          </Button>
+          {!hideCreateButton && sheetType !== 'EXECUTIVE' && (
+            <Button
+              size="sm"
+              onClick={() => setShowCreateModal(true)}
+              className="h-8 text-xs bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Yeni Kayıt
+            </Button>
+          )}
 
         </div>
 
@@ -1068,11 +1182,10 @@ export const ImprovementTable: React.FC<Props> = ({
       )}
 
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* TABLO KONTEYNERİ (Görsel 1 Standartlarında Sticky Başlıklar)        */}
+      {/* TABLO ALANI (Görsel 1 Standartlarında Sticky Başlıklar)             */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      <div ref={tableContainerRef} className="bg-card text-card-foreground border rounded-xl overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-xs text-left">
+      <div ref={tableContainerRef} className="overflow-x-auto">
+        <table className="w-full border-collapse text-xs text-left">
             
             {/* Tablo Başlıkları (Sticky) */}
             <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm border-b text-muted-foreground uppercase tracking-wider text-[11px] font-semibold">
@@ -1116,6 +1229,7 @@ export const ImprovementTable: React.FC<Props> = ({
                   return (
                     <tr 
                       key={record.id}
+                      id={`record-row-${record.id}`}
                       className="hover:bg-muted/40 transition-colors group"
                     >
                       {/* Sıra No */}
@@ -1124,8 +1238,8 @@ export const ImprovementTable: React.FC<Props> = ({
                       </td>
 
                       {/* Hastane Adı */}
-                      <td className="p-2.5 text-foreground font-medium truncate max-w-[130px]" title={record.facility?.name}>
-                        {record.facility?.shortName || record.facility?.name}
+                      <td className="p-2.5 text-foreground font-medium truncate max-w-[150px]" title={getFacilityDisplayName(record)}>
+                        {getFacilityDisplayName(record)}
                       </td>
 
                       {/* Nereden Geliyor (Kritik sekmesinde) */}
@@ -1201,7 +1315,7 @@ export const ImprovementTable: React.FC<Props> = ({
                       {/* Tespitler */}
                       <td className="p-2.5 text-foreground">
                         <div 
-                          onClick={() => navigate(`/operations-management/improvements/records/${record.id}`)}
+                          onClick={() => handleNavigateToDetail(record)}
                           className="line-clamp-3 leading-[16px] max-h-[50px] overflow-hidden whitespace-pre-wrap cursor-pointer hover:text-primary transition-colors font-medium text-xs" 
                           title="Detaylı sayfaya gitmek için tıklayın"
                         >
@@ -1218,7 +1332,7 @@ export const ImprovementTable: React.FC<Props> = ({
                                   setLightboxData({
                                     photos: record.findingPhotos,
                                     initialIndex: 0,
-                                    title: `${record.facility?.shortName || record.facility?.name || ''} - #${record.rowNo || ''} Tespit Fotoğrafları`
+                                    title: `${getFacilityDisplayName(record)} - #${record.rowNo || ''} Tespit Fotoğrafları`
                                   });
                                 }}
                                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-medium border border-blue-200 dark:border-blue-800 transition-colors"
@@ -1270,7 +1384,7 @@ export const ImprovementTable: React.FC<Props> = ({
                       <td className="p-2 text-center sticky right-0 bg-card/95 group-hover:bg-muted/95 border-l">
                         <div className="flex flex-col gap-1 items-center">
                           <button
-                            onClick={() => navigate(`/operations-management/improvements/records/${record.id}`)}
+                            onClick={() => handleNavigateToDetail(record)}
                             className="w-20 py-0.5 rounded border border-primary/40 bg-primary/10 hover:bg-primary/20 text-[11px] font-bold text-primary transition-colors shadow-2xs flex items-center justify-center gap-1"
                             title="Tüm detayları, fotoğrafları ve işlem geçmişini sayfada aç"
                           >
@@ -1343,8 +1457,11 @@ export const ImprovementTable: React.FC<Props> = ({
                 <select
                   value={pageSize}
                   onChange={(e) => {
-                    setPageSize(Number(e.target.value));
+                    const ps = Number(e.target.value);
+                    setPageSize(ps);
+                    sessionStorage.setItem('improvement_table_page_size', ps.toString());
                     setCurrentPage(1);
+                    sessionStorage.setItem('improvement_table_page', '1');
                   }}
                   className="h-7 px-2 rounded-md border border-input bg-background text-foreground text-xs focus:ring-1 focus:ring-primary outline-none cursor-pointer"
                 >
@@ -1638,6 +1755,6 @@ export const ImprovementTable: React.FC<Props> = ({
         </div>
       )}
 
-    </div>
+    </>
   );
 };

@@ -757,13 +757,62 @@ export const ExecutiveSummaryPage: React.FC = () => {
     return facilities.filter(f => userFacilities.includes(f.id));
   }, [facilities, hasAdminAccess, userFacilities]);
 
-  // Tüm Yetkili Hastaneler (Filtresiz ham liste)
+  // Tesisin tam görünen adını getiren yardımcı fonksiyon
+  const getFacilityFullName = (hospitalId: string, currentName?: string): string => {
+    const fac = facilities.find(f => 
+      f.id === hospitalId || 
+      f.id.replace(/İ/g, 'I').replace(/İ/g, 'I') === hospitalId.replace(/İ/g, 'I').replace(/İ/g, 'I') ||
+      (f.shortName && f.shortName.toUpperCase() === hospitalId.toUpperCase())
+    );
+    if (fac?.name && fac.name.trim()) return fac.name;
+
+    const norm = (hospitalId || currentName || '').replace(/İ/g, 'I').replace(/İ/g, 'I').toUpperCase();
+    if (norm.includes('TOPKAP') || norm.includes('LIV-TPK') || norm === 'TPK') return 'İSÜ Liv Topkapı';
+    if (norm.includes('BAHCES') || norm.includes('LIV-BHC') || norm === 'BHC') return 'İSÜ Liv Bahçeşehir';
+    if (norm.includes('GAZIOSM') || norm.includes('MP-GOP') || norm === 'GOP') return 'İSÜ MP Gaziosmanpaşa';
+    if (norm.includes('FAKULT') || norm.includes('TIP-FAK') || norm === 'TFK') return 'İSÜ Tıp Fakültesi';
+    if (norm.includes('VADI') || norm.includes('LIV-VAD') || norm === 'VAD') return 'Liv Vadi';
+    if (norm.includes('BAHCELIEVLER') || norm === 'BAH') return 'MP Bahçelievler';
+    if (norm.includes('ANKARA') || norm === 'ANL') return 'Liv Ankara';
+    if (norm.includes('GAZIANTEP') || norm === 'GZN') return 'Liv Gaziantep';
+    if (norm.includes('SAMSUN-LIV') || norm === 'SML') return 'Liv Samsun';
+    if (norm.includes('ULUS') || norm === 'ULS') return 'Liv Ulus';
+    if (norm.includes('ADANA') || norm === 'ADN') return 'MP Adana';
+    if (norm.includes('ANTALYA') || norm === 'ANT') return 'MP Antalya';
+    if (norm.includes('ATASEHIR') || norm === 'ATS') return 'MP Ataşehir';
+    if (norm.includes('GEBZE') || norm === 'GBZ') return 'MP Gebze';
+    if (norm.includes('GOZTEPE') || norm === 'GOZ') return 'MP Göztepe';
+    if (norm.includes('IZMIR') || norm === 'IZM') return 'MP İzmir';
+    if (norm.includes('KARADENIZ') || norm === 'KAR') return 'MP Karadeniz';
+    if (norm.includes('ORDU') || norm === 'ORD') return 'MP Ordu';
+    if (norm.includes('TEM') || norm === 'TEM') return 'MP Tem';
+    if (norm.includes('TOKAT') || norm === 'TKT') return 'MP Tokat';
+    if (norm.includes('PENDIK') || norm === 'PEN') return 'VM MP Pendik';
+    if (norm.includes('FLORYA') || norm === 'FLR') return 'VM MP Florya';
+    if (norm.includes('KOCAELI') || norm === 'KOC') return 'VM MP Kocaeli';
+    if (norm.includes('MALTEPE') || norm === 'MLT') return 'VM MP Maltepe';
+    if (norm.includes('MERSIN') || norm === 'MRS') return 'VM MP Mersin';
+    if (norm.includes('BURSA') || norm === 'BUR') return 'VM MP Bursa';
+
+    if (currentName && currentName.length > 5 && !currentName.includes('ISU-') && !currentName.includes('LIV-') && !currentName.includes('MP-')) {
+      return currentName;
+    }
+
+    return currentName || hospitalId || '';
+  };
+
+  // Tüm Yetkili Hastaneler (Filtresiz ham liste - isimler görünen tam adlarıyla)
   const allAuthorizedHospitals = useMemo(() => {
     const rawList = stats?.hospitals || [];
-    return (hasAdminAccess || userFacilities.length === 0)
+    const list = (hasAdminAccess || userFacilities.length === 0)
       ? rawList
       : rawList.filter(h => userFacilities.includes(h.hospitalId));
-  }, [stats?.hospitals, hasAdminAccess, userFacilities]);
+
+    return list.map(h => ({
+      ...h,
+      hospitalName: getFacilityFullName(h.hospitalId, h.hospitalName),
+    }));
+  }, [stats?.hospitals, facilities, hasAdminAccess, userFacilities]);
 
   // Filtrelenmiş ve sıralanmış hastane listesi (Çoklu tesis seçimine ve arama kriterlerine göre)
   const filteredHospitals = useMemo(() => {
@@ -901,9 +950,6 @@ export const ExecutiveSummaryPage: React.FC = () => {
               Canlı Takip
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
-            Tüm hastanelerin emniyet ve denetim bulgularını tek bir noktadan izleyin, risk seviyelerine ve denetim başlıklarına göre anında filtreleyip inceleyin.
-          </p>
         </div>
 
         {/* Sağ Üst Hızlı Kontroller */}
@@ -951,19 +997,9 @@ export const ExecutiveSummaryPage: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center font-bold shrink-0">
               <TrendingUp className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h3 className="text-sm sm:text-base font-bold text-foreground tracking-tight">
-                  Denetim İlerleme & Kapsam Değişimi Trend Grafiği
-                </h3>
-                <Badge variant="outline" className="text-[10px] font-mono bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
-                  {isTrendChartOpen ? 'Grafik Açık' : 'Tıklayarak Açın (Kapalı)'}
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Bulgu eklenme ve ağırlıklı ilerleme hızını zaman serisinde inceleyin (Earned Value / Burnup Modeli)
-              </p>
-            </div>
+            <h3 className="text-sm sm:text-base font-bold text-foreground tracking-tight">
+              Denetim İlerleme & Kapsam Değişimi Trend Grafiği
+            </h3>
           </div>
 
           <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground shrink-0">
@@ -999,15 +1035,12 @@ export const ExecutiveSummaryPage: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2.5">
                   <h2 className="text-lg font-bold tracking-tight text-foreground">
-                    Genel Durum & Risk Dağılımı KPI Göstergeleri (Tüm Zincir)
+                    Genel Durum & Risk Dağılımı KPI Göstergeleri
                   </h2>
                   <Badge variant="outline" className="text-xs font-mono px-2 py-0.5">
                     {allAuthorizedHospitals.length} Hastane
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Risk düzeyleri, açık/kapalı bulgu durumları ve tesisler arası genel dağılım özeti
-                </p>
               </div>
             </div>
 
@@ -1046,18 +1079,11 @@ export const ExecutiveSummaryPage: React.FC = () => {
         {/* RİSK VE DURUM KPI GÖSTERGELERİ & FİLTRELEME ALANI */}
         <div className="p-5 border-b bg-background/50 space-y-4">
           
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-xs font-bold text-foreground">
-              <TrendingUp className="w-4 h-4 text-primary" />
-              <span>Genel Durum & Risk Dağılımı KPI Göstergeleri:</span>
-              <span className="text-[11px] font-normal text-muted-foreground hidden sm:inline">
-                (Karta tıklayarak risk seviyesini, içindeki <strong>Başlamadı / Devam / Tamam</strong> butonlarına basarak duruma göre filtreleyin)
-              </span>
-            </div>
-
+          {/* Aktif Filtre Bilgi Çubuğu */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono flex-wrap">
-              <span className="font-sans">Aktif Filtre:</span>
-              <Badge variant="secondary" className="font-mono text-[11px] font-bold">
+              <span className="font-sans font-medium text-foreground">Aktif Filtre:</span>
+              <Badge variant="secondary" className="font-mono text-xs font-bold">
                 {selectedRiskOpt.label}
               </Badge>
               {hasStatusFilter && selectedStatuses.map(status => (
@@ -1065,7 +1091,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
                   key={status}
                   variant="default" 
                   className={cn(
-                    "font-mono text-[11px] font-bold flex items-center gap-1",
+                    "font-mono text-xs font-bold flex items-center gap-1",
                     status === 'Başlamadı' && "bg-amber-500 hover:bg-amber-600 text-white",
                     status === 'Devam Ediyor' && "bg-blue-600 hover:bg-blue-700 text-white",
                     status === 'Tamamlandı' && "bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -1088,205 +1114,352 @@ export const ExecutiveSummaryPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedStatuses([])}
-                  className="text-[11px] text-muted-foreground hover:text-foreground underline cursor-pointer"
+                  className="text-xs text-muted-foreground hover:text-foreground underline cursor-pointer"
                   title="Tüm durumları göster"
                 >
                   (Tüm Durumlar)
                 </button>
               )}
-              <span className="text-muted-foreground/40 font-normal">|</span>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
               <span>Eşleşen:</span>
-              <strong className="text-foreground font-bold">
+              <strong className="text-foreground font-bold text-sm">
                 {filteredRecordsForTable.length} Bulgu
               </strong>
             </div>
           </div>
 
-          {/* 5 KPI KARTI (Tıklanabilir Risk & Çoklu Durum Filtre Paneli) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-            {[
-              {
-                key: 'ALL',
-                title: 'Toplam Bulgu',
-                icon: Layers,
-                accentText: 'text-blue-600 dark:text-blue-400',
-                activeRing: 'bg-blue-500/10 border-blue-500/60 ring-2 ring-blue-500/30 shadow-xs',
-                activeBadge: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
-                counts: kpiData.total,
-              },
-              {
-                key: 'Kritik',
-                title: 'Kritik Risk',
-                icon: AlertTriangle,
-                accentText: 'text-red-600 dark:text-red-400',
-                activeRing: 'bg-red-500/10 border-red-500/60 ring-2 ring-red-500/30 shadow-xs',
-                activeBadge: 'bg-red-500/10 text-red-600 border-red-500/30',
-                counts: kpiData.critical,
-              },
-              {
-                key: 'Yüksek',
-                title: 'Yüksek Risk',
-                icon: Flame,
-                accentText: 'text-rose-600 dark:text-rose-400',
-                activeRing: 'bg-rose-500/10 border-rose-500/60 ring-2 ring-rose-500/30 shadow-xs',
-                activeBadge: 'bg-rose-500/10 text-rose-600 border-rose-500/30',
-                counts: kpiData.high,
-              },
-              {
-                key: 'Önemli',
-                title: 'Önemli Risk',
-                icon: ShieldAlert,
-                accentText: 'text-amber-600 dark:text-amber-400',
-                activeRing: 'bg-amber-500/10 border-amber-500/60 ring-2 ring-amber-500/30 shadow-xs',
-                activeBadge: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
-                counts: kpiData.medium,
-              },
-              {
-                key: 'OLASI_ONEMSIZ',
-                title: 'Olası & Önemsiz',
-                icon: ShieldCheck,
-                accentText: 'text-slate-600 dark:text-slate-400',
-                activeRing: 'bg-slate-500/10 border-slate-500/60 ring-2 ring-slate-500/30 shadow-xs',
-                activeBadge: 'bg-slate-500/10 text-slate-600 border-slate-500/30',
-                counts: kpiData.lowAndNegligible,
-              },
-            ].map(card => {
-              const isCardActive = selectedRiskFilter === card.key;
-              const CardIcon = card.icon;
+          {/* KPI KARTLARI (2 KATMANLI: ÜSTTE 2 BÜYÜK KART, ALTTA 3 KART) */}
+          <div className="space-y-3.5">
+            {/* Üst Satır: Toplam Bulgu ve Kritik Risk (2 Kart) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                {
+                  key: 'ALL',
+                  title: 'Toplam Bulgu',
+                  icon: Layers,
+                  accentText: 'text-blue-600 dark:text-blue-400',
+                  activeRing: 'bg-blue-500/10 border-blue-500/60 ring-2 ring-blue-500/30 shadow-sm',
+                  activeBadge: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+                  counts: kpiData.total,
+                },
+                {
+                  key: 'Kritik',
+                  title: 'Kritik Risk',
+                  icon: AlertTriangle,
+                  accentText: 'text-red-600 dark:text-red-400',
+                  activeRing: 'bg-red-500/10 border-red-500/60 ring-2 ring-red-500/30 shadow-sm',
+                  activeBadge: 'bg-red-500/10 text-red-600 border-red-500/30',
+                  counts: kpiData.critical,
+                },
+              ].map(card => {
+                const isCardActive = selectedRiskFilter === card.key;
+                const CardIcon = card.icon;
 
-              return (
-                <div
-                  key={card.key}
-                  onClick={() => handleSelectRiskOnly(card.key)}
-                  className={cn(
-                    "p-3.5 rounded-2xl border transition-all cursor-pointer select-none shadow-2xs group/kpi",
-                    isCardActive
-                      ? card.activeRing
-                      : "bg-card hover:bg-muted/40 border-border/80"
-                  )}
-                  title={`${card.title} - Tıklayarak bu risk seviyesindeki tüm bulguları listeleyin`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold tracking-tight text-foreground uppercase flex items-center gap-1.5">
-                      <CardIcon className={cn("w-3.5 h-3.5", card.accentText)} />
-                      {card.title}
-                    </span>
-                    {isCardActive && !hasStatusFilter && (
-                      <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 font-bold", card.activeBadge)}>
-                        Aktif
-                      </Badge>
+                return (
+                  <div
+                    key={card.key}
+                    onClick={() => handleSelectRiskOnly(card.key)}
+                    className={cn(
+                      "p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer select-none group/kpi shadow-xs",
+                      isCardActive
+                        ? card.activeRing
+                        : "bg-card hover:bg-muted/40 border-border/80"
                     )}
+                    title={`${card.title} - Tıklayarak bu risk seviyesindeki tüm bulguları filtreleyin`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm sm:text-base font-extrabold tracking-tight text-foreground uppercase flex items-center gap-2">
+                        <CardIcon className={cn("w-5 h-5", card.accentText)} />
+                        {card.title}
+                      </span>
+                      {isCardActive && !hasStatusFilter && (
+                        <Badge variant="outline" className={cn("text-xs px-2 py-0.5 font-bold", card.activeBadge)}>
+                          Aktif
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* 4'LÜ BUTON IZGARASI: Başlamadı / Devam / Tamam / Toplam */}
+                    <div className="grid grid-cols-4 gap-2.5 mt-3 pt-3 border-t border-border/60">
+                      {/* Başlamadı */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleStatusFilter(card.key, 'Başlamadı');
+                        }}
+                        className={cn(
+                          "flex flex-col items-center justify-center py-2.5 sm:py-3 px-1 rounded-xl text-center transition-all cursor-pointer",
+                          isCardActive && selectedStatuses.includes('Başlamadı')
+                            ? "bg-amber-500 text-white font-black shadow-md ring-2 ring-amber-400 scale-[1.03]"
+                            : "hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20"
+                        )}
+                        title={`${card.title} seviyesinde Başlamadı durumunu filtrele`}
+                      >
+                        <span className="text-lg sm:text-2xl font-black font-mono leading-none">
+                          {card.counts.notStarted}
+                        </span>
+                        <span className={cn(
+                          "text-xs sm:text-sm font-bold leading-tight mt-1.5",
+                          isCardActive && selectedStatuses.includes('Başlamadı') ? "text-white" : "text-amber-700 dark:text-amber-400"
+                        )}>
+                          Başlamadı
+                        </span>
+                      </button>
+
+                      {/* Devam */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleStatusFilter(card.key, 'Devam Ediyor');
+                        }}
+                        className={cn(
+                          "flex flex-col items-center justify-center py-2.5 sm:py-3 px-1 rounded-xl text-center transition-all cursor-pointer",
+                          isCardActive && selectedStatuses.includes('Devam Ediyor')
+                            ? "bg-blue-600 text-white font-black shadow-md ring-2 ring-blue-400 scale-[1.03]"
+                            : "hover:bg-blue-500/20 text-blue-800 dark:text-blue-300 bg-blue-500/10 border border-blue-500/20"
+                        )}
+                        title={`${card.title} seviyesinde Devam Eden durumunu filtrele`}
+                      >
+                        <span className="text-lg sm:text-2xl font-black font-mono leading-none">
+                          {card.counts.inProgress}
+                        </span>
+                        <span className={cn(
+                          "text-xs sm:text-sm font-bold leading-tight mt-1.5",
+                          isCardActive && selectedStatuses.includes('Devam Ediyor') ? "text-white" : "text-blue-700 dark:text-blue-400"
+                        )}>
+                          Devam
+                        </span>
+                      </button>
+
+                      {/* Tamam */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleStatusFilter(card.key, 'Tamamlandı');
+                        }}
+                        className={cn(
+                          "flex flex-col items-center justify-center py-2.5 sm:py-3 px-1 rounded-xl text-center transition-all cursor-pointer",
+                          isCardActive && selectedStatuses.includes('Tamamlandı')
+                            ? "bg-emerald-600 text-white font-black shadow-md ring-2 ring-emerald-400 scale-[1.03]"
+                            : "hover:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20"
+                        )}
+                        title={`${card.title} seviyesinde Tamamlanan durumunu filtrele`}
+                      >
+                        <span className="text-lg sm:text-2xl font-black font-mono leading-none">
+                          {card.counts.completed}
+                        </span>
+                        <span className={cn(
+                          "text-xs sm:text-sm font-bold leading-tight mt-1.5",
+                          isCardActive && selectedStatuses.includes('Tamamlandı') ? "text-white" : "text-emerald-700 dark:text-emerald-400"
+                        )}>
+                          Tamam
+                        </span>
+                      </button>
+
+                      {/* Toplam */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectRiskOnly(card.key);
+                        }}
+                        className={cn(
+                          "flex flex-col items-center justify-center py-2.5 sm:py-3 px-1 rounded-xl text-center transition-all cursor-pointer",
+                          isCardActive && !hasStatusFilter
+                            ? "bg-foreground text-background font-black shadow-md ring-2 ring-foreground/40 scale-[1.03]"
+                            : "hover:bg-muted text-foreground bg-muted/60 border border-border/60"
+                        )}
+                        title={`${card.title} seviyesindeki tüm durumları göster`}
+                      >
+                        <span className="text-lg sm:text-2xl font-black font-mono leading-none">
+                          {card.counts.total}
+                        </span>
+                        <span className={cn(
+                          "text-xs sm:text-sm font-bold leading-tight mt-1.5",
+                          isCardActive && !hasStatusFilter ? "text-background" : "text-muted-foreground"
+                        )}>
+                          Toplam
+                        </span>
+                      </button>
+                    </div>
                   </div>
+                );
+              })}
+            </div>
 
-                  {/* 4'LÜ BUTON IZGARASI: Başlamadı / Devam / Tamam / Toplam */}
-                  <div className="grid grid-cols-4 gap-1.5 mt-2.5 pt-2 border-t border-border/50">
-                    {/* Başlamadı */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleStatusFilter(card.key, 'Başlamadı');
-                      }}
-                      className={cn(
-                        "flex flex-col items-center justify-center py-1.5 px-0.5 rounded-lg text-center transition-all cursor-pointer",
-                        isCardActive && selectedStatuses.includes('Başlamadı')
-                          ? "bg-amber-500 text-white font-black shadow-xs ring-2 ring-amber-400 scale-[1.04]"
-                          : "hover:bg-amber-500/15 text-amber-700 dark:text-amber-400 bg-amber-500/10"
-                      )}
-                      title={`${card.title} seviyesinde Başlamadı durumunu filtrele (Çoklu seçim yapılabilir)`}
-                    >
-                      <span className="text-xs sm:text-sm font-bold font-mono leading-none">
-                        {card.counts.notStarted}
-                      </span>
-                      <span className={cn(
-                        "text-[9px] font-medium leading-tight mt-1",
-                        isCardActive && selectedStatuses.includes('Başlamadı') ? "text-white" : "text-amber-600 dark:text-amber-400"
-                      )}>
-                        Başlamadı
-                      </span>
-                    </button>
+            {/* Alt Satır: Yüksek, Önemli ve Olası & Önemsiz Risk (3 Kart) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                {
+                  key: 'Yüksek',
+                  title: 'Yüksek Risk',
+                  icon: Flame,
+                  accentText: 'text-rose-600 dark:text-rose-400',
+                  activeRing: 'bg-rose-500/10 border-rose-500/60 ring-2 ring-rose-500/30 shadow-sm',
+                  activeBadge: 'bg-rose-500/10 text-rose-600 border-rose-500/30',
+                  counts: kpiData.high,
+                },
+                {
+                  key: 'Önemli',
+                  title: 'Önemli Risk',
+                  icon: ShieldAlert,
+                  accentText: 'text-amber-600 dark:text-amber-400',
+                  activeRing: 'bg-amber-500/10 border-amber-500/60 ring-2 ring-amber-500/30 shadow-sm',
+                  activeBadge: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
+                  counts: kpiData.medium,
+                },
+                {
+                  key: 'OLASI_ONEMSIZ',
+                  title: 'Olası & Önemsiz',
+                  icon: ShieldCheck,
+                  accentText: 'text-slate-600 dark:text-slate-400',
+                  activeRing: 'bg-slate-500/10 border-slate-500/60 ring-2 ring-slate-500/30 shadow-sm',
+                  activeBadge: 'bg-slate-500/10 text-slate-600 border-slate-500/30',
+                  counts: kpiData.lowAndNegligible,
+                },
+              ].map(card => {
+                const isCardActive = selectedRiskFilter === card.key;
+                const CardIcon = card.icon;
 
-                    {/* Devam */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleStatusFilter(card.key, 'Devam Ediyor');
-                      }}
-                      className={cn(
-                        "flex flex-col items-center justify-center py-1.5 px-0.5 rounded-lg text-center transition-all cursor-pointer",
-                        isCardActive && selectedStatuses.includes('Devam Ediyor')
-                          ? "bg-blue-600 text-white font-black shadow-xs ring-2 ring-blue-400 scale-[1.04]"
-                          : "hover:bg-blue-500/15 text-blue-700 dark:text-blue-400 bg-blue-500/10"
+                return (
+                  <div
+                    key={card.key}
+                    onClick={() => handleSelectRiskOnly(card.key)}
+                    className={cn(
+                      "p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer select-none group/kpi shadow-2xs",
+                      isCardActive
+                        ? card.activeRing
+                        : "bg-card hover:bg-muted/40 border-border/80"
+                    )}
+                    title={`${card.title} - Tıklayarak bu risk seviyesindeki tüm bulguları listeleyin`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs sm:text-sm font-bold tracking-tight text-foreground uppercase flex items-center gap-1.5">
+                        <CardIcon className={cn("w-4 h-4", card.accentText)} />
+                        {card.title}
+                      </span>
+                      {isCardActive && !hasStatusFilter && (
+                        <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 font-bold", card.activeBadge)}>
+                          Aktif
+                        </Badge>
                       )}
-                      title={`${card.title} seviyesinde Devam Eden durumunu filtrele (Çoklu seçim yapılabilir)`}
-                    >
-                      <span className="text-xs sm:text-sm font-bold font-mono leading-none">
-                        {card.counts.inProgress}
-                      </span>
-                      <span className={cn(
-                        "text-[9px] font-medium leading-tight mt-1",
-                        isCardActive && selectedStatuses.includes('Devam Ediyor') ? "text-white" : "text-blue-600 dark:text-blue-400"
-                      )}>
-                        Devam
-                      </span>
-                    </button>
+                    </div>
 
-                    {/* Tamam */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleStatusFilter(card.key, 'Tamamlandı');
-                      }}
-                      className={cn(
-                        "flex flex-col items-center justify-center py-1.5 px-0.5 rounded-lg text-center transition-all cursor-pointer",
-                        isCardActive && selectedStatuses.includes('Tamamlandı')
-                          ? "bg-emerald-600 text-white font-black shadow-xs ring-2 ring-emerald-400 scale-[1.04]"
-                          : "hover:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10"
-                      )}
-                      title={`${card.title} seviyesinde Tamamlanan durumunu filtrele (Çoklu seçim yapılabilir)`}
-                    >
-                      <span className="text-xs sm:text-sm font-bold font-mono leading-none">
-                        {card.counts.completed}
-                      </span>
-                      <span className={cn(
-                        "text-[9px] font-medium leading-tight mt-1",
-                        isCardActive && selectedStatuses.includes('Tamamlandı') ? "text-white" : "text-emerald-600 dark:text-emerald-400"
-                      )}>
-                        Tamam
-                      </span>
-                    </button>
+                    {/* 4'LÜ BUTON IZGARASI: Başlamadı / Devam / Tamam / Toplam */}
+                    <div className="grid grid-cols-4 gap-2 mt-2.5 pt-2.5 border-t border-border/60">
+                      {/* Başlamadı */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleStatusFilter(card.key, 'Başlamadı');
+                        }}
+                        className={cn(
+                          "flex flex-col items-center justify-center py-2 sm:py-2.5 px-1 rounded-lg text-center transition-all cursor-pointer",
+                          isCardActive && selectedStatuses.includes('Başlamadı')
+                            ? "bg-amber-500 text-white font-black shadow-xs ring-2 ring-amber-400 scale-[1.03]"
+                            : "hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20"
+                        )}
+                        title={`${card.title} seviyesinde Başlamadı durumunu filtrele`}
+                      >
+                        <span className="text-base sm:text-xl font-black font-mono leading-none">
+                          {card.counts.notStarted}
+                        </span>
+                        <span className={cn(
+                          "text-[11px] sm:text-xs font-semibold leading-tight mt-1",
+                          isCardActive && selectedStatuses.includes('Başlamadı') ? "text-white" : "text-amber-700 dark:text-amber-400"
+                        )}>
+                          Başlamadı
+                        </span>
+                      </button>
 
-                    {/* Toplam */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSelectRiskOnly(card.key);
-                      }}
-                      className={cn(
-                        "flex flex-col items-center justify-center py-1.5 px-0.5 rounded-lg text-center transition-all cursor-pointer",
-                        isCardActive && !hasStatusFilter
-                          ? "bg-foreground text-background font-black shadow-xs ring-2 ring-foreground/40 scale-[1.04]"
-                          : "hover:bg-muted text-muted-foreground bg-muted/50"
-                      )}
-                      title={`${card.title} seviyesindeki tüm durumları göster`}
-                    >
-                      <span className="text-xs sm:text-sm font-black font-mono leading-none">
-                        {card.counts.total}
-                      </span>
-                      <span className={cn(
-                        "text-[9px] font-bold leading-tight mt-1",
-                        isCardActive && !hasStatusFilter ? "text-background" : "text-muted-foreground"
-                      )}>
-                        Toplam
-                      </span>
-                    </button>
+                      {/* Devam */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleStatusFilter(card.key, 'Devam Ediyor');
+                        }}
+                        className={cn(
+                          "flex flex-col items-center justify-center py-2 sm:py-2.5 px-1 rounded-lg text-center transition-all cursor-pointer",
+                          isCardActive && selectedStatuses.includes('Devam Ediyor')
+                            ? "bg-blue-600 text-white font-black shadow-xs ring-2 ring-blue-400 scale-[1.03]"
+                            : "hover:bg-blue-500/20 text-blue-800 dark:text-blue-300 bg-blue-500/10 border border-blue-500/20"
+                        )}
+                        title={`${card.title} seviyesinde Devam Eden durumunu filtrele`}
+                      >
+                        <span className="text-base sm:text-xl font-black font-mono leading-none">
+                          {card.counts.inProgress}
+                        </span>
+                        <span className={cn(
+                          "text-[11px] sm:text-xs font-semibold leading-tight mt-1",
+                          isCardActive && selectedStatuses.includes('Devam Ediyor') ? "text-white" : "text-blue-700 dark:text-blue-400"
+                        )}>
+                          Devam
+                        </span>
+                      </button>
+
+                      {/* Tamam */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleStatusFilter(card.key, 'Tamamlandı');
+                        }}
+                        className={cn(
+                          "flex flex-col items-center justify-center py-2 sm:py-2.5 px-1 rounded-lg text-center transition-all cursor-pointer",
+                          isCardActive && selectedStatuses.includes('Tamamlandı')
+                            ? "bg-emerald-600 text-white font-black shadow-xs ring-2 ring-emerald-400 scale-[1.03]"
+                            : "hover:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20"
+                        )}
+                        title={`${card.title} seviyesinde Tamamlanan durumunu filtrele`}
+                      >
+                        <span className="text-base sm:text-xl font-black font-mono leading-none">
+                          {card.counts.completed}
+                        </span>
+                        <span className={cn(
+                          "text-[11px] sm:text-xs font-semibold leading-tight mt-1",
+                          isCardActive && selectedStatuses.includes('Tamamlandı') ? "text-white" : "text-emerald-700 dark:text-emerald-400"
+                        )}>
+                          Tamam
+                        </span>
+                      </button>
+
+                      {/* Toplam */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectRiskOnly(card.key);
+                        }}
+                        className={cn(
+                          "flex flex-col items-center justify-center py-2 sm:py-2.5 px-1 rounded-lg text-center transition-all cursor-pointer",
+                          isCardActive && !hasStatusFilter
+                            ? "bg-foreground text-background font-black shadow-xs ring-2 ring-foreground/40 scale-[1.03]"
+                            : "hover:bg-muted text-foreground bg-muted/60 border border-border/60"
+                        )}
+                        title={`${card.title} seviyesindeki tüm durumları göster`}
+                      >
+                        <span className="text-base sm:text-xl font-black font-mono leading-none">
+                          {card.counts.total}
+                        </span>
+                        <span className={cn(
+                          "text-[11px] sm:text-xs font-bold leading-tight mt-1",
+                          isCardActive && !hasStatusFilter ? "text-background" : "text-muted-foreground"
+                        )}>
+                          Toplam
+                        </span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
           {/* KULLANICI İSTEĞİ: TESİSLER DAĞILIM ÖZETİ (ÇOKLU SEÇİM ÖZELLİĞİ İLE) */}
@@ -1326,36 +1499,37 @@ export const ExecutiveSummaryPage: React.FC = () => {
             {isFacilitySummaryOpen && (
               <div className="p-3 sm:p-4 bg-muted/20 border-t border-border/60 animate-in slide-in-from-top-1 duration-150 space-y-3">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <p className="text-[11px] text-muted-foreground">
-                    Her tesisin aktif filtreye ({selectedRiskFilter === 'ALL' ? 'Tüm Riskler' : selectedRiskFilter}{hasStatusFilter ? ` - ${selectedStatuses.join(', ')}` : ''}) göre eşleşen bulgu sayıları: <span className="font-semibold text-foreground">(Birden fazla tesis seçebilirsiniz)</span>
-                  </p>
                   <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-muted-foreground">Tesis Seçimi:</span>
                     {selectedFacilityIds.length > 0 ? (
-                      <>
-                        <span className="text-xs font-bold text-primary">
-                          {selectedFacilityIds.length} / {allAuthorizedHospitals.length} seçildi
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={clearFacilitySelection}
-                          className="h-7 text-xs text-destructive hover:bg-destructive/10 px-2 cursor-pointer font-medium"
-                        >
-                          Seçimi Temizle (Tümü)
-                        </Button>
-                      </>
+                      <span className="text-xs font-bold text-primary">
+                        {selectedFacilityIds.length} / {allAuthorizedHospitals.length} seçili
+                      </span>
                     ) : (
+                      <span className="text-xs text-muted-foreground">Tüm tesisler dahil</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {selectedFacilityIds.length > 0 && (
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={selectAllFacilities}
-                        className="h-7 text-xs text-muted-foreground hover:text-foreground px-2 cursor-pointer font-medium"
+                        onClick={clearFacilitySelection}
+                        className="h-7 text-xs text-destructive hover:bg-destructive/10 px-2 cursor-pointer font-medium"
                       >
-                        Tümünü Seç
+                        Seçimi Temizle (Tümü)
                       </Button>
                     )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={selectAllFacilities}
+                      className="h-7 text-xs text-primary hover:bg-primary/10 px-2 cursor-pointer font-medium"
+                    >
+                      Tümünü Seç
+                    </Button>
                   </div>
                 </div>
 
@@ -1434,15 +1608,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
                       {selectedFacilityIds.length} Tesis Filtrelendi
                     </Badge>
                   )}
-                  <Badge variant="secondary" className="text-[10px] font-mono font-semibold">
-                    {isHospitalsListOpen ? 'Bölüm Açık' : 'Tıklayarak Açın (Kapalı)'}
-                  </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                  {isHospitalsListOpen 
-                    ? 'Hastanelerin detaylı kartlarını daraltmak için tıklayın' 
-                    : 'Tüm hastanelerin açık/kapalı bulguları, risk düzeyleri ve 4 ana emniyet modülü kartlarını görüntülemek için tıklayın'}
-                </p>
               </div>
             </div>
 
@@ -1745,9 +1911,6 @@ export const ExecutiveSummaryPage: React.FC = () => {
                             </Badge>
                           )}
                         </div>
-                        <span className="text-[11px] text-muted-foreground">
-                          İlgili bar veya alt başlığa tıklayarak alttaki tabloda anında filtreleyin
-                        </span>
                       </div>
 
                       {/* 4 ANA EMNİYET MODÜLÜ BARI (İÇ İÇE AÇILIR LİSTE) */}
@@ -2016,124 +2179,116 @@ export const ExecutiveSummaryPage: React.FC = () => {
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* 4. DİNAMİK YÖNETİCİ TABLOSU (IMPROVEMENT TABLE ENTEGRASYONU)         */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      <div ref={tableSectionRef} className="space-y-3 pt-2">
-        
-        {/* Tablo Üst Kontrol & Canlı Filtre Rozetleri */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center font-bold shrink-0">
-              <ListOrdered className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
-                  {selectedRiskFilter === 'ALL' ? 'Tüm Risk Seviyeleri' : (selectedRiskFilter === 'OLASI_ONEMSIZ' ? 'Olası ve Önemsiz Risk' : `${selectedRiskFilter} Risk`)}
-                  {hasStatusFilter ? ` • ${selectedStatuses.join(' + ')}` : ''} Bulgular Listesi
-                </h3>
-                <Badge variant="outline" className="font-mono text-xs font-bold">
-                  {filteredRecordsForTable.length} Kayıt Gösteriliyor
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Yukarıda seçtiğiniz hastane, risk seviyesi ve denetim başlığına göre canlı filtrelenmiş liste
-              </p>
-            </div>
-          </div>
-
-          {/* Aktif Filtre Rozetleri & Sıfırla Butonu */}
-          <div className="flex items-center gap-2 flex-wrap self-end sm:self-auto">
-            {/* Durum Rozetleri */}
-            {hasStatusFilter && selectedStatuses.map(status => (
-              <span 
-                key={status}
-                className={cn(
-                  "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border",
-                  status === 'Başlamadı' && "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
-                  status === 'Devam Ediyor' && "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
-                  status === 'Tamamlandı' && "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
-                )}
-              >
-                <span>Durum: {status}</span>
-                <button 
-                  onClick={() => toggleStatusFilter(selectedRiskFilter, status)}
-                  className="ml-0.5 hover:opacity-80 cursor-pointer"
-                  title={`${status} durum filtresini kaldır`}
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
-
-            {/* Risk Rozeti */}
-            {selectedRiskFilter !== 'ALL' && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
-                <span>Risk: {selectedRiskFilter}</span>
-                <button 
-                  onClick={() => setSelectedRiskFilter('ALL')}
-                  className="hover:text-red-800 ml-0.5 cursor-pointer"
-                  title="Risk filtresini kaldır, tüm riskleri göster"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            )}
-
-            {/* Hastane / Tesis Rozeti */}
-            {selectedFacilityIds.length > 0 && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-                <span>Tesis: {currentFocusHospitalName}</span>
-                <button 
-                  onClick={clearFacilitySelection}
-                  className="hover:text-primary/80 ml-0.5 cursor-pointer"
-                  title="Tesis filtresini kaldır, tüm hastaneleri göster"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            )}
-
-            {/* Denetim Başlığı Rozeti */}
-            {selectedSheetFilter !== 'ALL' && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-                <span>Başlık: {getSheetDisplayName(selectedSheetFilter)}</span>
-                <button 
-                  onClick={() => setSelectedSheetFilter('ALL')}
-                  className="hover:text-indigo-800 ml-0.5 cursor-pointer"
-                  title="Başlık filtresini kaldır, tüm başlıkları göster"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            )}
-
-            {/* En Sonda Temizle Butonu */}
-            {hasAnyFilterActive && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClearAllFilters}
-                className="text-xs h-8 text-destructive hover:bg-destructive/10 border-destructive/30 cursor-pointer"
-                title="Tüm filtreleri temizle ve toplam görünüme dön"
-              >
-                <RotateCcw className="w-3.5 h-3.5 mr-1" />
-                Filtreleri Temizle
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Zenginleştirilmiş Ortak Tablo Bileşeni */}
+      <div ref={tableSectionRef} className="pt-2">
         <ImprovementTable
           records={filteredRecordsForTable}
+          totalRecordsCount={records.length}
           loading={loadingRecords}
           sheetTitle="Yonetici_Ozeti_Bulgular"
           sheetType="EXECUTIVE"
+          hideCreateButton={true}
           onRefresh={() => {
             fetchStats();
             fetchRecords();
           }}
           selectedFacilityId={selectedFacilityId}
           facilities={facilities}
+          headerContent={
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center font-bold shrink-0">
+                  <ListOrdered className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
+                    {selectedRiskFilter === 'ALL' ? 'Tüm Risk Seviyeleri' : (selectedRiskFilter === 'OLASI_ONEMSIZ' ? 'Olası ve Önemsiz Risk' : `${selectedRiskFilter} Risk`)}
+                    {hasStatusFilter ? ` • ${selectedStatuses.join(' + ')}` : ''} Bulgular Listesi
+                  </h3>
+                </div>
+              </div>
+
+              {/* Aktif Filtre Rozetleri & Sıfırla Butonu */}
+              <div className="flex items-center gap-2 flex-wrap self-end sm:self-auto">
+                {/* Durum Rozetleri */}
+                {hasStatusFilter && selectedStatuses.map(status => (
+                  <span 
+                    key={status}
+                    className={cn(
+                      "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border",
+                      status === 'Başlamadı' && "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
+                      status === 'Devam Ediyor' && "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
+                      status === 'Tamamlandı' && "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                    )}
+                  >
+                    <span>Durum: {status}</span>
+                    <button 
+                      onClick={() => toggleStatusFilter(selectedRiskFilter, status)}
+                      className="ml-0.5 hover:opacity-80 cursor-pointer"
+                      title={`${status} durum filtresini kaldır`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+
+                {/* Risk Rozeti */}
+                {selectedRiskFilter !== 'ALL' && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                    <span>Risk: {selectedRiskFilter}</span>
+                    <button 
+                      onClick={() => setSelectedRiskFilter('ALL')}
+                      className="hover:text-red-800 ml-0.5 cursor-pointer"
+                      title="Risk filtresini kaldır, tüm riskleri göster"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {/* Hastane / Tesis Rozeti */}
+                {selectedFacilityIds.length > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                    <span>Tesis: {currentFocusHospitalName}</span>
+                    <button 
+                      onClick={clearFacilitySelection}
+                      className="hover:text-primary/80 ml-0.5 cursor-pointer"
+                      title="Tesis filtresini kaldır, tüm hastaneleri göster"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {/* Denetim Başlığı Rozeti */}
+                {selectedSheetFilter !== 'ALL' && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                    <span>Başlık: {getSheetDisplayName(selectedSheetFilter)}</span>
+                    <button 
+                      onClick={() => setSelectedSheetFilter('ALL')}
+                      className="hover:text-indigo-800 ml-0.5 cursor-pointer"
+                      title="Başlık filtresini kaldır, tüm başlıkları göster"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {/* En Sonda Temizle Butonu */}
+                {hasAnyFilterActive && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearAllFilters}
+                    className="text-xs h-8 text-destructive hover:bg-destructive/10 border-destructive/30 cursor-pointer"
+                    title="Tüm filtreleri temizle ve toplam görünüme dön"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                    Filtreleri Temizle
+                  </Button>
+                )}
+              </div>
+            </div>
+          }
         />
       </div>
 
