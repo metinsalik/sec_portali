@@ -23,7 +23,8 @@ import {
   FileCheck2,
   ChevronRight,
   Eye,
-  X
+  X,
+  Check
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -244,6 +245,33 @@ export const ExecutiveSummaryPage: React.FC = () => {
     return outletCtx.selectedFacilityId || localStorage.getItem('activeFacilityId') || 'ALL';
   });
 
+  // KULLANICI İSTEĞİ: Çoklu Tesis Seçimi (Tüm Tesislerin Dağılım Özeti'nden birden fazla tesis seçilebilir)
+  const [selectedFacilityIds, setSelectedFacilityIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('exec_summary_selected_facilities');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    const single = outletCtx.selectedFacilityId || localStorage.getItem('activeFacilityId');
+    if (single && single !== 'ALL') return [single];
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('exec_summary_selected_facilities', JSON.stringify(selectedFacilityIds));
+    if (selectedFacilityIds.length === 1) {
+      setSelectedFacilityIdState(selectedFacilityIds[0]);
+      localStorage.setItem('activeFacilityId', selectedFacilityIds[0]);
+    } else {
+      setSelectedFacilityIdState('ALL');
+      if (selectedFacilityIds.length === 0) {
+        localStorage.removeItem('activeFacilityId');
+      }
+    }
+  }, [selectedFacilityIds]);
+
   const facilities = outletCtx.facilities || [];
 
   // Dashboard Stats
@@ -290,14 +318,39 @@ export const ExecutiveSummaryPage: React.FC = () => {
     return [];
   });
 
-  // KULLANICI İSTEĞİ: Tesisler Özeti Akordiyonu (Default kapalı)
-  const [isFacilitySummaryOpen, setIsFacilitySummaryOpen] = useState<boolean>(false);
+  // KULLANICI İSTEĞİ: Tesisler Özeti Akordiyonu (Varsayılan olarak açık)
+  const [isFacilitySummaryOpen, setIsFacilitySummaryOpen] = useState<boolean>(true);
 
   // KULLANICI İSTEĞİ: Trend Grafiği (Default KAPALI, istendiğinde açılır)
   const [isTrendChartOpen, setIsTrendChartOpen] = useState<boolean>(false);
 
-  // KULLANICI İSTEĞİ: Hastanelere Göre Bulgu Dağılımı Bölümü (Katlanabilir)
-  const [isHospitalsListOpen, setIsHospitalsListOpen] = useState<boolean>(true);
+  // KULLANICI İSTEĞİ: Hastanelere Göre Bulgu Dağılımı Bölümü (Katlanabilir, DEFAULT KAPALI GELSİN)
+  const [isHospitalsListOpen, setIsHospitalsListOpen] = useState<boolean>(false);
+
+  // Çoklu Tesis Seçimi Fonksiyonları
+  const toggleFacilitySelect = (hospitalId: string) => {
+    setSelectedFacilityIds(prev => {
+      if (prev.includes(hospitalId)) {
+        return prev.filter(id => id !== hospitalId);
+      } else {
+        return [...prev, hospitalId];
+      }
+    });
+  };
+
+  const selectAllFacilities = () => {
+    setSelectedFacilityIds(allAuthorizedHospitals.map(h => h.hospitalId));
+  };
+
+  const clearFacilitySelection = () => {
+    setSelectedFacilityIds([]);
+    setSelectedFacilityIdState('ALL');
+    localStorage.removeItem('activeFacilityId');
+    localStorage.removeItem('exec_summary_selected_facilities');
+    if (outletCtx.setSelectedFacilityId) {
+      outletCtx.setSelectedFacilityId('ALL');
+    }
+  };
 
   // Seçili Denetim Başlığı / Takip Alanı Filtresi (ALL, DENETIMLER, ELEKTRIK_PK vb.)
   const [selectedSheetFilter, setSelectedSheetFilter] = useState<string>(() => {
@@ -441,8 +494,10 @@ export const ExecutiveSummaryPage: React.FC = () => {
   const handleHospitalSelect = (hospitalId: string) => {
     if (hospitalId === 'ALL') {
       localStorage.removeItem('activeFacilityId');
+      setSelectedFacilityIds([]);
     } else {
       localStorage.setItem('activeFacilityId', hospitalId);
+      setSelectedFacilityIds([hospitalId]);
     }
     setSelectedFacilityIdState(hospitalId);
     if (outletCtx.setSelectedFacilityId) {
@@ -461,7 +516,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
     setSelectedSheetFilter('ALL');
     setSearchQuery('');
     setOnlyWithSelectedRisk(false);
-    handleHospitalSelect('ALL');
+    clearFacilitySelection();
     localStorage.setItem('exec_summary_risk_filter', 'ALL');
     localStorage.setItem('exec_summary_status_filter', '[]');
     localStorage.setItem('exec_summary_sheet_filter', 'ALL');
@@ -661,10 +716,11 @@ export const ExecutiveSummaryPage: React.FC = () => {
 
   // ─────────────────────────────────────────────────────────────────────────
   // KPI KARTLARI ÜÇLÜ YAPI (Başlamadı / Devam / Tamamlandı + Toplam)
-  // Odaklı hastane varsa onun sayıları, ALL ise tüm zincir sayıları gösterilir.
+  // Odaklı hastane(ler) varsa onların sayıları, yoksa tüm zincir sayıları gösterilir.
   // ─────────────────────────────────────────────────────────────────────────
   const kpiData = useMemo(() => {
-    if (records.length === 0 && stats?.summary && (!selectedFacilityId || selectedFacilityId === 'ALL')) {
+    const hasFacFilter = selectedFacilityIds.length > 0;
+    if (records.length === 0 && stats?.summary && !hasFacFilter) {
       const s = stats.summary;
       return {
         total: { notStarted: s.notStarted, inProgress: s.inProgress, completed: s.completed, total: s.total },
@@ -674,8 +730,8 @@ export const ExecutiveSummaryPage: React.FC = () => {
         lowAndNegligible: { notStarted: 0, inProgress: 0, completed: 0, total: (s.risks?.low || 0) + (s.risks?.negligible || 0) },
       };
     }
-    const relevantRecords = selectedFacilityId && selectedFacilityId !== 'ALL'
-      ? records.filter(r => r.facilityId === selectedFacilityId)
+    const relevantRecords = hasFacFilter
+      ? records.filter(r => selectedFacilityIds.includes(r.facilityId))
       : records;
 
     const calcSplit = (subList: ImprovementRecord[]) => {
@@ -693,20 +749,29 @@ export const ExecutiveSummaryPage: React.FC = () => {
       medium: calcSplit(relevantRecords.filter(r => r.riskScore === 'Önemli')),
       lowAndNegligible: calcSplit(relevantRecords.filter(r => r.riskScore === 'Olası' || r.riskScore === 'Önemsiz')),
     };
-  }, [records, selectedFacilityId]);
+  }, [records, selectedFacilityIds, stats?.summary]);
 
   // Yetkili Tesisler Listesi (Yetkisiz hastaneler filtrelenir)
   const authorizedFacilities = useMemo(() => {
     if (hasAdminAccess || userFacilities.length === 0) return facilities;
     return facilities.filter(f => userFacilities.includes(f.id));
   }, [facilities, hasAdminAccess, userFacilities]);
-  // Filtrelenmiş ve sıralanmış hastane listesi (Yetkili tesislerle sınırlandırılmış)
-  const filteredHospitals = useMemo(() => {
+
+  // Tüm Yetkili Hastaneler (Filtresiz ham liste)
+  const allAuthorizedHospitals = useMemo(() => {
     const rawList = stats?.hospitals || [];
-    const list = (hasAdminAccess || userFacilities.length === 0)
+    return (hasAdminAccess || userFacilities.length === 0)
       ? rawList
       : rawList.filter(h => userFacilities.includes(h.hospitalId));
-    return list.filter(hosp => {
+  }, [stats?.hospitals, hasAdminAccess, userFacilities]);
+
+  // Filtrelenmiş ve sıralanmış hastane listesi (Çoklu tesis seçimine ve arama kriterlerine göre)
+  const filteredHospitals = useMemo(() => {
+    return allAuthorizedHospitals.filter(hosp => {
+      // Çoklu Tesis Filtresi
+      if (selectedFacilityIds.length > 0 && !selectedFacilityIds.includes(hosp.hospitalId)) {
+        return false;
+      }
       // İsim filtresi
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -744,7 +809,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
       }
       return 0;
     });
-  }, [stats?.hospitals, records, searchQuery, selectedRiskFilter, selectedStatuses, hasStatusFilter, onlyWithSelectedRisk, sortBy]);
+  }, [allAuthorizedHospitals, selectedFacilityIds, records, searchQuery, selectedRiskFilter, selectedStatuses, hasStatusFilter, onlyWithSelectedRisk, sortBy]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // KULLANICI İSTEĞİ: TABLO FİLTRESİ
@@ -753,8 +818,8 @@ export const ExecutiveSummaryPage: React.FC = () => {
   // ─────────────────────────────────────────────────────────────────────────
   const filteredRecordsForTable = useMemo(() => {
     return records.filter(r => {
-      // 0. Hastane Filtresi
-      if (selectedFacilityId && selectedFacilityId !== 'ALL' && r.facilityId !== selectedFacilityId) {
+      // 0. Çoklu Tesis Filtresi
+      if (selectedFacilityIds.length > 0 && !selectedFacilityIds.includes(r.facilityId)) {
         return false;
       }
 
@@ -798,18 +863,27 @@ export const ExecutiveSummaryPage: React.FC = () => {
 
       return true;
     });
-  }, [records, selectedFacilityId, selectedRiskFilter, selectedStatuses, hasStatusFilter, selectedSheetFilter]);
+  }, [records, selectedFacilityIds, selectedRiskFilter, selectedStatuses, hasStatusFilter, selectedSheetFilter]);
 
   const selectedRiskOpt = RISK_FILTER_OPTIONS.find(o => o.key === selectedRiskFilter) || RISK_FILTER_OPTIONS[0];
 
   const hasAnyFilterActive = selectedRiskFilter !== 'ALL' || 
     hasStatusFilter ||
     selectedSheetFilter !== 'ALL' || 
-    selectedFacilityId !== 'ALL' || 
+    selectedFacilityIds.length > 0 || 
     Boolean(searchQuery.trim()) || 
     onlyWithSelectedRisk;
 
-  const currentFocusHospitalName = stats?.hospitals?.find(h => h.hospitalId === selectedFacilityId)?.hospitalName;
+  const currentFocusHospitalName = useMemo(() => {
+    if (selectedFacilityIds.length === 1) {
+      return allAuthorizedHospitals.find(h => h.hospitalId === selectedFacilityIds[0])?.hospitalName || selectedFacilityIds[0];
+    }
+    if (selectedFacilityIds.length > 1) {
+      const names = selectedFacilityIds.map(id => allAuthorizedHospitals.find(h => h.hospitalId === id)?.hospitalName || id);
+      return `${selectedFacilityIds.length} Tesis (${names.join(', ')})`;
+    }
+    return null;
+  }, [selectedFacilityIds, allAuthorizedHospitals]);
 
   return (
     <div className="space-y-6 max-w-[1700px] mx-auto pb-16 font-sans px-4 sm:px-6">
@@ -925,41 +999,30 @@ export const ExecutiveSummaryPage: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2.5">
                   <h2 className="text-lg font-bold tracking-tight text-foreground">
-                    Hastanelere Göre Bulgu Dağılımı
+                    Genel Durum & Risk Dağılımı KPI Göstergeleri (Tüm Zincir)
                   </h2>
                   <Badge variant="outline" className="text-xs font-mono px-2 py-0.5">
-                    {stats?.hospitals?.length || 0} Hastane
+                    {allAuthorizedHospitals.length} Hastane
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Her hastanenin risk düzeyi, açık/kapalı bulgu sayıları ve 4 ana emniyet modülü dağılımı
+                  Risk düzeyleri, açık/kapalı bulgu durumları ve tesisler arası genel dağılım özeti
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
-              {/* KULLANICI İSTEĞİ: Bölümü Aç / Kapa Butonu */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsHospitalsListOpen(prev => !prev)}
-                className="text-xs h-8 gap-1.5 cursor-pointer font-medium"
-              >
-                <span>{isHospitalsListOpen ? 'Bölümü Daralt' : 'Bölümü Aç'}</span>
-                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-200", isHospitalsListOpen && "rotate-180")} />
-              </Button>
-
-              {selectedFacilityId !== 'ALL' && (
+              {selectedFacilityIds.length > 0 && (
                 <div className="px-3.5 py-1.5 rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-2 text-xs text-primary font-medium">
                   <span>
-                    Odaklı Hastane: <strong>{currentFocusHospitalName || 'Seçili'}</strong>
+                    Seçili Tesisler: <strong>{currentFocusHospitalName}</strong>
                   </span>
                   <button 
-                    onClick={() => handleHospitalSelect('ALL')}
+                    onClick={clearFacilitySelection}
                     className="text-xs underline hover:text-primary/80 ml-1.5 cursor-pointer font-bold"
-                    title={userFacilities.length > 1 && !hasAdminAccess ? "Yetkili tüm tesislerinizi toplu görün" : "Tüm hastaneleri göster"}
+                    title="Tüm tesisleri göster"
                   >
-                    {userFacilities.length > 1 && !hasAdminAccess ? "Toplu Görünüme Dön" : "Kaldır"}
+                    Tümüne Dön
                   </button>
                 </div>
               )}
@@ -980,8 +1043,6 @@ export const ExecutiveSummaryPage: React.FC = () => {
           </div>
         </div>
 
-        {isHospitalsListOpen && (
-          <>
         {/* RİSK VE DURUM KPI GÖSTERGELERİ & FİLTRELEME ALANI */}
         <div className="p-5 border-b bg-background/50 space-y-4">
           
@@ -1228,7 +1289,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
             })}
           </div>
 
-          {/* KULLANICI İSTEĞİ: TESİSLER DAĞILIM ÖZETİ (DEFAULT KAPALI, TIKLAYINCA AÇILIR) */}
+          {/* KULLANICI İSTEĞİ: TESİSLER DAĞILIM ÖZETİ (ÇOKLU SEÇİM ÖZELLİĞİ İLE) */}
           <div className="border border-border/80 rounded-xl bg-card overflow-hidden transition-all shadow-2xs">
             <button
               type="button"
@@ -1238,12 +1299,17 @@ export const ExecutiveSummaryPage: React.FC = () => {
               <div className="flex items-center gap-2.5 flex-wrap">
                 <Building2 className="w-4 h-4 text-primary shrink-0" />
                 <span className="text-xs sm:text-sm font-bold text-foreground">
-                  {userFacilities.length > 0 && !hasAdminAccess ? `Yetkili Tesislerin Dağılım Özeti (${filteredHospitals.length} Tesis)` : `Tüm Tesislerin Dağılım Özeti (${filteredHospitals.length} Tesis)`}
+                  {userFacilities.length > 0 && !hasAdminAccess ? `Yetkili Tesislerin Dağılım Özeti (${allAuthorizedHospitals.length} Tesis)` : `Tüm Tesislerin Dağılım Özeti (${allAuthorizedHospitals.length} Tesis)`}
                 </span>
                 <Badge variant="outline" className="text-[11px] font-mono font-bold bg-muted/60">
                   {selectedRiskFilter === 'ALL' ? 'Tüm Riskler' : (selectedRiskFilter === 'OLASI_ONEMSIZ' ? 'Olası ve Önemsiz' : `${selectedRiskFilter} Risk`)}
                   {hasStatusFilter ? ` • ${selectedStatuses.join(' + ')}` : ''}
                 </Badge>
+                {selectedFacilityIds.length > 0 && (
+                  <Badge className="text-[11px] font-mono font-bold bg-primary text-primary-foreground">
+                    {selectedFacilityIds.length} Tesis Seçili
+                  </Badge>
+                )}
                 {hasStatusFilter && (
                   <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium hidden sm:inline">
                     (Seçili filtrelere göre canlı sayılar)
@@ -1258,40 +1324,76 @@ export const ExecutiveSummaryPage: React.FC = () => {
             </button>
 
             {isFacilitySummaryOpen && (
-              <div className="p-3 sm:p-4 bg-muted/20 border-t border-border/60 animate-in slide-in-from-top-1 duration-150">
-                <p className="text-[11px] text-muted-foreground mb-2.5">
-                  Her tesisin aktif filtreye ({selectedRiskFilter === 'ALL' ? 'Tüm Riskler' : selectedRiskFilter}{hasStatusFilter ? ` - ${selectedStatuses.join(', ')}` : ''}) göre eşleşen bulgu sayıları:
-                </p>
+              <div className="p-3 sm:p-4 bg-muted/20 border-t border-border/60 animate-in slide-in-from-top-1 duration-150 space-y-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <p className="text-[11px] text-muted-foreground">
+                    Her tesisin aktif filtreye ({selectedRiskFilter === 'ALL' ? 'Tüm Riskler' : selectedRiskFilter}{hasStatusFilter ? ` - ${selectedStatuses.join(', ')}` : ''}) göre eşleşen bulgu sayıları: <span className="font-semibold text-foreground">(Birden fazla tesis seçebilirsiniz)</span>
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {selectedFacilityIds.length > 0 ? (
+                      <>
+                        <span className="text-xs font-bold text-primary">
+                          {selectedFacilityIds.length} / {allAuthorizedHospitals.length} seçildi
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearFacilitySelection}
+                          className="h-7 text-xs text-destructive hover:bg-destructive/10 px-2 cursor-pointer font-medium"
+                        >
+                          Seçimi Temizle (Tümü)
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={selectAllFacilities}
+                        className="h-7 text-xs text-muted-foreground hover:text-foreground px-2 cursor-pointer font-medium"
+                      >
+                        Tümünü Seç
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                  {filteredHospitals.map(hosp => {
+                  {allAuthorizedHospitals.map(hosp => {
                     const hStats = getHospitalComputedStats(hosp.hospitalId);
-                    const isHospFocused = selectedFacilityId === hosp.hospitalId;
+                    const isSelected = selectedFacilityIds.includes(hosp.hospitalId);
 
                     return (
                       <div
                         key={hosp.hospitalId}
-                        onClick={() => handleHospitalSelect(isHospFocused ? 'ALL' : hosp.hospitalId)}
+                        onClick={() => toggleFacilitySelect(hosp.hospitalId)}
                         className={cn(
-                          "p-2.5 rounded-lg border text-left transition-all cursor-pointer select-none group",
-                          isHospFocused
+                          "p-2.5 rounded-lg border text-left transition-all cursor-pointer select-none group relative",
+                          isSelected
                             ? "bg-primary text-primary-foreground border-primary shadow-xs ring-2 ring-primary/30"
                             : "bg-card hover:bg-muted/70 border-border/80 text-foreground"
                         )}
-                        title={`${hosp.hospitalName} - Tıklayarak odaklayın`}
+                        title={`${hosp.hospitalName} - Tıklayarak seçin/kaldırın`}
                       >
-                        <div className="text-[11px] font-bold truncate">
+                        {isSelected && (
+                          <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-primary-foreground/25 flex items-center justify-center">
+                            <Check className="w-2.5 h-2.5 text-primary-foreground stroke-[3]" />
+                          </div>
+                        )}
+                        <div className="text-[11px] font-bold truncate pr-5">
                           {hosp.hospitalName}
                         </div>
                         <div className="mt-1 flex items-baseline justify-between gap-1">
                           <span className={cn(
                             "text-sm font-black font-mono",
-                            isHospFocused ? "text-primary-foreground" : "text-foreground"
+                            isSelected ? "text-primary-foreground" : "text-foreground"
                           )}>
                             {hStats.matchingFilterCount}
                           </span>
                           <span className={cn(
                             "text-[10px] truncate",
-                            isHospFocused ? "text-primary-foreground/80" : "text-muted-foreground"
+                            isSelected ? "text-primary-foreground/80" : "text-muted-foreground"
                           )}>
                             {hasStatusFilter 
                               ? selectedStatuses.map(s => s === 'Başlamadı' ? 'bşl' : s === 'Devam Ediyor' ? 'dvm' : 'tmm').join('+')
@@ -1306,59 +1408,106 @@ export const ExecutiveSummaryPage: React.FC = () => {
             )}
           </div>
 
-          {/* Arama ve Sıralama Çubuğu */}
-          <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="relative flex-1 max-w-md">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Hastane adına göre ara..."
-                className="pl-9 h-9 text-xs bg-background"
-              />
-              {searchQuery && (
-                <button 
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
+        </div>
 
-            <div className="flex items-center gap-3 self-end sm:self-auto flex-wrap">
-              {/* Sadece Seçili Filtresi Olanlar Toggle */}
-              {(selectedRiskFilter !== 'ALL' || hasStatusFilter) && (
-                <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={onlyWithSelectedRisk}
-                    onChange={(e) => setOnlyWithSelectedRisk(e.target.checked)}
-                    className="rounded border-border text-primary focus:ring-primary w-3.5 h-3.5"
-                  />
-                  <span>Sadece seçili filtreye uygun bulgusu olan hastaneler</span>
-                </label>
-              )}
-
-              {/* Sıralama */}
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <ArrowUpDown className="w-3.5 h-3.5" />
-                <span>Sırala:</span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="bg-background border border-border/80 rounded-lg px-2.5 py-1 text-xs text-foreground cursor-pointer"
-                >
-                  <option value="risk">Risk Yoğunluğuna Göre</option>
-                  <option value="total">Toplam Bulguya Göre</option>
-                  <option value="progress">İlerleme Yüzdesine Göre</option>
-                  <option value="name">İsme Göre (A-Z)</option>
-                </select>
+        {/* ── BÖLÜM: HASTANELERE GÖRE BULGU DAĞILIMI DETAY LİSTESİ (DEFAULT KAPALI, İSTENDİĞİNDE AÇILIR) ── */}
+        <div className="border-t border-border/80 bg-muted/15">
+          <button
+            type="button"
+            onClick={() => setIsHospitalsListOpen(prev => !prev)}
+            className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-muted/30 transition-colors text-left cursor-pointer select-none"
+          >
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center font-bold shrink-0">
+                <Building2 className="w-5 h-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h3 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
+                    Hastanelere Göre Bulgu Dağılımı Detay Listesi
+                  </h3>
+                  <Badge variant="outline" className="text-xs font-mono px-2 py-0.5">
+                    {filteredHospitals.length} Hastane
+                  </Badge>
+                  {selectedFacilityIds.length > 0 && (
+                    <Badge className="text-xs font-mono font-bold bg-primary text-primary-foreground">
+                      {selectedFacilityIds.length} Tesis Filtrelendi
+                    </Badge>
+                  )}
+                  <Badge variant="secondary" className="text-[10px] font-mono font-semibold">
+                    {isHospitalsListOpen ? 'Bölüm Açık' : 'Tıklayarak Açın (Kapalı)'}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                  {isHospitalsListOpen 
+                    ? 'Hastanelerin detaylı kartlarını daraltmak için tıklayın' 
+                    : 'Tüm hastanelerin açık/kapalı bulguları, risk düzeyleri ve 4 ana emniyet modülü kartlarını görüntülemek için tıklayın'}
+                </p>
               </div>
             </div>
-          </div>
 
+            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground shrink-0 ml-3">
+              <span className="hidden sm:inline">{isHospitalsListOpen ? 'Listeyi Gizle' : 'Listeyi Aç'}</span>
+              <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", isHospitalsListOpen ? "rotate-180" : "")} />
+            </div>
+          </button>
         </div>
+
+        {isHospitalsListOpen ? (
+          <div className="border-t border-border/80 animate-in slide-in-from-top-1 duration-150">
+            {/* Arama ve Sıralama Çubuğu */}
+            <div className="p-4 sm:p-5 bg-background border-b border-border/60">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Hastane adına göre ara..."
+                    className="pl-9 h-9 text-xs bg-background"
+                  />
+                  {searchQuery && (
+                    <button 
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3 self-end sm:self-auto flex-wrap">
+                  {/* Sadece Seçili Filtresi Olanlar Toggle */}
+                  {(selectedRiskFilter !== 'ALL' || hasStatusFilter) && (
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={onlyWithSelectedRisk}
+                        onChange={(e) => setOnlyWithSelectedRisk(e.target.checked)}
+                        className="rounded border-border text-primary focus:ring-primary w-3.5 h-3.5"
+                      />
+                      <span>Sadece seçili filtreye uygun bulgusu olan hastaneler</span>
+                    </label>
+                  )}
+
+                  {/* Sıralama */}
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <ArrowUpDown className="w-3.5 h-3.5" />
+                    <span>Sırala:</span>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as any)}
+                      className="bg-background border border-border/80 rounded-lg px-2.5 py-1 text-xs text-foreground cursor-pointer"
+                    >
+                      <option value="risk">Risk Yoğunluğuna Göre</option>
+                      <option value="total">Toplam Bulguya Göre</option>
+                      <option value="progress">İlerleme Yüzdesine Göre</option>
+                      <option value="name">İsme Göre (A-Z)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
 
         {/* HASTANELER LİSTESİ (AKORDİYONLU VE GENİŞ İLERLEME BARLI) */}
         <div className="divide-y divide-border/60">
@@ -1374,7 +1523,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
           ) : (
             filteredHospitals.map(hosp => {
               const isHospOpen = !!expandedHospitals[hosp.hospitalId];
-              const isCurrentActive = selectedFacilityId === hosp.hospitalId;
+              const isCurrentActive = selectedFacilityIds.includes(hosp.hospitalId);
               const hospStats = getHospitalComputedStats(hosp.hospitalId);
 
               return (
@@ -1536,14 +1685,23 @@ export const ExecutiveSummaryPage: React.FC = () => {
                       {/* Aksiyon Butonları */}
                       <div className="flex items-center gap-2 self-end sm:self-center">
                         <Button
-                          variant={isCurrentActive ? "secondary" : "outline"}
+                          variant={isCurrentActive ? "default" : "outline"}
                           size="sm"
-                          onClick={() => handleHospitalSelect(isCurrentActive ? 'ALL' : hosp.hospitalId)}
-                          className="text-xs h-8 px-2.5 cursor-pointer font-medium"
-                          title={isCurrentActive ? "Filtreyi kaldır, tüm hastaneleri göster" : "Tüm paneli bu hastaneye göre odakla"}
+                          onClick={() => toggleFacilitySelect(hosp.hospitalId)}
+                          className={cn("text-xs h-8 px-2.5 cursor-pointer font-medium", isCurrentActive && "bg-primary text-primary-foreground")}
+                          title={isCurrentActive ? "Tesis seçimini kaldır" : "Listeyi ve paneli bu tesise göre filtrele"}
                         >
-                          <Eye className="w-3.5 h-3.5 mr-1" />
-                          {isCurrentActive ? 'Tümüne Dön' : 'Odakla'}
+                          {isCurrentActive ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 mr-1" />
+                              Seçili
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="w-3.5 h-3.5 mr-1" />
+                              Odakla
+                            </>
+                          )}
                         </Button>
 
                         <Button
@@ -1831,7 +1989,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
 
         {/* Panel Dipnotu & Filtreleri Sıfırla Linki */}
         <div className="p-4 px-6 border-t bg-muted/20 text-xs text-muted-foreground flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <span>{filteredHospitals.length} hastane listelendi (Toplam {stats?.hospitals?.length || 0} kayıtlı)</span>
+          <span>{filteredHospitals.length} hastane listelendi (Toplam {allAuthorizedHospitals.length} kayıtlı)</span>
           <div className="flex items-center gap-3">
             <span className="font-mono">{records.length} toplam bulgu • {kpiData.critical.total} kritik risk</span>
             {hasAnyFilterActive && (
@@ -1845,16 +2003,15 @@ export const ExecutiveSummaryPage: React.FC = () => {
             )}
           </div>
         </div>
-          </>
-        )}
-
-        {!isHospitalsListOpen && (
-          <div className="p-4 px-6 text-center text-xs text-muted-foreground flex items-center justify-center gap-2 bg-muted/10">
-            <span>Hastane dağılım listesi gizlendi ({filteredHospitals.length} Tesis). Görüntülemek için yukarıdaki <strong>Bölümü Aç</strong> butonuna tıklayabilirsiniz.</span>
-          </div>
-        )}
-
       </div>
+    ) : (
+      <div className="p-4 px-6 text-center text-xs text-muted-foreground flex items-center justify-center gap-2 bg-muted/10 border-t border-border/60">
+        <Building2 className="w-3.5 h-3.5 text-muted-foreground/60" />
+        <span>Hastane detay listesi kapalı ({filteredHospitals.length} Tesis). Görüntülemek için yukarıdaki <strong>Listeyi Aç</strong> butonuna tıklayabilirsiniz.</span>
+      </div>
+    )}
+
+  </div>
 
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* 4. DİNAMİK YÖNETİCİ TABLOSU (IMPROVEMENT TABLE ENTEGRASYONU)         */}
@@ -1921,14 +2078,14 @@ export const ExecutiveSummaryPage: React.FC = () => {
               </span>
             )}
 
-            {/* Hastane Rozeti */}
-            {selectedFacilityId !== 'ALL' && (
+            {/* Hastane / Tesis Rozeti */}
+            {selectedFacilityIds.length > 0 && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-                <span>Hastane: {currentFocusHospitalName || selectedFacilityId}</span>
+                <span>Tesis: {currentFocusHospitalName}</span>
                 <button 
-                  onClick={() => handleHospitalSelect('ALL')}
+                  onClick={clearFacilitySelection}
                   className="hover:text-primary/80 ml-0.5 cursor-pointer"
-                  title="Hastane filtresini kaldır, tüm hastaneleri göster"
+                  title="Tesis filtresini kaldır, tüm hastaneleri göster"
                 >
                   <X className="w-3 h-3" />
                 </button>
