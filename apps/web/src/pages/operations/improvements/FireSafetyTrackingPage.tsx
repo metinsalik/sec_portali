@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useOutletContext, useNavigate } from 'react-router-dom';
+import { useParams, useOutletContext } from 'react-router-dom';
 import { Flame } from 'lucide-react';
 import { type ImprovementRecord, type FacilityOption, FIRE_SYSTEMS_SHEETS } from './types';
 import { ImprovementTable } from './ImprovementTable';
@@ -8,8 +8,7 @@ const API = import.meta.env.VITE_API_URL || '';
 
 export const FireSafetyTrackingPage: React.FC = () => {
   const { subCategory } = useParams<{ subCategory: string }>();
-  const navigate = useNavigate();
-  
+
   const { selectedFacilityId, facilities } = useOutletContext<{
     selectedFacilityId: string;
     facilities: FacilityOption[];
@@ -46,38 +45,19 @@ export const FireSafetyTrackingPage: React.FC = () => {
 
   return (
     <div className="space-y-4 max-w-7xl mx-auto">
-      
-      {/* Üst Sekme Başlığı & Alt Sekme Seçici Butonlar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold">
-            <Flame className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-              {activeSheet.name}
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Sulu/gazlı söndürme, basınçlandırma ve yangın algılama/uyarı sistemleri periyodik kontrol & bakım takibi.
-            </p>
-          </div>
-        </div>
 
-        {/* Hızlı Alt Sekme Değiştirici */}
-        <div className="flex flex-wrap gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-lg">
-          {FIRE_SYSTEMS_SHEETS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => navigate(`/operations-management/improvements/fire-safety/${tab.path}`)}
-              className={`px-2.5 py-1 text-xs rounded-md font-medium transition-all ${
-                tab.path === (subCategory || FIRE_SYSTEMS_SHEETS[0].path)
-                  ? 'bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-300 shadow-xs font-bold'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              {tab.name}
-            </button>
-          ))}
+      {/* Üst Sekme Başlığı */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold shrink-0">
+          <Flame className="w-5 h-5" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+            {activeSheet.name}
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Sulu/gazlı söndürme, basınçlandırma ve yangın algılama/uyarı sistemleri periyodik kontrol & bakım takibi.
+          </p>
         </div>
       </div>
 

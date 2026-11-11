@@ -59,37 +59,18 @@ export const DenetimlerPage: React.FC = () => {
   return (
     <div className="space-y-4 max-w-7xl mx-auto">
       
-      {/* Sayfa Başlığı ve Hızlı Alt Sekme Seçici */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
-            <ClipboardList className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-              {currentSheetTitle}
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Hastane içi, merkezi, sağlık ve itfaiye komisyonu denetim bulguları ve aksiyon takibi.
-            </p>
-          </div>
+      {/* Sayfa Başlığı */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
+          <ClipboardList className="w-5 h-5" />
         </div>
-
-        {/* Hızlı Alt Sekme Değiştirici */}
-        <div className="flex flex-wrap gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-lg">
-          {AUDIT_SHEETS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => navigate(`/operations-management/improvements/denetimler/${tab.path}`)}
-              className={`px-2.5 py-1 text-xs rounded-md font-medium transition-all ${
-                tab.path === subCategory || (!subCategory && tab.key === 'MERKEZI_DENETIMLER')
-                  ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-300 shadow-xs font-bold'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              {tab.name}
-            </button>
-          ))}
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+            {currentSheetTitle}
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Hastane içi, merkezi, sağlık ve itfaiye komisyonu denetim bulguları ve aksiyon takibi.
+          </p>
         </div>
       </div>
 

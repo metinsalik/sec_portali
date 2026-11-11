@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { 
-  Search, ArrowUpDown, ArrowUp, ArrowDown, Download, RefreshCw, X, Calendar, 
+  Search, ArrowUp, ArrowDown, Download, RefreshCw, X, Calendar, 
   Tag, Shield, AlertTriangle, CheckCircle2, Building2, Filter, Plus, Check, Trash2, ListOrdered,
   Camera, FileText, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight 
 } from 'lucide-react';
@@ -866,44 +866,44 @@ export const ImprovementTable: React.FC<Props> = ({
   const isTrafoOrUps = sheetType === 'TRAFO' || sheetType === 'UPS';
   const hasActiveFilters = Object.keys(columnFilters).length > 0 || !!searchTerm;
 
-  // Sütun Başlığı Render Fonksiyonu (Excel Filtre İkonlu)
+  // Sütun Başlığı Render Fonksiyonu (Kompakt Sıralama + Küçük Filtre İkonu)
   const renderColumnHeader = (colKey: string, label: string, widthClass: string = '', alignCenter: boolean = false) => {
     const isFiltered = !!columnFilters[colKey];
     const isSorted = sortField === colKey;
 
     return (
-      <th className={`p-2.5 ${widthClass} select-none relative group`}>
-        <div className={`flex items-center gap-1.5 ${alignCenter ? 'justify-center' : 'justify-between'}`}>
+      <th className={`px-2 py-2 ${widthClass} select-none relative group`}>
+        <div className={`flex items-center gap-1 ${alignCenter ? 'justify-center' : 'justify-between'}`}>
           
           {/* Tıklanınca Sırala */}
-          <div 
+          <button
+            type="button"
             onClick={() => handleSort(colKey)}
-            className="flex items-center gap-1 cursor-pointer hover:text-foreground font-semibold truncate"
+            title={`${label} sütununa göre sırala`}
+            className="flex items-center gap-0.5 cursor-pointer hover:text-foreground font-semibold text-left leading-tight whitespace-normal"
           >
-            <span className="truncate">{label}</span>
-            {isSorted ? (
+            <span>{label}</span>
+            {isSorted && (
               sortOrder === 'asc' ? (
-                <ArrowUp className="w-3.5 h-3.5 text-primary shrink-0" />
+                <ArrowUp className="w-2.5 h-2.5 text-primary shrink-0" />
               ) : (
-                <ArrowDown className="w-3.5 h-3.5 text-primary shrink-0" />
+                <ArrowDown className="w-2.5 h-2.5 text-primary shrink-0" />
               )
-            ) : (
-              <ArrowUpDown className="w-3 h-3 opacity-30 group-hover:opacity-70 shrink-0" />
             )}
-          </div>
+          </button>
 
           {/* Excel Filtre Butonu */}
           <button
             type="button"
             onClick={(e) => handleOpenFilter(colKey, e)}
             title={`${label} filtresi`}
-            className={`p-1 rounded transition-colors shrink-0 ${
+            className={`p-0.5 rounded transition-colors shrink-0 ${
               isFiltered
                 ? 'bg-primary text-primary-foreground shadow-xs'
-                : 'text-muted-foreground/60 hover:text-foreground hover:bg-muted'
+                : 'text-muted-foreground/55 hover:text-foreground hover:bg-muted'
             }`}
           >
-            <Filter className={`w-3.5 h-3.5 ${isFiltered ? 'fill-current' : ''}`} />
+            <Filter className={`w-2.5 h-2.5 ${isFiltered ? 'fill-current' : ''}`} />
           </button>
 
         </div>
@@ -955,14 +955,14 @@ export const ImprovementTable: React.FC<Props> = ({
       )}
 
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 2. CANLI METRİKLER VE ARAMA/EYLEM BARI                              */}
+      {/* 2. CANLI METRİKLER VE ARAMA/EYLEM BARI (TEK SATIR KOMPAKT)          */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="p-3 sm:px-4 bg-muted/10 border-b border-border/60 flex flex-wrap items-center justify-between gap-3">
+      <div className="px-3 py-2 bg-muted/10 border-b border-border/60 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
         
         {/* Sol: Canlı İstatistikler & Metrik Barı */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground font-medium">
-          <span className="text-foreground">
-            <strong>{filteredRecords.length}</strong> / {totalRecordsCount ?? records.length} kayıt gösteriliyor
+        <div className="flex items-center gap-x-2 text-[11px] text-muted-foreground font-medium whitespace-nowrap shrink-0">
+          <span className="text-foreground" title="Gösterilen / Toplam kayıt">
+            <strong>{filteredRecords.length}</strong>/{totalRecordsCount ?? records.length} kayıt
           </span>
           <span className="text-border">|</span>
           <span>Açık: <strong className="text-foreground">{metrics.open}</strong></span>
@@ -973,44 +973,48 @@ export const ImprovementTable: React.FC<Props> = ({
           <span className="text-border">|</span>
           <span>Açık Yüksek: <strong className="text-orange-600 dark:text-orange-400 font-bold">{metrics.openHigh}</strong></span>
           <span className="text-border">|</span>
-          <span>Tamamlanan: <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{metrics.completed}</strong></span>
+          <span>Tamam: <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{metrics.completed}</strong></span>
           <span className="text-border">|</span>
-          <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-md font-bold">
-            Ağırlıklı İlerleme: %{metrics.avgProgress}
+          <span className="bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded font-bold" title="Ağırlıklı İlerleme Yüzdesi">
+            İlerleme: %{metrics.avgProgress}
           </span>
         </div>
 
-        {/* Sağ: Genel Arama, Temizle, Yeni Kayıt, Export */}
-        <div className="flex items-center gap-2">
+        {/* Sağ: Genel Arama & İkon Eylem Butonları */}
+        <div className="flex items-center gap-1.5 shrink-0">
           
           {/* Genel Arama Input */}
-          <div className="relative w-48 sm:w-64">
-            <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+          <div className="relative w-36 xl:w-44">
+            <Search className="w-3 h-3 text-muted-foreground absolute left-2 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Tabloda ara..."
-              className="w-full h-8 pl-8 pr-7 rounded-lg border bg-background text-foreground text-xs focus:ring-2 focus:ring-primary outline-none"
+              className="w-full h-7 pl-7 pr-6 rounded-md border bg-background text-foreground text-xs focus:ring-2 focus:ring-primary outline-none"
             />
             {searchTerm && (
               <button 
                 onClick={() => setSearchTerm('')} 
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                title="Aramayı temizle"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 <X className="w-3 h-3" />
               </button>
             )}
           </div>
 
-          {/* Filtreleri Temizle Butonu (Filtre varsa görünür) */}
+          {/* Filtreleri Temizle İkonu */}
           {hasActiveFilters && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleClearAllFilters}
-              className="text-xs text-primary hover:underline px-2 py-1 font-medium whitespace-nowrap"
+              className="h-7 px-1.5 text-[11px] text-primary hover:bg-primary/10 shrink-0"
+              title="Tüm filtreleri temizle"
             >
-              Filtreleri Temizle
-            </button>
+              <X className="w-3.5 h-3.5" />
+            </Button>
           )}
 
           {/* Yenile */}
@@ -1018,8 +1022,9 @@ export const ImprovementTable: React.FC<Props> = ({
             variant="outline"
             size="sm"
             onClick={onRefresh}
-            className="h-8 w-8 p-0"
+            className="h-7 w-7 p-0 shrink-0"
             title="Yenile"
+            aria-label="Yenile"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </Button>
@@ -1030,11 +1035,11 @@ export const ImprovementTable: React.FC<Props> = ({
             size="sm"
             onClick={handleExport}
             disabled={filteredRecords.length === 0}
-            className="h-8 text-xs"
+            className="h-7 w-7 p-0 shrink-0"
             title="Excel İndir"
+            aria-label="Excel İndir"
           >
-            <Download className="w-3.5 h-3.5 mr-1 text-emerald-600 dark:text-emerald-400" />
-            <span className="hidden sm:inline">Excel</span>
+            <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
           </Button>
 
           {/* Numaraları Yeniden Diz (1, 2, 3...) */}
@@ -1043,22 +1048,23 @@ export const ImprovementTable: React.FC<Props> = ({
             size="sm"
             onClick={handleRenumber}
             disabled={isRenumbering || loading || records.length === 0}
-            className="h-8 text-xs font-normal"
-            title="Eksik/silinmiş sıra numaralarını baştan düzenler (1, 2, 3...)"
+            className="h-7 w-7 p-0 shrink-0"
+            title="Numaraları Sırala (1, 2, 3...)"
+            aria-label="Numaraları Sırala"
           >
-            <ListOrdered className={`w-3.5 h-3.5 mr-1 text-blue-600 dark:text-blue-400 ${isRenumbering ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Numaraları Sırala</span>
+            <ListOrdered className={`w-3.5 h-3.5 text-blue-600 dark:text-blue-400 ${isRenumbering ? 'animate-spin' : ''}`} />
           </Button>
 
-          {/* Yeni Kayıt Ekle Butonu */}
+          {/* Yeni Kayıt Ekle (+) */}
           {!hideCreateButton && sheetType !== 'EXECUTIVE' && (
             <Button
               size="sm"
               onClick={() => setShowCreateModal(true)}
-              className="h-8 text-xs bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+              className="h-7 w-7 p-0 shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
+              title="Yeni Kayıt Ekle"
+              aria-label="Yeni Kayıt Ekle"
             >
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              Yeni Kayıt
+              <Plus className="w-4 h-4" />
             </Button>
           )}
 
@@ -1308,10 +1314,10 @@ export const ImprovementTable: React.FC<Props> = ({
         <table className="w-full border-collapse text-xs text-left">
             
             {/* Tablo Başlıkları (Sticky) */}
-            <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm border-b text-muted-foreground uppercase tracking-wider text-[11px] font-semibold">
+            <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm border-b text-muted-foreground uppercase tracking-wider text-[10px] font-semibold">
               <tr>
                 {hasAdminAccess && (
-                  <th className="p-2.5 w-10 text-center">
+                  <th className="p-1.5 w-8 text-center">
                     <input
                       type="checkbox"
                       checked={isAllPageSelected}
@@ -1321,21 +1327,21 @@ export const ImprovementTable: React.FC<Props> = ({
                       onChange={toggleSelectPage}
                       title="Bu sayfadaki tüm kayıtları seç / kaldır"
                       aria-label="Tümünü seç"
-                      className="rounded border-border text-primary focus:ring-primary w-4 h-4 cursor-pointer align-middle"
+                      className="rounded border-border text-primary focus:ring-primary w-3.5 h-3.5 cursor-pointer align-middle"
                     />
                   </th>
                 )}
-                {renderColumnHeader('rowNo', '#', 'w-14 text-center', true)}
-                {renderColumnHeader('facility', 'Hastane Adı', 'w-32')}
-                {isKritik && renderColumnHeader('sheetType', 'Nereden Geliyor', 'w-36')}
-                {isDenetimler && renderColumnHeader('auditName', 'Denetim Adı', 'w-36')}
-                {!isDenetimler && !isKritik && renderColumnHeader('equipmentName', 'Ekipman Adı', 'w-40')}
-                {renderColumnHeader('status', 'Durum', 'w-32 text-center', true)}
-                {renderColumnHeader('location', 'Mahal', 'w-32')}
-                {renderColumnHeader('finding', 'Tespitler', 'min-w-[280px]')}
-                {renderColumnHeader('category', 'Kategori', 'w-32')}
-                {renderColumnHeader('riskScore', 'Risk Skoru', 'w-28 text-center', true)}
-                <th className="p-2.5 w-24 text-center sticky right-0 bg-muted/95 border-l">
+                {renderColumnHeader('rowNo', '#', 'w-10 text-center', true)}
+                {renderColumnHeader('facility', 'Hastane Adı', 'w-28')}
+                {isKritik && renderColumnHeader('sheetType', 'Nereden Geliyor', 'w-28')}
+                {isDenetimler && renderColumnHeader('auditName', 'Denetim Adı', 'w-32')}
+                {!isDenetimler && !isKritik && renderColumnHeader('equipmentName', 'Ekipman Adı', 'w-32')}
+                {renderColumnHeader('status', 'Durum', 'w-28 text-center', true)}
+                {renderColumnHeader('location', 'Mahal', 'w-28')}
+                {renderColumnHeader('finding', 'Tespitler', 'min-w-[200px]')}
+                {renderColumnHeader('category', 'Kategori', 'w-28')}
+                {renderColumnHeader('riskScore', 'Risk Skoru', 'w-20 text-center', true)}
+                <th className="px-2 py-2 w-20 text-center sticky right-0 bg-muted/95 border-l">
                   İşlem
                 </th>
               </tr>
@@ -1370,51 +1376,55 @@ export const ImprovementTable: React.FC<Props> = ({
                     >
                       {/* Seçim Kutucuğu (Yöneticiler) */}
                       {hasAdminAccess && (
-                        <td className="p-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+                        <td className="p-1.5 text-center" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => toggleRowSelection(record.id)}
                             aria-label={`Kayıt #${record.rowNo || ''} seç`}
-                            className="rounded border-border text-primary focus:ring-primary w-4 h-4 cursor-pointer align-middle"
+                            className="rounded border-border text-primary focus:ring-primary w-3.5 h-3.5 cursor-pointer align-middle"
                           />
                         </td>
                       )}
 
                       {/* Sıra No */}
-                      <td className="p-2.5 text-center text-muted-foreground font-mono text-[11px]">
+                      <td className="p-2 text-center text-muted-foreground font-mono text-[11px]">
                         {record.rowNo || '-'}
                       </td>
 
-                      {/* Hastane Adı */}
-                      <td className="p-2.5 text-foreground font-medium truncate max-w-[150px]" title={getFacilityDisplayName(record)}>
-                        {getFacilityDisplayName(record)}
+                      {/* Hastane Adı (2 satıra sığabilir) */}
+                      <td className="p-2 text-foreground max-w-[125px]" title={getFacilityDisplayName(record)}>
+                        <div className="line-clamp-2 leading-tight font-medium text-[11px] whitespace-normal">
+                          {getFacilityDisplayName(record)}
+                        </div>
                       </td>
 
                       {/* Nereden Geliyor (Kritik sekmesinde) */}
                       {isKritik && (
-                        <td className="p-2.5">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20">
+                        <td className="p-2 max-w-[125px]" title={getSheetLabel(record.sheetType)}>
+                          <span className="inline-block px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 line-clamp-2 leading-tight whitespace-normal">
                             {getSheetLabel(record.sheetType)}
                           </span>
                         </td>
                       )}
 
-                      {/* Denetim Adı (Denetimler sekmesinde) */}
+                      {/* Denetim Adı (Denetimler sekmesinde - 2 satıra sığabilir) */}
                       {isDenetimler && (
-                        <td className="p-2.5 text-muted-foreground truncate max-w-[140px]" title={record.auditName || ''}>
-                          {record.auditName || '-'}
+                        <td className="p-2 text-muted-foreground max-w-[135px]" title={record.auditName || ''}>
+                          <div className="line-clamp-2 leading-tight text-[11px] whitespace-normal">
+                            {record.auditName || '-'}
+                          </div>
                         </td>
                       )}
 
-                      {/* Ekipman Adı & Ekipman No (Teknik Sekmelerde) */}
+                      {/* Ekipman Adı & Ekipman No (Teknik Sekmelerde - 2 satır) */}
                       {!isDenetimler && !isKritik && (
-                        <td className="p-2.5 text-foreground truncate max-w-[160px]" title={record.equipmentName || record.equipment || ''}>
-                          <div className="font-medium text-foreground truncate">
+                        <td className="p-2 text-foreground max-w-[140px]" title={record.equipmentName || record.equipment || ''}>
+                          <div className="font-medium text-foreground line-clamp-2 leading-tight text-[11px] whitespace-normal">
                             {record.equipmentName || record.equipment || '-'}
                           </div>
                           {record.equipmentNo && (
-                            <div className="text-[10px] text-muted-foreground font-mono">
+                            <div className="text-[10px] text-muted-foreground font-mono truncate">
                               No: {record.equipmentNo}
                             </div>
                           )}
@@ -1426,43 +1436,60 @@ export const ImprovementTable: React.FC<Props> = ({
                         </td>
                       )}
 
-                      {/* Durum */}
-                      <td className="p-2.5 text-center whitespace-nowrap">
+                      {/* Durum (Devam Ediyor üstte, bar + yüzde yanında altta) */}
+                      <td className="p-2 text-center w-28">
                         {record.status === 'Tamamlandı' ? (
-                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50">
-                            Tamamlandı (%100)
-                          </span>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50 leading-tight whitespace-nowrap">
+                              Tamamlandı
+                            </span>
+                            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 font-mono leading-none">
+                              %100
+                            </span>
+                          </div>
                         ) : record.status === 'Devam Ediyor' ? (
                           <div className="flex flex-col items-center gap-1">
-                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-900/50">
-                              Devam Ediyor (%{record.progress ?? 0})
+                            <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-900/50 leading-tight whitespace-nowrap">
+                              Devam Ediyor
                             </span>
-                            <div className="w-16 bg-muted rounded-full h-1.5 overflow-hidden">
-                              <div 
-                                className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
-                                style={{ width: `${Math.min(100, Math.max(0, record.progress ?? 0))}%` }}
-                                title={`İlerleme: %${record.progress ?? 0}`}
-                              />
+                            <div className="flex items-center justify-center gap-1.5 w-full">
+                              <div className="w-12 bg-muted rounded-full h-1.5 overflow-hidden shrink-0">
+                                <div 
+                                  className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                                  style={{ width: `${Math.min(100, Math.max(0, record.progress ?? 0))}%` }}
+                                  title={`İlerleme: %${record.progress ?? 0}`}
+                                />
+                              </div>
+                              <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 font-mono leading-none">
+                                %{record.progress ?? 0}
+                              </span>
                             </div>
                           </div>
                         ) : record.status === 'İptal Edildi' ? (
-                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-muted text-muted-foreground border line-through">
+                          <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-muted text-muted-foreground border line-through leading-tight whitespace-nowrap">
                             İptal Edildi
                           </span>
                         ) : (
-                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50">
-                            Başlamadı (%0)
-                          </span>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 leading-tight whitespace-nowrap">
+                              Başlamadı
+                            </span>
+                            <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 font-mono leading-none">
+                              %0
+                            </span>
+                          </div>
                         )}
                       </td>
 
-                      {/* Mahal */}
-                      <td className="p-2.5 text-muted-foreground truncate max-w-[130px]" title={record.location || ''}>
-                        {record.location || '-'}
+                      {/* Mahal (2 satıra sığabilir) */}
+                      <td className="p-2 text-muted-foreground max-w-[120px]" title={record.location || ''}>
+                        <div className="line-clamp-2 leading-tight text-[11px] whitespace-normal">
+                          {record.location || '-'}
+                        </div>
                       </td>
 
                       {/* Tespitler */}
-                      <td className="p-2.5 text-foreground">
+                      <td className="p-2 text-foreground">
                         <div 
                           onClick={() => handleNavigateToDetail(record)}
                           className="line-clamp-3 leading-[16px] max-h-[50px] overflow-hidden whitespace-pre-wrap cursor-pointer hover:text-primary transition-colors font-medium text-xs" 
@@ -1506,15 +1533,15 @@ export const ImprovementTable: React.FC<Props> = ({
                         )}
                       </td>
 
-                      {/* Kategori */}
-                      <td className="p-2.5 text-foreground">
-                        <Badge variant="outline" className="text-[10px] truncate max-w-[130px] font-normal" title={record.category || 'Belirtilmemiş'}>
+                      {/* Kategori (2 satıra sığabilir) */}
+                      <td className="p-2 text-foreground max-w-[120px]">
+                        <Badge variant="outline" className="text-[10px] whitespace-normal line-clamp-2 leading-tight font-normal h-auto py-0.5 text-left" title={record.category || 'Belirtilmemiş'}>
                           {record.category || 'Belirtilmemiş'}
                         </Badge>
                       </td>
 
                       {/* Risk Skoru */}
-                      <td className="p-2.5 text-center whitespace-nowrap">
+                      <td className="p-2 text-center whitespace-nowrap">
                         <span 
                           className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
                             isCrit ? 'bg-red-500/15 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/50' :
