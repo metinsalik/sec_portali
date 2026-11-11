@@ -15,13 +15,14 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import LocationCascadingSelector from '@/components/shared/LocationCascadingSelector';
 import { toast } from 'react-hot-toast';
+import { formatGroup5Breadcrumb, formatLocationBreadcrumb } from '@/utils/locationHierarchy';
 
 export default function FacilityInventoryFormPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const initialDepartmentId = searchParams.get('departmentId');
-  const returnTo = location.state?.returnTo || (initialDepartmentId ? `/hazmat/departments/${initialDepartmentId}` : '/hazmat/inventory');
+  const returnTo = location.state?.returnTo || (initialDepartmentId ? `/hazmat/departments/${encodeURIComponent(initialDepartmentId)}` : '/hazmat/inventory');
   const activeFacilityId = localStorage.getItem('activeFacilityId');
   const queryClient = useQueryClient();
 
@@ -55,7 +56,7 @@ export default function FacilityInventoryFormPage() {
     queryFn: async () => {
       if (!initialDepartmentId || !activeFacilityId) return null;
       try {
-        const res = await api.get(`/hazmat/inventory/department/${initialDepartmentId}?facilityId=${activeFacilityId}`);
+        const res = await api.get(`/hazmat/inventory/department/${encodeURIComponent(initialDepartmentId)}?facilityId=${activeFacilityId}`);
         if (!res.ok) return null;
         return await res.json();
       } catch (e) {
@@ -270,6 +271,7 @@ export default function FacilityInventoryFormPage() {
       }
       queryClient.invalidateQueries({ queryKey: ['facility-inventory-summary', activeFacilityId] });
       queryClient.invalidateQueries({ queryKey: ['hazmat-departments', activeFacilityId] });
+      queryClient.invalidateQueries({ queryKey: ['hazmat-cleaning-carts', activeFacilityId] });
       queryClient.invalidateQueries({ queryKey: ['inventory-summary', activeFacilityId] });
       navigate(returnTo);
     },
@@ -362,6 +364,9 @@ export default function FacilityInventoryFormPage() {
   }, [matrixData, deptSearch, initialDepartmentId]);
 
   const getLocationName = (deptId: string) => {
+    if (deptId.startsWith('group5:')) {
+      return formatGroup5Breadcrumb(deptId);
+    }
     if (deptId.startsWith('group:')) {
       const parts = deptId.split(':');
       if (parts.length >= 4) {
@@ -377,7 +382,7 @@ export default function FacilityInventoryFormPage() {
       || allLocations.find((l: any) => l.id === deptId);
       
     if (!dept) return deptId;
-    return `${dept.building ? dept.building + ' / ' : ''}${dept.floor ? dept.floor + ' / ' : ''}${dept.name || dept.department || dept.description || deptId}`;
+    return formatLocationBreadcrumb(dept);
   };
 
   return (

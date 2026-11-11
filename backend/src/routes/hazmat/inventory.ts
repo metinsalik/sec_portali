@@ -1,9 +1,53 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware, AuthRequest } from '../../middleware/auth';
+import { upsertFacilityLocation } from '../../utils/locationHierarchy';
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+async function resolveHazmatLocationId(facilityId: string, rawLocationId: string): Promise<string> {
+  if (!rawLocationId) return rawLocationId;
+
+  if (rawLocationId.startsWith('group5:')) {
+    const payload = rawLocationId.slice('group5:'.length);
+    const [bName = '', blk = '', flr = '', dept = '', desc = ''] = payload
+      .split('|')
+      .map((s) => decodeURIComponent(s || ''));
+    const { location } = await upsertFacilityLocation(prisma, {
+      facilityId,
+      buildingName: bName || null,
+      building: blk || null,
+      floor: flr || null,
+      department: dept || null,
+      description: desc || null,
+      returnExistingOnDuplicate: true,
+    });
+    return location.id;
+  }
+
+  if (rawLocationId.startsWith('group:')) {
+    const parts = rawLocationId.split(':');
+    let b = '', f = '', d = '';
+    if (['building', 'floor', 'department'].includes(parts[1])) {
+      const level = parts[1];
+      const pathParts = parts.slice(3).join(':').split('|');
+      if (level === 'building') { b = pathParts[0] || ''; }
+      else if (level === 'floor') { b = pathParts[0] || ''; f = pathParts[1] || ''; }
+      else { b = pathParts[0] || ''; f = pathParts[1] || ''; d = pathParts[2] || ''; }
+    }
+    const { location } = await upsertFacilityLocation(prisma, {
+      facilityId,
+      building: b || null,
+      floor: f || null,
+      department: d || null,
+      returnExistingOnDuplicate: true,
+    });
+    return location.id;
+  }
+
+  return rawLocationId;
+}
 
 // Get inventory matrix for a specific facility and material
 router.get('/', authMiddleware, async (req: AuthRequest, res) => {
@@ -21,6 +65,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res) => {
     // 1. Get all active departments for the facility
     const departments = await prisma.facilityLocation.findMany({
       where: { facilityId: String(facilityId), isActive: true },
+      include: { facilityBuilding: true },
       orderBy: { name: 'asc' }
     });
 
@@ -101,13 +146,20 @@ router.get('/departments', authMiddleware, async (req: AuthRequest, res) => {
       orderBy: { name: 'asc' },
       include: {
         _count: {
-          // @ts-ignore
-          select: { inventory: true }
+          select: { hazmatMaterials: true }
         }
       }
     });
 
-    res.json(departments);
+    res.json(
+      departments.map((d: any) => ({
+        ...d,
+        _count: {
+          ...(d._count || {}),
+          inventory: d._count?.hazmatMaterials || 0
+        }
+      }))
+    );
   } catch (error) {
     console.error('Error fetching departments with count:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -128,39 +180,11 @@ router.get('/department/:id', authMiddleware, async (req: AuthRequest, res) => {
   }
 
   try {
-    let actualLocationId = id;
-    if (id.startsWith('group:')) {
-      const parts = id.split(':');
-      let b = '', f = '', d = '';
-      if (['building', 'floor', 'department'].includes(parts[1])) {
-        const level = parts[1];
-        const pathParts = parts.slice(3).join(':').split('|');
-        if (level === 'building') { b = pathParts[0] || ''; }
-        else if (level === 'floor') { b = pathParts[0] || ''; f = pathParts[1] || ''; }
-        else { b = pathParts[0] || ''; f = pathParts[1] || ''; d = pathParts[2] || ''; }
-      }
-      
-      let groupLoc = await prisma.facilityLocation.findFirst({
-        where: { facilityId: String(facilityId), building: b || null, floor: f || null, department: d || null, description: null }
-      });
-      
-      if (!groupLoc) {
-        groupLoc = await prisma.facilityLocation.create({
-          data: {
-            facilityId: String(facilityId),
-            name: d || f || b || 'Bilinmeyen',
-            building: b || null,
-            floor: f || null,
-            department: d || null,
-            description: null
-          }
-        });
-      }
-      actualLocationId = groupLoc.id;
-    }
+    const actualLocationId = await resolveHazmatLocationId(String(facilityId), id);
 
     const department = await prisma.facilityLocation.findUnique({
-      where: { id: actualLocationId }
+      where: { id: actualLocationId },
+      include: { facilityBuilding: true }
     });
 
     if (!department) {
@@ -204,41 +228,20 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
   }
 
   try {
+    const resolvedMatrix = await Promise.all(
+      matrix.map(async (item: any) => ({
+        ...item,
+        locationId: item.locationId
+          ? await resolveHazmatLocationId(facilityId, item.locationId)
+          : item.locationId,
+      }))
+    );
+
     // We will do this in a transaction
     await prisma.$transaction(async (tx) => {
-      for (const item of matrix) {
-        let { locationId, minQuantity, maxQuantity } = item;
-        
-        if (locationId && locationId.startsWith('group:')) {
-          const parts = locationId.split(':');
-          let b = '', f = '', d = '';
-          if (['building', 'floor', 'department'].includes(parts[1])) {
-            const level = parts[1];
-            const pathParts = parts.slice(3).join(':').split('|');
-            if (level === 'building') { b = pathParts[0] || ''; }
-            else if (level === 'floor') { b = pathParts[0] || ''; f = pathParts[1] || ''; }
-            else { b = pathParts[0] || ''; f = pathParts[1] || ''; d = pathParts[2] || ''; }
-          }
-          
-          let groupLoc = await tx.facilityLocation.findFirst({
-            where: { facilityId, building: b || null, floor: f || null, department: d || null, description: null }
-          });
-          
-          if (!groupLoc) {
-            groupLoc = await tx.facilityLocation.create({
-              data: {
-                facilityId,
-                name: d || f || b || 'Bilinmeyen',
-                building: b || null,
-                floor: f || null,
-                department: d || null,
-                description: null
-              }
-            });
-          }
-          locationId = groupLoc.id;
-        }
-        
+      for (const item of resolvedMatrix) {
+        const { locationId, minQuantity, maxQuantity } = item;
+
         // If both are empty/null/0, we can delete the entry or just store null
         if (!minQuantity && !maxQuantity) {
           // Attempt to delete if exists
@@ -299,36 +302,7 @@ router.post('/department-bulk', authMiddleware, async (req: AuthRequest, res) =>
   }
 
   try {
-    let actualLocationId = locationId;
-    if (locationId.startsWith('group:')) {
-      const parts = locationId.split(':');
-      let b = '', f = '', d = '';
-      if (['building', 'floor', 'department'].includes(parts[1])) {
-        const level = parts[1];
-        const pathParts = parts.slice(3).join(':').split('|');
-        if (level === 'building') { b = pathParts[0] || ''; }
-        else if (level === 'floor') { b = pathParts[0] || ''; f = pathParts[1] || ''; }
-        else { b = pathParts[0] || ''; f = pathParts[1] || ''; d = pathParts[2] || ''; }
-      }
-      
-      let groupLoc = await prisma.facilityLocation.findFirst({
-        where: { facilityId, building: b || null, floor: f || null, department: d || null, description: null }
-      });
-      
-      if (!groupLoc) {
-        groupLoc = await prisma.facilityLocation.create({
-          data: {
-            facilityId,
-            name: d || f || b || 'Bilinmeyen',
-            building: b || null,
-            floor: f || null,
-            department: d || null,
-            description: null
-          }
-        });
-      }
-      actualLocationId = groupLoc.id;
-    }
+    const actualLocationId = await resolveHazmatLocationId(facilityId, locationId);
 
     await prisma.$transaction(async (tx) => {
       for (const item of items) {
@@ -430,11 +404,11 @@ router.post('/bulk-import-matrix', authMiddleware, async (req: AuthRequest, res)
       const s = unitStr.toLowerCase().trim();
       if (s === 'ml' || s === 'mililitre' || s === 'milli litre') {
         return allUnits.find(u => u.symbol?.toLowerCase() === 'ml') ||
-               allUnits.find(u => u.name?.toLowerCase().includes('mililitre'));
+          allUnits.find(u => u.name?.toLowerCase().includes('mililitre'));
       }
       if (s === 'mg' || s === 'miligram' || s === 'milli gram') {
         return allUnits.find(u => u.symbol?.toLowerCase() === 'mg') ||
-               allUnits.find(u => u.name?.toLowerCase().includes('miligram'));
+          allUnits.find(u => u.name?.toLowerCase().includes('miligram'));
       }
       if (s === 'litre' || s === 'l' || s === 'lt' || s === 'lt.') {
         return allUnits.find(u => u.symbol?.toLowerCase() === 'l' || u.name?.toLowerCase() === 'litre');
@@ -452,8 +426,8 @@ router.post('/bulk-import-matrix', authMiddleware, async (req: AuthRequest, res)
         return allUnits.find(u => u.symbol?.toLowerCase() === 'adet' || u.name?.toLowerCase() === 'adet');
       }
       return allUnits.find(u => u.symbol?.toLowerCase() === s) ||
-             allUnits.find(u => u.name?.toLowerCase() === s) ||
-             allUnits.find(u => u.name?.toLowerCase().includes(s));
+        allUnits.find(u => u.name?.toLowerCase() === s) ||
+        allUnits.find(u => u.name?.toLowerCase().includes(s));
     };
 
     let adetUnit = allUnits.find(u => u.name?.toLowerCase() === 'adet' || u.symbol?.toLowerCase() === 'adet');

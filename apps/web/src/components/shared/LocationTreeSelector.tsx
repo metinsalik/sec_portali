@@ -9,6 +9,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { formatLocationBreadcrumb, getLocationPathSegments } from '@/utils/locationHierarchy';
 
 interface LocationTreeSelectorProps {
   facilityId: string;
@@ -40,32 +41,30 @@ export default function LocationTreeSelector({ facilityId, value, onChange, disa
     const flatLocations: any[] = [];
 
     locations.forEach((loc: any) => {
-      if (!loc.building) {
+      const segments = getLocationPathSegments(loc);
+      if (segments.length === 0) {
         flatLocations.push(loc);
         return;
       }
-      if (!root[loc.building]) root[loc.building] = { id: `b-${loc.building}`, name: loc.building, type: 'building', children: {} };
-      const bNode = root[loc.building];
 
-      if (!bNode.locationId) bNode.locationId = loc.id;
-
-      if (!loc.floor) {
-        return;
-      }
-      if (!bNode.children[loc.floor]) bNode.children[loc.floor] = { id: `f-${loc.building}-${loc.floor}`, name: loc.floor, type: 'floor', children: {} };
-      const fNode = bNode.children[loc.floor];
-      if (!fNode.locationId) fNode.locationId = loc.id;
-
-      if (!loc.department) {
-        return;
-      }
-      if (!fNode.children[loc.department]) fNode.children[loc.department] = { id: `d-${loc.building}-${loc.floor}-${loc.department}`, name: loc.department, type: 'department', children: {} };
-      const dNode = fNode.children[loc.department];
-      if (!dNode.locationId) dNode.locationId = loc.id;
-
-      if (loc.description) {
-        dNode.children[loc.description] = { id: loc.id, name: loc.description, type: 'unit', locationId: loc.id };
-      }
+      let currentMap = root;
+      let pathPrefix = '';
+      segments.forEach((seg, idx) => {
+        pathPrefix = pathPrefix ? `${pathPrefix}::${seg}` : seg;
+        if (!currentMap[seg]) {
+          currentMap[seg] = {
+            id: `node-${pathPrefix}`,
+            name: seg,
+            children: {},
+            locationId: undefined as string | undefined,
+          };
+        }
+        // Assign exact match ID when we reach the end of segments, or fallback ID on intermediate node
+        if (idx === segments.length - 1 || !currentMap[seg].locationId) {
+          currentMap[seg].locationId = loc.id;
+        }
+        currentMap = currentMap[seg].children;
+      });
     });
 
     return { root, flatLocations };
@@ -124,11 +123,9 @@ export default function LocationTreeSelector({ facilityId, value, onChange, disa
     );
   };
 
-  const displayValue = selectedLocation ? (
-    selectedLocation.building ? 
-      [selectedLocation.building, selectedLocation.floor, selectedLocation.department, selectedLocation.description].filter(Boolean).join(' > ')
-      : selectedLocation.name
-  ) : 'Lokasyon Seçiniz...';
+  const displayValue = selectedLocation
+    ? formatLocationBreadcrumb(selectedLocation, ' > ')
+    : 'Lokasyon Seçiniz...';
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>

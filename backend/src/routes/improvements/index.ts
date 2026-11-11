@@ -1534,9 +1534,23 @@ router.patch('/records/:id/action-note', async (req: AuthRequest, res: Response)
   }
 });
 
-// 8. TEKİL KAYIT SİL VE SIRA NUMARALARINI GÜNCELLE
+const isImprovementAdmin = (req: AuthRequest): boolean => {
+  const user = getUser(req);
+  return !!(
+    user.isAdmin ||
+    user.isManagement ||
+    user.roles?.includes('admin') ||
+    user.roles?.includes('management')
+  );
+};
+
+// 8. TEKİL KAYIT SİL VE SIRA NUMARALARINI GÜNCELLE (Yalnızca Yöneticiler)
 router.delete('/records/:id', async (req: AuthRequest, res: Response) => {
   try {
+    if (!isImprovementAdmin(req)) {
+      return res.status(403).json({ success: false, message: 'Kayıt silme yetkisi sadece yöneticilere aittir.' });
+    }
+
     const { id } = req.params;
 
     const existing = await prisma.improvementRecord.findUnique({
@@ -1573,6 +1587,72 @@ router.delete('/records/:id', async (req: AuthRequest, res: Response) => {
     res.json({ success: true, message: 'Kayıt silindi ve sıra numaraları güncellendi.' });
   } catch (error: any) {
     console.error('Error deleting improvement record:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 8.1 TOPLU KAYIT SİL VE SIRA NUMARALARINI GÜNCELLE (Yalnızca Yöneticiler)
+router.post('/records/bulk-delete', async (req: AuthRequest, res: Response) => {
+  try {
+    if (!isImprovementAdmin(req)) {
+      return res.status(403).json({ success: false, message: 'Toplu silme yetkisi sadece yöneticilere aittir.' });
+    }
+
+    const { ids } = req.body as { ids?: string[] };
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Silinecek en az bir kayıt seçilmelidir.' });
+    }
+
+    const uniqueIds = Array.from(new Set(ids.map((id) => String(id).trim()).filter(Boolean)));
+    if (uniqueIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'Geçerli kayıt seçilmedi.' });
+    }
+
+    const deletedCount = await prisma.$transaction(async (tx) => {
+      const toDelete = await tx.improvementRecord.findMany({
+        where: { id: { in: uniqueIds } },
+        select: { id: true, facilityId: true, sheetType: true },
+      });
+
+      if (toDelete.length === 0) {
+        return 0;
+      }
+
+      const deleteRes = await tx.improvementRecord.deleteMany({
+        where: { id: { in: toDelete.map((r) => r.id) } },
+      });
+
+      // Etkilenen her (facilityId, sheetType) grubu için sıra numaralarını yeniden düzenle
+      const touchedGroups = new Set(toDelete.map((r) => `${r.facilityId}::${r.sheetType}`));
+      for (const groupKey of touchedGroups) {
+        const [facId, sType] = groupKey.split('::');
+        const remaining = await tx.improvementRecord.findMany({
+          where: { facilityId: facId, sheetType: sType, isArchived: false },
+          orderBy: [{ rowNo: 'asc' }, { createdAt: 'asc' }],
+          select: { id: true, rowNo: true },
+        });
+
+        for (let i = 0; i < remaining.length; i++) {
+          const expectedNo = i + 1;
+          if (remaining[i].rowNo !== expectedNo) {
+            await tx.improvementRecord.update({
+              where: { id: remaining[i].id },
+              data: { rowNo: expectedNo },
+            });
+          }
+        }
+      }
+
+      return deleteRes.count;
+    });
+
+    res.json({
+      success: true,
+      deletedCount,
+      message: `${deletedCount} adet kayıt silindi ve sıra numaraları güncellendi.`,
+    });
+  } catch (error: any) {
+    console.error('Error bulk deleting improvement records:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -1994,7 +2074,9 @@ router.post('/import-sheet', async (req: AuthRequest, res: Response) => {
 // 10. HASTANE VEYA SEKME BAZLI KAYITLARI TEMİZLE / SİL
 router.delete('/facility-records', async (req: AuthRequest, res: Response) => {
   try {
-    const user = getUser(req);
+    if (!isImprovementAdmin(req)) {
+      return res.status(403).json({ success: false, message: 'Bu işlem sadece yöneticiler için yetkilendirilmiştir.' });
+    }
     const { facilityId, sheetType } = req.body;
 
     if (!facilityId) {

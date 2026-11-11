@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
 import { DepartmentPrintModal } from '@/components/hazmat/DepartmentPrintModal';
+import { formatLocationBreadcrumb } from '@/utils/locationHierarchy';
 
 export default function HazmatDepartmentViewPage() {
   const { id } = useParams();
@@ -22,7 +23,8 @@ export default function HazmatDepartmentViewPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['hazmat-department-details', id, activeFacilityId],
     queryFn: async () => {
-      const res = await api.get(`/hazmat/inventory/department/${id}?facilityId=${activeFacilityId}`);
+      if (!id) throw new Error('Hata');
+      const res = await api.get(`/hazmat/inventory/department/${encodeURIComponent(id)}?facilityId=${activeFacilityId}`);
       if (!res.ok) throw new Error('Hata');
       return res.json();
     },
@@ -73,14 +75,14 @@ export default function HazmatDepartmentViewPage() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">{department.name}</h1>
-            <p className="text-muted-foreground">Departmana atanan tehlikeli maddeler</p>
+            <h1 className="text-2xl font-bold">{formatLocationBreadcrumb(department)}</h1>
+            <p className="text-muted-foreground">Bu konuma atanan tehlikeli maddeler</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Button 
             className="shadow-sm"
-            onClick={() => navigate(`/hazmat/inventory/new?departmentId=${id}`)}
+            onClick={() => navigate(`/hazmat/inventory/new?departmentId=${encodeURIComponent(id || '')}`)}
           >
             <Plus className="w-4 h-4 mr-2" />
             Envanter Ekle

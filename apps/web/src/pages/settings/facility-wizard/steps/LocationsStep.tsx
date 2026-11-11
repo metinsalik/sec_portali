@@ -6,12 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, ChevronDown, ChevronRight, Pencil, Check, MapPin, BookOpen, Sparkles, Building, Layers } from 'lucide-react';
 import { STANDARD_BLOCKS, STANDARD_FLOORS, getBlockCode, getFloorCode, generateLocationCode } from '@/data/locationStandards';
 import StandardCodesModal from '@/components/shared/StandardCodesModal';
+import { extractLocationParts } from '@/utils/locationHierarchy';
 
 export default function LocationsStep({ data, update }: any) {
   const locations = data.locations || [];
   const facilityShortCode = data.shortName || '';
   
-  const [newLocation, setNewLocation] = useState({ building: '', floor: '', department: '', description: '' });
+  const [newLocation, setNewLocation] = useState({ buildingName: 'Ana Bina', building: '', floor: '', department: '', description: '' });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingLocation, setEditingLocation] = useState<any>(null);
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
@@ -21,15 +22,15 @@ export default function LocationsStep({ data, update }: any) {
   const availableBlocks = useMemo(() => {
     const fromBuildings = (data.buildings || []).map((b: any) => b.name).filter(Boolean);
     const fromStandards = STANDARD_BLOCKS.map(sb => sb.name);
-    const fromLocations = locations.map((l: any) => l.building).filter(Boolean);
+    const fromLocations = locations.map((l: any) => extractLocationParts(l).block || l.building).filter(Boolean);
     return Array.from(new Set([...fromBuildings, ...fromStandards, ...fromLocations])).sort();
   }, [data.buildings, locations]);
 
   const addLoc = () => {
-    if (!newLocation.building) return;
-    const name = newLocation.department || newLocation.description || newLocation.floor || newLocation.building || 'İsimsiz';
+    if (!newLocation.buildingName && !newLocation.building) return;
+    const name = [newLocation.buildingName, newLocation.building, newLocation.floor, newLocation.department, newLocation.description].filter(Boolean).join(' - ') || 'İsimsiz';
     update({ locations: [...locations, { ...newLocation, name }] });
-    setNewLocation({ building: '', floor: '', department: '', description: '' });
+    setNewLocation({ buildingName: newLocation.buildingName || 'Ana Bina', building: '', floor: '', department: '', description: '' });
   };
 
   const removeLoc = (idx: number) => {
@@ -59,9 +60,10 @@ export default function LocationsStep({ data, update }: any) {
   const tree = useMemo(() => {
     const root: Record<string, any> = {};
     locations.forEach((loc: any, idx: number) => {
-      const b = loc.building || 'Belirtilmemiş Blok';
-      const f = loc.floor || 'Belirtilmemiş Kat';
-      const d = loc.department || 'Belirtilmemiş Birim';
+      const p = extractLocationParts(loc);
+      const b = [p.buildingName, p.block].filter(Boolean).join(' › ') || 'Belirtilmemiş Blok';
+      const f = p.floor || 'Belirtilmemiş Kat';
+      const d = p.department || 'Belirtilmemiş Birim';
 
       if (!root[b]) root[b] = { type: 'building', name: b, children: {}, id: `b-${b}` };
       if (!root[b].children[f]) root[b].children[f] = { type: 'floor', name: f, children: {}, id: `f-${b}-${f}` };
@@ -113,13 +115,22 @@ export default function LocationsStep({ data, update }: any) {
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 items-end">
+        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 items-end">
           <div>
-            <Label className="text-xs mb-1 block">Blok <span className="text-rose-500">*</span></Label>
+            <Label className="text-xs mb-1 block">Bina Adı <span className="text-rose-500">*</span></Label>
+            <Input 
+              value={newLocation.buildingName} 
+              onChange={e => setNewLocation({...newLocation, buildingName: e.target.value})} 
+              placeholder="Örn: Ana Bina" 
+              className="h-9 text-xs rounded-md" 
+            />
+          </div>
+          <div>
+            <Label className="text-xs mb-1 block">Blok (Opsiyonel)</Label>
             <Input 
               value={newLocation.building} 
               onChange={e => setNewLocation({...newLocation, building: e.target.value})} 
-              placeholder="Örn: A Blok, Ana Bina..." 
+              placeholder="Örn: A Blok" 
               className="h-9 text-xs rounded-md" 
               list="wizard-building-list"
             />
@@ -170,7 +181,7 @@ export default function LocationsStep({ data, update }: any) {
           <Button 
             className="h-9 w-full sm:col-span-1 text-xs rounded-md font-medium" 
             onClick={addLoc}
-            disabled={!newLocation.building}
+            disabled={!newLocation.buildingName && !newLocation.building}
           >
             <Plus className="w-3.5 h-3.5 mr-1" /> Ekle
           </Button>

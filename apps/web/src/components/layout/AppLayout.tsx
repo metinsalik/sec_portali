@@ -110,7 +110,7 @@ const riskNavItems = (hasAdminAccess: boolean) => [
   { label: 'Modül Ayarları', icon: Settings, to: '/risks/settings' },
 ];
 
-const hazmatNavItems = [
+const hazmatNavItems = (hasAdminAccess: boolean) => [
   { label: 'GENEL', type: 'group' },
   { label: 'Dashboard', icon: LayoutDashboard, to: '/hazmat/dashboard', end: true },
   { label: 'TEHLİKELİ MADDE YÖNETİMİ', type: 'group' },
@@ -118,15 +118,14 @@ const hazmatNavItems = [
   { label: 'Departmanlar', icon: LayoutGrid, to: '/hazmat/departments' },
   { label: 'Temizlik Arabaları', icon: ShoppingCart, to: '/hazmat/cleaning-carts' },
   { label: 'Olağan Dışı Olay', icon: ShieldAlert, to: '/hazmat/incidents' },
-  { label: 'EKİPMAN YÖNETİMİ', type: 'group' },
-  { label: 'Göz Duşu Risk Analizi', icon: FileText, to: '/hazmat/eyewash-risk' },
-  { label: 'Dökülme Saçılma Kiti', icon: LifeBuoy, to: '/hazmat/spill-kits' },
   { label: 'AYARLAR', type: 'group' },
   { label: 'Tehlikeli Madde Havuzu', icon: AlertTriangle, to: '/hazmat/materials' },
-  { label: 'Kategoriler', icon: FolderTree, to: '/hazmat/settings/categories' },
-  { label: 'Miktar Cinsi', icon: Database, to: '/hazmat/settings/units' },
-  { label: 'Bölüm - Departman', icon: Settings, to: '/hazmat/settings/departments' },
-  { label: 'Kit Malzemeleri', icon: PackageOpen, to: '/hazmat/settings/kit-items' },
+  ...(hasAdminAccess ? [
+    { label: 'Kategoriler', icon: FolderTree, to: '/hazmat/settings/categories' },
+    { label: 'Miktar Cinsi', icon: Database, to: '/hazmat/settings/units' },
+    { label: 'Bölüm - Departman', icon: Settings, to: '/hazmat/settings/departments' },
+    { label: 'Kit Malzemeleri', icon: PackageOpen, to: '/hazmat/settings/kit-items' },
+  ] : []),
 ];
 
 const fireEquipmentNavItems = [
@@ -230,7 +229,7 @@ const renovationReportNavItems = [
 const checklistNavItems = (hasAdminAccess: boolean, hasSpecialistAccess: boolean) => [
   { label: 'GENEL', type: 'group' },
   { label: 'Dashboard', icon: LayoutDashboard, to: '/checklists', end: true },
-  
+
   { label: 'SAHA DENETİMLERİ', type: 'group' },
   { label: 'Denetimlerim', icon: ClipboardList, to: '/checklists/submissions' },
 
@@ -323,7 +322,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       const next = !prev;
       try {
         localStorage.setItem('sidebar_collapsed', String(next));
-      } catch {}
+      } catch { }
       return next;
     });
   };
@@ -332,7 +331,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const path = location.pathname;
   const hasAdminAccess = user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management');
   const hasSpecialistAccess = user?.roles?.includes('specialist');
-  
+
   let navItems = operationsNavItems(!!hasAdminAccess);
   let moduleName = 'Aylık Veri Sistemi';
 
@@ -346,7 +345,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     navItems = riskNavItems(!!hasAdminAccess);
     moduleName = 'Risk Yaşam Döngüsü';
   } else if (path.startsWith('/hazmat')) {
-    navItems = hazmatNavItems;
+    navItems = hazmatNavItems(!!hasAdminAccess);
     moduleName = 'Tehlikeli Madde Yönetimi';
   } else if (path.startsWith('/fire-equipment')) {
     navItems = fireEquipmentNavItems;
@@ -399,8 +398,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   const getAppsUrl = () => {
     if (
-      path.startsWith('/bina-turu') || 
-      path.startsWith('/hazmat') || 
+      path.startsWith('/bina-turu') ||
+      path.startsWith('/hazmat') ||
       path.startsWith('/risks') ||
       path.startsWith('/checklists') ||
       path.startsWith('/safety-management/fire-doors') ||
@@ -424,7 +423,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="flex h-screen bg-background text-foreground overflow-hidden print:h-auto print:overflow-visible print:block">
       {/* Mobile/Tablet Backdrop */}
       {isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
@@ -514,10 +513,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
               );
             }
             const Icon = item.icon!;
-            
+
             const decodedSearch = decodeURIComponent(location.search);
             let customIsActive = false;
-            
+
             if (item.to?.includes('?category=')) {
               customIsActive = (location.pathname + decodedSearch) === item.to;
             } else if (item.to?.includes('?tab=')) {
@@ -603,7 +602,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       {children.map((child: any, cIdx: number) => {
                         const ChildIcon = child.icon || ChevronRight;
                         const childDecodedSearch = decodeURIComponent(location.search);
-                        const isChildActive = location.pathname === child.to?.split('?')[0] && 
+                        const isChildActive = location.pathname === child.to?.split('?')[0] &&
                           childDecodedSearch.includes(child.to?.split('?')[1] || '---');
 
                         return (
@@ -657,7 +656,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <div className={cn("border-t border-border/60 transition-all duration-200", isCollapsed ? "p-2 flex justify-center" : "p-2.5")}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button 
+              <button
                 title={isCollapsed ? `${user?.fullName || 'Kullanıcı'} (${user?.username || ''})` : undefined}
                 className={cn(
                   "flex items-center rounded-md hover:bg-muted transition-all duration-200 text-left border border-transparent hover:border-border/40",
@@ -704,9 +703,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <header className="h-14 bg-card border-b border-border/60 flex items-center justify-between px-4 lg:px-6 shrink-0 print:hidden">
           <div className="flex items-center gap-2 lg:gap-3">
             {/* Mobile Sidebar Toggle */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setIsSidebarOpen(true)}
               className="lg:hidden h-8 w-8 rounded-md"
             >
@@ -726,16 +725,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </Button>
             )}
 
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => navigate(getAppsUrl())}
               className="hidden md:flex h-8 text-xs font-medium rounded-md"
             >
               <LayoutGrid className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
               Uygulamalar
             </Button>
-            
+
             <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
               <ChevronRight className="w-4 h-4" />
               <span className="text-foreground font-medium capitalize">
@@ -756,9 +755,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
           <div className="flex items-center gap-1.5 md:gap-3">
             {path.startsWith('/workflow') && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => openChat()}
                 className="relative text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full w-9 h-9 md:w-10 md:h-10 transition-colors"
                 title="İş Akışı Sohbetleri"

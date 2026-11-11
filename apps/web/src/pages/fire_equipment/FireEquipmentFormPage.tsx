@@ -13,6 +13,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useAuth } from '@/context/AuthContext';
 import { ExcelBulkImportModal } from './components/ExcelBulkImportModal';
 import { ExcelBulkImportDolapModal } from './components/ExcelBulkImportDolapModal';
+import { extractLocationParts, formatLocationBreadcrumb } from '@/utils/locationHierarchy';
+
+const getBinaBlokLabel = (loc: any) => {
+  const p = extractLocationParts(loc);
+  return [p.buildingName, p.block].filter(Boolean).join(' › ');
+};
 
 export default function FireEquipmentFormPage() {
   const { id } = useParams();
@@ -146,9 +152,10 @@ export default function FireEquipmentFormPage() {
     if (equipmentData && equipmentData.locationId && locations?.length) {
       const loc = locations.find((l: any) => l.id === equipmentData.locationId);
       if (loc) {
-        setLocBlock(loc.building || 'all');
-        setLocFloor(loc.floor || 'all');
-        setLocDepartment(loc.department || 'all');
+        const p = extractLocationParts(loc);
+        setLocBlock(getBinaBlokLabel(loc) || 'all');
+        setLocFloor(p.floor || 'all');
+        setLocDepartment(p.department || 'all');
       }
     }
   }, [equipmentData, locations]);
@@ -248,12 +255,26 @@ export default function FireEquipmentFormPage() {
   };
 
   const updateLocationIdFromFilters = (block: string, floor: string, dept: string) => {
-    const exactMatch = locations?.find((l: any) => 
-      (block === 'all' ? !l.building : l.building === block) &&
-      (floor === 'all' ? !l.floor : l.floor === floor) &&
-      (dept === 'all' ? !l.department : l.department === dept) &&
-      !l.description
-    );
+    const candidates = (locations || []).filter((l: any) => {
+      const p = extractLocationParts(l);
+      const bLabel = getBinaBlokLabel(l);
+      return (
+        (block === 'all' || bLabel === block) &&
+        (floor === 'all' || p.floor === floor) &&
+        (dept === 'all' || p.department === dept)
+      );
+    });
+    const exactMatch =
+      candidates.find((l: any) => {
+        const p = extractLocationParts(l);
+        return (
+          (block === 'all' ? !getBinaBlokLabel(l) : getBinaBlokLabel(l) === block) &&
+          (floor === 'all' ? !p.floor : p.floor === floor) &&
+          (dept === 'all' ? !p.department : p.department === dept) &&
+          !p.description
+        );
+      }) || candidates[0];
+
     if (exactMatch) {
       handleSelectChange('locationId', exactMatch.id);
     } else {
@@ -278,17 +299,18 @@ export default function FireEquipmentFormPage() {
 
   const getFilteredLocations = () => {
     return locations?.filter((l: any) => {
+      const p = extractLocationParts(l);
       let match = true;
-      if (locBlock !== 'all') match = match && l.building === locBlock;
-      if (locFloor !== 'all') match = match && l.floor === locFloor;
-      if (locDepartment !== 'all') match = match && l.department === locDepartment;
+      if (locBlock !== 'all') match = match && getBinaBlokLabel(l) === locBlock;
+      if (locFloor !== 'all') match = match && p.floor === locFloor;
+      if (locDepartment !== 'all') match = match && p.department === locDepartment;
       return match;
     }) || [];
   };
 
-  const blocks = Array.from(new Set(locations?.map((l: any) => l.building).filter(Boolean))).sort();
-  const floors = Array.from(new Set(locations?.filter((l:any) => locBlock === 'all' || l.building === locBlock).map((l: any) => l.floor).filter(Boolean))).sort();
-  const departments = Array.from(new Set(locations?.filter((l:any) => (locBlock === 'all' || l.building === locBlock) && (locFloor === 'all' || l.floor === locFloor)).map((l: any) => l.department).filter(Boolean))).sort();
+  const blocks = Array.from(new Set(locations?.map((l: any) => getBinaBlokLabel(l)).filter(Boolean))).sort();
+  const floors = Array.from(new Set(locations?.filter((l:any) => locBlock === 'all' || getBinaBlokLabel(l) === locBlock).map((l: any) => extractLocationParts(l).floor).filter(Boolean))).sort();
+  const departments = Array.from(new Set(locations?.filter((l:any) => (locBlock === 'all' || getBinaBlokLabel(l) === locBlock) && (locFloor === 'all' || extractLocationParts(l).floor === locFloor)).map((l: any) => extractLocationParts(l).department).filter(Boolean))).sort();
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12 p-6">
@@ -466,7 +488,7 @@ export default function FireEquipmentFormPage() {
                 <Label className="text-muted-foreground font-medium">Lokasyon Seçimi</Label>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="space-y-1">
-                    <Label className="text-xs">Blok Filtresi</Label>
+                    <Label className="text-xs">Bina / Blok Filtresi</Label>
                     <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm" value={locBlock} onChange={e => handleBlockChange(e.target.value)}>
                       <option value="all">Seçiniz...</option>
                       {blocks.map((b: any) => <option key={b} value={b}>{b}</option>)}
@@ -495,7 +517,7 @@ export default function FireEquipmentFormPage() {
                     >
                       <option value="" disabled>Seçiniz...</option>
                       {getFilteredLocations().map((loc: any) => (
-                        <option key={loc.id} value={loc.id}>{`${loc.building}${loc.floor ? ` / ${loc.floor}` : ''}${loc.department ? ` - ${loc.department}` : ''}${loc.description ? ` > ${loc.description}` : ''}`}</option>
+                        <option key={loc.id} value={loc.id}>{formatLocationBreadcrumb(loc)}</option>
                       ))}
                     </select>
                   </div>

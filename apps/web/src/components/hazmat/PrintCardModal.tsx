@@ -36,10 +36,10 @@ export function PrintCardModal({ isOpen, onClose, material, facilityLogoUrl }: P
 
   const getPreviewScale = () => {
     switch(size) {
-      case 'A3': return 'scale(0.45)';
-      case 'A4': return 'scale(0.65)';
-      case 'A5': return 'scale(0.85)';
-      default: return 'scale(0.65)';
+      case 'A3': return 'scale(0.48)';
+      case 'A4': return 'scale(0.70)';
+      case 'A5': return 'scale(0.90)';
+      default: return 'scale(0.70)';
     }
   };
 
@@ -81,13 +81,22 @@ export function PrintCardModal({ isOpen, onClose, material, facilityLogoUrl }: P
   ${document.head.innerHTML}
   <style>
     @page { size: ${size} portrait; margin: 5mm; }
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      box-sizing: border-box !important;
+    }
     html, body {
       margin: 0;
       padding: 0;
+      background: #ffffff !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
     body {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
       zoom: ${scale};
     }
   </style>

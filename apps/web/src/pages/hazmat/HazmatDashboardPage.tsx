@@ -65,9 +65,10 @@ export default function HazmatDashboardPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => navigate('/hazmat/inventory')}>Envanter</Button>
+          <Button variant="outline" onClick={() => navigate('/hazmat/departments')}>Departmanlar</Button>
+          <Button variant="outline" onClick={() => navigate('/hazmat/cleaning-carts')}>Temizlik Arabaları</Button>
+          <Button variant="outline" onClick={() => navigate('/hazmat/incidents')}>Olağan Dışı Olay</Button>
           <Button variant="outline" onClick={() => navigate('/hazmat/materials')}>Madde Havuzu</Button>
-          <Button variant="outline" onClick={() => navigate('/hazmat/spill-kits')}>Dökülme Kitleri</Button>
-          <Button variant="outline" onClick={() => navigate('/hazmat/eyewash/risks')}>Göz Duşu Risk</Button>
         </div>
       </div>
 

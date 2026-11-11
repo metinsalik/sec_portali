@@ -17,6 +17,7 @@ import { FacilityRiskPrintModal } from '@/components/risks/FacilityRiskPrintModa
 import RiskLocationPage from './RiskLocationPage';
 import { IsometricFacilityViewer } from '@/components/risks/isometric/IsometricFacilityViewer';
 import { Box, Cuboid } from 'lucide-react';
+import { extractLocationParts } from '@/utils/locationHierarchy';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -59,9 +60,10 @@ function buildHierarchyTree(locations: any[]) {
   const tree: Record<string, any> = {};
 
   locations.forEach(loc => {
-    const b = loc.building || 'Belirtilmemiş Bina';
-    const f = loc.floor || 'Belirtilmemiş Kat';
-    const d = loc.department || 'Belirtilmemiş Birim';
+    const p = extractLocationParts(loc);
+    const b = [p.buildingName, p.block].filter(Boolean).join(' › ') || 'Belirtilmemiş Bina';
+    const f = p.floor || 'Belirtilmemiş Kat';
+    const d = p.department || 'Belirtilmemiş Birim';
 
     if (!tree[b]) {
       tree[b] = { 
@@ -661,7 +663,8 @@ export default function FacilityDepartmentsPage() {
 
               <div className="flex flex-wrap gap-2">
                 {activeDeptNode.units.map((unit: any) => {
-                  const unitLabel = unit.description || unit.name || 'Ana Mahal';
+                  const unitParts = extractLocationParts(unit);
+                  const unitLabel = unitParts.description || unit.name || 'Ana Mahal';
                   const isSelected = selectedUnit?.id === unit.id;
                   return (
                     <button

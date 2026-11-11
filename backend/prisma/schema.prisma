@@ -1800,16 +1800,17 @@ enum BTUygunsuzlukDurum {
 }
 
 model FacilityLocation {
-  id          String   @id @default(uuid())
-  facilityId  String
-  buildingId  Int?
-  name        String? // Geriye donuk uyumluluk veya genel isim
-  building    String? // Blok
-  floor       String? // Kat
-  department  String? // Birim
-  type        String?
-  description String? // Mahal
-  isActive    Boolean  @default(true)
+  id           String   @id @default(uuid())
+  facilityId   String
+  buildingId   Int?
+  buildingName String? // Bina Adi (orn. Ana Bina, Ek Bina)
+  name         String? // Geriye donuk uyumluluk veya genel isim
+  building     String? // Blok (orn. A Blok, B Blok)
+  floor        String? // Kat
+  department   String? // Birim
+  type         String?
+  description  String? // Mahal
+  isActive     Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

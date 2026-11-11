@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { AuthRequest } from "../../middleware/auth";
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../../middleware/auth';
+import { upsertFacilityLocation } from '../../utils/locationHierarchy';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -10,7 +11,7 @@ async function checkFacilityAccess(req: AuthRequest, facilityId: string): Promis
   const user = req.user;
   if (!user) return false;
   if (user.isAdmin || user.isManagement) return true;
-  
+
   const access = await prisma.userFacility.findUnique({
     where: {
       username_facilityId: {
@@ -38,8 +39,13 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     }
 
     const locations = await prisma.facilityLocation.findMany({
-      where: { facilityId: facilityId as string },
+      where: {
+        facilityId: facilityId as string,
+        isActive: true,
+        OR: [{ type: null }, { type: { not: 'TEMIZLIK_ARABASI' } }],
+      },
       include: {
+        facilityBuilding: true,
         risks: {
           select: { status: true },
         },
@@ -69,9 +75,9 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
 
-    const dept = await prisma.facilityLocation.findUnique({ 
+    const dept = await prisma.facilityLocation.findUnique({
       where: { id },
-      include: { 
+      include: {
         facility: {
           include: {
             assignments: {
@@ -81,7 +87,7 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
               }
             }
           }
-        } 
+        }
       }
     });
     if (!dept) return res.status(404).json({ error: 'Lokasyon bulunamadı.' });
@@ -113,24 +119,28 @@ router.delete('/areas/:id', authMiddleware, async (req: AuthRequest, res: Respon
 
 router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { facilityId, name } = req.body;
-    if (!facilityId || !name) return res.status(400).json({ error: 'facilityId ve name gerekli.' });
+    const { facilityId, buildingName, building, block, floor, department, description, name, type } = req.body;
+    if (!facilityId || (!name && !buildingName && !building && !block)) {
+      return res.status(400).json({ error: 'facilityId ve lokasyon bilgisi gerekli.' });
+    }
 
     const hasAccess = await checkFacilityAccess(req, facilityId);
     if (!hasAccess) return res.status(403).json({ error: 'Bu tesis için yetkiniz yok.' });
 
-    const existing = await prisma.facilityLocation.findFirst({
-      where: { facilityId, name: { equals: name.trim(), mode: 'insensitive' } },
+    const { location } = await upsertFacilityLocation(prisma, {
+      facilityId,
+      buildingName,
+      building,
+      block,
+      floor,
+      department,
+      description,
+      name,
+      type,
     });
-    
-    if (existing) return res.status(409).json({ error: 'Bu lokasyon zaten mevcut.' });
-
-    const dept = await prisma.facilityLocation.create({
-      data: { facilityId, name: name.trim() },
-    });
-    res.status(201).json(dept);
-  } catch (error) {
-    res.status(500).json({ error: 'Lokasyon oluşturulamadı.' });
+    res.status(201).json(location);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || 'Lokasyon oluşturulamadı.' });
   }
 });
 

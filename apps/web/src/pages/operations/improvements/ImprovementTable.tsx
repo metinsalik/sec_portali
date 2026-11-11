@@ -14,6 +14,7 @@ import { ImprovementMediaLightbox } from './ImprovementMediaManager';
 import { 
   InspectRecordDialog, EditRecordDialog, ActionNoteDialog, CreateRecordDialog 
 } from './ImprovementRecordDialogs';
+import { useAuth } from '@/context/AuthContext';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -50,14 +51,34 @@ export const ImprovementTable: React.FC<Props> = ({
   headerContent,
 }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const hasAdminAccess = !!(
+    user?.isAdmin ||
+    user?.isManagement ||
+    user?.roles?.includes('admin') ||
+    user?.roles?.includes('management')
+  );
+
   // Modal states
   const [inspectRecord, setInspectRecord] = useState<ImprovementRecord | null>(null);
   const [editRecord, setEditRecord] = useState<ImprovementRecord | null>(null);
   const [actionRecord, setActionRecord] = useState<ImprovementRecord | null>(null);
   const [deleteConfirmRecord, setDeleteConfirmRecord] = useState<ImprovementRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState<boolean>(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState<boolean>(false);
   const [isRenumbering, setIsRenumbering] = useState<boolean>(false);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    const validIds = new Set(records.map((r) => r.id));
+    setSelectedRecordIds((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Set(Array.from(prev).filter((id) => validIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [records]);
 
   // Medya Önizleme (Lightbox) ve Belge Açma State'leri
   const [lightboxData, setLightboxData] = useState<{
@@ -119,6 +140,39 @@ export const ImprovementTable: React.FC<Props> = ({
       toast.error('Bağlantı hatası: Kayıt silinemedi.');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  // Toplu Kayıt Silme (Yöneticiler)
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedRecordIds);
+    if (ids.length === 0) return;
+
+    try {
+      setIsBulkDeleting(true);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/api/operations/improvements/records/bulk-delete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ ids })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(data.message || `${data.deletedCount ?? ids.length} kayıt silindi.`);
+        setSelectedRecordIds(new Set());
+        setBulkDeleteConfirmOpen(false);
+        onRefresh();
+      } else {
+        toast.error(data.message || 'Seçilen kayıtlar silinemedi.');
+      }
+    } catch (err: any) {
+      console.error('Toplu silme hatası:', err);
+      toast.error('Bağlantı hatası: Seçilen kayıtlar silinemedi.');
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
 
@@ -857,6 +911,36 @@ export const ImprovementTable: React.FC<Props> = ({
     );
   };
 
+  const isAllPageSelected =
+    paginatedRecords.length > 0 && paginatedRecords.every((r) => selectedRecordIds.has(r.id));
+  const isSomePageSelected =
+    paginatedRecords.some((r) => selectedRecordIds.has(r.id)) && !isAllPageSelected;
+
+  const toggleRowSelection = (id: string) => {
+    setSelectedRecordIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectPage = () => {
+    setSelectedRecordIds((prev) => {
+      const next = new Set(prev);
+      if (isAllPageSelected) {
+        paginatedRecords.forEach((r) => next.delete(r.id));
+      } else {
+        paginatedRecords.forEach((r) => next.add(r.id));
+      }
+      return next;
+    });
+  };
+
+  const selectAllFiltered = () => {
+    setSelectedRecordIds(new Set(filteredRecords.map((r) => r.id)));
+  };
+
   return (
     <>
       <div className="bg-card text-card-foreground border border-border/80 rounded-2xl overflow-hidden shadow-xs font-sans">
@@ -981,6 +1065,42 @@ export const ImprovementTable: React.FC<Props> = ({
         </div>
 
       </div>
+
+      {/* Yöneticiler İçin Toplu Seçim / Silme Barı */}
+      {hasAdminAccess && selectedRecordIds.size > 0 && (
+        <div className="px-4 py-2.5 bg-red-50/80 dark:bg-red-950/30 border-b border-red-200 dark:border-red-900/50 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-red-900 dark:text-red-200">
+            <span className="font-semibold">
+              {selectedRecordIds.size} kayıt seçildi
+            </span>
+            {filteredRecords.length > selectedRecordIds.size && (
+              <button
+                type="button"
+                onClick={selectAllFiltered}
+                className="text-primary hover:underline font-semibold ml-1"
+              >
+                Filtrelenen tüm {filteredRecords.length} kaydı seç
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setSelectedRecordIds(new Set())}
+              className="text-muted-foreground hover:text-foreground underline ml-1"
+            >
+              Seçimi Temizle
+            </button>
+          </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setBulkDeleteConfirmOpen(true)}
+            className="h-8 text-xs bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Seçilenleri Sil ({selectedRecordIds.size})
+          </Button>
+        </div>
+      )}
 
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* EXCEL FİLTRE POPOVER MENÜSÜ                                         */}
@@ -1190,6 +1310,21 @@ export const ImprovementTable: React.FC<Props> = ({
             {/* Tablo Başlıkları (Sticky) */}
             <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm border-b text-muted-foreground uppercase tracking-wider text-[11px] font-semibold">
               <tr>
+                {hasAdminAccess && (
+                  <th className="p-2.5 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isAllPageSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = isSomePageSelected;
+                      }}
+                      onChange={toggleSelectPage}
+                      title="Bu sayfadaki tüm kayıtları seç / kaldır"
+                      aria-label="Tümünü seç"
+                      className="rounded border-border text-primary focus:ring-primary w-4 h-4 cursor-pointer align-middle"
+                    />
+                  </th>
+                )}
                 {renderColumnHeader('rowNo', '#', 'w-14 text-center', true)}
                 {renderColumnHeader('facility', 'Hastane Adı', 'w-32')}
                 {isKritik && renderColumnHeader('sheetType', 'Nereden Geliyor', 'w-36')}
@@ -1210,14 +1345,14 @@ export const ImprovementTable: React.FC<Props> = ({
             <tbody className="divide-y divide-border/60">
               {loading ? (
                 <tr>
-                  <td colSpan={10} className="p-12 text-center text-muted-foreground">
+                  <td colSpan={hasAdminAccess ? 11 : 10} className="p-12 text-center text-muted-foreground">
                     <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
                     Kayıtlar yükleniyor...
                   </td>
                 </tr>
               ) : filteredRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="p-12 text-center text-muted-foreground">
+                  <td colSpan={hasAdminAccess ? 11 : 10} className="p-12 text-center text-muted-foreground">
                     Gösterilecek kayıt bulunamadı.
                   </td>
                 </tr>
@@ -1225,13 +1360,27 @@ export const ImprovementTable: React.FC<Props> = ({
                 paginatedRecords.map((record) => {
                   const isCrit = record.riskScore === 'Kritik';
                   const isHigh = record.riskScore === 'Yüksek';
+                  const isSelected = selectedRecordIds.has(record.id);
 
                   return (
                     <tr 
                       key={record.id}
                       id={`record-row-${record.id}`}
-                      className="hover:bg-muted/40 transition-colors group"
+                      className={`hover:bg-muted/40 transition-colors group ${isSelected ? 'bg-red-50/50 dark:bg-red-950/20' : ''}`}
                     >
+                      {/* Seçim Kutucuğu (Yöneticiler) */}
+                      {hasAdminAccess && (
+                        <td className="p-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleRowSelection(record.id)}
+                            aria-label={`Kayıt #${record.rowNo || ''} seç`}
+                            className="rounded border-border text-primary focus:ring-primary w-4 h-4 cursor-pointer align-middle"
+                          />
+                        </td>
+                      )}
+
                       {/* Sıra No */}
                       <td className="p-2.5 text-center text-muted-foreground font-mono text-[11px]">
                         {record.rowNo || '-'}
@@ -1409,14 +1558,16 @@ export const ImprovementTable: React.FC<Props> = ({
                           >
                             Aksiyon Gir
                           </button>
-                          <button
-                            onClick={() => setDeleteConfirmRecord(record)}
-                            className="w-20 py-0.5 rounded border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-[11px] font-semibold text-red-600 dark:text-red-400 transition-colors shadow-2xs flex items-center justify-center gap-1"
-                            title="Bu kaydı sil"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                            Sil
-                          </button>
+                          {hasAdminAccess && (
+                            <button
+                              onClick={() => setDeleteConfirmRecord(record)}
+                              className="w-20 py-0.5 rounded border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-[11px] font-semibold text-red-600 dark:text-red-400 transition-colors shadow-2xs flex items-center justify-center gap-1"
+                              title="Bu kaydı sil"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              Sil
+                            </button>
+                          )}
                         </div>
                       </td>
 
@@ -1577,10 +1728,10 @@ export const ImprovementTable: React.FC<Props> = ({
           record={editRecord}
           onClose={() => setEditRecord(null)}
           onSuccess={onRefresh}
-          onDelete={(rec) => {
+          onDelete={hasAdminAccess ? (rec) => {
             setEditRecord(null);
             setDeleteConfirmRecord(rec);
-          }}
+          } : undefined}
         />
       )}
 
@@ -1747,6 +1898,75 @@ export const ImprovementTable: React.FC<Props> = ({
                   <>
                     <Trash2 className="w-3.5 h-3.5" />
                     Evet, Sil
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toplu Kayıt Silme Onay Modalı (Yöneticiler) */}
+      {hasAdminAccess && bulkDeleteConfirmOpen && selectedRecordIds.size > 0 && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-card text-card-foreground border rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-foreground">
+                  {selectedRecordIds.size} Kaydı Silmek İstiyor Musunuz?
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Bu işlem geri alınamaz. Seçili tüm kayıtlar ve varsa aksiyon geçmişleri kalıcı olarak silinecek, sıra numaraları yeniden düzenlenecektir.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-muted/40 rounded-xl border text-xs space-y-1.5 max-h-40 overflow-y-auto">
+              {records
+                .filter((r) => selectedRecordIds.has(r.id))
+                .slice(0, 5)
+                .map((r) => (
+                  <div key={r.id} className="truncate text-foreground">
+                    <span className="font-mono text-muted-foreground mr-1.5">#{r.rowNo || '-'}</span>
+                    <span className="font-medium mr-1">{r.facility?.shortName || r.facility?.name || '-'}:</span>
+                    <span className="text-muted-foreground">{r.finding}</span>
+                  </div>
+                ))}
+              {selectedRecordIds.size > 5 && (
+                <div className="text-[11px] text-muted-foreground italic pt-1 border-t border-border/50">
+                  ...ve {selectedRecordIds.size - 5} kayıt daha
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBulkDeleteConfirmOpen(false)}
+                disabled={isBulkDeleting}
+              >
+                Vazgeç
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+                className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5"
+              >
+                {isBulkDeleting ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    Siliniyor...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Evet, {selectedRecordIds.size} Kaydı Sil
                   </>
                 )}
               </Button>

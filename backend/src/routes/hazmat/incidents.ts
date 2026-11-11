@@ -7,17 +7,31 @@ const prisma = new PrismaClient();
 
 router.use(authMiddleware);
 
+const INCIDENT_INCLUDE = {
+  facility: { select: { name: true, logoUrl: true, commercialTitle: true } },
+  creator: { select: { fullName: true } },
+  materials: true,
+  category: true,
+  incidentType: true,
+  location: true,
+  supportUnit: true,
+  emergencyCode: true,
+};
+
+const isUserAdmin = (user: AuthRequest['user']) =>
+  Boolean(user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management'));
+
 // Get all incidents
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const { facilityId } = req.query as Record<string, any>;
     const user = req.user!;
-    const isAdmin = user.roles.includes('admin') || user.roles.includes('management');
+    const isAdmin = isUserAdmin(user);
 
     const where: any = {};
 
-    if (facilityId) {
-      where.facilityId = facilityId;
+    if (facilityId && facilityId !== 'all') {
+      where.facilityId = String(facilityId);
     }
 
     if (!isAdmin) {
@@ -27,24 +41,18 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       });
       const allowedIds = userFacilities.map(uf => uf.facilityId);
 
-      if (facilityId && !allowedIds.includes(facilityId as string)) {
+      if (facilityId && facilityId !== 'all' && !allowedIds.includes(String(facilityId))) {
         return res.status(403).json({ error: 'Bu tesise erişim yetkiniz yok.' });
       }
 
-      where.facilityId = { in: allowedIds };
+      if (!where.facilityId) {
+        where.facilityId = { in: allowedIds };
+      }
     }
 
     const incidents = await prisma.hazmatIncident.findMany({
       where,
-      include: {
-        facility: { select: { name: true, logoUrl: true, commercialTitle: true } },
-        creator: { select: { fullName: true } },
-        materials: true,
-        category: true,
-        location: true,
-        supportUnit: true,
-        emergencyCode: true
-      },
+      include: INCIDENT_INCLUDE,
       orderBy: { incidentDate: 'desc' }
     });
 
@@ -60,19 +68,11 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id;
     const user = req.user!;
-    const isAdmin = user.roles.includes('admin') || user.roles.includes('management');
+    const isAdmin = isUserAdmin(user);
 
     const incident = await prisma.hazmatIncident.findUnique({
       where: { id },
-      include: {
-        facility: { select: { name: true, logoUrl: true, commercialTitle: true } },
-        creator: { select: { fullName: true } },
-        materials: true,
-        category: true,
-        location: true,
-        supportUnit: true,
-        emergencyCode: true
-      }
+      include: INCIDENT_INCLUDE,
     });
 
     if (!incident) return res.status(404).json({ error: 'Olay bulunamadı.' });
@@ -95,7 +95,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
     const {
-      facilityId, categoryId, incidentTypeId, rootCause, locationId,
+      facilityId, categoryId, incidentTypeId, rootCause, locationId, departmentId,
       incidentDate, interventionRequired, interventionTime, controlTime,
       supportReceived, supportUnitId, announcementMade, emergencyCodeId,
       serviceInterrupted, interruptionDuration,
@@ -104,24 +104,32 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       kitUsed, spillKitId, materialIds
     } = req.body;
 
+    if (!facilityId) {
+      return res.status(400).json({ error: 'Tesis seçimi zorunludur.' });
+    }
+    if (!incidentDate || !controlTime) {
+      return res.status(400).json({ error: 'Olay tarihi ve kontrol altına alma saati zorunludur.' });
+    }
+
     const hasAccess = await prisma.userFacility.findFirst({
       where: { username: user.username, facilityId }
     });
-    const isAdmin = user.roles.includes('admin') || user.roles.includes('management');
+    const isAdmin = isUserAdmin(user);
     
     if (!hasAccess && !isAdmin) {
       return res.status(403).json({ error: 'Bu tesis için olay kaydetme yetkiniz yok.' });
     }
 
     const isKitUsed = kitUsed === true || kitUsed === 'true';
+    const resolvedLocationId = locationId || departmentId || null;
 
     const incident = await prisma.hazmatIncident.create({
       data: {
         facilityId,
         categoryId: categoryId || null,
         incidentTypeId: incidentTypeId || null,
-        rootCause,
-        locationId,
+        rootCause: rootCause || '',
+        locationId: resolvedLocationId,
         incidentDate: new Date(incidentDate),
         interventionRequired: interventionRequired === true || interventionRequired === 'true',
         interventionTime: interventionTime ? new Date(interventionTime) : null,
@@ -136,19 +144,20 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         evacuatedPatientCount: parseInt(evacuatedPatientCount) || 0,
         injuredCount: parseInt(injuredCount) || 0,
         deceasedCount: parseInt(deceasedCount) || 0,
-        incidentMode,
-        causeDetail,
-        detectedEffect,
-        observations,
-        actionsTaken,
-        resultEvaluation,
+        incidentMode: incidentMode || '',
+        causeDetail: causeDetail || '',
+        detectedEffect: detectedEffect || '',
+        observations: observations || '',
+        actionsTaken: actionsTaken || '',
+        resultEvaluation: resultEvaluation || '',
         kitUsed: isKitUsed,
         spillKitId: spillKitId || null,
         createdBy: user.username,
         materials: {
           connect: Array.isArray(materialIds) ? materialIds.map((id: string) => ({ id })) : []
         }
-      }
+      },
+      include: INCIDENT_INCLUDE,
     });
 
     // If kit was used, create a check record for it
@@ -170,7 +179,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
           placementId: spillKitId,
           incidentDate: new Date(incidentDate),
           incidentType: "Olağan Dışı Olay",
-          incidentDesc: incidentMode,
+          incidentDesc: incidentMode || '',
           incidentOutcome: "Kit kullanıldı ve eksildi."
         }
       });
@@ -188,10 +197,10 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id;
     const user = req.user!;
-    const isAdmin = user.roles.includes('admin') || user.roles.includes('management');
+    const isAdmin = isUserAdmin(user);
     
     const {
-      categoryId, incidentTypeId, rootCause, locationId,
+      categoryId, incidentTypeId, rootCause, locationId, departmentId,
       incidentDate, interventionRequired, interventionTime, controlTime,
       supportReceived, supportUnitId, announcementMade, emergencyCodeId,
       serviceInterrupted, interruptionDuration,
@@ -211,14 +220,15 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     }
 
     const isKitUsed = kitUsed === true || kitUsed === 'true';
+    const resolvedLocationId = locationId !== undefined ? (locationId || null) : (departmentId !== undefined ? (departmentId || null) : undefined);
 
     const updated = await prisma.hazmatIncident.update({
       where: { id },
       data: {
-        categoryId: categoryId !== undefined ? categoryId : undefined,
-        incidentTypeId: incidentTypeId !== undefined ? incidentTypeId : undefined,
+        categoryId: categoryId !== undefined ? (categoryId || null) : undefined,
+        incidentTypeId: incidentTypeId !== undefined ? (incidentTypeId || null) : undefined,
         rootCause: rootCause !== undefined ? rootCause : undefined,
-        locationId: locationId || undefined,
+        locationId: resolvedLocationId,
         incidentDate: incidentDate ? new Date(incidentDate) : undefined,
         interventionRequired: interventionRequired === true || interventionRequired === 'true',
         interventionTime: interventionTime ? new Date(interventionTime) : (interventionRequired === 'false' || interventionRequired === false ? null : undefined),
@@ -228,20 +238,24 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
         announcementMade: announcementMade === true || announcementMade === 'true',
         emergencyCodeId: emergencyCodeId ? parseInt(emergencyCodeId) : (announcementMade === 'false' || announcementMade === false ? null : undefined),
         serviceInterrupted: serviceInterrupted === true || serviceInterrupted === 'true',
-        interruptionDuration: interruptionDuration !== undefined ? parseFloat(interruptionDuration) : undefined,
-        evacuatedStaffCount: evacuatedStaffCount !== undefined ? parseInt(evacuatedStaffCount) : undefined,
-        evacuatedPatientCount: evacuatedPatientCount !== undefined ? parseInt(evacuatedPatientCount) : undefined,
-        injuredCount: injuredCount !== undefined ? parseInt(injuredCount) : undefined,
-        deceasedCount: deceasedCount !== undefined ? parseInt(deceasedCount) : undefined,
-        incidentMode,
-        causeDetail,
-        detectedEffect,
-        observations,
-        actionsTaken,
-        resultEvaluation,
+        interruptionDuration: interruptionDuration !== undefined ? (parseFloat(interruptionDuration) || 0) : undefined,
+        evacuatedStaffCount: evacuatedStaffCount !== undefined ? (parseInt(evacuatedStaffCount) || 0) : undefined,
+        evacuatedPatientCount: evacuatedPatientCount !== undefined ? (parseInt(evacuatedPatientCount) || 0) : undefined,
+        injuredCount: injuredCount !== undefined ? (parseInt(injuredCount) || 0) : undefined,
+        deceasedCount: deceasedCount !== undefined ? (parseInt(deceasedCount) || 0) : undefined,
+        incidentMode: incidentMode !== undefined ? incidentMode : undefined,
+        causeDetail: causeDetail !== undefined ? (causeDetail || '') : undefined,
+        detectedEffect: detectedEffect !== undefined ? (detectedEffect || '') : undefined,
+        observations: observations !== undefined ? (observations || '') : undefined,
+        actionsTaken: actionsTaken !== undefined ? (actionsTaken || '') : undefined,
+        resultEvaluation: resultEvaluation !== undefined ? (resultEvaluation || '') : undefined,
         kitUsed: isKitUsed,
-        spillKitId: spillKitId || null
-      }
+        spillKitId: spillKitId || null,
+        materials: Array.isArray(materialIds)
+          ? { set: materialIds.map((mid: string) => ({ id: mid })) }
+          : undefined,
+      },
+      include: INCIDENT_INCLUDE,
     });
 
     res.json(updated);
@@ -256,7 +270,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id;
     const user = req.user!;
-    const isAdmin = user.roles.includes('admin') || user.roles.includes('management');
+    const isAdmin = isUserAdmin(user);
 
     const existing = await prisma.hazmatIncident.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: 'Olay bulunamadı.' });

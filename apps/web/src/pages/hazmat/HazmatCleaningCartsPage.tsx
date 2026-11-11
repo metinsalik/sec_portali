@@ -12,17 +12,19 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { toast } from 'sonner';
 import { cn } from "@/lib/utils";
+import { useActiveFacility } from '@/hooks/useActiveFacility';
 
 export default function HazmatCleaningCartsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const activeFacilityId = localStorage.getItem('activeFacilityId');
+  const activeFacilityId = useActiveFacility();
+  const hasSelectedFacility = Boolean(activeFacilityId && activeFacilityId !== 'ALL');
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   
   // Create / Edit state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingCartId, setEditingCartId] = useState<number | null>(null);
+  const [editingCartId, setEditingCartId] = useState<string | null>(null);
   const [cartForm, setCartForm] = useState({ name: '', building: '', floor: '' });
   
   const [openLocCombo, setOpenLocCombo] = useState(false);
@@ -30,23 +32,25 @@ export default function HazmatCleaningCartsPage() {
   const { data: carts = [], isLoading } = useQuery({
     queryKey: ['hazmat-cleaning-carts', activeFacilityId],
     queryFn: async () => {
-      if (!activeFacilityId) return [];
-      const res = await api.get(`/risks/facilities/${activeFacilityId}/locations&isCleaningCart=true`);
-      if (!res.ok) throw new Error('Hata');
-      return res.json();
+      if (!hasSelectedFacility || !activeFacilityId) return [];
+      const res = await api.get(`/hazmat/settings/departments?facilityId=${activeFacilityId}&isCleaningCart=true`);
+      if (!res.ok) throw new Error('Temizlik arabaları yüklenemedi');
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
     },
-    enabled: !!activeFacilityId
+    enabled: hasSelectedFacility
   });
 
   const { data: locations = [] } = useQuery({
     queryKey: ['facility-locations', activeFacilityId],
     queryFn: async () => {
-      if (!activeFacilityId) return [];
+      if (!hasSelectedFacility || !activeFacilityId) return [];
       const res = await api.get(`/risks/facilities/${activeFacilityId}/locations`);
       if (!res.ok) return [];
-      return res.json();
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
     },
-    enabled: !!activeFacilityId
+    enabled: hasSelectedFacility
   });
 
   const uniqueLocations = useMemo(() => {
@@ -65,43 +69,73 @@ export default function HazmatCleaningCartsPage() {
     return locs.sort((a, b) => a.label.localeCompare(b.label));
   }, [locations]);
 
+  const parseApiError = async (res: Response, fallback: string) => {
+    const err = await res.json().catch(() => ({}));
+    return err?.error || err?.message || fallback;
+  };
+
   const createCart = useMutation({
-    mutationFn: async () => await api.post('/hazmat/settings/departments', { 
-      facilityId: activeFacilityId, 
-      name: cartForm.name,
-      building: cartForm.building,
-      floor: cartForm.floor,
-      isCleaningCart: true
-    }),
+    mutationFn: async () => {
+      const res = await api.post('/hazmat/settings/departments', { 
+        facilityId: activeFacilityId, 
+        name: cartForm.name,
+        building: cartForm.building,
+        floor: cartForm.floor,
+        isCleaningCart: true
+      });
+      if (!res.ok) throw new Error(await parseApiError(res, 'Temizlik arabası eklenemedi.'));
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hazmat-cleaning-carts', activeFacilityId] });
       setIsDialogOpen(false);
       toast.success('Temizlik Arabası başarıyla eklendi.');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Temizlik arabası eklenemedi.');
     }
   });
 
   const updateCart = useMutation({
-    mutationFn: async () => await api.put(`/hazmat/settings/departments/${editingCartId}`, { 
-      name: cartForm.name,
-      building: cartForm.building,
-      floor: cartForm.floor,
-    }),
+    mutationFn: async () => {
+      const res = await api.put(`/hazmat/settings/departments/${editingCartId}`, { 
+        name: cartForm.name,
+        building: cartForm.building,
+        floor: cartForm.floor,
+      });
+      if (!res.ok) throw new Error(await parseApiError(res, 'Temizlik arabası güncellenemedi.'));
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hazmat-cleaning-carts', activeFacilityId] });
       setIsDialogOpen(false);
       toast.success('Temizlik Arabası başarıyla güncellendi.');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Temizlik arabası güncellenemedi.');
     }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => await api.delete(`/hazmat/settings/departments/${id}`),
+    mutationFn: async (id: string) => {
+      const res = await api.delete(`/hazmat/settings/departments/${id}`);
+      if (!res.ok) throw new Error(await parseApiError(res, 'Temizlik arabası silinemedi.'));
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hazmat-cleaning-carts', activeFacilityId] });
       toast.success('Temizlik Arabası silindi.');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Temizlik arabası silinemedi.');
     }
   });
 
   const handleSave = () => {
+    if (!cartForm.name.trim()) {
+      toast.error('Lütfen araba adını girin.');
+      return;
+    }
     if (editingCartId) {
       updateCart.mutate();
     } else {
@@ -122,8 +156,12 @@ export default function HazmatCleaningCartsPage() {
     setIsDialogOpen(true);
   };
 
-  if (!activeFacilityId) {
-    return <div className="p-8 text-center text-muted-foreground">Lütfen önce bir tesis seçin.</div>;
+  if (!hasSelectedFacility) {
+    return (
+      <div className="p-8 text-center text-muted-foreground">
+        Lütfen temizlik arabalarını görüntülemek ve yönetmek için üst menüden tek bir tesis seçin.
+      </div>
+    );
   }
 
   const filteredCarts = carts.filter((cart: any) => 
@@ -247,10 +285,10 @@ export default function HazmatCleaningCartsPage() {
       ) : (
         <div className="border rounded-lg bg-card overflow-hidden">
           <div className="grid grid-cols-12 gap-4 p-4 font-medium text-sm text-muted-foreground border-b bg-muted/30">
-            <div className="col-span-4">Araba Adı</div>
-            <div className="col-span-4">Lokasyon (Blok / Kat)</div>
+            <div className="col-span-3">Araba Adı</div>
+            <div className="col-span-3">Lokasyon (Blok / Kat)</div>
             <div className="col-span-2 text-center">Envanter</div>
-            <div className="col-span-2 text-right">İşlemler</div>
+            <div className="col-span-4 text-right">İşlemler</div>
           </div>
           <div className="divide-y">
             {filteredCarts.map((cart: any) => (
@@ -259,27 +297,51 @@ export default function HazmatCleaningCartsPage() {
                 className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-muted/10 cursor-pointer transition-colors"
                 onClick={() => navigate(`/hazmat/departments/${cart.id}`)}
               >
-                <div className="col-span-4 font-medium flex items-center gap-3">
-                  <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
+                <div className="col-span-3 font-medium flex items-center gap-3">
+                  <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary shrink-0">
                     <ShoppingCart className="w-4 h-4" />
                   </div>
-                  {cart.name || 'İsimsiz Araba'}
+                  <span className="truncate">{cart.name || 'İsimsiz Araba'}</span>
                 </div>
-                <div className="col-span-4 text-muted-foreground text-sm flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5" />
-                  {cart.building ? `${cart.building} ${cart.floor ? '/ ' + cart.floor : ''}` : '-'}
+                <div className="col-span-3 text-muted-foreground text-sm flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{cart.building ? `${cart.building} ${cart.floor ? '/ ' + cart.floor : ''}` : '-'}</span>
                 </div>
                 <div className="col-span-2 text-center flex items-center justify-center gap-2 text-muted-foreground">
                   <PackageSearch className="w-4 h-4" />
                   <span className="font-semibold text-foreground">{cart._count?.inventory || 0}</span>
                 </div>
-                <div className="col-span-2 text-right flex justify-end">
+                <div className="col-span-4 text-right flex justify-end gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/hazmat/inventory/new?departmentId=${cart.id}`);
+                    }}
+                  >
+                    Kimyasal Ata
+                  </Button>
                   <Button 
                     variant="outline" 
                     size="sm" 
                     onClick={(e) => openEditDialog(cart, e)}
+                    title="Düzenle"
                   >
-                    Konum Değiştir
+                    <Edit2 className="w-3.5 h-3.5 mr-1" />
+                    Düzenle
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-red-500"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm('Silmek istediğinize emin misiniz?')) deleteMutation.mutate(cart.id);
+                    }}
+                    title="Sil"
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </div>

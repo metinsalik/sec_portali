@@ -21,17 +21,18 @@ interface HazmatIncidentFormPageProps {
 
 const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatIncidentFormPageProps) => {
   const { user } = useAuth();
-  const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('management');
+  const isAdmin = Boolean(user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management'));
 
   const [materialSearch, setMaterialSearch] = useState('');
   const [kitLocationId, setKitLocationId] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
   const [formData, setFormData] = useState<any>({
     facilityId: initialData?.facilityId || '',
-    incidentTypeId: '',
-    rootCause: '',
-    departmentId: '',
-    materialIds: [],
-    incidentMode: '',
+    incidentTypeId: initialData?.incidentTypeId || '',
+    rootCause: initialData?.rootCause || '',
+    departmentId: initialData?.locationId || initialData?.departmentId || '',
+    materialIds: initialData?.materials?.map((m: any) => m.id) || [],
+    incidentMode: initialData?.incidentMode || '',
     incidentDate: '',
     interventionRequired: false,
     interventionTime: '',
@@ -59,51 +60,99 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
     if (initialData) {
       setFormData({
         ...initialData,
-        facilityId: initialData.facilityId,
+        facilityId: initialData.facilityId || '',
         categoryId: initialData.categoryId || '',
+        incidentTypeId: initialData.incidentTypeId || '',
         rootCause: initialData.rootCause || '',
-        departmentId: initialData.departmentId,
+        departmentId: initialData.locationId || initialData.departmentId || '',
         materialIds: initialData.materials?.map((m: any) => m.id) || [],
         supportUnitId: initialData.supportUnitId?.toString() || '',
         emergencyCodeId: initialData.emergencyCodeId?.toString() || '',
         incidentDate: initialData.incidentDate ? new Date(initialData.incidentDate).toISOString().slice(0, 16) : '',
         interventionTime: initialData.interventionTime ? new Date(initialData.interventionTime).toISOString().slice(0, 16) : '',
         controlTime: initialData.controlTime ? new Date(initialData.controlTime).toISOString().slice(0, 16) : '',
-        interruptionDuration: initialData.interruptionDuration?.toString(),
-        evacuatedStaffCount: initialData.evacuatedStaffCount?.toString(),
-        evacuatedPatientCount: initialData.evacuatedPatientCount?.toString(),
-        injuredCount: initialData.injuredCount?.toString(),
-        deceasedCount: initialData.deceasedCount?.toString(),
+        interruptionDuration: initialData.interruptionDuration?.toString() || '0',
+        evacuatedStaffCount: initialData.evacuatedStaffCount?.toString() || '0',
+        evacuatedPatientCount: initialData.evacuatedPatientCount?.toString() || '0',
+        injuredCount: initialData.injuredCount?.toString() || '0',
+        deceasedCount: initialData.deceasedCount?.toString() || '0',
         kitUsed: initialData.kitUsed || false,
         spillKitId: initialData.spillKitId || '',
       });
-    } else if (!isAdmin && user?.facilities?.[0]) {
-      setFormData((prev: any) => ({ ...prev, facilityId: user.facilities[0] }));
+    } else {
+      const activeFac = localStorage.getItem('activeFacilityId');
+      const fallbackFac =
+        (activeFac && activeFac !== 'ALL' && (isAdmin || user?.facilities?.includes(activeFac)) ? activeFac : '') ||
+        user?.facilities?.[0] ||
+        '';
+      if (fallbackFac) {
+        setFormData((prev: any) => (prev.facilityId ? prev : { ...prev, facilityId: fallbackFac }));
+      }
     }
   }, [initialData, isAdmin, user]);
 
   // Queries for definitions
-  const { data: facilities = [] } = useQuery<any[]>({ queryKey: ['facilities'], queryFn: async () => (await api.get('/settings/facilities')).json() });
-  const { data: incidentTypes = [] } = useQuery<any[]>({ queryKey: ['hazmat-incident-types'], queryFn: async () => (await api.get('/hazmat/settings/incident-types')).json() });
+  const { data: facilities = [], isLoading: loadingFacilities } = useQuery<any[]>({
+    queryKey: ['facilities'],
+    queryFn: async () => {
+      const res = await api.get('/settings/facilities');
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
+  const { data: incidentTypes = [], isLoading: loadingIncidentTypes } = useQuery<any[]>({
+    queryKey: ['hazmat-incident-types'],
+    queryFn: async () => {
+      const res = await api.get('/hazmat/settings/incident-types');
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+  });
   
   const { data: departments = [] } = useQuery<any[]>({ 
     queryKey: ['facility-locations', formData.facilityId], 
     queryFn: async () => {
       if (!formData.facilityId) return [];
-      return (await api.get(`/risks/facilities/${formData.facilityId}/locations`)).json();
+      const res = await api.get(`/risks/facilities/${formData.facilityId}/locations`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
     },
     enabled: !!formData.facilityId
   });
 
-  const { data: supportUnits = [] } = useQuery<any[]>({ queryKey: ['incident-support-units'], queryFn: async () => (await api.get('/settings/definitions/incident-support-units')).json() });
-  const { data: emergencyCodes = [] } = useQuery<any[]>({ queryKey: ['emergency-codes'], queryFn: async () => (await api.get('/settings/definitions/emergency-codes')).json() });
+  const { data: supportUnits = [] } = useQuery<any[]>({
+    queryKey: ['incident-support-units'],
+    queryFn: async () => {
+      const res = await api.get('/settings/definitions/incident-support-units');
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
+  const { data: emergencyCodes = [] } = useQuery<any[]>({
+    queryKey: ['emergency-codes'],
+    queryFn: async () => {
+      const res = await api.get('/settings/definitions/emergency-codes');
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+  });
 
   // Get kits for the facility to filter placements
   const { data: kits = [] } = useQuery<any[]>({
     queryKey: ['hazmat-spill-kits', formData.facilityId],
     queryFn: async () => {
       if (!formData.facilityId) return [];
-      return (await api.get(`/hazmat/spill-kits?facilityId=${formData.facilityId}`)).json();
+      const res = await api.get(`/hazmat/spill-kits?facilityId=${formData.facilityId}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
     },
     enabled: !!formData.facilityId
   });
@@ -112,11 +161,21 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
     queryKey: ['hazmat-materials', formData.facilityId],
     queryFn: async () => {
       if (!formData.facilityId) return [];
-      return (await api.get(`/hazmat/materials?facilityId=${formData.facilityId}`)).json();
+      const res = await api.get(`/hazmat/materials?facilityId=${formData.facilityId}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) return data;
+      // Tesiste tanımlı madde yoksa genel madde havuzundan çek
+      const globalRes = await api.get(`/hazmat/materials/global?facilityId=${formData.facilityId}`);
+      if (!globalRes.ok) return [];
+      const globalData = await globalRes.json();
+      return Array.isArray(globalData) ? globalData : [];
     },
     enabled: !!formData.facilityId
   });
-  const materials = facilityItems.map((item: any) => item.material);
+  const materials = Array.isArray(facilityItems)
+    ? facilityItems.map((item: any) => item.material).filter(Boolean)
+    : [];
 
   // Extract relevant placements
   const availableKits: { placementId: string, departmentId: string, kitName: string, location: string, code: string }[] = [];
@@ -139,21 +198,40 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
+      const payload = {
+        ...data,
+        locationId: data.departmentId || data.locationId || null,
+      };
       const res = initialData 
-        ? await api.put(`/hazmat/incidents/${initialData.id}`, data)
-        : await api.post(`/hazmat/incidents`, data);
+        ? await api.put(`/hazmat/incidents/${initialData.id}`, payload)
+        : await api.post(`/hazmat/incidents`, payload);
       
       if (!res.ok) { 
-        const e = await res.json(); 
-        throw new Error(e.error || 'Bir hata oluştu'); 
+        const e = await res.json().catch(() => ({})); 
+        throw new Error(e.error || 'Olay kaydedilirken bir hata oluştu.'); 
       }
       return res.json();
     },
-    onSuccess: () => onSuccess()
+    onSuccess: () => {
+      setFormError(null);
+      onSuccess();
+    },
+    onError: (err: any) => {
+      setFormError(err?.message || 'Olay kaydedilemedi.');
+    }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+    if (!formData.facilityId) {
+      setFormError('Lütfen bir tesis seçiniz.');
+      return;
+    }
+    if (!formData.incidentTypeId) {
+      setFormError('Lütfen olay türünü seçiniz.');
+      return;
+    }
     mutation.mutate(formData);
   };
 
@@ -161,7 +239,7 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
     setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
 
-  const isDefinitionsLoading = !facilities.length || !incidentTypes.length;
+  const isDefinitionsLoading = loadingFacilities || loadingIncidentTypes;
 
   const currentLocString = useMemo(() => {
     if (!kitLocationId) return '';
@@ -512,6 +590,12 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
           </div>
         </div>
       </div>
+
+      {formError && (
+        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-xs font-medium text-red-700 dark:text-red-300">
+          {formError}
+        </div>
+      )}
 
       <div className="flex justify-end gap-3 pt-6 border-t">
         <Button type="button" variant="outline" onClick={onCancel}>İptal</Button>

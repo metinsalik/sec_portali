@@ -49,7 +49,9 @@ router.get('/departments', authMiddleware, async (req: AuthRequest, res) => {
 
   try {
     const whereClause: any = { isActive: true };
-    if (facilityId && facilityId !== 'all') whereClause.facilityId = String(facilityId);
+    if (facilityId && facilityId !== 'all' && facilityId !== 'ALL') {
+      whereClause.facilityId = String(facilityId);
+    }
     
     if (isCleaningCart === 'true') {
       whereClause.type = 'TEMIZLIK_ARABASI';
@@ -57,6 +59,11 @@ router.get('/departments', authMiddleware, async (req: AuthRequest, res) => {
 
     const locations = await prisma.facilityLocation.findMany({
       where: whereClause,
+      include: {
+        _count: {
+          select: { hazmatMaterials: true }
+        }
+      },
       orderBy: [
         { building: 'asc' },
         { floor: 'asc' },
@@ -64,13 +71,17 @@ router.get('/departments', authMiddleware, async (req: AuthRequest, res) => {
         { description: 'asc' }
       ]
     });
+
+    const mapped = locations.map((loc: any) => ({
+      ...loc,
+      _count: {
+        ...(loc._count || {}),
+        inventory: loc._count?.hazmatMaterials || 0
+      },
+      ...(isCleaningCart === 'true' ? { isCleaningCart: true } : {})
+    }));
     
-    // For backwards compatibility on frontend
-    if (isCleaningCart === 'true') {
-      return res.json(locations.map((c: any) => ({ ...c, isCleaningCart: true })));
-    }
-    
-    return res.json(locations);
+    return res.json(mapped);
   } catch (error) {
     console.error('Error fetching departments:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -79,18 +90,54 @@ router.get('/departments', authMiddleware, async (req: AuthRequest, res) => {
 
 router.post('/departments', authMiddleware, async (req: AuthRequest, res) => {
   const { facilityId, name, building, floor, department, description, isCleaningCart } = req.body;
-  if (!facilityId) return res.status(400).json({ error: 'facilityId is required' });
+  if (!facilityId || facilityId === 'ALL') {
+    return res.status(400).json({ error: 'Geçerli bir tesis seçilmelidir.' });
+  }
 
   try {
+    const trimmedName = name
+      ? String(name).trim()
+      : (isCleaningCart ? 'Bilinmeyen Araç' : 'Bilinmeyen Lokasyon');
+    const targetType = isCleaningCart ? 'TEMIZLIK_ARABASI' : 'DEPARTMAN';
+
+    const existing = await prisma.facilityLocation.findUnique({
+      where: {
+        facilityId_name: {
+          facilityId,
+          name: trimmedName
+        }
+      }
+    });
+
+    if (existing) {
+      if (existing.isActive) {
+        return res.status(400).json({ error: 'Bu isimde bir kayıt bu tesiste zaten mevcut.' });
+      }
+
+      const reactivated = await prisma.facilityLocation.update({
+        where: { id: existing.id },
+        data: {
+          building: building || null,
+          floor: floor || null,
+          department: department || null,
+          description: description || null,
+          type: targetType,
+          isActive: true
+        }
+      });
+
+      return res.status(201).json(isCleaningCart ? { ...reactivated, isCleaningCart: true } : reactivated);
+    }
+
     const newLocation = await prisma.facilityLocation.create({
       data: { 
         facilityId, 
-        name: name ? name.trim() : (isCleaningCart ? 'Bilinmeyen Araç' : 'Bilinmeyen Lokasyon'), 
-        building,
-        floor,
-        department,
-        description,
-        type: isCleaningCart ? 'TEMIZLIK_ARABASI' : 'DEPARTMAN'
+        name: trimmedName, 
+        building: building || null,
+        floor: floor || null,
+        department: department || null,
+        description: description || null,
+        type: targetType
       }
     });
     
@@ -354,11 +401,31 @@ router.delete('/categories/:id', authMiddleware, async (req: AuthRequest, res) =
 });
 
 // --- INCIDENT TYPES ---
+const DEFAULT_HAZMAT_INCIDENT_TYPES = [
+  'Kimyasal Dökülme',
+  'Kimyasal Sızıntı',
+  'Gaz / Buhar Yayılımı',
+  'Hatalı Karışım / Reaksiyon',
+  'Deri / Göz Teması',
+  'Solunum Yolu Maruziyeti',
+  'Yangın / Parlama Riski',
+  'Ambalaj / Kap Hasarı',
+  'Diğer',
+];
+
 router.get('/incident-types', authMiddleware, async (req, res) => {
   try {
-    const types = await prisma.hazmatIncidentType.findMany({
+    let types = await prisma.hazmatIncidentType.findMany({
       orderBy: { name: 'asc' }
     });
+    if (types.length === 0) {
+      await prisma.hazmatIncidentType.createMany({
+        data: DEFAULT_HAZMAT_INCIDENT_TYPES.map(name => ({ name }))
+      });
+      types = await prisma.hazmatIncidentType.findMany({
+        orderBy: { name: 'asc' }
+      });
+    }
     res.json(types);
   } catch (error) {
     console.error('Error fetching incident types:', error);

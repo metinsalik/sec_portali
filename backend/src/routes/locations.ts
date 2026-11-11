@@ -2,24 +2,39 @@ import { Router, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { authMiddleware } from '../middleware/auth';
+import {
+  buildCanonicalLocationName,
+  deleteLocationNode,
+  ensureFacilityBuilding,
+  inferLocationType,
+  renameLocationNode,
+  upsertFacilityLocation,
+} from '../utils/locationHierarchy';
 
 const router = Router();
 const prisma = new PrismaClient();
 
-// Get all locations for a facility
+// Get all physical locations for a facility
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { facilityId } = req.query as Record<string, string>;
   if (!facilityId) return res.status(400).json({ error: 'facilityId zorunludur' });
 
   try {
     const locations = await prisma.facilityLocation.findMany({
-      where: { facilityId, isActive: true },
+      where: {
+        facilityId,
+        isActive: true,
+        OR: [{ type: null }, { type: { not: 'TEMIZLIK_ARABASI' } }],
+      },
+      include: { facilityBuilding: true },
       orderBy: [
+        { buildingName: 'asc' },
         { building: 'asc' },
         { floor: 'asc' },
+        { department: 'asc' },
+        { description: 'asc' },
         { name: 'asc' },
-        { description: 'asc' }
-      ]
+      ],
     });
     res.json(locations);
   } catch (err) {
@@ -27,127 +42,141 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Create location
+// Create location (5-level: Bina Adı > Blok > Kat > Birim > Mahal)
 router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const { facilityId, building, floor, department, name, description, type } = req.body;
+  const { facilityId, buildingName, building, block, floor, department, name, description, type } = req.body;
   if (!facilityId) return res.status(400).json({ error: 'facilityId zorunludur' });
 
   try {
-    const location = await prisma.facilityLocation.create({
-      data: {
-        facilityId,
-        building,
-        floor,
-        department,
-        name: name || 'Yeni Lokasyon',
-        description,
-        type: type || 'DEPARTMAN'
-      }
+    const { location } = await upsertFacilityLocation(prisma, {
+      facilityId,
+      buildingName,
+      building,
+      block,
+      floor,
+      department,
+      description,
+      name,
+      type,
     });
     res.status(201).json(location);
   } catch (err: any) {
     console.error('Lokasyon ekleme hatası:', err);
-    res.status(500).json({ error: err.message || 'Lokasyon eklenemedi.' });
+    res.status(err.statusCode || 500).json({ error: err.message || 'Lokasyon eklenemedi.' });
   }
 });
 
-// Rename node (bulk update)
+// Rename node (bulk update across 5 hierarchy levels)
 router.post('/rename-node', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const { facilityId, level, oldValue, newValue, parentBuilding, parentFloor } = req.body;
+  const {
+    facilityId,
+    level,
+    oldValue,
+    newValue,
+    parentBuildingName,
+    parentBuilding,
+    parentFloor,
+    parentDepartment,
+  } = req.body;
   if (!facilityId) return res.status(400).json({ error: 'facilityId zorunludur' });
-  if (!newValue || newValue.trim() === '') return res.status(400).json({ error: 'Yeni isim boş olamaz.' });
-  
+
   try {
-    let whereClause: any = { facilityId };
-    let dataClause: any = {};
-    
-    const cleanOld = oldValue.startsWith('Belirtilmemiş') ? '' : oldValue;
-    const cleanPB = parentBuilding && parentBuilding.startsWith('Belirtilmemiş') ? '' : parentBuilding;
-    const cleanPF = parentFloor && parentFloor.startsWith('Belirtilmemiş') ? '' : parentFloor;
-
-    if (level === 'building') {
-      whereClause.building = cleanOld;
-      dataClause.building = newValue;
-    } else if (level === 'floor') {
-      whereClause.building = cleanPB;
-      whereClause.floor = cleanOld;
-      dataClause.floor = newValue;
-    } else if (level === 'department') {
-      whereClause.building = cleanPB;
-      whereClause.floor = cleanPF;
-      whereClause.department = cleanOld;
-      dataClause.department = newValue;
-    } else if (level === 'name') {
-      whereClause.building = cleanPB;
-      whereClause.floor = cleanPF;
-      whereClause.name = cleanOld;
-      dataClause.name = newValue;
-    } else {
-      return res.status(400).json({ error: 'Geçersiz seviye.' });
-    }
-
-    await prisma.facilityLocation.updateMany({
-      where: whereClause,
-      data: dataClause
+    const result = await renameLocationNode(prisma, {
+      facilityId,
+      level,
+      oldValue,
+      newValue,
+      parentBuildingName,
+      parentBuilding,
+      parentFloor,
+      parentDepartment,
     });
-    
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'İsim güncellenemedi.' });
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    res.status(err.statusCode || 500).json({ error: err.message || 'İsim güncellenemedi.' });
   }
 });
 
-// Delete node (bulk delete / clear)
+// Delete node (soft delete node and its subtree)
 router.post('/delete-node', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const { facilityId, level, value, parentBuilding, parentFloor } = req.body;
+  const {
+    facilityId,
+    level,
+    value,
+    parentBuildingName,
+    parentBuilding,
+    parentFloor,
+    parentDepartment,
+    id,
+  } = req.body;
   if (!facilityId) return res.status(400).json({ error: 'facilityId zorunludur' });
-  
-  try {
-    let whereClause: any = { facilityId };
-    let dataClause: any = {};
-    
-    const cleanVal = value.startsWith('Belirtilmemiş') ? '' : value;
-    const cleanPB = parentBuilding && parentBuilding.startsWith('Belirtilmemiş') ? '' : parentBuilding;
-    const cleanPF = parentFloor && parentFloor.startsWith('Belirtilmemiş') ? '' : parentFloor;
-    
-    if (level === 'building') {
-      whereClause.building = cleanVal;
-      dataClause.building = '';
-    } else if (level === 'floor') {
-      whereClause.building = cleanPB;
-      whereClause.floor = cleanVal;
-      dataClause.floor = '';
-    } else if (level === 'department') {
-      whereClause.building = cleanPB;
-      whereClause.floor = cleanPF;
-      whereClause.department = cleanVal;
-      dataClause.department = '';
-    } else {
-      return res.status(400).json({ error: 'Geçersiz seviye.' });
-    }
 
-    await prisma.facilityLocation.updateMany({
-      where: whereClause,
-      data: dataClause
+  try {
+    const result = await deleteLocationNode(prisma, {
+      facilityId,
+      level,
+      value,
+      parentBuildingName,
+      parentBuilding,
+      parentFloor,
+      parentDepartment,
+      id,
     });
-    
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Düğüm silinemedi.' });
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    res.status(err.statusCode || 500).json({ error: err.message || 'Düğüm silinemedi.' });
   }
 });
 
 // Single location ops
 router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const { building, floor, department, name, description, type } = req.body;
+  const { buildingName, building, block, floor, department, name, description, type } = req.body;
   try {
+    const existing = await prisma.facilityLocation.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: 'Lokasyon bulunamadı.' });
+
+    const nextBuildingName = buildingName !== undefined ? (buildingName?.trim() || null) : existing.buildingName;
+    const rawBlk = block !== undefined ? block : building;
+    const nextBuilding = rawBlk !== undefined ? (rawBlk?.trim() || null) : existing.building;
+    const nextFloor = floor !== undefined ? (floor?.trim() || null) : existing.floor;
+    const nextDept = department !== undefined ? (department?.trim() || null) : existing.department;
+    const nextDesc = description !== undefined ? (description?.trim() || null) : existing.description;
+
+    const buildingId = await ensureFacilityBuilding(prisma, existing.facilityId, nextBuildingName);
+    const nextName = buildCanonicalLocationName({
+      buildingName: nextBuildingName,
+      building: nextBuilding,
+      floor: nextFloor,
+      department: nextDept,
+      description: nextDesc,
+      name: name ?? existing.name,
+    });
+    const nextType = inferLocationType({
+      buildingName: nextBuildingName,
+      building: nextBuilding,
+      floor: nextFloor,
+      department: nextDept,
+      description: nextDesc,
+      type: type ?? existing.type,
+    });
+
     const location = await prisma.facilityLocation.update({
       where: { id: req.params.id },
-      data: { building, floor, department, name, description, type }
+      data: {
+        buildingId,
+        buildingName: nextBuildingName,
+        building: nextBuilding,
+        floor: nextFloor,
+        department: nextDept,
+        description: nextDesc,
+        name: nextName,
+        type: nextType,
+      },
+      include: { facilityBuilding: true },
     });
     res.json(location);
-  } catch (err) {
-    res.status(500).json({ error: 'Lokasyon güncellenemedi.' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Lokasyon güncellenemedi.' });
   }
 });
 
@@ -156,7 +185,7 @@ router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) =>
     // Soft delete
     await prisma.facilityLocation.update({
       where: { id: req.params.id },
-      data: { isActive: false }
+      data: { isActive: false },
     });
     res.json({ success: true });
   } catch (err) {
@@ -167,7 +196,7 @@ router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) =>
 import multer from 'multer';
 import * as XLSX from 'xlsx';
 
-// Excel Şablon İndirme (Tesis Adı, Bina, Blok, Kat + Kurumsal Standart Kodlar)
+// Excel Şablon İndirme (Tesis Adı, Bina, Blok, Kat, Birim, Mahal + Kurumsal Standart Kodlar)
 router.get('/excel-template', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const sampleData = [
@@ -175,31 +204,41 @@ router.get('/excel-template', authMiddleware, async (req: AuthRequest, res: Resp
         'Tesis Adı': 'MP Adana',
         'Bina': 'Ana Bina',
         'Blok': 'A Blok',
-        'Kat': 'Z.Kat'
+        'Kat': 'Z.Kat',
+        'Birim': 'Acil Servis',
+        'Mahal': 'Triaj Odası'
       },
       {
         'Tesis Adı': 'MP Adana',
         'Bina': 'Ana Bina',
         'Blok': 'A Blok',
-        'Kat': '1.Kat'
+        'Kat': '1.Kat',
+        'Birim': 'Radyoloji',
+        'Mahal': 'MR Çekim Odası'
       },
       {
         'Tesis Adı': 'MP Adana',
         'Bina': 'Ana Bina',
         'Blok': 'B Blok',
-        'Kat': 'B1.Kat'
+        'Kat': 'B1.Kat',
+        'Birim': 'Teknik Servis',
+        'Mahal': ''
       },
       {
         'Tesis Adı': 'Liv Ulus',
         'Bina': 'Ana Bina',
-        'Blok': 'Ana Bina',
-        'Kat': 'Z.Kat'
+        'Blok': '',
+        'Kat': 'Z.Kat',
+        'Birim': '',
+        'Mahal': ''
       },
       {
         'Tesis Adı': 'Liv Vadi',
         'Bina': 'Ana Bina',
         'Blok': 'A Blok',
-        'Kat': '2.Kat'
+        'Kat': '2.Kat',
+        'Birim': 'Ameliyathane',
+        'Mahal': 'Steril Depo'
       }
     ];
 
@@ -355,13 +394,15 @@ router.post('/import-excel', authMiddleware, excelUpload.single('file'), async (
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      // Kullanıcının tablosundaki sütun başlıkları: "Tesis Adı", "Bina", "Blok", "Kat"
+      // Sütun başlıkları: "Tesis Adı", "Bina", "Blok", "Kat", "Birim", "Mahal"
       const rawFacilityName = (row['Tesis Adı'] || row['Tesis'] || '').toString().trim();
-      let rawBuilding = (row['Bina'] || '').toString().trim();
+      let rawBuilding = (row['Bina'] || row['Bina Adı'] || '').toString().trim();
       let rawBlock = (row['Blok'] || '').toString().trim();
       let rawFloor = (row['Kat'] || '').toString().trim();
+      const rawDepartment = (row['Birim'] || row['Departman'] || '').toString().trim();
+      const rawMahal = (row['Mahal'] || row['Oda'] || row['Açıklama'] || '').toString().trim();
 
-      if (!rawBuilding && !rawBlock && !rawFloor) continue;
+      if (!rawBuilding && !rawBlock && !rawFloor && !rawDepartment && !rawMahal) continue;
 
       // Kod normalizasyonu (Örn: ABL -> A Blok, 1K -> 1.Kat)
       const upperBlock = rawBlock.toUpperCase();
@@ -397,38 +438,21 @@ router.post('/import-excel', authMiddleware, excelUpload.single('file'), async (
         continue;
       }
 
-      // Bina, Blok ve Kat kombinasyonunu oluştur
-      // Modelimizde: building = Blok veya Bina, floor = Kat
-      let buildingField = rawBuilding;
-      if (rawBlock && rawBlock !== rawBuilding) {
-        buildingField = rawBuilding ? `${rawBuilding} (${rawBlock})` : rawBlock;
-      } else if (!buildingField && rawBlock) {
-        buildingField = rawBlock;
-      }
-      const floorField = rawFloor || 'Z.Kat';
-      const nameField = `${buildingField} - ${floorField}`;
+      const bNameField = rawBuilding || rawBlock || 'Ana Bina';
+      const blockField = rawBlock && rawBlock.toLowerCase() !== bNameField.toLowerCase() ? rawBlock : '';
+      const floorField = rawFloor || (rawDepartment || rawMahal ? 'Z.Kat' : '');
 
-      // Mükerrer kontrolü: Aynı tesiste aynı bina ve kat var mı?
-      const existing = await prisma.facilityLocation.findFirst({
-        where: {
-          facilityId: targetFacilityId,
-          building: buildingField,
-          floor: floorField,
-          isActive: true
-        }
+      const { created } = await upsertFacilityLocation(prisma, {
+        facilityId: targetFacilityId,
+        buildingName: bNameField,
+        building: blockField,
+        floor: floorField,
+        department: rawDepartment,
+        description: rawMahal,
+        returnExistingOnDuplicate: true,
       });
 
-      if (!existing) {
-        await prisma.facilityLocation.create({
-          data: {
-            facilityId: targetFacilityId,
-            building: buildingField,
-            floor: floorField,
-            name: nameField,
-            type: 'KAT',
-            description: rawBlock || rawBuilding
-          }
-        });
+      if (created) {
         importedCount++;
       }
     }

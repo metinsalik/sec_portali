@@ -55,28 +55,28 @@ async function ensureRolesExist() {
 
 async function ensureModulesExist() {
   const defaultModules = [
-      { code: 'DASHBOARD', name: 'Gösterge Paneli', description: 'Ana özet ekranı', icon: 'LayoutGrid' },
-      { code: 'SETTINGS', name: 'Ayarlar', description: 'Kullanıcı ve sistem ayarları', icon: 'Settings' },
-      { code: 'REPORTS', name: 'Raporlar', description: 'Sistem raporları ve çıktıları', icon: 'FileText' },
-      { code: 'INCIDENTS', name: 'Olay Bildirimleri', description: 'Kaza ve ramak kala bildirimleri', icon: 'AlertTriangle' },
-      { code: 'FIRE_EQUIPMENT', name: 'Yangın Ekipmanları', description: 'Yangın envanteri ve bakımları', icon: 'Flame' },
-      { code: 'HAZMAT', name: 'Tehlikeli Maddeler', description: 'Kimyasal yönetimi', icon: 'Skull' },
-      { code: 'RISKS', name: 'Risk Analizi', description: 'Saha risk analizleri', icon: 'ShieldAlert' },
-      { code: 'WORKFLOW', name: 'İş Takibi', description: 'Görev ve iş akış yönetimi', icon: 'KanbanSquare' },
-      { code: 'OPERATIONS', name: 'Aylık Veri Sistemi', description: 'Aylık çalışma saatleri ve kaza kayıtları', icon: 'description' },
-      { code: 'PANEL', name: 'Operasyon Yönetim Sistemi', description: 'İSG Atama Paneli', icon: 'settings_suggest' },
-      { code: 'RENOVATION_REPORT', name: 'Entegre Risk ve Güvenlik Denetimi', description: 'Entegre Risk ve Güvenlik Denetimi Raporları', icon: 'assignment_turned_in' },
-      { code: 'BUILD_MANAGEMENT', name: 'İnşaat ve Renovasyon Yönetimi', description: 'İnşaat projelerinin ICRA, risk ve onay süreçleri', icon: 'construction' },
-      { code: 'BUILDING_TOUR', name: 'Bina Turu Yönetimi', description: 'Bina turları ve denetimleri', icon: 'apartment' },
-      { code: 'CHECKLISTS', name: 'Kontrol Listeleri', description: 'İSG Kontrol ve Denetim Listeleri', icon: 'ClipboardCheck' },
-      { code: 'ISG_KURUL', name: 'İSG Kurul Yönetimi', description: 'İSG Kurul Üyeleri ve Toplantı Kararları', icon: 'Users' },
-      { code: 'ISG_DEFTER', name: 'İSG Defteri', description: 'İSG Onaylı Defter ve Tespit Kayıtları', icon: 'BookOpen' },
-      { code: 'ELEVATOR_TRACKING', name: 'Asansör Takip Yönetimi', description: 'Asansör kayıt, periyodik kontrol ve takip sistemi', icon: 'ArrowUpDown' },
-      { code: 'ELECTRIC_INFRASTRUCTURE', name: 'Elektrik Altyapı Sistemleri Kontrol Formu', description: 'Tesis bazında elektrik altyapı ekipmanları ve panoları kontrol formu', icon: 'Zap' },
-      { code: 'ELECTRIC_PANEL_INSPECTION', name: 'Elektrik Pano Kontrolü', description: 'Termal kamera ile elektrik panoları sıcaklık ölçümü ve denetim formu', icon: 'photo_camera' },
-      { code: 'FIRE_SAFETY_CONTROL', name: 'Yangın Güvenliği Kontrol Sistemi', description: 'Yangın güvenliği denetimleri, saha tespitleri ve aksiyon takip sistemi', icon: 'local_fire_department' },
-      { code: 'FM200_TRACKING', name: 'FM-200 Kontrol ve Sızdırmazlık Durum Kontrolü', description: 'FM-200 ve gazlı yangın söndürme sistemleri denetim, bakım, sızdırmazlık ve iş emri takip sistemi', icon: 'propane_tank' },
-      { code: 'IMPROVEMENTS_TRACKING', name: 'İyileştirme ve Aksiyon Takip', description: 'Hastane denetimleri, elektrik PK, topraklama, pano ve trafo periyodik kontrolleri konsolide takibi', icon: 'fact_check' }
+    { code: 'DASHBOARD', name: 'Gösterge Paneli', description: 'Ana özet ekranı', icon: 'LayoutGrid' },
+    { code: 'SETTINGS', name: 'Ayarlar', description: 'Kullanıcı ve sistem ayarları', icon: 'Settings' },
+    { code: 'REPORTS', name: 'Raporlar', description: 'Sistem raporları ve çıktıları', icon: 'FileText' },
+    { code: 'INCIDENTS', name: 'Olay Bildirimleri', description: 'Kaza ve ramak kala bildirimleri', icon: 'AlertTriangle' },
+    { code: 'FIRE_EQUIPMENT', name: 'Yangın Ekipmanları', description: 'Yangın envanteri ve bakımları', icon: 'Flame' },
+    { code: 'HAZMAT', name: 'Tehlikeli Maddeler', description: 'Kimyasal yönetimi', icon: 'Skull' },
+    { code: 'RISKS', name: 'Risk Analizi', description: 'Saha risk analizleri', icon: 'ShieldAlert' },
+    { code: 'WORKFLOW', name: 'İş Takibi', description: 'Görev ve iş akış yönetimi', icon: 'KanbanSquare' },
+    { code: 'OPERATIONS', name: 'Aylık Veri Sistemi', description: 'Aylık çalışma saatleri ve kaza kayıtları', icon: 'description' },
+    { code: 'PANEL', name: 'Operasyon Yönetim Sistemi', description: 'İSG Atama Paneli', icon: 'settings_suggest' },
+    { code: 'RENOVATION_REPORT', name: 'Entegre Risk ve Güvenlik Denetimi', description: 'Entegre Risk ve Güvenlik Denetimi Raporları', icon: 'assignment_turned_in' },
+    { code: 'BUILD_MANAGEMENT', name: 'İnşaat ve Renovasyon Yönetimi', description: 'İnşaat projelerinin ICRA, risk ve onay süreçleri', icon: 'construction' },
+    { code: 'BUILDING_TOUR', name: 'Bina Turu Yönetimi', description: 'Bina turları ve denetimleri', icon: 'apartment' },
+    { code: 'CHECKLISTS', name: 'Kontrol Listeleri', description: 'İSG Kontrol ve Denetim Listeleri', icon: 'ClipboardCheck' },
+    { code: 'ISG_KURUL', name: 'İSG Kurul Yönetimi', description: 'İSG Kurul Üyeleri ve Toplantı Kararları', icon: 'Users' },
+    { code: 'ISG_DEFTER', name: 'İSG Defteri', description: 'İSG Onaylı Defter ve Tespit Kayıtları', icon: 'BookOpen' },
+    { code: 'ELEVATOR_TRACKING', name: 'Asansör Takip Yönetimi', description: 'Asansör kayıt, periyodik kontrol ve takip sistemi', icon: 'ArrowUpDown' },
+    { code: 'ELECTRIC_INFRASTRUCTURE', name: 'Elektrik Altyapı Sistemleri Kontrol Formu', description: 'Tesis bazında elektrik altyapı ekipmanları ve panoları kontrol formu', icon: 'Zap' },
+    { code: 'ELECTRIC_PANEL_INSPECTION', name: 'Elektrik Pano Kontrolü', description: 'Termal kamera ile elektrik panoları sıcaklık ölçümü ve denetim formu', icon: 'photo_camera' },
+    { code: 'FIRE_SAFETY_CONTROL', name: 'Yangın Güvenliği Kontrol Sistemi', description: 'Yangın güvenliği denetimleri, saha tespitleri ve aksiyon takip sistemi', icon: 'local_fire_department' },
+    { code: 'FM200_TRACKING', name: 'FM-200 Kontrol ve Sızdırmazlık Durum Kontrolü', description: 'FM-200 ve gazlı yangın söndürme sistemleri denetim, bakım, sızdırmazlık ve iş emri takip sistemi', icon: 'propane_tank' },
+    { code: 'IMPROVEMENTS_TRACKING', name: 'İyileştirme ve Aksiyon Takip', description: 'Hastane denetimleri, elektrik PK, topraklama, pano ve trafo periyodik kontrolleri konsolide takibi', icon: 'fact_check' }
   ];
   for (const mod of defaultModules) {
     await prisma.module.upsert({
@@ -101,7 +101,7 @@ router.get('/facilities', async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
     let whereClause = {};
-    
+
     if (!user.isAdmin && !user.isManagement) {
       if (user.facilities && user.facilities.length > 0) {
         whereClause = { id: { in: user.facilities as string[] } };
@@ -109,7 +109,7 @@ router.get('/facilities', async (req: AuthRequest, res: Response) => {
         return res.json([]);
       }
     }
-    
+
     const facilities = await prisma.facility.findMany({
       where: whereClause,
       include: { buildings: true, assignments: true },
@@ -126,8 +126,8 @@ router.get('/facilities/:id', async (req: AuthRequest, res: Response) => {
   try {
     const facility = await prisma.facility.findUnique({
       where: { id },
-      include: { 
-        buildings: true, 
+      include: {
+        buildings: true,
         locations: true,
         assignments: {
           include: {
@@ -154,10 +154,10 @@ router.get('/facilities/:id', async (req: AuthRequest, res: Response) => {
 });
 
 router.post('/facilities', managementMiddleware, async (req: AuthRequest, res: Response) => {
-  const { 
-    id, name, shortName, type, city, district, fullAddress, 
-    phone, email, website, logoUrl, commercialTitle, taxOffice, 
-    taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings, locations 
+  const {
+    id, name, shortName, type, city, district, fullAddress,
+    phone, email, website, logoUrl, commercialTitle, taxOffice,
+    taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings, locations
   } = req.body;
 
   if (!id || !name) {
@@ -183,7 +183,7 @@ router.post('/facilities', managementMiddleware, async (req: AuthRequest, res: R
         taxNumber: taxNumber || null,
         sgkNumber: sgkNumber || null,
         naceCode: naceCode || null,
-        dangerClass: dangerClass || 'Az Tehlikeli', 
+        dangerClass: dangerClass || 'Az Tehlikeli',
         employeeCount: parseInt(employeeCount) || 0,
         buildings: {
           create: buildings?.map((b: any) => ({
@@ -223,10 +223,10 @@ router.post('/facilities', managementMiddleware, async (req: AuthRequest, res: R
 
 router.put('/facilities/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
   const oldId = (req.params as Record<string, string>).id as any;
-  const { 
-    name, shortName, type, city, district, fullAddress, 
-    phone, email, website, logoUrl, commercialTitle, taxOffice, 
-    taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings, locations 
+  const {
+    name, shortName, type, city, district, fullAddress,
+    phone, email, website, logoUrl, commercialTitle, taxOffice,
+    taxNumber, sgkNumber, naceCode, dangerClass, employeeCount, buildings, locations
   } = req.body;
 
   try {
@@ -288,16 +288,46 @@ router.put('/facilities/:id', managementMiddleware, async (req: AuthRequest, res
     if (Array.isArray(locations) && locations.length > 0) {
       const newLocations = locations.filter((l: any) => !l.id);
       if (newLocations.length > 0) {
-        await prisma.facilityLocation.createMany({
-          data: newLocations.map((l: any) => ({
-            facilityId: oldId,
-            name: l.name || l.department || l.description || l.floor || l.building || 'İsimsiz',
-            building: l.building || null,
-            floor: l.floor || null,
-            department: l.department || null,
-            description: l.description || null
-          }))
-        });
+        for (const l of newLocations) {
+          const bName = l.buildingName?.trim() || null;
+          const blk = l.building?.trim() || null;
+          const flr = l.floor?.trim() || null;
+          const dept = l.department?.trim() || null;
+          const desc = l.description?.trim() || null;
+          const canonicalName =
+            [bName, blk, flr, dept, desc].filter(Boolean).join(' - ') || l.name || 'İsimsiz';
+
+          const existingLoc = await prisma.facilityLocation.findUnique({
+            where: { facilityId_name: { facilityId: oldId, name: canonicalName } }
+          });
+
+          if (!existingLoc) {
+            await prisma.facilityLocation.create({
+              data: {
+                facilityId: oldId,
+                buildingName: bName,
+                name: canonicalName,
+                building: blk,
+                floor: flr,
+                department: dept,
+                description: desc,
+                type: desc ? 'MAHAL' : dept ? 'BIRIM' : flr ? 'KAT' : blk ? 'BLOK' : 'BINA'
+              }
+            });
+          } else if (!existingLoc.isActive) {
+            await prisma.facilityLocation.update({
+              where: { id: existingLoc.id },
+              data: {
+                buildingName: bName,
+                building: blk,
+                floor: flr,
+                department: dept,
+                description: desc,
+                isActive: true
+              }
+            });
+          }
+        }
       }
     }
 
@@ -565,7 +595,7 @@ router.put('/users/:username', adminMiddleware, async (req: AuthRequest, res: Re
 
 router.post('/users/:username/facilities', adminMiddleware, async (req: AuthRequest, res: Response) => {
   const username = String(req.params.username);
-  const { facilityId, action } = req.body; 
+  const { facilityId, action } = req.body;
 
   if (!facilityId) {
     return res.status(400).json({ error: 'Tesis ID zorunludur.' });
@@ -923,7 +953,7 @@ router.get('/smtp', adminMiddleware, async (req: AuthRequest, res: Response) => 
 
 router.post('/smtp', adminMiddleware, async (req: AuthRequest, res: Response) => {
   const { host, port, user, pass, secure, fromEmail, fromName } = req.body;
-  
+
   if (!host || !port || !user || !pass || !fromEmail) {
     return res.status(400).json({ error: 'Tüm alanlar zorunludur.' });
   }
@@ -948,8 +978,8 @@ router.post('/smtp/test', adminMiddleware, async (req: AuthRequest, res: Respons
   try {
     const { sendMail } = require('../services/mail');
     await sendMail(
-      to, 
-      'SEC Portalı - SMTP Test Mesajı', 
+      to,
+      'SEC Portalı - SMTP Test Mesajı',
       'SEC Portalı SMTP ayarları başarıyla doğrulandı.'
     );
     res.json({ message: 'Test e-postası başarıyla gönderildi.' });
@@ -975,9 +1005,9 @@ async function seedNotificationConfigs() {
     await prisma.notificationConfig.upsert({
       where: { code: config.code },
       update: { module: config.module, description: config.description },
-      create: { 
-        code: config.code, 
-        module: config.module, 
+      create: {
+        code: config.code,
+        module: config.module,
         description: config.description,
         emailEnabled: true,
         appEnabled: true,
@@ -1015,7 +1045,7 @@ router.get('/notification-configs', adminMiddleware, async (req: AuthRequest, re
 
 router.post('/notification-configs', adminMiddleware, async (req: AuthRequest, res: Response) => {
   const { code, name, module, description, priority } = req.body;
-  
+
   if (!code || !name || !module) {
     return res.status(400).json({ error: 'Kod, isim ve modül zorunludur.' });
   }
@@ -1107,24 +1137,24 @@ router.get('/fines', adminMiddleware, async (req: AuthRequest, res: Response) =>
 });
 
 router.post('/fines', adminMiddleware, async (req: AuthRequest, res: Response) => {
-  const { 
-    year, 
-    specialistAndPhysicianVery, 
-    specialistAndPhysicianDanger, 
-    specialistAndPhysicianLess, 
-    dspVeryDangerous 
+  const {
+    year,
+    specialistAndPhysicianVery,
+    specialistAndPhysicianDanger,
+    specialistAndPhysicianLess,
+    dspVeryDangerous
   } = req.body;
 
   try {
     const fines = await prisma.administrativeFine.upsert({
       where: { year: parseInt(String(year)) },
-      update: { 
+      update: {
         specialistAndPhysicianVery: parseFloat(String(specialistAndPhysicianVery)),
         specialistAndPhysicianDanger: parseFloat(String(specialistAndPhysicianDanger)),
         specialistAndPhysicianLess: parseFloat(String(specialistAndPhysicianLess)),
         dspVeryDangerous: parseFloat(String(dspVeryDangerous))
       },
-      create: { 
+      create: {
         year: parseInt(String(year)),
         specialistAndPhysicianVery: parseFloat(String(specialistAndPhysicianVery)),
         specialistAndPhysicianDanger: parseFloat(String(specialistAndPhysicianDanger)),
@@ -1168,7 +1198,7 @@ router.get('/report-templates/:id', adminMiddleware, async (req: AuthRequest, re
 
 router.post('/report-templates', adminMiddleware, async (req: AuthRequest, res: Response) => {
   const { name, code, module, content, orientation, documentNo, revisionNo, releaseDate } = req.body;
-  
+
   if (!name || !code || !module) {
     return res.status(400).json({ error: 'İsim, kod ve modül zorunludur.' });
   }

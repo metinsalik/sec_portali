@@ -1079,7 +1079,7 @@ function App() {
                   <Route
                     path="/hazmat/settings/units"
                     element={
-                      <ProtectedRoute >
+                      <ProtectedRoute requireAdmin>
                         <AppLayout><HazmatSettingsPage /></AppLayout>
                       </ProtectedRoute>
                     }
@@ -1087,7 +1087,7 @@ function App() {
                   <Route
                     path="/hazmat/settings/departments"
                     element={
-                      <ProtectedRoute >
+                      <ProtectedRoute requireAdmin>
                         <AppLayout><HazmatSettingsPage /></AppLayout>
                       </ProtectedRoute>
                     }
@@ -1095,7 +1095,7 @@ function App() {
                   <Route
                     path="/hazmat/settings/ghs"
                     element={
-                      <ProtectedRoute >
+                      <ProtectedRoute requireAdmin>
                         <AppLayout><HazmatSettingsPage /></AppLayout>
                       </ProtectedRoute>
                     }
@@ -1103,7 +1103,7 @@ function App() {
                   <Route
                     path="/hazmat/settings/adr"
                     element={
-                      <ProtectedRoute >
+                      <ProtectedRoute requireAdmin>
                         <AppLayout><HazmatSettingsPage /></AppLayout>
                       </ProtectedRoute>
                     }
@@ -1111,7 +1111,7 @@ function App() {
                   <Route
                     path="/hazmat/settings/ppe"
                     element={
-                      <ProtectedRoute >
+                      <ProtectedRoute requireAdmin>
                         <AppLayout><HazmatSettingsPage /></AppLayout>
                       </ProtectedRoute>
                     }
@@ -1119,7 +1119,7 @@ function App() {
                   <Route
                     path="/hazmat/settings/events"
                     element={
-                      <ProtectedRoute requiredModules={['hazmat']}>
+                      <ProtectedRoute requireAdmin>
                         <AppLayout><HazmatSettingsPage /></AppLayout>
                       </ProtectedRoute>
                     }
@@ -1127,7 +1127,7 @@ function App() {
                   <Route
                     path="/hazmat/settings/categories"
                     element={
-                      <ProtectedRoute >
+                      <ProtectedRoute requireAdmin>
                         <AppLayout><HazmatSettingsPage /></AppLayout>
                       </ProtectedRoute>
                     }
@@ -1135,7 +1135,7 @@ function App() {
                   <Route
                     path="/hazmat/settings/kit-items"
                     element={
-                      <ProtectedRoute >
+                      <ProtectedRoute requireAdmin>
                         <AppLayout><HazmatKitItemsPage /></AppLayout>
                       </ProtectedRoute>
                     }

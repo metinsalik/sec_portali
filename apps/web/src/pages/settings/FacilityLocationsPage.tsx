@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter
+  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   Plus,
@@ -19,51 +19,83 @@ import {
   ChevronRight,
   Pencil,
   Check,
+  X,
   Loader2,
   Building,
+  Building2,
   FileSpreadsheet,
   Download,
   Upload,
   Layers,
-  Sparkles,
   Search,
   CheckCircle2,
-  AlertCircle,
-  BookOpen
+  BookOpen,
+  MapPin,
+  Briefcase,
+  DoorOpen,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAuth } from '@/context/AuthContext';
 import { STANDARD_BLOCKS, STANDARD_FLOORS, getBlockCode, getFloorCode, generateLocationCode } from '@/data/locationStandards';
 import StandardCodesModal from '@/components/shared/StandardCodesModal';
+import { extractLocationParts } from '@/utils/locationHierarchy';
+
+type InlineTarget = {
+  level: 'block' | 'floor' | 'department' | 'description';
+  buildingName: string;
+  block: string;
+  floor: string;
+  department: string;
+  nodeKey: string;
+};
+
+type RenameTarget = {
+  level: 'buildingName' | 'building' | 'floor' | 'department' | 'description';
+  oldValue: string;
+  parentBuildingName?: string;
+  parentBuilding?: string;
+  parentFloor?: string;
+  parentDepartment?: string;
+  nodeKey: string;
+};
 
 export default function FacilityLocationsPage() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const [facilityId, setFacilityId] = useState(localStorage.getItem('activeFacilityId') || '');
-  
-  // Standard Codes Modal State
-  const [isCodesModalOpen, setIsCodesModalOpen] = useState(false);
+  const [facilityId, setFacilityId] = useState(() => localStorage.getItem('activeFacilityId') || '');
 
-  // Excel Modal State
+  useEffect(() => {
+    const onFacilityChanged = () => {
+      setFacilityId(localStorage.getItem('activeFacilityId') || '');
+    };
+    window.addEventListener('facilityChanged', onFacilityChanged);
+    window.addEventListener('storage', onFacilityChanged);
+    return () => {
+      window.removeEventListener('facilityChanged', onFacilityChanged);
+      window.removeEventListener('storage', onFacilityChanged);
+    };
+  }, []);
+
+  const [isCodesModalOpen, setIsCodesModalOpen] = useState(false);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
 
-  // Hızlı Ekleme
+  // 5-seviyeli hızlı ekleme formu: Bina Adı > Blok > Kat > Birim > Mahal
   const [newLocation, setNewLocation] = useState({
-    building: 'Ana Bina',
+    buildingName: 'Ana Bina',
     block: '',
-    floor: 'Zemin Kat',
+    floor: 'Z.Kat',
     department: '',
     description: '',
-    type: 'KAT'
   });
-  
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [editingNode, setEditingNode] = useState<any>(null);
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
+  const [inlineAdd, setInlineAdd] = useState<InlineTarget | null>(null);
+  const [inlineValue, setInlineValue] = useState('');
+  const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null);
+  const [renameValue, setRenameValue] = useState('');
 
   const { data: facilities = [] } = useQuery({
     queryKey: ['facilities'],
@@ -71,19 +103,24 @@ export default function FacilityLocationsPage() {
       const res = await api.get('/settings/facilities');
       if (!res.ok) return [];
       return res.json();
-    }
+    },
   });
 
   const { data: locations = [], isLoading } = useQuery({
     queryKey: ['facility-locations', facilityId],
     queryFn: async () => {
-      if (!facilityId || facilityId === 'all') return [];
+      if (!facilityId || facilityId === 'all' || facilityId === 'ALL') return [];
       const res = await api.get(`/locations?facilityId=${facilityId}`);
       if (!res.ok) throw new Error('Lokasyonlar getirilemedi');
       return res.json();
     },
-    enabled: !!facilityId && facilityId !== 'all'
+    enabled: !!facilityId && facilityId !== 'all' && facilityId !== 'ALL',
   });
+
+  const invalidateAllLocationQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ['facility-locations'] });
+    queryClient.invalidateQueries({ queryKey: ['facilities'] });
+  };
 
   const addMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -94,86 +131,152 @@ export default function FacilityLocationsPage() {
       }
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['facility-locations'] });
+    onSuccess: (_data, variables) => {
+      invalidateAllLocationQueries();
       toast.success('Lokasyon eklendi');
-      setNewLocation({
-        building: 'Ana Bina',
-        block: '',
-        floor: 'Zemin Kat',
-        department: '',
-        description: '',
-        type: 'KAT'
-      });
+      if (variables?.isInline) {
+        setInlineAdd(null);
+        setInlineValue('');
+      } else {
+        // Hızlı eklemede üst seviyeleri koru, Birim ve Mahal'ı temizle
+        setNewLocation((prev) => ({
+          ...prev,
+          department: '',
+          description: '',
+        }));
+      }
     },
     onError: (err: any) => {
       toast.error(err.message || 'Lokasyon eklenirken hata oluştu');
-    }
+    },
   });
 
   const renameMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await api.post('/locations/rename-node', { ...data, facilityId });
-      if (!res.ok) throw new Error('Güncelleme başarısız');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Güncelleme başarısız');
+      }
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['facility-locations'] });
+      invalidateAllLocationQueries();
       toast.success('İsim güncellendi');
-      setEditingNode(null);
-    }
+      setRenameTarget(null);
+      setRenameValue('');
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Güncelleme başarısız');
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await api.post('/locations/delete-node', { ...data, facilityId });
-      if (!res.ok) throw new Error('Silme başarısız');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Silme başarısız');
+      }
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['facility-locations'] });
-      toast.success('Düğüm silindi');
-    }
+      invalidateAllLocationQueries();
+      toast.success('Lokasyon silindi');
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Silme başarısız');
+    },
   });
 
-  const addLoc = () => {
-    let buildingField = newLocation.building || 'Ana Bina';
-    if (newLocation.block && newLocation.block !== buildingField) {
-      buildingField = `${buildingField} (${newLocation.block})`;
+  const addLocFromForm = () => {
+    if (!newLocation.buildingName.trim()) {
+      toast.error('Lütfen Bina Adı giriniz.');
+      return;
     }
-    const floorField = newLocation.floor || 'Zemin Kat';
-    const name = `${buildingField} - ${floorField}`;
-
     addMutation.mutate({
-      building: buildingField,
-      floor: floorField,
-      department: newLocation.department,
-      description: newLocation.block || newLocation.description,
-      name,
-      type: 'KAT'
+      buildingName: newLocation.buildingName.trim(),
+      building: newLocation.block.trim() || null,
+      floor: newLocation.floor.trim() || null,
+      department: newLocation.department.trim() || null,
+      description: newLocation.description.trim() || null,
     });
   };
 
-  const removeNode = (level: string, value: string, parentBuilding?: string, parentFloor?: string) => {
-    if (!window.confirm(`${value} ve altındaki kayıtlar silinecek. Onaylıyor musunuz?`)) return;
-    deleteMutation.mutate({ level, value, parentBuilding, parentFloor });
+  const openInlineAdd = (target: InlineTarget) => {
+    setInlineAdd(target);
+    setInlineValue('');
+    setExpandedNodes((prev) => ({ ...prev, [target.nodeKey]: true }));
   };
 
-  const saveEdit = () => {
-    if (!editingNode || !editingNode.newValue) return;
-    renameMutation.mutate({ ...editingNode });
+  const saveInlineAdd = () => {
+    if (!inlineAdd || !inlineValue.trim()) return;
+    const val = inlineValue.trim();
+    const isNoBlock = inlineAdd.block === 'Blok Belirtilmemiş';
+    const isNoFloor = inlineAdd.floor === 'Kat Belirtilmemiş';
+
+    addMutation.mutate({
+      isInline: true,
+      buildingName: inlineAdd.buildingName,
+      building: inlineAdd.level === 'block' ? val : (isNoBlock ? null : inlineAdd.block),
+      floor: inlineAdd.level === 'floor' ? val : (inlineAdd.level === 'block' ? null : (isNoFloor ? null : inlineAdd.floor)),
+      department: inlineAdd.level === 'department' ? val : (inlineAdd.level === 'description' ? inlineAdd.department : null),
+      description: inlineAdd.level === 'description' ? val : null,
+    });
+  };
+
+  const startRename = (target: RenameTarget) => {
+    setRenameTarget(target);
+    setRenameValue(target.oldValue);
+  };
+
+  const saveRename = () => {
+    if (!renameTarget || !renameValue.trim()) return;
+    renameMutation.mutate({
+      level: renameTarget.level,
+      oldValue: renameTarget.oldValue,
+      newValue: renameValue.trim(),
+      parentBuildingName: renameTarget.parentBuildingName,
+      parentBuilding: renameTarget.parentBuilding,
+      parentFloor: renameTarget.parentFloor,
+      parentDepartment: renameTarget.parentDepartment,
+    });
+  };
+
+  const removeNode = (payload: {
+    label: string;
+    level: string;
+    value: string;
+    parentBuildingName?: string;
+    parentBuilding?: string;
+    parentFloor?: string;
+    parentDepartment?: string;
+    id?: string;
+  }) => {
+    if (!window.confirm(`"${payload.label}" ve altındaki kayıtlar silinecek. Onaylıyor musunuz?`)) return;
+    deleteMutation.mutate({
+      level: payload.level,
+      value: payload.value,
+      parentBuildingName: payload.parentBuildingName,
+      parentBuilding: payload.parentBuilding,
+      parentFloor: payload.parentFloor,
+      parentDepartment: payload.parentDepartment,
+      id: payload.id,
+    });
   };
 
   const toggleNode = (nodeId: string) => {
-    setExpandedNodes(prev => ({ ...prev, [nodeId]: !prev[nodeId] }));
+    setExpandedNodes((prev) => ({ ...prev, [nodeId]: prev[nodeId] === undefined ? false : !prev[nodeId] }));
   };
 
-  // Excel Şablon İndir
+  const isNodeExpanded = (nodeId: string, defaultOpen = true) => {
+    return expandedNodes[nodeId] !== undefined ? expandedNodes[nodeId] : defaultOpen;
+  };
+
   const handleDownloadTemplate = () => {
     window.open('/api/locations/excel-template', '_blank');
   };
 
-  // Excel İle Yükle
   const handleExcelImport = async () => {
     if (!excelFile) {
       toast.error('Lütfen bir Excel dosyası seçin');
@@ -183,7 +286,7 @@ export default function FacilityLocationsPage() {
     setIsImporting(true);
     const formData = new FormData();
     formData.append('file', excelFile);
-    if (facilityId && facilityId !== 'all') {
+    if (facilityId && facilityId !== 'all' && facilityId !== 'ALL') {
       formData.append('facilityId', facilityId);
     }
 
@@ -192,9 +295,9 @@ export default function FacilityLocationsPage() {
       const res = await fetch('/api/locations/import-excel', {
         method: 'POST',
         headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: formData
+        body: formData,
       });
 
       const data = await res.json();
@@ -203,7 +306,7 @@ export default function FacilityLocationsPage() {
       toast.success(data.message || 'Konumlar aktarıldı');
       setIsExcelModalOpen(false);
       setExcelFile(null);
-      queryClient.invalidateQueries({ queryKey: ['facility-locations'] });
+      invalidateAllLocationQueries();
     } catch (err: any) {
       toast.error(err.message || 'Hata oluştu');
     } finally {
@@ -211,42 +314,120 @@ export default function FacilityLocationsPage() {
     }
   };
 
-  // Hiyerarşik Ağaç Yapısı
-  const tree = useMemo(() => {
-    const root: Record<string, any> = {};
-    const q = searchQuery.toLowerCase();
-
-    locations.forEach((loc: any) => {
-      const b = loc.building || 'Belirtilmemiş Bina/Blok';
-      const f = loc.floor || 'Belirtilmemiş Kat';
-      const d = loc.department || loc.description || 'Genel Alan';
-
-      if (q && !b.toLowerCase().includes(q) && !f.toLowerCase().includes(q) && !d.toLowerCase().includes(q)) {
-        return;
-      }
-
-      if (!root[b]) root[b] = { type: 'building', name: b, children: {}, id: `b-${b}` };
-      if (!root[b].children[f]) root[b].children[f] = { type: 'floor', name: f, children: {}, id: `f-${b}-${f}` };
-      if (!root[b].children[f].children[d]) root[b].children[f].children[d] = { type: 'department', name: d, locations: [], id: `d-${b}-${f}-${d}` };
-      
-      root[b].children[f].children[d].locations.push(loc);
-    });
-    return root;
-  }, [locations, searchQuery]);
-
   const currentFacility = useMemo(() => {
     return facilities.find((f: any) => f.id === facilityId);
   }, [facilities, facilityId]);
 
+  // Mevcut kayıtlardan autocomplete listeleri
+  const suggestionLists = useMemo(() => {
+    const bNames = new Set<string>(['Ana Bina', 'Ek Bina', 'Poliklinik Binası']);
+    (currentFacility?.buildings || []).forEach((b: any) => {
+      if (b?.name) bNames.add(b.name);
+    });
+    const blocks = new Set<string>(STANDARD_BLOCKS.map((sb) => sb.name));
+    const floors = new Set<string>(STANDARD_FLOORS.map((sf) => sf.name));
+    const departments = new Set<string>();
+    const descriptions = new Set<string>();
+
+    locations.forEach((loc: any) => {
+      const p = extractLocationParts(loc);
+      if (p.buildingName) bNames.add(p.buildingName);
+      if (p.block) blocks.add(p.block);
+      if (p.floor) floors.add(p.floor);
+      if (p.department) departments.add(p.department);
+      if (p.description) descriptions.add(p.description);
+    });
+
+    return {
+      buildingNames: Array.from(bNames),
+      blocks: Array.from(blocks),
+      floors: Array.from(floors),
+      departments: Array.from(departments).sort(),
+      descriptions: Array.from(descriptions).sort(),
+    };
+  }, [locations, currentFacility]);
+
+  // 5-Seviyeli Hiyerarşik Ağaç: Bina Adı > Blok > Kat > Birim > Mahal
+  const tree = useMemo(() => {
+    const root: Record<string, any> = {};
+    const q = searchQuery.trim().toLowerCase();
+
+    locations.forEach((loc: any) => {
+      const p = extractLocationParts(loc);
+      const bName = p.buildingName || 'Bina Belirtilmemiş';
+      const blk = p.block || 'Blok Belirtilmemiş';
+      const flr = p.floor;
+      const dept = p.department;
+      const desc = p.description;
+
+      if (q) {
+        const hay = [bName, p.block, flr, dept, desc, loc.name].filter(Boolean).join(' ').toLowerCase();
+        if (!hay.includes(q)) return;
+      }
+
+      const bId = `bn-${bName}`;
+      if (!root[bName]) {
+        root[bName] = { id: bId, name: bName, blocks: {}, count: 0 };
+      }
+      root[bName].count += 1;
+
+      const blkId = `blk-${bName}-${blk}`;
+      if (!root[bName].blocks[blk]) {
+        root[bName].blocks[blk] = { id: blkId, name: blk, isPlaceholder: !p.block, floors: {}, count: 0 };
+      }
+      root[bName].blocks[blk].count += 1;
+
+      if (!flr && !dept && !desc) return;
+
+      const flrKey = flr || 'Kat Belirtilmemiş';
+      const flrId = `flr-${bName}-${blk}-${flrKey}`;
+      if (!root[bName].blocks[blk].floors[flrKey]) {
+        root[bName].blocks[blk].floors[flrKey] = {
+          id: flrId,
+          name: flrKey,
+          isPlaceholder: !flr,
+          departments: {},
+          locations: [],
+        };
+      }
+      root[bName].blocks[blk].floors[flrKey].locations.push(loc);
+
+      if (!dept && !desc) return;
+
+      const deptKey = dept || 'Birim Belirtilmemiş';
+      const deptId = `dept-${bName}-${blk}-${flrKey}-${deptKey}`;
+      if (!root[bName].blocks[blk].floors[flrKey].departments[deptKey]) {
+        root[bName].blocks[blk].floors[flrKey].departments[deptKey] = {
+          id: deptId,
+          name: deptKey,
+          isPlaceholder: !dept,
+          rooms: [],
+        };
+      }
+
+      if (desc) {
+        root[bName].blocks[blk].floors[flrKey].departments[deptKey].rooms.push({
+          id: loc.id,
+          name: desc,
+          loc,
+        });
+      }
+    });
+
+    return root;
+  }, [locations, searchQuery]);
+
   const generatedCode = useMemo(() => {
-    const blockOrBuilding = newLocation.block || newLocation.building;
+    const blockOrBuilding = newLocation.block || newLocation.buildingName;
     if (!blockOrBuilding && !newLocation.floor) return '';
     return generateLocationCode(blockOrBuilding, newLocation.floor, currentFacility?.shortName);
-  }, [newLocation.block, newLocation.building, newLocation.floor, currentFacility?.shortName]);
+  }, [newLocation.block, newLocation.buildingName, newLocation.floor, currentFacility?.shortName]);
+
+  const hasValidFacility = Boolean(facilityId && facilityId !== 'all' && facilityId !== 'ALL');
 
   return (
     <div className="space-y-6 w-full animate-in fade-in duration-200 pb-16">
-      {/* Üst Başlık & Aksiyon Kartı */}
+      {/* Üst Başlık & Aksiyonlar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -257,7 +438,7 @@ export default function FacilityLocationsPage() {
               Tesis Lokasyon Yönetimi
             </h1>
             <p className="text-xs text-muted-foreground">
-              Bina, blok ve kat hiyerarşisini kurumsal kod standartlarına göre yapılandırın veya Excel ile toplu yükleyin.
+              Fiziksel yapıyı <strong>Bina Adı &gt; Blok &gt; Kat &gt; Birim &gt; Mahal</strong> hiyerarşisiyle yönetin; tüm modüllerle çift yönlü senkronize çalışır.
             </p>
           </div>
         </div>
@@ -291,10 +472,15 @@ export default function FacilityLocationsPage() {
           </Button>
 
           <div className="w-56">
-            <Select value={facilityId} onValueChange={v => {
-              setFacilityId(v);
-              localStorage.setItem('activeFacilityId', v);
-            }}>
+            <Select
+              value={hasValidFacility ? facilityId : ''}
+              onValueChange={(v) => {
+                if (!v) return;
+                setFacilityId(v);
+                localStorage.setItem('activeFacilityId', v);
+                window.dispatchEvent(new Event('facilityChanged'));
+              }}
+            >
               <SelectTrigger className="h-9 bg-background text-xs font-medium rounded-md">
                 <div className="flex items-center gap-2 truncate">
                   <Building className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -312,24 +498,24 @@ export default function FacilityLocationsPage() {
           </div>
         </div>
       </div>
-      
-      {(!facilityId || facilityId === 'all') ? (
+
+      {!hasValidFacility ? (
         <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-border/60 rounded-lg bg-muted/10">
           <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center mb-2.5 text-muted-foreground">
             <Building className="w-5 h-5" />
           </div>
           <h3 className="text-sm font-semibold text-foreground">Tesis Seçimi Bekleniyor</h3>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-            Lokasyon ağacını görüntülemek veya Excel'den toplu bina, blok ve kat yüklemek için lütfen üstten bir tesis seçiniz.
+            Lokasyon ağacını (Bina, Blok, Kat, Birim, Mahal) görüntülemek veya eklemek için lütfen üstten bir tesis seçiniz.
           </p>
         </div>
       ) : (
         <>
-          {/* Kolay & Yalın Manuel Ekleme Formu */}
+          {/* 5-Seviyeli Hızlı Konum Ekleme Formu */}
           <div className="bg-card border border-border/60 rounded-lg p-4 shadow-xs space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-border/40">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-border/40">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                <Plus className="w-3.5 h-3.5 text-primary" /> Hızlı Konum Ekle
+                <Plus className="w-3.5 h-3.5 text-primary" /> Hızlı Konum Ekle (Bina &gt; Blok &gt; Kat &gt; Birim &gt; Mahal)
               </h3>
               <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                 {generatedCode ? (
@@ -340,63 +526,97 @@ export default function FacilityLocationsPage() {
                     </Badge>
                   </span>
                 ) : (
-                  <span>Örn: Bina: Ana Bina | Blok: A Blok | Kat: 1.Kat</span>
+                  <span>Örn: Ana Bina &gt; A Blok &gt; 1.Kat &gt; Acil Servis &gt; Triaj Odası</span>
                 )}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
               <div className="space-y-1">
                 <Label className="text-xs font-medium">Bina Adı *</Label>
-                <Input 
-                  value={newLocation.building} 
-                  onChange={e => setNewLocation({...newLocation, building: e.target.value})} 
-                  placeholder="Örn: Ana Bina" 
-                  className="h-9 text-xs rounded-md" 
+                <Input
+                  value={newLocation.buildingName}
+                  onChange={(e) => setNewLocation({ ...newLocation, buildingName: e.target.value })}
+                  placeholder="Örn: Ana Bina"
+                  className="h-9 text-xs rounded-md"
                   list="fac-buildings-list"
                 />
                 <datalist id="fac-buildings-list">
-                  <option value="Ana Bina">Ana Bina [ANB]</option>
-                  <option value="Ek Bina">Ek Bina [EKB]</option>
+                  {suggestionLists.buildingNames.map((bn) => (
+                    <option key={bn} value={bn} />
+                  ))}
                 </datalist>
               </div>
 
               <div className="space-y-1">
                 <Label className="text-xs font-medium">Blok (Opsiyonel)</Label>
-                <Input 
-                  value={newLocation.block} 
-                  onChange={e => setNewLocation({...newLocation, block: e.target.value})} 
-                  placeholder="Örn: A Blok" 
-                  className="h-9 text-xs rounded-md" 
+                <Input
+                  value={newLocation.block}
+                  onChange={(e) => setNewLocation({ ...newLocation, block: e.target.value })}
+                  placeholder="Örn: A Blok"
+                  className="h-9 text-xs rounded-md"
                   list="fac-blocks-list"
                 />
                 <datalist id="fac-blocks-list">
-                  {STANDARD_BLOCKS.map(sb => (
-                    <option key={sb.code} value={sb.name}>{`${sb.name} [${sb.code}]`}</option>
+                  {suggestionLists.blocks.map((sb) => (
+                    <option key={sb} value={sb} />
                   ))}
                 </datalist>
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs font-medium">Kat *</Label>
-                <Input 
-                  value={newLocation.floor} 
-                  onChange={e => setNewLocation({...newLocation, floor: e.target.value})} 
-                  placeholder="Örn: 1.Kat, Z.Kat..." 
-                  className="h-9 text-xs rounded-md" 
+                <Label className="text-xs font-medium">Kat</Label>
+                <Input
+                  value={newLocation.floor}
+                  onChange={(e) => setNewLocation({ ...newLocation, floor: e.target.value })}
+                  placeholder="Örn: 1.Kat, Z.Kat..."
+                  className="h-9 text-xs rounded-md"
                   list="fac-floors-list"
                 />
                 <datalist id="fac-floors-list">
-                  {STANDARD_FLOORS.map(sf => (
-                    <option key={sf.code} value={sf.name}>{`${sf.name} [${sf.code}]`}</option>
+                  {suggestionLists.floors.map((sf) => (
+                    <option key={sf} value={sf} />
+                  ))}
+                </datalist>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Birim (Opsiyonel)</Label>
+                <Input
+                  value={newLocation.department}
+                  onChange={(e) => setNewLocation({ ...newLocation, department: e.target.value })}
+                  placeholder="Örn: Acil Servis"
+                  className="h-9 text-xs rounded-md"
+                  list="fac-depts-list"
+                />
+                <datalist id="fac-depts-list">
+                  {suggestionLists.departments.map((d) => (
+                    <option key={d} value={d} />
+                  ))}
+                </datalist>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Mahal (Opsiyonel)</Label>
+                <Input
+                  value={newLocation.description}
+                  onChange={(e) => setNewLocation({ ...newLocation, description: e.target.value })}
+                  placeholder="Örn: 101 Nolu Oda, Triaj..."
+                  className="h-9 text-xs rounded-md"
+                  list="fac-rooms-list"
+                  onKeyDown={(e) => e.key === 'Enter' && addLocFromForm()}
+                />
+                <datalist id="fac-rooms-list">
+                  {suggestionLists.descriptions.map((r) => (
+                    <option key={r} value={r} />
                   ))}
                 </datalist>
               </div>
 
               <div>
-                <Button 
-                  onClick={addLoc} 
-                  disabled={!newLocation.building || !newLocation.floor || addMutation.isPending}
+                <Button
+                  onClick={addLocFromForm}
+                  disabled={!newLocation.buildingName.trim() || addMutation.isPending}
                   className="w-full h-9 rounded-md text-xs font-medium gap-1.5"
                 >
                   {addMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
@@ -406,20 +626,25 @@ export default function FacilityLocationsPage() {
             </div>
           </div>
 
-          {/* Arama & Hiyerarşik Ağaç Kartı */}
+          {/* 5-Seviyeli Hiyerarşik Ağaç */}
           <div className="bg-card border border-border/60 rounded-lg p-5 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/40">
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-primary" />
-                <h3 className="text-sm font-semibold text-foreground">
-                  Tanımlı Konumlar ({locations.length})
-                </h3>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Fiziksel Yapı ve Tanımlı Konumlar ({locations.length})
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    Katların sağından <strong>+ Birim</strong>, birimlerin sağından <strong>+ Mahal</strong> ekleyebilirsiniz.
+                  </p>
+                </div>
               </div>
 
-              <div className="relative w-full sm:w-64">
+              <div className="relative w-full sm:w-72">
                 <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-muted-foreground" />
                 <Input
-                  placeholder="Bina, blok veya kat ara..."
+                  placeholder="Bina, blok, kat, birim veya mahal ara..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8 h-8 text-xs rounded-md"
@@ -436,82 +661,608 @@ export default function FacilityLocationsPage() {
                 <Building className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
                 <p className="text-xs font-semibold text-foreground">Henüz Konum Eklenmemiş</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Yukarıdaki "Hızlı Konum Ekle" formunu kullanabilir veya "Excel'den Yükle" ile aktarabilirsiniz.
+                  Yukarıdaki formu kullanarak Bina, Blok, Kat, Birim ve Mahal ekleyebilir veya Excel'den aktarabilirsiniz.
                 </p>
               </div>
             ) : (
-              <div className="space-y-2.5">
-                {Object.values(tree).map((buildingNode: any) => {
-                  const isExpanded = expandedNodes[buildingNode.id] !== false;
+              <div className="space-y-3">
+                {Object.values(tree).map((binaNode: any) => {
+                  const binaOpen = isNodeExpanded(binaNode.id, true);
+                  const isRenamingBina =
+                    renameTarget?.nodeKey === binaNode.id && renameTarget?.level === 'buildingName';
+
                   return (
-                    <div key={buildingNode.id} className="border border-border/60 rounded-lg overflow-hidden bg-background">
-                      {/* Bina Başlığı */}
+                    <div key={binaNode.id} className="border border-border/70 rounded-lg overflow-hidden bg-background">
+                      {/* SEVİYE 1: BİNA ADI */}
                       <div
-                        onClick={() => toggleNode(buildingNode.id)}
-                        className="px-3.5 py-2.5 bg-muted/30 hover:bg-muted/60 cursor-pointer flex items-center justify-between transition-colors"
+                        onClick={() => !isRenamingBina && toggleNode(binaNode.id)}
+                        className="px-3.5 py-2.5 bg-muted/40 hover:bg-muted/60 cursor-pointer flex items-center justify-between gap-2 transition-colors"
                       >
-                        <div className="flex items-center gap-2">
-                          {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-primary" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                          <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                            <Building className="w-3.5 h-3.5 text-primary" />
-                            {buildingNode.name}
-                            {(() => {
-                              const bCode = getBlockCode(buildingNode.name);
-                              return bCode ? (
-                                <Badge variant="outline" className="text-[10px] font-mono py-0 px-1 bg-background text-foreground/80 font-bold border-border/80">
-                                  {bCode}
-                                </Badge>
-                              ) : null;
-                            })()}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-primary/10 text-primary font-medium">
-                            {Object.keys(buildingNode.children).length} Kat
-                          </span>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeNode('building', buildingNode.name);
-                            }}
-                            className="p-1 text-muted-foreground hover:text-destructive transition-colors rounded"
-                            title="Binayı ve Alt Katları Sil"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        {isRenamingBina ? (
+                          <div className="flex items-center gap-2 flex-1" onClick={(e) => e.stopPropagation()}>
+                            <Input
+                              autoFocus
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && saveRename()}
+                              className="h-7 text-xs flex-1"
+                            />
+                            <Button size="sm" className="h-7 px-2 text-xs" onClick={saveRename} disabled={renameMutation.isPending}>
+                              <Check className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setRenameTarget(null)}>
+                              <X className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-2 min-w-0">
+                              {binaOpen ? <ChevronDown className="w-4 h-4 text-primary shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+                              <Building className="w-4 h-4 text-primary shrink-0" />
+                              <span className="text-xs font-bold text-foreground truncate">{binaNode.name}</span>
+                              <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
+                                {Object.keys(binaNode.blocks).length} Blok
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-[11px] text-primary hover:bg-primary/10"
+                                onClick={() =>
+                                  openInlineAdd({
+                                    level: 'block',
+                                    buildingName: binaNode.name,
+                                    block: '',
+                                    floor: '',
+                                    department: '',
+                                    nodeKey: binaNode.id,
+                                  })
+                                }
+                              >
+                                <Plus className="w-3 h-3 mr-1" /> Blok
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-[11px] text-emerald-600 hover:bg-emerald-500/10"
+                                onClick={() =>
+                                  openInlineAdd({
+                                    level: 'floor',
+                                    buildingName: binaNode.name,
+                                    block: 'Blok Belirtilmemiş',
+                                    floor: '',
+                                    department: '',
+                                    nodeKey: binaNode.id,
+                                  })
+                                }
+                              >
+                                <Plus className="w-3 h-3 mr-1" /> Kat
+                              </Button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  startRename({
+                                    level: 'buildingName',
+                                    oldValue: binaNode.name,
+                                    nodeKey: binaNode.id,
+                                  })
+                                }
+                                className="p-1 text-muted-foreground hover:text-primary rounded"
+                                title="Bina Adını Düzenle"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  removeNode({
+                                    label: binaNode.name,
+                                    level: 'buildingName',
+                                    value: binaNode.name,
+                                  })
+                                }
+                                className="p-1 text-muted-foreground hover:text-destructive rounded"
+                                title="Binayı ve Altındaki Tüm Kayıtları Sil"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </>
+                        )}
                       </div>
 
-                      {/* Katlar Listesi */}
-                      {isExpanded && (
-                        <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 bg-muted/10">
-                          {Object.values(buildingNode.children).map((floorNode: any) => {
-                            const fCode = getFloorCode(floorNode.name);
+                      {/* Bina İçi Hızlı Blok/Kat Ekleme */}
+                      {binaOpen && inlineAdd && inlineAdd.nodeKey === binaNode.id && (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-primary/5 border-b border-border/50">
+                          <Input
+                            autoFocus
+                            value={inlineValue}
+                            onChange={(e) => setInlineValue(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && saveInlineAdd()}
+                            placeholder={inlineAdd.level === 'block' ? 'Yeni Blok Adı (ör. A Blok)...' : 'Yeni Kat Adı (ör. 1.Kat)...'}
+                            className="h-7 text-xs flex-1 bg-background"
+                          />
+                          <Button size="sm" className="h-7 px-2.5 text-xs" onClick={saveInlineAdd} disabled={addMutation.isPending}>
+                            <Check className="w-3.5 h-3.5 mr-1" /> Ekle
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setInlineAdd(null)}>
+                            İptal
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* SEVİYE 2: BLOKLAR */}
+                      {binaOpen && (
+                        <div className="divide-y divide-border/50">
+                          {Object.values(binaNode.blocks).map((blokNode: any) => {
+                            const blokOpen = isNodeExpanded(blokNode.id, true);
+                            const isRenamingBlok =
+                              renameTarget?.nodeKey === blokNode.id && renameTarget?.level === 'building';
+                            const bCode = !blokNode.isPlaceholder ? getBlockCode(blokNode.name) : '';
+
                             return (
-                              <div
-                                key={floorNode.id}
-                                className="p-2 rounded-md bg-card border border-border/60 flex items-center justify-between gap-2 shadow-2xs"
-                              >
-                                <div className="flex items-center gap-1.5 truncate">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-                                  <span className="text-xs font-medium text-foreground truncate">
-                                    {floorNode.name}
-                                  </span>
-                                  {fCode && (
-                                    <Badge variant="outline" className="text-[9px] font-mono py-0 px-1 bg-background text-primary font-bold border-primary/20 shrink-0">
-                                      {fCode}
-                                    </Badge>
+                              <div key={blokNode.id} className="bg-background">
+                                <div
+                                  onClick={() => !isRenamingBlok && toggleNode(blokNode.id)}
+                                  className="pl-6 pr-3.5 py-2 bg-muted/20 hover:bg-muted/35 cursor-pointer flex items-center justify-between gap-2 transition-colors"
+                                >
+                                  {isRenamingBlok ? (
+                                    <div className="flex items-center gap-2 flex-1" onClick={(e) => e.stopPropagation()}>
+                                      <Input
+                                        autoFocus
+                                        value={renameValue}
+                                        onChange={(e) => setRenameValue(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && saveRename()}
+                                        className="h-7 text-xs flex-1"
+                                      />
+                                      <Button size="sm" className="h-7 px-2 text-xs" onClick={saveRename} disabled={renameMutation.isPending}>
+                                        <Check className="w-3.5 h-3.5" />
+                                      </Button>
+                                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setRenameTarget(null)}>
+                                        <X className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        {blokOpen ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+                                        <Building2 className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                        <span className={`text-xs font-semibold truncate ${blokNode.isPlaceholder ? 'text-muted-foreground italic' : 'text-foreground'}`}>
+                                          {blokNode.isPlaceholder ? 'Tek Blok / Genel Blok' : blokNode.name}
+                                        </span>
+                                        {bCode && (
+                                          <Badge variant="outline" className="text-[9px] font-mono py-0 px-1 font-bold">
+                                            {bCode}
+                                          </Badge>
+                                        )}
+                                        <span className="text-[10px] text-muted-foreground">
+                                          ({Object.keys(blokNode.floors).length} Kat)
+                                        </span>
+                                      </div>
+
+                                      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-6 px-2 text-[11px] text-emerald-600 hover:bg-emerald-500/10"
+                                          onClick={() =>
+                                            openInlineAdd({
+                                              level: 'floor',
+                                              buildingName: binaNode.name,
+                                              block: blokNode.name,
+                                              floor: '',
+                                              department: '',
+                                              nodeKey: blokNode.id,
+                                            })
+                                          }
+                                        >
+                                          <Plus className="w-3 h-3 mr-1" /> Kat Ekle
+                                        </Button>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            startRename({
+                                              level: 'building',
+                                              oldValue: blokNode.isPlaceholder ? '' : blokNode.name,
+                                              parentBuildingName: binaNode.name,
+                                              nodeKey: blokNode.id,
+                                            })
+                                          }
+                                          className="p-1 text-muted-foreground hover:text-primary rounded"
+                                          title={blokNode.isPlaceholder ? 'Blok Adı Tanımla' : 'Blok Adını Düzenle'}
+                                        >
+                                          <Pencil className="w-3 h-3" />
+                                        </button>
+                                        {!blokNode.isPlaceholder && (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              removeNode({
+                                                label: `${binaNode.name} > ${blokNode.name}`,
+                                                level: 'building',
+                                                value: blokNode.name,
+                                                parentBuildingName: binaNode.name,
+                                              })
+                                            }
+                                            className="p-1 text-muted-foreground hover:text-destructive rounded"
+                                            title="Bloğu ve Altındaki Kayıtları Sil"
+                                          >
+                                            <Trash2 className="w-3 h-3" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    </>
                                   )}
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => removeNode('floor', floorNode.name, buildingNode.name)}
-                                  className="p-1 text-muted-foreground hover:text-destructive transition-colors shrink-0 rounded"
-                                  title="Bu Katı Sil"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </button>
+
+                                {/* Blok İçi Hızlı Kat Ekleme */}
+                                {blokOpen && inlineAdd?.nodeKey === blokNode.id && (
+                                  <div className="flex items-center gap-2 pl-10 pr-4 py-2 bg-emerald-500/5 border-b border-border/40">
+                                    <Input
+                                      autoFocus
+                                      value={inlineValue}
+                                      onChange={(e) => setInlineValue(e.target.value)}
+                                      onKeyDown={(e) => e.key === 'Enter' && saveInlineAdd()}
+                                      placeholder="Yeni Kat Adı (ör. 1.Kat, Z.Kat)..."
+                                      list="fac-floors-list"
+                                      className="h-7 text-xs flex-1 bg-background"
+                                    />
+                                    <Button size="sm" className="h-7 px-2.5 text-xs" onClick={saveInlineAdd} disabled={addMutation.isPending}>
+                                      <Check className="w-3.5 h-3.5 mr-1" /> Ekle
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setInlineAdd(null)}>
+                                      İptal
+                                    </Button>
+                                  </div>
+                                )}
+
+                                {/* SEVİYE 3: KATLAR */}
+                                {blokOpen && (
+                                  <div className="pl-8 pr-3 py-2 space-y-2 bg-background">
+                                    {Object.keys(blokNode.floors).length === 0 ? (
+                                      <div className="text-[11px] text-muted-foreground italic py-1 pl-2">
+                                        Henüz kat eklenmemiş. Sağ üstten "+ Kat Ekle" kullanabilirsiniz.
+                                      </div>
+                                    ) : (
+                                      Object.values(blokNode.floors).map((floorNode: any) => {
+                                        const flrOpen = isNodeExpanded(floorNode.id, true);
+                                        const isRenamingFloor =
+                                          renameTarget?.nodeKey === floorNode.id && renameTarget?.level === 'floor';
+                                        const fCode = !floorNode.isPlaceholder ? getFloorCode(floorNode.name) : '';
+                                        const deptCount = Object.keys(floorNode.departments).length;
+
+                                        return (
+                                          <div key={floorNode.id} className="border border-border/50 rounded-md overflow-hidden bg-muted/5">
+                                            <div
+                                              onClick={() => !isRenamingFloor && toggleNode(floorNode.id)}
+                                              className="px-3 py-2 bg-muted/15 hover:bg-muted/30 cursor-pointer flex items-center justify-between gap-2"
+                                            >
+                                              {isRenamingFloor ? (
+                                                <div className="flex items-center gap-2 flex-1" onClick={(e) => e.stopPropagation()}>
+                                                  <Input
+                                                    autoFocus
+                                                    value={renameValue}
+                                                    onChange={(e) => setRenameValue(e.target.value)}
+                                                    onKeyDown={(e) => e.key === 'Enter' && saveRename()}
+                                                    className="h-7 text-xs flex-1"
+                                                  />
+                                                  <Button size="sm" className="h-7 px-2 text-xs" onClick={saveRename} disabled={renameMutation.isPending}>
+                                                    <Check className="w-3.5 h-3.5" />
+                                                  </Button>
+                                                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setRenameTarget(null)}>
+                                                    <X className="w-3.5 h-3.5" />
+                                                  </Button>
+                                                </div>
+                                              ) : (
+                                                <>
+                                                  <div className="flex items-center gap-2 min-w-0">
+                                                    {flrOpen ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+                                                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                                                    <span className="text-xs font-semibold text-foreground truncate">{floorNode.name}</span>
+                                                    {fCode && (
+                                                      <Badge variant="outline" className="text-[9px] font-mono py-0 px-1 text-primary border-primary/30 font-bold">
+                                                        {fCode}
+                                                      </Badge>
+                                                    )}
+                                                    {deptCount > 0 && (
+                                                      <span className="text-[10px] text-muted-foreground">({deptCount} Birim)</span>
+                                                    )}
+                                                  </div>
+
+                                                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                                    <Button
+                                                      type="button"
+                                                      size="sm"
+                                                      variant="ghost"
+                                                      className="h-6 px-2 text-[11px] text-amber-600 hover:bg-amber-500/10"
+                                                      onClick={() =>
+                                                        openInlineAdd({
+                                                          level: 'department',
+                                                          buildingName: binaNode.name,
+                                                          block: blokNode.name,
+                                                          floor: floorNode.name,
+                                                          department: '',
+                                                          nodeKey: floorNode.id,
+                                                        })
+                                                      }
+                                                    >
+                                                      <Plus className="w-3 h-3 mr-1" /> Birim Ekle
+                                                    </Button>
+                                                    {!floorNode.isPlaceholder && (
+                                                      <>
+                                                        <button
+                                                          type="button"
+                                                          onClick={() =>
+                                                            startRename({
+                                                              level: 'floor',
+                                                              oldValue: floorNode.name,
+                                                              parentBuildingName: binaNode.name,
+                                                              parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
+                                                              nodeKey: floorNode.id,
+                                                            })
+                                                          }
+                                                          className="p-1 text-muted-foreground hover:text-primary rounded"
+                                                          title="Kat Adını Düzenle"
+                                                        >
+                                                          <Pencil className="w-3 h-3" />
+                                                        </button>
+                                                        <button
+                                                          type="button"
+                                                          onClick={() =>
+                                                            removeNode({
+                                                              label: `${floorNode.name}`,
+                                                              level: 'floor',
+                                                              value: floorNode.name,
+                                                              parentBuildingName: binaNode.name,
+                                                              parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
+                                                            })
+                                                          }
+                                                          className="p-1 text-muted-foreground hover:text-destructive rounded"
+                                                          title="Bu Katı Sil"
+                                                        >
+                                                          <Trash2 className="w-3 h-3" />
+                                                        </button>
+                                                      </>
+                                                    )}
+                                                  </div>
+                                                </>
+                                              )}
+                                            </div>
+
+                                            {/* Kat İçi Hızlı Birim Ekleme */}
+                                            {flrOpen && inlineAdd?.nodeKey === floorNode.id && (
+                                              <div className="flex items-center gap-2 pl-8 pr-3 py-2 bg-amber-500/5 border-t border-border/40">
+                                                <Input
+                                                  autoFocus
+                                                  value={inlineValue}
+                                                  onChange={(e) => setInlineValue(e.target.value)}
+                                                  onKeyDown={(e) => e.key === 'Enter' && saveInlineAdd()}
+                                                  placeholder="Yeni Birim Adı (ör. Acil Servis, Radyoloji)..."
+                                                  list="fac-depts-list"
+                                                  className="h-7 text-xs flex-1 bg-background"
+                                                />
+                                                <Button size="sm" className="h-7 px-2.5 text-xs" onClick={saveInlineAdd} disabled={addMutation.isPending}>
+                                                  <Check className="w-3.5 h-3.5 mr-1" /> Ekle
+                                                </Button>
+                                                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setInlineAdd(null)}>
+                                                  İptal
+                                                </Button>
+                                              </div>
+                                            )}
+
+                                            {/* SEVİYE 4: BİRİMLER */}
+                                            {flrOpen && deptCount > 0 && (
+                                              <div className="pl-6 pr-2.5 py-2 space-y-1.5 border-t border-border/40 bg-background/60">
+                                                {Object.values(floorNode.departments).map((deptNode: any) => {
+                                                  const deptOpen = isNodeExpanded(deptNode.id, true);
+                                                  const isRenamingDept =
+                                                    renameTarget?.nodeKey === deptNode.id && renameTarget?.level === 'department';
+
+                                                  return (
+                                                    <div key={deptNode.id} className="border border-border/40 rounded bg-card">
+                                                      <div
+                                                        onClick={() => !isRenamingDept && toggleNode(deptNode.id)}
+                                                        className="px-2.5 py-1.5 hover:bg-muted/20 cursor-pointer flex items-center justify-between gap-2"
+                                                      >
+                                                        {isRenamingDept ? (
+                                                          <div className="flex items-center gap-2 flex-1" onClick={(e) => e.stopPropagation()}>
+                                                            <Input
+                                                              autoFocus
+                                                              value={renameValue}
+                                                              onChange={(e) => setRenameValue(e.target.value)}
+                                                              onKeyDown={(e) => e.key === 'Enter' && saveRename()}
+                                                              className="h-6 text-xs flex-1"
+                                                            />
+                                                            <Button size="sm" className="h-6 px-2 text-xs" onClick={saveRename} disabled={renameMutation.isPending}>
+                                                              <Check className="w-3 h-3" />
+                                                            </Button>
+                                                            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setRenameTarget(null)}>
+                                                              <X className="w-3 h-3" />
+                                                            </Button>
+                                                          </div>
+                                                        ) : (
+                                                          <>
+                                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                              {deptNode.rooms.length > 0 ? (
+                                                                deptOpen ? <ChevronDown className="w-3 h-3 text-muted-foreground shrink-0" /> : <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
+                                                              ) : (
+                                                                <span className="w-3 shrink-0" />
+                                                              )}
+                                                              <Briefcase className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                                              <span className={`text-xs font-medium truncate ${deptNode.isPlaceholder ? 'text-muted-foreground italic' : 'text-foreground'}`}>
+                                                                {deptNode.name}
+                                                              </span>
+                                                              {deptNode.rooms.length > 0 && (
+                                                                <span className="text-[10px] text-muted-foreground">({deptNode.rooms.length} Mahal)</span>
+                                                              )}
+                                                            </div>
+
+                                                            <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                                              <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                className="h-6 px-2 text-[10px] text-sky-600 hover:bg-sky-500/10"
+                                                                onClick={() =>
+                                                                  openInlineAdd({
+                                                                    level: 'description',
+                                                                    buildingName: binaNode.name,
+                                                                    block: blokNode.name,
+                                                                    floor: floorNode.name,
+                                                                    department: deptNode.isPlaceholder ? '' : deptNode.name,
+                                                                    nodeKey: deptNode.id,
+                                                                  })
+                                                                }
+                                                              >
+                                                                <Plus className="w-3 h-3 mr-0.5" /> Mahal Ekle
+                                                              </Button>
+                                                              {!deptNode.isPlaceholder && (
+                                                                <>
+                                                                  <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                      startRename({
+                                                                        level: 'department',
+                                                                        oldValue: deptNode.name,
+                                                                        parentBuildingName: binaNode.name,
+                                                                        parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
+                                                                        parentFloor: floorNode.isPlaceholder ? '' : floorNode.name,
+                                                                        nodeKey: deptNode.id,
+                                                                      })
+                                                                    }
+                                                                    className="p-1 text-muted-foreground hover:text-primary rounded"
+                                                                    title="Birim Adını Düzenle"
+                                                                  >
+                                                                    <Pencil className="w-3 h-3" />
+                                                                  </button>
+                                                                  <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                      removeNode({
+                                                                        label: deptNode.name,
+                                                                        level: 'department',
+                                                                        value: deptNode.name,
+                                                                        parentBuildingName: binaNode.name,
+                                                                        parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
+                                                                        parentFloor: floorNode.isPlaceholder ? '' : floorNode.name,
+                                                                      })
+                                                                    }
+                                                                    className="p-1 text-muted-foreground hover:text-destructive rounded"
+                                                                    title="Birimi ve Altındaki Mahalleri Sil"
+                                                                  >
+                                                                    <Trash2 className="w-3 h-3" />
+                                                                  </button>
+                                                                </>
+                                                              )}
+                                                            </div>
+                                                          </>
+                                                        )}
+                                                      </div>
+
+                                                      {/* Birim İçi Hızlı Mahal Ekleme */}
+                                                      {deptOpen && inlineAdd?.nodeKey === deptNode.id && (
+                                                        <div className="flex items-center gap-2 pl-7 pr-2.5 py-1.5 bg-sky-500/5 border-t border-border/30">
+                                                          <Input
+                                                            autoFocus
+                                                            value={inlineValue}
+                                                            onChange={(e) => setInlineValue(e.target.value)}
+                                                            onKeyDown={(e) => e.key === 'Enter' && saveInlineAdd()}
+                                                            placeholder="Yeni Mahal Adı (ör. 101 Nolu Oda, Triaj)..."
+                                                            list="fac-rooms-list"
+                                                            className="h-6 text-xs flex-1 bg-background"
+                                                          />
+                                                          <Button size="sm" className="h-6 px-2 text-[11px]" onClick={saveInlineAdd} disabled={addMutation.isPending}>
+                                                            <Check className="w-3 h-3 mr-1" /> Ekle
+                                                          </Button>
+                                                          <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => setInlineAdd(null)}>
+                                                            İptal
+                                                          </Button>
+                                                        </div>
+                                                      )}
+
+                                                      {/* SEVİYE 5: MAHALLER */}
+                                                      {deptOpen && deptNode.rooms.length > 0 && (
+                                                        <div className="pl-7 pr-2.5 py-1.5 flex flex-wrap gap-1.5 border-t border-border/30 bg-muted/10">
+                                                          {deptNode.rooms.map((room: any) => {
+                                                            const isRenamingRoom =
+                                                              renameTarget?.nodeKey === room.id && renameTarget?.level === 'description';
+
+                                                            return isRenamingRoom ? (
+                                                              <div key={room.id} className="flex items-center gap-1 bg-background border rounded px-1.5 py-0.5">
+                                                                <Input
+                                                                  autoFocus
+                                                                  value={renameValue}
+                                                                  onChange={(e) => setRenameValue(e.target.value)}
+                                                                  onKeyDown={(e) => e.key === 'Enter' && saveRename()}
+                                                                  className="h-6 text-xs w-36"
+                                                                />
+                                                                <button type="button" onClick={saveRename} className="text-emerald-600 p-0.5">
+                                                                  <Check className="w-3 h-3" />
+                                                                </button>
+                                                                <button type="button" onClick={() => setRenameTarget(null)} className="text-muted-foreground p-0.5">
+                                                                  <X className="w-3 h-3" />
+                                                                </button>
+                                                              </div>
+                                                            ) : (
+                                                              <div
+                                                                key={room.id}
+                                                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-background border border-border/60 text-[11px] text-foreground shadow-2xs"
+                                                              >
+                                                                <DoorOpen className="w-3 h-3 text-sky-600 shrink-0" />
+                                                                <span>{room.name}</span>
+                                                                <button
+                                                                  type="button"
+                                                                  onClick={() =>
+                                                                    startRename({
+                                                                      level: 'description',
+                                                                      oldValue: room.name,
+                                                                      parentBuildingName: binaNode.name,
+                                                                      parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
+                                                                      parentFloor: floorNode.isPlaceholder ? '' : floorNode.name,
+                                                                      parentDepartment: deptNode.isPlaceholder ? '' : deptNode.name,
+                                                                      nodeKey: room.id,
+                                                                    })
+                                                                  }
+                                                                  className="text-muted-foreground hover:text-primary"
+                                                                  title="Mahal Adını Düzenle"
+                                                                >
+                                                                  <Pencil className="w-2.5 h-2.5" />
+                                                                </button>
+                                                                <button
+                                                                  type="button"
+                                                                  onClick={() =>
+                                                                    removeNode({
+                                                                      label: room.name,
+                                                                      level: 'description',
+                                                                      value: room.name,
+                                                                      id: room.id,
+                                                                    })
+                                                                  }
+                                                                  className="text-muted-foreground hover:text-destructive"
+                                                                  title="Mahali Sil"
+                                                                >
+                                                                  <Trash2 className="w-2.5 h-2.5" />
+                                                                </button>
+                                                              </div>
+                                                            );
+                                                          })}
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
@@ -535,7 +1286,7 @@ export default function FacilityLocationsPage() {
               Excel ile Lokasyon Yükleme
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Excel tablonuzda <b>Tesis Adı</b>, <b>Bina</b>, <b>Blok</b> ve <b>Kat</b> sütunlarını içerecek şekilde yükleme yapabilirsiniz.
+              Excel tablonuzda <b>Tesis Adı</b>, <b>Bina</b>, <b>Blok</b>, <b>Kat</b>, <b>Birim</b> ve <b>Mahal</b> sütunlarını içerecek şekilde toplu yükleme yapabilirsiniz.
             </DialogDescription>
           </DialogHeader>
 
@@ -547,9 +1298,11 @@ export default function FacilityLocationsPage() {
               </div>
               <ul className="list-disc list-inside space-y-0.5 pl-1">
                 <li><b>Tesis Adı:</b> MP Adana, Liv Gaziantep vb.</li>
-                <li><b>Bina:</b> Ana Bina, Tek Blok vb.</li>
-                <li><b>Blok:</b> A Blok, B Blok vb.</li>
-                <li><b>Kat:</b> 1.Kat, 2.Kat, Zemin Kat vb.</li>
+                <li><b>Bina:</b> Ana Bina, Ek Bina vb.</li>
+                <li><b>Blok:</b> A Blok, B Blok vb. (Opsiyonel)</li>
+                <li><b>Kat:</b> Z.Kat, 1.Kat, 2.Kat vb.</li>
+                <li><b>Birim:</b> Acil Servis, Radyoloji vb. (Opsiyonel)</li>
+                <li><b>Mahal:</b> Triaj Odası, 101 Nolu Oda vb. (Opsiyonel)</li>
               </ul>
             </div>
 

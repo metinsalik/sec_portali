@@ -45,23 +45,35 @@ const HazmatIncidentsPage = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
 
-  const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('management');
+  const isAdmin = Boolean(user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management'));
 
   const { data: facilities = [] } = useQuery<any[]>({
     queryKey: ['facilities'],
-    queryFn: async () => (await api.get('/settings/facilities')).json()
+    queryFn: async () => {
+      const res = await api.get('/settings/facilities');
+      if (!res.ok) return [];
+      const d = await res.json();
+      return Array.isArray(d) ? d : [];
+    }
   });
 
-  const { data: categories = [] } = useQuery<any[]>({ 
-    queryKey: ['hazmat-categories'], 
-    queryFn: async () => (await api.get('/hazmat/settings/categories')).json() 
+  const { data: incidentTypes = [] } = useQuery<any[]>({ 
+    queryKey: ['hazmat-incident-types'], 
+    queryFn: async () => {
+      const res = await api.get('/hazmat/settings/incident-types');
+      if (!res.ok) return [];
+      const d = await res.json();
+      return Array.isArray(d) ? d : [];
+    }
   });
   
   const { data: departments = [] } = useQuery<any[]>({ 
     queryKey: ['facility-locations', selectedFacility], 
     queryFn: async () => {
       const url = selectedFacility && selectedFacility !== 'all' ? `/risks/facilities/${selectedFacility}/locations` : '/hazmat/settings/departments';
-      const data = await (await api.get(url)).json();
+      const res = await api.get(url);
+      if (!res.ok) return [];
+      const data = await res.json();
       return Array.isArray(data) ? data : [];
     }
   });
@@ -69,9 +81,11 @@ const HazmatIncidentsPage = () => {
   const { data: incidents = [], isLoading } = useQuery<any[]>({
     queryKey: ['hazmat-incidents', selectedFacility],
     queryFn: async () => {
-      const url = selectedFacility ? `/hazmat/incidents?facilityId=${selectedFacility}` : '/hazmat/incidents';
+      const url = selectedFacility && selectedFacility !== 'all' ? `/hazmat/incidents?facilityId=${selectedFacility}` : '/hazmat/incidents';
       const res = await api.get(url);
-      return res.json();
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
     }
   });
 
@@ -87,13 +101,15 @@ const HazmatIncidentsPage = () => {
   });
 
   const filteredIncidents = incidents.filter(i => {
+    const typeLabel = i.incidentType?.name || i.category?.name || '';
     const searchMatch = !searchTerm || 
       i.incidentMode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      i.rootCause?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       i.facility?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      i.category?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      typeLabel.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const categoryMatch = categoryFilter === 'all' || i.categoryId?.toString() === categoryFilter;
-    const departmentMatch = departmentFilter === 'all' || i.departmentId?.toString() === departmentFilter;
+    const categoryMatch = categoryFilter === 'all' || String(i.incidentTypeId || i.categoryId || '') === categoryFilter;
+    const departmentMatch = departmentFilter === 'all' || String(i.locationId || i.departmentId || '') === departmentFilter;
 
     return searchMatch && categoryMatch && departmentMatch;
   });
@@ -265,12 +281,12 @@ const HazmatIncidentsPage = () => {
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-[160px] h-10">
                   <SelectValue>
-                    {categories.find(c => String(c.id) === categoryFilter)?.name || "Tüm Kategoriler"}
+                    {incidentTypes.find(c => String(c.id) === categoryFilter)?.name || "Tüm Olay Türleri"}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tüm Kategoriler</SelectItem>
-                  {categories.map(c => (
+                  <SelectItem value="all">Tüm Olay Türleri</SelectItem>
+                  {incidentTypes.map(c => (
                     <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -321,7 +337,7 @@ const HazmatIncidentsPage = () => {
                 <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between space-y-0">
                   <div className="space-y-1">
                     <Badge variant="secondary" className="bg-purple-500/10 text-purple-600 border-none px-2 py-0">
-                      {incident.category?.name}
+                      {incident.incidentType?.name || incident.category?.name || 'Olay'}
                     </Badge>
                     <CardTitle className="text-md font-bold line-clamp-1 group-hover:text-primary transition-colors mt-1">
                       {incident.incidentMode || 'Özet Belirtilmemiş'}
@@ -356,7 +372,7 @@ const HazmatIncidentsPage = () => {
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <MapPin className="w-3.5 h-3.5" />
-                    {incident.department?.name} {incident.facility?.name && `- ${incident.facility.name}`}
+                    {incident.location?.name || incident.department?.name || '-'} {incident.facility?.name && `- ${incident.facility.name}`}
                   </div>
 
                   <div className="pt-2 flex flex-wrap gap-2">
@@ -398,9 +414,9 @@ const HazmatIncidentsPage = () => {
                 <TableRow className="bg-muted/50">
                   <TableHead className="w-[100px]">Tarih</TableHead>
                   <TableHead>Tesis</TableHead>
-                  <TableHead>Kategori</TableHead>
+                  <TableHead>Olay Türü</TableHead>
                   <TableHead className="max-w-[300px]">Özet</TableHead>
-                  <TableHead>Departman</TableHead>
+                  <TableHead>Departman / Lokasyon</TableHead>
                   <TableHead className="text-center">Etki / Kit</TableHead>
                   <TableHead className="text-right">İşlemler</TableHead>
                 </TableRow>
@@ -416,11 +432,11 @@ const HazmatIncidentsPage = () => {
                     <TableCell className="text-xs font-semibold">{incident.facility?.name}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="bg-purple-500/10 text-purple-600 border-none text-[10px]">
-                        {incident.category?.name}
+                        {incident.incidentType?.name || incident.category?.name || 'Olay'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-xs max-w-[300px] truncate">{incident.incidentMode}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{incident.department?.name}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{incident.location?.name || incident.department?.name || '-'}</TableCell>
                     <TableCell>
                       <div className="flex justify-center gap-1">
                         {incident.kitUsed && <Badge className="bg-blue-500 h-2 w-2 rounded-full p-0" title="Kit Kullanıldı" />}
@@ -464,7 +480,7 @@ const HazmatIncidentsPage = () => {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="border-b pb-4">
             <div className="flex items-center gap-3">
-              <Badge className="bg-purple-100 text-purple-700 border-none">{viewingIncident?.category?.name}</Badge>
+              <Badge className="bg-purple-100 text-purple-700 border-none">{viewingIncident?.incidentType?.name || viewingIncident?.category?.name || 'Olay'}</Badge>
               <DialogTitle className="text-xl font-bold">Olay Detay Raporu</DialogTitle>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -485,14 +501,27 @@ const HazmatIncidentsPage = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <p className="text-[10px] text-muted-foreground font-bold uppercase">Departman</p>
-                  <p className="text-sm font-medium">{viewingIncident?.department?.name}</p>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase">Departman / Lokasyon</p>
+                  <p className="text-sm font-medium">{viewingIncident?.location?.name || viewingIncident?.department?.name || '-'}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] text-muted-foreground font-bold uppercase">Kök Neden</p>
                   <p className="text-sm font-medium">{viewingIncident?.rootCause || '-'}</p>
                 </div>
               </div>
+
+              {viewingIncident?.materials && viewingIncident.materials.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase">İlgili Tehlikeli Madde(ler)</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {viewingIncident.materials.map((m: any) => (
+                      <Badge key={m.id} variant="outline" className="text-xs bg-amber-50/70 text-amber-800 border-amber-200">
+                        {m.productName}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <section className="space-y-3">
                 <h4 className="text-sm font-bold mb-3 text-primary uppercase tracking-wider">Müdahale Bilgileri</h4>
