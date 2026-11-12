@@ -255,7 +255,7 @@ export const PeriodicControlPanel: React.FC<PeriodicControlPanelProps> = ({
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                           <div className="flex items-center gap-2">
                             {sDateStr ? (
-                              <span className="font-mono font-bold text-xs text-foreground">
+                              <span className="tabular-nums font-bold text-xs text-foreground">
                                 {sDateStr}
                               </span>
                             ) : null}
@@ -286,7 +286,7 @@ export const PeriodicControlPanel: React.FC<PeriodicControlPanelProps> = ({
                             )}
 
                             {rep?.reportNo && (
-                              <span className="text-[11px] font-mono text-muted-foreground hidden md:inline">
+                              <span className="text-[11px] tabular-nums text-muted-foreground hidden md:inline">
                                 (#{rep.reportNo})
                               </span>
                             )}
@@ -295,7 +295,7 @@ export const PeriodicControlPanel: React.FC<PeriodicControlPanelProps> = ({
                           {/* Sonraki Kontrol Tarihi */}
                           <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                             <span>Sonraki:</span>
-                            <span className={`font-mono font-semibold ${item.isOverdue ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
+                            <span className={`tabular-nums font-semibold ${item.isOverdue ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
                               {nextDateStr}
                             </span>
                             {item.isOverdue && (

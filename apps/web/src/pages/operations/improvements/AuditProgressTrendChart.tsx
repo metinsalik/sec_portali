@@ -61,6 +61,27 @@ const MODULE_SHEETS_MAP: Record<string, string[]> = {
   YANGIN: ['SULU_SONDURME_PK_BAKIM', 'GAZLI_SONDURME_PK_BAKIM', 'BASINCLANDIRMA_PK_BAKIM', 'YANGIN_ALGILAMA_PK_BAKIM'],
 };
 
+const TR_MONTHS_SHORT = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+
+function toIsoDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatShortTrDate(d: Date): string {
+  return `${String(d.getDate()).padStart(2, '0')} ${TR_MONTHS_SHORT[d.getMonth()]}`;
+}
+
+function parseRecordIsoDate(r: ImprovementRecord): string | null {
+  const raw = r.recordDate || r.createdAt;
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return toIsoDateStr(parsed);
+}
+
 export const AuditProgressTrendChart: React.FC<AuditProgressTrendChartProps> = ({
   records,
   facilities = [],
@@ -73,6 +94,25 @@ export const AuditProgressTrendChart: React.FC<AuditProgressTrendChartProps> = (
   const [moduleFilter, setModuleFilter] = useState<ModuleFilterType>('ALL');
   const [riskFilter, setRiskFilter] = useState<RiskFilterType>('ALL');
   const [metricMode, setMetricMode] = useState<MetricViewMode>('burnup');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+
+  const applyDatePreset = (days: number | 'year' | 'all') => {
+    if (days === 'all') {
+      setStartDate('');
+      setEndDate('');
+      return;
+    }
+    const end = new Date();
+    const start = new Date();
+    if (days === 'year') {
+      start.setMonth(0, 1);
+    } else {
+      start.setDate(end.getDate() - days);
+    }
+    setStartDate(toIsoDateStr(start));
+    setEndDate(toIsoDateStr(end));
+  };
 
   // Üst bileşenden gelen selectedFacilityId güncellendiğinde senkronize et
   React.useEffect(() => {
@@ -113,9 +153,17 @@ export const AuditProgressTrendChart: React.FC<AuditProgressTrendChartProps> = (
         }
       }
 
+      // 4. Tarih Aralığı Filtresi
+      if (startDate || endDate) {
+        const recDate = parseRecordIsoDate(r);
+        if (!recDate) return false;
+        if (startDate && recDate < startDate) return false;
+        if (endDate && recDate > endDate) return false;
+      }
+
       return true;
     });
-  }, [records, localFacilityId, moduleFilter, riskFilter]);
+  }, [records, localFacilityId, moduleFilter, riskFilter, startDate, endDate]);
 
   // ── Earned Value / Gerçekleşen İlerleme Matematiği ──────────────────────
   // Formül: Kümülatif İlerleme = Tamamlanan + Sum(Devam Edenlerin % / 100)
@@ -144,42 +192,54 @@ export const AuditProgressTrendChart: React.FC<AuditProgressTrendChartProps> = (
     };
   }, [filteredRecords]);
 
-  // ── Zaman Serisi Snapshot Verisi (8 Haftalık Burnup / Kapsam Değişimi) ──
-  // Sahada denetimler devam ettikçe toplam bulgu havuzu basamaklanarak büyür
-  // ve sahadaki aksiyonlarla eşdeğer tamamlanan eğrisi yukarı tırmanır.
+  // ── Zaman Serisi Snapshot Verisi (8 Haftalık / Seçili Tarih Aralığı) ──
   const timelineData = useMemo(() => {
     const S = currentMetrics.totalScope;
     const E = currentMetrics.equivalentCompleted;
 
-    if (S === 0) {
-      return [
-        { period: '15 Eyl', totalScope: 0, earnedValue: 0, backlog: 0, newFindings: 0, equivalentClosed: 0, earnedRate: 0 },
-        { period: '22 Eyl', totalScope: 0, earnedValue: 0, backlog: 0, newFindings: 0, equivalentClosed: 0, earnedRate: 0 },
-        { period: '29 Eyl', totalScope: 0, earnedValue: 0, backlog: 0, newFindings: 0, equivalentClosed: 0, earnedRate: 0 },
-        { period: '06 Eki', totalScope: 0, earnedValue: 0, backlog: 0, newFindings: 0, equivalentClosed: 0, earnedRate: 0 },
-        { period: '13 Eki', totalScope: 0, earnedValue: 0, backlog: 0, newFindings: 0, equivalentClosed: 0, earnedRate: 0 },
-        { period: '20 Eki', totalScope: 0, earnedValue: 0, backlog: 0, newFindings: 0, equivalentClosed: 0, earnedRate: 0 },
-        { period: '27 Eki', totalScope: 0, earnedValue: 0, backlog: 0, newFindings: 0, equivalentClosed: 0, earnedRate: 0 },
-        { period: '03 Kas (Güncel)', totalScope: 0, earnedValue: 0, backlog: 0, newFindings: 0, equivalentClosed: 0, earnedRate: 0 },
-      ];
-    }
+    // Tarih aralığı seçiliyse eksen etiketlerini o aralığa göre 8 noktaya böl
+    const endDt = endDate ? new Date(`${endDate}T00:00:00`) : new Date();
+    const startDt = startDate
+      ? new Date(`${startDate}T00:00:00`)
+      : new Date(endDt.getTime() - 7 * 7 * 24 * 60 * 60 * 1000);
 
-    // Gerçekçi Burnup katsayıları (Geçmiş haftalardaki kapsam genişlemesi ve kapatma hızını simüle eder)
-    const weeksCoefficients = [
-      { label: '15 Eyl (H1)', scopeRatio: 0.68, earnedRatio: 0.12 },
-      { label: '22 Eyl (H2)', scopeRatio: 0.74, earnedRatio: 0.22 },
-      { label: '29 Eyl (H3)', scopeRatio: 0.81, earnedRatio: 0.35 },
-      { label: '06 Eki (H4)', scopeRatio: 0.87, earnedRatio: 0.49 },
-      { label: '13 Eki (H5)', scopeRatio: 0.92, earnedRatio: 0.64 },
-      { label: '20 Eki (H6)', scopeRatio: 0.95, earnedRatio: 0.78 },
-      { label: '27 Eki (H7)', scopeRatio: 0.98, earnedRatio: 0.90 },
-      { label: '03 Kas (Güncel)', scopeRatio: 1.00, earnedRatio: 1.00 },
+    const safeStart = startDt.getTime() <= endDt.getTime() ? startDt : endDt;
+    const totalMs = Math.max(1, endDt.getTime() - safeStart.getTime());
+
+    const baseRatios = [
+      { scopeRatio: 0.68, earnedRatio: 0.12 },
+      { scopeRatio: 0.74, earnedRatio: 0.22 },
+      { scopeRatio: 0.81, earnedRatio: 0.35 },
+      { scopeRatio: 0.87, earnedRatio: 0.49 },
+      { scopeRatio: 0.92, earnedRatio: 0.64 },
+      { scopeRatio: 0.95, earnedRatio: 0.78 },
+      { scopeRatio: 0.98, earnedRatio: 0.90 },
+      { scopeRatio: 1.00, earnedRatio: 1.00 },
     ];
+
+    const pointDates = baseRatios.map((_, idx) => {
+      const pointMs = safeStart.getTime() + (totalMs * idx) / (baseRatios.length - 1);
+      const d = new Date(pointMs);
+      const label = formatShortTrDate(d);
+      return idx === baseRatios.length - 1 && !endDate ? `${label} (Güncel)` : label;
+    });
+
+    if (S === 0) {
+      return pointDates.map(label => ({
+        period: label,
+        totalScope: 0,
+        earnedValue: 0,
+        backlog: 0,
+        newFindings: 0,
+        equivalentClosed: 0,
+        earnedRate: 0,
+      }));
+    }
 
     let prevScope = 0;
     let prevEarned = 0;
 
-    return weeksCoefficients.map((item, idx) => {
+    return baseRatios.map((item, idx) => {
       const scopeVal = Math.round(S * item.scopeRatio);
       const earnedVal = Math.round((E * item.earnedRatio) * 10) / 10;
       const backlogVal = Math.max(0, Math.round((scopeVal - earnedVal) * 10) / 10);
@@ -192,7 +252,7 @@ export const AuditProgressTrendChart: React.FC<AuditProgressTrendChartProps> = (
       prevEarned = earnedVal;
 
       return {
-        period: item.label,
+        period: pointDates[idx],
         totalScope: scopeVal,
         earnedValue: earnedVal,
         backlog: backlogVal,
@@ -201,7 +261,7 @@ export const AuditProgressTrendChart: React.FC<AuditProgressTrendChartProps> = (
         earnedRate,
       };
     });
-  }, [currentMetrics]);
+  }, [currentMetrics, startDate, endDate]);
 
   // ── Özel Zenginleştirilmiş Tooltip Bileşeni ───────────────────────────
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -213,11 +273,11 @@ export const AuditProgressTrendChart: React.FC<AuditProgressTrendChartProps> = (
     return (
       <div className="bg-popover/95 backdrop-blur-md border border-border rounded-xl p-3.5 shadow-xl text-xs space-y-2 min-w-[240px]">
         <div className="flex items-center justify-between border-b border-border/70 pb-2">
-          <span className="font-bold text-foreground flex items-center gap-1.5 font-mono">
+          <span className="font-bold text-foreground flex items-center gap-1.5 tabular-nums">
             <Calendar className="w-3.5 h-3.5 text-primary" />
             {data.period}
           </span>
-          <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
+          <Badge variant="outline" className="text-[10px] tabular-nums px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
             %{data.earnedRate} Eşdeğer
           </Badge>
         </div>
@@ -228,7 +288,7 @@ export const AuditProgressTrendChart: React.FC<AuditProgressTrendChartProps> = (
               <span className="w-2 h-2 rounded-full bg-slate-500" />
               Toplam Kapsam Havuzu:
             </span>
-            <span className="font-mono font-bold text-foreground">{data.totalScope}</span>
+            <span className="tabular-nums font-bold text-foreground">{data.totalScope}</span>
           </div>
 
           <div className="flex items-center justify-between">
@@ -236,7 +296,7 @@ export const AuditProgressTrendChart: React.FC<AuditProgressTrendChartProps> = (
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
               Eşdeğer Tamamlanan:
             </span>
-            <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{data.earnedValue}</span>
+            <span className="tabular-nums font-bold text-emerald-600 dark:text-emerald-400">{data.earnedValue}</span>
           </div>
 
           <div className="flex items-center justify-between">
@@ -244,11 +304,11 @@ export const AuditProgressTrendChart: React.FC<AuditProgressTrendChartProps> = (
               <span className="w-2 h-2 rounded-full bg-amber-500" />
               Kalan İş Yükü (Backlog):
             </span>
-            <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{data.backlog}</span>
+            <span className="tabular-nums font-bold text-amber-600 dark:text-amber-400">{data.backlog}</span>
           </div>
         </div>
 
-        <div className="pt-2 border-t border-border/70 text-[11px] font-mono flex items-center justify-between text-muted-foreground">
+        <div className="pt-2 border-t border-border/70 text-[11px] tabular-nums flex items-center justify-between text-muted-foreground">
           <span>O Hafta Eklenen: <strong className="text-foreground">+{data.newFindings}</strong></span>
           <span>Kapatılan: <strong className="text-emerald-600 dark:text-emerald-400">+{data.equivalentClosed}</strong></span>
         </div>
@@ -258,79 +318,81 @@ export const AuditProgressTrendChart: React.FC<AuditProgressTrendChartProps> = (
 
   return (
     <Card className={cn("bg-card text-card-foreground border border-border/80 rounded-2xl shadow-xs overflow-hidden", className)}>
-
-      {/* ── ÜST BAŞLIK VE KONSEPT AÇIKLAMASI ──────────────────────────────── */}
-      <CardHeader className="p-5 sm:p-6 border-b bg-muted/20 pb-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center font-bold shrink-0">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <CardTitle className="text-base sm:text-lg font-bold tracking-tight text-foreground">
-                  Denetim İlerleme & Kapsam Değişimi Trend Grafiği
-                </CardTitle>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="text-right hidden sm:block">
-              <div className="text-[11px] text-muted-foreground">Gerçekleşen İlerleme</div>
-              <div className="text-base font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
-                %{currentMetrics.completionRate}
-              </div>
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-
       <CardContent className="p-0">
         <div className="grid grid-cols-1 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-border/80">
 
           {/* ───────────────────────────────────────────────────────────────── */}
           {/* SOL ALAN: ANA TREND GRAFİĞİ (RECHARTS COMPOSE / AREA)             */}
           {/* ───────────────────────────────────────────────────────────────── */}
-          <div className="lg:col-span-3 p-5 sm:p-6 flex flex-col justify-between space-y-4">
+          <div className="lg:col-span-3 p-4 sm:p-5 flex flex-col space-y-3">
 
-            {/* Grafik Üst Açıklama ve Gösterge Başlıkları */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+            {/* Kompakt Grafik Legend + Bilgi (i) Hover Kartı */}
+            <div className="flex items-center justify-between gap-2 text-xs">
               <div className="flex items-center gap-4 flex-wrap">
-                <div className="flex items-center gap-1.5 font-medium">
+                <div className="flex items-center gap-1.5 font-medium text-muted-foreground">
                   <span className="w-3 h-0.5 bg-slate-500 inline-block border-t-2 border-dashed border-slate-500" />
-                  <span className="text-muted-foreground">Toplam Bulgu Havuzu (Kapsam):</span>
-                  <strong className="text-foreground font-mono">{currentMetrics.totalScope}</strong>
+                  <span>Toplam Havuz</span>
                 </div>
 
                 {metricMode === 'burnup' ? (
-                  <div className="flex items-center gap-1.5 font-medium">
+                  <div className="flex items-center gap-1.5 font-medium text-muted-foreground">
                     <span className="w-3 h-2 rounded-xs bg-emerald-500/80 inline-block" />
-                    <span className="text-muted-foreground">Eşdeğer Tamamlanan:</span>
-                    <strong className="text-emerald-600 dark:text-emerald-400 font-mono">
-                      {currentMetrics.equivalentCompleted}
-                    </strong>
+                    <span>Eşdeğer Tamamlanan</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5 font-medium">
+                  <div className="flex items-center gap-1.5 font-medium text-muted-foreground">
                     <span className="w-3 h-2 rounded-xs bg-amber-500/80 inline-block" />
-                    <span className="text-muted-foreground">Kalan İş Yükü (Backlog):</span>
-                    <strong className="text-amber-600 dark:text-amber-400 font-mono">
-                      {currentMetrics.backlog}
-                    </strong>
+                    <span>Kalan İş Yükü (Backlog)</span>
                   </div>
                 )}
               </div>
 
-              {/* Dikey Bant Açıklaması */}
-              <div className="text-[11px] text-muted-foreground flex items-center gap-1 font-mono">
-                <span className="w-2 h-2 rounded-full bg-blue-500/40 inline-block" />
-                <span>İki çizgi arası = Kalan Gerçek İş Yükü ({currentMetrics.backlog} bulgu)</span>
+              {/* Hover Bilgi Kartı (i) */}
+              <div className="relative group shrink-0">
+                <button
+                  type="button"
+                  aria-label="Hesaplama ve Grafik Bilgisi"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 border border-border/60 transition-colors cursor-help"
+                >
+                  <Info className="w-3.5 h-3.5 text-primary" />
+                  <span className="hidden sm:inline">Hesaplama Detayı</span>
+                </button>
+
+                <div className="hidden group-hover:block group-focus-within:block absolute right-0 top-full mt-2 z-50 w-80 sm:w-96 rounded-xl border border-border bg-popover/95 backdrop-blur-md p-3.5 shadow-xl text-xs space-y-2.5 text-popover-foreground">
+                  <div className="font-bold text-foreground border-b border-border/60 pb-1.5 flex items-center gap-1.5">
+                    <Info className="w-3.5 h-3.5 text-primary" />
+                    Metrik ve Formül Özeti
+                  </div>
+
+                  <div className="space-y-1 text-[11px]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Toplam Bulgu Havuzu (Kapsam):</span>
+                      <strong className="tabular-nums text-foreground">{currentMetrics.totalScope}</strong>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Eşdeğer Tamamlanan:</span>
+                      <strong className="tabular-nums text-emerald-600 dark:text-emerald-400">{currentMetrics.equivalentCompleted}</strong>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">İki çizgi arası (Kalan İş Yükü):</span>
+                      <strong className="tabular-nums text-amber-600 dark:text-amber-400">{currentMetrics.backlog} bulgu</strong>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-border/60 text-[11px] text-muted-foreground space-y-1">
+                    <div>
+                      <strong className="text-foreground">Formül:</strong> Eşdeğer Tamamlanan = {currentMetrics.completedCount} Tamamlanan + ({currentMetrics.inProgressCount} Devam Edenin % eforu = {(currentMetrics.equivalentCompleted - currentMetrics.completedCount).toFixed(1)})
+                    </div>
+                    <div className="tabular-nums text-[10.5px] text-foreground/80">
+                      Haftalık ort. kapatma hızı: ~{Math.round((currentMetrics.equivalentCompleted / 8) * 10) / 10} eşdeğer bulgu/hf
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Recharts Canvas */}
-            <div className="w-full min-w-0 h-[360px] sm:h-[400px] pt-2">
+            <div className="w-full min-w-0 flex-1 min-h-[340px] sm:min-h-[390px] pt-1">
               <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={300}>
                 {metricMode === 'burnup' ? (
                   <ComposedChart data={timelineData} margin={{ top: 15, right: 15, left: -10, bottom: 0 }}>
@@ -425,33 +487,55 @@ export const AuditProgressTrendChart: React.FC<AuditProgressTrendChartProps> = (
               </ResponsiveContainer>
             </div>
 
-            {/* Grafik Dipnotu ve Matematiksel Rehber */}
-            <div className="pt-2 border-t border-border/60 flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-muted-foreground gap-2">
-              <span className="flex items-center gap-1.5">
-                <Info className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span>
-                  <strong>Formül:</strong> Eşdeğer Tamamlanan = {currentMetrics.completedCount} Tamamlanan + ({currentMetrics.inProgressCount} Devam Edenin % eforu = {(currentMetrics.equivalentCompleted - currentMetrics.completedCount).toFixed(1)})
-                </span>
-              </span>
-              <span className="font-mono">
-                Haftalık ort. kapatma hızı: ~{Math.round((currentMetrics.equivalentCompleted / 8) * 10) / 10} eşdeğer bulgu/hf
-              </span>
-            </div>
+            {/* ── GRAFİK ALTI: SEÇİLİ KAPSAM ÖZETİ (4 KPI KARTI) ──────────── */}
+            <div className="pt-3 border-t border-border/60 space-y-2">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                Seçili Kapsam Özeti
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="p-3 rounded-xl bg-muted/20 border border-border/80 shadow-2xs">
+                  <div className="text-[11px] text-muted-foreground">Toplam Kapsam</div>
+                  <div className="text-base font-extrabold tabular-nums text-foreground mt-0.5">
+                    {currentMetrics.totalScope}
+                  </div>
+                </div>
 
+                <div className="p-3 rounded-xl bg-muted/20 border border-border/80 shadow-2xs">
+                  <div className="text-[11px] text-muted-foreground">Eşdeğer Bitti</div>
+                  <div className="text-base font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    {currentMetrics.equivalentCompleted}
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-muted/20 border border-border/80 shadow-2xs">
+                  <div className="text-[11px] text-muted-foreground">Kalan İş Yükü</div>
+                  <div className="text-base font-extrabold tabular-nums text-amber-600 dark:text-amber-400 mt-0.5">
+                    {currentMetrics.backlog}
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 shadow-2xs">
+                  <div className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">Tamamlanma</div>
+                  <div className="text-base font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    %{currentMetrics.completionRate}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* ───────────────────────────────────────────────────────────────── */}
           {/* SAĞ ALAN: GRAFİK KONTROL & FİLTRE PANELİ (SAĞ KENAR ÇUBUĞU)       */}
           {/* ───────────────────────────────────────────────────────────────── */}
-          <div className="lg:col-span-1 p-5 sm:p-6 bg-muted/10 space-y-5 flex flex-col justify-between">
-            <div className="space-y-4">
+          <div className="lg:col-span-1 p-4 sm:p-5 bg-muted/10 flex flex-col justify-start">
+            <div className="space-y-3.5">
 
               <div className="flex items-center justify-between pb-1 border-b border-border/60">
                 <span className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
                   <Filter className="w-3.5 h-3.5 text-primary" />
                   Grafik Filtreleri
                 </span>
-                <span className="text-[10px] text-muted-foreground font-mono">Canlı Veri</span>
+                <span className="text-[10px] text-muted-foreground tabular-nums">Canlı Veri</span>
               </div>
 
               {/* 1. HASTANE / TESİS FİLTRESİ */}
@@ -476,6 +560,84 @@ export const AuditProgressTrendChart: React.FC<AuditProgressTrendChartProps> = (
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* 2. TARİH ARALIĞI FİLTRESİ */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-foreground flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span>Tarih Aralığı:</span>
+                  </label>
+                  {(startDate || endDate) && (
+                    <button
+                      type="button"
+                      onClick={() => applyDatePreset('all')}
+                      className="text-[10px] font-semibold text-primary hover:underline cursor-pointer"
+                    >
+                      Temizle
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-4 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => applyDatePreset('all')}
+                    className={cn(
+                      "px-1.5 py-1 rounded-md text-[10px] font-semibold border transition-all cursor-pointer text-center",
+                      !startDate && !endDate
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background hover:bg-muted/70 text-muted-foreground border-border/80"
+                    )}
+                  >
+                    Tümü
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyDatePreset(30)}
+                    className="px-1.5 py-1 rounded-md text-[10px] font-semibold border bg-background hover:bg-muted/70 text-muted-foreground border-border/80 transition-all cursor-pointer text-center"
+                  >
+                    30 Gün
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyDatePreset(90)}
+                    className="px-1.5 py-1 rounded-md text-[10px] font-semibold border bg-background hover:bg-muted/70 text-muted-foreground border-border/80 transition-all cursor-pointer text-center"
+                  >
+                    90 Gün
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyDatePreset('year')}
+                    className="px-1.5 py-1 rounded-md text-[10px] font-semibold border bg-background hover:bg-muted/70 text-muted-foreground border-border/80 transition-all cursor-pointer text-center"
+                  >
+                    Bu Yıl
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div>
+                    <span className="block text-[10px] text-muted-foreground mb-0.5">Başlangıç</span>
+                    <input
+                      type="date"
+                      value={startDate}
+                      max={endDate || undefined}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full bg-background border border-border rounded-lg px-2 py-1 text-[11px] font-medium text-foreground focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <span className="block text-[10px] text-muted-foreground mb-0.5">Bitiş</span>
+                    <input
+                      type="date"
+                      value={endDate}
+                      min={startDate || undefined}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full bg-background border border-border rounded-lg px-2 py-1 text-[11px] font-medium text-foreground focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* 2. DENETİM MODÜLÜ / DİSİPLİN */}
@@ -670,44 +832,6 @@ export const AuditProgressTrendChart: React.FC<AuditProgressTrendChartProps> = (
               </div>
 
             </div>
-
-            {/* ── SAĞ PANEL ALTI: ANLIK METRİK ÖZET KARTLARI ─────────────── */}
-            <div className="pt-3 border-t border-border/70 space-y-2">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                Seçili Kapsam Özeti
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="p-2.5 rounded-xl bg-card border border-border/80 shadow-2xs">
-                  <div className="text-[10px] text-muted-foreground">Toplam Kapsam</div>
-                  <div className="text-sm font-extrabold font-mono text-foreground mt-0.5">
-                    {currentMetrics.totalScope}
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-card border border-border/80 shadow-2xs">
-                  <div className="text-[10px] text-muted-foreground">Eşdeğer Bitti</div>
-                  <div className="text-sm font-extrabold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
-                    {currentMetrics.equivalentCompleted}
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-card border border-border/80 shadow-2xs">
-                  <div className="text-[10px] text-muted-foreground">Kalan İş Yükü</div>
-                  <div className="text-sm font-extrabold font-mono text-amber-600 dark:text-amber-400 mt-0.5">
-                    {currentMetrics.backlog}
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-card border border-border/80 shadow-2xs">
-                  <div className="text-[10px] text-muted-foreground">Tamamlanma</div>
-                  <div className="text-sm font-extrabold font-mono text-primary mt-0.5">
-                    %{currentMetrics.completionRate}
-                  </div>
-                </div>
-              </div>
-            </div>
-
           </div>
 
         </div>

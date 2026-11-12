@@ -2,10 +2,11 @@ import React, { useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Loader2 } from 'lucide-react';
+import { Printer, Loader2, FileSpreadsheet } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { MaterialPrintCard } from './MaterialPrintCard';
+import { exportMaterialCardToExcel } from './exportMaterialCardExcel';
 
 interface PrintCardModalProps {
   isOpen: boolean;
@@ -17,7 +18,20 @@ interface PrintCardModalProps {
 export function PrintCardModal({ isOpen, onClose, material, facilityLogoUrl }: PrintCardModalProps) {
   const [size, setSize] = useState<'A3' | 'A4' | 'A5'>('A4');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+
+  const handleExportExcel = async () => {
+    if (!material) return;
+    setIsExportingExcel(true);
+    try {
+      await exportMaterialCardToExcel(material, size);
+    } catch (e) {
+      console.error('Excel oluşturma hatası:', e);
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
   
   const activeFacilityId = localStorage.getItem('activeFacilityId');
 
@@ -150,11 +164,20 @@ export function PrintCardModal({ isOpen, onClose, material, facilityLogoUrl }: P
             <div className="flex flex-col gap-3 mt-auto">
               <Button 
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
-                disabled={isGenerating}
+                disabled={isGenerating || isExportingExcel}
                 onClick={handleGeneratePdf}
               >
                 {isGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Printer className="w-4 h-4 mr-2" />}
                 Çıktı Al / PDF Kaydet
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+                disabled={isExportingExcel || isGenerating}
+                onClick={handleExportExcel}
+              >
+                {isExportingExcel ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileSpreadsheet className="w-4 h-4 mr-2" />}
+                Excel İndir (.xlsx)
               </Button>
               <p className="text-[10px] text-slate-500 text-center leading-tight">
                 Tarayıcınızın yazdırma ekranı açılacaktır. PDF olarak kaydetmek için Hedef (Yazıcı) kısmından "PDF olarak kaydet" seçeneğini seçebilirsiniz.

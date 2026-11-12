@@ -1388,7 +1388,7 @@ export const ImprovementTable: React.FC<Props> = ({
                       )}
 
                       {/* Sıra No */}
-                      <td className="p-2 text-center text-muted-foreground font-mono text-[11px]">
+                      <td className="p-2 text-center text-muted-foreground tabular-nums text-[11px]">
                         {record.rowNo || '-'}
                       </td>
 
@@ -1424,7 +1424,7 @@ export const ImprovementTable: React.FC<Props> = ({
                             {record.equipmentName || record.equipment || '-'}
                           </div>
                           {record.equipmentNo && (
-                            <div className="text-[10px] text-muted-foreground font-mono truncate">
+                            <div className="text-[10px] text-muted-foreground tabular-nums truncate">
                               No: {record.equipmentNo}
                             </div>
                           )}
@@ -1443,7 +1443,7 @@ export const ImprovementTable: React.FC<Props> = ({
                             <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50 leading-tight whitespace-nowrap">
                               Tamamlandı
                             </span>
-                            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 font-mono leading-none">
+                            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 tabular-nums leading-none">
                               %100
                             </span>
                           </div>
@@ -1460,7 +1460,7 @@ export const ImprovementTable: React.FC<Props> = ({
                                   title={`İlerleme: %${record.progress ?? 0}`}
                                 />
                               </div>
-                              <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 font-mono leading-none">
+                              <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 tabular-nums leading-none">
                                 %{record.progress ?? 0}
                               </span>
                             </div>
@@ -1474,7 +1474,7 @@ export const ImprovementTable: React.FC<Props> = ({
                             <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 leading-tight whitespace-nowrap">
                               Başlamadı
                             </span>
-                            <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 font-mono leading-none">
+                            <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 tabular-nums leading-none">
                               %0
                             </span>
                           </div>
@@ -1836,7 +1836,7 @@ export const ImprovementTable: React.FC<Props> = ({
                         {doc.name || `Belge ${idx + 1}`}
                       </div>
                       {doc.size && (
-                        <div className="text-[10px] text-muted-foreground font-mono">
+                        <div className="text-[10px] text-muted-foreground tabular-nums">
                           {formatBytes(doc.size)}
                         </div>
                       )}
@@ -1957,7 +1957,7 @@ export const ImprovementTable: React.FC<Props> = ({
                 .slice(0, 5)
                 .map((r) => (
                   <div key={r.id} className="truncate text-foreground">
-                    <span className="font-mono text-muted-foreground mr-1.5">#{r.rowNo || '-'}</span>
+                    <span className="tabular-nums text-muted-foreground mr-1.5">#{r.rowNo || '-'}</span>
                     <span className="font-medium mr-1">{r.facility?.shortName || r.facility?.name || '-'}:</span>
                     <span className="text-muted-foreground">{r.finding}</span>
                   </div>

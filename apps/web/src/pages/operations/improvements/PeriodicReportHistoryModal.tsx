@@ -136,7 +136,7 @@ export const PeriodicReportHistoryModal: React.FC<PeriodicReportHistoryModalProp
                           {isUygun ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <AlertTriangle className="w-3.5 h-3.5 text-red-600" />}
                           {rep.result}
                         </Badge>
-                        <span className="font-mono font-bold text-xs text-foreground">
+                        <span className="tabular-nums font-bold text-xs text-foreground">
                           {rep.reportNo ? `Rapor No: ${rep.reportNo}` : 'Rapor Numarasız'}
                         </span>
                         {rep.actionType && (
@@ -145,7 +145,7 @@ export const PeriodicReportHistoryModal: React.FC<PeriodicReportHistoryModalProp
                           </span>
                         )}
                         {rep.isgKatipId && (
-                          <span className="text-[11px] font-mono text-muted-foreground">
+                          <span className="text-[11px] tabular-nums text-muted-foreground">
                             İSG-KATİP: {rep.isgKatipId}
                           </span>
                         )}

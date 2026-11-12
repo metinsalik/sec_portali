@@ -33,6 +33,7 @@ import {
   MapPin,
   Briefcase,
   DoorOpen,
+  RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -78,6 +79,7 @@ export default function FacilityLocationsPage() {
 
   const [isCodesModalOpen, setIsCodesModalOpen] = useState(false);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
 
@@ -121,6 +123,27 @@ export default function FacilityLocationsPage() {
     queryClient.invalidateQueries({ queryKey: ['facility-locations'] });
     queryClient.invalidateQueries({ queryKey: ['facilities'] });
   };
+
+  const syncFromFm200Mutation = useMutation({
+    mutationFn: async (targetFacilityId?: string) => {
+      const res = await api.post('/locations/sync-from-fm200', {
+        facilityId: targetFacilityId || 'ALL',
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'FM200 eşitlemesi başarısız');
+      }
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      invalidateAllLocationQueries();
+      toast.success(data?.message || 'FM200 Bina/Blok/Kat verileri eşitlendi');
+      setIsSyncModalOpen(false);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'FM200 eşitlemesi sırasında hata oluştu');
+    },
+  });
 
   const addMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -460,6 +483,16 @@ export default function FacilityLocationsPage() {
           >
             <Download className="w-3.5 h-3.5 text-muted-foreground" />
             Şablon İndir
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => setIsSyncModalOpen(true)}
+            className="flex items-center gap-1.5 text-xs h-9 rounded-md border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10"
+            title="FM200 Ayarlarındaki Bina, Blok ve Kat kayıtlarını buraya aktar"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            FM200&apos;den Eşitle
           </Button>
 
           <Button
@@ -1354,6 +1387,60 @@ export default function FacilityLocationsPage() {
             >
               {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
               Yükle ve Aktar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* FM200 Bina / Blok / Kat Eşitleme Modalı */}
+      <Dialog open={isSyncModalOpen} onOpenChange={setIsSyncModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <RefreshCw className="w-4 h-4 text-emerald-600" />
+              FM200&apos;den Bina / Blok / Kat Eşitle
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              FM200 Ayarları&apos;nda kayıtlı olan <strong>Bina Adı &gt; Blok &gt; Kat</strong> verilerini Lokasyon Yönetimi&apos;ne aktarır. Mevcut Birim ve Mahal kayıtlarınız korunur; sadece eksik Bina/Blok/Kat iskeleti oluşturulur.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-2 text-xs text-muted-foreground">
+            <p>
+              Eşitleme sonrası ağaç yapısında her katın yanındaki <strong>+ Birim</strong> ve <strong>+ Mahal</strong> butonlarıyla hızlıca alt birimleri ekleyebilirsiniz.
+            </p>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsSyncModalOpen(false)}
+              className="h-8 text-xs rounded-md"
+              disabled={syncFromFm200Mutation.isPending}
+            >
+              İptal
+            </Button>
+            {hasValidFacility && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => syncFromFm200Mutation.mutate(facilityId)}
+                disabled={syncFromFm200Mutation.isPending}
+                className="h-8 text-xs rounded-md gap-1.5"
+              >
+                {syncFromFm200Mutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                Seçili Tesisi Eşitle
+              </Button>
+            )}
+            <Button
+              size="sm"
+              onClick={() => syncFromFm200Mutation.mutate('ALL')}
+              disabled={syncFromFm200Mutation.isPending}
+              className="h-8 text-xs rounded-md gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {syncFromFm200Mutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+              Tüm Tesisleri Eşitle
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -346,14 +346,14 @@ export const ImprovementDetailPage: React.FC = () => {
             <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
             <span>{getSheetLabel(record.sheetType)}</span>
             <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
-            <span className="font-mono text-primary font-bold">#{record.rowNo || '-'}</span>
+            <span className="tabular-nums text-primary font-bold">#{record.rowNo || '-'}</span>
           </div>
 
           {/* Başlık ve Rozetler */}
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground flex items-center gap-2">
               <span>Bulgu Detayı</span>
-              <span className="text-base font-mono font-medium text-muted-foreground">
+              <span className="text-base tabular-nums font-medium text-muted-foreground">
                 (Kayıt #{record.rowNo || '-'})
               </span>
             </h1>
@@ -437,7 +437,7 @@ export const ImprovementDetailPage: React.FC = () => {
           
           {/* Sol: Büyük Durum Rozeti ve % Değeri */}
           <div className="flex items-center gap-4">
-            <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center font-mono font-black border shadow-xs shrink-0 ${
+            <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center tabular-nums font-black border shadow-xs shrink-0 ${
               record.status === 'Tamamlandı'
                 ? 'bg-emerald-500 text-white border-emerald-600'
                 : record.status === 'Devam Ediyor'
@@ -489,7 +489,7 @@ export const ImprovementDetailPage: React.FC = () => {
           <div className="flex-1 max-w-md w-full space-y-2">
             <div className="flex justify-between items-center text-xs font-bold">
               <span className="text-muted-foreground">Süreç Gerçekleşme Oranı</span>
-              <span className="font-mono text-foreground font-black text-sm">
+              <span className="tabular-nums text-foreground font-black text-sm">
                 %{currentProgressVal} / %100
               </span>
             </div>
@@ -508,7 +508,7 @@ export const ImprovementDetailPage: React.FC = () => {
               />
             </div>
 
-            <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+            <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
               <span>%0 Başlangıç</span>
               <span>%25 Talep/İhale</span>
               <span>%50 Tedarik</span>
@@ -549,7 +549,7 @@ export const ImprovementDetailPage: React.FC = () => {
         >
           <History className="w-4 h-4 text-blue-500" />
           <span>İşlem Geçmişi & Denetim İzi</span>
-          <span className="px-2 py-0.5 rounded-full text-[10px] bg-primary/15 text-primary font-mono font-bold">
+          <span className="px-2 py-0.5 rounded-full text-[10px] bg-primary/15 text-primary tabular-nums font-bold">
             {histories.length + 1}
           </span>
         </button>
@@ -567,7 +567,7 @@ export const ImprovementDetailPage: React.FC = () => {
           <Camera className="w-4 h-4 text-purple-500" />
           <span>Görseller & Ekli Belgeler</span>
           {(findingPhotos.length + documents.length + allEvidencePhotos.length > 0) && (
-            <span className="px-2 py-0.5 rounded-full text-[10px] bg-muted text-foreground font-mono font-bold">
+            <span className="px-2 py-0.5 rounded-full text-[10px] bg-muted text-foreground tabular-nums font-bold">
               {findingPhotos.length + documents.length + allEvidencePhotos.length}
             </span>
           )}
@@ -641,7 +641,7 @@ export const ImprovementDetailPage: React.FC = () => {
                       <Wrench className="w-3.5 h-3.5 text-amber-600" /> Ekipman:
                     </span>
                     <p className="font-bold text-foreground text-sm truncate" title={record.equipmentName || record.equipment || '-'}>
-                      {record.equipmentNo ? <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-muted mr-1">{record.equipmentNo}</span> : ''}
+                      {record.equipmentNo ? <span className="tabular-nums text-xs px-1.5 py-0.5 rounded bg-muted mr-1">{record.equipmentNo}</span> : ''}
                       {record.equipmentName || record.equipment || '-'}
                     </p>
                   </div>
@@ -693,7 +693,7 @@ export const ImprovementDetailPage: React.FC = () => {
                     <span className="text-muted-foreground font-medium flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5 text-muted-foreground" /> Tespit Tarihi:
                     </span>
-                    <span className="font-mono font-bold text-foreground">
+                    <span className="tabular-nums font-bold text-foreground">
                       {recordDateStr || '-'}
                     </span>
                   </div>
@@ -760,7 +760,7 @@ export const ImprovementDetailPage: React.FC = () => {
                             <span className="font-semibold text-foreground truncate" title={doc.name}>
                               {formatAttachmentName(doc.name)}
                             </span>
-                            <span className="text-[10px] text-muted-foreground font-mono">({formatBytes(doc.size)})</span>
+                            <span className="text-[10px] text-muted-foreground tabular-nums">({formatBytes(doc.size)})</span>
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
                             <a
@@ -843,7 +843,7 @@ export const ImprovementDetailPage: React.FC = () => {
                     <span className="text-muted-foreground flex items-center gap-1 font-medium">
                       <Clock className="w-3.5 h-3.5 text-primary" /> Termin Tarihi:
                     </span>
-                    <p className="font-mono font-bold text-foreground text-sm">
+                    <p className="tabular-nums font-bold text-foreground text-sm">
                       {dueDateStr || <span className="italic text-muted-foreground font-normal">Termin Yok</span>}
                     </p>
                   </div>
@@ -872,13 +872,13 @@ export const ImprovementDetailPage: React.FC = () => {
                           {countdown.isOverdue ? 'Termin Tarihi Aşıldı' : 'Kalan Canlı Süre'}
                         </span>
                       </div>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-background/80 border">
+                      <span className="text-[10px] tabular-nums px-2 py-0.5 rounded-full bg-background/80 border">
                         Hedef: {dueDateStr}
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-background/90 border">
-                      <div className="flex items-center gap-1.5 font-mono text-xs font-black text-foreground">
+                      <div className="flex items-center gap-1.5 tabular-nums text-xs font-black text-foreground">
                         <span className="px-2 py-0.5 rounded bg-primary/10 text-primary">{countdown.days} Gün</span>
                         <span>:</span>
                         <span className="px-2 py-0.5 rounded bg-muted">{String(countdown.hours).padStart(2, '0')} Saat</span>
@@ -981,11 +981,11 @@ export const ImprovementDetailPage: React.FC = () => {
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-1.5 text-muted-foreground text-[11px]">
                         <span>Tahmini / Gerçekleşen</span>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 tabular-nums">
                           {record.currency || 'TRY'}
                         </Badge>
                       </div>
-                      <span className="font-mono font-bold text-foreground">
+                      <span className="tabular-nums font-bold text-foreground">
                         {formatCurrency(estBudget, record.currency)} / {formatCurrency(actBudget, record.currency)}
                       </span>
                     </div>
@@ -1028,7 +1028,7 @@ export const ImprovementDetailPage: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="secondary" className="text-xs font-mono font-bold">
+                <Badge variant="secondary" className="text-xs tabular-nums font-bold">
                   {histories.length > 0 ? `${histories.length} Adım Gerçekleştirildi` : 'Henüz Adım Yok'}
                 </Badge>
                 {histories.length > 1 && (
@@ -1152,7 +1152,7 @@ export const ImprovementDetailPage: React.FC = () => {
                               )}
 
                               {h.newStatus && (
-                                <Badge variant="outline" className="text-[10px] font-medium font-mono">
+                                <Badge variant="outline" className="text-[10px] font-medium tabular-nums">
                                   {h.previousStatus && h.previousStatus !== h.newStatus ? `${h.previousStatus} ➔ ${h.newStatus}` : h.newStatus}
                                 </Badge>
                               )}
@@ -1164,20 +1164,20 @@ export const ImprovementDetailPage: React.FC = () => {
                               )}
 
                               {h.progress !== undefined && h.progress !== null && (
-                                <Badge variant="outline" className="text-[10px] font-mono font-bold bg-primary/10 text-primary border-primary/20">
+                                <Badge variant="outline" className="text-[10px] tabular-nums font-bold bg-primary/10 text-primary border-primary/20">
                                   Toplam %{h.progress}
                                 </Badge>
                               )}
 
                               {/* Fotoğraf ve Belge Sayacı Rozetleri */}
                               {evPhotos.length > 0 && (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md border border-border/50">
+                                <span className="inline-flex items-center gap-1 text-[10px] tabular-nums font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md border border-border/50">
                                   <Camera className="w-3 h-3 text-blue-500" /> {evPhotos.length}
                                 </span>
                               )}
 
                               {evDocs.length > 0 && (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md border border-border/50">
+                                <span className="inline-flex items-center gap-1 text-[10px] tabular-nums font-semibold text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md border border-border/50">
                                   <FileText className="w-3 h-3 text-red-500" /> {evDocs.length}
                                 </span>
                               )}
@@ -1190,7 +1190,7 @@ export const ImprovementDetailPage: React.FC = () => {
                                   {h.changedByName || h.changedBy}
                                 </span>
                                 <span>•</span>
-                                <span className="font-mono text-xs">
+                                <span className="tabular-nums text-xs">
                                   {new Date(h.createdAt).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                 </span>
                               </div>
@@ -1241,7 +1241,7 @@ export const ImprovementDetailPage: React.FC = () => {
                                 {h.stepFields && Object.keys(h.stepFields).length > 0 && (
                                   <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
                                     {Object.entries(h.stepFields).slice(0, 2).map(([k, v]) => (
-                                      <span key={k} className="px-1.5 py-0.5 rounded bg-muted/60 text-[10px] font-mono border text-foreground font-semibold">
+                                      <span key={k} className="px-1.5 py-0.5 rounded bg-muted/60 text-[10px] tabular-nums border text-foreground font-semibold">
                                         {formatFieldLabel(k)}: {String(v)}
                                       </span>
                                     ))}
@@ -1266,7 +1266,7 @@ export const ImprovementDetailPage: React.FC = () => {
                                   {Object.entries(h.stepFields).map(([k, v]) => {
                                     if (!v) return null;
                                     return (
-                                      <div key={k} className="px-2.5 py-1 rounded-lg bg-muted/60 border text-[11px] flex items-center gap-1.5 font-mono shadow-2xs">
+                                      <div key={k} className="px-2.5 py-1 rounded-lg bg-muted/60 border text-[11px] flex items-center gap-1.5 tabular-nums shadow-2xs">
                                         <span className="text-muted-foreground uppercase text-[10px] font-sans font-semibold">
                                           {formatFieldLabel(k)}:
                                         </span>
@@ -1331,7 +1331,7 @@ export const ImprovementDetailPage: React.FC = () => {
                                             <span className="font-semibold text-foreground text-xs block truncate" title={doc.name}>
                                               {formatAttachmentName(doc.name)}
                                             </span>
-                                            <span className="text-[10px] text-muted-foreground font-mono">
+                                            <span className="text-[10px] text-muted-foreground tabular-nums">
                                               ({formatBytes(doc.size)})
                                             </span>
                                           </div>
@@ -1364,7 +1364,7 @@ export const ImprovementDetailPage: React.FC = () => {
                               {/* Adım Alt Aksiyon Çubuğu (Düzenle & Sil) */}
                               <div className="pt-2.5 mt-2 border-t border-border/50 flex items-center justify-between gap-2 text-xs">
                                 <span className="text-[11px] text-muted-foreground">
-                                  Adım ID: <code className="font-mono text-foreground font-semibold">{h.id.slice(0, 8)}</code> • {new Date(h.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                                  Adım ID: <code className="tabular-nums text-foreground font-semibold">{h.id.slice(0, 8)}</code> • {new Date(h.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                                 <div className="flex items-center gap-2">
                                   <Button
@@ -1421,7 +1421,7 @@ export const ImprovementDetailPage: React.FC = () => {
                 Kim ne zaman tespit etti, kim aksiyon notu girdi ve durumlar nasıl değişti adım adım listelenmektedir.
               </p>
             </div>
-            <Badge variant="outline" className="font-mono text-xs">
+            <Badge variant="outline" className="tabular-nums text-xs">
               Toplam {histories.length + 1} Hareket
             </Badge>
           </div>
@@ -1450,7 +1450,7 @@ export const ImprovementDetailPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
+                      <div className="flex items-center gap-2 text-[11px] tabular-nums text-muted-foreground">
                         <Clock className="w-3.5 h-3.5" />
                         <span>{new Date(h.createdAt).toLocaleString('tr-TR')}</span>
                         <div className="flex items-center gap-1 ml-2">
@@ -1564,7 +1564,7 @@ export const ImprovementDetailPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <span className="font-mono text-[11px] text-muted-foreground">
+                  <span className="tabular-nums text-[11px] text-muted-foreground">
                     {new Date(record.createdAt).toLocaleString('tr-TR')}
                   </span>
                 </div>
@@ -1616,7 +1616,7 @@ export const ImprovementDetailPage: React.FC = () => {
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2 text-white">
                       <span className="text-[10px] truncate">{photo.name}</span>
                       <div className="flex items-center justify-between text-[10px]">
-                        <span className="bg-black/60 px-1.5 py-0.5 rounded font-mono">{formatBytes(photo.size)}</span>
+                        <span className="bg-black/60 px-1.5 py-0.5 rounded tabular-nums">{formatBytes(photo.size)}</span>
                         <ZoomIn className="w-4 h-4 text-primary" />
                       </div>
                     </div>
@@ -1648,7 +1648,7 @@ export const ImprovementDetailPage: React.FC = () => {
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2 text-white">
                       <span className="text-[10px] truncate">{item.photo.name}</span>
                       <div className="flex items-center justify-between text-[10px]">
-                        <span className="bg-black/60 px-1.5 py-0.5 rounded font-mono">{formatBytes(item.photo.size)}</span>
+                        <span className="bg-black/60 px-1.5 py-0.5 rounded tabular-nums">{formatBytes(item.photo.size)}</span>
                         <ZoomIn className="w-4 h-4 text-emerald-400" />
                       </div>
                     </div>
@@ -1676,7 +1676,7 @@ export const ImprovementDetailPage: React.FC = () => {
                       <FileText className="w-5 h-5 text-red-500 shrink-0" />
                       <div className="truncate text-xs">
                         <p className="font-bold text-foreground truncate" title={doc.name}>{formatAttachmentName(doc.name)}</p>
-                        <span className="text-[10px] text-muted-foreground font-mono">{formatBytes(doc.size)}</span>
+                        <span className="text-[10px] text-muted-foreground tabular-nums">{formatBytes(doc.size)}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
@@ -1713,7 +1713,7 @@ export const ImprovementDetailPage: React.FC = () => {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs font-mono font-bold px-3 py-1 bg-muted border">
+              <Badge variant="outline" className="text-xs tabular-nums font-bold px-3 py-1 bg-muted border">
                 Para Birimi: {record.currency || 'TRY'} ({record.currency === 'USD' ? '$' : record.currency === 'EUR' ? '€' : '₺'})
               </Badge>
             </div>
@@ -1723,7 +1723,7 @@ export const ImprovementDetailPage: React.FC = () => {
             {/* Tahmini Bütçe */}
             <div className="p-4 bg-blue-500/10 border border-blue-200 dark:border-blue-900/50 rounded-2xl space-y-1">
               <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">Tahmini Bütçe</span>
-              <p className="text-2xl font-black font-mono text-foreground">
+              <p className="text-2xl font-black tabular-nums text-foreground">
                 {formatCurrency(estBudget, record.currency)}
               </p>
             </div>
@@ -1731,7 +1731,7 @@ export const ImprovementDetailPage: React.FC = () => {
             {/* Gerçekleşen Bütçe */}
             <div className="p-4 bg-emerald-500/10 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl space-y-1">
               <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Gerçekleşen Bütçe</span>
-              <p className="text-2xl font-black font-mono text-foreground">
+              <p className="text-2xl font-black tabular-nums text-foreground">
                 {formatCurrency(actBudget, record.currency)}
               </p>
             </div>
@@ -1747,7 +1747,7 @@ export const ImprovementDetailPage: React.FC = () => {
               <span className="text-xs font-semibold">
                 {budgetVariance === null ? 'Sapma Durumu' : budgetVariance > 0 ? 'Bütçe Aşımı' : 'Bütçe Tasarrufu'}
               </span>
-              <p className="text-2xl font-black font-mono">
+              <p className="text-2xl font-black tabular-nums">
                 {budgetVariance !== null ? formatCurrency(Math.abs(budgetVariance), record.currency) : '-'}
               </p>
               {variancePercentage !== null && (

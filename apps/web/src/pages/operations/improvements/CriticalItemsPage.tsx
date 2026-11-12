@@ -50,7 +50,7 @@ export const CriticalItemsPage: React.FC = () => {
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
               Merkezi Kritik Maddeler Konsolu
-              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500 text-white font-mono font-bold">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500 text-white tabular-nums font-bold">
                 {records.length}
               </span>
             </h2>

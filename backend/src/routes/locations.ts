@@ -469,4 +469,71 @@ router.post('/import-excel', authMiddleware, excelUpload.single('file'), async (
   }
 });
 
+// Sync Bina Adı > Blok > Kat from FM200BuildingFloor into FacilityLocation
+router.post('/sync-from-fm200', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { facilityId } = (req.body || {}) as { facilityId?: string };
+    const syncAll = !facilityId || facilityId === 'ALL' || facilityId === 'all';
+
+    const fm200Floors = await prisma.fm200BuildingFloor.findMany({
+      where: syncAll ? {} : { facilityId },
+      orderBy: [{ facilityId: 'asc' }, { building: 'asc' }, { block: 'asc' }, { floor: 'asc' }],
+    });
+
+    let createdCount = 0;
+    let skippedCount = 0;
+
+    for (const bf of fm200Floors) {
+      const bName = (bf.building || 'Ana Bina').trim();
+      const blk = bf.block ? bf.block.trim() : null;
+      const flr = (bf.floor || '').trim();
+      if (!flr) continue;
+
+      const existingOnFloor = await prisma.facilityLocation.findFirst({
+        where: {
+          facilityId: bf.facilityId,
+          buildingName: bName,
+          building: blk,
+          floor: flr,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+
+      if (existingOnFloor) {
+        skippedCount++;
+        continue;
+      }
+
+      const { created } = await upsertFacilityLocation(prisma, {
+        facilityId: bf.facilityId,
+        buildingName: bName,
+        block: blk || undefined,
+        floor: flr,
+        returnExistingOnDuplicate: true,
+      });
+
+      if (created) {
+        createdCount++;
+      } else {
+        skippedCount++;
+      }
+    }
+
+    res.json({
+      success: true,
+      totalSourceRows: fm200Floors.length,
+      createdCount,
+      skippedCount,
+      message:
+        createdCount > 0
+          ? `FM200 verilerinden ${createdCount} yeni Bina/Blok/Kat konumu aktarıldı (${skippedCount} mevcut atlandı).`
+          : `Tüm FM200 Bina/Blok/Kat kayıtları zaten güncel (${skippedCount} kayıt).`,
+    });
+  } catch (error: any) {
+    console.error('FM200 konum eşitleme hatası:', error);
+    res.status(500).json({ error: error.message || 'FM200 konumları eşitlenemedi.' });
+  }
+});
+
 export default router;

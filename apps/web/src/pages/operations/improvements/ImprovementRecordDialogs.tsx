@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { 
-  X, Check, AlertCircle, Clock, Calendar, Building2, 
+import {
+  X, Check, AlertCircle, Clock, Calendar, Building2,
   MapPin, Wrench, Shield, User, FileText, CheckCircle2, Tag, Plus, Trash2, Camera, Eye, Download,
   Scale, ShoppingCart, HardHat, Package, Sparkles, Upload, Paperclip, ExternalLink, Loader2, MoreHorizontal,
   RefreshCw, Zap
@@ -9,31 +9,32 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
-import { 
-  type ImprovementRecord, 
-  type ImprovementRecordHistory, 
-  type FacilityOption, 
+import {
+  type ImprovementRecord,
+  type ImprovementRecordHistory,
+  type FacilityOption,
   type ImprovementFileAttachment,
   type ImprovementActionTemplate,
   type ActionTemplateField,
   type GroundingStandardNote,
   GROUNDING_STANDARD_NOTES,
   formatAttachmentName,
-  getModuleGroup 
+  getModuleGroup
 } from './types';
 import { ImprovementAttachmentManager, ImprovementMediaLightbox, uploadImprovementFiles, formatBytes } from './ImprovementMediaManager';
+import { ResponsibleMultiSelect, AuditNameMultiSelect } from './ResponsibleMultiSelect';
 
 const API = import.meta.env.VITE_API_URL || '';
 
 const getRecordFacilityName = (
-  facility?: { name?: string; shortName?: string } | null, 
-  fallbackId?: string, 
+  facility?: { name?: string; shortName?: string } | null,
+  fallbackId?: string,
   facilityList?: FacilityOption[]
 ): string => {
   if (facility?.name && facility.name.trim()) return facility.name;
   if (fallbackId && facilityList && facilityList.length > 0) {
-    const f = facilityList.find(fac => 
-      fac.id === fallbackId || 
+    const f = facilityList.find(fac =>
+      fac.id === fallbackId ||
       fac.id.replace(/İ/g, 'I').replace(/İ/g, 'I') === fallbackId.replace(/İ/g, 'I').replace(/İ/g, 'I') ||
       (fac.shortName && fac.shortName.toUpperCase() === fallbackId.toUpperCase())
     );
@@ -70,7 +71,7 @@ const getRecordFacilityName = (
   return facility?.name || facility?.shortName || fallbackId || '';
 };
 
-const isAuditSheet = (sheetType: string) => 
+const isAuditSheet = (sheetType: string) =>
   ['DENETIMLER', 'HASTANE_IC_DENETIMLERI', 'MERKEZI_DENETIMLER', 'SAGLIK_DENETIMLERI', 'ITFAIYE_YANGIN_DENETIMLERI'].includes(sheetType);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -87,7 +88,7 @@ export const InspectRecordDialog: React.FC<InspectProps> = ({ record, onClose })
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-card text-card-foreground border rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        
+
         {/* Başlık */}
         <div className="px-6 py-4 border-b flex items-center justify-between bg-muted/40">
           <div>
@@ -98,26 +99,24 @@ export const InspectRecordDialog: React.FC<InspectProps> = ({ record, onClose })
               <Badge variant="secondary" className="text-xs">
                 {record.category || 'Belirtilmemiş'}
               </Badge>
-              <Badge 
-                className={`text-xs ${
-                  record.riskScore === 'Kritik' ? 'bg-red-500 text-white' :
-                  record.riskScore === 'Yüksek' ? 'bg-orange-500 text-white' :
-                  record.riskScore === 'Önemli' ? 'bg-amber-500 text-white' :
-                  record.riskScore === 'Olası' ? 'bg-yellow-500 text-white' :
-                  record.riskScore === 'Önemsiz' ? 'bg-slate-500 text-white' :
-                  'bg-slate-500 text-white'
-                }`}
+              <Badge
+                className={`text-xs ${record.riskScore === 'Kritik' ? 'bg-red-500 text-white' :
+                    record.riskScore === 'Yüksek' ? 'bg-orange-500 text-white' :
+                      record.riskScore === 'Önemli' ? 'bg-amber-500 text-white' :
+                        record.riskScore === 'Olası' ? 'bg-yellow-500 text-white' :
+                          record.riskScore === 'Önemsiz' ? 'bg-slate-500 text-white' :
+                            'bg-slate-500 text-white'
+                  }`}
               >
                 {record.riskScore || 'Risk Belirtilmedi'}
               </Badge>
-              <Badge 
+              <Badge
                 variant="outline"
-                className={`text-xs ${
-                  record.status === 'Tamamlandı' ? 'text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30' :
-                  record.status === 'Devam Ediyor' ? 'text-blue-600 border-blue-300 bg-blue-50 dark:bg-blue-950/30' :
-                  record.status === 'İptal Edildi' ? 'text-muted-foreground' :
-                  'text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-950/30'
-                }`}
+                className={`text-xs ${record.status === 'Tamamlandı' ? 'text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30' :
+                    record.status === 'Devam Ediyor' ? 'text-blue-600 border-blue-300 bg-blue-50 dark:bg-blue-950/30' :
+                      record.status === 'İptal Edildi' ? 'text-muted-foreground' :
+                        'text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-950/30'
+                  }`}
               >
                 {record.status}
               </Badge>
@@ -133,17 +132,17 @@ export const InspectRecordDialog: React.FC<InspectProps> = ({ record, onClose })
 
         {/* Gövde */}
         <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
-          
+
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-muted/30 p-3 rounded-xl border">
             <div>
               <span className="text-muted-foreground font-semibold block">Tespit Tarihi</span>
-              <span className="text-foreground font-mono font-medium">
+              <span className="text-foreground tabular-nums font-medium">
                 {record.recordDate ? new Date(record.recordDate).toLocaleDateString('tr-TR') : '-'}
               </span>
             </div>
             <div>
               <span className="text-muted-foreground font-semibold block text-primary">Termin Tarihi</span>
-              <span className="text-foreground font-mono font-semibold">
+              <span className="text-foreground tabular-nums font-semibold">
                 {record.dueDate ? new Date(record.dueDate).toLocaleDateString('tr-TR') : '-'}
               </span>
             </div>
@@ -160,7 +159,7 @@ export const InspectRecordDialog: React.FC<InspectProps> = ({ record, onClose })
               <>
                 <div>
                   <span className="text-muted-foreground font-semibold block">Ekipman No</span>
-                  <span className="text-foreground font-mono font-medium">{record.equipmentNo || '-'}</span>
+                  <span className="text-foreground tabular-nums font-medium">{record.equipmentNo || '-'}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground font-semibold block">Ekipman Adı</span>
@@ -180,7 +179,7 @@ export const InspectRecordDialog: React.FC<InspectProps> = ({ record, onClose })
             )}
             <div>
               <span className="text-muted-foreground font-semibold block">Kaynak Dosya</span>
-              <span className="text-foreground truncate block font-mono text-[10px]" title={record.sourceFileName || ''}>
+              <span className="text-foreground truncate block tabular-nums text-[10px]" title={record.sourceFileName || ''}>
                 {record.sourceFileName || 'Sistem İçi Kayıt'}
               </span>
             </div>
@@ -190,16 +189,16 @@ export const InspectRecordDialog: React.FC<InspectProps> = ({ record, onClose })
           <div className="grid grid-cols-2 gap-3 bg-muted/20 p-3 rounded-xl border">
             <div>
               <span className="text-muted-foreground font-semibold block text-[11px]">Tahmini Bütçe</span>
-              <span className="text-blue-600 dark:text-blue-400 font-mono font-bold text-sm">
-                {record.estimatedBudget !== undefined && record.estimatedBudget !== null 
+              <span className="text-blue-600 dark:text-blue-400 tabular-nums font-bold text-sm">
+                {record.estimatedBudget !== undefined && record.estimatedBudget !== null
                   ? new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(record.estimatedBudget) + ' ₺'
                   : '-'}
               </span>
             </div>
             <div>
               <span className="text-muted-foreground font-semibold block text-[11px]">Gerçekleşen Bütçe</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-mono font-bold text-sm">
-                {record.actualBudget !== undefined && record.actualBudget !== null 
+              <span className="text-emerald-600 dark:text-emerald-400 tabular-nums font-bold text-sm">
+                {record.actualBudget !== undefined && record.actualBudget !== null
                   ? new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(record.actualBudget) + ' ₺'
                   : '-'}
               </span>
@@ -255,19 +254,19 @@ export const InspectRecordDialog: React.FC<InspectProps> = ({ record, onClose })
           {/* Bulgu Fotoğrafları & Dokümanlar (Varsa Görüntüleme) */}
           {((Array.isArray(record.findingPhotos) && record.findingPhotos.length > 0) ||
             (Array.isArray(record.documents) && record.documents.length > 0)) && (
-            <div className="space-y-1 pt-2 border-t">
-              <label className="text-xs font-bold text-foreground">Bulgu Fotoğrafları & Dokümanlar:</label>
-              <ImprovementAttachmentManager
-                facilityId={record.facilityId}
-                facilityName={getRecordFacilityName(record.facility, record.facilityId)}
-                photos={Array.isArray(record.findingPhotos) ? record.findingPhotos : []}
-                onPhotosChange={() => {}}
-                documents={Array.isArray(record.documents) ? record.documents : []}
-                onDocumentsChange={() => {}}
-                isReadOnly={true}
-              />
-            </div>
-          )}
+              <div className="space-y-1 pt-2 border-t">
+                <label className="text-xs font-bold text-foreground">Bulgu Fotoğrafları & Dokümanlar:</label>
+                <ImprovementAttachmentManager
+                  facilityId={record.facilityId}
+                  facilityName={getRecordFacilityName(record.facility, record.facilityId)}
+                  photos={Array.isArray(record.findingPhotos) ? record.findingPhotos : []}
+                  onPhotosChange={() => { }}
+                  documents={Array.isArray(record.documents) ? record.documents : []}
+                  onDocumentsChange={() => { }}
+                  isReadOnly={true}
+                />
+              </div>
+            )}
 
         </div>
 
@@ -309,7 +308,7 @@ export const QuickStatusDialog: React.FC<QuickStatusProps> = ({ record, onClose,
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : ''
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           status: selectedStatus,
           note: note.trim() || undefined,
         })
@@ -331,7 +330,7 @@ export const QuickStatusDialog: React.FC<QuickStatusProps> = ({ record, onClose,
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-card text-card-foreground border rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        
+
         {/* Başlık */}
         <div className="px-5 py-4 border-b flex items-center justify-between bg-muted/40">
           <div className="flex items-center gap-2">
@@ -364,11 +363,10 @@ export const QuickStatusDialog: React.FC<QuickStatusProps> = ({ record, onClose,
                     key={stId}
                     type="button"
                     onClick={() => setSelectedStatus(stId)}
-                    className={`p-3 rounded-xl border text-left transition-all flex flex-col gap-1 cursor-pointer ${
-                      isSelected
+                    className={`p-3 rounded-xl border text-left transition-all flex flex-col gap-1 cursor-pointer ${isSelected
                         ? 'border-primary bg-primary/10 ring-2 ring-primary/20 text-foreground font-bold shadow-xs'
                         : 'border-border/70 hover:bg-muted/40 text-muted-foreground'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-1.5">
                       <Icon className={`w-3.5 h-3.5 ${color}`} />
@@ -523,10 +521,10 @@ interface ActionNoteProps {
 export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, onSuccess }) => {
   if (!record) return null;
 
-  const initialRecordDate = record.recordDate 
+  const initialRecordDate = record.recordDate
     ? new Date(record.recordDate).toISOString().split('T')[0]
     : '';
-  const initialDueDate = record.dueDate 
+  const initialDueDate = record.dueDate
     ? new Date(record.dueDate).toISOString().split('T')[0]
     : '';
 
@@ -784,8 +782,8 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : ''
         },
-        body: JSON.stringify({ 
-          currentNote: note, 
+        body: JSON.stringify({
+          currentNote: note,
           status,
           progress: calcProgress,
           progressAdded: calcAdded,
@@ -816,7 +814,7 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-card text-card-foreground border rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        
+
         {/* Başlık */}
         <div className="px-6 py-4 border-b flex items-center justify-between bg-muted/40">
           <div>
@@ -834,7 +832,7 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[82vh] overflow-y-auto text-xs">
-          
+
           {/* İlgili Tespit Hatırlatması */}
           <div className="p-3 bg-muted/30 border rounded-xl text-xs space-y-1">
             <span className="text-muted-foreground font-semibold block">İlgili Tespit:</span>
@@ -850,7 +848,7 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
                 <Zap className="w-3.5 h-3.5 text-amber-500" />
                 Aksiyon Süreç Zinciri (Otomatik Kademeli İlerleme):
               </span>
-              <Badge variant="outline" className="font-mono text-[10px] bg-primary/10 text-primary border-primary/20 font-bold">
+              <Badge variant="outline" className="tabular-nums text-[10px] bg-primary/10 text-primary border-primary/20 font-bold">
                 Aşama: {activeChainStep.shortTitle} (%{calcProgress})
               </Badge>
             </div>
@@ -869,12 +867,12 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
                       isCurrent
                         ? "bg-primary text-primary-foreground font-bold border-primary shadow-xs ring-1 ring-primary/40"
                         : isPast
-                        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 font-medium"
-                        : "bg-background text-muted-foreground/60 border-border/60"
+                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 font-medium"
+                          : "bg-background text-muted-foreground/60 border-border/60"
                     )}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-[9px] opacity-80">%{step.baseProgress}</span>
+                      <span className="tabular-nums text-[9px] opacity-80">%{step.baseProgress}</span>
                       {isPast ? (
                         <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                       ) : isCurrent ? (
@@ -977,9 +975,9 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
               <div className="flex items-center gap-1.5 shrink-0">
                 <span className="text-[11px] text-muted-foreground">Yeni Hedef:</span>
                 <span className={cn(
-                  "text-xs font-black px-2 py-0.5 rounded-lg font-mono",
-                  calcProgress === 100 
-                    ? "bg-emerald-600 text-white shadow-xs" 
+                  "text-xs font-black px-2 py-0.5 rounded-lg tabular-nums",
+                  calcProgress === 100
+                    ? "bg-emerald-600 text-white shadow-xs"
                     : "bg-primary text-primary-foreground"
                 )}>
                   %{calcProgress}
@@ -989,13 +987,13 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
 
             {/* Çift Katmanlı İlerleme Çubuğu */}
             <div className="w-full bg-muted/60 h-2.5 rounded-full overflow-hidden flex relative">
-              <div 
+              <div
                 className="bg-blue-600 h-full transition-all duration-300"
                 style={{ width: `${Math.min(100, baseProgress)}%` }}
                 title={`Mevcut İlerleme: %${baseProgress}`}
               />
               {calcAdded > 0 && (
-                <div 
+                <div
                   className="bg-emerald-500 h-full transition-all duration-300 animate-pulse"
                   style={{ width: `${Math.min(100 - baseProgress, calcAdded)}%` }}
                   title={`Bu Adımda Eklenecek: +%${calcAdded}`}
@@ -1013,7 +1011,7 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
                     type="button"
                     onClick={() => setCustomProgress(p)}
                     className={cn(
-                      "px-2 py-0.5 rounded border text-[10px] font-mono font-bold transition-all cursor-pointer",
+                      "px-2 py-0.5 rounded border text-[10px] tabular-nums font-bold transition-all cursor-pointer",
                       calcProgress === p
                         ? "bg-primary text-primary-foreground border-primary"
                         : "bg-background hover:bg-muted text-muted-foreground border-border"
@@ -1026,10 +1024,10 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
 
               <div className="flex items-center gap-1.5 self-end sm:self-auto">
                 <label className="text-[11px] font-semibold text-foreground">Hedef %:</label>
-                <input 
-                  type="number" 
-                  min={0} 
-                  max={100} 
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
                   value={calcProgress}
                   onChange={(e) => setCustomProgress(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
                   className="w-14 h-6 text-center border rounded-md bg-background text-foreground text-xs font-bold"
@@ -1040,7 +1038,7 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
 
           {/* 🎯 2. ADIM: AŞAMA BİLGİLERİ & ÖNCEKİ SÜREÇ NUMARALARI */}
           <div className="space-y-3">
-            
+
             {/* ÖNCEKİ SÜREÇ NUMARALARI (TALEP NO & SS NO OTOMATİK BAĞLAMA) */}
             {activeChainStep.requiresPrereqInputs && (
               <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2.5">
@@ -1068,7 +1066,7 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
                       value={stepFields.talepNo || ''}
                       onChange={(e) => setStepFields({ ...stepFields, talepNo: e.target.value })}
                       placeholder="Örn: 2026-9481"
-                      className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs font-mono outline-none focus:ring-1 focus:ring-primary"
+                      className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs tabular-nums outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
 
@@ -1081,7 +1079,7 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
                       value={stepFields.siparisNo || ''}
                       onChange={(e) => setStepFields({ ...stepFields, siparisNo: e.target.value })}
                       placeholder="Örn: SS-84210"
-                      className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs font-mono outline-none focus:ring-1 focus:ring-primary"
+                      className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs tabular-nums outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
                 </div>
@@ -1103,20 +1101,20 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
                   {activeTemplate.fields
                     .filter(f => f.key !== 'talepNo' && f.key !== 'siparisNo') // Zaten yukarıdaki özel kutuda var
                     .map((field) => (
-                    <div key={field.key} className="space-y-1">
-                      <label className="text-[11px] font-semibold text-foreground flex items-center gap-1">
-                        {field.label} {field.required ? <span className="text-red-500">*</span> : ''}
-                      </label>
-                      <input
-                        type={field.type}
-                        value={stepFields[field.key] || ''}
-                        onChange={(e) => setStepFields({ ...stepFields, [field.key]: e.target.value })}
-                        placeholder={field.placeholder || `${field.label} giriniz...`}
-                        className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs outline-none focus:ring-1 focus:ring-primary"
-                        required={field.required}
-                      />
-                    </div>
-                  ))}
+                      <div key={field.key} className="space-y-1">
+                        <label className="text-[11px] font-semibold text-foreground flex items-center gap-1">
+                          {field.label} {field.required ? <span className="text-red-500">*</span> : ''}
+                        </label>
+                        <input
+                          type={field.type}
+                          value={stepFields[field.key] || ''}
+                          onChange={(e) => setStepFields({ ...stepFields, [field.key]: e.target.value })}
+                          placeholder={field.placeholder || `${field.label} giriniz...`}
+                          className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs outline-none focus:ring-1 focus:ring-primary"
+                          required={field.required}
+                        />
+                      </div>
+                    ))}
                 </div>
 
                 {/* Ek Açıklama / Not */}
@@ -1182,7 +1180,7 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none font-mono font-medium border-primary/40 focus:border-primary"
+                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums font-medium border-primary/40 focus:border-primary"
               />
             </div>
           </div>
@@ -1281,7 +1279,7 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
   // Tarih stringlerini YYYY-MM-DD formatına çevir
-  const initialDateStr = record.recordDate 
+  const initialDateStr = record.recordDate
     ? new Date(record.recordDate).toISOString().split('T')[0]
     : '';
   const initialDueDateStr = record.dueDate
@@ -1425,7 +1423,7 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-card text-card-foreground border rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        
+
         <div className="px-6 py-4 border-b flex items-center justify-between bg-muted/40">
           <div>
             <h3 className="text-base font-bold text-foreground">
@@ -1439,7 +1437,7 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-sm">
-          
+
           {/* Topraklama PK: Standart Periyodik Kontrol Kusur / Not Seçimi */}
           {isGrounding && (
             <div className="p-3.5 bg-amber-500/10 dark:bg-amber-950/20 border border-amber-500/30 rounded-xl space-y-2.5">
@@ -1474,21 +1472,20 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
                 return (
                   <div className="p-2.5 bg-background/80 rounded-lg border text-xs space-y-1.5">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Badge 
-                        className={`text-[10px] font-bold ${
-                          note.isHeavyDefect 
-                            ? 'bg-red-500 text-white' 
-                            : note.defectLevel === 'Uygun' 
-                            ? 'bg-emerald-600 text-white' 
-                            : 'bg-amber-600 text-white'
-                        }`}
+                      <Badge
+                        className={`text-[10px] font-bold ${note.isHeavyDefect
+                            ? 'bg-red-500 text-white'
+                            : note.defectLevel === 'Uygun'
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-amber-600 text-white'
+                          }`}
                       >
                         {note.defectLevel}
                       </Badge>
                       <Badge variant="outline" className="text-[10px] font-semibold">
                         Önerilen Risk: {note.recommendedRisk}
                       </Badge>
-                      <span className="text-[11px] text-muted-foreground font-mono font-medium">
+                      <span className="text-[11px] text-muted-foreground tabular-nums font-medium">
                         {note.code}
                       </span>
                     </div>
@@ -1552,7 +1549,7 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
                 type="date"
                 value={formData.recordDate}
                 onChange={e => setFormData({ ...formData, recordDate: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none font-mono"
+                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums"
               />
             </div>
 
@@ -1566,7 +1563,7 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
                 type="date"
                 value={formData.dueDate}
                 onChange={e => setFormData({ ...formData, dueDate: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none font-mono border-primary/40 focus:border-primary"
+                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums border-primary/40 focus:border-primary"
               />
             </div>
           </div>
@@ -1602,7 +1599,7 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
                 max={100}
                 value={formData.progress ?? 0}
                 onChange={e => setFormData({ ...formData, progress: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) })}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs font-bold font-mono outline-none"
+                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs font-bold tabular-nums outline-none"
               />
             </div>
 
@@ -1610,11 +1607,9 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
               <label className="text-xs font-semibold text-foreground block mb-1">
                 Sorumlusu
               </label>
-              <input
-                type="text"
+              <ResponsibleMultiSelect
                 value={formData.assignedTo}
-                onChange={e => setFormData({ ...formData, assignedTo: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none"
+                onChange={val => setFormData({ ...formData, assignedTo: val })}
               />
             </div>
           </div>
@@ -1637,11 +1632,9 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
                 <label className="text-xs font-semibold text-foreground block mb-1">
                   Denetim Adı
                 </label>
-                <input
-                  type="text"
+                <AuditNameMultiSelect
                   value={formData.auditName}
-                  onChange={e => setFormData({ ...formData, auditName: e.target.value })}
-                  className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none"
+                  onChange={val => setFormData({ ...formData, auditName: val })}
                 />
               </div>
             ) : (
@@ -1796,7 +1789,7 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
                 placeholder="Örn: 15000"
                 value={formData.estimatedBudget}
                 onChange={e => setFormData({ ...formData, estimatedBudget: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none font-mono"
+                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums"
               />
             </div>
             <div>
@@ -1809,7 +1802,7 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
                 placeholder="Örn: 12500"
                 value={formData.actualBudget}
                 onChange={e => setFormData({ ...formData, actualBudget: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none font-mono"
+                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums"
               />
             </div>
           </div>
@@ -1867,8 +1860,8 @@ export const CreateRecordDialog: React.FC<CreateProps> = ({
   initialPeriodicReportId,
 }) => {
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
-  const initialFacility = (defaultFacilityId && defaultFacilityId !== 'ALL') 
-    ? defaultFacilityId 
+  const initialFacility = (defaultFacilityId && defaultFacilityId !== 'ALL')
+    ? defaultFacilityId
     : (facilities[0]?.id || '');
 
   const isAudit = isAuditSheet(sheetType);
@@ -2042,7 +2035,7 @@ export const CreateRecordDialog: React.FC<CreateProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-card text-card-foreground border rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        
+
         <div className="px-6 py-4 border-b flex items-center justify-between bg-muted/40">
           <div>
             <h3 className="text-base font-bold text-foreground flex items-center gap-2">
@@ -2057,7 +2050,7 @@ export const CreateRecordDialog: React.FC<CreateProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-sm">
-          
+
           {/* Hastane Seçimi */}
           <div>
             <label className="text-xs font-semibold text-foreground block mb-1">
@@ -2110,21 +2103,20 @@ export const CreateRecordDialog: React.FC<CreateProps> = ({
                 return (
                   <div className="p-2.5 bg-background/80 rounded-lg border text-xs space-y-1.5">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Badge 
-                        className={`text-[10px] font-bold ${
-                          note.isHeavyDefect 
-                            ? 'bg-red-500 text-white' 
-                            : note.defectLevel === 'Uygun' 
-                            ? 'bg-emerald-600 text-white' 
-                            : 'bg-amber-600 text-white'
-                        }`}
+                      <Badge
+                        className={`text-[10px] font-bold ${note.isHeavyDefect
+                            ? 'bg-red-500 text-white'
+                            : note.defectLevel === 'Uygun'
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-amber-600 text-white'
+                          }`}
                       >
                         {note.defectLevel}
                       </Badge>
                       <Badge variant="outline" className="text-[10px] font-semibold">
                         Önerilen Risk: {note.recommendedRisk}
                       </Badge>
-                      <span className="text-[11px] text-muted-foreground font-mono font-medium">
+                      <span className="text-[11px] text-muted-foreground tabular-nums font-medium">
                         {note.code}
                       </span>
                     </div>
@@ -2186,7 +2178,7 @@ export const CreateRecordDialog: React.FC<CreateProps> = ({
                 type="date"
                 value={formData.recordDate}
                 onChange={e => setFormData({ ...formData, recordDate: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none font-mono"
+                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums"
               />
             </div>
 
@@ -2199,7 +2191,7 @@ export const CreateRecordDialog: React.FC<CreateProps> = ({
                 type="date"
                 value={formData.dueDate}
                 onChange={e => setFormData({ ...formData, dueDate: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none font-mono border-primary/40 focus:border-primary"
+                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums border-primary/40 focus:border-primary"
               />
             </div>
           </div>
@@ -2225,12 +2217,9 @@ export const CreateRecordDialog: React.FC<CreateProps> = ({
               <label className="text-xs font-semibold text-foreground block mb-1">
                 Sorumlusu
               </label>
-              <input
-                type="text"
-                placeholder="Örn: Teknik Müdürlük"
+              <ResponsibleMultiSelect
                 value={formData.assignedTo}
-                onChange={e => setFormData({ ...formData, assignedTo: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none"
+                onChange={val => setFormData({ ...formData, assignedTo: val })}
               />
             </div>
           </div>
@@ -2254,12 +2243,9 @@ export const CreateRecordDialog: React.FC<CreateProps> = ({
                 <label className="text-xs font-semibold text-foreground block mb-1">
                   Denetim Adı
                 </label>
-                <input
-                  type="text"
-                  placeholder="Örn: Saha Turu"
+                <AuditNameMultiSelect
                   value={formData.auditName}
-                  onChange={e => setFormData({ ...formData, auditName: e.target.value })}
-                  className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none"
+                  onChange={val => setFormData({ ...formData, auditName: val })}
                 />
               </div>
             ) : (
@@ -2423,7 +2409,7 @@ export const CreateRecordDialog: React.FC<CreateProps> = ({
                 placeholder="Örn: 15000"
                 value={formData.estimatedBudget}
                 onChange={e => setFormData({ ...formData, estimatedBudget: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none font-mono"
+                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums"
               />
             </div>
             <div>
@@ -2436,7 +2422,7 @@ export const CreateRecordDialog: React.FC<CreateProps> = ({
                 placeholder="Örn: 12500"
                 value={formData.actualBudget}
                 onChange={e => setFormData({ ...formData, actualBudget: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none font-mono"
+                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums"
               />
             </div>
           </div>
@@ -2561,7 +2547,7 @@ export const EditActionHistoryDialog: React.FC<EditActionHistoryProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-card text-card-foreground border rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-6">
-        
+
         {/* Başlık */}
         <div className="px-6 py-4 border-b flex items-center justify-between bg-muted/40">
           <div className="flex items-center gap-2">
@@ -2579,7 +2565,7 @@ export const EditActionHistoryDialog: React.FC<EditActionHistoryProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs max-h-[calc(100vh-160px)] overflow-y-auto">
-          
+
           {/* Adım Başlığı ve Durum */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -2622,7 +2608,7 @@ export const EditActionHistoryDialog: React.FC<EditActionHistoryProps> = ({
           <div className="p-4 bg-muted/20 border border-blue-500/20 rounded-xl space-y-3">
             <div className="flex justify-between items-center text-xs font-bold text-foreground">
               <span>İlerleme Katkısı & Toplam Yüzde</span>
-              <span className="font-mono text-blue-600 dark:text-blue-400">
+              <span className="tabular-nums text-blue-600 dark:text-blue-400">
                 +{progressAdded}% Katkı ➔ Toplam %{progress}
               </span>
             </div>
@@ -2641,7 +2627,7 @@ export const EditActionHistoryDialog: React.FC<EditActionHistoryProps> = ({
                     const val = Number(e.target.value);
                     setProgressAdded(val);
                   }}
-                  className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs outline-none font-mono"
+                  className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums"
                 />
               </div>
 
@@ -2661,7 +2647,7 @@ export const EditActionHistoryDialog: React.FC<EditActionHistoryProps> = ({
                       setNewStatus('Tamamlandı');
                     }
                   }}
-                  className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs outline-none font-mono font-bold"
+                  className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums font-bold"
                 />
               </div>
             </div>
@@ -2676,11 +2662,10 @@ export const EditActionHistoryDialog: React.FC<EditActionHistoryProps> = ({
                     setProgress(pct);
                     if (pct >= 100) setNewStatus('Tamamlandı');
                   }}
-                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold border cursor-pointer transition-all ${
-                    progress === pct
+                  className={`px-2 py-0.5 rounded text-[10px] tabular-nums font-semibold border cursor-pointer transition-all ${progress === pct
                       ? 'bg-primary text-primary-foreground border-primary font-bold'
                       : 'bg-background hover:bg-muted text-muted-foreground'
-                  }`}
+                    }`}
                 >
                   %{pct}
                 </button>
@@ -2712,7 +2697,7 @@ export const EditActionHistoryDialog: React.FC<EditActionHistoryProps> = ({
               type="datetime-local"
               value={createdAt}
               onChange={e => setCreatedAt(e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none font-mono cursor-pointer"
+              className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums cursor-pointer"
             />
           </div>
 
@@ -2821,10 +2806,10 @@ export const EditActionHistoryDialog: React.FC<EditActionHistoryProps> = ({
             <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading || uploadingFiles}>
               Vazgeç
             </Button>
-            <Button 
-              type="submit" 
-              size="sm" 
-              disabled={loading || uploadingFiles} 
+            <Button
+              type="submit"
+              size="sm"
+              disabled={loading || uploadingFiles}
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold gap-1.5"
             >
               {loading ? (
@@ -2912,7 +2897,7 @@ export const DeleteActionHistoryDialog: React.FC<DeleteActionHistoryProps> = ({
             <div className="font-bold text-foreground text-xs flex items-center gap-1.5">
               <span>{history.stepTitle || 'Aksiyon Adımı'}</span>
               {history.progressAdded ? (
-                <Badge variant="outline" className="text-[10px] text-emerald-600 font-mono">
+                <Badge variant="outline" className="text-[10px] text-emerald-600 tabular-nums">
                   +{history.progressAdded}%
                 </Badge>
               ) : null}
@@ -2920,7 +2905,7 @@ export const DeleteActionHistoryDialog: React.FC<DeleteActionHistoryProps> = ({
             <p className="line-clamp-2 italic text-muted-foreground text-[11px]">
               "{history.newNote}"
             </p>
-            <div className="text-[10px] text-muted-foreground font-mono pt-1">
+            <div className="text-[10px] text-muted-foreground tabular-nums pt-1">
               Tarih: {new Date(history.createdAt).toLocaleString('tr-TR')}
             </div>
           </div>
@@ -2933,11 +2918,11 @@ export const DeleteActionHistoryDialog: React.FC<DeleteActionHistoryProps> = ({
             <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading}>
               Vazgeç
             </Button>
-            <Button 
-              type="button" 
-              size="sm" 
-              onClick={handleDelete} 
-              disabled={loading} 
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleDelete}
+              disabled={loading}
               className="bg-red-600 hover:bg-red-700 text-white font-bold gap-1.5"
             >
               {loading ? (

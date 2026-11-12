@@ -181,12 +181,12 @@ export const ExecutiveProgressCockpit: React.FC<ExecutiveProgressCockpitProps> =
           <div className="bg-muted/40 border rounded-2xl px-3.5 py-1.5 flex items-center gap-2.5">
             <div className="text-right">
               <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Toplam Bulgu</div>
-              <div className="text-sm font-black font-mono text-foreground leading-tight">{total} Adet</div>
+              <div className="text-sm font-black tabular-nums text-foreground leading-tight">{total} Adet</div>
             </div>
             <div className="h-6 w-px bg-border/80" />
             <div className="text-right">
               <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Ağırlıklı Başarı</div>
-              <div className="text-sm font-black font-mono text-emerald-600 dark:text-emerald-400 leading-tight">
+              <div className="text-sm font-black tabular-nums text-emerald-600 dark:text-emerald-400 leading-tight">
                 %{weightedCompletion}
               </div>
             </div>
@@ -209,7 +209,7 @@ export const ExecutiveProgressCockpit: React.FC<ExecutiveProgressCockpitProps> =
                 <Sparkles className="w-3.5 h-3.5 text-blue-600" />
                 Saha Gerçekleşme Spektrumu
               </span>
-              <span className="font-mono text-xs font-black text-blue-600 dark:text-blue-400">
+              <span className="tabular-nums text-xs font-black text-blue-600 dark:text-blue-400">
                 %{weightedCompletion} Gerçekleşti
               </span>
             </div>
@@ -258,14 +258,14 @@ export const ExecutiveProgressCockpit: React.FC<ExecutiveProgressCockpitProps> =
                   Devam Eden {inProgress} İşin Durumu
                 </span>
               </div>
-              <span className="text-xs font-mono font-bold text-muted-foreground">
+              <span className="text-xs tabular-nums font-bold text-muted-foreground">
                 Ortalama %{avgInProgress}
               </span>
             </div>
 
             {/* Çift Göstergeli Olgunluk Bandı: Tamamlandı vs Kaldı */}
             <div className="space-y-1.5">
-              <div className="flex justify-between items-center text-xs font-bold font-mono">
+              <div className="flex justify-between items-center text-xs font-bold tabular-nums">
                 <span className="text-blue-600 dark:text-blue-400">%{avgInProgress} Tamamlandı</span>
                 <span className="text-muted-foreground">%{Math.max(0, 100 - avgInProgress)} Kaldı</span>
               </div>
@@ -292,7 +292,7 @@ export const ExecutiveProgressCockpit: React.FC<ExecutiveProgressCockpitProps> =
                 <div className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-tight flex items-center justify-center gap-1">
                   <span>🏁 Bitişe Yakın</span>
                 </div>
-                <div className="text-base font-black font-mono text-emerald-700 dark:text-emerald-400 mt-0.5">
+                <div className="text-base font-black tabular-nums text-emerald-700 dark:text-emerald-400 mt-0.5">
                   {brackets.nearCompletion}
                 </div>
                 <div className="text-[9px] text-muted-foreground font-medium">%70 ve üzeri</div>
@@ -303,7 +303,7 @@ export const ExecutiveProgressCockpit: React.FC<ExecutiveProgressCockpitProps> =
                 <div className="text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-tight flex items-center justify-center gap-1">
                   <span>⚙️ Tedarik / İşlem</span>
                 </div>
-                <div className="text-base font-black font-mono text-blue-700 dark:text-blue-400 mt-0.5">
+                <div className="text-base font-black tabular-nums text-blue-700 dark:text-blue-400 mt-0.5">
                   {brackets.inExecution}
                 </div>
                 <div className="text-[9px] text-muted-foreground font-medium">%30 - %69</div>
@@ -314,7 +314,7 @@ export const ExecutiveProgressCockpit: React.FC<ExecutiveProgressCockpitProps> =
                 <div className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-tight flex items-center justify-center gap-1">
                   <span>📝 Talep / İhale</span>
                 </div>
-                <div className="text-base font-black font-mono text-amber-700 dark:text-amber-400 mt-0.5">
+                <div className="text-base font-black tabular-nums text-amber-700 dark:text-amber-400 mt-0.5">
                   {brackets.earlyStage}
                 </div>
                 <div className="text-[9px] text-muted-foreground font-medium">%0 - %29</div>
@@ -388,10 +388,10 @@ export const ExecutiveProgressCockpit: React.FC<ExecutiveProgressCockpitProps> =
 
                       {/* Sağ: Yüzdeler */}
                       <div className="text-right shrink-0">
-                        <div className="text-sm font-black font-mono text-foreground leading-tight">
+                        <div className="text-sm font-black tabular-nums text-foreground leading-tight">
                           %{item.weightedPercentage}
                         </div>
-                        <div className="text-[10px] text-muted-foreground font-mono">
+                        <div className="text-[10px] text-muted-foreground tabular-nums">
                           Devam Eden Ort: %{item.avgInProgress}
                         </div>
                       </div>
@@ -424,7 +424,7 @@ export const ExecutiveProgressCockpit: React.FC<ExecutiveProgressCockpitProps> =
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
               Çubuk renkleri: 🟩 Yeşil = Tam Kapanan, 🟦 Mavi = Devam Edenlerin Tamamlanan Payı
             </span>
-            <span className="hidden sm:inline font-mono font-bold text-foreground">
+            <span className="hidden sm:inline tabular-nums font-bold text-foreground">
               {rightItems.length} Grup İnceleniyor
             </span>
           </div>

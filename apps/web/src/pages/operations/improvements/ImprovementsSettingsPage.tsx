@@ -3,12 +3,14 @@ import {
   Settings, Sliders, Shield, Bell, FileSpreadsheet, Building2, 
   Info, Tag, Plus, Trash2, RotateCcw, Check, Save,
   FileText, Scale, ShoppingCart, HardHat, Package, Wrench, 
-  CheckCircle2, MoreHorizontal, Sparkles, Layers, Edit2, X, ToggleLeft, ToggleRight
+  CheckCircle2, MoreHorizontal, Sparkles, Layers, Edit2, X, ToggleLeft, ToggleRight, Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 import type { ImprovementActionTemplate, ActionTemplateField } from './types';
+import { StringListSettingCard } from './StringListSettingCard';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -22,11 +24,32 @@ const DEFAULT_CATEGORIES = [
   'Diğer'
 ];
 
+const DEFAULT_RESPONSIBLES = [
+  'Teknik Müdürlük',
+  'İSG Birimi',
+  'Biyomedikal',
+  'Başhekimlik',
+  'Destek Hizmetleri',
+  'Bilgi İşlem',
+];
+
+const DEFAULT_AUDIT_NAMES = [
+  'Hastane İç Denetimleri',
+  'Merkezi Denetimler',
+  'Sağlık Denetimleri',
+  'İtfaiye/Yangın Komisyonu Denetimleri',
+  'İSG Yangın ve Teknik Alan Saha Turu',
+  'Diğer',
+];
+
 export const ImprovementsSettingsPage: React.FC = () => {
-  const [categories, setCategories] = useState<string[]>([]);
-  const [newCategory, setNewCategory] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const { user } = useAuth();
+  const hasAdminAccess = !!(
+    user?.isAdmin ||
+    user?.isManagement ||
+    user?.roles?.includes('admin') ||
+    user?.roles?.includes('management')
+  );
 
   // Aksiyon Kalıpları & Şablon State
   const [actionTemplates, setActionTemplates] = useState<ImprovementActionTemplate[]>([]);
@@ -96,28 +119,6 @@ export const ImprovementsSettingsPage: React.FC = () => {
     }
   };
 
-  // Kategorileri getir
-  const fetchCategories = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API}/api/operations/improvements/categories`, {
-        headers: { 'Authorization': token ? `Bearer ${token}` : '' }
-      });
-      const data = await res.json();
-      if (data.success && Array.isArray(data.data)) {
-        setCategories(data.data);
-      } else {
-        setCategories(DEFAULT_CATEGORIES);
-      }
-    } catch (err) {
-      console.error('Error fetching categories:', err);
-      setCategories(DEFAULT_CATEGORIES);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Aksiyon Kalıplarını Getir
   const fetchActionTemplates = async () => {
     try {
@@ -138,60 +139,9 @@ export const ImprovementsSettingsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchCategories();
     fetchActionTemplates();
     fetchFacilities();
   }, []);
-
-  // Kategori Ekle
-  const handleAddCategory = () => {
-    const trimmed = newCategory.trim();
-    if (!trimmed) return;
-    if (categories.includes(trimmed)) {
-      toast.error('Bu kategori zaten listede mevcut.');
-      return;
-    }
-    setCategories(prev => [...prev, trimmed]);
-    setNewCategory('');
-  };
-
-  // Kategori Sil
-  const handleRemoveCategory = (catToRemove: string) => {
-    setCategories(prev => prev.filter(c => c !== catToRemove));
-  };
-
-  // Varsayılanlara Sıfırla
-  const handleResetDefaults = () => {
-    if (window.confirm('Kategorileri sistem varsayılanlarına sıfırlamak istiyor musunuz?')) {
-      setCategories(DEFAULT_CATEGORIES);
-    }
-  };
-
-  // Kategorileri Kaydet
-  const handleSaveCategories = async () => {
-    try {
-      setSaving(true);
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API}/api/operations/improvements/categories`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
-        },
-        body: JSON.stringify({ categories })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        toast.success('Kategoriler başarıyla güncellendi.');
-      } else {
-        throw new Error(data.message || 'Kaydedilemedi');
-      }
-    } catch (err: any) {
-      toast.error('Hata: ' + err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   // 🎯 Aksiyon Kalıpları Kaydet
   const handleSaveActionTemplates = async (newList?: ImprovementActionTemplate[]) => {
@@ -483,7 +433,7 @@ export const ImprovementsSettingsPage: React.FC = () => {
                         tpl.fields.map((f, fIdx) => (
                           <span 
                             key={fIdx} 
-                            className="px-2 py-0.5 rounded-md bg-muted/60 border text-[11px] font-mono text-foreground"
+                            className="px-2 py-0.5 rounded-md bg-muted/60 border text-[11px] tabular-nums text-foreground"
                           >
                             {f.label} {f.required ? <span className="text-red-500">*</span> : ''}
                           </span>
@@ -495,7 +445,7 @@ export const ImprovementsSettingsPage: React.FC = () => {
                   </div>
 
                   {/* Cümle Kalıbı Önizlemesi */}
-                  <div className="p-2.5 rounded-lg bg-muted/20 border border-border/60 text-[11px] text-muted-foreground font-mono leading-relaxed">
+                  <div className="p-2.5 rounded-lg bg-muted/20 border border-border/60 text-[11px] text-muted-foreground tabular-nums leading-relaxed">
                     <span className="font-bold text-foreground font-sans mr-1">Cümle Şablonu:</span>
                     "{tpl.sentenceTemplate}"
                   </div>
@@ -509,101 +459,49 @@ export const ImprovementsSettingsPage: React.FC = () => {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 2. KATEGORİ YÖNETİMİ KARTI                                          */}
+      {/* 2. SORUMLU BİRİM / KİŞİ VE DENETİM ADI YÖNETİMİ                    */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="bg-card text-card-foreground border rounded-xl p-5 shadow-xs space-y-4">
-        
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
-          <div className="flex items-center gap-2.5">
-            <Tag className="w-5 h-5 text-indigo-500" />
-            <div>
-              <h3 className="text-sm font-bold text-foreground">Takip ve Risk Kategorileri</h3>
-              <p className="text-xs text-muted-foreground">
-                Sistem genelinde kullanılabilir aktif kategori listesi ({categories.length} adet)
-              </p>
-            </div>
-          </div>
+      <StringListSettingCard
+        title="Sorumlu Birim / Kişi Yönetimi"
+        description="Denetim ve bulgu kayıtlarında seçilebilecek sorumlu birim ve kişiler"
+        icon={<Users className="w-5 h-5 text-blue-500" />}
+        dotColorClass="bg-blue-500"
+        endpoint="/api/operations/improvements/responsibles"
+        bodyField="responsibles"
+        defaults={DEFAULT_RESPONSIBLES}
+        placeholder="Yeni sorumlu birim veya kişi adı yazın (Örn: Kalite Direktörlüğü)..."
+        itemLabel="Sorumlu"
+        hasAdminAccess={hasAdminAccess}
+      />
 
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleResetDefaults}
-              className="h-8 text-xs"
-            >
-              <RotateCcw className="w-3.5 h-3.5 mr-1" />
-              Varsayılanlara Dön
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSaveCategories}
-              disabled={saving}
-              className="h-8 text-xs bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              <Save className="w-3.5 h-3.5 mr-1.5" />
-              {saving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
-            </Button>
-          </div>
-        </div>
+      <StringListSettingCard
+        title="Denetim Adı Yönetimi"
+        description="Denetim kayıtlarında seçilebilecek denetim adları (seçicide en sonda 'Diğer' yer alır)"
+        icon={<FileText className="w-5 h-5 text-emerald-500" />}
+        dotColorClass="bg-emerald-500"
+        endpoint="/api/operations/improvements/audit-names"
+        bodyField="auditNames"
+        defaults={DEFAULT_AUDIT_NAMES}
+        placeholder="Yeni denetim adı yazın (Örn: JCI Hazırlık Denetimi)..."
+        itemLabel="Denetim adı"
+        hasAdminAccess={hasAdminAccess}
+      />
 
-        {/* Yeni Kategori Ekleme Satırı */}
-        <div className="flex items-center gap-2 pt-1">
-          <input
-            type="text"
-            value={newCategory}
-            onChange={(e) => setNewCategory(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleAddCategory();
-              }
-            }}
-            placeholder="Yeni kategori adı yazın (Örn: Havalandırma & İklimlendirme)..."
-            className="flex-1 h-9 px-3 rounded-lg border bg-background text-sm text-foreground focus:ring-2 focus:ring-primary outline-none"
-          />
-          <Button
-            type="button"
-            size="sm"
-            onClick={handleAddCategory}
-            className="h-9 px-3 text-xs"
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            Ekle
-          </Button>
-        </div>
-
-        {/* Mevcut Kategoriler Listesi */}
-        {loading ? (
-          <div className="py-6 text-center text-xs text-muted-foreground animate-pulse">
-            Kategoriler yükleniyor...
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-2">
-            {categories.map((cat, idx) => (
-              <div
-                key={idx}
-                className="flex items-center justify-between p-2.5 rounded-lg border bg-muted/30 hover:bg-muted/60 transition-colors group"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
-                  <span className="text-xs font-medium text-foreground truncate">
-                    {cat}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveCategory(cat)}
-                  className="opacity-60 hover:opacity-100 hover:text-red-500 p-1 transition-opacity"
-                  title="Kategoriyi Sil"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-      </div>
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* 3. KATEGORİ YÖNETİMİ KARTI                                          */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      <StringListSettingCard
+        title="Takip ve Risk Kategorileri"
+        description="Sistem genelinde kullanılabilir aktif kategori listesi"
+        icon={<Tag className="w-5 h-5 text-indigo-500" />}
+        dotColorClass="bg-indigo-500"
+        endpoint="/api/operations/improvements/categories"
+        bodyField="categories"
+        defaults={DEFAULT_CATEGORIES}
+        placeholder="Yeni kategori adı yazın (Örn: Havalandırma & İklimlendirme)..."
+        itemLabel="Kategori"
+        hasAdminAccess={hasAdminAccess}
+      />
 
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* 3. VERİ YÖNETİMİ & MÜKERRER / SEKME TEMİZLEME ARACI                 */}
@@ -800,7 +698,7 @@ const TemplateEditModal: React.FC<TemplateEditModalProps> = ({ template, onClose
                 value={formData.progressWeight ?? 10}
                 onChange={(e) => setFormData({ ...formData, progressWeight: parseInt(e.target.value) || 0 })}
                 placeholder="Örn: 10"
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs font-bold font-mono outline-none"
+                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs font-bold tabular-nums outline-none"
               />
             </div>
           </div>
@@ -842,7 +740,7 @@ const TemplateEditModal: React.FC<TemplateEditModalProps> = ({ template, onClose
               {formData.fields && formData.fields.map((f, fIdx) => (
                 <div key={fIdx} className="flex items-center justify-between p-2 rounded-lg bg-muted/40 border text-xs">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-primary font-bold">{`{${f.key}}`}</span>
+                    <span className="tabular-nums text-primary font-bold">{`{${f.key}}`}</span>
                     <span className="font-medium text-foreground">{f.label}</span>
                     <Badge variant="outline" className="text-[10px] px-1 py-0">{f.type}</Badge>
                   </div>
@@ -864,7 +762,7 @@ const TemplateEditModal: React.FC<TemplateEditModalProps> = ({ template, onClose
                 value={newFieldKey}
                 onChange={(e) => setNewFieldKey(e.target.value)}
                 placeholder="Alan Kodu (örn: talepNo)"
-                className="w-1/3 h-8 px-2.5 rounded-lg border bg-background text-foreground text-[11px] font-mono outline-none"
+                className="w-1/3 h-8 px-2.5 rounded-lg border bg-background text-foreground text-[11px] tabular-nums outline-none"
               />
               <input
                 type="text"
@@ -899,7 +797,7 @@ const TemplateEditModal: React.FC<TemplateEditModalProps> = ({ template, onClose
               value={formData.sentenceTemplate}
               onChange={(e) => setFormData({ ...formData, sentenceTemplate: e.target.value })}
               placeholder="Örn: {tarih} tarihinde #{talepNo} numaralı talep açılmıştır."
-              className="w-full p-2.5 rounded-lg border bg-background text-foreground font-mono text-xs outline-none"
+              className="w-full p-2.5 rounded-lg border bg-background text-foreground tabular-nums text-xs outline-none"
               required
             />
           </div>

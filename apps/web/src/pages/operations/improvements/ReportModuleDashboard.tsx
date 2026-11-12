@@ -251,28 +251,28 @@ export const ReportModuleDashboard: React.FC<ReportModuleDashboardProps> = ({ mo
         {/* 1. Toplam Bulgu */}
         <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div className="text-xs font-medium text-muted-foreground">Toplam bulgu</div>
-          <div className="text-3xl font-bold font-mono text-foreground mt-1.5">{summary.total}</div>
+          <div className="text-3xl font-bold tabular-nums text-foreground mt-1.5">{summary.total}</div>
           <div className="text-[11px] text-muted-foreground mt-2 truncate">Bu raporun alt başlıkları</div>
         </div>
 
         {/* 2. Açık Bulgu */}
         <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div className="text-xs font-medium text-muted-foreground">Açık bulgu</div>
-          <div className="text-3xl font-bold font-mono text-foreground mt-1.5">{openCount}</div>
+          <div className="text-3xl font-bold tabular-nums text-foreground mt-1.5">{openCount}</div>
           <div className="text-[11px] text-muted-foreground mt-2 truncate">Başlamadı, Devam, Açık</div>
         </div>
 
         {/* 3. Tamamlanan */}
         <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div className="text-xs font-medium text-muted-foreground">Tamamlanan</div>
-          <div className="text-3xl font-bold font-mono text-foreground mt-1.5">{summary.completed}</div>
+          <div className="text-3xl font-bold tabular-nums text-foreground mt-1.5">{summary.completed}</div>
           <div className="text-[11px] text-muted-foreground mt-2 truncate">Tamamlandı durumundakiler</div>
         </div>
 
         {/* 4. Tamamlanma Oranı */}
         <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div className="text-xs font-medium text-muted-foreground">Tamamlanma</div>
-          <div className="text-3xl font-bold font-mono text-foreground mt-1.5">
+          <div className="text-3xl font-bold tabular-nums text-foreground mt-1.5">
             {hasDurumEksik ? '—' : (summary.total - summary.cancelled > 0 ? `%${(((summary.completed) / (summary.total - summary.cancelled)) * 100).toFixed(1).replace('.', ',')}` : '—')}
           </div>
           <div className="text-[11px] text-muted-foreground mt-2 truncate">Kesin kapananlar (%100)</div>
@@ -282,9 +282,9 @@ export const ReportModuleDashboard: React.FC<ReportModuleDashboardProps> = ({ mo
         <div className="bg-card border-2 border-primary/30 bg-primary/5 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div className="text-xs font-bold text-primary flex items-center justify-between">
             <span>Ağırlıklı İlerleme</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded bg-primary/20 text-primary font-mono font-semibold">Süreç Dahil</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded bg-primary/20 text-primary tabular-nums font-semibold">Süreç Dahil</span>
           </div>
-          <div className="text-3xl font-bold font-mono text-primary mt-1.5">
+          <div className="text-3xl font-bold tabular-nums text-primary mt-1.5">
             {summary.total - summary.cancelled > 0 
               ? `%${(summary.weightedCompletionPercentage ?? 0).toFixed(1).replace('.', ',')}` 
               : '—'}
@@ -297,7 +297,7 @@ export const ReportModuleDashboard: React.FC<ReportModuleDashboardProps> = ({ mo
         {/* 6. Kritik Bulgu */}
         <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div className="text-xs font-medium text-muted-foreground">Kritik bulgu</div>
-          <div className="text-3xl font-bold font-mono text-[#b83a38] dark:text-red-400 mt-1.5">
+          <div className="text-3xl font-bold tabular-nums text-[#b83a38] dark:text-red-400 mt-1.5">
             {criticalCount}
           </div>
           <div className="text-[11px] text-muted-foreground mt-2 truncate">Tamamlananlar dahil</div>
@@ -306,7 +306,7 @@ export const ReportModuleDashboard: React.FC<ReportModuleDashboardProps> = ({ mo
         {/* 7. Durumu Belirsiz */}
         <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div className="text-xs font-medium text-muted-foreground">Durumu belirsiz</div>
-          <div className="text-3xl font-bold font-mono text-[#b58f47] dark:text-amber-400 mt-1.5">
+          <div className="text-3xl font-bold tabular-nums text-[#b58f47] dark:text-amber-400 mt-1.5">
             {unspecifiedStatusCount}
           </div>
           <div className="text-[11px] text-muted-foreground mt-2 truncate">Boş veya tanımsız durum</div>
@@ -384,22 +384,22 @@ export const ReportModuleDashboard: React.FC<ReportModuleDashboardProps> = ({ mo
                     <td className="py-3.5 px-4 font-semibold text-foreground">
                       {item.name}
                     </td>
-                    <td className="py-3.5 px-3 text-center font-mono font-bold text-foreground">
+                    <td className="py-3.5 px-3 text-center tabular-nums font-bold text-foreground">
                       {s.total}
                     </td>
-                    <td className="py-3.5 px-3 text-center font-mono text-slate-600 dark:text-slate-300">
+                    <td className="py-3.5 px-3 text-center tabular-nums text-slate-600 dark:text-slate-300">
                       {rowOpen}
                     </td>
-                    <td className="py-3.5 px-3 text-center font-mono text-slate-600 dark:text-slate-300">
+                    <td className="py-3.5 px-3 text-center tabular-nums text-slate-600 dark:text-slate-300">
                       {s.critical || 0}
                     </td>
-                    <td className="py-3.5 px-3 text-center font-mono text-slate-600 dark:text-slate-300">
+                    <td className="py-3.5 px-3 text-center tabular-nums text-slate-600 dark:text-slate-300">
                       {s.completed}
                     </td>
-                    <td className="py-3.5 px-3 text-center font-mono text-slate-600 dark:text-slate-300">
+                    <td className="py-3.5 px-3 text-center tabular-nums text-slate-600 dark:text-slate-300">
                       {s.durumEksik || 0}
                     </td>
-                    <td className="py-3.5 px-3 text-center font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                    <td className="py-3.5 px-3 text-center tabular-nums font-semibold text-emerald-600 dark:text-emerald-400">
                       {ratioStr}
                     </td>
                     <td className="py-3.5 px-4 text-right">
@@ -452,7 +452,7 @@ export const ReportModuleDashboard: React.FC<ReportModuleDashboardProps> = ({ mo
                     }}
                   />
                 </div>
-                <span className="w-8 text-right font-mono font-bold text-xs text-foreground shrink-0">
+                <span className="w-8 text-right tabular-nums font-bold text-xs text-foreground shrink-0">
                   {row.value}
                 </span>
               </div>
@@ -487,7 +487,7 @@ export const ReportModuleDashboard: React.FC<ReportModuleDashboardProps> = ({ mo
                     }}
                   />
                 </div>
-                <span className="w-8 text-right font-mono font-bold text-xs text-foreground shrink-0">
+                <span className="w-8 text-right tabular-nums font-bold text-xs text-foreground shrink-0">
                   {row.value}
                 </span>
               </div>

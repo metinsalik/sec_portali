@@ -940,16 +940,11 @@ export const ExecutiveSummaryPage: React.FC = () => {
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* 1. ÜST BAŞLIK VE HIZLI EYLEMLER                                     */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/80 pb-5 pt-2">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-border/80 pb-3 pt-1">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2.5">
-              <span>Yönetici Özeti & Denetim Paneli</span>
-            </h1>
-            <Badge variant="outline" className="text-xs font-semibold px-2.5 py-0.5 bg-primary/10 text-primary border-primary/20">
-              Canlı Takip
-            </Badge>
-          </div>
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+            Yönetici Özeti
+          </h1>
         </div>
 
         {/* Sağ Üst Hızlı Kontroller */}
@@ -1009,12 +1004,13 @@ export const ExecutiveSummaryPage: React.FC = () => {
         </button>
 
         {isTrendChartOpen && (
-          <div className="border-t border-border/70 p-4 sm:p-6 bg-background animate-in slide-in-from-top-1 duration-150">
+          <div className="border-t border-border/70 bg-background animate-in slide-in-from-top-1 duration-150">
             <AuditProgressTrendChart
               records={records}
               facilities={authorizedFacilities}
               selectedFacilityId={selectedFacilityId}
               onFacilityChange={handleHospitalSelect}
+              className="border-0 rounded-none shadow-none"
             />
           </div>
         )}
@@ -1037,7 +1033,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
                   <h2 className="text-lg font-bold tracking-tight text-foreground">
                     Genel Durum & Risk Dağılımı KPI Göstergeleri
                   </h2>
-                  <Badge variant="outline" className="text-xs font-mono px-2 py-0.5">
+                  <Badge variant="outline" className="text-xs tabular-nums px-2 py-0.5">
                     {allAuthorizedHospitals.length} Hastane
                   </Badge>
                 </div>
@@ -1081,9 +1077,9 @@ export const ExecutiveSummaryPage: React.FC = () => {
           
           {/* Aktif Filtre Bilgi Çubuğu */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono flex-wrap">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums flex-wrap">
               <span className="font-sans font-medium text-foreground">Aktif Filtre:</span>
-              <Badge variant="secondary" className="font-mono text-xs font-bold">
+              <Badge variant="secondary" className="tabular-nums text-xs font-bold">
                 {selectedRiskOpt.label}
               </Badge>
               {hasStatusFilter && selectedStatuses.map(status => (
@@ -1091,7 +1087,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
                   key={status}
                   variant="default" 
                   className={cn(
-                    "font-mono text-xs font-bold flex items-center gap-1",
+                    "tabular-nums text-xs font-bold flex items-center gap-1",
                     status === 'Başlamadı' && "bg-amber-500 hover:bg-amber-600 text-white",
                     status === 'Devam Ediyor' && "bg-blue-600 hover:bg-blue-700 text-white",
                     status === 'Tamamlandı' && "bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -1122,7 +1118,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
               )}
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
               <span>Eşleşen:</span>
               <strong className="text-foreground font-bold text-sm">
                 {filteredRecordsForTable.length} Bulgu
@@ -1198,7 +1194,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
                         )}
                         title={`${card.title} seviyesinde Başlamadı durumunu filtrele`}
                       >
-                        <span className="text-lg sm:text-2xl font-black font-mono leading-none">
+                        <span className="text-lg sm:text-2xl font-black tabular-nums leading-none">
                           {card.counts.notStarted}
                         </span>
                         <span className={cn(
@@ -1224,7 +1220,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
                         )}
                         title={`${card.title} seviyesinde Devam Eden durumunu filtrele`}
                       >
-                        <span className="text-lg sm:text-2xl font-black font-mono leading-none">
+                        <span className="text-lg sm:text-2xl font-black tabular-nums leading-none">
                           {card.counts.inProgress}
                         </span>
                         <span className={cn(
@@ -1250,7 +1246,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
                         )}
                         title={`${card.title} seviyesinde Tamamlanan durumunu filtrele`}
                       >
-                        <span className="text-lg sm:text-2xl font-black font-mono leading-none">
+                        <span className="text-lg sm:text-2xl font-black tabular-nums leading-none">
                           {card.counts.completed}
                         </span>
                         <span className={cn(
@@ -1276,7 +1272,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
                         )}
                         title={`${card.title} seviyesindeki tüm durumları göster`}
                       >
-                        <span className="text-lg sm:text-2xl font-black font-mono leading-none">
+                        <span className="text-lg sm:text-2xl font-black tabular-nums leading-none">
                           {card.counts.total}
                         </span>
                         <span className={cn(
@@ -1367,7 +1363,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
                         )}
                         title={`${card.title} seviyesinde Başlamadı durumunu filtrele`}
                       >
-                        <span className="text-base sm:text-xl font-black font-mono leading-none">
+                        <span className="text-base sm:text-xl font-black tabular-nums leading-none">
                           {card.counts.notStarted}
                         </span>
                         <span className={cn(
@@ -1393,7 +1389,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
                         )}
                         title={`${card.title} seviyesinde Devam Eden durumunu filtrele`}
                       >
-                        <span className="text-base sm:text-xl font-black font-mono leading-none">
+                        <span className="text-base sm:text-xl font-black tabular-nums leading-none">
                           {card.counts.inProgress}
                         </span>
                         <span className={cn(
@@ -1419,7 +1415,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
                         )}
                         title={`${card.title} seviyesinde Tamamlanan durumunu filtrele`}
                       >
-                        <span className="text-base sm:text-xl font-black font-mono leading-none">
+                        <span className="text-base sm:text-xl font-black tabular-nums leading-none">
                           {card.counts.completed}
                         </span>
                         <span className={cn(
@@ -1445,7 +1441,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
                         )}
                         title={`${card.title} seviyesindeki tüm durumları göster`}
                       >
-                        <span className="text-base sm:text-xl font-black font-mono leading-none">
+                        <span className="text-base sm:text-xl font-black tabular-nums leading-none">
                           {card.counts.total}
                         </span>
                         <span className={cn(
@@ -1474,12 +1470,12 @@ export const ExecutiveSummaryPage: React.FC = () => {
                 <span className="text-xs sm:text-sm font-bold text-foreground">
                   {userFacilities.length > 0 && !hasAdminAccess ? `Yetkili Tesislerin Dağılım Özeti (${allAuthorizedHospitals.length} Tesis)` : `Tüm Tesislerin Dağılım Özeti (${allAuthorizedHospitals.length} Tesis)`}
                 </span>
-                <Badge variant="outline" className="text-[11px] font-mono font-bold bg-muted/60">
+                <Badge variant="outline" className="text-[11px] tabular-nums font-bold bg-muted/60">
                   {selectedRiskFilter === 'ALL' ? 'Tüm Riskler' : (selectedRiskFilter === 'OLASI_ONEMSIZ' ? 'Olası ve Önemsiz' : `${selectedRiskFilter} Risk`)}
                   {hasStatusFilter ? ` • ${selectedStatuses.join(' + ')}` : ''}
                 </Badge>
                 {selectedFacilityIds.length > 0 && (
-                  <Badge className="text-[11px] font-mono font-bold bg-primary text-primary-foreground">
+                  <Badge className="text-[11px] tabular-nums font-bold bg-primary text-primary-foreground">
                     {selectedFacilityIds.length} Tesis Seçili
                   </Badge>
                 )}
@@ -1560,7 +1556,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
                         </div>
                         <div className="mt-1 flex items-baseline justify-between gap-1">
                           <span className={cn(
-                            "text-sm font-black font-mono",
+                            "text-sm font-black tabular-nums",
                             isSelected ? "text-primary-foreground" : "text-foreground"
                           )}>
                             {hStats.matchingFilterCount}
@@ -1600,11 +1596,11 @@ export const ExecutiveSummaryPage: React.FC = () => {
                   <h3 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
                     Hastanelere Göre Bulgu Dağılımı Detay Listesi
                   </h3>
-                  <Badge variant="outline" className="text-xs font-mono px-2 py-0.5">
+                  <Badge variant="outline" className="text-xs tabular-nums px-2 py-0.5">
                     {filteredHospitals.length} Hastane
                   </Badge>
                   {selectedFacilityIds.length > 0 && (
-                    <Badge className="text-xs font-mono font-bold bg-primary text-primary-foreground">
+                    <Badge className="text-xs tabular-nums font-bold bg-primary text-primary-foreground">
                       {selectedFacilityIds.length} Tesis Filtrelendi
                     </Badge>
                   )}
@@ -1735,7 +1731,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
                               {hospStats.riskTotal} {selectedRiskFilter === 'OLASI_ONEMSIZ' ? 'Olası ve Önemsiz' : selectedRiskFilter} Bulgu
                             </span>
                           ) : (
-                            <span className="font-mono font-medium text-foreground">{hospStats.overallTotal} Toplam Bulgu</span>
+                            <span className="tabular-nums font-medium text-foreground">{hospStats.overallTotal} Toplam Bulgu</span>
                           )}
                         </div>
                       </div>
@@ -1773,13 +1769,13 @@ export const ExecutiveSummaryPage: React.FC = () => {
                       {/* İlerleme ve Mini Risk Dağılımı */}
                       {hasStatusFilter ? (
                         <div className="w-full sm:w-44 text-right flex items-center justify-end">
-                          <span className="text-xs font-mono text-muted-foreground">
+                          <span className="text-xs tabular-nums text-muted-foreground">
                             Eşleşen: <strong className="text-foreground text-sm font-black">{hospStats.matchingFilterCount}</strong> Bulgu
                           </span>
                         </div>
                       ) : selectedRiskFilter !== 'ALL' ? (
                         <div className="w-full sm:w-48 space-y-1.5">
-                          <div className="flex items-center justify-between text-xs font-mono">
+                          <div className="flex items-center justify-between text-xs tabular-nums">
                             <span className="text-muted-foreground text-[11px]">
                               {selectedRiskFilter} İlerlemesi
                             </span>
@@ -1805,7 +1801,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
                         </div>
                       ) : (
                         <div className="w-full sm:w-48 space-y-1.5">
-                          <div className="flex items-center justify-between text-xs font-mono">
+                          <div className="flex items-center justify-between text-xs tabular-nums">
                             <span className="text-muted-foreground text-[11px]">
                               Genel İlerleme
                             </span>
@@ -1823,7 +1819,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
                           </div>
 
                           {/* 5 Risk Seviyesi Mini Noktalar (Sadece Konsolide Tüm Riskler görünümünde gösterilir) */}
-                          <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground pt-0.5">
+                          <div className="flex items-center justify-between text-[10px] tabular-nums text-muted-foreground pt-0.5">
                             <span title="Kritik Risk Sayısı" className="flex items-center gap-0.5 text-red-700 dark:text-red-400 font-bold">
                               <span className="w-1.5 h-1.5 rounded-full bg-red-600 inline-block" />
                               {hospStats.critical}
@@ -1961,13 +1957,13 @@ export const ExecutiveSummaryPage: React.FC = () => {
                                 {/* Orta: İlerleme Barı (Progress Bar) veya Filtrelenen Sayı */}
                                 {hasStatusFilter ? (
                                   <div className="flex-1 max-w-md w-full flex items-center justify-center">
-                                    <span className="text-xs font-mono text-muted-foreground">
+                                    <span className="text-xs tabular-nums text-muted-foreground">
                                       Eşleşen: <strong className="text-foreground font-bold">{groupStats.matchingFilterCount}</strong> Bulgu
                                     </span>
                                   </div>
                                 ) : (
                                   <div className="flex-1 max-w-md w-full space-y-1">
-                                    <div className="flex items-center justify-between text-xs font-mono">
+                                    <div className="flex items-center justify-between text-xs tabular-nums">
                                       <span className="text-[11px] text-muted-foreground font-sans">
                                         {selectedRiskFilter !== 'ALL' ? `${selectedRiskFilter} İlerlemesi` : 'İlerleme Oranı'}
                                       </span>
@@ -1988,11 +1984,11 @@ export const ExecutiveSummaryPage: React.FC = () => {
                                 {/* Sağ: Üçlü Dağılım veya Filtrelenmiş Sayı + Filtrele Butonu + Aç/Kapa İkonu */}
                                 <div className="flex items-center gap-3 shrink-0 self-end md:self-auto">
                                   {hasStatusFilter ? (
-                                    <div className="font-mono text-xs font-bold text-foreground bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/20">
+                                    <div className="tabular-nums text-xs font-bold text-foreground bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/20">
                                       <span>{groupStats.matchingFilterCount} Bulgu</span>
                                     </div>
                                   ) : (
-                                    <div className="font-mono text-xs flex items-center gap-1.5 font-bold">
+                                    <div className="tabular-nums text-xs flex items-center gap-1.5 font-bold">
                                       <span className="text-amber-600 dark:text-amber-400" title="Başlamadı">{groupStats.notStarted}</span>
                                       <span className="text-muted-foreground/40 font-normal">/</span>
                                       <span className="text-blue-600 dark:text-blue-400" title="Devam">{groupStats.inProgress}</span>
@@ -2052,11 +2048,11 @@ export const ExecutiveSummaryPage: React.FC = () => {
                                             {subItem.name}
                                           </span>
                                           {hasStatusFilter ? (
-                                            <span className="text-[10px] font-mono text-muted-foreground shrink-0 font-medium">
+                                            <span className="text-[10px] tabular-nums text-muted-foreground shrink-0 font-medium">
                                               ({subStats.matchingFilterCount} {selectedRiskFilter !== 'ALL' ? (selectedRiskFilter === 'OLASI_ONEMSIZ' ? 'Olası' : selectedRiskFilter) : ''} {selectedStatuses.join('+')})
                                             </span>
                                           ) : selectedRiskFilter !== 'ALL' ? (
-                                            <span className="text-[10px] font-mono text-muted-foreground shrink-0 font-medium">
+                                            <span className="text-[10px] tabular-nums text-muted-foreground shrink-0 font-medium">
                                               ({subStats.total} {selectedRiskFilter === 'OLASI_ONEMSIZ' ? 'Olası' : selectedRiskFilter})
                                             </span>
                                           ) : null}
@@ -2065,13 +2061,13 @@ export const ExecutiveSummaryPage: React.FC = () => {
                                         {/* Orta: Alt İlerleme Çubuğu veya Eşleşen Sayı */}
                                         {hasStatusFilter ? (
                                           <div className="flex-1 max-w-xs w-full text-center">
-                                            <span className="text-[10px] font-mono text-muted-foreground">
+                                            <span className="text-[10px] tabular-nums text-muted-foreground">
                                               Eşleşen: <strong className="text-foreground font-bold">{subStats.matchingFilterCount}</strong> Bulgu
                                             </span>
                                           </div>
                                         ) : (
                                           <div className="flex-1 max-w-xs w-full space-y-1">
-                                            <div className="flex items-center justify-between text-[11px] font-mono">
+                                            <div className="flex items-center justify-between text-[11px] tabular-nums">
                                               <span className="text-muted-foreground text-[10px]">
                                                 {selectedRiskFilter !== 'ALL' ? `${selectedRiskFilter} İlerlemesi` : 'Tamamlanma'}
                                               </span>
@@ -2094,9 +2090,9 @@ export const ExecutiveSummaryPage: React.FC = () => {
                                         )}
 
                                         {/* Sağ: Üçlü Dağılım veya Filtrelenmiş Sayı + Durum Rozeti + Link */}
-                                        <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto font-mono text-[11px]">
+                                        <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto tabular-nums text-[11px]">
                                           {hasStatusFilter ? (
-                                            <div className="font-mono text-xs font-bold text-foreground bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
+                                            <div className="tabular-nums text-xs font-bold text-foreground bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
                                               <span>{subStats.matchingFilterCount} Bulgu</span>
                                             </div>
                                           ) : (
@@ -2154,7 +2150,7 @@ export const ExecutiveSummaryPage: React.FC = () => {
         <div className="p-4 px-6 border-t bg-muted/20 text-xs text-muted-foreground flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <span>{filteredHospitals.length} hastane listelendi (Toplam {allAuthorizedHospitals.length} kayıtlı)</span>
           <div className="flex items-center gap-3">
-            <span className="font-mono">{records.length} toplam bulgu • {kpiData.critical.total} kritik risk</span>
+            <span className="tabular-nums">{records.length} toplam bulgu • {kpiData.critical.total} kritik risk</span>
             {hasAnyFilterActive && (
               <button 
                 onClick={handleClearAllFilters}

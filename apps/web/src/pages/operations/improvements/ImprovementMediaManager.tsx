@@ -194,14 +194,14 @@ export const ImprovementMediaLightbox: React.FC<LightboxProps> = ({
       {/* Üst Çubuk */}
       <div className="flex items-center justify-between text-white z-10" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3">
-          <Badge className="bg-white/20 text-white font-mono text-xs">
+          <Badge className="bg-white/20 text-white tabular-nums text-xs">
             {currentIndex + 1} / {photos.length}
           </Badge>
           <span className="text-sm font-semibold truncate max-w-[280px] sm:max-w-md">
             {currentPhoto?.name || title}
           </span>
           {currentPhoto?.size && (
-            <span className="text-xs text-white/60 font-mono">
+            <span className="text-xs text-white/60 tabular-nums">
               ({formatBytes(currentPhoto.size)})
             </span>
           )}
@@ -416,7 +416,7 @@ export const ImprovementAttachmentManager: React.FC<UploaderProps> = ({
             </span>
             <Badge 
               variant="outline" 
-              className={`text-[10px] font-mono ${
+              className={`text-[10px] tabular-nums ${
                 photos.length >= maxPhotos 
                   ? 'border-amber-500 text-amber-600 bg-amber-50/50 dark:bg-amber-950/20' 
                   : 'text-muted-foreground'
@@ -517,7 +517,7 @@ export const ImprovementAttachmentManager: React.FC<UploaderProps> = ({
                 </div>
 
                 {/* Fotoğraf Sıra Numarası Rozeti */}
-                <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[10px] font-mono px-1.5 py-0.5 rounded backdrop-blur-xs pointer-events-none">
+                <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[10px] tabular-nums px-1.5 py-0.5 rounded backdrop-blur-xs pointer-events-none">
                   #{idx + 1}
                 </span>
 
@@ -566,7 +566,7 @@ export const ImprovementAttachmentManager: React.FC<UploaderProps> = ({
                 <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 İlişkili Dokümanlar & PDF
               </span>
-              <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground">
+              <Badge variant="outline" className="text-[10px] tabular-nums text-muted-foreground">
                 {documents.length} Dosya
               </Badge>
             </div>
@@ -610,7 +610,7 @@ export const ImprovementAttachmentManager: React.FC<UploaderProps> = ({
                       {formatAttachmentName(doc.name)}
                     </span>
                     {doc.size && (
-                      <span className="text-[10px] text-muted-foreground font-mono shrink-0">
+                      <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">
                         ({formatBytes(doc.size)})
                       </span>
                     )}

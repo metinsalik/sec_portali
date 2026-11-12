@@ -654,28 +654,28 @@ export const ImprovementsDashboardPage: React.FC<ImprovementsDashboardPageProps>
             {/* 1. Toplam Bulgu */}
             <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
               <div className="text-xs font-medium text-muted-foreground">Toplam bulgu</div>
-              <div className="text-3xl font-bold font-mono text-foreground mt-1.5">{summary.total}</div>
+              <div className="text-3xl font-bold tabular-nums text-foreground mt-1.5">{summary.total}</div>
               <div className="text-[11px] text-muted-foreground mt-2 truncate">Tüm takip alanları</div>
             </div>
 
             {/* 2. Açık Bulgu */}
             <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
               <div className="text-xs font-medium text-muted-foreground">Açık bulgu</div>
-              <div className="text-3xl font-bold font-mono text-foreground mt-1.5">{openCount}</div>
+              <div className="text-3xl font-bold tabular-nums text-foreground mt-1.5">{openCount}</div>
               <div className="text-[11px] text-muted-foreground mt-2 truncate">Başlamadı, Devam, Açık</div>
             </div>
 
             {/* 3. Tamamlanan */}
             <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
               <div className="text-xs font-medium text-muted-foreground">Tamamlanan</div>
-              <div className="text-3xl font-bold font-mono text-foreground mt-1.5">{summary.completed}</div>
+              <div className="text-3xl font-bold tabular-nums text-foreground mt-1.5">{summary.completed}</div>
               <div className="text-[11px] text-muted-foreground mt-2 truncate">Tamamlandı durumundakiler</div>
             </div>
 
             {/* 4. Tamamlanma Oranı */}
             <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
               <div className="text-xs font-medium text-muted-foreground">Tamamlanma</div>
-              <div className="text-3xl font-bold font-mono text-foreground mt-1.5">
+              <div className="text-3xl font-bold tabular-nums text-foreground mt-1.5">
                 {hasDurumEksik ? '—' : (summary.total - summary.cancelled > 0 ? `%${(((summary.completed) / (summary.total - summary.cancelled)) * 100).toFixed(1).replace('.', ',')}` : '—')}
               </div>
               <div className="text-[11px] text-muted-foreground mt-2 truncate">Kesin kapananlar (%100)</div>
@@ -685,9 +685,9 @@ export const ImprovementsDashboardPage: React.FC<ImprovementsDashboardPageProps>
             <div className="bg-card border-2 border-primary/30 bg-primary/5 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
               <div className="text-xs font-bold text-primary flex items-center justify-between">
                 <span>Ağırlıklı İlerleme</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-primary/20 text-primary font-mono font-semibold">Süreç Dahil</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-primary/20 text-primary tabular-nums font-semibold">Süreç Dahil</span>
               </div>
-              <div className="text-3xl font-bold font-mono text-primary mt-1.5">
+              <div className="text-3xl font-bold tabular-nums text-primary mt-1.5">
                 {summary.total - summary.cancelled > 0 
                   ? `%${(summary.weightedCompletionPercentage ?? 0).toFixed(1).replace('.', ',')}` 
                   : '—'}
@@ -700,7 +700,7 @@ export const ImprovementsDashboardPage: React.FC<ImprovementsDashboardPageProps>
             {/* 6. Kritik Bulgu */}
             <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
               <div className="text-xs font-medium text-muted-foreground">Kritik bulgu</div>
-              <div className="text-3xl font-bold font-mono text-[#991b1b] dark:text-red-400 mt-1.5">
+              <div className="text-3xl font-bold tabular-nums text-[#991b1b] dark:text-red-400 mt-1.5">
                 {criticalCount}
               </div>
               <div className="text-[11px] text-muted-foreground mt-2 truncate">Tamamlananlar dahil</div>
@@ -709,7 +709,7 @@ export const ImprovementsDashboardPage: React.FC<ImprovementsDashboardPageProps>
             {/* 7. Durumu Belirsiz */}
             <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
               <div className="text-xs font-medium text-muted-foreground">Durumu belirsiz</div>
-              <div className="text-3xl font-bold font-mono text-[#d97706] dark:text-amber-400 mt-1.5">
+              <div className="text-3xl font-bold tabular-nums text-[#d97706] dark:text-amber-400 mt-1.5">
                 {unspecifiedStatusCount}
               </div>
               <div className="text-[11px] text-muted-foreground mt-2 truncate">Boş veya tanımsız durum</div>
@@ -823,7 +823,7 @@ export const ImprovementsDashboardPage: React.FC<ImprovementsDashboardPageProps>
               <span key={d.name} className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ backgroundColor: getDurumColor(d.name) }} />
                 <span>{d.name}</span>
-                <strong className="text-foreground font-mono font-bold">{d.value}</strong>
+                <strong className="text-foreground tabular-nums font-bold">{d.value}</strong>
               </span>
             ))}
           </div>
@@ -920,7 +920,7 @@ export const ImprovementsDashboardPage: React.FC<ImprovementsDashboardPageProps>
               <span key={r.name} className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ backgroundColor: getRiskColor(r.name) }} />
                 <span>{r.name}</span>
-                <strong className="text-foreground font-mono font-bold">{r.value}</strong>
+                <strong className="text-foreground tabular-nums font-bold">{r.value}</strong>
               </span>
             ))}
           </div>
@@ -958,7 +958,7 @@ export const ImprovementsDashboardPage: React.FC<ImprovementsDashboardPageProps>
           </div>
 
           <div className="flex items-center gap-3 self-end sm:self-auto">
-            <span className="text-xs font-mono font-bold text-muted-foreground hidden sm:inline">
+            <span className="text-xs tabular-nums font-bold text-muted-foreground hidden sm:inline">
               {summary.total} toplam bulgu
             </span>
             <div className="w-8 h-8 rounded-lg border flex items-center justify-center text-muted-foreground bg-background group-hover:bg-muted transition-colors">
@@ -1075,7 +1075,7 @@ export const ImprovementsDashboardPage: React.FC<ImprovementsDashboardPageProps>
                           <span>{group.name}</span>
                         </div>
                       </td>
-                      <td colSpan={4} className="py-2.5 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right font-mono">
+                      <td colSpan={4} className="py-2.5 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right tabular-nums">
                         {groupTotal} bulgu
                       </td>
                     </tr>
@@ -1099,28 +1099,28 @@ export const ImprovementsDashboardPage: React.FC<ImprovementsDashboardPageProps>
                               </span>
                             </div>
                           </td>
-                          <td className="py-3 px-3 text-center text-xs font-mono font-bold text-foreground">
+                          <td className="py-3 px-3 text-center text-xs tabular-nums font-bold text-foreground">
                             {data.total}
                           </td>
-                          <td className="py-3 px-3 text-center text-xs font-mono text-slate-600 dark:text-slate-300">
+                          <td className="py-3 px-3 text-center text-xs tabular-nums text-slate-600 dark:text-slate-300">
                             {data.completed}
                           </td>
-                          <td className="py-3 px-3 text-center text-xs font-mono text-slate-600 dark:text-slate-300">
+                          <td className="py-3 px-3 text-center text-xs tabular-nums text-slate-600 dark:text-slate-300">
                             {data.inProgress}
                           </td>
-                          <td className="py-3 px-3 text-center text-xs font-mono text-slate-600 dark:text-slate-300">
+                          <td className="py-3 px-3 text-center text-xs tabular-nums text-slate-600 dark:text-slate-300">
                             {data.notStarted}
                           </td>
-                          <td className="py-3 px-3 text-center text-xs font-mono text-slate-600 dark:text-slate-300">
+                          <td className="py-3 px-3 text-center text-xs tabular-nums text-slate-600 dark:text-slate-300">
                             {data.openStatus}
                           </td>
-                          <td className="py-3 px-3 text-center text-xs font-mono text-slate-600 dark:text-slate-300">
+                          <td className="py-3 px-3 text-center text-xs tabular-nums text-slate-600 dark:text-slate-300">
                             {data.cancelled}
                           </td>
-                          <td className="py-3 px-3 text-center text-xs font-mono font-semibold text-red-600 dark:text-red-400">
+                          <td className="py-3 px-3 text-center text-xs tabular-nums font-semibold text-red-600 dark:text-red-400">
                             {data.openHighCritical}
                           </td>
-                          <td className="py-3 px-4 text-right text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          <td className="py-3 px-4 text-right text-xs tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
                             {data.total === 0 ? '—' : `%${data.ratio.toFixed(2).replace('.', ',')}`}
                           </td>
                         </tr>
@@ -1304,28 +1304,28 @@ export const ImprovementsDashboardPage: React.FC<ImprovementsDashboardPageProps>
                               )}
                             </div>
                           </td>
-                          <td className="py-3 px-3 text-center text-xs font-mono font-bold text-foreground">
+                          <td className="py-3 px-3 text-center text-xs tabular-nums font-bold text-foreground">
                             {hosp.total || 0}
                           </td>
-                          <td className="py-3 px-3 text-center text-xs font-mono text-slate-600 dark:text-slate-300">
+                          <td className="py-3 px-3 text-center text-xs tabular-nums text-slate-600 dark:text-slate-300">
                             {hosp.completed || 0}
                           </td>
-                          <td className="py-3 px-3 text-center text-xs font-mono text-slate-600 dark:text-slate-300">
+                          <td className="py-3 px-3 text-center text-xs tabular-nums text-slate-600 dark:text-slate-300">
                             {hosp.inProgress || 0}
                           </td>
-                          <td className="py-3 px-3 text-center text-xs font-mono text-slate-600 dark:text-slate-300">
+                          <td className="py-3 px-3 text-center text-xs tabular-nums text-slate-600 dark:text-slate-300">
                             {hosp.notStarted || 0}
                           </td>
-                          <td className="py-3 px-3 text-center text-xs font-mono text-slate-600 dark:text-slate-300">
+                          <td className="py-3 px-3 text-center text-xs tabular-nums text-slate-600 dark:text-slate-300">
                             {hosp.openStatus || 0}
                           </td>
-                          <td className="py-3 px-3 text-center text-xs font-mono text-slate-600 dark:text-slate-300">
+                          <td className="py-3 px-3 text-center text-xs tabular-nums text-slate-600 dark:text-slate-300">
                             {hosp.cancelled || 0}
                           </td>
-                          <td className="py-3 px-3 text-center text-xs font-mono font-semibold text-red-600 dark:text-red-400">
+                          <td className="py-3 px-3 text-center text-xs tabular-nums font-semibold text-red-600 dark:text-red-400">
                             {hosp.openHighCritical || 0}
                           </td>
-                          <td className="py-3 px-4 text-right text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          <td className="py-3 px-4 text-right text-xs tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
                             {hosp.total === 0 ? '—' : `%${ratio.toFixed(2).replace('.', ',')}`}
                           </td>
                         </tr>

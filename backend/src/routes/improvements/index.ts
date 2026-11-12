@@ -2114,35 +2114,120 @@ export const DEFAULT_CATEGORIES = [
   'Diğer'
 ];
 
-router.get('/categories', async (_req: AuthRequest, res: Response) => {
-  try {
-    const setting = await prisma.improvementSetting.findUnique({
-      where: { key: 'categories' }
-    });
-    const categories = setting?.value && Array.isArray(setting.value)
-      ? setting.value
-      : DEFAULT_CATEGORIES;
-    res.json({ success: true, data: categories });
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+// 11.2 SORUMLU BİRİM / KİŞİ VE DENETİM ADI YÖNETİMİ
+const DEFAULT_RESPONSIBLES = [
+  'Teknik Müdürlük',
+  'İSG Birimi',
+  'Biyomedikal',
+  'Başhekimlik',
+  'Destek Hizmetleri',
+  'Bilgi İşlem',
+];
+
+const DEFAULT_AUDIT_NAMES = [
+  'Hastane İç Denetimleri',
+  'Merkezi Denetimler',
+  'Sağlık Denetimleri',
+  'İtfaiye/Yangın Komisyonu Denetimleri',
+  'İSG Yangın ve Teknik Alan Saha Turu',
+  'Diğer',
+];
+
+function registerStringListSettingRoutes(opts: {
+  path: string;
+  settingKey: string;
+  bodyField: string;
+  defaults: string[];
+  description: string;
+  label: string;
+}) {
+  router.get(opts.path, async (_req: AuthRequest, res: Response) => {
+    try {
+      const setting = await prisma.improvementSetting.findUnique({
+        where: { key: opts.settingKey }
+      });
+      const list = setting?.value && Array.isArray(setting.value)
+        ? setting.value
+        : opts.defaults;
+      res.json({ success: true, data: list });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
+  router.post(opts.path, async (req: AuthRequest, res: Response) => {
+    try {
+      const user = getUser(req);
+      const isAdmin = !!(
+        user.isAdmin ||
+        user.isManagement ||
+        user.roles?.includes('admin') ||
+        user.roles?.includes('management')
+      );
+      if (!isAdmin) {
+        return res.status(403).json({
+          success: false,
+          message: `${opts.label} listesini yalnızca yöneticiler güncelleyebilir.`,
+        });
+      }
+
+      const rawList = req.body?.[opts.bodyField];
+      if (!Array.isArray(rawList)) {
+        return res.status(400).json({ success: false, message: `${opts.label} listesi dizi olmalıdır.` });
+      }
+
+      const cleaned: string[] = [];
+      const seen = new Set<string>();
+      for (const item of rawList) {
+        const name = String(item || '').trim();
+        if (!name) continue;
+        const key = name.toLocaleLowerCase('tr-TR');
+        if (seen.has(key)) continue;
+        seen.add(key);
+        cleaned.push(name);
+      }
+
+      const setting = await prisma.improvementSetting.upsert({
+        where: { key: opts.settingKey },
+        update: { value: cleaned },
+        create: {
+          key: opts.settingKey,
+          value: cleaned,
+          description: opts.description,
+        },
+      });
+      res.json({ success: true, data: setting.value });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+}
+
+registerStringListSettingRoutes({
+  path: '/categories',
+  settingKey: 'categories',
+  bodyField: 'categories',
+  defaults: DEFAULT_CATEGORIES,
+  description: 'İyileştirme Takip Kategori Listesi',
+  label: 'Kategori',
 });
 
-router.post('/categories', async (req: AuthRequest, res: Response) => {
-  try {
-    const { categories } = req.body;
-    if (!Array.isArray(categories)) {
-      return res.status(400).json({ success: false, message: 'Kategori listesi dizi olmalıdır.' });
-    }
-    const setting = await prisma.improvementSetting.upsert({
-      where: { key: 'categories' },
-      update: { value: categories },
-      create: { key: 'categories', value: categories, description: 'İyileştirme Takip Kategori Listesi' }
-    });
-    res.json({ success: true, data: setting.value });
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+registerStringListSettingRoutes({
+  path: '/responsibles',
+  settingKey: 'responsibles',
+  bodyField: 'responsibles',
+  defaults: DEFAULT_RESPONSIBLES,
+  description: 'İyileştirme Takip Sorumlu Birim / Kişi Listesi',
+  label: 'Sorumlu',
+});
+
+registerStringListSettingRoutes({
+  path: '/audit-names',
+  settingKey: 'audit_names',
+  bodyField: 'auditNames',
+  defaults: DEFAULT_AUDIT_NAMES,
+  description: 'İyileştirme Takip Denetim Adı Listesi',
+  label: 'Denetim adı',
 });
 
 // 11.5 AKSİYON KALIPLARI VE ŞABLON YÖNETİMİ (Step-by-Step Süreç Kalıpları & İlerleme Yüzdeleri)

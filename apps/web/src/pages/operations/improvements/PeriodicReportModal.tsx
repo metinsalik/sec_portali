@@ -216,7 +216,7 @@ export const PeriodicReportModal: React.FC<PeriodicReportModalProps> = ({
                 type="date"
                 value={formData.inspectionDate}
                 onChange={e => setFormData({ ...formData, inspectionDate: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none font-mono"
+                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums"
                 required
               />
             </div>
@@ -233,7 +233,7 @@ export const PeriodicReportModal: React.FC<PeriodicReportModalProps> = ({
                 type="date"
                 value={formData.nextInspectionDate}
                 onChange={e => setFormData({ ...formData, nextInspectionDate: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg border border-primary/50 bg-background text-foreground text-xs outline-none font-mono font-semibold"
+                className="w-full h-9 px-3 rounded-lg border border-primary/50 bg-background text-foreground text-xs outline-none tabular-nums font-semibold"
               />
               <span className="text-[10px] text-muted-foreground block mt-0.5">
                 Topraklama uygun ise 1 yıl sürelidir.
@@ -249,7 +249,7 @@ export const PeriodicReportModal: React.FC<PeriodicReportModalProps> = ({
                 placeholder="Örn: 26-1478-141"
                 value={formData.reportNo}
                 onChange={e => setFormData({ ...formData, reportNo: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none font-mono"
+                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums"
               />
             </div>
 
@@ -311,7 +311,7 @@ export const PeriodicReportModal: React.FC<PeriodicReportModalProps> = ({
                 placeholder="Örn: 27058219"
                 value={formData.isgKatipId}
                 onChange={e => setFormData({ ...formData, isgKatipId: e.target.value })}
-                className="w-full h-10 px-3 rounded-xl border bg-background text-foreground text-xs outline-none font-mono"
+                className="w-full h-10 px-3 rounded-xl border bg-background text-foreground text-xs outline-none tabular-nums"
               />
             </div>
           </div>
@@ -326,7 +326,7 @@ export const PeriodicReportModal: React.FC<PeriodicReportModalProps> = ({
                 type="datetime-local"
                 value={formData.startDate}
                 onChange={e => setFormData({ ...formData, startDate: e.target.value })}
-                className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs outline-none font-mono"
+                className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums"
               />
             </div>
 
@@ -338,7 +338,7 @@ export const PeriodicReportModal: React.FC<PeriodicReportModalProps> = ({
                 type="datetime-local"
                 value={formData.endDate}
                 onChange={e => setFormData({ ...formData, endDate: e.target.value })}
-                className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs outline-none font-mono"
+                className="w-full h-8 px-2.5 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums"
               />
             </div>
           </div>
