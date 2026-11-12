@@ -1,8 +1,5 @@
 import React, { forwardRef, useLayoutEffect, useRef, useState } from 'react';
-import { 
-  Flame, Droplets, Leaf, Package, Phone, Glasses, 
-  Image as ImageIcon 
-} from 'lucide-react';
+import { Flame, Droplets, Phone, Glasses } from 'lucide-react';
 
 interface MaterialPrintCardProps {
   material: any;
@@ -50,6 +47,27 @@ const MAX_LINE_HEIGHT = 1.8;
 const BASE_GAP = 10;
 const BASE_PAD_Y = 9;
 const BASE_PAD_X = 14;
+
+const SAFE_USAGE_INSTRUCTIONS = [
+  'Kimyasalları yutmayınız. Göz, cilt ve kıyafetle temasından kaçınınız.',
+  'Toz, gaz, duman, sis, buhar ve spreylerini solumayınız.',
+  'Kimyasalları, üretici talimatı olmadan birbirleriyle karıştırmayınız.',
+  'Kullanım sırasında yeterli havalandırma sağlayınız.',
+  'Kimyasalın tehlikelerine uygun kişisel koruyucu donanım kullanınız.',
+  'Kimyasallarla çalışırken yiyecek ve içecek tüketmeyiniz.',
+  'Kullanım sonrası ellerinizi su ve sabunla iyice yıkayınız.',
+  'Kimyasalları orijinal veya uygun, etiketli ve kapalı kaplarda saklayınız.',
+  'Kimyasalları gıda maddelerinden ve birbirleriyle uyumsuz maddelerden ayrı muhafaza ediniz.',
+  'Kimyasalları ısı, doğrudan güneş ışığı ve diğer uygunsuz çevresel koşullardan koruyunuz.',
+  'Kimyasal kaplarını devrilme, düşme, sızma ve hasar riskine karşı güvenli şekilde yerleştiriniz.',
+  'Kimyasalların taşınması ve aktarılması sırasında sıçrama, dökülme ve sızıntıya karşı gerekli önlemleri alınız.',
+  'Kimyasalları kullanım amacı dışında kullanmayınız.',
+  'Kimyasal atıkları ve boş ambalajları, tehlike özelliklerine göre uygun atık kaplarında ayrı toplayınız. Tehlikeli atık niteliğindeki malzemeleri evsel atıklara karıştırmayınız.',
+];
+
+const SAFE_USAGE_WEIGHT = Math.ceil(
+  SAFE_USAGE_INSTRUCTIONS.reduce((sum, line) => sum + line.length, 0) / 2
+);
 
 const KNOWN_REPEATED_HEADINGS = [
   'Ekotoksik Bilgiler',
@@ -138,6 +156,97 @@ function capitalizeFirst(s: string): string {
   return t.charAt(0).toLocaleUpperCase('tr-TR') + t.slice(1);
 }
 
+/**
+ * Yüklenen GHS piktogram görsellerindeki farklı kenar boşluklarını (beyaz/şeffaf çerçeve)
+ * kırparak tüm tehlike işaretlerinin kartta birebir aynı boyutta görünmesini sağlar.
+ */
+function GhsPictogramImage({ src, alt }: { src: string; alt: string }) {
+  const [normalizedSrc, setNormalizedSrc] = useState<string>(src);
+
+  React.useEffect(() => {
+    setNormalizedSrc(src);
+    let cancelled = false;
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const w = img.naturalWidth;
+        const h = img.naturalHeight;
+        if (!w || !h) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        ctx.drawImage(img, 0, 0);
+        const { data } = ctx.getImageData(0, 0, w, h);
+
+        let minX = w;
+        let minY = h;
+        let maxX = -1;
+        let maxY = -1;
+
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const idx = (y * w + x) * 4;
+            const r = data[idx];
+            const g = data[idx + 1];
+            const b = data[idx + 2];
+            const a = data[idx + 3];
+            const isTransparent = a < 20;
+            const isNearWhite = r > 245 && g > 245 && b > 245;
+            if (!isTransparent && !isNearWhite) {
+              if (x < minX) minX = x;
+              if (x > maxX) maxX = x;
+              if (y < minY) minY = y;
+              if (y > maxY) maxY = y;
+            }
+          }
+        }
+
+        if (maxX <= minX || maxY <= minY) return;
+
+        const cropW = maxX - minX + 1;
+        const cropH = maxY - minY + 1;
+        const size = Math.max(cropW, cropH);
+
+        const outCanvas = document.createElement('canvas');
+        outCanvas.width = size;
+        outCanvas.height = size;
+        const outCtx = outCanvas.getContext('2d');
+        if (!outCtx) return;
+
+        const offsetX = Math.floor((size - cropW) / 2);
+        const offsetY = Math.floor((size - cropH) / 2);
+        outCtx.drawImage(canvas, minX, minY, cropW, cropH, offsetX, offsetY, cropW, cropH);
+
+        const dataUrl = outCanvas.toDataURL('image/png');
+        if (!cancelled) {
+          setNormalizedSrc(dataUrl);
+        }
+      } catch {
+        // CORS veya canvas erişim hatasında orijinal görseli koru
+      }
+    };
+    img.src = src;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [src]);
+
+  return (
+    <img
+      src={normalizedSrc}
+      alt={alt}
+      style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+    />
+  );
+}
+
 export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardProps>(
   ({ material, facilityLogoUrl = '/mlpcare.jpg', size = 'A4' }, ref) => {
     const { w: printableW, h: printableH } = PRINTABLE_DIMENSIONS[size];
@@ -177,20 +286,25 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
     const firstAidNorm = normalizeText(material?.firstAid, ['İlk Yardım']);
     const fireNorm = normalizeText(material?.fireFightingMeasures, ['Yangın']);
     const spillNorm = normalizeText(material?.accidentalReleaseMeasures, ['Kaza Sonucu']);
-    const ecoNorm = normalizeText(material?.ecologicalInformation, ['Çevresel']);
-    const storageNorm = normalizeText(material?.handlingAndStorage, ['Depolama']);
 
-    const parseHazardDescription = (text: string, hasData: boolean): HazardItem[] => {
-      if (!hasData) return [];
+    const parseHazardDescription = (raw?: string | null): HazardItem[] => {
+      if (!raw || typeof raw !== 'string') return [];
 
-      const lines = text.split(/[\r\n]+/).map(l => l.trim()).filter(Boolean);
+      const lines = raw
+        .split(/[\r\n]+/)
+        .map(l => normalizeText(l, ['Zararlılık İfadeleri', 'Tehlike Tanımı']))
+        .filter(r => r.hasData)
+        .map(r => r.text);
+
       const items: HazardItem[] = [];
 
       for (const line of lines) {
-        const hMatch = line.match(/^(H\d{3}[a-zA-Z*]?|P\d{3}[a-zA-Z*]?)\s*[:\-\.]?\s*(.*)$/i);
+        const hMatch = line.match(
+          /^(H\d{3}[a-zA-Z*]?(?:\s*\+\s*H\d{3}[a-zA-Z*]?)*|EUH\d{3}[a-zA-Z*]?|P\d{3}[a-zA-Z*]?)\s*[:\-\.]?\s*(.*)$/i
+        );
         if (hMatch) {
           items.push({
-            code: hMatch[1].toUpperCase(),
+            code: hMatch[1].replace(/\s+/g, '').toUpperCase(),
             text: capitalizeFirst(hMatch[2] ? hMatch[2] : hMatch[1]),
           });
         } else {
@@ -264,7 +378,7 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
       return sections;
     };
 
-    const hazardItems = parseHazardDescription(hazardNorm.text, hazardNorm.hasData);
+    const hazardItems = parseHazardDescription(material?.hazardDescription);
     const firstAidData = parseFirstAid(firstAidNorm.text, firstAidNorm.hasData);
     const hasStructuredSubsections = Boolean(
       firstAidData.goz || firstAidData.deri || firstAidData.yutma || firstAidData.solunum
@@ -280,13 +394,7 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
         spillNorm.hasData ? spillNorm.text.length : 0
       )
     );
-    const weightRow4 = Math.max(
-      40,
-      Math.max(
-        ecoNorm.hasData ? ecoNorm.text.length : 0,
-        storageNorm.hasData ? storageNorm.text.length : 0
-      )
-    );
+    const weightRow4 = Math.max(40, SAFE_USAGE_WEIGHT);
 
     // ─────────────────────────────────────────────────────────────────────────
     // BİNARY SEARCH İLE TEK ORTAK FONT-SIZE, LINE-HEIGHT VE PADDING/GAP HESABI
@@ -501,11 +609,11 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
     // Üst Bölüm Yardımcı Değerleri (tasarım genişliği 794px üzerinde sabit kalır)
     const ghsList = material?.hazardLabels || [];
     const ghsCount = ghsList.length;
-    const ghsIconSize = ghsCount <= 2 ? 56 : ghsCount === 3 ? 44 : 36;
-    const ghsMaxColWidth = ghsCount <= 2 ? 84 : ghsCount === 3 ? 68 : 54;
+    const ghsIconSize = ghsCount <= 2 ? 76 : ghsCount === 3 ? 58 : 44;
+    const ghsMaxColWidth = ghsCount <= 2 ? 96 : ghsCount === 3 ? 68 : 64;
 
     const prodName = material?.productName || material?.name || 'BELİRTİLMEDİ';
-    const prodNameFs = prodName.length <= 16 ? '20px' : prodName.length <= 28 ? '17px' : '14.5px';
+    const prodNameFs = prodName.length <= 20 ? '16px' : prodName.length <= 34 ? '14.5px' : '13px';
 
     const ppeList = material?.ppes || [];
     const ppeIconSize = ppeList.length <= 2 ? 38 : ppeList.length === 3 ? 34 : 28;
@@ -553,32 +661,15 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                <img
-                  src={getAbsoluteUrl(facilityLogoUrl)}
-                  alt="Kurum Logosu"
-                  style={{
-                    maxHeight: '32px',
-                    maxWidth: '125px',
-                    objectFit: 'contain',
-                    display: 'block',
-                  }}
-                />
-                <div
-                  style={{
-                    width: '1px',
-                    height: '26px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-                    margin: '0 12px',
-                  }}
-                />
                 <h1
                   style={{
                     margin: 0,
-                    fontSize: '16.5px',
-                    fontWeight: 800,
-                    letterSpacing: '0.06em',
+                    fontSize: '25px',
+                    fontWeight: 900,
+                    letterSpacing: '0.07em',
                     color: '#ffffff',
                     textTransform: 'uppercase',
+                    lineHeight: 1.15,
                   }}
                 >
                   GÜVENLİK BİLGİ KARTI
@@ -601,28 +692,28 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'center',
-                  gap: '6px',
+                  gap: '7px',
                 }}
               >
-                <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: '10px', alignItems: 'start' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: '12px', alignItems: 'start' }}>
                   <div>
                     <div
                       style={{
-                        fontSize: '8.5px',
+                        fontSize: '9.5px',
                         fontWeight: 700,
                         color: '#67e8f9',
                         letterSpacing: '0.06em',
                         textTransform: 'uppercase',
                       }}
                     >
-                      ÜRÜN TİCARİ ADI
+                      ÜRÜN ADI
                     </div>
                     <div
                       style={{
                         fontSize: prodNameFs,
-                        fontWeight: 900,
+                        fontWeight: 800,
                         color: '#ffffff',
-                        lineHeight: 1.15,
+                        lineHeight: 1.2,
                         marginTop: '2px',
                         wordBreak: 'break-word',
                       }}
@@ -634,21 +725,21 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
                   <div>
                     <div
                       style={{
-                        fontSize: '8.5px',
+                        fontSize: '9.5px',
                         fontWeight: 700,
                         color: '#67e8f9',
                         letterSpacing: '0.06em',
                         textTransform: 'uppercase',
                       }}
                     >
-                      TEDARİKÇİ FİRMA
+                      FİRMA
                     </div>
                     <div
                       style={{
-                        fontSize: '16px',
-                        fontWeight: 900,
+                        fontSize: '15.5px',
+                        fontWeight: 800,
                         color: '#ffffff',
-                        lineHeight: 1.15,
+                        lineHeight: 1.2,
                         marginTop: '2px',
                         wordBreak: 'break-word',
                       }}
@@ -661,7 +752,7 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
                 <div>
                   <div
                     style={{
-                      fontSize: '8.5px',
+                      fontSize: '9.5px',
                       fontWeight: 700,
                       color: '#67e8f9',
                       letterSpacing: '0.06em',
@@ -672,7 +763,7 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
                   </div>
                   <div
                     style={{
-                      fontSize: '12px',
+                      fontSize: '13px',
                       fontWeight: 600,
                       color: '#f8fafc',
                       lineHeight: 1.25,
@@ -685,65 +776,38 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
               </div>
             </div>
 
-            {/* SAĞ KART: ÜRÜN GÖRSELİ VE PİKTOGRAMLAR */}
+            {/* SAĞ KART: ZARARLILIK İŞARETLERİ */}
             <div
               style={{
                 width: '235px',
                 backgroundColor: '#ffffff',
                 border: '1px solid #cbd5e1',
                 borderRadius: '12px',
-                padding: '8px 10px',
+                padding: '10px 10px',
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'space-between',
+                justifyContent: 'center',
                 gap: '6px',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
               }}
             >
               <div
                 style={{
-                  border: '1px dashed #cbd5e1',
-                  borderRadius: '8px',
-                  backgroundColor: '#f8fafc',
-                  height: '54px',
+                  flex: 1,
                   display: 'flex',
                   flexDirection: 'column',
-                  alignItems: 'center',
                   justifyContent: 'center',
-                  padding: '2px',
-                  overflow: 'hidden',
                 }}
               >
-                {material?.imageUrl ? (
-                  <img
-                    src={getAbsoluteUrl(material.imageUrl)}
-                    alt={material.productName}
-                    style={{
-                      maxHeight: '100%',
-                      maxWidth: '100%',
-                      objectFit: 'contain',
-                    }}
-                  />
-                ) : (
-                  <>
-                    <ImageIcon style={{ width: '18px', height: '18px', color: '#94a3b8', strokeWidth: 1.5 }} />
-                    <div style={{ fontSize: '8px', fontWeight: 700, color: '#475569', marginTop: '1px' }}>
-                      ÜRÜN GÖRSELİ
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div>
                 <div
                   style={{
-                    fontSize: '8px',
+                    fontSize: '9px',
                     fontWeight: 800,
                     color: '#64748b',
                     letterSpacing: '0.06em',
                     textTransform: 'uppercase',
                     textAlign: 'center',
-                    marginBottom: '3px',
+                    marginBottom: '6px',
                   }}
                 >
                   ZARARLILIK İŞARETLERİ
@@ -766,7 +830,9 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
-                          maxWidth: `${ghsMaxColWidth}px`,
+                          flex: ghsCount <= 3 ? '1 1 0px' : undefined,
+                          width: ghsCount > 3 ? `${ghsMaxColWidth}px` : undefined,
+                          minWidth: 0,
                         }}
                       >
                         <div
@@ -776,13 +842,13 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
+                            flexShrink: 0,
                           }}
                         >
                           {hl.label?.imageUrl ? (
-                            <img
+                            <GhsPictogramImage
                               src={getAbsoluteUrl(hl.label.imageUrl)}
                               alt={hl.label.name}
-                              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                             />
                           ) : (
                             <div
@@ -979,7 +1045,6 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
                   fontWeight: 900,
                   color: '#e11d48',
                   lineHeight: 1,
-                  fontFamily: 'monospace, sans-serif',
                   letterSpacing: '-0.02em',
                 }}
               >
@@ -1002,6 +1067,7 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
             fontSize: `${metrics.fontSize}px`,
             lineHeight: metrics.lineHeight,
             gap: `${currentGap}px`,
+            textAlign: 'justify',
           }}
         >
           {/* SATIR 1: ZARARLILIK VE ÖNLEM İFADELERİ */}
@@ -1039,10 +1105,10 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
               {hazardItems.length > 0 ? (
                 <div
                   style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '0.4em 1.2em',
-                    alignItems: 'baseline',
+                    display: 'grid',
+                    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+                    gap: '0.45em 1.4em',
+                    alignItems: 'start',
                     width: '100%',
                   }}
                 >
@@ -1065,7 +1131,6 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
                           fontWeight: 800,
                           padding: '0.1em 0.45em',
                           borderRadius: '0.3em',
-                          fontFamily: 'monospace, sans-serif',
                           flexShrink: 0,
                         }}
                       >
@@ -1333,10 +1398,10 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
             </div>
           </div>
 
-          {/* SATIR 4: GÜVENLİ KULLANIM VE KORUNMA (ÇEVRESEL & ELLEÇLEME) */}
+          {/* SATIR 4: GÜVENLİ KULLANIM TALİMATLARI (SABİT - İSG EMREDİCİ MAVİ ZEMİN / BEYAZ YAZI) */}
           <div style={{ flex: `${weightRow4} 1 0px`, display: 'flex', flexDirection: 'column', gap: '0.35em' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4em', flexShrink: 0 }}>
-              <div style={{ width: '0.3em', height: '1.15em', backgroundColor: '#06b6d4', borderRadius: '0.15em' }} />
+              <div style={{ width: '0.3em', height: '1.15em', backgroundColor: '#00a3db', borderRadius: '0.15em' }} />
               <h2
                 style={{
                   margin: 0,
@@ -1347,115 +1412,81 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
                   textTransform: 'uppercase',
                 }}
               >
-                GÜVENLİ KULLANIM VE KORUNMA
+                GÜVENLİ KULLANIM TALİMATLARI
               </h2>
             </div>
 
             <div
+              ref={registerCardRef(4)}
               style={{
                 flex: 1,
-                display: 'grid',
-                gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-                alignItems: 'stretch',
-                gap: '0.7em',
+                border: '1px solid #008ec0',
+                borderRadius: '0.75em',
+                backgroundColor: '#00a3db',
+                color: '#ffffff',
+                padding: cardPaddingStyle,
+                boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
               }}
             >
-              {/* ÇEVRESEL TEDBİRLER */}
               <div
-                ref={registerCardRef(4)}
                 style={{
-                  border: '1px solid #e2e8f0',
-                  borderLeft: '0.32em solid #0d9488',
-                  borderRadius: '0.75em',
-                  backgroundColor: '#ffffff',
-                  padding: cardPaddingStyle,
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'flex-start',
-                  gap: '0.4em',
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(0, 1fr) 1px minmax(0, 1fr)',
+                  gap: '1em',
+                  width: '100%',
+                  alignItems: 'stretch',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45em', flexShrink: 0 }}>
-                  <div
-                    style={{
-                      width: '1.4em',
-                      height: '1.4em',
-                      borderRadius: '50%',
-                      backgroundColor: '#ccfbf1',
-                      color: '#0f766e',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Leaf style={{ width: '0.85em', height: '0.85em', strokeWidth: 2.5 }} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: '0.95em', fontWeight: 800, color: '#0f172a' }}>
-                    Çevresel Tedbirler
-                  </h3>
-                </div>
-                <div
-                  style={{
-                    fontSize: '1em',
-                    color: ecoNorm.hasData ? '#475569' : '#94a3b8',
-                    fontStyle: ecoNorm.hasData ? 'normal' : 'italic',
-                    whiteSpace: 'pre-wrap',
-                    overflowWrap: 'break-word',
-                  }}
-                >
-                  {ecoNorm.text}
-                </div>
-              </div>
-
-              {/* ELLEÇLEME VE DEPOLAMA */}
-              <div
-                ref={registerCardRef(5)}
-                style={{
-                  border: '1px solid #e2e8f0',
-                  borderLeft: '0.32em solid #0284c7',
-                  borderRadius: '0.75em',
-                  backgroundColor: '#ffffff',
-                  padding: cardPaddingStyle,
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'flex-start',
-                  gap: '0.4em',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45em', flexShrink: 0 }}>
-                  <div
-                    style={{
-                      width: '1.4em',
-                      height: '1.4em',
-                      borderRadius: '50%',
-                      backgroundColor: '#e0f2fe',
-                      color: '#0369a1',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Package style={{ width: '0.85em', height: '0.85em', strokeWidth: 2.5 }} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: '0.95em', fontWeight: 800, color: '#0f172a' }}>
-                    Elleçleme ve Depolama
-                  </h3>
-                </div>
-                <div
-                  style={{
-                    fontSize: '1em',
-                    color: storageNorm.hasData ? '#475569' : '#94a3b8',
-                    fontStyle: storageNorm.hasData ? 'normal' : 'italic',
-                    whiteSpace: 'pre-wrap',
-                    overflowWrap: 'break-word',
-                  }}
-                >
-                  {storageNorm.text}
-                </div>
+                {[SAFE_USAGE_INSTRUCTIONS.slice(0, 8), SAFE_USAGE_INSTRUCTIONS.slice(8)].map((colItems, colIdx) => (
+                  <React.Fragment key={`safe-usage-col-${colIdx}`}>
+                    {colIdx === 1 && (
+                      <div
+                        style={{
+                          width: '1px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.35)',
+                        }}
+                      />
+                    )}
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        gap: '0.28em',
+                      }}
+                    >
+                      {colItems.map((instruction, idx) => (
+                        <div
+                          key={`safe-usage-${colIdx}-${idx}`}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '0.4em',
+                            fontSize: '0.96em',
+                            color: '#ffffff',
+                            fontWeight: 500,
+                            overflowWrap: 'break-word',
+                          }}
+                        >
+                          <span
+                            style={{
+                              color: '#ffffff',
+                              fontWeight: 900,
+                              flexShrink: 0,
+                              lineHeight: 'inherit',
+                            }}
+                          >
+                            •
+                          </span>
+                          <span>{instruction}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </React.Fragment>
+                ))}
               </div>
             </div>
           </div>
@@ -1476,10 +1507,9 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
         >
           <span
             style={{
-              fontSize: '9px',
-              fontWeight: 800,
-              color: '#94a3b8',
-              fontFamily: 'monospace, sans-serif',
+              fontSize: '10px',
+              fontWeight: 900,
+              color: '#000000',
               letterSpacing: '0.05em',
             }}
           >

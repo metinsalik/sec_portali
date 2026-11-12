@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Search, Check, Save, AlertTriangle, Info, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { HazardStatementSelector } from '@/components/hazmat/HazardStatementSelector';
 
 export default function MaterialFormPage() {
   const navigate = useNavigate();
@@ -501,7 +502,11 @@ export default function MaterialFormPage() {
             {/* 6. Tehlike Tanımı */}
             <div className="space-y-2">
               <Label className="text-base">6. Tehlike Tanımı</Label>
-              <Textarea value={formData.hazardDescription} onChange={e => setFormData({...formData, hazardDescription: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
+              <HazardStatementSelector
+                value={formData.hazardDescription}
+                onChange={val => setFormData({ ...formData, hazardDescription: val })}
+                disabled={!!selectedGlobalMaterial && !isEditMode}
+              />
             </div>
 
             {/* 7. Tehlike Etiketleri (ADR) */}

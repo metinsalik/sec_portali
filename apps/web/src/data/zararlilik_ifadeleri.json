@@ -1,0 +1,524 @@
+{
+  "dil": "tr",
+  "kapsam": "Önceki yanıtta listelenen H, birleşik H ve EUH ifadeleri. Güncel mevzuat açısından eksiksizliği doğrulanmamıştır.",
+  "kaynak": "http://www.chemleg.com/upload/files/Mevzuatlar/SEA%20Y%C3%B6netmeli%C4%9Fi/SEA%20Y%C3%B6netmeli%C4%9Fi_Ek%203.pdf",
+  "notlar": [
+    "İfade metinleri önceki yanıttan değiştirilmeden aktarılmıştır.",
+    "EUH206 içindeki “klorür” sözcüğü önceki listeden korunmuştur; kullanmadan önce güncel resmî metinle kontrol edilmelidir.",
+    "H340, H341, H350, H351, H360, H361 ve H370–H373 için mevzuattaki koşullara göre maruz kalma yolu, etkilenen organlar veya özel etkiler eklenmesi gerekebilir.",
+    "H350i, H360F, H360D, H361f gibi son ekli gösterimler ve daha yeni mevzuat kodları bu veri kümesine dahil değildir.",
+    "Bir ürünün SDS/GBF belgesine yalnızca o ürün için geçerli ifadeler aktarılmalıdır."
+  ],
+  "ifadeler": [
+    {
+      "kod": "H200",
+      "ifade": "Kararsız patlayıcı.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H201",
+      "ifade": "Patlayıcı; kütlesel patlama zararı.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H202",
+      "ifade": "Patlayıcı; ciddi yansıtım zararı.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H203",
+      "ifade": "Patlayıcı; yangın, patlama veya yansıtım zararı.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H204",
+      "ifade": "Yangın veya yansıtım zararı.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H205",
+      "ifade": "Yangında kütlesel patlamaya yol açabilir.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H220",
+      "ifade": "Çok kolay alevlenir gaz.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H221",
+      "ifade": "Alevlenir gaz.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H222",
+      "ifade": "Çok kolay alevlenir aerosol.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H223",
+      "ifade": "Alevlenir aerosol.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H224",
+      "ifade": "Çok kolay alevlenir sıvı ve buhar.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H225",
+      "ifade": "Kolay alevlenir sıvı ve buhar.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H226",
+      "ifade": "Alevlenir sıvı ve buhar.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H228",
+      "ifade": "Alevlenir katı.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H229",
+      "ifade": "Basınçlı kap. Isıtma patlamaya yol açabilir.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H230",
+      "ifade": "Hava olmadığında bile patlayabilir.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H231",
+      "ifade": "Yüksek basınçta ve/veya sıcaklıkta, hava olmadığında bile, patlayabilir.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H240",
+      "ifade": "Isıtma patlamaya yol açabilir.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H241",
+      "ifade": "Isıtma yangına veya patlamaya yol açabilir.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H242",
+      "ifade": "Isıtma yangına yol açabilir.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H250",
+      "ifade": "Hava ile temas ettiğinde ani yangınlara yol açar.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H251",
+      "ifade": "Kendiliğinden ısınır; alev alabilir.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H252",
+      "ifade": "Büyük miktarlarda kendiliğinden ısınır; yangına yol açabilir.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H260",
+      "ifade": "Su ile temas ettiğinde kendiliğinden tutuşabilen alevlenir gazlar yayar.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H261",
+      "ifade": "Su ile temas ettiğinde alevlenir gazlar yayar.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H270",
+      "ifade": "Yangına yol açabilir veya yangını şiddetlendirebilir; oksitleyici.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H271",
+      "ifade": "Yangına veya patlamaya yol açabilir; güçlü oksitleyici.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H272",
+      "ifade": "Yangını güçlendirebilir; oksitleyici.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H280",
+      "ifade": "Basınçlı gaz içerir; ısıtıldığında patlayabilir.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H281",
+      "ifade": "Soğutulmuş gaz içerir; soğuktan yanma veya yaralanmalara yol açabilir.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H290",
+      "ifade": "Metalleri aşındırabilir.",
+      "kategori": "Fiziksel zararlılık"
+    },
+    {
+      "kod": "H300",
+      "ifade": "Yutulması halinde öldürücüdür.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H301",
+      "ifade": "Yutulması halinde toksiktir.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H302",
+      "ifade": "Yutulması halinde zararlıdır.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H304",
+      "ifade": "Solunum yoluna nüfuzu ve yutulması halinde öldürücü olabilir.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H310",
+      "ifade": "Cilt ile teması halinde öldürücüdür.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H311",
+      "ifade": "Cilt ile teması halinde toksiktir.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H312",
+      "ifade": "Cilt ile teması halinde zararlıdır.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H314",
+      "ifade": "Ciddi cilt yanıklarına ve göz hasarına yol açar.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H315",
+      "ifade": "Cilt tahrişine yol açar.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H317",
+      "ifade": "Alerjik cilt reaksiyonlarına yol açabilir.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H318",
+      "ifade": "Ciddi göz hasarına yol açar.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H319",
+      "ifade": "Ciddi göz tahrişine yol açar.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H330",
+      "ifade": "Solunması halinde öldürücüdür.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H331",
+      "ifade": "Solunması halinde toksiktir.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H332",
+      "ifade": "Solunması halinde zararlıdır.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H334",
+      "ifade": "Solunması halinde nefes alma zorlukları, astım nöbetleri veya alerjiye yol açabilir.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H335",
+      "ifade": "Solunum yolu tahrişine yol açabilir.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H336",
+      "ifade": "Rehavete veya baş dönmesine yol açabilir.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H340",
+      "ifade": "Genetik hasara yol açabilir.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H341",
+      "ifade": "Genetik hasara yol açma şüphesi var.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H350",
+      "ifade": "Kansere yol açabilir.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H351",
+      "ifade": "Kansere yol açma şüphesi var.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H360",
+      "ifade": "Doğmamış çocukta hasara yol açabilir veya üremeye zarar verebilir.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H361",
+      "ifade": "Doğmamış çocukta hasara yol açma veya üremeye zarar verme şüphesi var.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H362",
+      "ifade": "Emzirilen çocuğa zarar verebilir.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H370",
+      "ifade": "Organlarda hasara yol açar.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H371",
+      "ifade": "Organlarda hasara yol açabilir.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H372",
+      "ifade": "Uzun süreli veya tekrarlı maruz kalma sonucu organlarda hasara yol açar.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H373",
+      "ifade": "Uzun süreli veya tekrarlı maruz kalma sonucu organlarda hasara yol açabilir.",
+      "kategori": "Sağlığa ilişkin zararlılık"
+    },
+    {
+      "kod": "H300 + H310",
+      "ifade": "Yutulması halinde veya ciltle teması halinde öldürücüdür.",
+      "kategori": "Birleşik akut toksisite"
+    },
+    {
+      "kod": "H300 + H330",
+      "ifade": "Yutulduğunda veya solunduğunda öldürücüdür.",
+      "kategori": "Birleşik akut toksisite"
+    },
+    {
+      "kod": "H310 + H330",
+      "ifade": "Ciltle temas ettiğinde veya solunduğunda öldürücüdür.",
+      "kategori": "Birleşik akut toksisite"
+    },
+    {
+      "kod": "H300 + H310 + H330",
+      "ifade": "Yutulduğunda, ciltle temas ettiğinde veya solunduğunda öldürücüdür.",
+      "kategori": "Birleşik akut toksisite"
+    },
+    {
+      "kod": "H301 + H311",
+      "ifade": "Yutulması halinde veya ciltle teması halinde toksiktir.",
+      "kategori": "Birleşik akut toksisite"
+    },
+    {
+      "kod": "H301 + H331",
+      "ifade": "Yutulduğunda veya solunduğunda toksiktir.",
+      "kategori": "Birleşik akut toksisite"
+    },
+    {
+      "kod": "H311 + H331",
+      "ifade": "Ciltle temas ettiğinde veya solunduğunda toksiktir.",
+      "kategori": "Birleşik akut toksisite"
+    },
+    {
+      "kod": "H301 + H311 + H331",
+      "ifade": "Yutulduğunda, ciltle temas ettiğinde veya solunduğunda toksiktir.",
+      "kategori": "Birleşik akut toksisite"
+    },
+    {
+      "kod": "H302 + H312",
+      "ifade": "Yutulması halinde veya ciltle teması halinde zararlıdır.",
+      "kategori": "Birleşik akut toksisite"
+    },
+    {
+      "kod": "H302 + H332",
+      "ifade": "Yutulduğunda veya solunduğunda zararlıdır.",
+      "kategori": "Birleşik akut toksisite"
+    },
+    {
+      "kod": "H312 + H332",
+      "ifade": "Ciltle temas ettiğinde veya solunduğunda zararlıdır.",
+      "kategori": "Birleşik akut toksisite"
+    },
+    {
+      "kod": "H302 + H312 + H332",
+      "ifade": "Yutulduğunda, ciltle temas ettiğinde veya solunduğunda zararlıdır.",
+      "kategori": "Birleşik akut toksisite"
+    },
+    {
+      "kod": "H400",
+      "ifade": "Sucul ortamda çok toksiktir.",
+      "kategori": "Çevresel zararlılık"
+    },
+    {
+      "kod": "H410",
+      "ifade": "Sucul ortamda uzun süre kalıcı, çok toksik etki.",
+      "kategori": "Çevresel zararlılık"
+    },
+    {
+      "kod": "H411",
+      "ifade": "Sucul ortamda uzun süre kalıcı, toksik etki.",
+      "kategori": "Çevresel zararlılık"
+    },
+    {
+      "kod": "H412",
+      "ifade": "Sucul ortamda uzun süre kalıcı, zararlı etki.",
+      "kategori": "Çevresel zararlılık"
+    },
+    {
+      "kod": "H413",
+      "ifade": "Sucul ortamda uzun süre kalıcı, zararlı etki yapabilir.",
+      "kategori": "Çevresel zararlılık"
+    },
+    {
+      "kod": "H420",
+      "ifade": "Atmosferin üst katmanındaki ozon tabakasını tahrip ederek halk sağlığına ve çevreye zarar verir.",
+      "kategori": "Çevresel zararlılık"
+    },
+    {
+      "kod": "EUH001",
+      "ifade": "Kuru haldeyken patlayıcıdır.",
+      "kategori": "İlave zararlılık — fiziksel özellikler"
+    },
+    {
+      "kod": "EUH014",
+      "ifade": "Su ile şiddetli tepkime verir.",
+      "kategori": "İlave zararlılık — fiziksel özellikler"
+    },
+    {
+      "kod": "EUH018",
+      "ifade": "Kullanım sırasında alevlenen / patlayan buhar-hava karışımı oluşturabilir.",
+      "kategori": "İlave zararlılık — fiziksel özellikler"
+    },
+    {
+      "kod": "EUH019",
+      "ifade": "Patlayıcı peroksitler oluşturabilir.",
+      "kategori": "İlave zararlılık — fiziksel özellikler"
+    },
+    {
+      "kod": "EUH044",
+      "ifade": "Kapalı ortamda ısıtıldığında patlama riski var.",
+      "kategori": "İlave zararlılık — fiziksel özellikler"
+    },
+    {
+      "kod": "EUH029",
+      "ifade": "Su ile temasında toksik gaz çıkarır.",
+      "kategori": "İlave zararlılık — sağlığa ilişkin özellikler"
+    },
+    {
+      "kod": "EUH031",
+      "ifade": "Asitlerle temasında toksik gaz çıkarır.",
+      "kategori": "İlave zararlılık — sağlığa ilişkin özellikler"
+    },
+    {
+      "kod": "EUH032",
+      "ifade": "Asitlerle temasında çok toksik gaz çıkarır.",
+      "kategori": "İlave zararlılık — sağlığa ilişkin özellikler"
+    },
+    {
+      "kod": "EUH066",
+      "ifade": "Tekrarlı maruz kalmalarda ciltte kuruluğa ve çatlaklara neden olabilir.",
+      "kategori": "İlave zararlılık — sağlığa ilişkin özellikler"
+    },
+    {
+      "kod": "EUH070",
+      "ifade": "Gözle teması halinde toksiktir.",
+      "kategori": "İlave zararlılık — sağlığa ilişkin özellikler"
+    },
+    {
+      "kod": "EUH071",
+      "ifade": "Solunum yolunda aşınmaya yol açar.",
+      "kategori": "İlave zararlılık — sağlığa ilişkin özellikler"
+    },
+    {
+      "kod": "EUH201",
+      "ifade": "Kurşun içerir. Çocuklar tarafından çiğnenebilecek veya emilebilecek yüzeyler üzerinde kullanılmamalıdır.",
+      "kategori": "Bazı karışımlara ilişkin ilave etiket bilgileri"
+    },
+    {
+      "kod": "EUH201A",
+      "ifade": "Dikkat! Kurşun içerir.",
+      "kategori": "Bazı karışımlara ilişkin ilave etiket bilgileri"
+    },
+    {
+      "kod": "EUH202",
+      "ifade": "Siyanoakrilat. Tehlikelidir. Cildi ve gözleri saniyeler içinde yapıştırır. Çocukların erişiminden uzak tutun.",
+      "kategori": "Bazı karışımlara ilişkin ilave etiket bilgileri"
+    },
+    {
+      "kod": "EUH203",
+      "ifade": "Krom (VI) içerir. Alerjik reaksiyonlara neden olabilir.",
+      "kategori": "Bazı karışımlara ilişkin ilave etiket bilgileri"
+    },
+    {
+      "kod": "EUH204",
+      "ifade": "İzosiyanat içerir. Alerjik reaksiyonlara yol açabilir.",
+      "kategori": "Bazı karışımlara ilişkin ilave etiket bilgileri"
+    },
+    {
+      "kod": "EUH205",
+      "ifade": "Epoksi bileşenleri içerir. Alerjik reaksiyonlara yol açabilir.",
+      "kategori": "Bazı karışımlara ilişkin ilave etiket bilgileri"
+    },
+    {
+      "kod": "EUH206",
+      "ifade": "Dikkat! Diğer ürünlerle birlikte kullanmayın. Tehlikeli gazlar açığa çıkarabilir (klorür).",
+      "kategori": "Bazı karışımlara ilişkin ilave etiket bilgileri"
+    },
+    {
+      "kod": "EUH207",
+      "ifade": "Dikkat! Kadmiyum içerir. Kullanım esnasında tehlikeli dumanlar ortaya çıkar. İmalatçı tarafından sağlanan bilgilere başvurun. Güvenlik talimatlarına uyun.",
+      "kategori": "Bazı karışımlara ilişkin ilave etiket bilgileri"
+    },
+    {
+      "kod": "EUH208",
+      "ifade": "(Hassaslaştırıcı maddenin ismi) içerir. Alerjik reaksiyona yol açabilir.",
+      "kategori": "Bazı karışımlara ilişkin ilave etiket bilgileri"
+    },
+    {
+      "kod": "EUH209",
+      "ifade": "Kullanım esnasında çok alevlenir hale gelebilir.",
+      "kategori": "Bazı karışımlara ilişkin ilave etiket bilgileri"
+    },
+    {
+      "kod": "EUH209A",
+      "ifade": "Kullanım esnasında alevlenir hale gelebilir.",
+      "kategori": "Bazı karışımlara ilişkin ilave etiket bilgileri"
+    },
+    {
+      "kod": "EUH210",
+      "ifade": "Talep halinde güvenlik bilgi formu sağlanabilir.",
+      "kategori": "Bazı karışımlara ilişkin ilave etiket bilgileri"
+    },
+    {
+      "kod": "EUH401",
+      "ifade": "İnsan sağlığına ve çevreye yönelik riskleri önlemek için, kullanma talimatlarına uyun.",
+      "kategori": "Bazı karışımlara ilişkin ilave etiket bilgileri"
+    }
+  ]
+}
