@@ -84,23 +84,30 @@ router.get('/', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
-// Get summary of all allocated materials in a facility
+// Get summary of all allocated materials in a facility (or all facilities if facilityId is 'all')
 router.get('/summary', authMiddleware, async (req: AuthRequest, res) => {
   const { facilityId } = req.query as Record<string, any>;
+  const isAll = !facilityId || String(facilityId).toLowerCase() === 'all';
 
-  if (!facilityId) {
-    return res.status(400).json({ error: 'facilityId is required' });
-  }
-
-  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(String(facilityId))) {
-    return res.status(403).json({ error: 'Access denied' });
+  if (!isAll) {
+    if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities?.includes(String(facilityId))) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
   }
 
   try {
+    const whereClause: any = {};
+    if (!isAll) {
+      whereClause.facilityId = String(facilityId);
+    } else if (!req.user?.isAdmin && !req.user?.isManagement) {
+      whereClause.facilityId = { in: req.user?.facilities || [] };
+    }
+
     const facilityItems = await prisma.facilityHazmatItem.findMany({
-      where: { facilityId: String(facilityId) },
+      where: whereClause,
       include: {
         unit: true,
+        facility: { select: { id: true, name: true } },
         material: {
           include: {
             category: true,
@@ -113,12 +120,13 @@ router.get('/summary', authMiddleware, async (req: AuthRequest, res) => {
               take: 1
             },
             inventory: {
-              where: { facilityId: String(facilityId) },
+              where: !isAll ? { facilityId: String(facilityId) } : undefined,
               include: { location: true }
             }
           }
         }
-      }
+      },
+      orderBy: { createdAt: 'desc' }
     });
 
     res.json({ facilityItems });

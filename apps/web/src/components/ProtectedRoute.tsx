@@ -53,7 +53,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (!hasThermalAccess) {
       return <Navigate to="/portal" replace />;
     }
-  } else if (location.pathname.startsWith('/hazmat')) requiredModule = 'HAZMAT';
+  } else if (location.pathname.startsWith('/hazmat') || location.pathname.startsWith('/inventory')) requiredModule = 'HAZMAT';
   else if (location.pathname.startsWith('/fire-equipment')) requiredModule = 'FIRE_EQUIPMENT';
   else if (location.pathname.startsWith('/build-management')) requiredModule = 'BUILD_MANAGEMENT';
   else if (location.pathname.startsWith('/renovation-report')) requiredModule = 'RENOVATION_REPORT';

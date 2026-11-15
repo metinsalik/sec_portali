@@ -43,6 +43,9 @@ export const ImprovementDetailPage: React.FC = () => {
   // Modallar
   const [showActionModal, setShowActionModal] = useState<boolean>(false);
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
+  const [showDiscoveryModal, setShowDiscoveryModal] = useState<boolean>(false);
+  const [discoveryNotesInput, setDiscoveryNotesInput] = useState<string>('');
+  const [savingDiscovery, setSavingDiscovery] = useState<boolean>(false);
   const [editingHistory, setEditingHistory] = useState<ImprovementRecordHistory | null>(null);
   const [deletingHistory, setDeletingHistory] = useState<ImprovementRecordHistory | null>(null);
 
@@ -123,6 +126,39 @@ export const ImprovementDetailPage: React.FC = () => {
       toast.error('Hata: ' + err.message);
     } finally {
       setUpdatingStatus(false);
+    }
+  };
+
+  const openDiscoveryModal = () => {
+    setDiscoveryNotesInput(record?.discoveryNotes || '');
+    setShowDiscoveryModal(true);
+  };
+
+  const handleSaveDiscoveryNotes = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!record) return;
+    setSavingDiscovery(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/api/operations/improvements/records/${record.id}/discovery-notes`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify({ discoveryNotes: discoveryNotesInput }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Saha keşif notu kaydedilemedi.');
+      }
+      toast.success('Saha keşif notu başarıyla güncellendi.');
+      setShowDiscoveryModal(false);
+      fetchRecordDetail();
+    } catch (err: any) {
+      toast.error('Hata: ' + err.message);
+    } finally {
+      setSavingDiscovery(false);
     }
   };
 
@@ -596,116 +632,89 @@ export const ImprovementDetailPage: React.FC = () => {
       {/* ── SEKME 1: TESPİT & AKSİYON & SÜREÇ ADIMLARI ─────────────────── */}
       {activeTab === 'OVERVIEW' && (
         <div className="space-y-6 animate-in fade-in-50 duration-200">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-          
           {/* ═══════════════════════════════════════════════════════════════════ */}
-          {/* SOL SÜTUN: 📋 TESPİT BÖLÜMÜ VE BİLGİLERİ                          */}
+          {/* 1. TESPİT BÖLÜMÜ VE BİLGİLERİ (YATAY KART)                          */}
           {/* ═══════════════════════════════════════════════════════════════════ */}
-          <div className="space-y-5 flex flex-col h-full">
-            <div className="bg-card text-card-foreground border-2 border-amber-500/30 dark:border-amber-500/20 rounded-2xl shadow-sm overflow-hidden flex flex-col h-full">
-              
-              {/* Tespit Başlık Bandı */}
-              <div className="px-5 py-3.5 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-b border-amber-500/20 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
-                    <Shield className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-black uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                      1. Tespit Bölümü
-                    </h2>
-                    <p className="text-[11px] text-muted-foreground">Saha Bulgusu ve Uygunsuzluk Tanımı</p>
-                  </div>
+          <div className="bg-card text-card-foreground border-2 border-amber-500/30 dark:border-amber-500/20 rounded-2xl shadow-sm overflow-hidden">
+            {/* Tespit Başlık Bandı */}
+            <div className="px-5 py-3.5 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-b border-amber-500/20 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+                  <Shield className="w-4 h-4" />
                 </div>
+                <div>
+                  <h2 className="text-sm font-black uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                    1. Tespit Bölümü
+                  </h2>
+                  <p className="text-[11px] text-muted-foreground">Saha Bulgusu ve Uygunsuzluk Tanımı</p>
+                </div>
+              </div>
 
-                <Badge variant="outline" className="text-xs font-semibold bg-background/80 border-amber-300 dark:border-amber-800">
+              <div className="flex items-center gap-2 flex-wrap">
+                {record.facility && (
+                  <Badge variant="outline" className="text-xs font-semibold bg-background/80 border-border">
+                    <Building2 className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
+                    {record.facility.name}
+                  </Badge>
+                )}
+                <Badge variant="outline" className="text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800">
                   {record.category || 'Kategori Belirtilmemiş'}
                 </Badge>
               </div>
+            </div>
 
-              <div className="p-5 space-y-4 text-xs flex-1 flex flex-col justify-between">
-                
-                {/* Saha Parametreleri: Mahal & Ekipman */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-muted/30 border rounded-xl">
-                  <div className="space-y-1">
-                    <span className="text-muted-foreground flex items-center gap-1 font-medium">
-                      <MapPin className="w-3.5 h-3.5 text-amber-600" /> Mahal:
-                    </span>
-                    <p className="font-bold text-foreground text-sm truncate" title={record.location || '-'}>
-                      {record.location || '-'}
-                    </p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <span className="text-muted-foreground flex items-center gap-1 font-medium">
-                      <Wrench className="w-3.5 h-3.5 text-amber-600" /> Ekipman:
-                    </span>
-                    <p className="font-bold text-foreground text-sm truncate" title={record.equipmentName || record.equipment || '-'}>
-                      {record.equipmentNo ? <span className="tabular-nums text-xs px-1.5 py-0.5 rounded bg-muted mr-1">{record.equipmentNo}</span> : ''}
-                      {record.equipmentName || record.equipment || '-'}
-                    </p>
-                  </div>
+            <div className="p-5 space-y-4 text-xs">
+              {/* Saha Parametreleri: 4'lü Yatay Izgara */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3.5 bg-muted/30 border rounded-xl">
+                <div className="space-y-1">
+                  <span className="text-muted-foreground flex items-center gap-1 font-medium">
+                    <MapPin className="w-3.5 h-3.5 text-amber-600" /> Mahal:
+                  </span>
+                  <p className="font-bold text-foreground text-sm truncate" title={record.location || '-'}>
+                    {record.location || '-'}
+                  </p>
                 </div>
 
-                {/* Tespit Metni (Geniş Vurgulu Kutu) */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                    Tespit Metni / Uygunsuzluk Açıklaması:
-                  </label>
-                  <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl text-foreground text-sm leading-relaxed whitespace-pre-wrap font-sans font-medium">
-                    {record.finding}
-                  </div>
+                <div className="space-y-1">
+                  <span className="text-muted-foreground flex items-center gap-1 font-medium">
+                    <Wrench className="w-3.5 h-3.5 text-amber-600" /> Ekipman:
+                  </span>
+                  <p className="font-bold text-foreground text-sm truncate" title={record.equipmentName || record.equipment || '-'}>
+                    {record.equipmentNo ? <span className="tabular-nums text-xs px-1.5 py-0.5 rounded bg-muted mr-1">{record.equipmentNo}</span> : ''}
+                    {record.equipmentName || record.equipment || '-'}
+                  </p>
                 </div>
 
-                {/* 🔍 Yapılan Saha Keşif Notları (Kalıcı ve Belirgin Bölüm) */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-amber-600" />
-                      Yapılan Saha Keşif Notları:
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowEditModal(true)}
-                      className="text-[11px] text-primary hover:text-primary/80 font-semibold"
-                    >
-                      {record.discoveryNotes ? 'Düzenle' : '+ Keşif Notu Ekle'}
-                    </button>
-                  </div>
-                  {record.discoveryNotes ? (
-                    <div className="p-3.5 bg-amber-500/5 border border-amber-500/25 rounded-xl text-foreground text-xs leading-relaxed whitespace-pre-wrap font-medium">
-                      {record.discoveryNotes}
-                    </div>
-                  ) : (
-                    <div className="p-3 bg-muted/20 border border-dashed rounded-xl text-muted-foreground text-xs flex items-center justify-between">
-                      <span className="italic">Henüz saha keşif notu girilmemiş.</span>
-                      <Button variant="ghost" size="sm" onClick={() => setShowEditModal(true)} className="h-7 text-xs font-medium">
-                        Not Ekle
-                      </Button>
-                    </div>
-                  )}
+                <div className="space-y-1">
+                  <span className="text-muted-foreground flex items-center gap-1 font-medium">
+                    <Calendar className="w-3.5 h-3.5 text-amber-600" /> Tespit Tarihi:
+                  </span>
+                  <p className="tabular-nums font-bold text-foreground text-sm">
+                    {recordDateStr || '-'}
+                  </p>
                 </div>
 
-                {/* Tespit Tarihi & Denetim Bilgisi */}
-                <div className="grid grid-cols-2 gap-3 pt-1">
-                  <div className="p-3 bg-muted/20 border rounded-xl flex items-center justify-between">
-                    <span className="text-muted-foreground font-medium flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-muted-foreground" /> Tespit Tarihi:
-                    </span>
-                    <span className="tabular-nums font-bold text-foreground">
-                      {recordDateStr || '-'}
-                    </span>
-                  </div>
-
-                  <div className="p-3 bg-muted/20 border rounded-xl flex items-center justify-between">
-                    <span className="text-muted-foreground font-medium">Risk Skoru:</span>
-                    <div>{getRiskBadge(record.riskScore)}</div>
-                  </div>
+                <div className="space-y-1">
+                  <span className="text-muted-foreground block font-medium">Risk Skoru:</span>
+                  <div>{getRiskBadge(record.riskScore)}</div>
                 </div>
+              </div>
 
-                {/* Bulgu Fotoğrafları (Maks 3 WebP) */}
-                <div className="space-y-2 pt-2 border-t">
+              {/* Tespit Metni / Uygunsuzluk Açıklaması */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  Tespit Metni / Uygunsuzluk Açıklaması:
+                </label>
+                <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl text-foreground text-sm leading-relaxed whitespace-pre-wrap font-sans font-medium">
+                  {record.finding}
+                </div>
+              </div>
+
+              {/* Bulgu Fotoğrafları & Ekli Belgeler (Yatay Alt Izgara) */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-1">
+                {/* Bulgu Fotoğrafları */}
+                <div className="space-y-2 p-3.5 bg-muted/20 border rounded-xl">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-foreground flex items-center gap-1.5">
                       <Camera className="w-4 h-4 text-blue-500" />
@@ -736,28 +745,28 @@ export const ImprovementDetailPage: React.FC = () => {
                       ))}
                     </div>
                   ) : (
-                    <div className="p-3.5 border border-dashed rounded-xl text-center text-muted-foreground">
+                    <div className="p-3 border border-dashed rounded-lg text-center text-muted-foreground text-xs">
                       Bu bulguya ait fotoğraf bulunmuyor. "Düzenle" butonundan yükleyebilirsiniz.
                     </div>
                   )}
                 </div>
 
-                {/* Ekli Belgeler (PDF) */}
-                {documents.length > 0 && (
-                  <div className="space-y-2 pt-2 border-t">
-                    <span className="font-bold text-foreground flex items-center gap-1.5">
-                      <FileText className="w-4 h-4 text-amber-500" />
-                      Ekli Belgeler ({documents.length}):
-                    </span>
-                    <div className="space-y-1.5">
+                {/* Ekli Belgeler */}
+                <div className="space-y-2 p-3.5 bg-muted/20 border rounded-xl">
+                  <span className="font-bold text-foreground flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-amber-500" />
+                    Ekli Belgeler ({documents.length}):
+                  </span>
+                  {documents.length > 0 ? (
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                       {documents.map((doc, dIdx) => (
                         <div 
                           key={dIdx}
-                          className="p-2.5 bg-muted/30 border rounded-lg flex items-center justify-between hover:bg-muted/50 transition-colors"
+                          className="p-2 bg-background border rounded-lg flex items-center justify-between hover:bg-muted/50 transition-colors"
                         >
                           <div className="flex items-center gap-2 truncate pr-2">
-                            <FileText className="w-4 h-4 text-red-500 shrink-0" />
-                            <span className="font-semibold text-foreground truncate" title={doc.name}>
+                            <FileText className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                            <span className="font-semibold text-foreground truncate text-xs" title={doc.name}>
                               {formatAttachmentName(doc.name)}
                             </span>
                             <span className="text-[10px] text-muted-foreground tabular-nums">({formatBytes(doc.size)})</span>
@@ -784,32 +793,46 @@ export const ImprovementDetailPage: React.FC = () => {
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
-
+                  ) : (
+                    <div className="p-3 border border-dashed rounded-lg text-center text-muted-foreground text-xs">
+                      Ekli doküman bulunmuyor.
+                    </div>
+                  )}
+                </div>
               </div>
+
             </div>
           </div>
 
           {/* ═══════════════════════════════════════════════════════════════════ */}
-          {/* SAĞ SÜTUN: 🚀 AKSİYON BÖLÜMÜ VE BİLGİLERİ                          */}
+          {/* 2. AKSİYON BÖLÜMÜ VE BİLGİLERİ (YATAY KART)                         */}
           {/* ═══════════════════════════════════════════════════════════════════ */}
-          <div className="space-y-5 flex flex-col h-full">
-            <div className="bg-card text-card-foreground border-2 border-primary/30 dark:border-primary/20 rounded-2xl shadow-sm overflow-hidden flex flex-col h-full">
-              
-              {/* Aksiyon Başlık Bandı */}
-              <div className="px-5 py-3.5 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-primary/20 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-primary/15 text-primary flex items-center justify-center font-bold">
-                    <CheckCircle2 className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-black uppercase tracking-wider text-primary">
-                      2. Aksiyon Bölümü
-                    </h2>
-                    <p className="text-[11px] text-muted-foreground">İş Planı, Giderim Durumu ve Kanıtlar</p>
-                  </div>
+          <div className="bg-card text-card-foreground border-2 border-primary/30 dark:border-primary/20 rounded-2xl shadow-sm overflow-hidden">
+            
+            {/* Aksiyon Başlık Bandı */}
+            <div className="px-5 py-3.5 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-primary/20 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-primary/15 text-primary flex items-center justify-center font-bold">
+                  <CheckCircle2 className="w-4 h-4" />
                 </div>
+                <div>
+                  <h2 className="text-sm font-black uppercase tracking-wider text-primary">
+                    2. Aksiyon Bölümü
+                  </h2>
+                  <p className="text-[11px] text-muted-foreground">İş Planı, Saha Keşif Notları ve Giderim Kanıtları</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={openDiscoveryModal}
+                  className="text-xs font-semibold gap-1.5 h-8 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  {record.discoveryNotes ? 'Keşif Notu Düzenle' : '+ Keşif Notu Ekle'}
+                </Button>
 
                 <Button 
                   size="sm" 
@@ -820,140 +843,196 @@ export const ImprovementDetailPage: React.FC = () => {
                   Aksiyon Güncelle
                 </Button>
               </div>
+            </div>
 
-              <div className="p-5 space-y-4 text-xs flex-1 flex flex-col justify-between">
-                
-                {/* Durum, Sorumlu ve Termin Kartı */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-muted/30 border rounded-xl">
-                  <div className="space-y-1">
-                    <span className="text-muted-foreground block font-medium">Güncel Durum:</span>
-                    <div>{getStatusBadge(record.status)}</div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <span className="text-muted-foreground flex items-center gap-1 font-medium">
-                      <User className="w-3.5 h-3.5 text-primary" /> Sorumlusu:
-                    </span>
-                    <p className="font-bold text-foreground text-sm truncate" title={record.assignedTo || '-'}>
-                      {record.assignedTo || <span className="italic text-muted-foreground font-normal">Atanmamış</span>}
-                    </p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <span className="text-muted-foreground flex items-center gap-1 font-medium">
-                      <Clock className="w-3.5 h-3.5 text-primary" /> Termin Tarihi:
-                    </span>
-                    <p className="tabular-nums font-bold text-foreground text-sm">
-                      {dueDateStr || <span className="italic text-muted-foreground font-normal">Termin Yok</span>}
-                    </p>
-                  </div>
+            <div className="p-5 space-y-4 text-xs">
+              
+              {/* Durum, Sorumlu, Termin ve Canlı Süre 4'lü Izgarası */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3.5 bg-muted/30 border rounded-xl">
+                <div className="space-y-1">
+                  <span className="text-muted-foreground block font-medium">Güncel Durum:</span>
+                  <div>{getStatusBadge(record.status)}</div>
                 </div>
 
-                {/* Canlı Termin Geri Sayım Sayacı (Kompakt ve Şık Tasarım) */}
-                {countdown ? (
-                  <div className={`p-3 rounded-xl border transition-all shadow-2xs ${
-                    countdown.isOverdue 
-                      ? 'bg-red-500/10 border-red-300 dark:border-red-900/60 text-red-700 dark:text-red-400' 
-                      : countdown.days <= 7 
-                        ? 'bg-amber-500/10 border-amber-300 dark:border-amber-900/60 text-amber-700 dark:text-amber-400' 
-                        : 'bg-emerald-500/10 border-emerald-300 dark:border-emerald-900/60 text-emerald-700 dark:text-emerald-400'
-                  }`}>
-                    <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
-                      <div className="flex items-center gap-1.5">
-                        <span className="relative flex h-2 w-2">
-                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                            countdown.isOverdue ? 'bg-red-500' : 'bg-emerald-500'
-                          }`} />
-                          <span className={`relative inline-flex rounded-full h-2 w-2 ${
-                            countdown.isOverdue ? 'bg-red-600' : 'bg-emerald-600'
-                          }`} />
-                        </span>
-                        <span className="text-[11px] font-black uppercase tracking-wider">
-                          {countdown.isOverdue ? 'Termin Tarihi Aşıldı' : 'Kalan Canlı Süre'}
-                        </span>
-                      </div>
-                      <span className="text-[10px] tabular-nums px-2 py-0.5 rounded-full bg-background/80 border">
-                        Hedef: {dueDateStr}
-                      </span>
-                    </div>
+                <div className="space-y-1">
+                  <span className="text-muted-foreground flex items-center gap-1 font-medium">
+                    <User className="w-3.5 h-3.5 text-primary" /> Sorumlusu:
+                  </span>
+                  <p className="font-bold text-foreground text-sm truncate" title={record.assignedTo || '-'}>
+                    {record.assignedTo || <span className="italic text-muted-foreground font-normal">Atanmamış</span>}
+                  </p>
+                </div>
 
-                    <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-background/90 border">
-                      <div className="flex items-center gap-1.5 tabular-nums text-xs font-black text-foreground">
-                        <span className="px-2 py-0.5 rounded bg-primary/10 text-primary">{countdown.days} Gün</span>
-                        <span>:</span>
-                        <span className="px-2 py-0.5 rounded bg-muted">{String(countdown.hours).padStart(2, '0')} Saat</span>
-                        <span>:</span>
-                        <span className="px-2 py-0.5 rounded bg-muted">{String(countdown.minutes).padStart(2, '0')} Dk</span>
-                        <span>:</span>
-                        <span className="px-2 py-0.5 rounded bg-muted animate-pulse">{String(countdown.seconds).padStart(2, '0')} Sn</span>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground font-medium hidden sm:inline">
+                <div className="space-y-1">
+                  <span className="text-muted-foreground flex items-center gap-1 font-medium">
+                    <Clock className="w-3.5 h-3.5 text-primary" /> Termin Tarihi:
+                  </span>
+                  <p className="tabular-nums font-bold text-foreground text-sm">
+                    {dueDateStr || <span className="italic text-muted-foreground font-normal">Termin Yok</span>}
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-muted-foreground block font-medium">Kalan Süre / İlerleme:</span>
+                  <div className="flex items-center gap-2">
+                    {record.status === 'Tamamlandı' ? (
+                      <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-300 font-semibold text-xs">
+                        Tamamlandı (%100)
+                      </Badge>
+                    ) : countdown ? (
+                      <Badge className={countdown.isOverdue ? 'bg-red-500/15 text-red-700 border-red-300 font-bold' : 'bg-emerald-500/15 text-emerald-700 border-emerald-300 font-bold'}>
                         {countdown.isOverdue ? `⚠️ ${countdown.days} gün gecikme` : `⏳ Son ${countdown.days} gün`}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground italic font-normal">Süreç Devam Ediyor</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Canlı Termin Geri Sayım Sayacı (Eğer aktifse) */}
+              {countdown && (
+                <div className={`p-3 rounded-xl border transition-all shadow-2xs ${
+                  countdown.isOverdue 
+                    ? 'bg-red-500/10 border-red-300 dark:border-red-900/60 text-red-700 dark:text-red-400' 
+                    : countdown.days <= 7 
+                      ? 'bg-amber-500/10 border-amber-300 dark:border-amber-900/60 text-amber-700 dark:text-amber-400' 
+                      : 'bg-emerald-500/10 border-emerald-300 dark:border-emerald-900/60 text-emerald-700 dark:text-emerald-400'
+                }`}>
+                  <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                      <span className="relative flex h-2 w-2">
+                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                          countdown.isOverdue ? 'bg-red-500' : 'bg-emerald-500'
+                        }`} />
+                        <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                          countdown.isOverdue ? 'bg-red-600' : 'bg-emerald-600'
+                        }`} />
+                      </span>
+                      <span className="text-[11px] font-black uppercase tracking-wider">
+                        {countdown.isOverdue ? 'Termin Tarihi Aşıldı' : 'Kalan Canlı Süre'}
                       </span>
                     </div>
-                  </div>
-                ) : record.status === 'Tamamlandı' ? (
-                  <div className="p-2.5 bg-emerald-500/10 border border-emerald-300 dark:border-emerald-800 rounded-xl flex items-center gap-2 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Bu iyileştirme kaydı hedeflenen termin süresi içerisinde başarıyla tamamlanmıştır.</span>
-                  </div>
-                ) : null}
-
-                {/* Planlanan İş Planı */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-foreground block">
-                    Planlanan Faaliyet (İş Planı):
-                  </label>
-                  <div className="p-3.5 bg-muted/30 border rounded-xl text-foreground text-xs leading-relaxed whitespace-pre-wrap">
-                    {record.actionPlan || <span className="text-muted-foreground italic">Henüz bir iş planı belirtilmemiş.</span>}
-                  </div>
-                </div>
-
-                {/* Güncel Aksiyon Açıklaması */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-primary block">
-                    Güncel Durum & Alınan Aksiyon Açıklaması:
-                  </label>
-                  <div className="p-4 bg-primary/10 border border-primary/25 rounded-xl text-foreground text-sm leading-relaxed whitespace-pre-wrap font-medium">
-                    {record.currentNote || <span className="text-muted-foreground italic font-normal">Henüz sahadan aksiyon notu girilmemiş. "Aksiyon Güncelle" butonundan not ekleyebilirsiniz.</span>}
-                  </div>
-                </div>
-
-                {/* 🛠️ Teknik Hizmetler / Teknik Müdür Açıklaması (Kalıcı ve Belirgin Bölüm) */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                      <Wrench className="w-3.5 h-3.5 text-blue-600" />
-                      Teknik Hizmetler Açıklaması (Teknik Müdür Değerlendirmesi):
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowEditModal(true)}
-                      className="text-[11px] text-primary hover:text-primary/80 font-semibold"
-                    >
-                      {record.technicalManagerDesc ? 'Düzenle' : '+ Değerlendirme Ekle'}
-                    </button>
-                  </div>
-                  {record.technicalManagerDesc ? (
-                    <div className="p-3.5 bg-blue-500/5 border border-blue-500/25 rounded-xl text-foreground text-xs leading-relaxed whitespace-pre-wrap font-medium">
-                      {record.technicalManagerDesc}
-                    </div>
-                  ) : (
-                    <div className="p-3 bg-muted/20 border border-dashed rounded-xl text-muted-foreground text-xs flex items-center justify-between">
-                      <span className="italic">Henüz teknik hizmetler değerlendirmesi girilmemiş.</span>
-                      <Button variant="ghost" size="sm" onClick={() => setShowEditModal(true)} className="h-7 text-xs font-medium">
-                        Açıklama Ekle
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                {/* En Son Aksiyon Kanıt Fotoğrafları */}
-                {allEvidencePhotos.length > 0 && (
-                  <div className="space-y-2 pt-2 border-t">
-                    <span className="font-bold text-foreground block">
-                      Aksiyon Kanıt Fotoğrafları ({allEvidencePhotos.length}):
+                    <span className="text-[10px] tabular-nums px-2 py-0.5 rounded-full bg-background/80 border">
+                      Hedef Termin: {dueDateStr}
                     </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-background/90 border">
+                    <div className="flex items-center gap-1.5 tabular-nums text-xs font-black text-foreground">
+                      <span className="px-2 py-0.5 rounded bg-primary/10 text-primary">{countdown.days} Gün</span>
+                      <span>:</span>
+                      <span className="px-2 py-0.5 rounded bg-muted">{String(countdown.hours).padStart(2, '0')} Saat</span>
+                      <span>:</span>
+                      <span className="px-2 py-0.5 rounded bg-muted">{String(countdown.minutes).padStart(2, '0')} Dk</span>
+                      <span>:</span>
+                      <span className="px-2 py-0.5 rounded bg-muted animate-pulse">{String(countdown.seconds).padStart(2, '0')} Sn</span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground font-medium hidden sm:inline">
+                      {countdown.isOverdue ? `⚠️ ${countdown.days} gün gecikme var` : `⏳ Kalan net çalışma süresi`}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* 2 Sütunlu Aksiyon & Keşif İçerik Izgarası */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                
+                {/* SOL SÜTUN: İş Planı & Güncel Aksiyon Açıklaması */}
+                <div className="space-y-4">
+                  {/* Planlanan İş Planı */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-foreground block">
+                      Planlanan Faaliyet (İş Planı):
+                    </label>
+                    <div className="p-3.5 bg-muted/30 border rounded-xl text-foreground text-xs leading-relaxed whitespace-pre-wrap min-h-[72px]">
+                      {record.actionPlan || <span className="text-muted-foreground italic">Henüz bir iş planı belirtilmemiş.</span>}
+                    </div>
+                  </div>
+
+                  {/* Güncel Aksiyon Açıklaması */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-primary block">
+                      Güncel Durum & Alınan Aksiyon Açıklaması:
+                    </label>
+                    <div className="p-3.5 bg-primary/10 border border-primary/25 rounded-xl text-foreground text-sm leading-relaxed whitespace-pre-wrap font-medium min-h-[88px]">
+                      {record.currentNote || <span className="text-muted-foreground italic font-normal text-xs">Henüz sahadan aksiyon notu girilmemiş. "Aksiyon Güncelle" butonundan not ekleyebilirsiniz.</span>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* SAĞ SÜTUN: Yapılan Saha Keşif Notları & Teknik Müdür Değerlendirmesi */}
+                <div className="space-y-4">
+                  {/* 🔍 Yapılan Saha Keşif Notları (Aksiyon Bölümüne Taşındı) */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-amber-600" />
+                        Yapılan Saha Keşif Notları:
+                      </label>
+                      <button
+                        type="button"
+                        onClick={openDiscoveryModal}
+                        className="text-[11px] text-amber-700 dark:text-amber-400 hover:underline font-bold flex items-center gap-1"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        {record.discoveryNotes ? 'Düzenle' : '+ Keşif Notu Ekle'}
+                      </button>
+                    </div>
+                    {record.discoveryNotes ? (
+                      <div className="p-3.5 bg-amber-500/5 border border-amber-500/25 rounded-xl text-foreground text-xs leading-relaxed whitespace-pre-wrap font-medium min-h-[72px]">
+                        {record.discoveryNotes}
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-muted/20 border border-dashed rounded-xl text-muted-foreground text-xs flex items-center justify-between min-h-[72px]">
+                        <span className="italic">Henüz saha keşif notu girilmemiş.</span>
+                        <Button variant="ghost" size="sm" onClick={openDiscoveryModal} className="h-7 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30">
+                          + Not Ekle
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 🛠️ Teknik Hizmetler Açıklaması (Teknik Müdür Değerlendirmesi) */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <Wrench className="w-3.5 h-3.5 text-blue-600" />
+                        Teknik Hizmetler Açıklaması (Teknik Müdür Değerlendirmesi):
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowEditModal(true)}
+                        className="text-[11px] text-primary hover:text-primary/80 font-semibold"
+                      >
+                        {record.technicalManagerDesc ? 'Düzenle' : '+ Değerlendirme Ekle'}
+                      </button>
+                    </div>
+                    {record.technicalManagerDesc ? (
+                      <div className="p-3.5 bg-blue-500/5 border border-blue-500/25 rounded-xl text-foreground text-xs leading-relaxed whitespace-pre-wrap font-medium min-h-[88px]">
+                        {record.technicalManagerDesc}
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-muted/20 border border-dashed rounded-xl text-muted-foreground text-xs flex items-center justify-between min-h-[88px]">
+                        <span className="italic">Henüz teknik hizmetler değerlendirmesi girilmemiş.</span>
+                        <Button variant="ghost" size="sm" onClick={() => setShowEditModal(true)} className="h-7 text-xs font-medium">
+                          Açıklama Ekle
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Alt Izgara: Aksiyon Kanıt Fotoğrafları & Bütçe */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2 border-t">
+                {/* Aksiyon Kanıt Fotoğrafları */}
+                <div className="space-y-2 p-3.5 bg-muted/20 border rounded-xl">
+                  <span className="font-bold text-foreground block">
+                    Aksiyon Kanıt Fotoğrafları ({allEvidencePhotos.length}):
+                  </span>
+                  {allEvidencePhotos.length > 0 ? (
                     <div className="grid grid-cols-3 gap-2.5">
                       {allEvidencePhotos.slice(0, 3).map((item, pIdx) => (
                         <div
@@ -972,39 +1051,52 @@ export const ImprovementDetailPage: React.FC = () => {
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="p-3 border border-dashed rounded-lg text-center text-muted-foreground text-xs">
+                      Aksiyon adımı kanıt fotoğrafı eklenmemiş. "Aksiyon Güncelle" butonundan ekleyebilirsiniz.
+                    </div>
+                  )}
+                </div>
 
                 {/* Bütçe Mini Özet */}
-                {(estBudget !== null || actBudget !== null) && (
-                  <div className="p-3 bg-muted/20 border rounded-xl flex items-center justify-between pt-2">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5 text-muted-foreground text-[11px]">
-                        <span>Tahmini / Gerçekleşen</span>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 tabular-nums">
-                          {record.currency || 'TRY'}
-                        </Badge>
+                <div className="p-3.5 bg-muted/20 border rounded-xl flex flex-col justify-between">
+                  <span className="font-bold text-foreground block mb-1">
+                    Bütçe ve Maliyet Durumu:
+                  </span>
+                  {(estBudget !== null || actBudget !== null) ? (
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5 text-muted-foreground text-[11px]">
+                          <span>Tahmini / Gerçekleşen</span>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 tabular-nums">
+                            {record.currency || 'TRY'}
+                          </Badge>
+                        </div>
+                        <span className="tabular-nums font-bold text-foreground text-sm">
+                          {formatCurrency(estBudget, record.currency)} / {formatCurrency(actBudget, record.currency)}
+                        </span>
                       </div>
-                      <span className="tabular-nums font-bold text-foreground">
-                        {formatCurrency(estBudget, record.currency)} / {formatCurrency(actBudget, record.currency)}
-                      </span>
+                      {budgetVariance !== null && (
+                        <Badge className={budgetVariance > 0 ? 'bg-red-500/15 text-red-700 border-red-300' : 'bg-emerald-500/15 text-emerald-700 border-emerald-300'}>
+                          {budgetVariance > 0 ? `+${formatCurrency(budgetVariance, record.currency)} Aşım` : `${formatCurrency(Math.abs(budgetVariance), record.currency)} Tasarruf`}
+                        </Badge>
+                      )}
                     </div>
-                    {budgetVariance !== null && (
-                      <Badge className={budgetVariance > 0 ? 'bg-red-500/15 text-red-700 border-red-300' : 'bg-emerald-500/15 text-emerald-700 border-emerald-300'}>
-                        {budgetVariance > 0 ? `+${formatCurrency(budgetVariance, record.currency)} Aşım` : `${formatCurrency(Math.abs(budgetVariance), record.currency)} Tasarruf`}
-                      </Badge>
-                    )}
-                  </div>
-                )}
-
+                  ) : (
+                    <div className="p-3 border border-dashed rounded-lg text-center text-muted-foreground text-xs">
+                      Bütçe tahmini veya gerçekleşen maliyet girilmemiş.
+                    </div>
+                  )}
+                </div>
               </div>
+
             </div>
           </div>
 
           {/* ═══════════════════════════════════════════════════════════════════ */}
           {/* 3. SÜREÇ & AKSİYON ADIMLARI (STEP-BY-STEP MİLESTONE TRACKER)       */}
           {/* ═══════════════════════════════════════════════════════════════════ */}
-          <div className="col-span-1 lg:col-span-2 bg-card text-card-foreground border-2 border-indigo-500/25 dark:border-indigo-500/20 rounded-2xl shadow-sm overflow-hidden">
+          <div className="bg-card text-card-foreground border-2 border-indigo-500/25 dark:border-indigo-500/20 rounded-2xl shadow-sm overflow-hidden">
             
             {/* 3. Bölüm Başlık Bandı */}
             <div className="px-5 py-4 bg-gradient-to-r from-indigo-500/10 via-indigo-500/5 to-transparent border-b border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1405,7 +1497,6 @@ export const ImprovementDetailPage: React.FC = () => {
           </div>
 
         </div>
-      </div>
       )}
 
       {/* ── SEKME 2: İŞLEM GEÇMİŞİ & DENETİM İZİ (LOGLAMA) ────────────────── */}
@@ -1436,17 +1527,24 @@ export const ImprovementDetailPage: React.FC = () => {
                   {/* Çember İşaretçi */}
                   <div className="absolute -left-8 top-1 w-4 h-4 rounded-full border-2 border-background bg-primary ring-4 ring-primary/15 transition-transform group-hover:scale-125" />
                   
-                  <div className="p-4 bg-muted/20 border border-border/70 rounded-xl space-y-2 hover:bg-muted/30 transition-colors shadow-2xs">
+                  <div className="p-4 bg-muted/20 border border-border/70 rounded-xl space-y-2.5 hover:bg-muted/30 transition-colors shadow-2xs">
                     <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs">
                           {(h.changedByName || h.changedBy || 'U').charAt(0).toUpperCase()}
                         </div>
-                        <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-bold text-foreground text-sm">
                             {h.changedByName || h.changedBy || 'Yetkili Kullanıcı'}
                           </span>
-                          <span className="text-muted-foreground text-xs ml-1.5">aksiyon kaydı oluşturdu</span>
+                          <Badge variant="outline" className="text-[11px] font-semibold bg-primary/10 text-primary border-primary/20">
+                            {h.stepTitle || (
+                              h.stepType === 'DUZENLEME' ? 'Bulgu ve Aksiyon Güncellendi' :
+                              h.stepType === 'DURUM_DEGISIKLIGI' ? 'Durum Değişikliği' :
+                              h.stepType === 'KESIF_NOTU' ? 'Saha Keşif Notu Kaydı' :
+                              'Aksiyon Adımı'
+                            )}
+                          </Badge>
                         </div>
                       </div>
 
@@ -1474,19 +1572,44 @@ export const ImprovementDetailPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Durum Değişimi Varsa */}
-                    {h.newStatus && h.previousStatus && h.newStatus !== h.previousStatus && (
-                      <div className="inline-flex items-center gap-2 text-xs bg-background p-1.5 px-3 rounded-lg border font-medium">
-                        <span className="text-muted-foreground">Eski Durum: <strong className="text-foreground">{h.previousStatus}</strong></span>
-                        <span className="text-primary font-bold">→</span>
-                        <span className="text-emerald-600 font-bold">Yeni Durum: {h.newStatus}</span>
+                    {/* Yapılan İşlemler / Alan Değişiklikleri Detay Rozetleri */}
+                    {h.stepFields?.changes && Array.isArray(h.stepFields.changes) && h.stepFields.changes.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        {h.stepFields.changes.map((changeText: string, cIdx: number) => (
+                          <span 
+                            key={cIdx} 
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium bg-background text-foreground border border-border shadow-2xs"
+                          >
+                            <Check className="w-3 h-3 text-emerald-600 shrink-0" />
+                            {changeText}
+                          </span>
+                        ))}
                       </div>
                     )}
 
-                    {/* Aksiyon Notu */}
-                    <div className="p-3 bg-background/80 rounded-lg border border-border/50 text-xs text-foreground whitespace-pre-wrap leading-relaxed">
-                      {h.newNote}
+                    {/* Durum Değişimi Varsa */}
+                    <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                      {h.newStatus && h.previousStatus && h.newStatus !== h.previousStatus && (
+                        <div className="inline-flex items-center gap-2 text-xs bg-background p-1.5 px-3 rounded-lg border font-medium">
+                          <span className="text-muted-foreground">Eski Durum: <strong className="text-foreground">{h.previousStatus}</strong></span>
+                          <span className="text-primary font-bold">→</span>
+                          <span className="text-emerald-600 font-bold">Yeni Durum: {h.newStatus}</span>
+                        </div>
+                      )}
+
+                      {h.progress !== null && h.progress !== undefined && (
+                        <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 tabular-nums">
+                          İlerleme: %{h.progress} {h.progressAdded ? `(+%${h.progressAdded})` : ''}
+                        </span>
+                      )}
                     </div>
+
+                    {/* Aksiyon Notu */}
+                    {h.newNote && (
+                      <div className="p-3 bg-background/90 rounded-lg border border-border/50 text-xs text-foreground whitespace-pre-wrap leading-relaxed font-sans">
+                        {h.newNote}
+                      </div>
+                    )}
 
                     {/* Bu Adımda Yüklenen Kanıt Fotoğrafları */}
                     {evPhotos.length > 0 && (
@@ -1550,17 +1673,17 @@ export const ImprovementDetailPage: React.FC = () => {
             <div className="relative space-y-2 group">
               <div className="absolute -left-8 top-1 w-4 h-4 rounded-full border-2 border-background bg-slate-400 ring-4 ring-slate-400/15" />
               
-              <div className="p-4 bg-muted/10 border border-border/50 rounded-xl space-y-1.5 text-xs">
+              <div className="p-4 bg-muted/10 border border-border/50 rounded-xl space-y-2 text-xs">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold flex items-center justify-center text-xs">
-                      {(record.createdBy || 'S').charAt(0).toUpperCase()}
+                      {(record.createdByName || record.createdBy || 'S').charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <span className="font-bold text-foreground text-sm">
-                        {record.createdBy || 'Sistem / İçe Aktarım'}
+                        {record.createdByName || record.createdBy || 'Sistem / İçe Aktarım'}
                       </span>
-                      <span className="text-muted-foreground text-xs ml-1.5">ilk tespiti sisteme kaydetti</span>
+                      <span className="text-muted-foreground text-xs ml-1.5 font-medium">ilk tespiti sisteme kaydetti</span>
                     </div>
                   </div>
 
@@ -1569,7 +1692,15 @@ export const ImprovementDetailPage: React.FC = () => {
                   </span>
                 </div>
 
-                <p className="text-muted-foreground italic pt-1">
+                <div className="p-3 bg-background rounded-lg border border-border/50 text-xs text-foreground">
+                  <p className="font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-amber-500" />
+                    İlk Kaydedilen Bulgu / Uygunsuzluk:
+                  </p>
+                  <p className="whitespace-pre-wrap leading-relaxed">{record.finding}</p>
+                </div>
+
+                <p className="text-muted-foreground italic pt-0.5">
                   Kaynak Dosya: <strong>{record.sourceFileName || 'Excel İçe Aktarımı'}</strong> ({getSheetLabel(record.sheetType)})
                 </p>
               </div>
@@ -1781,6 +1912,62 @@ export const ImprovementDetailPage: React.FC = () => {
             toast.success('Bulgu ve ekler başarıyla güncellendi.');
           }}
         />
+      )}
+
+      {/* Hızlı Saha Keşif Notu Modalı */}
+      {showDiscoveryModal && record && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-background border rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in-50 zoom-in-95 duration-150">
+            <div className="px-5 py-4 border-b flex items-center justify-between bg-muted/30">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-amber-600" />
+                <h3 className="font-bold text-foreground text-sm">Saha Keşif Notu Girişi</h3>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowDiscoveryModal(false)} 
+                className="text-muted-foreground hover:text-foreground text-sm font-bold p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveDiscoveryNotes} className="p-5 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-foreground block">
+                  Yapılan Saha Keşif Notları ve İnceleme Bulguları:
+                </label>
+                <textarea
+                  rows={5}
+                  value={discoveryNotesInput}
+                  onChange={(e) => setDiscoveryNotesInput(e.target.value)}
+                  placeholder="Sahada yapılan keşif, teknik tespitler, ölçümler veya inceleme notlarını giriniz..."
+                  className="w-full p-3 rounded-xl border bg-background text-foreground text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary leading-relaxed"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowDiscoveryModal(false)}
+                  disabled={savingDiscovery}
+                >
+                  Vazgeç
+                </Button>
+                <Button 
+                  type="submit" 
+                  size="sm" 
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                  disabled={savingDiscovery}
+                >
+                  {savingDiscovery ? 'Kaydediliyor...' : 'Keşif Notunu Kaydet'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {editingHistory && record && (

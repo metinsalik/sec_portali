@@ -1,11 +1,151 @@
 import { Router, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import sharp from 'sharp';
 import { authMiddleware, AuthRequest } from '../../middleware/auth';
 
 const router = Router();
 const prisma = new PrismaClient();
 
+const uploadMemory = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 35 * 1024 * 1024, // 35MB max
+  }
+});
+
+function sanitizeFolderName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ş/g, 's')
+    .replace(/ı/g, 'i')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c')
+    .replace(/[^a-z0-9_-]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
 router.use(authMiddleware);
+
+// File Upload endpoint for Hazmat Incidents (Photos & Documents)
+router.post('/upload', uploadMemory.array('files', 10), async (req: AuthRequest, res: Response) => {
+  try {
+    const rawFiles = req.files as Express.Multer.File[];
+    if (!rawFiles || rawFiles.length === 0) {
+      return res.status(400).json({ success: false, message: 'Yüklenecek dosya seçilmedi.' });
+    }
+
+    const { facilityId, facilityName } = req.query as Record<string, string>;
+    let folderName = 'general';
+
+    if (facilityName && typeof facilityName === 'string' && facilityName.trim() !== '') {
+      folderName = sanitizeFolderName(facilityName);
+    } else if (facilityId && facilityId !== 'ALL' && facilityId !== 'all') {
+      const fac = await prisma.facility.findUnique({
+        where: { id: String(facilityId) },
+        select: { name: true, shortName: true }
+      });
+      if (fac) {
+        folderName = sanitizeFolderName(fac.shortName || fac.name || String(facilityId));
+      } else {
+        folderName = sanitizeFolderName(String(facilityId));
+      }
+    }
+
+    const targetDir = path.join(process.cwd(), 'uploads', 'hazmat', 'incidents', folderName);
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+
+    const uploadedFiles: Array<{
+      name: string;
+      url: string;
+      type: string;
+      size: number;
+      originalSize: number;
+      uploadedAt: string;
+    }> = [];
+
+    for (const file of rawFiles) {
+      let originalName = file.originalname;
+      try {
+        originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+      } catch {
+        originalName = file.originalname;
+      }
+
+      const isImage = file.mimetype.startsWith('image/') || /\.(jpg|jpeg|png|webp|heic|heif|bmp|tiff)$/i.test(originalName);
+      const isPdf = file.mimetype === 'application/pdf' || /\.pdf$/i.test(originalName);
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+
+      if (isImage) {
+        const targetFilename = `hzm-${uniqueSuffix}.webp`;
+        const destPath = path.join(targetDir, targetFilename);
+
+        try {
+          const processedBuffer = await sharp(file.buffer)
+            .rotate()
+            .resize(1920, 1920, { fit: 'inside', withoutEnlargement: true })
+            .webp({ quality: 82 })
+            .toBuffer();
+
+          await fs.promises.writeFile(destPath, processedBuffer);
+
+          uploadedFiles.push({
+            name: originalName,
+            url: `/uploads/hazmat/incidents/${folderName}/${targetFilename}`,
+            type: 'image/webp',
+            size: processedBuffer.length,
+            originalSize: file.size,
+            uploadedAt: new Date().toISOString()
+          });
+        } catch {
+          const ext = path.extname(originalName) || '.webp';
+          const fallbackFilename = `hzm-${uniqueSuffix}${ext}`;
+          const fallbackPath = path.join(targetDir, fallbackFilename);
+          await fs.promises.writeFile(fallbackPath, file.buffer);
+
+          uploadedFiles.push({
+            name: originalName,
+            url: `/uploads/hazmat/incidents/${folderName}/${fallbackFilename}`,
+            type: file.mimetype,
+            size: file.size,
+            originalSize: file.size,
+            uploadedAt: new Date().toISOString()
+          });
+        }
+      } else {
+        const ext = path.extname(originalName) || (isPdf ? '.pdf' : '.bin');
+        const docFilename = `hzm-doc-${uniqueSuffix}${ext}`;
+        const destPath = path.join(targetDir, docFilename);
+
+        await fs.promises.writeFile(destPath, file.buffer);
+
+        uploadedFiles.push({
+          name: originalName,
+          url: `/uploads/hazmat/incidents/${folderName}/${docFilename}`,
+          type: file.mimetype || (isPdf ? 'application/pdf' : 'application/octet-stream'),
+          size: file.size,
+          originalSize: file.size,
+          uploadedAt: new Date().toISOString()
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      files: uploadedFiles,
+    });
+  } catch (error: any) {
+    console.error('Error uploading hazmat incident files:', error);
+    res.status(500).json({ success: false, message: error.message || 'Dosya yükleme başarısız oldu.' });
+  }
+});
 
 const INCIDENT_INCLUDE = {
   facility: { select: { name: true, logoUrl: true, commercialTitle: true } },
@@ -13,6 +153,7 @@ const INCIDENT_INCLUDE = {
   materials: true,
   category: true,
   incidentType: true,
+  rootCauseDef: true,
   location: true,
   supportUnit: true,
   emergencyCode: true,
@@ -95,13 +236,14 @@ router.post('/', async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
     const {
-      facilityId, categoryId, incidentTypeId, rootCause, locationId, departmentId,
+      facilityId, categoryId, incidentTypeId, rootCause, rootCauseId, locationId, departmentId,
       incidentDate, interventionRequired, interventionTime, controlTime,
       supportReceived, supportUnitId, announcementMade, emergencyCodeId,
       serviceInterrupted, interruptionDuration,
       evacuatedStaffCount, evacuatedPatientCount, injuredCount, deceasedCount,
       incidentMode, causeDetail, detectedEffect, observations, actionsTaken, resultEvaluation,
-      kitUsed, spillKitId, materialIds
+      kitUsed, spillKitId, materialIds,
+      photos, documents, actionStatus, actionPlan, actionDate, actionResponsible, actionResult
     } = req.body;
 
     if (!facilityId) {
@@ -129,6 +271,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         categoryId: categoryId || null,
         incidentTypeId: incidentTypeId || null,
         rootCause: rootCause || '',
+        rootCauseId: rootCauseId || null,
         locationId: resolvedLocationId,
         incidentDate: new Date(incidentDate),
         interventionRequired: interventionRequired === true || interventionRequired === 'true',
@@ -152,6 +295,13 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         resultEvaluation: resultEvaluation || '',
         kitUsed: isKitUsed,
         spillKitId: spillKitId || null,
+        photos: Array.isArray(photos) ? photos : [],
+        documents: Array.isArray(documents) ? documents : [],
+        actionStatus: actionStatus || 'Aksiyon Alınmadı',
+        actionPlan: actionPlan || null,
+        actionDate: actionDate ? new Date(actionDate) : null,
+        actionResponsible: actionResponsible || null,
+        actionResult: actionResult || null,
         createdBy: user.username,
         materials: {
           connect: Array.isArray(materialIds) ? materialIds.map((id: string) => ({ id })) : []
@@ -200,13 +350,14 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     const isAdmin = isUserAdmin(user);
     
     const {
-      categoryId, incidentTypeId, rootCause, locationId, departmentId,
+      categoryId, incidentTypeId, rootCause, rootCauseId, locationId, departmentId,
       incidentDate, interventionRequired, interventionTime, controlTime,
       supportReceived, supportUnitId, announcementMade, emergencyCodeId,
       serviceInterrupted, interruptionDuration,
       evacuatedStaffCount, evacuatedPatientCount, injuredCount, deceasedCount,
       incidentMode, causeDetail, detectedEffect, observations, actionsTaken, resultEvaluation,
-      kitUsed, spillKitId, materialIds
+      kitUsed, spillKitId, materialIds,
+      photos, documents, actionStatus, actionPlan, actionDate, actionResponsible, actionResult
     } = req.body;
 
     const existing = await prisma.hazmatIncident.findUnique({ where: { id } });
@@ -228,6 +379,7 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
         categoryId: categoryId !== undefined ? (categoryId || null) : undefined,
         incidentTypeId: incidentTypeId !== undefined ? (incidentTypeId || null) : undefined,
         rootCause: rootCause !== undefined ? rootCause : undefined,
+        rootCauseId: rootCauseId !== undefined ? (rootCauseId || null) : undefined,
         locationId: resolvedLocationId,
         incidentDate: incidentDate ? new Date(incidentDate) : undefined,
         interventionRequired: interventionRequired === true || interventionRequired === 'true',
@@ -251,6 +403,13 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
         resultEvaluation: resultEvaluation !== undefined ? (resultEvaluation || '') : undefined,
         kitUsed: isKitUsed,
         spillKitId: spillKitId || null,
+        photos: photos !== undefined ? (Array.isArray(photos) ? photos : []) : undefined,
+        documents: documents !== undefined ? (Array.isArray(documents) ? documents : []) : undefined,
+        actionStatus: actionStatus !== undefined ? actionStatus : undefined,
+        actionPlan: actionPlan !== undefined ? actionPlan : undefined,
+        actionDate: actionDate !== undefined ? (actionDate ? new Date(actionDate) : null) : undefined,
+        actionResponsible: actionResponsible !== undefined ? actionResponsible : undefined,
+        actionResult: actionResult !== undefined ? actionResult : undefined,
         materials: Array.isArray(materialIds)
           ? { set: materialIds.map((mid: string) => ({ id: mid })) }
           : undefined,

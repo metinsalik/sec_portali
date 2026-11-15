@@ -1,17 +1,20 @@
-import { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { 
   Plus, Search, ShieldAlert, 
   Calendar, MapPin, Clock, Loader2,
   MoreVertical, Edit, Trash2, Eye,
   Skull, HeartPulse, LayoutGrid, List,
-  FileText, CheckCircle2, ChevronRight, XCircle, Info
+  FileText, CheckCircle2, ChevronRight, XCircle, Info,
+  PieChart as PieChartIcon
 } from 'lucide-react';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { 
@@ -19,31 +22,44 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from '@/components/ui/select';
-import HazmatIncidentFormPage from './HazmatIncidentFormPage';
+import { toast } from 'sonner';
 import HazmatIncidentReportPage from './HazmatIncidentReportPage';
 
-const HazmatIncidentsPage = () => {
+const PIE_COLORS = [
+  '#6366f1', // Indigo
+  '#ef4444', // Red
+  '#f59e0b', // Amber
+  '#10b981', // Emerald
+  '#8b5cf6', // Purple
+  '#06b6d4', // Cyan
+  '#ec4899', // Pink
+  '#3b82f6', // Blue
+  '#84cc16', // Lime
+  '#f97316', // Orange
+  '#14b8a6', // Teal
+  '#a855f7', // Violet
+];
+
+export default function HazmatIncidentsPage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   
   // UI State
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isViewOpen, setIsViewOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
-  const [editingIncident, setEditingIncident] = useState<any>(null);
   const [viewingIncident, setViewingIncident] = useState<any>(null);
 
   // Filter State
-  const [selectedFacility, setSelectedFacility] = useState<string>('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [departmentFilter, setDepartmentFilter] = useState<string>('all');
+  const [selectedFacility, setSelectedFacility] = useState<string>('all');
+  const [incidentTypeFilter, setIncidentTypeFilter] = useState<string>('all');
+  const [rootCauseFilter, setRootCauseFilter] = useState<string>('all');
 
   const isAdmin = Boolean(user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management'));
 
@@ -66,15 +82,14 @@ const HazmatIncidentsPage = () => {
       return Array.isArray(d) ? d : [];
     }
   });
-  
-  const { data: departments = [] } = useQuery<any[]>({ 
-    queryKey: ['facility-locations', selectedFacility], 
+
+  const { data: rootCauses = [] } = useQuery<any[]>({ 
+    queryKey: ['hazmat-root-causes'], 
     queryFn: async () => {
-      const url = selectedFacility && selectedFacility !== 'all' ? `/risks/facilities/${selectedFacility}/locations` : '/hazmat/settings/departments';
-      const res = await api.get(url);
+      const res = await api.get('/hazmat/settings/root-causes');
       if (!res.ok) return [];
-      const data = await res.json();
-      return Array.isArray(data) ? data : [];
+      const d = await res.json();
+      return Array.isArray(d) ? d : [];
     }
   });
 
@@ -97,37 +112,15 @@ const HazmatIncidentsPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hazmat-incidents'] });
+      toast.success('Olay kaydı silindi.');
+    },
+    onError: () => {
+      toast.error('Olay silinemedi.');
     }
   });
 
-  const filteredIncidents = incidents.filter(i => {
-    const typeLabel = i.incidentType?.name || i.category?.name || '';
-    const searchMatch = !searchTerm || 
-      i.incidentMode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      i.rootCause?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      i.facility?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      typeLabel.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const categoryMatch = categoryFilter === 'all' || String(i.incidentTypeId || i.categoryId || '') === categoryFilter;
-    const departmentMatch = departmentFilter === 'all' || String(i.locationId || i.departmentId || '') === departmentFilter;
-
-    return searchMatch && categoryMatch && departmentMatch;
-  });
-
-  const stats = {
-    total: filteredIncidents.length,
-    injured: filteredIncidents.reduce((sum, i) => sum + (i.injuredCount || 0), 0),
-    deceased: filteredIncidents.reduce((sum, i) => sum + (i.deceasedCount || 0), 0),
-    kitsUsed: filteredIncidents.filter(i => i.kitUsed).length
-  };
-
-  const handleEdit = (incident: any) => {
-    setEditingIncident(incident);
-    setIsFormOpen(true);
-  };
-
   const handleDelete = (id: string) => {
-    if (confirm('Bu olay kaydını silmek istediğinize emin misiniz?')) {
+    if (window.confirm('Bu olay kaydını silmek istediğinize emin misiniz?')) {
       deleteMutation.mutate(id);
     }
   };
@@ -143,178 +136,364 @@ const HazmatIncidentsPage = () => {
       const d = new Date(date);
       if (isNaN(d.getTime())) return '-';
       return format(d, formatStr, { locale: tr });
-    } catch (e) {
+    } catch {
       return '-';
     }
   };
 
+  // Filtered Data
+  const filteredIncidents = useMemo(() => {
+    return incidents.filter((incident) => {
+      // Search
+      const matchSearch =
+        !searchTerm ||
+        incident.facility?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        incident.category?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        incident.incidentType?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        incident.rootCause?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        incident.rootCauseDef?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        incident.incidentMode?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Incident Type Filter
+      const matchType =
+        incidentTypeFilter === 'all' ||
+        String(incident.incidentTypeId) === incidentTypeFilter ||
+        String(incident.categoryId) === incidentTypeFilter ||
+        incident.incidentType?.name === incidentTypeFilter ||
+        incident.category?.name === incidentTypeFilter;
+
+      // Root Cause Filter
+      const matchRootCause =
+        rootCauseFilter === 'all' ||
+        String(incident.rootCauseId) === rootCauseFilter ||
+        incident.rootCause === rootCauseFilter ||
+        incident.rootCauseDef?.name === rootCauseFilter;
+
+      return matchSearch && matchType && matchRootCause;
+    });
+  }, [incidents, searchTerm, incidentTypeFilter, rootCauseFilter]);
+
+  // Stats calculation
+  const stats = useMemo(() => {
+    return {
+      total: incidents.length,
+      kitsUsed: incidents.filter((i) => i.kitUsed).length,
+      injured: incidents.reduce((sum, i) => sum + (i.injuredCount || 0), 0),
+      deceased: incidents.reduce((sum, i) => sum + (i.deceasedCount || 0), 0),
+    };
+  }, [incidents]);
+
+  // Pie chart distribution for Incident Types (Olay Türleri Dağılımı)
+  const pieData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    incidents.forEach((inc) => {
+      const typeName = inc.incidentType?.name || inc.category?.name || 'Belirtilmemiş';
+      counts[typeName] = (counts[typeName] || 0) + 1;
+    });
+    const total = incidents.length;
+    return Object.entries(counts)
+      .map(([name, value], index) => ({
+        name,
+        value,
+        percentage: total > 0 ? ((value / total) * 100).toFixed(1) : '0',
+        color: PIE_COLORS[index % PIE_COLORS.length]
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [incidents]);
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12 font-sans antialiased">
+      {/* Üst Başlık */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-5">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Olağan Dışı Olaylar (Tehlikeli Madde)</h1>
-          <p className="text-sm text-muted-foreground mt-1">Tehlikeli madde sızıntısı, dökülmesi veya diğer olayların takibi ve raporlanması.</p>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+              Olağan Dışı Olaylar
+            </h1>
+            <Badge variant="secondary" className="font-semibold text-xs px-2.5 py-0.5">
+              {incidents.length} Kayıt
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Tehlikeli madde sızıntısı, dökülmesi veya diğer olağan dışı olayların takibi ve raporlanması.
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-muted rounded-lg p-1 border mr-2">
+        <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center bg-muted rounded-lg p-1 border">
             <Button 
               variant={viewMode === 'list' ? 'secondary' : 'ghost'} 
-              size="sm" className="h-8 w-8 p-0" 
+              size="sm" 
+              className="h-8 w-8 p-0" 
               onClick={() => setViewMode('list')}
-            ><List className="w-4 h-4" /></Button>
+              title="Liste Görünümü"
+            >
+              <List className="w-4 h-4" />
+            </Button>
             <Button 
               variant={viewMode === 'card' ? 'secondary' : 'ghost'} 
-              size="sm" className="h-8 w-8 p-0" 
+              size="sm" 
+              className="h-8 w-8 p-0" 
               onClick={() => setViewMode('card')}
-            ><LayoutGrid className="w-4 h-4" /></Button>
+              title="Kart Görünümü"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </Button>
           </div>
-          <Button onClick={() => { setEditingIncident(null); setIsFormOpen(true); }} className="shadow-sm shadow-primary/20 bg-purple-600 hover:bg-purple-700 text-white">
-            <Plus className="w-4 h-4 mr-2" /> Yeni Olay Bildirimi
+          <Button 
+            onClick={() => navigate('/hazmat/incidents/new')} 
+            className="shadow-sm gap-2 h-9 text-xs font-semibold"
+          >
+            <Plus className="w-4 h-4" /> Yeni Olay Bildirimi
           </Button>
-          
-          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingIncident ? 'Olay Kaydını Düzenle' : 'Yeni TM Olağan Dışı Olay Bildirimi'}</DialogTitle>
-              </DialogHeader>
-              <HazmatIncidentFormPage 
-                initialData={editingIncident} 
-                onSuccess={() => {
-                  setIsFormOpen(false);
-                  queryClient.invalidateQueries({ queryKey: ['hazmat-incidents'] });
-                }}
-                onCancel={() => setIsFormOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
-
-          {/* Rapor Önizleme / Yazdırma Modalı */}
-          <Dialog open={isReportOpen} onOpenChange={setIsReportOpen}>
-             <DialogContent className="max-w-4xl max-h-[95vh] h-[90vh] overflow-hidden flex flex-col p-0">
-               <HazmatIncidentReportPage incident={viewingIncident} onCancel={() => setIsReportOpen(false)} />
-             </DialogContent>
-          </Dialog>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="shadow-sm border-border/50 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20 shadow-inner">
-              <ShieldAlert className="w-6 h-6 text-purple-500" />
+      {/* KPI Kartları */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Card className="shadow-2xs border-border/70">
+          <CardContent className="p-4 flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0 border border-purple-500/20">
+              <ShieldAlert className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">TOPLAM OLAY</p>
-              <p className="text-3xl font-black text-purple-700">{stats.total}</p>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">TOPLAM OLAY</p>
+              <p className="text-2xl font-black text-foreground">{stats.total}</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-border/50 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shadow-inner">
-              <CheckCircle2 className="w-6 h-6 text-blue-500" />
+        <Card className="shadow-2xs border-border/70">
+          <CardContent className="p-4 flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0 border border-blue-500/20">
+              <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">KULLANILAN KİT</p>
-              <p className="text-3xl font-black text-blue-600">{stats.kitsUsed}</p>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">KULLANILAN KİT</p>
+              <p className="text-2xl font-black text-foreground">{stats.kitsUsed}</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-border/50 bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/20 dark:to-background">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20 shadow-inner">
-              <HeartPulse className="w-6 h-6 text-orange-500" />
+        <Card className="shadow-2xs border-border/70">
+          <CardContent className="p-4 flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0 border border-orange-500/20">
+              <HeartPulse className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">YARALI SAYISI</p>
-              <p className="text-3xl font-black text-orange-600">{stats.injured}</p>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">YARALI SAYISI</p>
+              <p className="text-2xl font-black text-foreground">{stats.injured}</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-border/50 bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-background">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center border border-red-500/20 shadow-inner">
-              <Skull className="w-6 h-6 text-red-500" />
+        <Card className="shadow-2xs border-border/70">
+          <CardContent className="p-4 flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center shrink-0 border border-rose-500/20">
+              <Skull className="w-5 h-5 text-rose-600 dark:text-rose-400" />
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">ÖLÜ SAYISI</p>
-              <p className="text-3xl font-black text-red-600">{stats.deceased}</p>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">ÖLÜ SAYISI</p>
+              <p className="text-2xl font-black text-foreground">{stats.deceased}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card className="shadow-sm border-border/50">
-        <CardContent className="p-4 space-y-4">
-          <div className="flex flex-col md:flex-row gap-4">
+      {/* Olay Türleri Dağılımı - Pasta / Halka Grafik */}
+      <Card className="shadow-2xs border-border/70 overflow-hidden bg-card">
+        <CardHeader className="p-4 pb-3 border-b border-border/60 bg-muted/20">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 shrink-0">
+                <PieChartIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-bold text-foreground">
+                  Olay Türleri Dağılımı
+                </CardTitle>
+                <CardDescription className="text-xs text-muted-foreground">
+                  {isAdmin 
+                    ? (selectedFacility && selectedFacility !== 'all' 
+                        ? `${facilities.find((f) => f.id === selectedFacility)?.name || 'Seçili Tesis'} Olay Dağılımı` 
+                        : 'Tüm Tesisler Genel Olay Dağılımı')
+                    : 'Tesis Olay Türleri Dağılımı'}
+                </CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs font-semibold px-2.5 py-1 bg-background border-border">
+                Toplam {incidents.length} Olay &bull; {pieData.length} Farklı Olay Türü
+              </Badge>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4">
+          {pieData.length > 0 ? (
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              {/* Sol Taraf: Donut Chart */}
+              <div className="w-full md:w-[240px] h-[210px] relative flex items-center justify-center shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={85}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-popover text-popover-foreground border border-border shadow-md rounded-lg px-3 py-2 text-xs">
+                              <div className="font-bold flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: data.color }} />
+                                {data.name}
+                              </div>
+                              <div className="text-muted-foreground mt-1 flex items-center justify-between gap-4">
+                                <span>Olay Sayısı:</span>
+                                <span className="font-semibold text-foreground">{data.value} adet</span>
+                              </div>
+                              <div className="text-muted-foreground flex items-center justify-between gap-4">
+                                <span>Oran:</span>
+                                <span className="font-semibold text-indigo-500">%{data.percentage}</span>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-2xl font-black text-foreground">{incidents.length}</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">OLAY</span>
+                </div>
+              </div>
+
+              {/* Sağ Taraf: Olay Türleri Kırılım Listesi */}
+              <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[220px] overflow-y-auto pr-1">
+                {pieData.map((d, i) => (
+                  <div
+                    key={i}
+                    onClick={() => setIncidentTypeFilter(incidentTypeFilter === d.name ? 'all' : d.name)}
+                    className={`flex items-center justify-between p-2.5 rounded-lg border text-xs transition-all cursor-pointer ${
+                      incidentTypeFilter === d.name
+                        ? 'bg-primary/10 border-primary text-primary font-semibold shadow-2xs'
+                        : 'bg-muted/30 border-border/60 hover:bg-muted/60 text-foreground'
+                    }`}
+                    title="Bu olay türüne göre filtrelemek için tıklayın"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <span className="w-3 h-3 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: d.color }} />
+                      <span className="truncate font-medium">{d.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-bold">
+                        {d.value}
+                      </Badge>
+                      <span className="text-[10px] text-muted-foreground font-mono font-semibold w-11 text-right">
+                        %{d.percentage}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground text-xs">
+              Grafik oluşturmak için henüz kayıtlı olay bulunmuyor.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Filtreleme Araç Çubuğu */}
+      <Card className="shadow-2xs border-border/70">
+        <CardContent className="p-3.5 space-y-3">
+          <div className="flex flex-col md:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
               <Input 
-                placeholder="Olay, tesis veya kategori ara..." 
-                className="pl-9 h-10 shadow-inner bg-muted/20"
+                placeholder="Olay, tesis veya kök neden ara..." 
+                className="pl-9 h-9 text-xs bg-background"
                 value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {(isAdmin || (user?.facilities && user.facilities.length > 1)) && (
+              {/* Yalnızca Yöneticiler için Tesis Filtresi */}
+              {isAdmin && (
                 <Select value={selectedFacility} onValueChange={setSelectedFacility}>
-                  <SelectTrigger className="w-[200px] h-10">
+                  <SelectTrigger className="w-full sm:w-[180px] h-9 text-xs">
                     <SelectValue>
-                      {facilities.find(f => f.id === selectedFacility)?.name || "Tüm Tesisler"}
+                      {selectedFacility === 'all' || !selectedFacility 
+                        ? "Tüm Tesisler" 
+                        : (facilities.find((f) => f.id === selectedFacility)?.name || "Tesis Seçiniz")}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tüm Tesisler</SelectItem>
-                    {facilities
-                      .filter(f => isAdmin || user?.facilities?.includes(f.id))
-                      .map(f => (
-                        <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                      ))
-                    }
+                    <SelectItem value="all" className="text-xs">Tüm Tesisler</SelectItem>
+                    {facilities.map((f) => (
+                      <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               )}
               
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[160px] h-10">
+              {/* Olay Türleri Filtresi */}
+              <Select value={incidentTypeFilter} onValueChange={setIncidentTypeFilter}>
+                <SelectTrigger className="w-full sm:w-[180px] h-9 text-xs">
                   <SelectValue>
-                    {incidentTypes.find(c => String(c.id) === categoryFilter)?.name || "Tüm Olay Türleri"}
+                    {incidentTypeFilter === 'all' 
+                      ? "Tüm Olay Türleri" 
+                      : (incidentTypes.find((c) => String(c.id) === incidentTypeFilter || c.name === incidentTypeFilter)?.name || incidentTypeFilter)}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tüm Olay Türleri</SelectItem>
-                  {incidentTypes.map(c => (
-                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  <SelectItem value="all" className="text-xs">Tüm Olay Türleri</SelectItem>
+                  {incidentTypes.map((c) => (
+                    <SelectItem key={c.id} value={c.name} className="text-xs">{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
-              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                <SelectTrigger className="w-[160px] h-10">
+              {/* Kök Nedenler Filtresi */}
+              <Select value={rootCauseFilter} onValueChange={setRootCauseFilter}>
+                <SelectTrigger className="w-full sm:w-[180px] h-9 text-xs">
                   <SelectValue>
-                    {departments.find(d => String(d.id) === departmentFilter)?.name || "Tüm Departmanlar"}
+                    {rootCauseFilter === 'all' 
+                      ? "Tüm Kök Nedenler" 
+                      : (rootCauses.find((r) => String(r.id) === rootCauseFilter || r.name === rootCauseFilter)?.name || rootCauseFilter)}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tüm Departmanlar</SelectItem>
-                  {departments.map(d => (
-                    <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                  <SelectItem value="all" className="text-xs">Tüm Kök Nedenler</SelectItem>
+                  {rootCauses.map((r) => (
+                    <SelectItem key={r.id} value={r.name} className="text-xs">{r.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
-              {(searchTerm || selectedFacility || categoryFilter !== 'all' || departmentFilter !== 'all') && (
+              {/* Temizle Butonu */}
+              {(searchTerm || (isAdmin && selectedFacility !== 'all' && selectedFacility !== '') || incidentTypeFilter !== 'all' || rootCauseFilter !== 'all') && (
                 <Button 
-                  variant="ghost" size="sm" 
+                  variant="ghost" 
+                  size="sm" 
                   onClick={() => {
-                    setSearchTerm(''); setSelectedFacility(''); setCategoryFilter('all'); setDepartmentFilter('all');
+                    setSearchTerm(''); 
+                    if (isAdmin) setSelectedFacility('all'); 
+                    setIncidentTypeFilter('all'); 
+                    setRootCauseFilter('all');
                   }}
-                  className="text-xs h-10 px-3 text-muted-foreground hover:text-primary"
+                  className="text-xs h-9 px-2.5 text-muted-foreground hover:text-primary"
                 >
-                  <XCircle className="w-4 h-4 mr-2" /> Temizle
+                  <XCircle className="w-3.5 h-3.5 mr-1" /> Temizle
                 </Button>
               )}
             </div>
@@ -322,108 +501,124 @@ const HazmatIncidentsPage = () => {
         </CardContent>
       </Card>
 
-      {/* Incident List/Card View */}
+      {/* Olay Listesi / Kart Görünümü */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-64 rounded-xl bg-muted animate-pulse border border-border/50" />
+            <div key={i} className="h-44 rounded-xl bg-muted/60 animate-pulse border border-border/50" />
           ))}
         </div>
       ) : filteredIncidents.length > 0 ? (
         viewMode === 'card' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredIncidents.map(incident => (
-              <Card key={incident.id} className="shadow-sm hover:shadow-md transition-shadow border-border/50 overflow-hidden group bg-card">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredIncidents.map((incident) => (
+              <Card 
+                key={incident.id} 
+                className="shadow-2xs hover:shadow-md transition-all border-border/70 overflow-hidden group bg-card cursor-pointer"
+                onClick={() => navigate(`/hazmat/incidents/view/${incident.id}`)}
+              >
                 <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between space-y-0">
-                  <div className="space-y-1">
-                    <Badge variant="secondary" className="bg-purple-500/10 text-purple-600 border-none px-2 py-0">
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <Badge variant="outline" className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30 text-[10px] font-semibold">
                       {incident.incidentType?.name || incident.category?.name || 'Olay'}
                     </Badge>
-                    <CardTitle className="text-md font-bold line-clamp-1 group-hover:text-primary transition-colors mt-1">
-                      {incident.incidentMode || 'Özet Belirtilmemiş'}
+                    <CardTitle className="text-sm font-bold line-clamp-1 group-hover:text-primary transition-colors mt-1">
+                      {incident.incidentMode || incident.rootCause || 'Özet Belirtilmemiş'}
                     </CardTitle>
                   </div>
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreVertical className="w-4 h-4" />
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0">
+                        <MoreVertical className="w-3.5 h-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => { setViewingIncident(incident); setIsViewOpen(true); }}>
-                        <Eye className="w-4 h-4 mr-2" /> Görüntüle
+                    <DropdownMenuContent align="end" className="text-xs">
+                      <DropdownMenuItem onClick={() => navigate(`/hazmat/incidents/view/${incident.id}`)}>
+                        <Eye className="w-3.5 h-3.5 mr-2" /> Görüntüle
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handlePrint(incident)}>
-                        <FileText className="w-4 h-4 mr-2" /> Rapor Görüntüle
+                        <FileText className="w-3.5 h-3.5 mr-2" /> Rapor Görüntüle
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEdit(incident)}>
-                        <Edit className="w-4 h-4 mr-2" /> Düzenle
+                      <DropdownMenuItem onClick={() => navigate(`/hazmat/incidents/edit/${incident.id}`)}>
+                        <Edit className="w-3.5 h-3.5 mr-2" /> Düzenle
                       </DropdownMenuItem>
                       <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(incident.id)}>
-                        <Trash2 className="w-4 h-4 mr-2" /> Sil
+                        <Trash2 className="w-3.5 h-3.5 mr-2" /> Sil
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </CardHeader>
-                <CardContent className="p-4 pt-2 space-y-3">
+                <CardContent className="p-4 pt-1 space-y-2.5">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Calendar className="w-3.5 h-3.5" />
-                    {safeFormatDate(incident.incidentDate, 'dd MMMM yyyy, HH:mm')}
+                    <Calendar className="w-3.5 h-3.5 shrink-0" />
+                    <span>{safeFormatDate(incident.incidentDate, 'dd MMMM yyyy, HH:mm')}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <MapPin className="w-3.5 h-3.5" />
-                    {incident.location?.name || incident.department?.name || '-'} {incident.facility?.name && `- ${incident.facility.name}`}
+                    <MapPin className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">
+                      {incident.location?.name || incident.department?.name || 'Konum Belirtilmemiş'} {incident.facility?.name && `(${incident.facility.name})`}
+                    </span>
                   </div>
 
-                  <div className="pt-2 flex flex-wrap gap-2">
+                  <div className="pt-1 flex flex-wrap gap-1.5">
                     {incident.kitUsed && (
-                      <Badge variant="outline" className="text-[10px] text-blue-600 bg-blue-50 border-blue-200">
+                      <Badge variant="outline" className="text-[10px] text-blue-600 bg-blue-500/10 border-blue-200">
                         Kit Kullanıldı
                       </Badge>
                     )}
                     {incident.injuredCount > 0 && (
-                      <Badge variant="outline" className="text-[10px] text-orange-600 bg-orange-50 border-orange-200">
+                      <Badge variant="outline" className="text-[10px] text-orange-600 bg-orange-500/10 border-orange-200">
                         {incident.injuredCount} Yaralı
                       </Badge>
                     )}
                     {incident.deceasedCount > 0 && (
-                      <Badge variant="outline" className="text-[10px] text-red-600 bg-red-50 border-red-200 font-bold">
-                        {incident.deceasedCount} Ölü
+                      <Badge variant="outline" className="text-[10px] text-rose-600 bg-rose-500/10 border-rose-200 font-bold">
+                        {incident.deceasedCount} Vefat
                       </Badge>
                     )}
                   </div>
                   
-                  <div className="pt-2 border-t flex items-center justify-between">
+                  <div className="pt-2 border-t border-border/50 flex items-center justify-between">
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className="h-7 text-[11px] font-medium p-0 hover:bg-transparent text-primary hover:translate-x-1 transition-transform"
-                      onClick={() => { setViewingIncident(incident); setIsViewOpen(true); }}
+                      className="h-6 text-[11px] font-medium p-0 hover:bg-transparent text-primary hover:translate-x-0.5 transition-transform"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/hazmat/incidents/view/${incident.id}`);
+                      }}
                     >
                       Detaylar <ChevronRight className="w-3 h-3 ml-1" />
                     </Button>
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      #{incident.id.slice(0, 6)}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         ) : (
-          <Card className="shadow-sm border-border/50 overflow-hidden">
+          <Card className="shadow-2xs border-border/70 overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-[100px]">Tarih</TableHead>
-                  <TableHead>Tesis</TableHead>
-                  <TableHead>Olay Türü</TableHead>
-                  <TableHead className="max-w-[300px]">Özet</TableHead>
-                  <TableHead>Departman / Lokasyon</TableHead>
-                  <TableHead className="text-center">Etki / Kit</TableHead>
-                  <TableHead className="text-right">İşlemler</TableHead>
+                <TableRow className="bg-muted/40">
+                  <TableHead className="w-[110px] text-xs">Tarih</TableHead>
+                  <TableHead className="text-xs">Tesis</TableHead>
+                  <TableHead className="text-xs">Olay Türü</TableHead>
+                  <TableHead className="max-w-[280px] text-xs">Özet / Kök Neden</TableHead>
+                  <TableHead className="text-xs">Lokasyon</TableHead>
+                  <TableHead className="text-center text-xs">Etki / Kit</TableHead>
+                  <TableHead className="text-right text-xs">İşlemler</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredIncidents.map(incident => (
-                  <TableRow key={incident.id} className="group hover:bg-muted/30 cursor-pointer" onClick={() => { setViewingIncident(incident); setIsViewOpen(true); }}>
+                {filteredIncidents.map((incident) => (
+                  <TableRow 
+                    key={incident.id} 
+                    className="group hover:bg-muted/30 cursor-pointer" 
+                    onClick={() => navigate(`/hazmat/incidents/view/${incident.id}`)}
+                  >
                     <TableCell className="font-medium text-xs whitespace-nowrap">
                       {safeFormatDate(incident.incidentDate, 'dd.MM.yyyy')}
                       <br />
@@ -431,12 +626,16 @@ const HazmatIncidentsPage = () => {
                     </TableCell>
                     <TableCell className="text-xs font-semibold">{incident.facility?.name}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="bg-purple-500/10 text-purple-600 border-none text-[10px]">
+                      <Badge variant="outline" className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border-none text-[10px]">
                         {incident.incidentType?.name || incident.category?.name || 'Olay'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs max-w-[300px] truncate">{incident.incidentMode}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{incident.location?.name || incident.department?.name || '-'}</TableCell>
+                    <TableCell className="text-xs max-w-[280px] truncate">
+                      {incident.incidentMode || incident.rootCause || '-'}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {incident.location?.name || incident.department?.name || '-'}
+                    </TableCell>
                     <TableCell>
                       <div className="flex justify-center gap-1">
                         {incident.kitUsed && <Badge className="bg-blue-500 h-2 w-2 rounded-full p-0" title="Kit Kullanıldı" />}
@@ -445,19 +644,34 @@ const HazmatIncidentsPage = () => {
                         {incident.serviceInterrupted && <Badge className="bg-amber-500 h-2 w-2 rounded-full p-0" title="Kesinti" />}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); handlePrint(incident); }}>
-                          <FileText className="w-4 h-4 text-purple-600" />
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-7 w-7 p-0" 
+                          onClick={() => handlePrint(incident)}
+                          title="Rapor Yazdır"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-muted-foreground" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); setViewingIncident(incident); setIsViewOpen(true); }}>
-                          <Eye className="w-4 h-4 text-primary" />
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-7 w-7 p-0" 
+                          onClick={() => navigate(`/hazmat/incidents/edit/${incident.id}`)}
+                          title="Düzenle"
+                        >
+                          <Edit className="w-3.5 h-3.5 text-muted-foreground" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); handleEdit(incident); }}>
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); handleDelete(incident.id); }}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" 
+                          onClick={() => handleDelete(incident.id)}
+                          title="Sil"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>
                     </TableCell>
@@ -468,171 +682,21 @@ const HazmatIncidentsPage = () => {
           </Card>
         )
       ) : (
-        <div className="col-span-full py-20 text-center bg-card rounded-2xl border-2 border-dashed border-border/50">
-          <ShieldAlert className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-muted-foreground">Olay Kaydı Bulunamadı</h3>
-          <p className="text-sm text-muted-foreground mt-1">Arama kriterlerinizi değiştirmeyi veya yeni bir kayıt eklemeyi deneyin.</p>
+        <div className="col-span-full py-16 text-center bg-card rounded-xl border border-dashed border-border/70">
+          <ShieldAlert className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+          <h3 className="text-base font-semibold text-foreground">Olay Kaydı Bulunamadı</h3>
+          <p className="text-xs text-muted-foreground mt-1">Arama kriterlerinizi değiştirmeyi veya yeni bir kayıt eklemeyi deneyin.</p>
         </div>
       )}
 
-      {/* Detail View Modal */}
-      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="border-b pb-4">
-            <div className="flex items-center gap-3">
-              <Badge className="bg-purple-100 text-purple-700 border-none">{viewingIncident?.incidentType?.name || viewingIncident?.category?.name || 'Olay'}</Badge>
-              <DialogTitle className="text-xl font-bold">Olay Detay Raporu</DialogTitle>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {viewingIncident?.facility?.name} - {safeFormatDate(viewingIncident?.incidentDate, 'dd MMMM yyyy, HH:mm')}
-            </p>
-          </DialogHeader>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-6">
-            <div className="space-y-6">
-              <section>
-                <h4 className="text-sm font-bold flex items-center gap-2 mb-3 text-primary uppercase tracking-wider">
-                  <Info className="w-4 h-4" /> Olay Özeti
-                </h4>
-                <div className="bg-muted/30 p-4 rounded-xl border border-border/50 text-sm leading-relaxed italic">
-                  "{viewingIncident?.incidentMode}"
-                </div>
-              </section>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-[10px] text-muted-foreground font-bold uppercase">Departman / Lokasyon</p>
-                  <p className="text-sm font-medium">{viewingIncident?.location?.name || viewingIncident?.department?.name || '-'}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] text-muted-foreground font-bold uppercase">Kök Neden</p>
-                  <p className="text-sm font-medium">{viewingIncident?.rootCause || '-'}</p>
-                </div>
-              </div>
-
-              {viewingIncident?.materials && viewingIncident.materials.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-[10px] text-muted-foreground font-bold uppercase">İlgili Tehlikeli Madde(ler)</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {viewingIncident.materials.map((m: any) => (
-                      <Badge key={m.id} variant="outline" className="text-xs bg-amber-50/70 text-amber-800 border-amber-200">
-                        {m.productName}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <section className="space-y-3">
-                <h4 className="text-sm font-bold mb-3 text-primary uppercase tracking-wider">Müdahale Bilgileri</h4>
-                <div className="grid grid-cols-1 gap-2">
-                  <div className="flex items-center justify-between text-sm py-1 border-b border-dashed">
-                    <span className="text-muted-foreground">Müdahale Gereksinimi:</span>
-                    <span className={viewingIncident?.interventionRequired ? 'text-primary font-bold' : 'text-muted-foreground'}>
-                      {viewingIncident?.interventionRequired ? 'Evet' : 'Hayır'}
-                    </span>
-                  </div>
-                  {viewingIncident?.interventionRequired && viewingIncident?.interventionTime && (
-                    <div className="flex items-center justify-between text-sm py-1 border-b border-dashed">
-                      <span className="text-muted-foreground">Müdahale Saati:</span>
-                      <span className="font-medium">
-                        {safeFormatDate(viewingIncident.interventionTime, 'HH:mm')}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between text-sm py-1 border-b border-dashed">
-                    <span className="text-muted-foreground">Kontrol Altına Alma:</span>
-                    <span className="font-medium">
-                      {safeFormatDate(viewingIncident?.controlTime, 'HH:mm')}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm py-1 border-b border-dashed">
-                    <span className="text-muted-foreground">Destek Birimi:</span>
-                    <span className="font-medium">{viewingIncident?.supportUnit?.name || 'Alınmadı'}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm py-1 border-b border-dashed">
-                    <span className="text-muted-foreground">Acil Durum Kodu:</span>
-                    <span className="font-medium">{viewingIncident?.emergencyCode?.name || 'Anons Yapılmadı'}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm py-1 border-b border-dashed">
-                    <span className="text-muted-foreground">Döküntü Kiti Kullanımı:</span>
-                    <span className="font-medium">{viewingIncident?.kitUsed ? 'Evet (Kullanıldı)' : 'Hayır'}</span>
-                  </div>
-                </div>
-              </section>
-            </div>
-
-            <div className="space-y-6">
-              <section>
-                <h4 className="text-sm font-bold mb-3 text-primary uppercase tracking-wider">Etki Bilgileri</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-orange-50 dark:bg-orange-950/20 p-3 rounded-lg border border-orange-200 shadow-sm">
-                    <p className="text-[10px] text-orange-600 font-bold uppercase">Yaralı</p>
-                    <p className="text-xl font-black text-orange-700">{viewingIncident?.injuredCount || 0}</p>
-                  </div>
-                  <div className="bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-200 shadow-sm">
-                    <p className="text-[10px] text-red-600 font-bold uppercase">Ölü</p>
-                    <p className="text-xl font-black text-red-700">{viewingIncident?.deceasedCount || 0}</p>
-                  </div>
-                  <div className="bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg border border-blue-200 shadow-sm">
-                    <p className="text-[10px] text-blue-600 font-bold uppercase">Tahliye Personel</p>
-                    <p className="text-xl font-black text-blue-700">{viewingIncident?.evacuatedStaffCount || 0}</p>
-                  </div>
-                  <div className="bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg border border-blue-200 shadow-sm">
-                    <p className="text-[10px] text-blue-600 font-bold uppercase">Tahliye Hasta</p>
-                    <p className="text-xl font-black text-blue-700">{viewingIncident?.evacuatedPatientCount || 0}</p>
-                  </div>
-                </div>
-                {viewingIncident?.serviceInterrupted && (
-                  <div className="mt-3 bg-amber-50 dark:bg-amber-950/20 p-3 rounded-lg border border-amber-200">
-                    <p className="text-xs font-semibold text-amber-700 flex items-center gap-2">
-                      <Clock className="w-4 h-4" /> Hizmet {viewingIncident?.interruptionDuration} saat kesintiye uğradı.
-                    </p>
-                  </div>
-                )}
-              </section>
-
-              <section className="space-y-4">
-                <h4 className="text-sm font-bold mb-3 text-primary uppercase tracking-wider">Detaylar</h4>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Neden Detay</p>
-                    <p className="text-xs leading-relaxed">{viewingIncident?.causeDetail || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Tespit Edilebilen Etki</p>
-                    <p className="text-xs leading-relaxed">{viewingIncident?.detectedEffect || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Olaya İlişkin Tespitler</p>
-                    <p className="text-xs leading-relaxed">{viewingIncident?.observations || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Alınan Aksiyonlar</p>
-                    <p className="text-xs leading-relaxed">{viewingIncident?.actionsTaken || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Sonuç / Değerlendirme</p>
-                    <p className="text-xs leading-relaxed">{viewingIncident?.resultEvaluation || '-'}</p>
-                  </div>
-                </div>
-              </section>
-            </div>
-          </div>
-
-          <DialogFooter className="border-t pt-4">
-            <Button variant="outline" onClick={() => setIsViewOpen(false)}>Kapat</Button>
-            <Button onClick={() => { setIsViewOpen(false); handlePrint(viewingIncident); }}>
-              <FileText className="w-4 h-4 mr-2" /> Önizle ve Yazdır
-            </Button>
-            <Button onClick={() => { setIsViewOpen(false); handleEdit(viewingIncident); }}>
-              <Edit className="w-4 h-4 mr-2" /> Düzenle
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Rapor Önizleme / Yazdırma Modalı */}
+      {isReportOpen && viewingIncident && (
+        <Dialog open={isReportOpen} onOpenChange={setIsReportOpen}>
+          <DialogContent className="max-w-4xl max-h-[95vh] h-[90vh] overflow-hidden flex flex-col p-0">
+            <HazmatIncidentReportPage incident={viewingIncident} onCancel={() => setIsReportOpen(false)} />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
-};
-
-export default HazmatIncidentsPage;
+}

@@ -834,11 +834,23 @@ model HazmatCategory {
 }
 
 model HazmatIncidentType {
-  id        String   @id @default(uuid())
-  name      String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  hazmatIncidents HazmatIncident[]
+}
+
+model HazmatRootCause {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   hazmatIncidents HazmatIncident[]
 }
@@ -1140,6 +1152,7 @@ model HazmatIncident {
   categoryId            String?
   incidentTypeId        String?
   rootCause             String
+  rootCauseId           String?
   locationId            String?
   incidentDate          DateTime
   interventionRequired  Boolean
@@ -1163,12 +1176,20 @@ model HazmatIncident {
   resultEvaluation      String
   kitUsed               Boolean   @default(false)
   spillKitId            String?
+  photos                Json?     @default("[]")
+  documents             Json?     @default("[]")
+  actionStatus          String?   @default("Aksiyon Alınmadı")
+  actionPlan            String?
+  actionDate            DateTime?
+  actionResponsible     String?
+  actionResult          String?
   createdBy             String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
   category      HazmatCategory?      @relation(fields: [categoryId], references: [id])
   incidentType  HazmatIncidentType?  @relation(fields: [incidentTypeId], references: [id])
+  rootCauseDef  HazmatRootCause?     @relation(fields: [rootCauseId], references: [id])
   supportUnit   IncidentSupportUnit? @relation(fields: [supportUnitId], references: [id])
   emergencyCode EmergencyCode?       @relation(fields: [emergencyCodeId], references: [id])
   facility      Facility             @relation(fields: [facilityId], references: [id], onDelete: Cascade)

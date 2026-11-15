@@ -1,38 +1,57 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import { useActiveFacility } from '@/hooks/useActiveFacility';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { 
+  ArrowLeft, Loader2, Save, X, ShieldAlert, Calendar, 
+  MapPin, Clock, HeartPulse, Search, Plus, CheckCircle2, Paperclip, Camera, Check
+} from 'lucide-react';
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import LocationSelector from '@/components/hazmat/LocationSelector';
+import { SearchableSelect } from '@/components/hazmat/SearchableSelect';
+import { HazmatMaterialMultiSelect } from '@/components/hazmat/HazmatMaterialMultiSelect';
+import { HazmatAttachmentManager } from '@/components/hazmat/HazmatAttachmentManager';
+import { toast } from 'sonner';
 
 interface HazmatIncidentFormPageProps {
   initialData?: any;
-  onSuccess: () => void;
-  onCancel: () => void;
+  onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
-const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatIncidentFormPageProps) => {
+export default function HazmatIncidentFormPage({ initialData, onSuccess, onCancel }: HazmatIncidentFormPageProps) {
+  const { id } = useParams<{ id?: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
+  const activeFacilityId = useActiveFacility();
+
+  const isEditing = Boolean(id || initialData?.id);
+  const editId = id || initialData?.id;
   const isAdmin = Boolean(user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management'));
 
-  const [materialSearch, setMaterialSearch] = useState('');
   const [kitLocationId, setKitLocationId] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+
   const [formData, setFormData] = useState<any>({
-    facilityId: initialData?.facilityId || '',
-    incidentTypeId: initialData?.incidentTypeId || '',
-    rootCause: initialData?.rootCause || '',
-    departmentId: initialData?.locationId || initialData?.departmentId || '',
-    materialIds: initialData?.materials?.map((m: any) => m.id) || [],
-    incidentMode: initialData?.incidentMode || '',
+    facilityId: '',
+    incidentTypeId: '',
+    rootCause: '',
+    rootCauseId: '',
+    departmentId: '',
+    materialIds: [],
+    incidentMode: '',
     incidentDate: '',
     interventionRequired: false,
     interventionTime: '',
@@ -54,42 +73,86 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
     resultEvaluation: '',
     kitUsed: false,
     spillKitId: '',
+    photos: [],
+    documents: [],
+    hasAction: false,
+    actionStatus: 'Aksiyon Alınmadı',
+    actionPlan: '',
+    actionDate: '',
+    actionResponsible: '',
+    actionResult: '',
   });
 
+  // Query incident detail if in edit mode and no initialData provided
+  const { data: fetchedIncident, isLoading: loadingIncident } = useQuery({
+    queryKey: ['hazmat-incident', editId],
+    queryFn: async () => {
+      if (!editId) return null;
+      const res = await api.get(`/hazmat/incidents/${editId}`);
+      if (!res.ok) throw new Error('Olay bilgileri yüklenemedi.');
+      return res.json();
+    },
+    enabled: Boolean(isEditing && !initialData && editId),
+  });
+
+  const activeData = initialData || fetchedIncident;
+
   useEffect(() => {
-    if (initialData) {
+    if (activeData) {
+      const actionSet = Boolean(activeData.actionStatus && activeData.actionStatus !== 'Aksiyon Alınmadı') || Boolean(activeData.actionPlan || activeData.actionResponsible || activeData.actionResult);
       setFormData({
-        ...initialData,
-        facilityId: initialData.facilityId || '',
-        categoryId: initialData.categoryId || '',
-        incidentTypeId: initialData.incidentTypeId || '',
-        rootCause: initialData.rootCause || '',
-        departmentId: initialData.locationId || initialData.departmentId || '',
-        materialIds: initialData.materials?.map((m: any) => m.id) || [],
-        supportUnitId: initialData.supportUnitId?.toString() || '',
-        emergencyCodeId: initialData.emergencyCodeId?.toString() || '',
-        incidentDate: initialData.incidentDate ? new Date(initialData.incidentDate).toISOString().slice(0, 16) : '',
-        interventionTime: initialData.interventionTime ? new Date(initialData.interventionTime).toISOString().slice(0, 16) : '',
-        controlTime: initialData.controlTime ? new Date(initialData.controlTime).toISOString().slice(0, 16) : '',
-        interruptionDuration: initialData.interruptionDuration?.toString() || '0',
-        evacuatedStaffCount: initialData.evacuatedStaffCount?.toString() || '0',
-        evacuatedPatientCount: initialData.evacuatedPatientCount?.toString() || '0',
-        injuredCount: initialData.injuredCount?.toString() || '0',
-        deceasedCount: initialData.deceasedCount?.toString() || '0',
-        kitUsed: initialData.kitUsed || false,
-        spillKitId: initialData.spillKitId || '',
+        facilityId: activeData.facilityId || '',
+        categoryId: activeData.categoryId || '',
+        incidentTypeId: activeData.incidentTypeId?.toString() || '',
+        rootCause: activeData.rootCause || '',
+        rootCauseId: activeData.rootCauseId?.toString() || '',
+        departmentId: activeData.locationId || activeData.departmentId || '',
+        materialIds: activeData.materials?.map((m: any) => m.id) || [],
+        incidentMode: activeData.incidentMode || '',
+        incidentDate: activeData.incidentDate ? new Date(activeData.incidentDate).toISOString().slice(0, 16) : '',
+        interventionRequired: Boolean(activeData.interventionRequired),
+        interventionTime: activeData.interventionTime ? new Date(activeData.interventionTime).toISOString().slice(0, 16) : '',
+        controlTime: activeData.controlTime ? new Date(activeData.controlTime).toISOString().slice(0, 16) : '',
+        supportReceived: Boolean(activeData.supportReceived),
+        supportUnitId: activeData.supportUnitId?.toString() || '',
+        announcementMade: Boolean(activeData.announcementMade),
+        emergencyCodeId: activeData.emergencyCodeId?.toString() || '',
+        serviceInterrupted: Boolean(activeData.serviceInterrupted),
+        interruptionDuration: activeData.interruptionDuration?.toString() || '0',
+        evacuatedStaffCount: activeData.evacuatedStaffCount?.toString() || '0',
+        evacuatedPatientCount: activeData.evacuatedPatientCount?.toString() || '0',
+        injuredCount: activeData.injuredCount?.toString() || '0',
+        deceasedCount: activeData.deceasedCount?.toString() || '0',
+        causeDetail: activeData.causeDetail || '',
+        detectedEffect: activeData.detectedEffect || '',
+        observations: activeData.observations || '',
+        actionsTaken: activeData.actionsTaken || '',
+        resultEvaluation: activeData.resultEvaluation || '',
+        kitUsed: Boolean(activeData.kitUsed),
+        spillKitId: activeData.spillKitId || '',
+        photos: Array.isArray(activeData.photos) ? activeData.photos : [],
+        documents: Array.isArray(activeData.documents) ? activeData.documents : [],
+        hasAction: actionSet,
+        actionStatus: activeData.actionStatus || (actionSet ? 'Tamamlandı' : 'Aksiyon Alınmadı'),
+        actionPlan: activeData.actionPlan || '',
+        actionDate: activeData.actionDate ? new Date(activeData.actionDate).toISOString().slice(0, 10) : '',
+        actionResponsible: activeData.actionResponsible || '',
+        actionResult: activeData.actionResult || '',
       });
+      if (activeData.locationId || activeData.departmentId) {
+        setKitLocationId(activeData.locationId || activeData.departmentId);
+      }
     } else {
-      const activeFac = localStorage.getItem('activeFacilityId');
+      // Default to user's facility or active facility
       const fallbackFac =
-        (activeFac && activeFac !== 'ALL' && (isAdmin || user?.facilities?.includes(activeFac)) ? activeFac : '') ||
+        (activeFacilityId && activeFacilityId !== 'ALL' && activeFacilityId !== 'all' ? activeFacilityId : '') ||
         user?.facilities?.[0] ||
         '';
       if (fallbackFac) {
-        setFormData((prev: any) => (prev.facilityId ? prev : { ...prev, facilityId: fallbackFac }));
+        setFormData((prev: any) => ({ ...prev, facilityId: fallbackFac }));
       }
     }
-  }, [initialData, isAdmin, user]);
+  }, [activeData, activeFacilityId, user]);
 
   // Queries for definitions
   const { data: facilities = [], isLoading: loadingFacilities } = useQuery<any[]>({
@@ -102,6 +165,7 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
     },
   });
 
+  // Olay Türleri (/hazmat/settings/events kaynağından gelir)
   const { data: incidentTypes = [], isLoading: loadingIncidentTypes } = useQuery<any[]>({
     queryKey: ['hazmat-incident-types'],
     queryFn: async () => {
@@ -111,9 +175,20 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
       return Array.isArray(data) ? data : [];
     },
   });
-  
-  const { data: departments = [] } = useQuery<any[]>({ 
-    queryKey: ['facility-locations', formData.facilityId], 
+
+  // Kök Nedenler (/hazmat/settings/root-causes kaynağından gelir)
+  const { data: rootCauses = [], isLoading: loadingRootCauses } = useQuery<any[]>({
+    queryKey: ['hazmat-root-causes'],
+    queryFn: async () => {
+      const res = await api.get('/hazmat/settings/root-causes');
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
+  const { data: departments = [] } = useQuery<any[]>({
+    queryKey: ['facility-locations', formData.facilityId],
     queryFn: async () => {
       if (!formData.facilityId) return [];
       const res = await api.get(`/risks/facilities/${formData.facilityId}/locations`);
@@ -121,7 +196,7 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
       const data = await res.json();
       return Array.isArray(data) ? data : [];
     },
-    enabled: !!formData.facilityId
+    enabled: Boolean(formData.facilityId),
   });
 
   const { data: supportUnits = [] } = useQuery<any[]>({
@@ -144,7 +219,6 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
     },
   });
 
-  // Get kits for the facility to filter placements
   const { data: kits = [] } = useQuery<any[]>({
     queryKey: ['hazmat-spill-kits', formData.facilityId],
     queryFn: async () => {
@@ -154,7 +228,7 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
       const data = await res.json();
       return Array.isArray(data) ? data : [];
     },
-    enabled: !!formData.facilityId
+    enabled: Boolean(formData.facilityId),
   });
 
   const { data: facilityItems = [] } = useQuery<any[]>({
@@ -165,31 +239,28 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
       if (!res.ok) return [];
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) return data;
-      // Tesiste tanımlı madde yoksa genel madde havuzundan çek
       const globalRes = await api.get(`/hazmat/materials/global?facilityId=${formData.facilityId}`);
       if (!globalRes.ok) return [];
       const globalData = await globalRes.json();
       return Array.isArray(globalData) ? globalData : [];
     },
-    enabled: !!formData.facilityId
+    enabled: Boolean(formData.facilityId),
   });
+
   const materials = Array.isArray(facilityItems)
-    ? facilityItems.map((item: any) => item.material).filter(Boolean)
+    ? facilityItems.map((item: any) => item.material || item).filter(Boolean)
     : [];
 
-  // Extract relevant placements
-  const availableKits: { placementId: string, departmentId: string, kitName: string, location: string, code: string }[] = [];
-  
-  kits.forEach(kit => {
+  const availableKits: { placementId: string; kitName: string; location: string; code: string }[] = [];
+  kits.forEach((kit) => {
     if (kit.placements) {
       kit.placements.forEach((p: any) => {
         if (p.status === 'Aktif' || p.status === 'Sahada' || p.status === 'Kurulumda') {
           availableKits.push({
             placementId: p.id,
-            departmentId: p.departmentId,
             kitName: kit.kitName,
             location: p.unit || p.location || p.area,
-            code: kit.code || ''
+            code: kit.code || '',
           });
         }
       });
@@ -202,23 +273,30 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
         ...data,
         locationId: data.departmentId || data.locationId || null,
       };
-      const res = initialData 
-        ? await api.put(`/hazmat/incidents/${initialData.id}`, payload)
+      const res = isEditing
+        ? await api.put(`/hazmat/incidents/${editId}`, payload)
         : await api.post(`/hazmat/incidents`, payload);
-      
-      if (!res.ok) { 
-        const e = await res.json().catch(() => ({})); 
-        throw new Error(e.error || 'Olay kaydedilirken bir hata oluştu.'); 
+
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || 'Olay kaydedilirken bir hata oluştu.');
       }
       return res.json();
     },
-    onSuccess: () => {
-      setFormError(null);
-      onSuccess();
+    onSuccess: (savedIncident) => {
+      queryClient.invalidateQueries({ queryKey: ['hazmat-incidents'] });
+      queryClient.invalidateQueries({ queryKey: ['hazmat-incident', editId] });
+      toast.success(isEditing ? 'Olay kaydı başarıyla güncellendi.' : 'Olağan dışı olay bildirimi başarıyla oluşturuldu.');
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate(`/hazmat/incidents/view/${savedIncident?.id || editId || ''}`);
+      }
     },
     onError: (err: any) => {
       setFormError(err?.message || 'Olay kaydedilemedi.');
-    }
+      toast.error(err?.message || 'Olay kaydedilemedi.');
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -226,10 +304,22 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
     setFormError(null);
     if (!formData.facilityId) {
       setFormError('Lütfen bir tesis seçiniz.');
+      toast.error('Lütfen bir tesis seçiniz.');
       return;
     }
     if (!formData.incidentTypeId) {
       setFormError('Lütfen olay türünü seçiniz.');
+      toast.error('Lütfen olay türünü seçiniz.');
+      return;
+    }
+    if (!formData.incidentDate) {
+      setFormError('Lütfen olay tarih ve saatini giriniz.');
+      toast.error('Lütfen olay tarih ve saatini giriniz.');
+      return;
+    }
+    if (!formData.controlTime) {
+      setFormError('Lütfen kontrol altına alınma tarih ve saatini giriniz.');
+      toast.error('Lütfen kontrol altına alınma tarih ve saatini giriniz.');
       return;
     }
     mutation.mutate(formData);
@@ -239,376 +329,816 @@ const HazmatIncidentFormPage = ({ initialData, onSuccess, onCancel }: HazmatInci
     setFormData((prev: any) => ({ ...prev, [field]: value }));
   };
 
-  const isDefinitionsLoading = loadingFacilities || loadingIncidentTypes;
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+    } else {
+      navigate('/hazmat/incidents');
+    }
+  };
 
-  const currentLocString = useMemo(() => {
-    if (!kitLocationId) return '';
-    const loc = departments.find((d: any) => d.id === kitLocationId);
-    if (!loc) return '';
-    return `Blok: ${loc.building || '-'} / Kat: ${loc.floor || '-'} / Birim: ${loc.name || '-'}${loc.description ? ` / Mahal: ${loc.description}` : ''}`;
-  }, [kitLocationId, departments]);
-
-  const currentLocName = useMemo(() => {
-    if (!kitLocationId) return '';
-    const loc = departments.find((d: any) => d.id === kitLocationId);
-    return loc ? loc.name : '';
-  }, [kitLocationId, departments]);
-
-  const filteredKits = availableKits.filter(k => 
-    (k.departmentId && k.departmentId === kitLocationId) || 
-    k.location === currentLocString ||
-    k.location === currentLocName ||
-    (currentLocName && k.location?.includes(currentLocName))
-  );
-
-  if (isDefinitionsLoading && !initialData) {
+  if (loadingIncident) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground italic">Tanımlamalar yükleniyor...</p>
+      <div className="p-12 text-center text-muted-foreground flex flex-col items-center justify-center gap-2">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        <span>Olay bilgileri yükleniyor...</span>
       </div>
     );
   }
 
+  const selectedFacilityObj = facilities.find((f) => f.id === formData.facilityId);
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 pt-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Basic Info */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold border-b pb-2 text-purple-600 uppercase tracking-wider">Temel Bilgiler</h3>
-          
-          <div className="space-y-2">
-            <Label>Tesis *</Label>
-            <Select 
-              value={formData.facilityId} 
-              onValueChange={v => { updateField('facilityId', v); updateField('departmentId', ''); }} 
-              disabled={!isAdmin && !!initialData}
-            >
-              <SelectTrigger>
-                <SelectValue>
-                  {facilities.find(f => f.id === formData.facilityId)?.name || "Tesis seçin"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {facilities
-                  .filter(f => isAdmin || user?.facilities?.includes(f.id))
-                  .map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)
-                }
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Olay Türü *</Label>
-            <Select 
-              value={String(formData.incidentTypeId || '')} 
-              onValueChange={v => updateField('incidentTypeId', v)}
-            >
-              <SelectTrigger>
-                <SelectValue>
-                  {incidentTypes.find(c => String(c.id) === String(formData.incidentTypeId))?.name || "Olay Türü seçin"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {incidentTypes.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Kök Neden *</Label>
-            <Input 
-              value={formData.rootCause} 
-              onChange={e => updateField('rootCause', e.target.value)} 
-              required 
-              placeholder="Tehlikeli Madde kaynaklı kök nedeni girin"
-            />
-          </div>
-
-          <div className="space-y-2 md:col-span-2">
-            <Label>Lokasyon *</Label>
-            <LocationSelector
-              departments={departments}
-              value={String(formData.departmentId || '')}
-              onChange={v => {
-                updateField('departmentId', v);
-                if (formData.kitUsed) {
-                  setKitLocationId(v);
-                  updateField('spillKitId', '');
-                }
-              }}
-              disabled={!formData.facilityId}
-            />
-          </div>
-
-          <div className="space-y-2 md:col-span-2">
-            <Label>İlgili Tehlikeli Madde(ler) (Opsiyonel)</Label>
-            <Input 
-              placeholder="Tehlikeli madde ara..." 
-              value={materialSearch}
-              onChange={(e) => setMaterialSearch(e.target.value)}
-              className="mb-2"
-            />
-            <div className="border rounded-md p-2 max-h-48 overflow-y-auto bg-background space-y-1">
-              {materials.length === 0 ? (
-                <p className="text-xs text-muted-foreground p-2">Bu tesise tanımlı tehlikeli madde bulunamadı.</p>
-              ) : (
-                materials.filter((m: any) => m.productName?.toLowerCase().includes(materialSearch.toLowerCase())).length === 0 ? (
-                  <p className="text-xs text-muted-foreground p-2">Aramaya uygun madde bulunamadı.</p>
-                ) : (
-                  materials.filter((m: any) => m.productName?.toLowerCase().includes(materialSearch.toLowerCase())).map((m: any) => (
-                    <div key={m.id} className="flex items-center space-x-2 p-1.5 hover:bg-muted/50 rounded transition-colors">
-                      <Checkbox 
-                        id={`mat-${m.id}`}
-                        checked={formData.materialIds?.includes(m.id)}
-                        onCheckedChange={(checked) => {
-                          const current = formData.materialIds || [];
-                          if (checked) {
-                            updateField('materialIds', [...current, m.id]);
-                          } else {
-                            updateField('materialIds', current.filter((id: string) => id !== m.id));
-                          }
-                        }}
-                      />
-                      <Label htmlFor={`mat-${m.id}`} className="text-sm cursor-pointer flex-1">{m.productName}</Label>
-                    </div>
-                  ))
-                )
-              )}
+    <div className="max-w-5xl mx-auto space-y-6 pb-16 font-sans antialiased">
+      {/* Üst Başlık & Eylem Çubuğu */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-4">
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={handleCancel}
+            className="h-9 w-9 rounded-lg shrink-0 shadow-2xs"
+            title="Geri Dön"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+                {isEditing ? 'Olağan Dışı Olayı Düzenle' : 'Yeni TM Olağan Dışı Olay Bildirimi'}
+              </h1>
+              <Badge variant="outline" className="text-xs font-semibold">
+                {isEditing ? 'Düzenleme' : 'Yeni Bildirim'}
+              </Badge>
             </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label>Olay Tarihi / Saati *</Label>
-            <Input type="datetime-local" value={formData.incidentDate} onChange={e => updateField('incidentDate', e.target.value)} required />
-          </div>
-
-          {/* Döküntü Kiti Alanı */}
-          <div className="p-4 bg-blue-50/50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-900/30 space-y-3 md:col-span-2">
-             <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="kitUsed" 
-                  checked={formData.kitUsed} 
-                  onCheckedChange={v => {
-                    updateField('kitUsed', !!v);
-                    if (!!v && formData.departmentId) {
-                      setKitLocationId(formData.departmentId);
-                    } else {
-                      setKitLocationId('');
-                    }
-                    updateField('spillKitId', '');
-                  }} 
-                />
-                <Label htmlFor="kitUsed" className="text-sm font-semibold text-blue-800 dark:text-blue-300">Döküntü Kiti Kullanıldı Mı?</Label>
-              </div>
-              {formData.kitUsed && (
-                <div className="space-y-4 pl-6 border-l-2 border-blue-200 ml-2 mt-2">
-                  <div className="space-y-2">
-                    <Label className="text-xs text-blue-700 dark:text-blue-400">Kitin Bulunduğu Lokasyon</Label>
-                    <LocationSelector
-                      departments={departments}
-                      value={kitLocationId}
-                      onChange={v => {
-                        setKitLocationId(v);
-                        updateField('spillKitId', '');
-                      }}
-                      disabled={!formData.facilityId}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs text-blue-700 dark:text-blue-400">Kullanılan Kiti Seçin *</Label>
-                    <Select 
-                      value={formData.spillKitId} 
-                      onValueChange={v => updateField('spillKitId', v)}
-                      disabled={!kitLocationId}
-                    >
-                      <SelectTrigger className="h-8 border-blue-200 dark:border-blue-800">
-                        <SelectValue>
-                          {availableKits.find(k => k.placementId === formData.spillKitId) 
-                            ? `${availableKits.find(k => k.placementId === formData.spillKitId)?.code} - ${availableKits.find(k => k.placementId === formData.spillKitId)?.kitName}`
-                            : "Kit seçin"}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredKits.length === 0 ? (
-                          <div className="p-2 text-xs text-muted-foreground text-center">Bu lokasyonda aktif kit bulunamadı.</div>
-                        ) : (
-                          filteredKits.map(k => (
-                            <SelectItem key={k.placementId} value={k.placementId}>
-                              {k.code} - {k.kitName}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <p className="text-[10px] text-blue-600/70 italic">Not: Kit kullanıldığında, kiti yeniden tamamlamak için otomatik eksik kontrol kaydı oluşturulacaktır.</p>
-                </div>
-              )}
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Tehlikeli madde sızıntı, döküntü, maruziyet ve kaza bildirim formu.
+            </p>
           </div>
         </div>
 
-        {/* Status & Response */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold border-b pb-2 text-purple-600 uppercase tracking-wider">Müdahale & Durum</h3>
-          
-          <div className="grid grid-cols-2 gap-6 p-4 bg-muted/30 rounded-xl border border-border/50">
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="interventionRequired" 
-                  checked={formData.interventionRequired} 
-                  onCheckedChange={v => updateField('interventionRequired', !!v)} 
-                />
-                <Label htmlFor="interventionRequired" className="text-xs">Müdahale Gerekti mi?</Label>
-              </div>
-              {formData.interventionRequired && (
-                <div className="space-y-2">
-                  <Label className="text-[10px]">Müdahale Saati</Label>
-                  <Input type="datetime-local" size={1} className="h-8 text-xs" value={formData.interventionTime} onChange={e => updateField('interventionTime', e.target.value)} />
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs">Kontrol Altına Alındığı Saat *</Label>
-              <Input type="datetime-local" className="h-8 text-xs" value={formData.controlTime} onChange={e => updateField('controlTime', e.target.value)} required />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-3 p-3 bg-muted/20 rounded-lg border border-border/50">
-              <div className="flex items-center space-x-2">
-                <Checkbox id="supportReceived" checked={formData.supportReceived} onCheckedChange={v => updateField('supportReceived', !!v)} />
-                <Label htmlFor="supportReceived" className="text-xs">Destek Alındı mı?</Label>
-              </div>
-              {formData.supportReceived && (
-                <Select 
-                  value={String(formData.supportUnitId || '')} 
-                  onValueChange={v => updateField('supportUnitId', v)}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue>
-                      {supportUnits.find(su => String(su.id) === String(formData.supportUnitId))?.name || "Birim seçin"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {supportUnits.map(su => <SelectItem key={su.id} value={String(su.id)}>{su.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            <div className="space-y-3 p-3 bg-muted/20 rounded-lg border border-border/50">
-              <div className="flex items-center space-x-2">
-                <Checkbox id="announcementMade" checked={formData.announcementMade} onCheckedChange={v => updateField('announcementMade', !!v)} />
-                <Label htmlFor="announcementMade" className="text-xs">Acil Durum Anonsu?</Label>
-              </div>
-              {formData.announcementMade && (
-                <Select 
-                  value={String(formData.emergencyCodeId || '')} 
-                  onValueChange={v => updateField('emergencyCodeId', v)}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue>
-                      {emergencyCodes.find(ec => String(ec.id) === String(formData.emergencyCodeId))?.name || "Kod seçin"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {emergencyCodes.map(ec => <SelectItem key={ec.id} value={String(ec.id)}>{ec.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-3 p-3 bg-muted/20 rounded-lg border border-border/50">
-            <div className="flex items-center space-x-2">
-              <Checkbox id="serviceInterrupted" checked={formData.serviceInterrupted} onCheckedChange={v => updateField('serviceInterrupted', !!v)} />
-              <Label htmlFor="serviceInterrupted" className="text-xs">Hizmet Kesintiye Uğradı mı?</Label>
-            </div>
-            {formData.serviceInterrupted && (
-              <div className="flex items-center gap-2">
-                <Input type="number" className="h-8 text-xs w-24" value={formData.interruptionDuration} onChange={e => updateField('interruptionDuration', e.target.value)} />
-                <span className="text-[10px] text-muted-foreground">saat kesinti</span>
-              </div>
+        {/* Üst Aksiyon Butonları */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCancel}
+            className="h-9 px-3.5 text-xs font-medium"
+          >
+            <X className="w-3.5 h-3.5 mr-1.5" /> İptal
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={mutation.isPending}
+            className="h-9 px-4 text-xs font-semibold gap-1.5 shadow-sm"
+          >
+            {mutation.isPending ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Save className="w-3.5 h-3.5" />
             )}
-          </div>
-        </div>
-      </div>
-
-      {/* Statistics */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold border-b pb-2 text-purple-600 uppercase tracking-wider">Etki & İstatistikler</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="space-y-2">
-            <Label className="text-xs">Tahliye Personel</Label>
-            <Input type="number" value={formData.evacuatedStaffCount} onChange={e => updateField('evacuatedStaffCount', e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Tahliye Hasta</Label>
-            <Input type="number" value={formData.evacuatedPatientCount} onChange={e => updateField('evacuatedPatientCount', e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs text-orange-600 font-semibold">Yaralı Sayısı</Label>
-            <Input type="number" className="border-orange-200" value={formData.injuredCount} onChange={e => updateField('injuredCount', e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs text-red-600 font-semibold">Ölü Sayısı</Label>
-            <Input type="number" className="border-red-200" value={formData.deceasedCount} onChange={e => updateField('deceasedCount', e.target.value)} />
-          </div>
-        </div>
-      </div>
-
-      {/* Details (Text Areas) */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold border-b pb-2 text-purple-600 uppercase tracking-wider">Olay Detayları</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label>Olayın Gerçekleşme Şekli (Özet) *</Label>
-            <Textarea value={formData.incidentMode} onChange={e => updateField('incidentMode', e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label>Olayın Nedeni Detay</Label>
-            <Textarea value={formData.causeDetail} onChange={e => updateField('causeDetail', e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Tespit Edilebilen Etki</Label>
-            <Textarea value={formData.detectedEffect} onChange={e => updateField('detectedEffect', e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Olaya İlişkin Tespitler</Label>
-            <Textarea value={formData.observations} onChange={e => updateField('observations', e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Alınan Aksiyonlar</Label>
-            <Textarea value={formData.actionsTaken} onChange={e => updateField('actionsTaken', e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Sonuç / Değerlendirme</Label>
-            <Textarea value={formData.resultEvaluation} onChange={e => updateField('resultEvaluation', e.target.value)} />
-          </div>
+            {isEditing ? 'Değişiklikleri Güncelle' : 'Kaydı Tamamla'}
+          </Button>
         </div>
       </div>
 
       {formError && (
-        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-xs font-medium text-red-700 dark:text-red-300">
-          {formError}
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive text-xs p-3 rounded-lg flex items-center gap-2">
+          <ShieldAlert className="w-4 h-4 shrink-0" />
+          <span>{formError}</span>
         </div>
       )}
 
-      <div className="flex justify-end gap-3 pt-6 border-t">
-        <Button type="button" variant="outline" onClick={onCancel}>İptal</Button>
-        <Button type="submit" disabled={mutation.isPending} className="bg-purple-600 hover:bg-purple-700 text-white">
-          {mutation.isPending ? (
-            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Kaydediliyor...</>
-          ) : (
-            initialData ? 'Güncelle' : 'Olayı Bildir'
-          )}
-        </Button>
-      </div>
-    </form>
-  );
-};
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* KART 1: TEMEL BİLGİLER & LOKASYON */}
+        <Card className="border-border/70 shadow-2xs overflow-visible">
+          <CardHeader className="p-4 pb-2 border-b border-border/60 bg-muted/20">
+            <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-primary" />
+              1. Temel Bilgiler ve Lokasyon
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Olayın meydana geldiği tesis, olay türü ve detaylı fiziksel konum.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Tesis Seçimi */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Tesis *</Label>
+                {isAdmin ? (
+                  <Select
+                    value={formData.facilityId}
+                    onValueChange={(v) => {
+                      updateField('facilityId', v);
+                      updateField('departmentId', '');
+                    }}
+                  >
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue placeholder="Tesis seçiniz" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {facilities.map((f) => (
+                        <SelectItem key={f.id} value={f.id} className="text-xs">
+                          {f.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    value={selectedFacilityObj?.name || 'Tesis Belirleniyor...'}
+                    disabled
+                    className="h-9 text-xs bg-muted/50 cursor-not-allowed font-medium text-foreground"
+                  />
+                )}
+                {!isAdmin && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Tesis bilginiz yetkili olduğunuz tesisten otomatik alınmıştır.
+                  </p>
+                )}
+              </div>
 
-export default HazmatIncidentFormPage;
+              {/* Olay Türü (/hazmat/settings/events) */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Olay Türü *</Label>
+                <SearchableSelect
+                  value={String(formData.incidentTypeId || '')}
+                  onChange={(val) => updateField('incidentTypeId', val)}
+                  options={incidentTypes.map((c: any) => ({
+                    id: String(c.id),
+                    name: c.name,
+                    description: c.description,
+                  }))}
+                  placeholder="Olay Türü seçiniz..."
+                  searchPlaceholder="Olay türü ara (Sızıntı, Dökülme, Yangın vb.)..."
+                  emptyMessage="Eşleşen olay türü bulunamadı."
+                />
+              </div>
+
+              {/* Kök Neden (/hazmat/settings/root-causes) */}
+              <div className="space-y-1.5 md:col-span-2">
+                <Label className="text-xs font-medium">Kök Neden *</Label>
+                <SearchableSelect
+                  value={String(formData.rootCauseId || '')}
+                  onChange={(val, opt) => {
+                    updateField('rootCauseId', val);
+                    updateField('rootCause', opt?.name || '');
+                  }}
+                  options={rootCauses.map((r: any) => ({
+                    id: String(r.id),
+                    name: r.name,
+                    description: r.description,
+                  }))}
+                  placeholder="Kök Neden seçiniz..."
+                  searchPlaceholder="Kök neden ara (Ekipman arızası, Bakım eksikliği vb.)..."
+                  emptyMessage="Eşleşen kök neden bulunamadı."
+                />
+                {(formData.rootCause === 'Diğer' ||
+                  rootCauses.find((r) => String(r.id) === String(formData.rootCauseId))?.name === 'Diğer') && (
+                  <div className="pt-2">
+                    <Label className="text-[11px] text-muted-foreground">Diğer Kök Neden Açıklaması *</Label>
+                    <Input
+                      placeholder="Belirtilen nedenler haricindeki kök nedeni detaylandırın..."
+                      value={formData.causeDetail || ''}
+                      onChange={(e) => updateField('causeDetail', e.target.value)}
+                      className="h-8 text-xs mt-1"
+                      required
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Fiziksel Lokasyon Seçici */}
+              <div className="space-y-1.5 md:col-span-2">
+                <Label className="text-xs font-medium">Fiziksel Lokasyon *</Label>
+                <LocationSelector
+                  departments={departments}
+                  value={String(formData.departmentId || '')}
+                  onChange={(v) => {
+                    updateField('departmentId', v);
+                    if (formData.kitUsed) {
+                      setKitLocationId(v);
+                      updateField('spillKitId', '');
+                    }
+                  }}
+                  disabled={!formData.facilityId}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* KART 2: ZAMAN & MÜDAHALE SÜRELERİ */}
+        <Card className="border-border/70 shadow-2xs overflow-visible">
+          <CardHeader className="p-4 pb-2 border-b border-border/60 bg-muted/20">
+            <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+              <Clock className="w-4 h-4 text-emerald-600" />
+              2. Zaman ve Müdahale Bilgileri
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Olayın gerçekleştiği an ve kontrol altına alınma süreci.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Olay Tarihi ve Saati *</Label>
+                <Input
+                  type="datetime-local"
+                  value={formData.incidentDate}
+                  onChange={(e) => updateField('incidentDate', e.target.value)}
+                  required
+                  className="h-9 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Müdahale Başlangıç Saati</Label>
+                <Input
+                  type="datetime-local"
+                  value={formData.interventionTime}
+                  onChange={(e) => updateField('interventionTime', e.target.value)}
+                  disabled={!formData.interventionRequired}
+                  className="h-9 text-xs disabled:opacity-50"
+                />
+                <div className="flex items-center space-x-2 pt-1">
+                  <Checkbox
+                    id="interventionRequired"
+                    checked={formData.interventionRequired}
+                    onCheckedChange={(checked) => updateField('interventionRequired', Boolean(checked))}
+                  />
+                  <label htmlFor="interventionRequired" className="text-xs text-muted-foreground cursor-pointer">
+                    Müdahale gerçekleştirildi
+                  </label>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Kontrol Altına Alınma Saati *</Label>
+                <Input
+                  type="datetime-local"
+                  value={formData.controlTime}
+                  onChange={(e) => updateField('controlTime', e.target.value)}
+                  required
+                  className="h-9 text-xs"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* KART 3: DESTEK, ANONS & DÖKÜNTÜ KİTİ */}
+        <Card className="border-border/70 shadow-2xs overflow-visible">
+          <CardHeader className="p-4 pb-2 border-b border-border/60 bg-muted/20">
+            <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-purple-600" />
+              3. Destek, Acil Durum Kodu ve Döküntü Kiti
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Müdahale sürecinde alınan harici destek, acil durum anonsu ve kullanılan kitler.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* 1. Destek Birimi */}
+              <div className="space-y-2 p-3 bg-muted/20 rounded-lg border border-border/50">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-foreground">
+                    Destek Alındı mı?
+                  </Label>
+                  <div className="flex items-center bg-muted/70 p-0.5 rounded-md border border-border/60">
+                    <button
+                      type="button"
+                      onClick={() => updateField('supportReceived', true)}
+                      className={`px-3 py-1 text-xs font-medium rounded transition-all cursor-pointer ${
+                        formData.supportReceived
+                          ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Evet
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateField('supportReceived', false);
+                        updateField('supportUnitId', '');
+                      }}
+                      className={`px-3 py-1 text-xs font-medium rounded transition-all cursor-pointer ${
+                        !formData.supportReceived
+                          ? 'bg-muted-foreground/20 text-foreground font-semibold'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Hayır
+                    </button>
+                  </div>
+                </div>
+
+                {formData.supportReceived ? (
+                  <div className="pt-1.5 space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Alınan Destek Birimi *</Label>
+                    <SearchableSelect
+                      value={String(formData.supportUnitId || '')}
+                      onChange={(val) => updateField('supportUnitId', val)}
+                      options={supportUnits.map((u: any) => ({
+                        id: String(u.id),
+                        name: u.name,
+                      }))}
+                      placeholder="Destek birimi seçiniz..."
+                      searchPlaceholder="Destek birimi ara (İtfaiye, AFAD vb.)..."
+                      emptyMessage="Destek birimi bulunamadı."
+                    />
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground italic pt-1">
+                    Herhangi bir harici destek birimi çağrılmadı.
+                  </p>
+                )}
+              </div>
+
+              {/* 2. Anons / Acil Durum Kodu */}
+              <div className="space-y-2 p-3 bg-muted/20 rounded-lg border border-border/50">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-foreground">
+                    Anons Yapıldı mı?
+                  </Label>
+                  <div className="flex items-center bg-muted/70 p-0.5 rounded-md border border-border/60">
+                    <button
+                      type="button"
+                      onClick={() => updateField('announcementMade', true)}
+                      className={`px-3 py-1 text-xs font-medium rounded transition-all cursor-pointer ${
+                        formData.announcementMade
+                          ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Evet
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateField('announcementMade', false);
+                        updateField('emergencyCodeId', '');
+                      }}
+                      className={`px-3 py-1 text-xs font-medium rounded transition-all cursor-pointer ${
+                        !formData.announcementMade
+                          ? 'bg-muted-foreground/20 text-foreground font-semibold'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Hayır
+                    </button>
+                  </div>
+                </div>
+
+                {formData.announcementMade ? (
+                  <div className="pt-1.5 space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Verilen Acil Durum Kodu *</Label>
+                    <SearchableSelect
+                      value={String(formData.emergencyCodeId || '')}
+                      onChange={(val) => updateField('emergencyCodeId', val)}
+                      options={emergencyCodes.map((c: any) => ({
+                        id: String(c.id),
+                        name: c.code ? `${c.code} - ${c.name}` : c.name,
+                      }))}
+                      placeholder="Acil durum kodu seçiniz..."
+                      searchPlaceholder="Acil durum kodu ara (Kırmızı Kod, Mavi Kod vb.)..."
+                      emptyMessage="Acil durum kodu bulunamadı."
+                    />
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground italic pt-1">
+                    Tesis genelinde acil durum anonsu verilmedi.
+                  </p>
+                )}
+              </div>
+
+              {/* 3. Döküntü Kiti */}
+              <div className="space-y-2 p-3 bg-muted/20 rounded-lg border border-border/50">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-foreground">
+                    Döküntü Kiti Kullanıldı mı?
+                  </Label>
+                  <div className="flex items-center bg-muted/70 p-0.5 rounded-md border border-border/60">
+                    <button
+                      type="button"
+                      onClick={() => updateField('kitUsed', true)}
+                      className={`px-3 py-1 text-xs font-medium rounded transition-all cursor-pointer ${
+                        formData.kitUsed
+                          ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Evet
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateField('kitUsed', false);
+                        updateField('spillKitId', '');
+                      }}
+                      className={`px-3 py-1 text-xs font-medium rounded transition-all cursor-pointer ${
+                        !formData.kitUsed
+                          ? 'bg-muted-foreground/20 text-foreground font-semibold'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Hayır
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground italic pt-1">
+                  {formData.kitUsed
+                    ? 'Olay müdahalesinde kimyasal döküntü kiti kullanılmıştır.'
+                    : 'Olay müdahalesinde döküntü kiti kullanılmamıştır.'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* KART 4: İLGİLİ TEHLİKELİ MADDELER */}
+        <Card className="border-border/70 shadow-2xs overflow-visible">
+          <CardHeader className="p-4 pb-2 border-b border-border/60 bg-muted/20">
+            <CardTitle className="text-sm font-bold text-foreground flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-amber-500" />
+                4. İlgili Tehlikeli Madde(ler)
+              </span>
+              <Badge variant="secondary" className="text-[11px] font-normal">
+                {formData.materialIds?.length || 0} Madde Seçili
+              </Badge>
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Olaya karışan kimyasal maddeleri seçiniz.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4">
+            <HazmatMaterialMultiSelect
+              materials={materials}
+              selectedIds={formData.materialIds || []}
+              onChange={(ids) => updateField('materialIds', ids)}
+            />
+          </CardContent>
+        </Card>
+
+        {/* KART 5: ETKİ VE ZARAR BİLGİLERİ */}
+        <Card className="border-border/70 shadow-2xs overflow-visible">
+          <CardHeader className="p-4 pb-2 border-b border-border/60 bg-muted/20">
+            <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+              <HeartPulse className="w-4 h-4 text-rose-500" />
+              5. Etki ve Zarar Bilgileri
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Personel, hasta tahliyesi ve yaralanma/can kaybı verileri.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Yaralı Sayısı</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.injuredCount}
+                  onChange={(e) => updateField('injuredCount', e.target.value)}
+                  className="h-8 text-xs font-semibold"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Vefat Sayısı</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.deceasedCount}
+                  onChange={(e) => updateField('deceasedCount', e.target.value)}
+                  className="h-8 text-xs font-semibold text-rose-600"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Tahliye Personel</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.evacuatedStaffCount}
+                  onChange={(e) => updateField('evacuatedStaffCount', e.target.value)}
+                  className="h-8 text-xs font-semibold"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Tahliye Hasta</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.evacuatedPatientCount}
+                  onChange={(e) => updateField('evacuatedPatientCount', e.target.value)}
+                  className="h-8 text-xs font-semibold"
+                />
+              </div>
+            </div>
+
+            {/* Hizmet Kesintisi */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-muted/20 rounded-lg border border-border/50">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="serviceInterrupted"
+                  checked={formData.serviceInterrupted}
+                  onCheckedChange={(checked) => updateField('serviceInterrupted', Boolean(checked))}
+                />
+                <Label htmlFor="serviceInterrupted" className="text-xs font-semibold cursor-pointer">
+                  Hizmet Kesintiye Uğradı mı?
+                </Label>
+              </div>
+              {formData.serviceInterrupted && (
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground whitespace-nowrap">Kesinti Süresi (Saat):</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={formData.interruptionDuration}
+                    onChange={(e) => updateField('interruptionDuration', e.target.value)}
+                    className="h-8 w-24 text-xs font-semibold bg-background"
+                  />
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* KART 6: DETAYLI AÇIKLAMALAR VE DEĞERLENDİRME */}
+        <Card className="border-border/70 shadow-2xs overflow-visible">
+          <CardHeader className="p-4 pb-2 border-b border-border/60 bg-muted/20">
+            <CardTitle className="text-sm font-bold text-foreground">
+              6. Detaylı Açıklamalar ve Değerlendirme
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Olayın seyri, alınan aksiyonlar ve nihai durum özeti.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Olay Şekli / Oluş Biçimi</Label>
+              <Input
+                value={formData.incidentMode}
+                onChange={(e) => updateField('incidentMode', e.target.value)}
+                placeholder="Örn: 5L Asit bidonunun taşınırken kırılması sonucu zemin döküntüsü..."
+                className="h-9 text-xs"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Neden Detay</Label>
+                <Textarea
+                  value={formData.causeDetail}
+                  onChange={(e) => updateField('causeDetail', e.target.value)}
+                  placeholder="Kaza veya sızıntıya neden olan faktörler..."
+                  rows={2}
+                  className="text-xs resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Tespit Edilen Etki</Label>
+                <Textarea
+                  value={formData.detectedEffect}
+                  onChange={(e) => updateField('detectedEffect', e.target.value)}
+                  placeholder="Koku yayılımı, duman, cilt teması vb..."
+                  rows={2}
+                  className="text-xs resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Olaya İlişkin Tespitler / Gözlemler</Label>
+                <Textarea
+                  value={formData.observations}
+                  onChange={(e) => updateField('observations', e.target.value)}
+                  placeholder="Sahada tespit edilen durumlar..."
+                  rows={2}
+                  className="text-xs resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Alınan Aksiyonlar / Müdahaleler</Label>
+                <Textarea
+                  value={formData.actionsTaken}
+                  onChange={(e) => updateField('actionsTaken', e.target.value)}
+                  placeholder="Bölge emniyete alındı, absorban uygulandı vb..."
+                  rows={2}
+                  className="text-xs resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Sonuç ve Genel Değerlendirme</Label>
+              <Textarea
+                value={formData.resultEvaluation}
+                onChange={(e) => updateField('resultEvaluation', e.target.value)}
+                placeholder="Olay sonrası normale dönüş, atık bertarafı ve genel sonuç..."
+                rows={2}
+                className="text-xs resize-none"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* KART 7: FOTOĞRAFLAR VE BELGELER */}
+        <Card className="border-border/70 shadow-2xs overflow-visible">
+          <CardHeader className="p-4 pb-2 border-b border-border/60 bg-muted/20">
+            <CardTitle className="text-sm font-bold text-foreground flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Camera className="w-4 h-4 text-primary" />
+                7. Fotoğraf ve Belge Ekleri
+              </span>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-[10px]">
+                  {formData.photos?.length || 0} Fotoğraf
+                </Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  {formData.documents?.length || 0} Belge
+                </Badge>
+              </div>
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Olay yeri fotoğrafları, kaza tutanakları, inceleme raporları ve ilgili belgeleri yükleyebilirsiniz.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4">
+            <HazmatAttachmentManager
+              facilityId={formData.facilityId}
+              facilityName={selectedFacilityObj?.name}
+              photos={formData.photos || []}
+              onPhotosChange={(photos) => updateField('photos', photos)}
+              documents={formData.documents || []}
+              onDocumentsChange={(docs) => updateField('documents', docs)}
+            />
+          </CardContent>
+        </Card>
+
+        {/* KART 8: OLAY SONRASI AKSİYON VE İYİLEŞTİRME BİLGİLERİ */}
+        <Card className="border-border/70 shadow-2xs overflow-visible">
+          <CardHeader className="p-4 pb-2 border-b border-border/60 bg-muted/20">
+            <CardTitle className="text-sm font-bold text-foreground flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                8. Olay Sonrası Aksiyon ve İyileştirme Bilgileri
+              </span>
+              <div className="flex items-center bg-muted/70 p-0.5 rounded-md border border-border/60">
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateField('hasAction', true);
+                    if (!formData.actionStatus || formData.actionStatus === 'Aksiyon Alınmadı') {
+                      updateField('actionStatus', 'Tamamlandı');
+                    }
+                  }}
+                  className={`px-3 py-1 text-xs font-medium rounded transition-all cursor-pointer ${
+                    formData.hasAction
+                      ? 'bg-emerald-600 text-white shadow-xs font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Aksiyon Alındı
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateField('hasAction', false);
+                    updateField('actionStatus', 'Aksiyon Alınmadı');
+                  }}
+                  className={`px-3 py-1 text-xs font-medium rounded transition-all cursor-pointer ${
+                    !formData.hasAction
+                      ? 'bg-muted-foreground/20 text-foreground font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Henüz Alınmadı
+                </button>
+              </div>
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Bu olay kapsamında alınan önleyici ve düzeltici aksiyonlar (DÖF / İyileştirme).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            {formData.hasAction ? (
+              <div className="space-y-4 animate-in fade-in-0 duration-150">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Aksiyon Durumu */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Aksiyon Durumu *</Label>
+                    <Select
+                      value={formData.actionStatus}
+                      onValueChange={(v) => updateField('actionStatus', v)}
+                    >
+                      <SelectTrigger className="h-9 text-xs bg-background">
+                        <SelectValue placeholder="Durum seçiniz" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Tamamlandı" className="text-xs">
+                          Tamamlandı (Aksiyon Kapatıldı)
+                        </SelectItem>
+                        <SelectItem value="Devam Ediyor" className="text-xs">
+                          Devam Ediyor (Süreç Sürüyor)
+                        </SelectItem>
+                        <SelectItem value="Planlandı" className="text-xs">
+                          Planlandı (Termin Belirlendi)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Aksiyon Sorumlusu */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Aksiyon Sorumlusu</Label>
+                    <Input
+                      value={formData.actionResponsible || ''}
+                      onChange={(e) => updateField('actionResponsible', e.target.value)}
+                      placeholder="Örn: Ahmet Yılmaz - İSG Uzmanı / Tesis Müdürü"
+                      className="h-9 text-xs"
+                    />
+                  </div>
+
+                  {/* Aksiyon / Kapatma Tarihi */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Aksiyon Tarihi / Hedef</Label>
+                    <Input
+                      type="date"
+                      value={formData.actionDate || ''}
+                      onChange={(e) => updateField('actionDate', e.target.value)}
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Yapılan İşlemler / Aksiyon Detayı */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Alınan Aksiyon ve Yapılan İyileştirmeler *</Label>
+                  <Textarea
+                    value={formData.actionPlan || ''}
+                    onChange={(e) => updateField('actionPlan', e.target.value)}
+                    placeholder="Olayın tekrarını önlemek için yapılan teknik veya idari düzenlemeler..."
+                    rows={3}
+                    className="text-xs resize-none"
+                    required={formData.hasAction}
+                  />
+                </div>
+
+                {/* Aksiyon Sonucu ve Kapatma Değerlendirmesi */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Aksiyon Sonucu ve Kapatma Değerlendirmesi</Label>
+                  <Textarea
+                    value={formData.actionResult || ''}
+                    onChange={(e) => updateField('actionResult', e.target.value)}
+                    placeholder="Aksiyonun sahadaki etkisi, doğrulama ölçümleri ve kapanış notu..."
+                    rows={2}
+                    className="text-xs resize-none"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="border border-dashed border-border/70 rounded-lg p-4 text-center text-xs text-muted-foreground bg-background/50">
+                <p>Bu olay bildirimi için henüz düzeltici aksiyon tanımlanmadı.</p>
+                <p className="text-[11px] text-muted-foreground/80 mt-0.5">
+                  Aksiyon alındığında yukarıdaki "Aksiyon Alındı" butonuna tıklayarak yapılan işlemleri ve sorumluları kaydedebilirsiniz.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ALT BUTON ÇUBUĞU - Sağ Tarafa Yaslı, Belirgin Sınırlar */}
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-border/80">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCancel}
+            className="h-9 px-4 text-xs font-semibold border-border/80 hover:bg-muted"
+          >
+            İptal
+          </Button>
+          <Button
+            type="submit"
+            disabled={mutation.isPending}
+            className="h-9 px-5 text-xs font-semibold gap-1.5 shadow-sm"
+          >
+            {mutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            {isEditing ? 'Değişiklikleri Güncelle' : 'Kaydı Tamamla'}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}

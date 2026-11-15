@@ -1,33 +1,52 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import api, { BASE_URL } from '@/lib/api';
+import api from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 import { useActiveFacility } from '@/hooks/useActiveFacility';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Filter, Printer, ExternalLink, Download, LayoutGrid, Upload, Loader2, Layers, Sparkles, Clock, Pencil } from 'lucide-react';
+import {
+  Plus,
+  Search,
+  Printer,
+  Loader2,
+  Sparkles,
+  Clock,
+  Pencil,
+  X,
+  PackageOpen,
+  Building2
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
 import { HazmatMaterialSummaryDialog } from '@/components/hazmat/HazmatMaterialSummaryDialog';
-import { HazmatInventoryImportModal } from '@/components/hazmat/HazmatInventoryImportModal';
-import { toast } from 'sonner';
-import * as XLSX from 'xlsx';
+import { HazmatAddFromPoolModal } from '@/components/hazmat/HazmatAddFromPoolModal';
 
 export default function FacilityInventoryListPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const activeFacilityId = useActiveFacility();
 
+  const currentEffectiveFacilityId = activeFacilityId || localStorage.getItem('activeFacilityId') || 'all';
+  const isManagerOrAdmin = Boolean(user?.isAdmin || user?.isManagement || currentEffectiveFacilityId === 'all');
+
+  // Filters state
   const [searchMaterial, setSearchMaterial] = useState('');
-  const [searchDepartment, setSearchDepartment] = useState('');
   const [searchAdrCategory, setSearchAdrCategory] = useState('all');
   const [filterEditStatus, setFilterEditStatus] = useState<'ALL' | 'WITHIN_3H' | 'WITHIN_6H' | 'NOT_UPDATED'>('ALL');
   const [printMaterial, setPrintMaterial] = useState<any>(null);
-  
+
   const [justUpdatedId, setJustUpdatedId] = useState<string | null>(location.state?.justUpdatedMaterialId || null);
 
   useEffect(() => {
@@ -42,55 +61,22 @@ export default function FacilityInventoryListPage() {
   // Dialog state
   const [selectedGroup, setSelectedGroup] = useState<any>(null);
 
-  // Import Modal State
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [parsedRowsForImport, setParsedRowsForImport] = useState<any[]>([]);
-  const [isParsingExcel, setIsParsingExcel] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Havuzdan Madde Ekle Modalı State
+  const [isAddFromPoolOpen, setIsAddFromPoolOpen] = useState(false);
 
-  // 0. Fetch facility locations for mapping
-  const { data: facilityLocations = [] } = useQuery<any[]>({
-    queryKey: ['facility-locations', activeFacilityId],
-    queryFn: async () => {
-      const facId = activeFacilityId || localStorage.getItem('activeFacilityId');
-      if (!facId) return [];
-      const res = await api.get(`/risks/facilities/${facId}/locations`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!(activeFacilityId || localStorage.getItem('activeFacilityId'))
-  });
-
-  // 1. Fetch summary for the list
+  // 1. Fetch summary for the active facility
   const { data: summaryData, isLoading } = useQuery({
-    queryKey: ['inventory-summary', activeFacilityId],
+    queryKey: ['inventory-summary', currentEffectiveFacilityId],
     queryFn: async () => {
-      const facId = activeFacilityId || localStorage.getItem('activeFacilityId');
-      if (!facId) return [];
-      const res = await api.get(`/hazmat/inventory/summary?facilityId=${facId}`);
+      const res = await api.get(`/hazmat/inventory/summary?facilityId=${encodeURIComponent(currentEffectiveFacilityId)}`);
       if (!res.ok) throw new Error('Failed to fetch summary');
       const data = await res.json();
-      return data.facilityItems;
+      return data.facilityItems || [];
     },
-    refetchOnMount: 'always',
-    enabled: !!(activeFacilityId || localStorage.getItem('activeFacilityId'))
+    refetchOnMount: 'always'
   });
 
-  // 2. Fetch facility materials for amount and unit
-  const { data: facilityItems = [] } = useQuery({
-    queryKey: ['facility-materials', activeFacilityId],
-    queryFn: async () => {
-      const facId = activeFacilityId || localStorage.getItem('activeFacilityId');
-      if (!facId) return [];
-      const res = await api.get(`/hazmat/materials?facilityId=${facId}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    refetchOnMount: 'always',
-    enabled: !!(activeFacilityId || localStorage.getItem('activeFacilityId'))
-  });
-
-  // 3. Fetch ADR categories
+  // 2. Fetch ADR categories
   const { data: adrCategories = [] } = useQuery({
     queryKey: ['hazmat-hazard-labels'],
     queryFn: async () => {
@@ -102,44 +88,73 @@ export default function FacilityInventoryListPage() {
 
   const groupedSummary = useMemo(() => {
     if (!summaryData) return [];
-    
-    return summaryData.map((facItem: any) => {
-      const mat = facItem.material;
-      
-      const departments = (mat.inventory || [])
-        .filter((invItem: any) => invItem.location || invItem.department)
-        .map((invItem: any) => {
-        const dept = invItem.location || invItem.department;
-        const deptName = `${dept.isCleaningCart ? '[Temizlik Arabası] ' : ''}${dept.building ? dept.building + ' / ' : ''}${dept.floor ? dept.floor + ' / ' : ''}${dept.department ? dept.department + ' / ' : ''}${dept.name || dept.description || ''}`.trim().replace(/\/$/, '').trim() || 'İsimsiz Lokasyon';
-        return {
-          id: dept.id,
-          name: deptName
-        };
-      });
 
-      return {
-        materialId: mat.id,
-        productName: mat.productName,
-        brandName: mat.brandName,
-        categoryName: mat.category?.name || 'Kategorisiz',
-        hazardLabels: mat.hazardLabels || [],
-        ppes: mat.ppes || [],
-        sdsUrl: mat.sdsUrl,
-        departments,
-        material: mat,
-        auditLogs: mat.auditLogs || [],
-        updatedAt: mat.updatedAt,
-        createdAt: mat.createdAt,
+    const materialMap = new Map<string, any>();
+
+    for (const facItem of summaryData) {
+      const mat = facItem.material;
+      if (!mat || !mat.id) continue;
+
+      const facilityInfo = {
+        facilityId: facItem.facilityId,
+        facilityName: facItem.facility?.name || '',
         amountValue: facItem.amountValue,
         unitName: facItem.unit?.name,
         unitSymbol: facItem.unit?.symbol
       };
-    });
+
+      const existing = materialMap.get(mat.id);
+      if (!existing) {
+        const departments = (mat.inventory || [])
+          .filter((invItem: any) => invItem.location || invItem.department)
+          .map((invItem: any) => {
+            const dept = invItem.location || invItem.department;
+            const deptName = `${dept.isCleaningCart ? '[Temizlik Arabası] ' : ''}${dept.building ? dept.building + ' / ' : ''}${dept.floor ? dept.floor + ' / ' : ''}${dept.department ? dept.department + ' / ' : ''}${dept.name || dept.description || ''}`.trim().replace(/\/$/, '').trim() || 'İsimsiz Lokasyon';
+            return {
+              id: dept.id,
+              name: deptName
+            };
+          });
+
+        materialMap.set(mat.id, {
+          materialId: mat.id,
+          productName: mat.productName,
+          brandName: mat.brandName,
+          categoryName: mat.category?.name || 'Kategorisiz',
+          hazardLabels: mat.hazardLabels || [],
+          adrLabels: mat.adrLabels || [],
+          ppes: mat.ppes || [],
+          sdsUrl: mat.sdsUrl,
+          departments,
+          material: mat,
+          auditLogs: mat.auditLogs || [],
+          updatedAt: mat.updatedAt,
+          createdAt: mat.createdAt,
+          amountValue: facItem.amountValue,
+          unitName: facItem.unit?.name,
+          unitSymbol: facItem.unit?.symbol,
+          facilityName: facItem.facility?.name || '',
+          facilityId: facItem.facilityId || '',
+          facilities: [facilityInfo]
+        });
+      } else {
+        // Madde zaten varsa, tesis listesine ekle ve eksik miktar bilgisini tamamla
+        if (!existing.facilities.some((f: any) => f.facilityId === facItem.facilityId)) {
+          existing.facilities.push(facilityInfo);
+        }
+        if (!existing.amountValue && facItem.amountValue) {
+          existing.amountValue = facItem.amountValue;
+          existing.unitName = facItem.unit?.name;
+          existing.unitSymbol = facItem.unit?.symbol;
+        }
+      }
+    }
+
+    return Array.from(materialMap.values());
   }, [summaryData]);
 
   const getUpdateStatus = (item: any) => {
     const isInstant = justUpdatedId === item.materialId;
-    // An item is considered ever updated if it has an UPDATE audit log or its updatedAt differs from createdAt significantly
     const updateTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
     const createTime = item.createdAt ? new Date(item.createdAt).getTime() : 0;
     const hasAuditUpdate = Boolean(item.auditLogs && item.auditLogs.length > 0);
@@ -166,29 +181,37 @@ export default function FacilityInventoryListPage() {
     return { isInstant, hasEverBeenUpdated: true, type: 'OLD', label: null };
   };
 
+  // Resolved labels for SelectTriggers (so they NEVER show raw 'all' or 'ALL')
+  const adrCategoryLabel = useMemo(() => {
+    if (searchAdrCategory === 'all') return 'Tüm ADR Kategorileri';
+    const found = adrCategories.find((c: any) => c.id === searchAdrCategory);
+    return found ? found.name : 'Tüm ADR Kategorileri';
+  }, [searchAdrCategory, adrCategories]);
+
+  const editStatusLabel = useMemo(() => {
+    if (filterEditStatus === 'ALL') return 'Tüm Güncelleme Durumları';
+    if (filterEditStatus === 'WITHIN_3H') return '⚡ Son 3 Saatte Düzenlenen';
+    if (filterEditStatus === 'WITHIN_6H') return '🕒 Son 6 Saatte Düzenlenen';
+    if (filterEditStatus === 'NOT_UPDATED') return 'İşlem Görmemişler';
+    return 'Tüm Güncelleme Durumları';
+  }, [filterEditStatus]);
+
   // Apply filters
   const filteredGroups = useMemo(() => {
     if (!groupedSummary) return [];
     let filtered = groupedSummary;
 
     if (searchMaterial) {
-      const q = searchMaterial.toLowerCase();
-      filtered = filtered.filter((g: any) => 
-        g.productName?.toLowerCase().includes(q) || 
+      const q = searchMaterial.toLowerCase().trim();
+      filtered = filtered.filter((g: any) =>
+        g.productName?.toLowerCase().includes(q) ||
         g.brandName?.toLowerCase().includes(q)
       );
     }
 
-    if (searchDepartment) {
-      const q = searchDepartment.toLowerCase();
-      filtered = filtered.filter((g: any) => 
-        g.departments.some((d: any) => d.name.toLowerCase().includes(q))
-      );
-    }
-
     if (searchAdrCategory !== 'all') {
-      filtered = filtered.filter((g: any) => 
-        g.hazardLabels.some((hl: any) => hl.label.id === searchAdrCategory)
+      filtered = filtered.filter((g: any) =>
+        g.hazardLabels.some((hl: any) => hl.label?.id === searchAdrCategory)
       );
     }
 
@@ -203,484 +226,366 @@ export default function FacilityInventoryListPage() {
     }
 
     return filtered;
-  }, [groupedSummary, searchMaterial, searchDepartment, searchAdrCategory, filterEditStatus, justUpdatedId]);
+  }, [groupedSummary, searchMaterial, searchAdrCategory, filterEditStatus, justUpdatedId]);
 
-  const handleExcelFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const hasActiveFilters = Boolean(
+    searchMaterial ||
+    searchAdrCategory !== 'all' ||
+    filterEditStatus !== 'ALL'
+  );
 
-    setIsParsingExcel(true);
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-
-        const rowsToImport: any[] = [];
-
-        // Sheet selection preference:
-        // If a sheet contains "TÜM BİRİM" or "FLORYA" or first non-empty sheet
-        let targetSheetName = wb.SheetNames.find(s => s.toUpperCase().includes('TÜM BİRİM')) || wb.SheetNames[0];
-
-        const ws = wb.Sheets[targetSheetName];
-        const data: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
-
-        if (data.length <= 1) {
-          toast.error('Seçilen Excel sayfası boş görünüyor.');
-          return;
-        }
-
-        // Find header row containing department and product name keywords
-        const normalizeText = (text: any) => String(text || '').toLocaleLowerCase('tr-TR').trim();
-        let headerRowIndex = -1;
-        let headerRow: any[] = [];
-
-        for (let i = 0; i < Math.min(data.length, 25); i++) {
-          const row = data[i] || [];
-          const rowStr = row.map(c => normalizeText(c)).join(' ');
-          if (
-            (rowStr.includes('ürün adı') || rowStr.includes('madde') || rowStr.includes('malzeme') || rowStr.includes('productname')) &&
-            (rowStr.includes('bölüm') || rowStr.includes('departman') || rowStr.includes('birim') || rowStr.includes('kullanıldığı'))
-          ) {
-            headerRowIndex = i;
-            headerRow = row;
-            break;
-          }
-        }
-
-        if (headerRowIndex === -1) {
-          // Fallback: search row having >= 4 non-empty values
-          for (let i = 0; i < Math.min(data.length, 10); i++) {
-            const r = (data[i] || []).filter(Boolean);
-            if (r.length >= 4) {
-              headerRowIndex = i;
-              headerRow = data[i];
-              break;
-            }
-          }
-        }
-
-        if (headerRowIndex === -1) {
-          toast.error('Excel başlık satırı tespit edilemedi.');
-          return;
-        }
-
-        const getColIndex = (kw: string[]) =>
-          headerRow.findIndex((h: any) => h && kw.some(k => normalizeText(h).includes(k)));
-
-        const idxDept = getColIndex(['kullanıldığı ve depolandığı', 'bölüm', 'departman', 'birim', 'kullanıldığı']);
-        const idxName = getColIndex(['ürün adı', 'madde adı', 'malzeme adı', 'isim', 'productname']);
-        const idxMin = getColIndex(['net miktar min', 'miktar min', 'adet min', 'min miktar']);
-        const idxMax = getColIndex(['net miktar max', 'miktar max', 'adet max', 'maks miktar']);
-        const idxAmountFallback = getColIndex(['adet/ miktar', 'miktar', 'adedi', 'amountvalue']);
-        const idxPkgQty = getColIndex(['ambalaj içi miktar', 'paket içi miktar', 'birim ambalaj']);
-        const idxPkgUnit = getColIndex(['ambalaj içi birim', 'paket birim', 'birim ambalaj içi birim']);
-        const idxBrand = getColIndex(['firma tedarikçi', 'tedarikçi', 'marka', 'brandname']);
-        const idxUsage = getColIndex(['kullanım şekli', 'usagemethod']);
-        const idxComp = getColIndex(['bileşimi', 'içerik', 'composition']);
-        const idxHazard = getColIndex(['tehlike tanımları', 'tehlike', 'hazarddescription']);
-        const idxFirstAid = getColIndex(['ilk yardım', 'ilkyardım', 'firstaid']);
-        const idxFire = getColIndex(['yangınla', 'yangında', 'yangın', 'firefightingmeasures']);
-        const idxRelease = getColIndex(['kaza sonucu', 'serbest kalması', 'accidentalreleasemeasures']);
-        const idxHandling = getColIndex(['kullanım ve depolama', 'depolama', 'handlingandstorage']);
-        const idxExposure = getColIndex(['maruz kalma', 'kişisel korunma', 'exposurecontrolsppe']);
-        const idxPhysical = getColIndex(['fiziksel ve kimyasal', 'fiziksel', 'physicalandchemicalproperties']);
-        const idxStability = getColIndex(['stabilite', 'reaktivite', 'stabilityandreactivity']);
-        const idxTox = getColIndex(['toksikolojik', 'toxicologicalinformation']);
-        const idxDisposal = getColIndex(['temizlik', 'imha', 'disposalconsiderations']);
-        const idxTransport = getColIndex(['taşıma', 'tehlikeli madde sınıfı', 'transportinfo']);
-
-        const parseNum = (val: any): number | null => {
-          if (val === undefined || val === null || val === '') return null;
-          const s = String(val).replace(/,/g, '.').trim();
-          const n = parseFloat(s);
-          return isNaN(n) ? null : n;
-        };
-
-        const parseAmountRange = (val: any) => {
-          if (!val) return { min: null, max: null };
-          const s = String(val).replace(/,/g, '.');
-          const rangeMatch = s.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/);
-          if (rangeMatch) {
-            return {
-              min: parseFloat(rangeMatch[1]) || null,
-              max: parseFloat(rangeMatch[2]) || null
-            };
-          }
-          const singleMatch = s.match(/(\d+(?:\.\d+)?)/);
-          if (singleMatch) {
-            const v = parseFloat(singleMatch[1]) || null;
-            return { min: v, max: v };
-          }
-          return { min: null, max: null };
-        };
-
-        for (let i = headerRowIndex + 1; i < data.length; i++) {
-          const row = data[i];
-          if (!row || row.length === 0) continue;
-
-          let productName = '';
-          if (idxName !== -1 && row[idxName]) productName = String(row[idxName]).trim();
-          else if (idxBrand !== -1 && row[idxBrand]) productName = String(row[idxBrand]).trim();
-
-          if (!productName) continue;
-
-          let department = '';
-          if (idxDept !== -1 && row[idxDept]) department = String(row[idxDept]).trim();
-          if (!department) department = 'Genel';
-
-          // Check if separated Min and Max columns exist (new template)
-          let minVal: number | null = null;
-          let maxVal: number | null = null;
-
-          if (idxMin !== -1 && row[idxMin] !== undefined && row[idxMin] !== '') {
-            minVal = parseNum(row[idxMin]);
-          }
-          if (idxMax !== -1 && row[idxMax] !== undefined && row[idxMax] !== '') {
-            maxVal = parseNum(row[idxMax]);
-          }
-
-          // If neither was provided, fallback to legacy range column
-          if (minVal === null && maxVal === null && idxAmountFallback !== -1) {
-            const range = parseAmountRange(row[idxAmountFallback]);
-            minVal = range.min;
-            maxVal = range.max;
-          }
-
-          // Unit package quantity & unit name (e.g. 400 mL, 1 Litre)
-          const packageQuantity = idxPkgQty !== -1 ? parseNum(row[idxPkgQty]) : null;
-          const packageUnit = idxPkgUnit !== -1 && row[idxPkgUnit] ? String(row[idxPkgUnit]).trim() : undefined;
-
-          rowsToImport.push({
-            department,
-            productName,
-            brandName: idxBrand !== -1 && row[idxBrand] ? String(row[idxBrand]).trim() : undefined,
-            minQuantity: minVal,
-            maxQuantity: maxVal,
-            packageQuantity,
-            packageUnit,
-            usageMethod: idxUsage !== -1 && row[idxUsage] ? String(row[idxUsage]).trim() : undefined,
-            composition: idxComp !== -1 && row[idxComp] ? String(row[idxComp]).trim() : undefined,
-            hazardDescription: idxHazard !== -1 && row[idxHazard] ? String(row[idxHazard]).trim() : undefined,
-            firstAid: idxFirstAid !== -1 && row[idxFirstAid] ? String(row[idxFirstAid]).trim() : undefined,
-            fireFightingMeasures: idxFire !== -1 && row[idxFire] ? String(row[idxFire]).trim() : undefined,
-            accidentalReleaseMeasures: idxRelease !== -1 && row[idxRelease] ? String(row[idxRelease]).trim() : undefined,
-            handlingAndStorage: idxHandling !== -1 && row[idxHandling] ? String(row[idxHandling]).trim() : undefined,
-            exposureControlsPpe: idxExposure !== -1 && row[idxExposure] ? String(row[idxExposure]).trim() : undefined,
-            physicalAndChemicalProperties: idxPhysical !== -1 && row[idxPhysical] ? String(row[idxPhysical]).trim() : undefined,
-            stabilityAndReactivity: idxStability !== -1 && row[idxStability] ? String(row[idxStability]).trim() : undefined,
-            toxicologicalInformation: idxTox !== -1 && row[idxTox] ? String(row[idxTox]).trim() : undefined,
-            disposalConsiderations: idxDisposal !== -1 && row[idxDisposal] ? String(row[idxDisposal]).trim() : undefined,
-            transportInfo: idxTransport !== -1 && row[idxTransport] ? String(row[idxTransport]).trim() : undefined,
-          });
-        }
-
-        if (rowsToImport.length === 0) {
-          toast.error('Dosyadan okunabilir madde veya envanter kaydı bulunamadı.');
-          return;
-        }
-
-        setParsedRowsForImport(rowsToImport);
-        setIsImportModalOpen(true);
-      } catch (err) {
-        console.error('Excel parse error:', err);
-        toast.error('Excel dosyası okunurken hata oluştu.');
-      } finally {
-        setIsParsingExcel(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      }
-    };
-    reader.readAsBinaryString(file);
+  const resetFilters = () => {
+    setSearchMaterial('');
+    setSearchAdrCategory('all');
+    setFilterEditStatus('ALL');
   };
 
-  const currentEffectiveFacilityId = activeFacilityId || localStorage.getItem('activeFacilityId') || '';
-  const filteredFacilityLocations = useMemo(() => {
-    if (!currentEffectiveFacilityId || currentEffectiveFacilityId === 'all') return [];
-    return facilityLocations.filter(loc => !loc.facilityId || loc.facilityId === currentEffectiveFacilityId);
-  }, [facilityLocations, currentEffectiveFacilityId]);
-
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-12">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+    <div className="max-w-6xl mx-auto space-y-6 pb-12 font-sans antialiased">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-5">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tesis Envanteri</h1>
-          <p className="text-muted-foreground mt-1">
-            Tesisteki tehlikeli maddeleri ve atandıkları departmanları listeleyin.
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            Tesis Envanteri
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Tesisteki tehlikeli maddeleri listeleyin ve havuzdan yeni kimyasallar ekleyin.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 shrink-0">
-          <input
-            type="file"
-            accept=".xlsx, .xls"
-            ref={fileInputRef}
-            onChange={handleExcelFileSelected}
-            className="hidden"
-          />
+        <div className="flex items-center gap-3 shrink-0">
           <Button
-            onClick={() => fileInputRef.current?.click()}
-            variant="outline"
-            className="shadow-sm gap-2"
-            disabled={isParsingExcel}
+            onClick={() => setIsAddFromPoolOpen(true)}
+            className="shadow-sm gap-2 h-9 text-xs font-semibold"
           >
-            {isParsingExcel ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4 text-emerald-600" />}
-            {isParsingExcel ? 'Okunuyor...' : "Excel'den Envanter Yükle"}
-          </Button>
-          <Button onClick={() => navigate('/hazmat/inventory/new', { state: { returnTo: '/hazmat/inventory' } })} className="shadow-md">
-            <Plus className="w-4 h-4 mr-2" />
-            Tesise Ekle (Envantere Ekle)
-          </Button>
-          <Button onClick={() => navigate('/hazmat/materials/new', { state: { returnTo: '/hazmat/inventory' } })} variant="outline" className="shadow-md">
-            <Plus className="w-4 h-4 mr-2" />
-            Havuza Yeni Madde
+            <Plus className="w-4 h-4" />
+            Havuzdan Tesise Ekle
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 bg-muted/30 p-4 rounded-lg border border-border/50">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Tehlikeli Madde veya Marka Ara..." 
-            className="pl-9 bg-background"
-            value={searchMaterial}
-            onChange={(e) => setSearchMaterial(e.target.value)}
-          />
+      {/* Modern Filter Toolbar (3 clean filters) */}
+      <div className="bg-card border border-border/70 rounded-xl p-3.5 shadow-2xs space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Search Material */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Madde veya Marka Ara..."
+              className="pl-9 h-9 text-xs bg-background"
+              value={searchMaterial}
+              onChange={(e) => setSearchMaterial(e.target.value)}
+            />
+          </div>
+
+          {/* ADR Category Select */}
+          <div>
+            <Select value={searchAdrCategory} onValueChange={setSearchAdrCategory}>
+              <SelectTrigger className="w-full h-9 bg-background text-xs">
+                <SelectValue>{adrCategoryLabel}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm ADR Kategorileri</SelectItem>
+                {adrCategories.map((cat: any) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Edit Status Select */}
+          <div>
+            <Select value={filterEditStatus} onValueChange={(val: any) => setFilterEditStatus(val)}>
+              <SelectTrigger className="w-full h-9 bg-background text-xs">
+                <SelectValue>{editStatusLabel}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Tüm Güncelleme Durumları</SelectItem>
+                <SelectItem value="WITHIN_3H">⚡ Son 3 Saatte Düzenlenen</SelectItem>
+                <SelectItem value="WITHIN_6H">🕒 Son 6 Saatte Düzenlenen</SelectItem>
+                <SelectItem value="NOT_UPDATED">İşlem Görmemişler</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="relative flex-1">
-          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Departman Adı Ara..." 
-            className="pl-9 bg-background"
-            value={searchDepartment}
-            onChange={(e) => setSearchDepartment(e.target.value)}
-          />
-        </div>
-        <div className="relative flex-1">
-          <Select value={filterEditStatus} onValueChange={(val: any) => setFilterEditStatus(val)}>
-            <SelectTrigger className="w-full bg-background">
-              <SelectValue placeholder="İşlem / Güncelleme">
-                {filterEditStatus === 'ALL' ? 'Tüm Durumlar' : undefined}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Tüm Durumlar</SelectItem>
-              <SelectItem value="WITHIN_3H">⚡ Son 3 Saatte Düzenlenen</SelectItem>
-              <SelectItem value="WITHIN_6H">🕒 Son 6 Saatte Düzenlenen</SelectItem>
-              <SelectItem value="NOT_UPDATED">İşlem Görmemişler</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="relative flex-1">
-          <select 
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            value={searchAdrCategory}
-            onChange={(e) => setSearchAdrCategory(e.target.value)}
-          >
-            <option value="all">Tüm ADR Kategorileri</option>
-            {adrCategories.map((cat: any) => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
-          </select>
-        </div>
+
+        {/* Clear Filters bar if active */}
+        {hasActiveFilters && (
+          <div className="flex items-center justify-between pt-1 border-t border-border/40 text-xs">
+            <span className="text-muted-foreground">
+              Filtreler uygulandı: <strong className="text-foreground">{filteredGroups.length}</strong> kayıt listeleniyor
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetFilters}
+              className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1 px-2"
+            >
+              <X className="w-3.5 h-3.5" />
+              Filtreleri Temizle
+            </Button>
+          </div>
+        )}
       </div>
 
-      <Card className="border-primary/20 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
-        <CardHeader>
-          <CardTitle>Envanter Listesi</CardTitle>
-          <CardDescription>Maddenin detaylarını görmek için satıra tıklayın.</CardDescription>
+      {/* Main Inventory Card */}
+      <Card className="border border-border/70 shadow-2xs rounded-xl overflow-hidden">
+        <CardHeader className="p-4 sm:p-5 border-b border-border/60 bg-muted/15">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <CardTitle className="text-base sm:text-lg font-bold text-foreground">
+                Envanter Listesi
+              </CardTitle>
+              <Badge variant="secondary" className="font-semibold text-xs px-2 py-0.5">
+                {filteredGroups.length} Madde
+              </Badge>
+            </div>
+            <CardDescription className="text-xs text-muted-foreground">
+              Maddenin detaylarını ve güvenlik bilgilerini görüntülemek için satıra tıklayın.
+            </CardDescription>
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="rounded-lg border overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-muted/50 text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Tehlikeli Madde</th>
-                    <th className="px-4 py-3 font-medium">Kategori</th>
-                    <th className="px-4 py-3 font-medium">Birim / Ambalaj</th>
-                    <th className="px-4 py-3 font-medium">Bulunduğu Departmanlar</th>
-                    <th className="px-4 py-3 font-medium text-right">İşlemler</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left border-collapse">
+              <thead className="bg-muted/40 text-muted-foreground font-semibold uppercase tracking-wider text-[11px] border-b border-border/60">
+                <tr>
+                  <th className="px-5 py-3">Tehlikeli Madde & Marka</th>
+                  <th className="px-5 py-3">Kategori</th>
+                  <th className="px-5 py-3">Birim / Miktar</th>
+                  <th className="px-5 py-3 text-right">İşlemler</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60 font-sans">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-muted-foreground">Yükleniyor...</td>
+                    <td colSpan={4} className="py-16 text-center text-muted-foreground">
+                      <div className="flex flex-col items-center justify-center gap-2.5">
+                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                        <span className="text-xs font-medium">Tesis envanteri yükleniyor...</span>
+                      </div>
+                    </td>
                   </tr>
                 ) : filteredGroups.length === 0 ? (
                   <tr>
-                    <td colSpan={5}>
-                      <div className="py-8 text-center text-muted-foreground bg-muted/20">
-                        {groupedSummary.length === 0 
-                          ? "Henüz departmanlara atanmış bir tehlikeli madde bulunmuyor."
-                          : "Arama kriterlerinize uygun kayıt bulunamadı."}
+                    <td colSpan={4} className="py-16 text-center">
+                      <div className="flex flex-col items-center justify-center gap-3 max-w-md mx-auto">
+                        <div className="w-12 h-12 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground">
+                          {hasActiveFilters ? (
+                            <Search className="w-6 h-6" />
+                          ) : (
+                            <PackageOpen className="w-6 h-6" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">
+                            {hasActiveFilters
+                              ? 'Arama kriterlerinize uygun kayıt bulunamadı'
+                              : 'Bu tesiste henüz kayıtlı tehlikeli madde bulunmuyor'}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {hasActiveFilters
+                              ? 'Filtreleri temizleyerek veya arama kelimesini değiştirerek tekrar deneyebilirsiniz.'
+                              : 'Merkezi kimyasal havuzundaki maddeleri tesisinize eklemek için yukarıdaki butonu kullanabilirsiniz.'}
+                          </p>
+                        </div>
+                        {hasActiveFilters ? (
+                          <Button variant="outline" size="sm" onClick={resetFilters} className="text-xs mt-1">
+                            Filtreleri Temizle
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() => setIsAddFromPoolOpen(true)}
+                            className="text-xs gap-1.5 mt-1 shadow-sm"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Havuzdan Madde Ekle
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  filteredGroups.map((item: any, i: number) => {
+                  filteredGroups.map((item: any) => {
                     const updateStatus = getUpdateStatus(item);
                     return (
-                    <tr 
-                      key={i} 
-                      className={`cursor-pointer group transition-all duration-700 ${
-                        updateStatus.isInstant 
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 ring-2 ring-emerald-500 ring-inset' 
-                          : 'hover:bg-muted/30'
-                      }`}
-                      onClick={() => setSelectedGroup(item)}
-                    >
-                      <td className="px-4 py-3 font-medium text-foreground">
-                        <div className="flex items-center gap-3">
-                          <div className="flex -space-x-2">
-                            {item.hazardLabels?.slice(0, 3).map((hl: any) => (
-                              <img 
-                                key={hl.label.id} 
-                                src={hl.label.imageUrl} 
-                                alt={hl.label.name} 
-                                className="w-8 h-8 rounded-full border-2 border-background object-contain bg-white" 
-                                title={hl.label.name}
-                              />
-                            ))}
-                          </div>
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="group-hover:text-primary transition-colors">{item.productName}</span>
+                      <tr
+                        key={item.materialId}
+                        className={`cursor-pointer group transition-colors duration-150 ${updateStatus.isInstant
+                            ? 'bg-emerald-50/60 dark:bg-emerald-950/20'
+                            : 'hover:bg-muted/40'
+                          }`}
+                        onClick={() => setSelectedGroup(item)}
+                      >
+                        {/* Madde & Marka & Pictograms */}
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-3">
+                            {/* Hazard pictograms */}
+                            {item.hazardLabels && item.hazardLabels.length > 0 && (
+                              <div className="flex -space-x-1.5 shrink-0">
+                                {item.hazardLabels.slice(0, 3).map((hl: any) => (
+                                  <img
+                                    key={hl.label?.id || hl.id}
+                                    src={hl.label?.imageUrl}
+                                    alt={hl.label?.name}
+                                    className="w-7 h-7 rounded-md border border-border/80 object-contain bg-white shadow-2xs p-0.5"
+                                    title={hl.label?.name}
+                                  />
+                                ))}
+                              </div>
+                            )}
 
-                              {updateStatus.isInstant && (
-                                <span className="inline-flex items-center gap-1 bg-emerald-600 text-white font-semibold text-xs px-2.5 py-0.5 rounded-full shadow-sm animate-pulse">
-                                  <Sparkles className="w-3 h-3" />
-                                  Şimdi Düzenlendi
+                            <div className="space-y-0.5">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
+                                  {item.productName}
                                 </span>
-                              )}
 
-                              {!updateStatus.isInstant && updateStatus.type === '3H' && (
-                                <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200 border border-amber-300 dark:border-amber-700 text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium" title={item.updatedAt ? new Date(item.updatedAt).toLocaleString('tr-TR') : ''}>
-                                  <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                                  {updateStatus.label}
-                                </span>
-                              )}
+                                {/* Yönetici / Genel Görünüm: Kaç tesiste tanımlı olduğunu belirten rozet */}
+                                {isManagerOrAdmin && item.facilities && item.facilities.length > 0 && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] font-medium px-2 py-0.5 bg-muted/50 border-border/70 text-muted-foreground flex items-center gap-1 cursor-help hover:bg-muted/80 transition-colors"
+                                    title={item.facilities.map((f: any) => f.facilityName || 'Tesis').filter(Boolean).join(', ')}
+                                  >
+                                    <Building2 className="w-2.5 h-2.5 text-primary/70" />
+                                    {item.facilities.length} Tesis
+                                  </Badge>
+                                )}
 
-                              {!updateStatus.isInstant && updateStatus.type === '6H' && (
-                                <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-200 border border-blue-300 dark:border-blue-700 text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium" title={item.updatedAt ? new Date(item.updatedAt).toLocaleString('tr-TR') : ''}>
-                                  <Clock className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                                  {updateStatus.label}
-                                </span>
-                              )}
+                                {updateStatus.isInstant && (
+                                  <span className="inline-flex items-center gap-1 bg-emerald-600 text-white font-bold text-[10px] px-2 py-0.5 rounded-full shadow-2xs animate-pulse">
+                                    <Sparkles className="w-2.5 h-2.5" />
+                                    Şimdi Düzenlendi
+                                  </span>
+                                )}
+
+                                {!updateStatus.isInstant && updateStatus.type === '3H' && (
+                                  <span
+                                    className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 text-[10px] px-2 py-0.5 rounded-full font-medium"
+                                    title={item.updatedAt ? new Date(item.updatedAt).toLocaleString('tr-TR') : ''}
+                                  >
+                                    <Clock className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
+                                    {updateStatus.label}
+                                  </span>
+                                )}
+
+                                {!updateStatus.isInstant && updateStatus.type === '6H' && (
+                                  <span
+                                    className="inline-flex items-center gap-1 bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 text-[10px] px-2 py-0.5 rounded-full font-medium"
+                                    title={item.updatedAt ? new Date(item.updatedAt).toLocaleString('tr-TR') : ''}
+                                  >
+                                    <Clock className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400" />
+                                    {updateStatus.label}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-muted-foreground">
+                                {item.brandName || <span className="italic">Marka Belirtilmemiş</span>}
+                              </div>
                             </div>
-                            <div className="text-xs text-muted-foreground font-normal">
-                              {item.brandName || 'Marka Belirtilmemiş'}
-                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant="outline" className="font-normal bg-muted/50">
-                          {item.categoryName}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-medium">
-                          {item.amountValue ? item.amountValue : '-'}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {item.unitName ? `${item.unitName} ${item.unitSymbol ? `(${item.unitSymbol})` : ''}` : '-'}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {item.departments.slice(0, 3).map((d: any, idx: number) => (
-                            <Badge key={idx} variant="secondary" className="font-normal text-xs bg-primary/5 hover:bg-primary/10 transition-colors">
-                              {d.name.split(' / ').pop()}
-                            </Badge>
-                          ))}
-                          {item.departments.length > 3 && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
-                              +{item.departments.length - 3} departman
-                            </span>
-                          )}
-                          {item.departments.length === 0 && (
-                            <span className="text-xs text-muted-foreground italic">Atanmamış</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0 z-10 relative text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            title="Maddeyi Düzenle"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/hazmat/materials/edit/${item.materialId}`, { state: { returnTo: '/hazmat/inventory' } });
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0 z-10 relative"
-                            title="Bilgi Kartı Oluştur"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPrintMaterial(item.material);
-                            }}
-                          >
-                            <Printer className="h-4 w-4 text-emerald-600" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+
+                        {/* Kategori */}
+                        <td className="px-5 py-3.5">
+                          <Badge variant="outline" className="font-normal text-[11px] bg-background">
+                            {item.categoryName}
+                          </Badge>
+                        </td>
+
+                        {/* Birim / Miktar */}
+                        <td className="px-5 py-3.5">
+                          <div className="font-semibold text-foreground text-xs">
+                            {item.amountValue ? item.amountValue : '-'}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {item.unitName ? `${item.unitName} ${item.unitSymbol ? `(${item.unitSymbol})` : ''}` : '-'}
+                          </div>
+                        </td>
+
+                        {/* Aksiyon Butonları */}
+                        <td className="px-5 py-3.5 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                              title="Maddeyi Düzenle"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/hazmat/materials/edit/${item.materialId}`, {
+                                  state: { returnTo: '/hazmat/inventory' }
+                                });
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
+                              title="Bilgi Kartı Oluştur"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPrintMaterial(item.material);
+                              }}
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
                     );
                   })
                 )}
-                </tbody>
-              </table>
-            </div>
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
 
-      <PrintCardModal 
+      {/* Modals & Dialogs */}
+      <PrintCardModal
         isOpen={!!printMaterial}
         onClose={() => setPrintMaterial(null)}
         material={printMaterial}
       />
 
-      <HazmatMaterialSummaryDialog 
+      <HazmatMaterialSummaryDialog
         material={selectedGroup?.material}
         isOpen={!!selectedGroup}
         onOpenChange={(open) => !open && setSelectedGroup(null)}
         amountValue={selectedGroup?.amountValue}
         unitName={selectedGroup?.unitName}
         departments={selectedGroup?.departments}
+        facilities={selectedGroup?.facilities}
         onPrint={() => {
           setSelectedGroup(null);
           setPrintMaterial(selectedGroup?.material);
         }}
         onNavigateToPool={() => {
           setSelectedGroup(null);
-          navigate(`/hazmat/materials/view/${selectedGroup?.materialId}`, { state: { returnTo: '/hazmat/inventory' } });
+          navigate(`/hazmat/materials/view/${selectedGroup?.materialId}`, {
+            state: { returnTo: '/hazmat/inventory' }
+          });
         }}
         onNavigateToLocations={() => {
           setSelectedGroup(null);
-          navigate(`/hazmat/inventory/material/${selectedGroup?.materialId}`, { state: { returnTo: '/hazmat/inventory' } });
+          navigate(`/hazmat/inventory/material/${selectedGroup?.materialId}`, {
+            state: { returnTo: '/hazmat/inventory' }
+          });
         }}
       />
 
-      <HazmatInventoryImportModal
-        isOpen={isImportModalOpen}
-        onOpenChange={setIsImportModalOpen}
+      <HazmatAddFromPoolModal
+        isOpen={isAddFromPoolOpen}
+        onOpenChange={setIsAddFromPoolOpen}
         facilityId={currentEffectiveFacilityId}
-        facilityLocations={filteredFacilityLocations}
-        parsedRows={parsedRowsForImport}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['inventory-summary', activeFacilityId] });
-          queryClient.invalidateQueries({ queryKey: ['facility-materials', activeFacilityId] });
-          queryClient.invalidateQueries({ queryKey: ['facility-locations', activeFacilityId] });
+          queryClient.invalidateQueries({ queryKey: ['inventory-summary', currentEffectiveFacilityId] });
         }}
       />
     </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api, { API_URL, BASE_URL } from '@/lib/api';
@@ -6,9 +6,62 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Search, Check, Save, AlertTriangle, Info, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
+import {
+  ArrowLeft,
+  Search,
+  Check,
+  Save,
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  Shield,
+  FileText,
+  RotateCcw,
+  Sparkles,
+  FlaskConical,
+  Flame,
+  Truck,
+  FileCheck
+} from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import { HazardStatementSelector } from '@/components/hazmat/HazardStatementSelector';
+
+const initialEmptyForm = {
+  productName: '',
+  brandName: '',
+  amountValue: '',
+  unitId: '',
+  categoryId: '',
+  usageMethod: '',
+  composition: '',
+  hazardDescription: '',
+  firstAid: '',
+  fireFightingMeasures: '',
+  accidentalReleaseMeasures: '',
+  handlingAndStorage: '',
+  exposureControls: '',
+  physicalProperties: '',
+  stabilityAndReactivity: '',
+  toxicologicalInfo: '',
+  ecologicalInfo: '',
+  disposalConsiderations: '',
+  transportInfo: '',
+  regulatoryInfo: '',
+  hazardLabelIds: [] as string[],
+  adrLabelIds: [] as string[],
+  ppeIds: [] as string[],
+  imageUrl: '',
+  sdsUrl: '',
+  sdsExpiryDate: ''
+};
 
 export default function MaterialFormPage() {
   const navigate = useNavigate();
@@ -18,12 +71,17 @@ export default function MaterialFormPage() {
   const isEditMode = !!id;
   const queryClient = useQueryClient();
   const activeFacilityId = localStorage.getItem('activeFacilityId');
-  const draftKey = `hazmat_edit_draft_${id || 'new'}_${activeFacilityId || 'global'}`;
+  const draftKey = `hazmat_draft_${id || 'new'}`;
 
+  const [formData, setFormData] = useState(initialEmptyForm);
+  const [isDataLoaded, setIsDataLoaded] = useState(!isEditMode);
+  const [isDirty, setIsDirty] = useState(false);
+  const [hasLoadedDraft, setHasLoadedDraft] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  // Akıllı Arama
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGlobalMaterial, setSelectedGlobalMaterial] = useState<any>(null);
-  const [isDataLoaded, setIsDataLoaded] = useState(!isEditMode);
-  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   // Miktar Cinsleri
   const { data: units = [] } = useQuery<any[]>({
@@ -75,47 +133,33 @@ export default function MaterialFormPage() {
     }
   });
 
-  // Akıllı Arama
+  // Akıllı Arama Query
   const { data: searchResults = [], isFetching: isSearching } = useQuery<any[]>({
     queryKey: ['hazmat-search', searchQuery],
     queryFn: async () => {
       if (searchQuery.length < 2) return [];
-      const res = await api.get(`/hazmat/materials/search?q=${searchQuery}`);
+      const res = await api.get(`/hazmat/materials/search?q=${encodeURIComponent(searchQuery)}`);
       if (!res.ok) return [];
       return res.json();
     },
     enabled: searchQuery.length >= 2,
   });
 
-  const [formData, setFormData] = useState({
-    productName: '', brandName: '', amountValue: '', unitId: '', categoryId: '',
-    usageMethod: '', composition: '', hazardDescription: '',
-    firstAid: '', fireFightingMeasures: '', accidentalReleaseMeasures: '',
-    handlingAndStorage: '', exposureControls: '', physicalProperties: '',
-    stabilityAndReactivity: '', toxicologicalInfo: '', ecologicalInfo: '',
-    disposalConsiderations: '', transportInfo: '', regulatoryInfo: '',
-    hazardLabelIds: [] as string[],
-    adrLabelIds: [] as string[],
-    ppeIds: [] as string[],
-    imageUrl: '',
-    sdsUrl: '',
-    sdsExpiryDate: ''
-  });
-
-  // Fetch data if edit mode
+  // Edit Mode: Fetch Server Data
   useQuery({
-    queryKey: ['material-edit', id],
+    queryKey: ['material-edit-details', id],
     queryFn: async () => {
       if (!isEditMode) return null;
-      const res = await api.get(`/hazmat/materials/${id}?facilityId=${activeFacilityId}`);
+      const res = await api.get(`/hazmat/materials/${id}`);
       if (!res.ok) throw new Error('Hata');
       const data = await res.json();
-      const mat = data.material;
+      const mat = data.material || data;
       const fac = data.facilityItem;
+
       const serverFormData = {
         productName: mat.productName || '',
         brandName: mat.brandName || '',
-        amountValue: fac?.amountValue || '',
+        amountValue: fac?.amountValue ? String(fac.amountValue) : '',
         unitId: fac?.unitId || '',
         categoryId: mat.categoryId || '',
         usageMethod: mat.usageMethod || '',
@@ -133,22 +177,22 @@ export default function MaterialFormPage() {
         disposalConsiderations: mat.disposalConsiderations || '',
         transportInfo: mat.transportInfo || '',
         regulatoryInfo: mat.regulatoryInfo || '',
-        hazardLabelIds: mat.hazardLabels?.map((hl: any) => hl.labelId) || [],
-        adrLabelIds: mat.adrLabels?.map((al: any) => al.labelId) || [],
-        ppeIds: mat.ppes?.map((p: any) => p.ppeId) || [],
+        hazardLabelIds: mat.hazardLabels?.map((hl: any) => hl.labelId || hl.id) || [],
+        adrLabelIds: mat.adrLabels?.map((al: any) => al.labelId || al.id) || [],
+        ppeIds: mat.ppes?.map((p: any) => p.ppeId || p.id) || [],
         imageUrl: mat.imageUrl || '',
         sdsUrl: mat.sdsUrl || '',
         sdsExpiryDate: mat.sdsExpiryDate ? new Date(mat.sdsExpiryDate).toISOString().split('T')[0] : ''
       };
 
-      // Check if there is an unsaved local draft
+      // Check if there is an unsaved draft
       const savedDraft = localStorage.getItem(draftKey);
       if (savedDraft) {
         try {
           const parsed = JSON.parse(savedDraft);
-          if (parsed && typeof parsed === 'object') {
+          if (parsed && typeof parsed === 'object' && parsed.productName) {
             setFormData({ ...serverFormData, ...parsed });
-            toast.info('Kaydedilmemiş değişiklikleriniz yerel taslaktan otomatik geri yüklendi.');
+            setHasLoadedDraft(true);
             setIsDataLoaded(true);
             return data;
           }
@@ -161,12 +205,30 @@ export default function MaterialFormPage() {
       setIsDataLoaded(true);
       return data;
     },
-    enabled: isEditMode && !!activeFacilityId
+    enabled: isEditMode
   });
 
-  // Auto-save to localStorage whenever formData changes (with 500ms debounce)
+  // Check draft on mount for new mode
   useEffect(() => {
-    if (!isDataLoaded) return;
+    if (!isEditMode) {
+      const savedDraft = localStorage.getItem(draftKey);
+      if (savedDraft) {
+        try {
+          const parsed = JSON.parse(savedDraft);
+          if (parsed && typeof parsed === 'object' && parsed.productName) {
+            setFormData({ ...initialEmptyForm, ...parsed });
+            setHasLoadedDraft(true);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+  }, [isEditMode, draftKey]);
+
+  // Debounced auto-save to localStorage only when user actually makes changes (isDirty)
+  useEffect(() => {
+    if (!isDataLoaded || !isDirty) return;
 
     setAutoSaveStatus('saving');
     const timer = setTimeout(() => {
@@ -176,16 +238,31 @@ export default function MaterialFormPage() {
       } catch (err) {
         console.error('Draft auto-save error:', err);
       }
-    }, 500);
+    }, 1000);
 
     return () => clearTimeout(timer);
-  }, [formData, isDataLoaded, draftKey]);
+  }, [formData, isDirty, isDataLoaded, draftKey]);
+
+  const updateField = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setIsDirty(true);
+  };
+
+  const handleClearDraft = () => {
+    localStorage.removeItem(draftKey);
+    setFormData(initialEmptyForm);
+    setSelectedGlobalMaterial(null);
+    setHasLoadedDraft(false);
+    setIsDirty(false);
+    setAutoSaveStatus('idle');
+    toast.info('Taslak temizlendi.');
+  };
 
   const handleSelectGlobal = (mat: any) => {
     setSelectedGlobalMaterial(mat);
     setSearchQuery('');
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       productName: mat.productName || '',
       brandName: mat.brandName || '',
       categoryId: mat.categoryId || '',
@@ -196,36 +273,23 @@ export default function MaterialFormPage() {
       fireFightingMeasures: mat.fireFightingMeasures || '',
       accidentalReleaseMeasures: mat.accidentalReleaseMeasures || '',
       handlingAndStorage: mat.handlingAndStorage || '',
-      exposureControls: mat.exposureControls || '',
-      physicalProperties: mat.physicalProperties || '',
+      exposureControls: mat.exposureControlsPpe || mat.exposureControls || '',
+      physicalProperties: mat.physicalAndChemicalProperties || mat.physicalProperties || '',
       stabilityAndReactivity: mat.stabilityAndReactivity || '',
-      toxicologicalInfo: mat.toxicologicalInfo || '',
-      ecologicalInfo: mat.ecologicalInfo || '',
+      toxicologicalInfo: mat.toxicologicalInformation || mat.toxicologicalInfo || '',
+      ecologicalInfo: mat.ecologicalInformation || mat.ecologicalInfo || '',
       disposalConsiderations: mat.disposalConsiderations || '',
       transportInfo: mat.transportInfo || '',
       regulatoryInfo: mat.regulatoryInfo || '',
-      hazardLabelIds: mat.hazardLabels?.map((hl: any) => hl.labelId) || [],
-      adrLabelIds: mat.adrLabels?.map((hl: any) => hl.labelId) || [],
-      ppeIds: mat.ppes?.map((p: any) => p.ppeId) || [],
+      hazardLabelIds: mat.hazardLabels?.map((hl: any) => hl.labelId || hl.id) || [],
+      adrLabelIds: mat.adrLabels?.map((hl: any) => hl.labelId || hl.id) || [],
+      ppeIds: mat.ppes?.map((p: any) => p.ppeId || p.id) || [],
       imageUrl: mat.imageUrl || '',
       sdsUrl: mat.sdsUrl || '',
       sdsExpiryDate: mat.sdsExpiryDate ? new Date(mat.sdsExpiryDate).toISOString().split('T')[0] : ''
-    });
-    toast.success('Kütüphaneden bilgiler başarıyla çekildi. Sadece Miktar bilgisini girip kaydedebilirsiniz.');
-  };
-
-  const handleResetGlobal = () => {
-    setSelectedGlobalMaterial(null);
-    setFormData({
-      productName: searchQuery, brandName: '', amountValue: '', unitId: '', categoryId: '',
-      usageMethod: '', composition: '', hazardDescription: '',
-      firstAid: '', fireFightingMeasures: '', accidentalReleaseMeasures: '',
-      handlingAndStorage: '', exposureControls: '', physicalProperties: '',
-      stabilityAndReactivity: '', toxicologicalInfo: '', ecologicalInfo: '',
-      disposalConsiderations: '', transportInfo: '', regulatoryInfo: '',
-      hazardLabelIds: [], adrLabelIds: [], ppeIds: [],
-      imageUrl: '', sdsUrl: '', sdsExpiryDate: ''
-    });
+    }));
+    setIsDirty(true);
+    toast.success('Kütüphaneden bilgiler başarıyla çekildi.');
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'imageUrl' | 'sdsUrl') => {
@@ -248,7 +312,7 @@ export default function MaterialFormPage() {
 
       if (!res.ok) throw new Error('Yükleme başarısız');
       const data = await res.json();
-      setFormData(prev => ({ ...prev, [fieldName]: data.url }));
+      updateField(fieldName, data.url);
       toast.success('Dosya yüklendi.', { id: uploadToast });
     } catch (error) {
       console.error(error);
@@ -259,12 +323,14 @@ export default function MaterialFormPage() {
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const { hazardLabelIds, adrLabelIds, ppeIds, amountValue, unitId, ...materialData } = data;
-      
+
+      const effectiveFacility = (activeFacilityId && activeFacilityId !== 'all') ? activeFacilityId : undefined;
+
       if (isEditMode) {
         const res = await api.put(`/hazmat/materials/${id}`, {
-          facilityId: activeFacilityId,
-          amountValue,
-          unitId,
+          facilityId: effectiveFacility,
+          amountValue: amountValue || null,
+          unitId: unitId || null,
           ...materialData,
           hazardLabels: hazardLabelIds,
           adrLabels: adrLabelIds,
@@ -277,400 +343,731 @@ export default function MaterialFormPage() {
         return res.json();
       }
 
-      if (selectedGlobalMaterial) {
-        const res = await api.post('/hazmat/materials/facility', {
-          facilityId: activeFacilityId,
-          materialId: selectedGlobalMaterial.id,
-          amountValue: data.amountValue,
-          unitId: data.unitId
-        });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || 'Tesise ekleme sırasında sunucu hatası oluştu.');
-        }
-        return res.json();
-      } else {
-        const res = await api.post('/hazmat/materials', {
-          facilityId: activeFacilityId,
-          amountValue,
-          unitId,
-          ...materialData,
-          hazardLabels: hazardLabelIds,
-          adrLabels: adrLabelIds,
-          ppes: ppeIds
-        });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || 'Yeni madde oluşturma sırasında sunucu hatası oluştu.');
-        }
-        return res.json();
+      // Create new material in central DB
+      const res = await api.post('/hazmat/materials', {
+        facilityId: effectiveFacility,
+        amountValue: amountValue || null,
+        unitId: unitId || null,
+        ...materialData,
+        hazardLabels: hazardLabelIds,
+        adrLabels: adrLabelIds,
+        ppes: ppeIds
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Kayıt sırasında sunucu hatası oluştu.');
       }
+      return res.json();
     },
     onSuccess: async (data: any) => {
       localStorage.removeItem(draftKey);
+      await queryClient.invalidateQueries({ queryKey: ['global-materials-list'] });
       await queryClient.invalidateQueries({ queryKey: ['facility-materials'] });
-      await queryClient.invalidateQueries({ queryKey: ['material-details'] });
-      await queryClient.invalidateQueries({ queryKey: ['global-materials'] });
-      toast.success(isEditMode ? 'Tehlikeli Madde güncellendi!' : 'Tehlikeli Madde başarıyla tesise eklendi!');
+      await queryClient.invalidateQueries({ queryKey: ['inventory-summary'] });
+      toast.success(isEditMode ? 'Tehlikeli Madde başarıyla güncellendi!' : 'Yeni Tehlikeli Madde başarıyla kaydedildi!');
       const targetId = id || data?.id || data?.materialId || selectedGlobalMaterial?.id;
       navigate(returnTo, { state: { justUpdatedMaterialId: targetId } });
     },
     onError: (err: any) => {
-      toast.error(err.message || 'Bir hata oluştu. Veritabanı bağlantınızı kontrol edin.');
+      toast.error(err.message || 'Kayıt yapılamadı. Lütfen alanları kontrol ediniz.');
     }
   });
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.productName) {
-      toast.error('Ürün Adı zorunludur.');
+    if (!formData.productName.trim()) {
+      toast.error('Lütfen Ürün Adı alanını doldurunuz.');
       return;
     }
-    
-    let finalProductName = formData.productName.trim();
-    // Sıfırdan ekleme yapılıyorsa otomatik olarak (Miktar Birim) ekle
-    if (!isEditMode && !selectedGlobalMaterial && formData.amountValue && formData.unitId) {
-      const selectedUnit = units.find(u => u.id === formData.unitId);
-      if (selectedUnit) {
-        const suffix = `(${formData.amountValue} ${selectedUnit.symbol})`;
-        if (!finalProductName.includes(suffix)) {
-          finalProductName = `${finalProductName} ${suffix}`;
-        }
-      }
-    }
-
-    createMutation.mutate({ ...formData, productName: finalProductName });
+    createMutation.mutate(formData);
   };
 
-  const toggleArrayItem = (listName: 'hazardLabelIds'|'adrLabelIds'|'ppeIds', id: string) => {
-    if (selectedGlobalMaterial) return;
+  const toggleArrayItem = (listName: 'hazardLabelIds' | 'adrLabelIds' | 'ppeIds', itemId: string) => {
     setFormData(prev => ({
       ...prev,
-      [listName]: prev[listName].includes(id) 
-        ? prev[listName].filter((x: string) => x !== id) 
-        : [...prev[listName], id]
+      [listName]: prev[listName].includes(itemId)
+        ? prev[listName].filter((x: string) => x !== itemId)
+        : [...prev[listName], itemId]
     }));
+    setIsDirty(true);
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-20">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => navigate(returnTo)}>
+    <div className="max-w-5xl mx-auto space-y-6 pb-24 font-sans antialiased">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-5">
+        <div className="flex items-center gap-3.5">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate(returnTo)}
+            className="h-9 w-9 rounded-lg shrink-0 shadow-2xs"
+          >
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight">{isEditMode ? 'Maddeyi Düzenle' : 'Yeni Madde Ekle'}</h1>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+                {isEditMode ? 'Tehlikeli Maddeyi Düzenle' : 'Yeni Tehlikeli Madde Ekle'}
+              </h1>
+
               {autoSaveStatus === 'saving' && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
                   <Loader2 className="w-3 h-3 animate-spin" />
                   Taslak kaydediliyor...
                 </span>
               )}
               {autoSaveStatus === 'saved' && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                  <CheckCircle2 className="w-3 h-3" />
-                  Değişiklikler otomatik kaydedildi
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  Taslak kaydedildi
                 </span>
               )}
             </div>
-            <p className="text-muted-foreground">{isEditMode ? 'Bu maddedeki içerik güncellemeleri tüm tesisleri etkiler.' : 'Kütüphanede arama yapın veya yeni oluşturun.'}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {isEditMode
+                ? 'Merkezi veritabanındaki tehlikeli madde bilgilerini güncelleyin.'
+                : 'Merkezi tehlikeli madde veritabanına yeni bir kimyasal madde tanımlayın.'}
+            </p>
           </div>
         </div>
+
+        {hasLoadedDraft && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearDraft}
+              className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Taslağı Sıfırla
+            </Button>
+          </div>
+        )}
       </div>
 
-      {isEditMode && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-lg flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200 font-semibold">
-            <AlertTriangle className="w-5 h-5" />
-            Önemli Uyarı
-          </div>
-          <p className="text-sm text-amber-700 dark:text-amber-300">
-            Miktar ve Birim bilgisi sadece sizin tesisiniz için güncellenir. Ancak ürünün <b>diğer 18 alanında</b> (İlk yardım, Tehlike Tanımı vb.) yapacağınız tüm değişiklikler ortak veritabanını günceller ve <b>bu maddeyi kullanan diğer tesisleri de etkiler.</b> Lütfen güncellemelerinizi dikkatli yapın.
-          </p>
-        </div>
-      )}
-
-      {!selectedGlobalMaterial && !isEditMode && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-6 rounded-lg relative">
-          <Label className="text-blue-800 dark:text-blue-200 font-semibold mb-2 block">Akıllı Kütüphane Araması</Label>
-          <p className="text-sm text-blue-600 dark:text-blue-300 mb-4">
-            Eklemek istediğiniz maddenin ürün adını veya markasını yazın. Sistemde kayıtlıysa özelliklerini otomatik getirebiliriz.
-          </p>
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 w-5 h-5 text-muted-foreground" />
-            <Input 
-              placeholder="Ürün adı veya marka yazın (Örn: Aseton, Merbolin...)" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 py-6 text-lg shadow-sm"
-            />
-            {isSearching && <span className="absolute right-4 top-3 text-sm text-muted-foreground">Aranıyor...</span>}
-          </div>
-
-          {searchQuery.length >= 2 && searchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-card border rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto">
-              {searchResults.map((res: any) => (
-                <div 
-                  key={res.id} 
-                  className="p-3 hover:bg-muted cursor-pointer border-b last:border-0"
-                  onClick={() => handleSelectGlobal(res)}
-                >
-                  <div className="font-semibold">{res.productName}</div>
-                  <div className="text-sm text-muted-foreground">Marka: {res.brandName || '-'}</div>
-                </div>
-              ))}
+      {/* Akıllı Kütüphane Araması (Sadece Yeni Girişlerde) */}
+      {!isEditMode && !selectedGlobalMaterial && (
+        <Card className="border border-primary/30 bg-primary/5 shadow-2xs rounded-xl overflow-hidden">
+          <CardContent className="p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary shrink-0" />
+              <span className="text-xs font-semibold text-foreground">
+                Akıllı Arama (Önceden Kayıtlı Maddeler)
+              </span>
             </div>
-          )}
-        </div>
+            <p className="text-xs text-muted-foreground">
+              Eklemek istediğiniz kimyasalın adını yazarak sistemde mevcutsa tüm özelliklerini tek tıkla yükleyebilirsiniz.
+            </p>
+            <div className="relative pt-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Ürün adı veya marka yazın (Örn: Aseton, Hidrojen Peroksit, Derhand...)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-9 text-xs bg-background shadow-2xs"
+              />
+              {isSearching && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                </span>
+              )}
+            </div>
+
+            {searchQuery.length >= 2 && searchResults.length > 0 && (
+              <div className="bg-popover border border-border/80 rounded-xl shadow-lg mt-2 max-h-56 overflow-y-auto divide-y divide-border/60">
+                {searchResults.map((res: any) => (
+                  <div
+                    key={res.id}
+                    className="p-3 hover:bg-muted/50 cursor-pointer flex items-center justify-between transition-colors"
+                    onClick={() => handleSelectGlobal(res)}
+                  >
+                    <div>
+                      <div className="text-xs font-bold text-foreground">{res.productName}</div>
+                      <div className="text-[11px] text-muted-foreground">Marka: {res.brandName || '-'} | Kategori: {res.category?.name || '-'}</div>
+                    </div>
+                    <Button size="sm" variant="outline" className="h-7 text-xs font-medium">
+                      Verileri Al
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {selectedGlobalMaterial && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg flex items-center justify-between">
-          <div>
-            <h3 className="font-semibold text-green-800 dark:text-green-200">Kütüphaneden Seçildi: {selectedGlobalMaterial.productName}</h3>
-            <p className="text-sm text-green-700 dark:text-green-300">Özellikler kilitlendi. Sadece tesisiniz için miktar bilgisini girip kaydedebilirsiniz.</p>
+        <div className="bg-emerald-500/10 border border-emerald-500/30 p-3.5 rounded-xl flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>
+              <strong>{selectedGlobalMaterial.productName}</strong> verileri kütüphaneden dolduruldu. İstediğiniz alanları düzenleyip kaydedebilirsiniz.
+            </span>
           </div>
-          <Button variant="outline" size="sm" onClick={handleResetGlobal} className="border-green-300 text-green-700 hover:bg-green-100">
-            Vazgeç ve Yeni Oluştur
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClearDraft}
+            className="h-7 text-xs text-emerald-800 hover:text-emerald-900 hover:bg-emerald-500/20"
+          >
+            Sıfırla
           </Button>
         </div>
       )}
 
-      <form onSubmit={onSubmit} className="space-y-8">
-        
-        <div className="bg-card border rounded-lg p-6 shadow-sm">
-          <div className="space-y-6">
-            {/* 1. Ürün Adı */}
-            <div className="space-y-2">
-              <Label className="text-base">1. Ürün Adı <span className="text-red-500">*</span></Label>
-              <Input required value={formData.productName} onChange={e => setFormData({...formData, productName: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
-            </div>
-
-            {/* 2. Markası */}
-            <div className="space-y-2">
-              <Label className="text-base">2. Markası</Label>
-              <Input value={formData.brandName} onChange={e => setFormData({...formData, brandName: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
-            </div>
-
-            {/* 2.5. Kategori */}
-            <div className="space-y-2">
-              <Label className="text-base">Tehlikeli Madde Kategorisi</Label>
-              <select 
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:opacity-50" 
-                value={formData.categoryId} 
-                onChange={e => setFormData({...formData, categoryId: e.target.value})}
-                disabled={!!selectedGlobalMaterial && !isEditMode}
-              >
-                <option value="">Seçiniz (Opsiyonel)</option>
-                {categories.map((c: any) => (
-                  <option key={c.id} value={c.id} title={c.scope}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* 3. Miktarı ve Birimi */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-base">3. Miktarı <span className="text-red-500">*</span></Label>
-                <Input type="number" step="0.01" required value={formData.amountValue} onChange={e => setFormData({...formData, amountValue: e.target.value})} placeholder="Örn: 50" />
+      {/* Main Form */}
+      <form onSubmit={onSubmit} className="space-y-6">
+        {/* KART 1: Temel Bilgiler */}
+        <Card className="border border-border/70 shadow-2xs rounded-xl overflow-hidden">
+          <CardHeader className="p-4 sm:p-5 border-b border-border/60 bg-muted/15">
+            <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
+              <FlaskConical className="w-4 h-4 text-primary" />
+              1. Temel Ürün Bilgileri
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground">
+              Maddenin ürün adı, markası ve kategori sınıflandırması.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-5 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Ürün Adı */}
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs font-semibold">
+                  Ürün Adı <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  required
+                  placeholder="Örn: INCIDIN FOAM (750 mL)"
+                  value={formData.productName}
+                  onChange={(e) => updateField('productName', e.target.value)}
+                  className="h-9 text-xs"
+                />
               </div>
-              <div className="space-y-2">
-                <Label className="text-base">Miktar Cinsi (Birim) <span className="text-red-500">*</span></Label>
-                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background" required value={formData.unitId} onChange={e => setFormData({...formData, unitId: e.target.value})}>
-                  <option value="">Seçiniz...</option>
-                  {units.map(u => (
-                    <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>
-                  ))}
-                </select>
+
+              {/* Markası */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Markası</Label>
+                <Input
+                  placeholder="Örn: ECOLAB, AQUA, MERCK..."
+                  value={formData.brandName}
+                  onChange={(e) => updateField('brandName', e.target.value)}
+                  className="h-9 text-xs"
+                />
+              </div>
+
+              {/* Kategorisi */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Tehlikeli Madde Kategorisi</Label>
+                <Select
+                  value={formData.categoryId || 'none'}
+                  onValueChange={(val) => updateField('categoryId', val === 'none' ? '' : val)}
+                >
+                  <SelectTrigger className="w-full h-9 bg-background text-xs">
+                    <SelectValue>
+                      {categories.find((c: any) => c.id === formData.categoryId)?.name || 'Kategori Seçiniz (Opsiyonel)'}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Kategori Belirtilmemiş</SelectItem>
+                    {categories.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Miktarı (Opsiyonel) */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Varsayılan Ambalaj / Miktar (Opsiyonel)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="Örn: 750, 1, 50..."
+                  value={formData.amountValue}
+                  onChange={(e) => updateField('amountValue', e.target.value)}
+                  className="h-9 text-xs"
+                />
+              </div>
+
+              {/* Birimi (Opsiyonel) */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Miktar Birimi</Label>
+                <Select
+                  value={formData.unitId || 'none'}
+                  onValueChange={(val) => updateField('unitId', val === 'none' ? '' : val)}
+                >
+                  <SelectTrigger className="w-full h-9 bg-background text-xs">
+                    <SelectValue>
+                      {units.find((u: any) => u.id === formData.unitId)?.name
+                        ? `${units.find((u: any) => u.id === formData.unitId)?.name} (${units.find((u: any) => u.id === formData.unitId)?.symbol})`
+                        : 'Birim Seçiniz (Opsiyonel)'}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Birim Belirtilmemiş</SelectItem>
+                    {units.map((u: any) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name} ({u.symbol})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* 4. Kullanım Şekli */}
-            <div className="space-y-2">
-              <Label className="text-base">4. Kullanım Şekli</Label>
-              <Textarea value={formData.usageMethod} onChange={e => setFormData({...formData, usageMethod: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
-            </div>
-
-            {/* 5. Bileşimi / İçeriği */}
-            <div className="space-y-2">
-              <Label className="text-base">5. Bileşimi / İçeriği</Label>
-              <Textarea value={formData.composition} onChange={e => setFormData({...formData, composition: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
-            </div>
-
-            {/* 6. Tehlike Tanımı */}
-            <div className="space-y-2">
-              <Label className="text-base">6. Tehlike Tanımı</Label>
+        {/* KART 2: Tehlike Tanımları & Güvenlik Etiketleri */}
+        <Card className="border border-border/70 shadow-2xs rounded-xl overflow-hidden">
+          <CardHeader className="p-4 sm:p-5 border-b border-border/60 bg-muted/15">
+            <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
+              <Flame className="w-4 h-4 text-red-500" />
+              2. Tehlike Tanımları & Güvenlik Piktogramları
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground">
+              H-İfadeleri, GHS piktogramları, ADR taşıma işaretleri ve gerekli KKD'ler.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-5 space-y-5">
+            {/* Tehlike Tanımı (H-Statements) */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Tehlike Tanımı (H-Zararlılık İfadeleri)</Label>
               <HazardStatementSelector
                 value={formData.hazardDescription}
-                onChange={val => setFormData({ ...formData, hazardDescription: val })}
-                disabled={!!selectedGlobalMaterial && !isEditMode}
+                onChange={(val) => updateField('hazardDescription', val)}
               />
             </div>
 
-            {/* 7. Tehlike Etiketleri (ADR) */}
-            <div className="space-y-2">
-              <Label className="text-base block mb-3">7. Tehlike Etiketleri (ADR)</Label>
-              <div className="flex flex-wrap gap-4">
-                {hazardLabels.map(hl => {
+            {/* GHS Tehlike Piktogramları */}
+            <div className="space-y-2 pt-2 border-t border-border/60">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-foreground">
+                  GHS Tehlike Piktogramları ({formData.hazardLabelIds.length} Seçili)
+                </Label>
+              </div>
+              <div className="flex flex-wrap gap-2.5">
+                {hazardLabels.map((hl: any) => {
                   const isSelected = formData.hazardLabelIds.includes(hl.id);
                   return (
-                    <div key={hl.id} onClick={() => toggleArrayItem('hazardLabelIds', hl.id)} className={`w-24 h-24 border rounded-lg flex flex-col items-center justify-center p-2 cursor-pointer transition-all ${isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md ring-2 ring-blue-500' : 'border-dashed hover:bg-muted'} ${!!selectedGlobalMaterial && !isEditMode && 'opacity-60 cursor-not-allowed'}`}>
-                      {hl.imageUrl ? <img src={hl.imageUrl} alt={hl.name} className="w-12 h-12 object-contain mb-1" /> : <div className="w-12 h-12 bg-muted rounded flex items-center justify-center mb-1 text-xs">Yok</div>}
-                      <span className="text-[10px] font-semibold text-center leading-tight">{hl.name}</span>
-                      {isSelected && <Check className="w-4 h-4 text-blue-500 absolute top-1 right-1" />}
+                    <div
+                      key={hl.id}
+                      onClick={() => toggleArrayItem('hazardLabelIds', hl.id)}
+                      className={`relative flex flex-col items-center justify-center p-2 rounded-xl border cursor-pointer select-none transition-all w-[92px] h-[98px] ${
+                        isSelected
+                          ? 'border-primary bg-primary/5 ring-2 ring-primary/40 shadow-xs'
+                          : 'border-border/80 bg-card hover:bg-muted/40 shadow-2xs'
+                      }`}
+                    >
+                      {hl.imageUrl ? (
+                        <img
+                          src={hl.imageUrl}
+                          alt={hl.name}
+                          className="w-11 h-11 object-contain bg-white rounded-md p-0.5"
+                        />
+                      ) : (
+                        <div className="w-11 h-11 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
+                          Yok
+                        </div>
+                      )}
+                      <span className="text-[10px] font-medium text-center line-clamp-2 mt-1 leading-tight text-foreground">
+                        {hl.name}
+                      </span>
+                      {isSelected && (
+                        <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                          <Check className="w-2.5 h-2.5" />
+                        </span>
+                      )}
                     </div>
-                  )
+                  );
                 })}
               </div>
             </div>
 
-            {/* 8. İlkyardım Önlemleri */}
-            <div className="space-y-2">
-              <Label className="text-base">8. İlkyardım Önlemleri</Label>
-              <Textarea value={formData.firstAid} onChange={e => setFormData({...formData, firstAid: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
-            </div>
-
-            {/* 9. Yangınla Mücadele Tedbirleri */}
-            <div className="space-y-2">
-              <Label className="text-base">9. Yangınla Mücadele Tedbirleri</Label>
-              <Textarea value={formData.fireFightingMeasures} onChange={e => setFormData({...formData, fireFightingMeasures: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
-            </div>
-
-            {/* 10. Kaza Sonucu Serbest Kalması Durumunda Alınacak Tedbirler */}
-            <div className="space-y-2">
-              <Label className="text-base">10. Kaza Sonucu Serbest Kalması Durumunda Alınacak Tedbirler</Label>
-              <Textarea value={formData.accidentalReleaseMeasures} onChange={e => setFormData({...formData, accidentalReleaseMeasures: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
-            </div>
-
-            {/* 11. Kullanım ve Depolama */}
-            <div className="space-y-2">
-              <Label className="text-base">11. Kullanım ve Depolama</Label>
-              <Textarea value={formData.handlingAndStorage} onChange={e => setFormData({...formData, handlingAndStorage: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
-            </div>
-
-            {/* 12. Maruz Kalma Kontrolü ve Kişisel Korunma */}
-            <div className="space-y-2">
-              <Label className="text-base">12. Maruz Kalma Kontrolü ve Kişisel Korunma</Label>
-              <Textarea value={formData.exposureControls} onChange={e => setFormData({...formData, exposureControls: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
-            </div>
-
-            {/* 13. Fiziksel ve Kimyasal Özellikleri */}
-            <div className="space-y-2">
-              <Label className="text-base">13. Fiziksel ve Kimyasal Özellikleri</Label>
-              <Textarea value={formData.physicalProperties} onChange={e => setFormData({...formData, physicalProperties: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
-            </div>
-
-            {/* 14. Stabilite ve Reaktivite */}
-            <div className="space-y-2">
-              <Label className="text-base">14. Stabilite ve Reaktivite</Label>
-              <Textarea value={formData.stabilityAndReactivity} onChange={e => setFormData({...formData, stabilityAndReactivity: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
-            </div>
-
-            {/* 15. Toksikolojik Bilgi */}
-            <div className="space-y-2">
-              <Label className="text-base">15. Toksikolojik Bilgi</Label>
-              <Textarea value={formData.toxicologicalInfo} onChange={e => setFormData({...formData, toxicologicalInfo: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
-            </div>
-
-            {/* 16. Ekolojik Bilgi */}
-            <div className="space-y-2">
-              <Label className="text-base">16. Ekolojik Bilgi</Label>
-              <Textarea value={formData.ecologicalInfo} onChange={e => setFormData({...formData, ecologicalInfo: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
-            </div>
-
-            {/* 17. Temizlik/ İmha Yöntemi */}
-            <div className="space-y-2">
-              <Label className="text-base">17. Temizlik/ İmha Yöntemi</Label>
-              <Textarea value={formData.disposalConsiderations} onChange={e => setFormData({...formData, disposalConsiderations: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
-            </div>
-
-            {/* 18. Taşıma Bilgisi */}
-            <div className="space-y-2">
-              <Label className="text-base">18. Taşıma Bilgisi</Label>
-              <Textarea value={formData.transportInfo} onChange={e => setFormData({...formData, transportInfo: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
-            </div>
-
-            {/* 19. Tehlike Etiketleri (GHS) */}
-            <div className="space-y-2">
-              <Label className="text-base block mb-3">19. Tehlike Etiketleri (GHS)</Label>
-              <div className="flex flex-wrap gap-4">
-                {adrLabels.map(hl => {
-                  const isSelected = formData.adrLabelIds.includes(hl.id);
+            {/* ADR Taşıma İşaretleri */}
+            <div className="space-y-2 pt-2 border-t border-border/60">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-foreground">
+                  TDR (ADR) Taşıma Sınıfı Etiketleri ({formData.adrLabelIds.length} Seçili)
+                </Label>
+              </div>
+              <div className="flex flex-wrap gap-2.5">
+                {adrLabels.map((al: any) => {
+                  const isSelected = formData.adrLabelIds.includes(al.id);
                   return (
-                    <div key={hl.id} onClick={() => toggleArrayItem('adrLabelIds', hl.id)} className={`w-24 h-24 border rounded-lg flex flex-col items-center justify-center p-2 cursor-pointer transition-all ${isSelected ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 shadow-md ring-2 ring-orange-500' : 'border-dashed hover:bg-muted'} ${!!selectedGlobalMaterial && !isEditMode && 'opacity-60 cursor-not-allowed'}`}>
-                      {hl.imageUrl ? <img src={hl.imageUrl} alt={hl.name} className="w-12 h-12 object-contain mb-1" /> : <div className="w-12 h-12 bg-muted rounded flex items-center justify-center mb-1 text-xs">Yok</div>}
-                      <span className="text-[10px] font-semibold text-center leading-tight">{hl.name}</span>
-                      {isSelected && <Check className="w-4 h-4 text-orange-500 absolute top-1 right-1" />}
+                    <div
+                      key={al.id}
+                      onClick={() => toggleArrayItem('adrLabelIds', al.id)}
+                      className={`relative flex flex-col items-center justify-center p-2 rounded-xl border cursor-pointer select-none transition-all w-[92px] h-[98px] ${
+                        isSelected
+                          ? 'border-amber-500 bg-amber-500/5 ring-2 ring-amber-500/40 shadow-xs'
+                          : 'border-border/80 bg-card hover:bg-muted/40 shadow-2xs'
+                      }`}
+                    >
+                      {al.imageUrl ? (
+                        <img
+                          src={al.imageUrl}
+                          alt={al.name}
+                          className="w-11 h-11 object-contain bg-white rounded-md p-0.5"
+                        />
+                      ) : (
+                        <div className="w-11 h-11 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
+                          Yok
+                        </div>
+                      )}
+                      <span className="text-[10px] font-medium text-center line-clamp-2 mt-1 leading-tight text-foreground">
+                        {al.name}
+                      </span>
+                      {isSelected && (
+                        <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center">
+                          <Check className="w-2.5 h-2.5" />
+                        </span>
+                      )}
                     </div>
-                  )
+                  );
                 })}
               </div>
             </div>
 
-            {/* 20. Yönetmelik Bilgisi */}
-            <div className="space-y-2">
-              <Label className="text-base">20. Yönetmelik Bilgisi</Label>
-              <Textarea value={formData.regulatoryInfo} onChange={e => setFormData({...formData, regulatoryInfo: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
-            </div>
-
-            {/* 21. Kullanılması Gereken Kişisel Koruyucu Donanımlar */}
-            <div className="space-y-2">
-              <Label className="text-base block mb-3">21. Kullanılması Gereken Kişisel Koruyucu Donanımlar</Label>
-              <div className="flex flex-wrap gap-4">
-                {ppes.map(ppe => {
+            {/* Kişisel Koruyucu Donanımlar (KKD) */}
+            <div className="space-y-2 pt-2 border-t border-border/60">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-primary" />
+                  Gereken Kişisel Koruyucu Donanımlar ({formData.ppeIds.length} Seçili)
+                </Label>
+              </div>
+              <div className="flex flex-wrap gap-2.5">
+                {ppes.map((ppe: any) => {
                   const isSelected = formData.ppeIds.includes(ppe.id);
                   return (
-                    <div key={ppe.id} onClick={() => toggleArrayItem('ppeIds', ppe.id)} className={`w-28 h-28 border rounded-lg flex flex-col items-center justify-center p-2 cursor-pointer transition-all ${isSelected ? 'border-green-500 bg-green-50 dark:bg-green-900/20 shadow-md ring-2 ring-green-500' : 'border-dashed hover:bg-muted'} ${!!selectedGlobalMaterial && !isEditMode && 'opacity-60 cursor-not-allowed'}`}>
-                      {ppe.imageUrl ? <img src={ppe.imageUrl} alt={ppe.name} className="w-14 h-14 object-contain mb-2" /> : <div className="w-14 h-14 bg-muted rounded flex items-center justify-center mb-2 text-xs">Görsel Yok</div>}
-                      <span className="text-[10px] font-medium text-center leading-tight">{ppe.name}</span>
-                      {isSelected && <Check className="w-4 h-4 text-green-500 absolute top-1 right-1" />}
+                    <div
+                      key={ppe.id}
+                      onClick={() => toggleArrayItem('ppeIds', ppe.id)}
+                      className={`relative flex flex-col items-center justify-center p-2 rounded-xl border cursor-pointer select-none transition-all w-[92px] h-[98px] ${
+                        isSelected
+                          ? 'border-emerald-500 bg-emerald-500/5 ring-2 ring-emerald-500/40 shadow-xs'
+                          : 'border-border/80 bg-card hover:bg-muted/40 shadow-2xs'
+                      }`}
+                    >
+                      {ppe.imageUrl ? (
+                        <img
+                          src={ppe.imageUrl}
+                          alt={ppe.name}
+                          className="w-11 h-11 object-contain rounded-full bg-blue-50/50 p-0.5"
+                        />
+                      ) : (
+                        <div className="w-11 h-11 bg-muted rounded-full flex items-center justify-center text-xs text-muted-foreground">
+                          Yok
+                        </div>
+                      )}
+                      <span className="text-[10px] font-medium text-center line-clamp-2 mt-1 leading-tight text-foreground">
+                        {ppe.name}
+                      </span>
+                      {isSelected && (
+                        <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                          <Check className="w-2.5 h-2.5" />
+                        </span>
+                      )}
                     </div>
-                  )
+                  );
                 })}
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* SDS ve Görsel Yükleme */}
-            <div className="pt-6 mt-6 border-t">
-              <h3 className="text-lg font-semibold mb-4 flex items-center"><Search className="w-5 h-5 mr-2" /> Görsel ve Güvenlik Bilgi Formu (SDS)</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-base">Ürün Görseli</Label>
-                  {formData.imageUrl && (
-                    <div className="mb-2 relative w-32 h-32 border rounded-lg overflow-hidden flex items-center justify-center">
-                      <img src={`${BASE_URL}${formData.imageUrl}`} alt="Görsel" className="max-w-full max-h-full object-contain" />
-                    </div>
-                  )}
-                  <Input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'imageUrl')} disabled={!!selectedGlobalMaterial && !isEditMode} />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label className="text-base">SDS Belgesi (PDF)</Label>
-                  {formData.sdsUrl && (
-                    <div className="mb-2 text-sm text-blue-600 dark:text-blue-400">
-                      <a href={`${BASE_URL}${formData.sdsUrl}`} target="_blank" rel="noreferrer" className="underline">Belgeyi Görüntüle</a>
-                    </div>
-                  )}
-                  <Input type="file" accept="application/pdf" onChange={(e) => handleFileUpload(e, 'sdsUrl')} disabled={!!selectedGlobalMaterial && !isEditMode} />
-                </div>
+        {/* KART 3: Acil Durum & İlk Yardım */}
+        <Card className="border border-border/70 shadow-2xs rounded-xl overflow-hidden">
+          <CardHeader className="p-4 sm:p-5 border-b border-border/60 bg-muted/15">
+            <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
+              3. Acil Durum ve İlk Yardım Tedbirleri
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground">
+              İlkyardım adımları, yangın ve dökülme/sızma anında müdahale bilgileri.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-5 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">İlkyardım Önlemleri</Label>
+                <Textarea
+                  placeholder="Gözle temas, yutma, soluma durumunda ilk yardım..."
+                  rows={3}
+                  value={formData.firstAid}
+                  onChange={(e) => updateField('firstAid', e.target.value)}
+                  className="text-xs resize-none"
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label className="text-base">Geçerlilik Tarihi (Opsiyonel)</Label>
-                  <Input type="date" value={formData.sdsExpiryDate} onChange={e => setFormData({...formData, sdsExpiryDate: e.target.value})} disabled={!!selectedGlobalMaterial && !isEditMode} />
-                </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Yangınla Mücadele Tedbirleri</Label>
+                <Textarea
+                  placeholder="Uygun söndürme maddeleri, özel tehlikeler..."
+                  rows={3}
+                  value={formData.fireFightingMeasures}
+                  onChange={(e) => updateField('fireFightingMeasures', e.target.value)}
+                  className="text-xs resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Kaza Sonucu Serbest Kalma</Label>
+                <Textarea
+                  placeholder="Dökülme anında alınacak tedbirler, temizleme..."
+                  rows={3}
+                  value={formData.accidentalReleaseMeasures}
+                  onChange={(e) => updateField('accidentalReleaseMeasures', e.target.value)}
+                  className="text-xs resize-none"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* KART 4: Kullanım, Depolama & Taşıma */}
+        <Card className="border border-border/70 shadow-2xs rounded-xl overflow-hidden">
+          <CardHeader className="p-4 sm:p-5 border-b border-border/60 bg-muted/15">
+            <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
+              <Truck className="w-4 h-4 text-primary" />
+              4. Kullanım, Depolama ve Taşıma Bilgileri
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground">
+              Güvenli kullanım şekli, içerik, depolama şartları ve taşıma gereksinimleri.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-5 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Kullanım Şekli</Label>
+                <Textarea
+                  placeholder="Maddenin tesiste kullanım amacı ve talimatları..."
+                  rows={2}
+                  value={formData.usageMethod}
+                  onChange={(e) => updateField('usageMethod', e.target.value)}
+                  className="text-xs resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Bileşimi / İçeriği</Label>
+                <Textarea
+                  placeholder="Kimyasal bileşenler, CAS numaraları, konsantrasyon..."
+                  rows={2}
+                  value={formData.composition}
+                  onChange={(e) => updateField('composition', e.target.value)}
+                  className="text-xs resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Kullanım ve Depolama</Label>
+                <Textarea
+                  placeholder="Sıcaklık, havalandırma, uyumsuz kimyasallar..."
+                  rows={2}
+                  value={formData.handlingAndStorage}
+                  onChange={(e) => updateField('handlingAndStorage', e.target.value)}
+                  className="text-xs resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Maruz Kalma Kontrolü</Label>
+                <Textarea
+                  placeholder="Mesleki maruziyet sınır değerleri, havalandırma..."
+                  rows={2}
+                  value={formData.exposureControls}
+                  onChange={(e) => updateField('exposureControls', e.target.value)}
+                  className="text-xs resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Temizlik / İmha Yöntemi</Label>
+                <Textarea
+                  placeholder="Atık bertaraf yöntemi, yerel mevzuat kuralları..."
+                  rows={2}
+                  value={formData.disposalConsiderations}
+                  onChange={(e) => updateField('disposalConsiderations', e.target.value)}
+                  className="text-xs resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Taşıma Bilgisi (UN No vb.)</Label>
+                <Textarea
+                  placeholder="UN Numarası, Taşıma Grubu, Ambalajlama Grubu..."
+                  rows={2}
+                  value={formData.transportInfo}
+                  onChange={(e) => updateField('transportInfo', e.target.value)}
+                  className="text-xs resize-none"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* KART 5: Görsel, SDS & Teknik Bilgiler */}
+        <Card className="border border-border/70 shadow-2xs rounded-xl overflow-hidden">
+          <CardHeader className="p-4 sm:p-5 border-b border-border/60 bg-muted/15">
+            <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
+              <FileCheck className="w-4 h-4 text-emerald-600" />
+              5. Görsel, Güvenlik Bilgi Formu (SDS) ve Teknik Detaylar
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground">
+              SDS belgesi, geçerlilik tarihi, ürün görseli ve fiziksel/kimyasal veriler.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-5 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Ürün Görseli */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Ürün Görseli</Label>
+                {formData.imageUrl && (
+                  <div className="mb-2 relative w-20 h-20 border border-border/80 rounded-xl overflow-hidden flex items-center justify-center bg-white shadow-2xs p-1">
+                    <img
+                      src={`${BASE_URL}${formData.imageUrl}`}
+                      alt="Ürün Görseli"
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </div>
+                )}
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileUpload(e, 'imageUrl')}
+                  className="h-9 text-xs file:text-xs"
+                />
+              </div>
+
+              {/* SDS PDF */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Güvenlik Bilgi Formu (SDS - PDF)</Label>
+                {formData.sdsUrl && (
+                  <div className="mb-2 text-xs text-primary font-medium flex items-center gap-1">
+                    <FileText className="w-3.5 h-3.5" />
+                    <a
+                      href={`${BASE_URL}${formData.sdsUrl}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline"
+                    >
+                      Mevcut SDS Belgesini Görüntüle
+                    </a>
+                  </div>
+                )}
+                <Input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => handleFileUpload(e, 'sdsUrl')}
+                  className="h-9 text-xs file:text-xs"
+                />
+              </div>
+
+              {/* SDS Geçerlilik Tarihi */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">SDS Geçerlilik Tarihi</Label>
+                <Input
+                  type="date"
+                  value={formData.sdsExpiryDate}
+                  onChange={(e) => updateField('sdsExpiryDate', e.target.value)}
+                  className="h-9 text-xs"
+                />
               </div>
             </div>
 
-          </div>
-        </div>
+            {/* İsteğe Bağlı Teknik Notlar */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-border/60">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Fiziksel ve Kimyasal Özellikler</Label>
+                <Textarea
+                  placeholder="Görünüm, koku, pH, kaynama noktası, parlama noktası..."
+                  rows={2}
+                  value={formData.physicalProperties}
+                  onChange={(e) => updateField('physicalProperties', e.target.value)}
+                  className="text-xs resize-none"
+                />
+              </div>
 
-        <div className="flex justify-end gap-4 pb-12">
-          <Button variant="outline" type="button" onClick={() => navigate(returnTo)}>İptal</Button>
-          <Button type="submit" disabled={createMutation.isLoading} className="px-8">
-            <Save className="w-4 h-4 mr-2" />
-            {createMutation.isLoading ? 'Kaydediliyor...' : 'Kaydet'}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Stabilite ve Reaktivite</Label>
+                <Textarea
+                  placeholder="Kimyasal kararlılık, kaçınılması gereken durumlar..."
+                  rows={2}
+                  value={formData.stabilityAndReactivity}
+                  onChange={(e) => updateField('stabilityAndReactivity', e.target.value)}
+                  className="text-xs resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Toksikolojik ve Ekolojik Bilgi</Label>
+                <Textarea
+                  placeholder="Akut toksisite, çevreye olan etkileri..."
+                  rows={2}
+                  value={formData.toxicologicalInfo}
+                  onChange={(e) => updateField('toxicologicalInfo', e.target.value)}
+                  className="text-xs resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Mevzuat ve Yönetmelik Bilgisi</Label>
+                <Textarea
+                  placeholder="Maddeye ilişkin özel güvenlik, sağlık ve çevre mevzuatı..."
+                  rows={2}
+                  value={formData.regulatoryInfo}
+                  onChange={(e) => updateField('regulatoryInfo', e.target.value)}
+                  className="text-xs resize-none"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Sticky Action Footer - Yan Yana Sağa Yaslı */}
+        <div className="sticky bottom-4 z-20 bg-background/95 backdrop-blur-md border border-border/80 p-3.5 rounded-xl shadow-lg flex items-center justify-end gap-3">
+          {hasLoadedDraft && (
+            <Button
+              variant="outline"
+              type="button"
+              onClick={handleClearDraft}
+              className="text-xs h-9 text-muted-foreground hover:text-foreground gap-1.5"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Taslağı Temizle
+            </Button>
+          )}
+
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => navigate(returnTo)}
+            className="text-xs h-9 px-5 border border-border/80 bg-background text-foreground hover:bg-muted font-medium shadow-2xs"
+          >
+            İptal
+          </Button>
+
+          <Button
+            type="submit"
+            disabled={createMutation.isPending}
+            className="px-6 h-9 text-xs font-semibold gap-2 shadow-sm"
+          >
+            {createMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            {createMutation.isPending
+              ? 'Kaydediliyor...'
+              : isEditMode
+                ? 'Değişiklikleri Güncelle'
+                : 'Veritabanına Kaydet'}
           </Button>
         </div>
       </form>

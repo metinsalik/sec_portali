@@ -401,16 +401,26 @@ router.delete('/categories/:id', authMiddleware, async (req: AuthRequest, res) =
 });
 
 // --- INCIDENT TYPES ---
-const DEFAULT_HAZMAT_INCIDENT_TYPES = [
-  'Kimyasal Dökülme',
-  'Kimyasal Sızıntı',
-  'Gaz / Buhar Yayılımı',
-  'Hatalı Karışım / Reaksiyon',
-  'Deri / Göz Teması',
-  'Solunum Yolu Maruziyeti',
-  'Yangın / Parlama Riski',
-  'Ambalaj / Kap Hasarı',
-  'Diğer',
+const DEFAULT_HAZMAT_INCIDENT_TYPES: { name: string; description: string }[] = [
+  { name: 'Sızıntı', description: 'Maddenin kap, vana, boru veya ekipmandan kontrolsüz çıkması' },
+  { name: 'Dökülme', description: 'Maddenin zemine veya başka bir yüzeye yayılması' },
+  { name: 'Vücuda sıçrama / temas', description: 'Maddenin cilde, göze veya vücudun başka bir bölümüne temas etmesi' },
+  { name: 'Solunum yoluyla maruziyet', description: 'Gaz, buhar, duman, sis veya tozun solunması' },
+  { name: 'Yutma / ağız yoluyla maruziyet', description: 'Maddenin yanlışlıkla ağız yoluyla alınması' },
+  { name: 'Gaz veya buhar salınımı', description: 'Maddenin gaz veya buhar olarak ortama kontrolsüz yayılması' },
+  { name: 'Toz veya aerosol yayılımı', description: 'Katı parçacıkların, sisin veya aerosolün ortama yayılması' },
+  { name: 'Yangın', description: 'Tehlikeli maddenin veya bulunduğu alanın yanması' },
+  { name: 'Patlama / parlama', description: 'Patlama veya ani alevlenme meydana gelmesi' },
+  { name: 'Kontrolsüz kimyasal reaksiyon', description: 'Beklenmeyen ısınma, köpürme, gaz çıkışı veya benzeri reaksiyon' },
+  { name: 'Basınç kaynaklı olay', description: 'Basınç artışı, kap veya tüpün hasar görmesi ya da basınçlı salınım' },
+  { name: 'Kap / ambalaj hasarı', description: 'Kabın kırılması, delinmesi, devrilmesi veya şişmesi' },
+  { name: 'Uygunsuz karışım', description: 'Maddelerin yanlışlıkla karıştırılması veya uyumsuz maddelerin temas etmesi' },
+  { name: 'Yanlış madde kullanımı / transferi', description: 'Yanlış maddenin kullanılması, yanlış kaba veya hatta aktarılması' },
+  { name: 'Çevreye yayılım', description: 'Maddenin toprağa, kanalizasyona, yüzey suyuna veya dış ortama ulaşması' },
+  { name: 'Depolama uygunsuzluğu', description: 'Uyumsuz maddelerin birlikte tutulması veya depolama koşullarının uygunsuz olması' },
+  { name: 'Taşıma / yükleme olayı', description: 'Taşıma, yükleme veya boşaltma sırasında oluşan kaza ya da hasar' },
+  { name: 'Ramakkala', description: 'Olayın gerçekleşmediği ancak gerçekleşme potansiyeli taşıyan durum' },
+  { name: 'Diğer', description: 'Listede bulunmayan olay; açıklama girilir' },
 ];
 
 router.get('/incident-types', authMiddleware, async (req, res) => {
@@ -418,14 +428,31 @@ router.get('/incident-types', authMiddleware, async (req, res) => {
     let types = await prisma.hazmatIncidentType.findMany({
       orderBy: { name: 'asc' }
     });
+
     if (types.length === 0) {
-      await prisma.hazmatIncidentType.createMany({
-        data: DEFAULT_HAZMAT_INCIDENT_TYPES.map(name => ({ name }))
+      for (const item of DEFAULT_HAZMAT_INCIDENT_TYPES) {
+        await prisma.hazmatIncidentType.create({
+          data: { name: item.name, description: item.description }
+        });
+      }
+      types = await prisma.hazmatIncidentType.findMany({
+        orderBy: { name: 'asc' }
       });
+    } else {
+      // Missing default categories auto-sync
+      const existingNames = new Set(types.map(t => t.name.toLowerCase()));
+      for (const item of DEFAULT_HAZMAT_INCIDENT_TYPES) {
+        if (!existingNames.has(item.name.toLowerCase())) {
+          await prisma.hazmatIncidentType.create({
+            data: { name: item.name, description: item.description }
+          });
+        }
+      }
       types = await prisma.hazmatIncidentType.findMany({
         orderBy: { name: 'asc' }
       });
     }
+
     res.json(types);
   } catch (error) {
     console.error('Error fetching incident types:', error);
@@ -434,12 +461,12 @@ router.get('/incident-types', authMiddleware, async (req, res) => {
 });
 
 router.post('/incident-types', authMiddleware, async (req: AuthRequest, res) => {
-  const { name } = req.body;
+  const { name, description } = req.body;
   if (!name) return res.status(400).json({ error: 'name is required' });
 
   try {
     const type = await prisma.hazmatIncidentType.create({
-      data: { name }
+      data: { name, description: description || null }
     });
     res.status(201).json(type);
   } catch (error) {
@@ -449,11 +476,14 @@ router.post('/incident-types', authMiddleware, async (req: AuthRequest, res) => 
 });
 
 router.put('/incident-types/:id', authMiddleware, async (req: AuthRequest, res) => {
-  const { name } = req.body;
+  const { name, description } = req.body;
   try {
     const type = await prisma.hazmatIncidentType.update({
       where: { id: req.params.id },
-      data: { name }
+      data: { 
+        name: name !== undefined ? name : undefined,
+        description: description !== undefined ? description : undefined 
+      }
     });
     res.json(type);
   } catch (error) {
@@ -468,6 +498,104 @@ router.delete('/incident-types/:id', authMiddleware, async (req: AuthRequest, re
     res.json({ message: 'Incident type deleted successfully' });
   } catch (error) {
     console.error('Error deleting incident type:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// --- ROOT CAUSES (KÖK NEDENLER) ---
+const DEFAULT_HAZMAT_ROOT_CAUSES: { name: string; description: string }[] = [
+  { name: 'Ekipman / tesisat arızası', description: 'Vana arızası, conta arızası, hortum hasarı, boru çatlağı, pompa arızası, bağlantı arızası' },
+  { name: 'Kap / ambalaj yetersizliği', description: 'Kırık veya delinmiş kap, gevşek kapak, uygun olmayan ambalaj, ambalajın yıpranması' },
+  { name: 'Bakım / kontrol eksikliği', description: 'Bakımın yapılmaması, bakımın yetersiz yapılması, kontrol eksikliği, arızanın geç fark edilmesi' },
+  { name: 'Hatalı işlem / uygulama', description: 'Yanlış vana veya ekipman kullanımı, hatalı aktarım, aşırı doldurma, yanlış madde kullanımı' },
+  { name: 'Prosedür / talimat eksikliği', description: 'Talimatın bulunmaması, talimatın yetersiz veya anlaşılır olmaması, talimata uyulmaması' },
+  { name: 'Eğitim / yetkinlik eksikliği', description: 'Yetersiz eğitim, işe özgü bilgi eksikliği, ekipman kullanımına ilişkin yetkinlik eksikliği' },
+  { name: 'Etiketleme / bilgi eksikliği', description: 'Eksik veya yanlış etiket, ürünün yanlış tanımlanması, gerekli güvenlik bilgisinin erişilebilir olmaması' },
+  { name: 'Depolama koşulları', description: 'Uyumsuz maddelerin birlikte depolanması, uygunsuz sıcaklık, kapların yanlış yerleştirilmesi, yetersiz depolama alanı' },
+  { name: 'Taşıma / elleçleme koşulları', description: 'Kabın düşürülmesi, çarpma, uygunsuz kaldırma veya taşıma, yükün sabitlenmemesi' },
+  { name: 'Çalışma ortamı koşulları', description: 'Yetersiz havalandırma, kaygan zemin, yetersiz aydınlatma, dar çalışma alanı' },
+  { name: 'Koruyucu önlem eksikliği', description: 'Uygun kişisel koruyucu donanımın bulunmaması veya kullanılmaması, koruyucu bariyer ya da dökülme tutucunun yetersizliği' },
+  { name: 'Planlama / organizasyon eksikliği', description: 'Yetersiz iş planlaması, görev ve sorumlulukların belirsizliği, iş yükü veya zaman baskısı' },
+  { name: 'İletişim / koordinasyon eksikliği', description: 'Vardiyalar arası bilgi aktarımı eksikliği, ekipler arasında yetersiz koordinasyon' },
+  { name: 'Dış etkenler', description: 'Araç çarpması, elektrik kesintisi, doğal olaylar veya dış kaynaklı başka bir etki' },
+  { name: 'Diğer', description: 'Listede bulunmayan neden; açıklama girilir' },
+  { name: 'Henüz belirlenmedi', description: 'İnceleme devam ediyor veya neden için yeterli bilgi yok' },
+];
+
+router.get('/root-causes', authMiddleware, async (req, res) => {
+  try {
+    let causes = await prisma.hazmatRootCause.findMany({
+      orderBy: { name: 'asc' }
+    });
+
+    if (causes.length === 0) {
+      for (const item of DEFAULT_HAZMAT_ROOT_CAUSES) {
+        await prisma.hazmatRootCause.create({
+          data: { name: item.name, description: item.description }
+        });
+      }
+      causes = await prisma.hazmatRootCause.findMany({
+        orderBy: { name: 'asc' }
+      });
+    } else {
+      const existingNames = new Set(causes.map(c => c.name.toLowerCase()));
+      for (const item of DEFAULT_HAZMAT_ROOT_CAUSES) {
+        if (!existingNames.has(item.name.toLowerCase())) {
+          await prisma.hazmatRootCause.create({
+            data: { name: item.name, description: item.description }
+          });
+        }
+      }
+      causes = await prisma.hazmatRootCause.findMany({
+        orderBy: { name: 'asc' }
+      });
+    }
+
+    res.json(causes);
+  } catch (error) {
+    console.error('Error fetching root causes:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/root-causes', authMiddleware, async (req: AuthRequest, res) => {
+  const { name, description } = req.body;
+  if (!name) return res.status(400).json({ error: 'name is required' });
+
+  try {
+    const cause = await prisma.hazmatRootCause.create({
+      data: { name, description: description || null }
+    });
+    res.status(201).json(cause);
+  } catch (error) {
+    console.error('Error creating root cause:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.put('/root-causes/:id', authMiddleware, async (req: AuthRequest, res) => {
+  const { name, description } = req.body;
+  try {
+    const cause = await prisma.hazmatRootCause.update({
+      where: { id: req.params.id },
+      data: { 
+        name: name !== undefined ? name : undefined,
+        description: description !== undefined ? description : undefined 
+      }
+    });
+    res.json(cause);
+  } catch (error) {
+    console.error('Error updating root cause:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.delete('/root-causes/:id', authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    await prisma.hazmatRootCause.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Root cause deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting root cause:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

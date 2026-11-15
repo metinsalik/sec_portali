@@ -82,7 +82,7 @@ router.post('/add-to-facility', authMiddleware, async (req: AuthRequest, res) =>
     return res.status(400).json({ error: 'facilityId and materialId are required' });
   }
 
-  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(facilityId)) {
+  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities?.includes(facilityId)) {
     return res.status(403).json({ error: 'Access denied' });
   }
 
@@ -118,7 +118,7 @@ router.post('/bulk-add-to-facility', authMiddleware, async (req: AuthRequest, re
     return res.status(400).json({ error: 'facilityId and an array of materialIds are required' });
   }
 
-  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(facilityId)) {
+  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities?.includes(facilityId)) {
     return res.status(403).json({ error: 'Access denied' });
   }
 
@@ -162,7 +162,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res) => {
     return res.status(400).json({ error: 'facilityId is required' });
   }
 
-  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(String(facilityId))) {
+  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities?.includes(String(facilityId))) {
     return res.status(403).json({ error: 'Access denied to this facility' });
   }
 
@@ -203,7 +203,7 @@ router.post('/facility', authMiddleware, async (req: AuthRequest, res) => {
     return res.status(400).json({ error: 'facilityId and materialId are required' });
   }
 
-  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(facilityId)) {
+  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities?.includes(facilityId)) {
     return res.status(403).json({ error: 'Access denied' });
   }
 
@@ -241,16 +241,24 @@ router.post('/facility', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
-// Create a new global material AND add it to the facility
+// Create a new global material (and optionally link to facility if valid facilityId provided)
 router.post('/', authMiddleware, async (req: AuthRequest, res) => {
   const data = req.body;
 
-  if (!data.facilityId || !data.productName) {
-    return res.status(400).json({ error: 'facilityId and productName are required' });
+  if (!data.productName || !String(data.productName).trim()) {
+    return res.status(400).json({ error: 'Ürün Adı zorunludur' });
   }
 
-  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(data.facilityId)) {
-    return res.status(403).json({ error: 'Access denied to this facility' });
+  const hasValidFacility = Boolean(
+    data.facilityId &&
+    String(data.facilityId).toLowerCase() !== 'all' &&
+    String(data.facilityId).trim() !== ''
+  );
+
+  if (hasValidFacility) {
+    if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities?.includes(data.facilityId)) {
+      return res.status(403).json({ error: 'Access denied to this facility' });
+    }
   }
 
   try {
@@ -267,23 +275,23 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
     // Create the global material
     const newMaterial = await prisma.hazmatMaterial.create({
       data: {
-        productName: materialData.productName,
-        brandName: materialData.brandName,
-        usageMethod: materialData.usageMethod,
-        composition: materialData.composition,
-        hazardDescription: materialData.hazardDescription,
-        firstAid: materialData.firstAid,
-        fireFightingMeasures: materialData.fireFightingMeasures,
-        accidentalReleaseMeasures: materialData.accidentalReleaseMeasures,
-        handlingAndStorage: materialData.handlingAndStorage,
-        exposureControlsPpe: materialData.exposureControls,
-        physicalAndChemicalProperties: materialData.physicalProperties,
-        stabilityAndReactivity: materialData.stabilityAndReactivity,
-        toxicologicalInformation: materialData.toxicologicalInfo,
-        ecologicalInformation: materialData.ecologicalInfo,
-        disposalConsiderations: materialData.disposalConsiderations,
-        transportInfo: materialData.transportInfo,
-        regulatoryInfo: materialData.regulatoryInfo,
+        productName: materialData.productName.trim(),
+        brandName: materialData.brandName?.trim() || null,
+        usageMethod: materialData.usageMethod || null,
+        composition: materialData.composition || null,
+        hazardDescription: materialData.hazardDescription || null,
+        firstAid: materialData.firstAid || null,
+        fireFightingMeasures: materialData.fireFightingMeasures || null,
+        accidentalReleaseMeasures: materialData.accidentalReleaseMeasures || null,
+        handlingAndStorage: materialData.handlingAndStorage || null,
+        exposureControlsPpe: materialData.exposureControls || null,
+        physicalAndChemicalProperties: materialData.physicalProperties || null,
+        stabilityAndReactivity: materialData.stabilityAndReactivity || null,
+        toxicologicalInformation: materialData.toxicologicalInfo || null,
+        ecologicalInformation: materialData.ecologicalInfo || null,
+        disposalConsiderations: materialData.disposalConsiderations || null,
+        transportInfo: materialData.transportInfo || null,
+        regulatoryInfo: materialData.regulatoryInfo || null,
         categoryId: materialData.categoryId || null,
         imageUrl: materialData.imageUrl || null,
         sdsUrl: materialData.sdsUrl || null,
@@ -303,6 +311,12 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
             ppe: { connect: { id: ppeId } }
           }))
         }
+      },
+      include: {
+        category: true,
+        hazardLabels: { include: { label: true } },
+        adrLabels: { include: { label: true } },
+        ppes: { include: { ppe: true } }
       }
     });
 
@@ -317,27 +331,33 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
       }
     });
 
-    // Create the facility item
-    const newItem = await prisma.facilityHazmatItem.create({
-      data: {
-        facilityId,
-        materialId: newMaterial.id,
-        amountValue: amountValue ? Number(amountValue) : null,
-        unitId: unitId || null
-      },
-      include: {
-        unit: true,
-        material: {
-          include: {
-            hazardLabels: { include: { label: true } },
-            adrLabels: { include: { label: true } },
-            ppes: { include: { ppe: true } }
-          }
-        }
+    // If amountValue or unitId is provided, make sure we link a facilityItem even if facilityId wasn't passed or was 'all'
+    let facilityItem = null;
+    let actualFacilityId = hasValidFacility ? facilityId : null;
+    if (!actualFacilityId) {
+      if (req.user?.facilities && req.user.facilities.length > 0) {
+        actualFacilityId = req.user.facilities[0];
+      } else {
+        const firstFac = await prisma.facility.findFirst({ select: { id: true } });
+        if (firstFac) actualFacilityId = firstFac.id;
       }
-    });
+    }
 
-    res.status(201).json(newItem);
+    if (actualFacilityId && (amountValue !== undefined || unitId)) {
+      facilityItem = await prisma.facilityHazmatItem.create({
+        data: {
+          facilityId: actualFacilityId,
+          materialId: newMaterial.id,
+          amountValue: amountValue !== undefined && amountValue !== '' && amountValue !== null ? Number(amountValue) : null,
+          unitId: unitId || null
+        },
+        include: {
+          unit: true
+        }
+      });
+    }
+
+    res.status(201).json({ material: newMaterial, facilityItem });
   } catch (error) {
     console.error('Error creating global material and facility item:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -352,7 +372,7 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res) => {
     return res.status(400).json({ error: 'facilityId and a non-empty materials array are required' });
   }
 
-  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(facilityId)) {
+  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities?.includes(facilityId)) {
     return res.status(403).json({ error: 'Access denied to this facility' });
   }
 
@@ -479,7 +499,7 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res) => {
 router.delete('/facility/:facilityId/:materialId', authMiddleware, async (req: AuthRequest, res) => {
   const { facilityId, materialId } = (req.params as Record<string, string>);
 
-  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities.includes(facilityId)) {
+  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities?.includes(facilityId)) {
     return res.status(403).json({ error: 'Access denied' });
   }
 
@@ -518,14 +538,49 @@ router.get('/:materialId', authMiddleware, async (req: AuthRequest, res) => {
     }
 
     let facilityItem = null;
-    if (facilityId) {
+    if (facilityId && facilityId !== 'all') {
       facilityItem = await prisma.facilityHazmatItem.findUnique({
         where: { facilityId_materialId: { facilityId: String(facilityId), materialId } },
         include: { unit: true }
       });
     }
 
-    res.json({ material, facilityItem });
+    if (!facilityItem) {
+      facilityItem = await prisma.facilityHazmatItem.findFirst({
+        where: { materialId },
+        include: { unit: true }
+      });
+    }
+
+    // Resolve user full names for audit logs
+    const auditLogs = material.auditLogs || [];
+    const usernames = Array.from(new Set(auditLogs.map((l: any) => l.username).filter(Boolean)));
+    const userMap = new Map<string, string>();
+
+    if (usernames.length > 0) {
+      const users = await prisma.user.findMany({
+        where: { username: { in: usernames } },
+        select: { username: true, fullName: true }
+      });
+      users.forEach((u: any) => {
+        if (u.fullName) {
+          userMap.set(u.username, u.fullName);
+        }
+      });
+    }
+
+    const enrichedAuditLogs = auditLogs.map((log: any) => ({
+      ...log,
+      userFullName: userMap.get(log.username) || log.username
+    }));
+
+    res.json({
+      material: {
+        ...material,
+        auditLogs: enrichedAuditLogs
+      },
+      facilityItem
+    });
   } catch (error) {
     console.error('Error fetching material details:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -612,16 +667,29 @@ router.put('/:materialId', authMiddleware, async (req: AuthRequest, res) => {
       }
     });
 
-    // If a valid facilityId is available, upsert the facility item to update amount
-    if (targetFacilityId && targetFacilityId !== 'all') {
+    // Upsert facility item to update amount & unit
+    let actualFacilityId = (targetFacilityId && targetFacilityId !== 'all') ? targetFacilityId : null;
+    if (!actualFacilityId) {
+      const existingItem = await prisma.facilityHazmatItem.findFirst({
+        where: { materialId }
+      });
+      if (existingItem) {
+        actualFacilityId = existingItem.facilityId;
+      } else {
+        const firstFac = await prisma.facility.findFirst({ select: { id: true } });
+        if (firstFac) actualFacilityId = firstFac.id;
+      }
+    }
+
+    if (actualFacilityId) {
       await prisma.facilityHazmatItem.upsert({
-        where: { facilityId_materialId: { facilityId: targetFacilityId, materialId } },
+        where: { facilityId_materialId: { facilityId: actualFacilityId, materialId } },
         update: {
           amountValue: amountValue !== undefined && amountValue !== '' && amountValue !== null ? Number(amountValue) : null,
           unitId: unitId || null
         },
         create: {
-          facilityId: targetFacilityId,
+          facilityId: actualFacilityId,
           materialId,
           amountValue: amountValue !== undefined && amountValue !== '' && amountValue !== null ? Number(amountValue) : null,
           unitId: unitId || null

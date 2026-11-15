@@ -1,4 +1,4 @@
-FROM node:20-bookworm-slim
+FROM node:22-bookworm-slim
 
 WORKDIR /app
 RUN apt-get update && apt-get install -y openssl ca-certificates netcat-openbsd procps && rm -rf /var/lib/apt/lists/*
@@ -34,7 +34,7 @@ RUN chmod +x entrypoint.sh
 
 # Generate prisma client & build
 RUN node /app/node_modules/prisma/build/index.js generate --generator client
-RUN NODE_OPTIONS="--max-old-space-size=4096" /app/backend/node_modules/.bin/tsc
+RUN /app/backend/node_modules/.bin/tsc
 
 EXPOSE 3005
 

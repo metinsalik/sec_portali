@@ -62,8 +62,8 @@ const operationsNavItems = (hasAdminAccess: boolean) => [
 const settingsNavItems = (hasAdminAccess: boolean) => [
   { label: 'GENEL', type: 'group' },
   { label: 'Tesis Yönetimi', icon: Building2, to: '/settings/facilities' },
-  { label: 'Tesis Lokasyonları', icon: Building2, to: '/settings/locations' },
   ...(hasAdminAccess ? [
+    { label: 'Tesis Lokasyonları', icon: Building2, to: '/settings/locations' },
     { label: 'Kullanıcı Yönetimi', icon: Users2, to: '/settings/users' },
     { label: 'Tanım Yönetimi', icon: BookOpen, to: '/settings/definitions' },
     { label: 'SİSTEM', type: 'group' },

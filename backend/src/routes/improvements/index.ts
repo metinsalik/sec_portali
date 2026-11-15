@@ -1152,12 +1152,35 @@ router.post('/records', async (req: AuthRequest, res: Response) => {
   }
 });
 
-function formatHistoryItem(h: any) {
+async function getUserFullNamesMap(usernames: (string | null | undefined)[]) {
+  const cleanList = Array.from(new Set(usernames.filter(Boolean) as string[]));
+  if (cleanList.length === 0) return new Map<string, string>();
+
+  try {
+    const users = await prisma.user.findMany({
+      where: { username: { in: cleanList } },
+      select: { username: true, fullName: true }
+    });
+    const map = new Map<string, string>();
+    users.forEach(u => {
+      if (u.fullName && u.fullName.trim()) {
+        map.set(u.username, u.fullName.trim());
+      }
+    });
+    return map;
+  } catch (err) {
+    console.error('Error fetching user full names map:', err);
+    return new Map<string, string>();
+  }
+}
+
+function formatHistoryItem(h: any, userMap?: any) {
   let photos: any[] = [];
   let documents: any[] = [];
   let stepType: string | null = h.stepType || null;
   let stepTitle: string | null = h.stepTitle || null;
   let stepFields: Record<string, any> | null = null;
+  let changes: string[] = [];
 
   if (Array.isArray(h.evidencePhotos)) {
     h.evidencePhotos.forEach((item: any) => {
@@ -1174,17 +1197,42 @@ function formatHistoryItem(h: any) {
     stepType = h.stepType || raw.stepType || null;
     stepTitle = h.stepTitle || raw.stepTitle || null;
     stepFields = raw.stepFields || null;
+    if (Array.isArray(raw.changes)) {
+      changes = raw.changes;
+    }
+  }
+
+  const hasUserMap = userMap && typeof userMap.get === 'function';
+  const resolvedName = (hasUserMap && h.changedBy ? userMap.get(h.changedBy) : null) || h.changedByName || h.changedBy;
+
+  let finalStepTitle = stepTitle;
+  if (!finalStepTitle) {
+    if (stepType === 'DUZENLEME') {
+      finalStepTitle = 'Bulgu ve Aksiyon Bilgileri Güncellendi';
+    } else if (stepType === 'DURUM_DEGISIKLIGI') {
+      finalStepTitle = 'Durum Güncellendi';
+    } else if (stepType === 'KESIF_NOTU') {
+      finalStepTitle = 'Saha Keşif Notu Kaydı';
+    } else {
+      finalStepTitle = 'Aksiyon Adımı';
+    }
+  }
+
+  const mergedStepFields: Record<string, any> = { ...(stepFields || {}) };
+  if (changes.length > 0 && !mergedStepFields.changes) {
+    mergedStepFields.changes = changes;
   }
 
   return {
     ...h,
+    changedByName: resolvedName,
     progress: h.progress !== undefined ? h.progress : null,
     progressAdded: h.progressAdded !== undefined ? h.progressAdded : null,
     evidencePhotos: photos,
     documents,
     stepType,
-    stepTitle,
-    stepFields,
+    stepTitle: finalStepTitle,
+    stepFields: Object.keys(mergedStepFields).length > 0 ? mergedStepFields : null,
   };
 }
 
@@ -1208,9 +1256,17 @@ router.get('/records/:id', async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, message: 'Kayıt bulunamadı.' });
     }
 
+    const userMap = await getUserFullNamesMap([
+      record.createdBy,
+      record.updatedBy,
+      ...record.histories.map(h => h.changedBy)
+    ]);
+
     const formattedRecord = {
       ...record,
-      histories: record.histories.map(formatHistoryItem)
+      createdByName: (record.createdBy && userMap.get(record.createdBy)) || record.createdBy || null,
+      updatedByName: (record.updatedBy && userMap.get(record.updatedBy)) || record.updatedBy || null,
+      histories: record.histories.map(h => formatHistoryItem(h, userMap))
     };
 
     res.json({ success: true, data: formattedRecord });
@@ -1320,15 +1376,64 @@ router.put('/records/:id', async (req: AuthRequest, res: Response) => {
       }
     });
 
-    // Durum veya Not değişmişse geçmişe yaz
-    if (currentNote !== existing.currentNote || status !== existing.status) {
+    // Tüm alanlardaki değişiklikleri tespit et ve detaylı denetim izi (log) oluştur
+    const changeLogs: string[] = [];
+    if (status && status !== existing.status) {
+      changeLogs.push(`Durum: "${existing.status}" → "${status}"`);
+    }
+    if (finalProgress !== existing.progress) {
+      changeLogs.push(`İlerleme: %${existing.progress || 0} → %${finalProgress}`);
+    }
+    if (assignedTo !== undefined && assignedTo !== existing.assignedTo) {
+      changeLogs.push(`Sorumlu: "${existing.assignedTo || 'Atanmamış'}" → "${assignedTo || 'Atanmamış'}"`);
+    }
+    const reqDueStr = dueDate ? new Date(dueDate).toLocaleDateString('tr-TR') : '';
+    const existDueStr = existing.dueDate ? new Date(existing.dueDate).toLocaleDateString('tr-TR') : '';
+    if (dueDate !== undefined && reqDueStr !== existDueStr) {
+      changeLogs.push(`Termin Tarihi: "${existDueStr || 'Yok'}" → "${reqDueStr || 'Yok'}"`);
+    }
+    if (discoveryNotes !== undefined && (discoveryNotes || null) !== existing.discoveryNotes) {
+      changeLogs.push(existing.discoveryNotes ? 'Saha keşif notu güncellendi' : 'Saha keşif notu eklendi');
+    }
+    if (technicalManagerDesc !== undefined && (technicalManagerDesc || null) !== existing.technicalManagerDesc) {
+      changeLogs.push(existing.technicalManagerDesc ? 'Teknik müdür değerlendirmesi güncellendi' : 'Teknik müdür değerlendirmesi eklendi');
+    }
+    if (actionPlan !== undefined && (actionPlan || null) !== existing.actionPlan) {
+      changeLogs.push(existing.actionPlan ? 'İş planı güncellendi' : 'İş planı eklendi');
+    }
+    if (currentNote !== undefined && (currentNote || null) !== existing.currentNote) {
+      changeLogs.push('Aksiyon açıklaması güncellendi');
+    }
+    if (location !== undefined && (location || null) !== existing.location) {
+      changeLogs.push(`Mahal: "${existing.location || '-'}" → "${location || '-'}"`);
+    }
+    if (riskScore !== undefined && (riskScore || null) !== existing.riskScore) {
+      changeLogs.push(`Risk Skoru: "${existing.riskScore || '-'}" → "${riskScore || '-'}"`);
+    }
+    if (finding !== undefined && (finding || null) !== existing.finding) {
+      changeLogs.push('Tespit metni güncellendi');
+    }
+
+    if (changeLogs.length > 0 || (currentNote && currentNote !== existing.currentNote)) {
+      const summaryNote = currentNote && currentNote !== existing.currentNote
+        ? (changeLogs.length > 0 ? `${currentNote}\n\n[Yapılan Düzenlemeler]: ${changeLogs.join(' • ')}` : currentNote)
+        : `Bulgu ve aksiyon bilgileri güncellendi: ${changeLogs.join(' • ')}`;
+
       await prisma.improvementRecordHistory.create({
         data: {
           recordId: id,
           previousNote: existing.currentNote,
-          newNote: currentNote || '',
+          newNote: summaryNote,
           previousStatus: existing.status,
-          newStatus: status,
+          newStatus: status || existing.status,
+          progress: finalProgress,
+          stepType: 'DUZENLEME',
+          stepTitle: 'Bulgu ve Aksiyon Bilgileri Güncellendi',
+          evidencePhotos: {
+            stepType: 'DUZENLEME',
+            stepTitle: 'Bulgu ve Aksiyon Bilgileri Güncellendi',
+            changes: changeLogs,
+          },
           changedBy: user.username,
           changedByName: user.fullName || user.username,
         }
@@ -1378,13 +1483,22 @@ router.patch('/records/:id/status', async (req: AuthRequest, res: Response) => {
 
     // Durum değişmişse işlem geçmişine (log) ekle
     if (existing.status !== status) {
+      const statusNote = note || `Durum hızlı kontrol ile "${existing.status}" seviyesinden "${status}" seviyesine getirildi.`;
       await prisma.improvementRecordHistory.create({
         data: {
           recordId: id,
           previousStatus: existing.status,
           newStatus: status,
           previousNote: existing.currentNote,
-          newNote: note || `Durum hızlı kontrol ile "${existing.status}" -> "${status}" olarak güncellendi.`,
+          newNote: statusNote,
+          progress: newProg,
+          stepType: 'DURUM_DEGISIKLIGI',
+          stepTitle: 'Durum Değişikliği',
+          evidencePhotos: {
+            stepType: 'DURUM_DEGISIKLIGI',
+            stepTitle: 'Durum Değişikliği',
+            changes: [`Durum: "${existing.status}" → "${status}"`],
+          },
           changedBy: user.username,
           changedByName: user.fullName || user.username,
         }
@@ -1394,6 +1508,74 @@ router.patch('/records/:id/status', async (req: AuthRequest, res: Response) => {
     res.json({ success: true, data: updated });
   } catch (error: any) {
     console.error('Error updating status:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 6.2 SAHA KEŞİF NOTU GÜNCELLE (Doğrudan Aksiyon Bölümünden Hızlı Giriş)
+router.patch('/records/:id/discovery-notes', async (req: AuthRequest, res: Response) => {
+  try {
+    const user = getUser(req);
+    const { id } = req.params;
+    const { discoveryNotes } = req.body;
+
+    const existing = await prisma.improvementRecord.findUnique({
+      where: { id }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Kayıt bulunamadı.' });
+    }
+
+    const cleanNotes = discoveryNotes ? String(discoveryNotes).trim() : null;
+    const updated = await prisma.improvementRecord.update({
+      where: { id },
+      data: {
+        discoveryNotes: cleanNotes,
+        updatedBy: user.username,
+      },
+      include: {
+        facility: {
+          select: { id: true, name: true, shortName: true }
+        }
+      }
+    });
+
+    const isAdd = !existing.discoveryNotes && cleanNotes;
+    const isRemove = existing.discoveryNotes && !cleanNotes;
+    const actionDesc = isAdd
+      ? 'Saha keşif notu eklendi'
+      : isRemove
+        ? 'Saha keşif notu silindi'
+        : 'Saha keşif notu güncellendi';
+
+    const historyNote = cleanNotes
+      ? `${actionDesc}: "${cleanNotes}"`
+      : actionDesc;
+
+    await prisma.improvementRecordHistory.create({
+      data: {
+        recordId: id,
+        previousNote: existing.currentNote,
+        newNote: historyNote,
+        previousStatus: existing.status,
+        newStatus: existing.status,
+        progress: existing.progress,
+        stepType: 'KESIF_NOTU',
+        stepTitle: 'Saha Keşif Notu Kaydı',
+        evidencePhotos: {
+          stepType: 'KESIF_NOTU',
+          stepTitle: 'Saha Keşif Notu Kaydı',
+          changes: [actionDesc],
+        },
+        changedBy: user.username,
+        changedByName: user.fullName || user.username,
+      }
+    });
+
+    res.json({ success: true, data: updated, message: 'Saha keşif notu başarıyla kaydedildi.' });
+  } catch (error: any) {
+    console.error('Error updating discovery notes:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -1666,7 +1848,9 @@ router.get('/records/:id/history', async (req: AuthRequest, res: Response) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    res.json({ success: true, data: histories.map(formatHistoryItem) });
+    const userMap = await getUserFullNamesMap(histories.map(h => h.changedBy));
+
+    res.json({ success: true, data: histories.map(h => formatHistoryItem(h, userMap)) });
   } catch (error: any) {
     console.error('Error fetching record history:', error);
     res.status(500).json({ success: false, message: error.message });
@@ -1762,12 +1946,18 @@ router.put('/records/:recordId/history/:historyId', async (req: AuthRequest, res
       }
     });
 
+    const userMap = fullRecord
+      ? await getUserFullNamesMap([fullRecord.createdBy, fullRecord.updatedBy, ...fullRecord.histories.map(h => h.changedBy)])
+      : undefined;
+
     res.json({
       success: true,
       message: 'Aksiyon adımı başarıyla güncellendi.',
       data: fullRecord ? {
         ...fullRecord,
-        histories: fullRecord.histories.map(formatHistoryItem)
+        createdByName: (fullRecord.createdBy && userMap?.get(fullRecord.createdBy)) || fullRecord.createdBy || null,
+        updatedByName: (fullRecord.updatedBy && userMap?.get(fullRecord.updatedBy)) || fullRecord.updatedBy || null,
+        histories: fullRecord.histories.map(h => formatHistoryItem(h, userMap))
       } : null
     });
   } catch (error: any) {
@@ -1831,12 +2021,20 @@ router.delete('/records/:recordId/history/:historyId', async (req: AuthRequest, 
       }
     });
 
+    const userMap = await getUserFullNamesMap([
+      updatedRecord.createdBy,
+      updatedRecord.updatedBy,
+      ...updatedRecord.histories.map(h => h.changedBy)
+    ]);
+
     res.json({
       success: true,
       message: 'Aksiyon adımı silindi ve süreç başarıyla bir önceki adıma güncellendi.',
       data: {
         ...updatedRecord,
-        histories: updatedRecord.histories.map(formatHistoryItem)
+        createdByName: (updatedRecord.createdBy && userMap.get(updatedRecord.createdBy)) || updatedRecord.createdBy || null,
+        updatedByName: (updatedRecord.updatedBy && userMap.get(updatedRecord.updatedBy)) || updatedRecord.updatedBy || null,
+        histories: updatedRecord.histories.map(h => formatHistoryItem(h, userMap))
       }
     });
   } catch (error: any) {

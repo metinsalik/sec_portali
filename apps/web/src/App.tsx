@@ -124,6 +124,8 @@ import EyewashRiskAnalysisFormPage from './pages/hazmat/EyewashRiskAnalysisFormP
 import EyewashRiskAnalysisViewPage from './pages/hazmat/EyewashRiskAnalysisViewPage';
 import EyewashRiskAnalysisReportPage from './pages/hazmat/EyewashRiskAnalysisReportPage';
 import HazmatIncidentsPage from './pages/hazmat/HazmatIncidentsPage';
+import HazmatIncidentFormPage from './pages/hazmat/HazmatIncidentFormPage';
+import HazmatIncidentViewPage from './pages/hazmat/HazmatIncidentViewPage';
 
 // Fire Equipment
 import FireEquipmentDashboard from './pages/fire_equipment/FireEquipmentDashboard';
@@ -981,7 +983,23 @@ function App() {
                     }
                   />
                   <Route
+                    path="/inventory"
+                    element={
+                      <ProtectedRoute >
+                        <AppLayout><FacilityInventoryListPage /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
                     path="/hazmat/inventory/material/:id"
+                    element={
+                      <ProtectedRoute >
+                        <AppLayout><HazmatFacilityMaterialPage /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/inventory/material/:id"
                     element={
                       <ProtectedRoute >
                         <AppLayout><HazmatFacilityMaterialPage /></AppLayout>
@@ -1077,6 +1095,30 @@ function App() {
                     }
                   />
                   <Route
+                    path="/hazmat/incidents/new"
+                    element={
+                      <ProtectedRoute >
+                        <AppLayout><HazmatIncidentFormPage /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/hazmat/incidents/edit/:id"
+                    element={
+                      <ProtectedRoute >
+                        <AppLayout><HazmatIncidentFormPage /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/hazmat/incidents/view/:id"
+                    element={
+                      <ProtectedRoute >
+                        <AppLayout><HazmatIncidentViewPage /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
                     path="/hazmat/settings/units"
                     element={
                       <ProtectedRoute requireAdmin>
@@ -1118,6 +1160,14 @@ function App() {
                   />
                   <Route
                     path="/hazmat/settings/events"
+                    element={
+                      <ProtectedRoute requireAdmin>
+                        <AppLayout><HazmatSettingsPage /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/hazmat/settings/root-causes"
                     element={
                       <ProtectedRoute requireAdmin>
                         <AppLayout><HazmatSettingsPage /></AppLayout>
@@ -1393,7 +1443,7 @@ function App() {
                     <Route path="facilities/new" element={<FacilityWizardPage />} />
                     <Route path="facilities/:id/edit" element={<FacilityWizardPage />} />
 
-                    <Route path="locations" element={<FacilityLocationsPage />} />
+                    <Route path="locations" element={<ProtectedRoute requireAdmin><FacilityLocationsPage /></ProtectedRoute>} />
                     <Route path="users" element={<ProtectedRoute requireAdmin><UsersPage /></ProtectedRoute>} />
                     <Route path="users/new" element={<ProtectedRoute requireAdmin><UserEditPage /></ProtectedRoute>} />
                     <Route path="users/:username/edit" element={<ProtectedRoute requireAdmin><UserEditPage /></ProtectedRoute>} />

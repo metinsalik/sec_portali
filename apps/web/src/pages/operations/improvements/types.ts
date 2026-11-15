@@ -106,7 +106,9 @@ export interface ImprovementRecord {
   createdAt: string;
   updatedAt: string;
   createdBy?: string | null;
+  createdByName?: string | null;
   updatedBy?: string | null;
+  updatedByName?: string | null;
   histories?: ImprovementRecordHistory[];
 }
 
