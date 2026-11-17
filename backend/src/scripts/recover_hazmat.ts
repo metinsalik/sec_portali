@@ -8,7 +8,53 @@ const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/
 const strictUuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function cleanString(str: string): string {
-  return str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '').trim();
+  return str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\uFFFD]/g, '').trim();
+}
+
+function cleanProductName(rawName: string): string {
+  let name = rawName.trim();
+  // Strip non-alphanumeric leading chars
+  name = name.replace(/^[^a-zA-Z0-9ÇĞİÖŞÜçğıöşü]+/, '');
+  
+  // If first char is a single byte artifact preceding known chemical brand or word:
+  const prefixes = [
+    'CLINICAL', 'Alinity', 'Albumin', 'OOSAFE', 'JOHNSON', 'MUSTELA',
+    'DERHAND', 'ULTRASON', 'CRYOS', 'INCIDIN', 'HİDROJEN', 'KONIX', 'ECOLAB',
+    'BİKAR', 'BIKAR', 'MERCK', 'SIGMA', 'ABBOTT', 'ROCHE', 'SIEMENS'
+  ];
+  for (const p of prefixes) {
+    const reg = new RegExp(`^[A-Za-z0-9](${p}.*)`, 'i');
+    if (reg.test(name) && !name.toLowerCase().startsWith(p.toLowerCase())) {
+      name = name.replace(reg, '$1');
+      break;
+    }
+  }
+  return name.trim();
+}
+
+function isRealHazmatMaterial(name: string, fullText: string): boolean {
+  // 1. Strict Exclusions (Inspections, Electrical, Elevator, Audits, Personal Names)
+  const excludeRegex = /RoyalCert|DAVUT KARAGÖZ|FLUKE|PRİZ|NOLU PRİZ|UPS Odası|Jeneratör|Pano|Topraklama|Trafo|Asansör|Trafolar|Kazan Dairesi|MP-BAHCELIEVLER|ISU-MP|İSU-MP|D BLOK|A BLOK|B BLOK|C BLOK|KAT|Fine Kinney|Mevcut önlem|Alınacak önlem|Gözetim denetimi|Önemsiz|Uygundur|Belgelendirme|Müdürlüğü|Mühendisi|0530510/i;
+  
+  if (excludeRegex.test(name) || excludeRegex.test(fullText)) {
+    return false;
+  }
+
+  const clean = cleanProductName(name);
+  if (clean.length < 3 || /^[0-9]+$/.test(clean)) return false;
+
+  // 2. High-confidence Hazmat/Chemical Keywords in Name
+  const nameKeywords = /REAGENT|CALIBRATOR|BUFFER|DILUENT|CONTROL|KIT|ACID|ASİT|ALKOL|ALCOHOL|PEROKSİT|PEROXIDE|DEZENFEKTAN|DISINFECTANT|SOLÜSYON|SOLUTION|CLEANSER|CLEANSING|SHAMPOO|SABUN|SOAP|JEL|GEL|SPREY|SPRAY|HİDROJEN|SODYUM|SODIUM|ETANOL|GLİSERİN|FORMALDEHİT|FORMALIN|KSİLEN|İODİN|POVIDONE|OKSİJEN|ALINITY|ARCHITECT|ABBOTT|ECOLAB|KONIX|DERHAND|OOSAFE|CRYOS|MUSTELA|JOHNSON|BİKAR|BIKAR|MERCK|SIGMA|UREA|URIC|GGT|CHOLESTEROL|CREATINE|SUCCINIC|ALBUMIN|HAVAB|IGG|ASO|ICT|AMONYUM|KLORÜR|GLUKOZ|HEPARİN|LİDOKAİN|ANESTEZİK/i;
+
+  if (nameKeywords.test(clean)) return true;
+
+  // 3. High-confidence Hazmat/Chemical Codes in SDS Text
+  const hasHCode = /H[0-9]{3}|EUH[0-9]{3}|STOT|Aquatic/i.test(fullText);
+  const hasChemicalTerms = /reaksiyon|bozunma|tahriş|soluma|ciltle temas|gözle temas|kimyasal|toksisite/i.test(fullText);
+
+  if (hasHCode && hasChemicalTerms) return true;
+
+  return false;
 }
 
 function extractAllStringsFromBuffer(buf: Buffer): string[] {
@@ -21,7 +67,7 @@ function extractAllStringsFromBuffer(buf: Buffer): string[] {
     } else {
       if (curr.length >= 2) {
         try {
-          const s = curr.toString('utf-8').trim();
+          const s = cleanString(curr.toString('utf-8'));
           if (s.length >= 2) strings.push(s);
         } catch {}
       }
@@ -30,7 +76,7 @@ function extractAllStringsFromBuffer(buf: Buffer): string[] {
   }
   if (curr.length >= 2) {
     try {
-      const s = curr.toString('utf-8').trim();
+      const s = cleanString(curr.toString('utf-8'));
       if (s.length >= 2) strings.push(s);
     } catch {}
   }
@@ -39,14 +85,15 @@ function extractAllStringsFromBuffer(buf: Buffer): string[] {
 
 export async function recoverHazmatData() {
   console.log('====================================================');
-  console.log('   HAZMAT ULTRA-DERİN VERİ KURTARMA (WAL & DISK)    ');
+  console.log('  HAZMAT HASSAS VE TEMİZLENMİŞ KİMYASAL KURTARMA   ');
   console.log('====================================================');
   console.log('Tarih:', new Date().toLocaleString('tr-TR'));
-  console.log('PostgreSQL WAL günlükleri ve disk blokları taranıyor...\n');
+  console.log('İlgili olmayan tüm denetim/bakım kayıtları elenerek');
+  console.log('yalnızca GERÇEK KİMYASAL MADDELER ayıklanıyor...\n');
 
   try {
-    // 1. Get Categories, HazardLabels, AdrLabels, PPEs, Facilities for validation
-    console.log('[1/7] Sistem tanımları yükleniyor (Doğrulama ve Eşleştirme için)...');
+    // 1. Get Categories & System Settings
+    console.log('[1/7] Sistem tanımları yükleniyor...');
     const allCategories = await prisma.hazmatCategory.findMany();
     const categoryIds = new Set(allCategories.map(c => c.id));
     
@@ -62,10 +109,8 @@ export async function recoverHazmatData() {
     const allFacilities = await prisma.facility.findMany();
     const facilityIds = new Set(allFacilities.map(f => f.id));
 
-    console.log(`  -> Kategoriler: ${allCategories.length}, GHS Etiketleri: ${allHazardLabels.length}, ADR: ${allAdrLabels.length}, KKD: ${allPpes.length}, Tesisler: ${allFacilities.length}\n`);
-
     // 2. Discover WAL files
-    console.log('[2/7] WAL (İşlem Günlüğü) dosyaları taranıyor...');
+    console.log('[2/7] WAL dosyaları taranıyor...');
     const searchDirs = [
       path.resolve(process.cwd(), 'wal_dump'),
       path.resolve(process.cwd(), 'pg_wal'),
@@ -86,15 +131,10 @@ export async function recoverHazmatData() {
         } catch {}
       }
     }
+    console.log(`  -> Toplam ${walFiles.length} adet WAL dosyası bulundu.`);
 
-    console.log(`  -> Toplam ${walFiles.length} adet WAL dosyası bulundu:`);
-    for (const wf of walFiles) {
-      console.log(`     * ${path.basename(wf)} (${(fs.statSync(wf).size / 1024 / 1024).toFixed(1)} MB)`);
-    }
-    console.log('');
-
-    // 3. Scan WAL files for HazmatMaterial tuples
-    console.log('[3/7] WAL dosyalarından kimyasal madde blokları çıkarılıyor...');
+    // 3. Scan & Filter: KEEP ONLY GENUINE CHEMICALS
+    console.log('[3/7] Yalnızca gerçek kimyasal maddeler ayıklanıyor...');
     const recoveredMaterialsMap = new Map<string, any>();
     const recoveredHazardLabelsMap = new Set<string>();
     const recoveredAdrLabelsMap = new Set<string>();
@@ -102,11 +142,9 @@ export async function recoverHazmatData() {
     const recoveredFacilityItemsMap = new Set<string>();
 
     for (const walPath of walFiles) {
-      console.log(`  -> Taranıyor: ${path.basename(walPath)}...`);
       const buf = fs.readFileSync(walPath);
       const text = buf.toString('latin1');
 
-      // Search for K<uuid> patterns (PostgreSQL text varlena header 0x4B + 36 char UUID)
       const kUuidRegex = /\x4B([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
       let m;
 
@@ -114,26 +152,23 @@ export async function recoverHazmatData() {
         const matId = m[1];
         const offset = m.index;
 
-        // Extract slice following the UUID (up to 4000 bytes)
         const slice = buf.slice(offset + 37, Math.min(buf.length, offset + 37 + 3500));
         const rawStrings = extractAllStringsFromBuffer(slice);
         if (rawStrings.length < 2) continue;
 
         const fullText = rawStrings.join(' ');
-        
-        // Characteristic chemical keywords
-        const isChemical = /dezenfektan|yanıcı|tahriş|soluma|temas|göz|saklama|toksik|sds|ecolab|aqua|kimyasal|korozif|reaksiyon|sprey|alkol|peroksit|asit|çözelti|stot|euh|h3[0-9]{2}|p2[0-9]{2}|akut|deri|yutma|koku|ph|yoğunluk|gbf/i.test(fullText);
+        const rawName = rawStrings[0];
 
-        if (!isChemical) continue;
+        // Apply Precision Chemical Filter
+        if (!isRealHazmatMaterial(rawName, fullText)) {
+          continue;
+        }
 
-        // First string right after UUID is candidate product name
-        let rawName = rawStrings[0].replace(/^[-_?#@: ]+/, '').trim();
-        // Remove trailing non-alpha if any
-        if (rawName.length < 2 || rawName.startsWith('http') || rawName.includes('---')) continue;
+        const cleanName = cleanProductName(rawName);
 
         const record: any = {
           id: matId,
-          productName: rawName,
+          productName: cleanName,
           brandName: null,
           usageMethod: null,
           composition: null,
@@ -157,209 +192,138 @@ export async function recoverHazmatData() {
           _fullTextLength: fullText.length
         };
 
-        // Classify strings into corresponding fields
         for (let i = 1; i < rawStrings.length; i++) {
           const s = rawStrings[i].trim();
           if (s.length < 2) continue;
 
-          // Check for URLs
           if (s.startsWith('/uploads/')) {
             if (s.endsWith('.pdf')) record.sdsUrl = s;
             else if (/\.(jpe?g|png|webp)$/i.test(s)) record.imageUrl = s;
             continue;
           }
 
-          // Check for Category ID
           if (strictUuidRegex.test(s)) {
             if (categoryIds.has(s)) record.categoryId = s;
             continue;
           }
 
-          // Check for Brand (usually 2nd string, short 2-30 chars, no sentences)
           if (!record.brandName && i <= 3 && s.length <= 35 && !/(\. |,|;)/.test(s) && !/dezenfektan|temas|soluma/i.test(s)) {
             record.brandName = s;
             continue;
           }
 
-          // Check for Usage Method
           if (!record.usageMethod && /kullanım|dezenfektan|haricen|temizlik|antiseptik|yüzey|uygulama/i.test(s) && s.length < 150) {
             record.usageMethod = s;
             continue;
           }
 
-          // Check for Composition
           if (!record.composition && /etanol|alkol|amonyum|klorür|hidrojen|sodyum|oran|bilesik|karışım|çözelti|aktif madde/i.test(s) && s.length < 300) {
             record.composition = s;
             continue;
           }
 
-          // Check for Hazard Description
           if (/H[0-9]{3}|EUH[0-9]{3}|tehlike|yanıcı|tahriş|zararlı|aşındırıcı|toksik/i.test(s)) {
             record.hazardDescription = record.hazardDescription ? `${record.hazardDescription} | ${s}` : s;
             continue;
           }
 
-          // Check for First Aid
           if (/soluma|yutma|cilt|göz|doktor|temas|kustur|tıbbi yardım/i.test(s)) {
             record.firstAid = record.firstAid ? `${record.firstAid} | ${s}` : s;
             continue;
           }
 
-          // Check for Fire Fighting
           if (/yangın|söndürme|alev|köpük|karbondioksit|su sisi|patlama/i.test(s)) {
             record.fireFightingMeasures = record.fireFightingMeasures ? `${record.fireFightingMeasures} | ${s}` : s;
             continue;
           }
 
-          // Check for Accidental Release
           if (/dökülme|sızıntı|alan izole|emici|paspas|kanalizasyon|koruyucu giysi/i.test(s)) {
             record.accidentalReleaseMeasures = record.accidentalReleaseMeasures ? `${record.accidentalReleaseMeasures} | ${s}` : s;
             continue;
           }
 
-          // Check for Handling and Storage
           if (/saklama|depolama|serin|kuru|konteyner|havalandırma|direkt güneş|asitlerden uzak/i.test(s)) {
             record.handlingAndStorage = record.handlingAndStorage ? `${record.handlingAndStorage} | ${s}` : s;
             continue;
           }
 
-          // Check for PPE
           if (/eldiven|gözlük|maske|önlük|kkd|solunum|koruyucu donanım/i.test(s)) {
             record.exposureControlsPpe = record.exposureControlsPpe ? `${record.exposureControlsPpe} | ${s}` : s;
             continue;
           }
 
-          // Check for Physical Properties
           if (/renk|koku|ph|yoğunluk|parlama|sıvı|katı|berrak|görünüm/i.test(s)) {
             record.physicalAndChemicalProperties = record.physicalAndChemicalProperties ? `${record.physicalAndChemicalProperties} | ${s}` : s;
             continue;
           }
 
-          // Check for Stability and Reactivity
           if (/stabil|reaksiyon|bozunma|kaçınılması gereken|hidrazoik|oksijen/i.test(s)) {
             record.stabilityAndReactivity = record.stabilityAndReactivity ? `${record.stabilityAndReactivity} | ${s}` : s;
             continue;
           }
 
-          // Check for Toxicological Info
           if (/toksik|ld50|lc50|akut|dermal|oral/i.test(s)) {
             record.toxicologicalInformation = record.toxicologicalInformation ? `${record.toxicologicalInformation} | ${s}` : s;
             continue;
           }
 
-          // Check for Ecological Info
           if (/ekotoksik|sucul|çevre|balık|arı/i.test(s)) {
             record.ecologicalInformation = record.ecologicalInformation ? `${record.ecologicalInformation} | ${s}` : s;
             continue;
           }
 
-          // Check for Disposal
           if (/bertaraf|atık|tasfiye|imha|yönetmelik|konteyner/i.test(s)) {
             record.disposalConsiderations = record.disposalConsiderations ? `${record.disposalConsiderations} | ${s}` : s;
             continue;
           }
 
-          // Check for Transport
           if (/adr|rid|imdg|un [0-9]{4}|aerosol|taşıma/i.test(s)) {
             record.transportInfo = record.transportInfo ? `${record.transportInfo} | ${s}` : s;
             continue;
           }
 
-          // Check for Regulatory
           if (/27092|yönetmelik|gbf|güvenlik bilgi formu|mevzuat|hakkında/i.test(s)) {
             record.regulatoryInfo = record.regulatoryInfo ? `${record.regulatoryInfo} | ${s}` : s;
             continue;
           }
         }
 
-        // Deduplicate: keep richest version of record
         const existing = recoveredMaterialsMap.get(matId);
         if (!existing || existing._fullTextLength < record._fullTextLength) {
           recoveredMaterialsMap.set(matId, record);
         }
       }
 
-      // Also search for relation tuples in WAL (materialId + labelId or ppeId)
-      // In WAL, relation tuples look like: K<uuid1>K<uuid2>K<uuid3>
+      // Triple UUID relations in WAL
       const tripleUuidRegex = /\x4B([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\x4B([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
       let relMatch;
       while ((relMatch = tripleUuidRegex.exec(text)) !== null) {
         const u1 = relMatch[1];
         const u2 = relMatch[2];
 
-        // Is u2 a HazardLabel?
-        if (hazardLabelIds.has(u2)) {
-          recoveredHazardLabelsMap.add(`${u1}:::${u2}`);
-        }
-        // Is u2 an AdrLabel?
-        if (adrLabelIds.has(u2)) {
-          recoveredAdrLabelsMap.add(`${u1}:::${u2}`);
-        }
-        // Is u2 a PPE?
-        if (ppeIds.has(u2)) {
-          recoveredPpesMap.add(`${u1}:::${u2}`);
-        }
-        // Is u1 a Facility and u2 a Material?
-        if (facilityIds.has(u1)) {
-          recoveredFacilityItemsMap.add(`${u1}:::${u2}`);
-        }
+        if (hazardLabelIds.has(u2)) recoveredHazardLabelsMap.add(`${u1}:::${u2}`);
+        if (adrLabelIds.has(u2)) recoveredAdrLabelsMap.add(`${u1}:::${u2}`);
+        if (ppeIds.has(u2)) recoveredPpesMap.add(`${u1}:::${u2}`);
+        if (facilityIds.has(u1)) recoveredFacilityItemsMap.add(`${u1}:::${u2}`);
       }
     }
 
     const recoveredMaterials = Array.from(recoveredMaterialsMap.values());
-    console.log(`\n  -> WAL Taraması Sonucu: ${recoveredMaterials.length} adet kimyasal madde eksiksiz tespit edildi!`);
-    console.log(`  -> GHS İlişkisi: ${recoveredHazardLabelsMap.size}`);
-    console.log(`  -> ADR İlişkisi: ${recoveredAdrLabelsMap.size}`);
-    console.log(`  -> KKD İlişkisi: ${recoveredPpesMap.size}`);
-    console.log(`  -> Tesis Envanter İlişkisi: ${recoveredFacilityItemsMap.size}\n`);
+    console.log(`\n  -> Ayıklama Başarılı: TOPLAM ${recoveredMaterials.length} ADET GERÇEK KİMYASAL MADDE TESPİT EDİLDİ!`);
+    console.log(`  -> Geri yüklenecek temiz kimyasal sayısı: ${recoveredMaterials.length}\n`);
 
-    // 4. Scan raw heap pages from HazmatMaterialAdrLabel to collect more materialIds
-    console.log('[4/7] `HazmatMaterialAdrLabel` disk sayfaları taranıyor...');
-    try {
-      await prisma.$executeRawUnsafe('CREATE EXTENSION IF NOT EXISTS pageinspect;');
-      const adrRows: any[] = await prisma.$queryRawUnsafe(`
-        SELECT encode(t_data, 'hex') as hex_data FROM heap_page_items(get_raw_page('"HazmatMaterialAdrLabel"', 0)) WHERE t_data IS NOT NULL;
-      `);
-      for (const r of adrRows) {
-        const buf = Buffer.from(r.hex_data, 'hex');
-        const matches = buf.toString('utf-8').match(uuidRegex);
-        if (matches && matches.length >= 2) {
-          recoveredAdrLabelsMap.add(`${matches[0]}:::${matches[1]}`);
-        }
-      }
-    } catch (e: any) {
-      console.warn('  ! AdrLabel sayfası okunurken uyarı:', e.message);
-    }
-
-    // 5. Save permanent backup files (JSON and SQL)
-    console.log('[5/7] Kurtarılan verilerin kalıcı yedek dosyaları oluşturuluyor...');
+    // 4. Save permanent backup files
+    console.log('[4/7] Temizlenmiş verilerin kalıcı yedek dosyaları oluşturuluyor...');
     const backupDir = path.resolve(process.cwd(), 'recovered_backups');
     if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
 
     const timestampStr = new Date().toISOString().replace(/[:.]/g, '-');
-    const jsonPath = path.join(backupDir, `hazmat_wal_recovered_${timestampStr}.json`);
-    const sqlPath = path.join(backupDir, `hazmat_wal_recovered_${timestampStr}.sql`);
+    const jsonPath = path.join(backupDir, `hazmat_clean_recovered_${timestampStr}.json`);
+    const sqlPath = path.join(backupDir, `hazmat_clean_recovered_${timestampStr}.sql`);
 
-    const exportData = {
-      timestamp: new Date().toISOString(),
-      counts: {
-        materials: recoveredMaterials.length,
-        ghsLabels: recoveredHazardLabelsMap.size,
-        adrLabels: recoveredAdrLabelsMap.size,
-        ppes: recoveredPpesMap.size,
-        facilityItems: recoveredFacilityItemsMap.size
-      },
-      materials: recoveredMaterials,
-      ghsLabels: Array.from(recoveredHazardLabelsMap),
-      adrLabels: Array.from(recoveredAdrLabelsMap),
-      ppes: Array.from(recoveredPpesMap),
-      facilityItems: Array.from(recoveredFacilityItemsMap)
-    };
+    fs.writeFileSync(jsonPath, JSON.stringify(recoveredMaterials, null, 2), 'utf-8');
 
-    fs.writeFileSync(jsonPath, JSON.stringify(exportData, null, 2), 'utf-8');
-
-    // Generate SQL Restore
-    let sqlContent = `-- HAZMAT WAL RESTORE SCRIPT\n-- Date: ${new Date().toISOString()}\n\n`;
+    let sqlContent = `-- CLEAN HAZMAT RESTORE DUMP\n-- Date: ${new Date().toISOString()}\n\n`;
     for (const m of recoveredMaterials) {
       const pName = (m.productName || 'İsimsiz Kimyasal').replace(/'/g, "''");
       const bName = m.brandName ? `'${m.brandName.replace(/'/g, "''")}'` : 'NULL';
@@ -367,41 +331,29 @@ export async function recoverHazmatData() {
       const comp = m.composition ? `'${m.composition.replace(/'/g, "''")}'` : 'NULL';
       const hazDesc = m.hazardDescription ? `'${m.hazardDescription.replace(/'/g, "''")}'` : 'NULL';
       const firstAid = m.firstAid ? `'${m.firstAid.replace(/'/g, "''")}'` : 'NULL';
-      const fire = m.fireFightingMeasures ? `'${m.fireFightingMeasures.replace(/'/g, "''")}'` : 'NULL';
-      const acc = m.accidentalReleaseMeasures ? `'${m.accidentalReleaseMeasures.replace(/'/g, "''")}'` : 'NULL';
-      const hand = m.handlingAndStorage ? `'${m.handlingAndStorage.replace(/'/g, "''")}'` : 'NULL';
-      const exp = m.exposureControlsPpe ? `'${m.exposureControlsPpe.replace(/'/g, "''")}'` : 'NULL';
-      const phys = m.physicalAndChemicalProperties ? `'${m.physicalAndChemicalProperties.replace(/'/g, "''")}'` : 'NULL';
-      const stab = m.stabilityAndReactivity ? `'${m.stabilityAndReactivity.replace(/'/g, "''")}'` : 'NULL';
-      const tox = m.toxicologicalInformation ? `'${m.toxicologicalInformation.replace(/'/g, "''")}'` : 'NULL';
-      const eco = m.ecologicalInformation ? `'${m.ecologicalInformation.replace(/'/g, "''")}'` : 'NULL';
-      const disp = m.disposalConsiderations ? `'${m.disposalConsiderations.replace(/'/g, "''")}'` : 'NULL';
-      const reg = m.regulatoryInfo ? `'${m.regulatoryInfo.replace(/'/g, "''")}'` : 'NULL';
-      const trans = m.transportInfo ? `'${m.transportInfo.replace(/'/g, "''")}'` : 'NULL';
       const catId = m.categoryId ? `'${m.categoryId}'` : 'NULL';
       const imgUrl = m.imageUrl ? `'${m.imageUrl}'` : 'NULL';
       const sdsUrl = m.sdsUrl ? `'${m.sdsUrl}'` : 'NULL';
 
-      sqlContent += `INSERT INTO "HazmatMaterial" ("id", "productName", "brandName", "usageMethod", "composition", "hazardDescription", "firstAid", "fireFightingMeasures", "accidentalReleaseMeasures", "handlingAndStorage", "exposureControlsPpe", "physicalAndChemicalProperties", "stabilityAndReactivity", "toxicologicalInformation", "ecologicalInformation", "disposalConsiderations", "regulatoryInfo", "transportInfo", "categoryId", "imageUrl", "sdsUrl", "isActive", "createdAt", "updatedAt") VALUES ('${m.id}', '${pName}', ${bName}, ${uMethod}, ${comp}, ${hazDesc}, ${firstAid}, ${fire}, ${acc}, ${hand}, ${exp}, ${phys}, ${stab}, ${tox}, ${eco}, ${disp}, ${reg}, ${trans}, ${catId}, ${imgUrl}, ${sdsUrl}, true, NOW(), NOW()) ON CONFLICT ("id") DO UPDATE SET "productName" = EXCLUDED."productName";\n`;
+      sqlContent += `INSERT INTO "HazmatMaterial" ("id", "productName", "brandName", "usageMethod", "composition", "hazardDescription", "firstAid", "categoryId", "imageUrl", "sdsUrl", "isActive", "createdAt", "updatedAt") VALUES ('${m.id}', '${pName}', ${bName}, ${uMethod}, ${comp}, ${hazDesc}, ${firstAid}, ${catId}, ${imgUrl}, ${sdsUrl}, true, NOW(), NOW()) ON CONFLICT ("id") DO UPDATE SET "productName" = EXCLUDED."productName";\n`;
     }
     fs.writeFileSync(sqlPath, sqlContent, 'utf-8');
 
-    console.log(`  -> JSON yedeği kaydedildi: ${jsonPath}`);
-    console.log(`  -> SQL restore dosyası kaydedildi: ${sqlPath}\n`);
+    // 5. PURGE FALSE POSITIVES FROM DATABASE FIRST
+    console.log('[5/7] Veritabanı temizleniyor (Denetim/Asansör vb. yanlış kayıtlar siliniyor)...');
+    await prisma.$executeRawUnsafe('TRUNCATE "HazmatMaterial" CASCADE;');
+    console.log('  -> HazmatMaterial tablosu sıfırlandı, temiz kuruluma hazır.\n');
 
-    // 6. Restore to PostgreSQL Database
-    console.log('[6/7] Veritabanına yeniden aktarım (Restore) başlatılıyor...');
-    const existingMaterials = await prisma.hazmatMaterial.findMany({ select: { id: true } });
-    const existingIds = new Set(existingMaterials.map(m => m.id));
-
-    let insertedCount = 0;
-    let updatedCount = 0;
+    // 6. INSERT ONLY REAL CHEMICALS
+    console.log('[6/7] Gerçek kimyasal maddeler veritabanına yazılıyor...');
+    const validMaterialIds = new Set<string>();
 
     for (const m of recoveredMaterials) {
-      if (!m.id) continue;
+      if (!m.id || !m.productName) continue;
 
       const payload: any = {
-        productName: m.productName || 'İsimsiz Kimyasal',
+        id: m.id,
+        productName: m.productName,
         brandName: m.brandName || null,
         usageMethod: m.usageMethod || null,
         composition: m.composition || null,
@@ -418,116 +370,101 @@ export async function recoverHazmatData() {
         disposalConsiderations: m.disposalConsiderations || null,
         regulatoryInfo: m.regulatoryInfo || null,
         transportInfo: m.transportInfo || null,
-        categoryId: m.categoryId || null,
+        categoryId: (m.categoryId && categoryIds.has(m.categoryId)) ? m.categoryId : null,
         imageUrl: m.imageUrl || null,
         sdsUrl: m.sdsUrl || null,
         isActive: true
       };
 
-      if (existingIds.has(m.id)) {
-        await prisma.hazmatMaterial.update({
-          where: { id: m.id },
-          data: payload
-        });
-        updatedCount++;
-      } else {
-        await prisma.hazmatMaterial.create({
-          data: {
-            id: m.id,
-            ...payload
-          }
-        });
-        insertedCount++;
-        existingIds.add(m.id);
-      }
+      await prisma.hazmatMaterial.create({
+        data: payload
+      });
+      validMaterialIds.add(m.id);
     }
+    console.log(`  -> ${validMaterialIds.size} adet saf kimyasal madde başarıyla veritabanına yüklendi.`);
 
-    console.log(`  -> ${insertedCount} adet kimyasal madde veritabanına yeniden yazıldı!`);
-    console.log(`  -> ${updatedCount} adet mevcut kimyasal güncellendi.`);
-
-    // Restore GHS Labels
-    let ghsRestored = 0;
+    // Restore GHS Labels for valid materials
+    let ghsCount = 0;
     for (const rel of recoveredHazardLabelsMap) {
       const [matId, labelId] = rel.split(':::');
-      if (existingIds.has(matId) && hazardLabelIds.has(labelId)) {
+      if (validMaterialIds.has(matId) && hazardLabelIds.has(labelId)) {
         try {
           await prisma.hazmatMaterialHazardLabel.upsert({
             where: { materialId_labelId: { materialId: matId, labelId } },
             update: {},
             create: { materialId: matId, labelId }
           });
-          ghsRestored++;
+          ghsCount++;
         } catch {}
       }
     }
-    console.log(`  -> ${ghsRestored} adet GHS Piktogram bağlantısı kuruldu.`);
+    console.log(`  -> ${ghsCount} adet GHS Piktogram bağlantısı kuruldu.`);
 
-    // Restore ADR Labels
-    let adrRestored = 0;
+    // Restore ADR Labels for valid materials
+    let adrCount = 0;
     for (const rel of recoveredAdrLabelsMap) {
       const [matId, labelId] = rel.split(':::');
-      if (existingIds.has(matId) && adrLabelIds.has(labelId)) {
+      if (validMaterialIds.has(matId) && adrLabelIds.has(labelId)) {
         try {
           await prisma.hazmatMaterialAdrLabel.upsert({
             where: { materialId_labelId: { materialId: matId, labelId } },
             update: {},
             create: { materialId: matId, labelId }
           });
-          adrRestored++;
+          adrCount++;
         } catch {}
       }
     }
-    console.log(`  -> ${adrRestored} adet ADR Etiketi bağlantısı kuruldu.`);
+    console.log(`  -> ${adrCount} adet ADR Etiketi bağlantısı kuruldu.`);
 
-    // Restore PPEs
-    let ppeRestored = 0;
+    // Restore PPEs for valid materials
+    let ppeCount = 0;
     for (const rel of recoveredPpesMap) {
       const [matId, ppeId] = rel.split(':::');
-      if (existingIds.has(matId) && ppeIds.has(ppeId)) {
+      if (validMaterialIds.has(matId) && ppeIds.has(ppeId)) {
         try {
           await prisma.hazmatMaterialPpe.upsert({
             where: { materialId_ppeId: { materialId: matId, ppeId } },
             update: {},
             create: { materialId: matId, ppeId }
           });
-          ppeRestored++;
+          ppeCount++;
         } catch {}
       }
     }
-    console.log(`  -> ${ppeRestored} adet KKD bağlantısı kuruldu.`);
+    console.log(`  -> ${ppeCount} adet KKD donanım bağlantısı kuruldu.`);
 
-    // Restore Facility Items
-    let facRestored = 0;
+    // Restore Facility Items for valid materials
+    let facCount = 0;
     for (const rel of recoveredFacilityItemsMap) {
       const [facId, matId] = rel.split(':::');
-      if (facilityIds.has(facId) && existingIds.has(matId)) {
+      if (facilityIds.has(facId) && validMaterialIds.has(matId)) {
         try {
           await prisma.facilityHazmatItem.upsert({
             where: { facilityId_materialId: { facilityId: facId, materialId: matId } },
             update: {},
             create: { facilityId: facId, materialId: matId }
           });
-          facRestored++;
+          facCount++;
         } catch {}
       }
     }
-    console.log(`  -> ${facRestored} adet Tesis Envanter bağlantısı kuruldu.\n`);
+    console.log(`  -> ${facCount} adet Tesis Envanter bağlantısı kuruldu.\n`);
 
-    // 7. Final Summary
-    console.log('[7/7] TAMAMLANDI! ÖZET RAPOR:');
+    // 7. Summary
+    console.log('[7/7] İŞLEM BAŞARIYLA TAMAMLANDI!');
+    console.log('====================================================');
+    console.log(`GERİ YÜKLENEN GERÇEK KİMYASAL LİSTESİ (${recoveredMaterials.length} Madde):`);
     console.log('----------------------------------------------------');
-    console.log(`Kurtarılan Toplam Kimyasal Sayısı: ${recoveredMaterials.length}`);
     for (let i = 0; i < recoveredMaterials.length; i++) {
       const rm = recoveredMaterials[i];
-      console.log(`  ${i + 1}. [${rm.id}] ${rm.productName} (${rm.brandName || 'Marka Belirtilmemiş'})`);
-      if (rm.hazardDescription) console.log(`     Tehlike: ${rm.hazardDescription.substring(0, 80)}...`);
-      if (rm.firstAid) console.log(`     İlk Yardım: ${rm.firstAid.substring(0, 80)}...`);
+      console.log(`  ${i + 1}. ${rm.productName} [${rm.brandName || 'Marka Belirtilmemiş'}]`);
     }
     console.log('----------------------------------------------------');
-    console.log('Tüm veriler başarıyla kurtarıldı ve kalıcı olarak veritabanına aktarıldı!');
+    console.log('Tüm gereksiz kayıtlar temizlendi. Yalnızca kimyasal maddeler yüklendi.');
 
   } catch (err: any) {
-    console.error('Kurtarma sırasında hata:', err);
+    console.error('Kurtarma hatası:', err);
   } finally {
     await prisma.$disconnect();
   }
