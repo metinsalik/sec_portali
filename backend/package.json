@@ -10,6 +10,7 @@
     "db:push": "prisma db push",
     "db:import": "ts-node src/scripts/import_data.ts",
     "db:consolidate-fire": "ts-node src/scripts/consolidate_fire_audits.ts",
+    "db:recover-hazmat": "ts-node src/scripts/recover_hazmat.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
