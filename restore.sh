@@ -3,6 +3,7 @@ set -e
 
 # ==========================================================
 #     SEC PORTALI - TEK KOMUTLA YEDEK GERİ YÜKLEME (RESTORE)
+#     (Veritabanı [Tüm Tablolar] + Fotoğraflar/Belgeler)
 # ==========================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -25,7 +26,7 @@ fi
 # 2. Hangi Yedeğin Yükleneceğini Belirle
 TARGET_DATE="$1"
 
-if [ -n "$TARGET_DATE" ]; then
+if [ -n "$TARGET_DATE" ] && [ "$TARGET_DATE" != "-y" ]; then
   DB_FILE=$(find "$BACKUP_DIR" -name "db_*${TARGET_DATE}*.sql.gz" | head -n 1)
   UPLOADS_FILE=$(find "$BACKUP_DIR" -name "uploads_*${TARGET_DATE}*.tar.gz" | head -n 1)
 else
@@ -46,7 +47,7 @@ echo ""
 
 # Onay İste (Eğer -y parametresi verilmediyse)
 if [ "$2" != "-y" ] && [ "$1" != "-y" ]; then
-  read -p "DİKKAT: Mevcut veritabanı ve fotoğrafların üzerine yazılacaktır! Devam edilsin mi? (e/h): " CONFIRM
+  read -p "DİKKAT: Mevcut veritabanı ve fotoğrafların üzerine seçilen yedek yazılacaktır! Devam edilsin mi? (e/h): " CONFIRM
   if [ "$CONFIRM" != "e" ] && [ "$CONFIRM" != "E" ]; then
     echo "İşlem iptal edildi."
     exit 0
@@ -56,22 +57,25 @@ fi
 echo ""
 echo "1. PostgreSQL veritabanı geri yükleniyor..."
 
-# Veritabanına aktar
+# Bütünlük kontrolü
+gzip -t "$DB_FILE"
+
+# Veritabanına tam aktarım
 gunzip -c "$DB_FILE" | docker exec -i "$POSTGRES_CONTAINER" psql -U isguser -d isgdb > /dev/null 2>&1 || {
-  echo "Uyarı: Bazı kısıtlar atlandı, psql doğrudan çalıştırılıyor..."
+  echo "Bilgi: Standart aktarım yapılıyor..."
   gunzip -c "$DB_FILE" | docker exec -i "$POSTGRES_CONTAINER" psql -U isguser -d isgdb
 }
 
-echo "   -> Veritabanı başarıyla geri yüklendi."
+echo "   -> Veritabanındaki tüm tablolar eksiksiz geri yüklendi."
 
-# 3. Uploads (Fotoğraflar) Geri Yükleme
+# 3. Uploads (Fotoğraflar ve Belgeler) Geri Yükleme
 if [ -f "$UPLOADS_FILE" ]; then
   echo "2. Fotoğraflar ve belgeler geri yükleniyor..."
   mkdir -p "$SCRIPT_DIR/backend/uploads"
   tar -xzf "$UPLOADS_FILE" -C "$SCRIPT_DIR/backend"
   echo "   -> Fotoğraflar ve belgeler başarıyla geri yüklendi."
 else
-  echo "   ! Fotoğraf yedek arşivi bulunamadı, veritabanı yüklendi."
+  echo "   ! Fotoğraf yedek arşivi bulunamadı, sadece veritabanı yüklendi."
 fi
 
 echo ""

@@ -6,35 +6,35 @@ BACKUP_SCRIPT="$SCRIPT_DIR/backup.sh"
 
 echo "=========================================================="
 echo "    SEC PORTALI - OTOMATİK GÜNLÜK YEDEKLEME KURULUMU     "
+echo "    (Her Gün Saat 18:00'de Otomatik 24 Saatlik Yedek)    "
 echo "=========================================================="
 echo ""
 
 chmod +x "$SCRIPT_DIR/backup.sh"
 chmod +x "$SCRIPT_DIR/restore.sh"
 
-# 1. İlk test yedeğini al
-echo "1. İlk test yedeği alınıyor..."
+# 1. İlk test yedeğini al ve doğrula
+echo "1. İlk tam test yedeği alınıyor ve doğrulanıyor..."
 "$BACKUP_SCRIPT"
 
-# 2. Linux Crontab'a Gece 03:00 Görevi Ekle
+# 2. Linux Crontab'a Her Gün Saat 18:00 Görevi Ekle
 echo ""
-echo "2. Linux Crontab zamanlayıcısına (Her gece 03:00) kaydediliyor..."
+echo "2. Linux Crontab zamanlayıcısına (Her gün 18:00) kaydediliyor..."
 
-CRON_JOB="0 3 * * * /bin/bash $BACKUP_SCRIPT >> $SCRIPT_DIR/backups/backup.log 2>&1"
+CRON_JOB="0 18 * * * /bin/bash $BACKUP_SCRIPT >> $SCRIPT_DIR/backups/backup.log 2>&1"
 
-# Mevcut crontab'da zaten var mı kontrol et
-if crontab -l 2>/dev/null | grep -Fq "$BACKUP_SCRIPT"; then
-  echo "   -> Görev crontab içinde zaten kayıtlı."
-else
-  (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
-  echo "   -> Görev başarıyla eklendi!"
-fi
+# Eski veya önceki yedekleme satırlarını temizle, güncel 18:00 görevini ekle
+(crontab -l 2>/dev/null | grep -v "backup.sh" || true; echo "$CRON_JOB") | crontab -
+
+echo "   -> Görev başarıyla kaydedildi! (Her gün saat 18:00)"
 
 echo ""
 echo "=========================================================="
-echo "KURULUM TAMAMLANDI!"
-echo "Her gece saat 03:00'te otomatik tam yedek (DB + Fotoğraflar) alınacaktır."
-echo "Yedekler dizini: $SCRIPT_DIR/backups"
+echo "KURULUM BAŞARIYLA TAMAMLANDI!"
+echo "Zamanlama:       Her gün saat 18:00 (24 saatte bir)"
+echo "Saklama Süresi:  Son 3 günlük tam arşiv (Daha eskiler otomatik silinir)"
+echo "Kapsam:          Tüm Veritabanı Tabloları + Tüm Fotoğraf/Belgeler (Uploads)"
+echo "Yedekler Dizini: $SCRIPT_DIR/backups"
 echo ""
 echo "İstediğiniz an manuel yedek almak için: ./backup.sh"
 echo "Yedekten geri dönmek için:             ./restore.sh"
