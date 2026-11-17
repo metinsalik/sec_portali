@@ -16,7 +16,11 @@ fi
 
 echo "   Bulunan container: $CONTAINER_NAME"
 echo ""
-echo "2. Kurtarma scripti backend container içinde çalıştırılıyor..."
+echo "2. Güncel kurtarma scripti container içine aktarılıyor (Build beklemenize gerek yok)..."
+docker cp backend/src/scripts/recover_hazmat.ts "$CONTAINER_NAME":/app/backend/src/scripts/recover_hazmat.ts
+
+echo ""
+echo "3. Kurtarma işlemi başlatılıyor..."
 echo ""
 
 docker exec -it "$CONTAINER_NAME" npx ts-node --transpile-only src/scripts/recover_hazmat.ts
