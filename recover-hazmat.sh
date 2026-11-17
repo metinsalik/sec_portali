@@ -22,7 +22,10 @@ echo ""
 if [ -n "$POSTGRES_CONTAINER" ]; then
   echo "2. PostgreSQL WAL (İşlem Günlüğü) dosyaları çıkarılıyor..."
   docker exec "$POSTGRES_CONTAINER" sh -c "mkdir -p /tmp/wal_dump && cp /var/lib/postgresql/data/pg_wal/00000001* /tmp/wal_dump/ 2>/dev/null || true"
-  docker cp "$POSTGRES_CONTAINER":/tmp/wal_dump "$BACKEND_CONTAINER":/app/backend/wal_dump
+  rm -rf /tmp/wal_dump_host 2>/dev/null || true
+  docker cp "$POSTGRES_CONTAINER":/tmp/wal_dump /tmp/wal_dump_host
+  docker cp /tmp/wal_dump_host "$BACKEND_CONTAINER":/app/backend/wal_dump
+  rm -rf /tmp/wal_dump_host 2>/dev/null || true
   echo "   -> WAL dosyaları başarıyla backend container'ına aktarıldı."
 fi
 
