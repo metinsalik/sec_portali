@@ -37,6 +37,11 @@ yarn-debug.log*
 # Uploads
 backend/uploads/
 
+# Backups
+backups/
+recovered_backups/
+wal_dump/
+
 # Database dump
 backend/database_dump.sql
 packages/shared/src/generated/generated/
