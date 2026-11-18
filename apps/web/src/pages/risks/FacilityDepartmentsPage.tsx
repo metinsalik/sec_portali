@@ -436,18 +436,6 @@ export default function FacilityDepartmentsPage() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            {/* 3D Dijital İkiz Sol Panel Açma Butonu */}
-            <Button
-              onClick={() => setShow3DDrawer(true)}
-              className="gap-2 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white shadow-xs font-semibold h-8 px-3 rounded-xl transition-all"
-            >
-              <Cuboid className="w-4 h-4 text-white animate-pulse" />
-              <span>3D Dijital İkiz (Sol Panel)</span>
-              <span className="px-1.5 py-0.2 rounded-md bg-white/20 text-white text-[10px] font-mono ml-0.5">
-                {selectedBuilding ? `${selectedBuilding}${selectedFloor ? ` › ${selectedFloor}` : ''}` : 'Modeli Aç'}
-              </span>
-            </Button>
-
             <Button
               variant={!selectedBuilding && !selectedFloor && !selectedDept ? 'default' : 'ghost'}
               size="sm"

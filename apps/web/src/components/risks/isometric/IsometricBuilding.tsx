@@ -3,7 +3,7 @@ import type { IsometricBuildingData, IsometricFloor } from './types';
 import { formatFloorLabel } from './mockData';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
+import {
   Building2, Shield, Expand, Shrink,
   RotateCcw, ZoomIn, ZoomOut, Compass,
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight
@@ -84,7 +84,7 @@ export const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
     }
     try {
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    } catch {}
+    } catch { }
 
     const isPan = e.button === 2 || e.shiftKey || e.button === 1;
     dragStartRef.current = {
@@ -124,7 +124,7 @@ export const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
     if (isDragging) {
       try {
         (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-      } catch {}
+      } catch { }
       setIsDragging(false);
     }
   };
@@ -245,7 +245,7 @@ export const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
         </div>
 
         {/* 3D İzometrik Kule Sahnesi (Pointer Drag + CSS 3D Perspective) */}
-        <div 
+        <div
           className="relative flex-1 h-full min-h-[380px] flex items-center justify-center p-3 overflow-hidden cursor-grab active:cursor-grabbing select-none"
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
@@ -256,7 +256,7 @@ export const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
           style={{ touchAction: 'none' }}
         >
           {/* CSS 3D Perspektif Taşıyıcı Kutu */}
-          <div 
+          <div
             className="w-full h-full flex items-center justify-center"
             style={{
               perspective: '1200px',
@@ -271,9 +271,9 @@ export const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
                 willChange: 'transform',
               }}
             >
-              <svg 
+              <svg
                 ref={svgRef}
-                viewBox={`0 0 420 ${Math.max(360, totalElevation + 160)}`} 
+                viewBox={`0 0 420 ${Math.max(360, totalElevation + 160)}`}
                 className="w-full max-w-[360px] h-auto drop-shadow-xl overflow-visible"
               >
                 <defs>
@@ -396,13 +396,13 @@ export const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
                             strokeWidth="1.2"
                             strokeLinejoin="round"
                           />
-                          <line 
-                            x1={cx - SLAB_WIDTH_HALF} 
-                            y1={cy + SLAB_HEIGHT_HALF} 
-                            x2={cx - SLAB_WIDTH_HALF} 
-                            y2={cy + SLAB_HEIGHT_HALF + SLAB_THICKNESS} 
-                            stroke={strokeColor} 
-                            strokeWidth="1.2" 
+                          <line
+                            x1={cx - SLAB_WIDTH_HALF}
+                            y1={cy + SLAB_HEIGHT_HALF}
+                            x2={cx - SLAB_WIDTH_HALF}
+                            y2={cy + SLAB_HEIGHT_HALF + SLAB_THICKNESS}
+                            stroke={strokeColor}
+                            strokeWidth="1.2"
                           />
 
                           {/* Sağ Yüzey */}
@@ -489,8 +489,8 @@ export const IsometricBuilding: React.FC<IsometricBuildingProps> = ({
 
                   {/* ─── AŞAMA 3: PARAMETRİK CAM GİYDİRME KABUK (X-RAY FACADE) ─── */}
                   {showEnvelope && (
-                    <g 
-                      id="glass-curtain-envelope" 
+                    <g
+                      id="glass-curtain-envelope"
                       className="pointer-events-none select-none transition-opacity duration-300"
                       style={{ opacity: isExploded ? 0.35 : 0.85 }}
                     >

@@ -177,8 +177,8 @@ export const thermalInspectionService = {
   },
 
   // Toplu oturum/rapor sil
-  async deleteSessionsBulk(sessionIds: string[]): Promise<{ message: string; deletedSessionCount: number; deletedItemCount: number }> {
-    const res = await api.delete('/safety-management/electric-infrastructure/thermal/sessions/bulk', { sessionIds });
+  async deleteSessionsBulk(sessionIds: string[], confirmUsername?: string): Promise<{ message: string; deletedSessionCount: number; deletedItemCount: number }> {
+    const res = await api.delete('/safety-management/electric-infrastructure/thermal/sessions/bulk', { sessionIds, confirmUsername });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Raporlar toplu silinemedi.');

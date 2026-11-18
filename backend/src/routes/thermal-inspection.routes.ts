@@ -304,6 +304,15 @@ router.patch('/sessions/:id/status', async (req: AuthRequest, res) => {
 // ─────────────────────────────────────────────────────────
 router.delete('/sessions/bulk', async (req: AuthRequest, res) => {
   try {
+    if (!req.user?.isAdmin && !req.user?.isManagement) {
+      return res.status(403).json({ error: 'Toplu silme yetkisi sadece yöneticilere aittir.' });
+    }
+
+    const confirmUsername = req.body?.confirmUsername || req.query?.confirmUsername;
+    if (!confirmUsername || String(confirmUsername).trim().toLowerCase() !== req.user?.username?.trim().toLowerCase()) {
+      return res.status(400).json({ error: 'Toplu silme onayı için kullanıcı adınızı doğru girmelisiniz.' });
+    }
+
     const rawIds = req.body?.sessionIds || (typeof req.query.ids === 'string' ? req.query.ids.split(',') : undefined);
     const sessionIds = Array.isArray(rawIds) ? rawIds : [];
     if (sessionIds.length === 0) {

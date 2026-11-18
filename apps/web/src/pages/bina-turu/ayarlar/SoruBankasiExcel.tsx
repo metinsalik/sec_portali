@@ -7,13 +7,25 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Upload, FileSpreadsheet, Trash2, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { useAuth } from '@/context/AuthContext';
+import { BulkDeleteConfirmDialog } from '@/components/shared/BulkDeleteConfirmDialog';
 
 const SoruBankasiExcel = () => {
+  const { user } = useAuth();
+  const hasAdminAccess = Boolean(
+    user?.isAdmin || 
+    user?.isManagement || 
+    user?.roles?.includes('admin') || 
+    user?.roles?.includes('management')
+  );
+
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [questions, setQuestions] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deleting, setDeleting] = useState(false);
+  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+  const [isDeleteAllMode, setIsDeleteAllMode] = useState(false);
 
   useEffect(() => {
     fetchQuestions();
@@ -47,29 +59,30 @@ const SoruBankasiExcel = () => {
     }
   };
 
-  const handleDeleteBulk = async (deleteAll = false) => {
-    const facilityId = localStorage.getItem('activeFacilityId');
-    if (!facilityId) return;
-
+  const openBulkDeleteDialog = (deleteAll: boolean) => {
     if (!deleteAll && selectedIds.length === 0) {
       toast.error('Lütfen silinecek soruları seçin.');
       return;
     }
+    setIsDeleteAllMode(deleteAll);
+    setBulkDeleteModalOpen(true);
+  };
 
-    if (!confirm(deleteAll ? 'Tüm soru bankasını silmek istediğinize emin misiniz?' : 'Seçili soruları silmek istediğinize emin misiniz?')) {
-      return;
-    }
+  const handleConfirmBulkDelete = async (confirmUsername: string) => {
+    const facilityId = localStorage.getItem('activeFacilityId');
+    if (!facilityId) return;
 
     setDeleting(true);
     try {
       const res = await api.customFetch('/bina-turu/soru-bankasi/bulk', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ facilityId, ids: selectedIds, deleteAll })
+        body: JSON.stringify({ facilityId, ids: selectedIds, deleteAll: isDeleteAllMode, confirmUsername })
       });
       const data = await res.json();
       if (res.ok) {
         toast.success(data.message || 'Sorular silindi.');
+        setBulkDeleteModalOpen(false);
         fetchQuestions();
       } else {
         toast.error(data.error || 'Silme işlemi başarısız.');
@@ -179,16 +192,18 @@ const SoruBankasiExcel = () => {
               <Download className="w-4 h-4 mr-2" />
               Excel Olarak İndir
             </Button>
-            {selectedIds.length > 0 && (
-              <Button variant="destructive" onClick={() => handleDeleteBulk(false)} disabled={deleting}>
+            {hasAdminAccess && selectedIds.length > 0 && (
+              <Button variant="destructive" onClick={() => openBulkDeleteDialog(false)} disabled={deleting}>
                 <Trash2 className="w-4 h-4 mr-2" />
                 Seçilileri Sil ({selectedIds.length})
               </Button>
             )}
-            <Button variant="destructive" onClick={() => handleDeleteBulk(true)} disabled={deleting || questions.length === 0}>
-              <Trash2 className="w-4 h-4 mr-2" />
-              Tüm Soruları Sil
-            </Button>
+            {hasAdminAccess && (
+              <Button variant="destructive" onClick={() => openBulkDeleteDialog(true)} disabled={deleting || questions.length === 0}>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Tüm Soruları Sil
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -196,12 +211,14 @@ const SoruBankasiExcel = () => {
             <table className="w-full text-sm text-left">
               <thead className="bg-muted sticky top-0">
                 <tr>
-                  <th className="p-3 w-[50px]">
-                    <Checkbox 
-                      checked={questions.length > 0 && selectedIds.length === questions.length}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </th>
+                  {hasAdminAccess && (
+                    <th className="p-3 w-[50px]">
+                      <Checkbox 
+                        checked={questions.length > 0 && selectedIds.length === questions.length}
+                        onCheckedChange={handleSelectAll}
+                      />
+                    </th>
+                  )}
                   <th className="p-3 font-medium">Ana Grup</th>
                   <th className="p-3 font-medium">Denetlenen Alan</th>
                   <th className="p-3 font-medium">Kategori</th>
@@ -211,12 +228,14 @@ const SoruBankasiExcel = () => {
               <tbody>
                 {questions.map((q) => (
                   <tr key={q.id} className="border-t">
-                    <td className="p-3">
-                      <Checkbox 
-                        checked={selectedIds.includes(q.id)}
-                        onCheckedChange={(checked) => handleSelectOne(checked as boolean, q.id)}
-                      />
-                    </td>
+                    {hasAdminAccess && (
+                      <td className="p-3">
+                        <Checkbox 
+                          checked={selectedIds.includes(q.id)}
+                          onCheckedChange={(checked) => handleSelectOne(checked as boolean, q.id)}
+                        />
+                      </td>
+                    )}
                     <td className="p-3">{q.anaGrup?.ad}</td>
                     <td className="p-3">{q.denetlenenAlan?.ad}</td>
                     <td className="p-3">
@@ -229,7 +248,7 @@ const SoruBankasiExcel = () => {
                 ))}
                 {questions.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="p-4 text-center text-muted-foreground">Henüz soru eklenmemiş.</td>
+                    <td colSpan={hasAdminAccess ? 5 : 4} className="p-4 text-center text-muted-foreground">Henüz soru eklenmemiş.</td>
                   </tr>
                 )}
               </tbody>
@@ -237,6 +256,20 @@ const SoruBankasiExcel = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Toplu Soru Silme Onay Modalı (Yöneticiler) */}
+      <BulkDeleteConfirmDialog
+        isOpen={bulkDeleteModalOpen && hasAdminAccess}
+        onClose={() => setBulkDeleteModalOpen(false)}
+        onConfirm={(confirmUsername) => handleConfirmBulkDelete(confirmUsername)}
+        title={isDeleteAllMode ? 'Tüm Soru Bankasını Sil' : 'Seçili Soruları Sil'}
+        itemCount={isDeleteAllMode ? questions.length : selectedIds.length}
+        itemName="soru"
+        description={isDeleteAllMode 
+          ? 'Bu tesise ait soru bankasındaki TÜM sorular kalıcı olarak silinecektir. Bu işlem geri alınamaz.' 
+          : 'Seçili sorular soru bankasından kalıcı olarak silinecektir.'}
+        isDeleting={deleting}
+      />
     </div>
   );
 };

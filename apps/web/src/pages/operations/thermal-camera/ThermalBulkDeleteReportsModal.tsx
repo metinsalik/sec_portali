@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { useAuth } from '@/context/AuthContext';
 import type { ThermalInspectionSession } from '@/services/thermal-inspection.service';
 
 interface Props {
@@ -19,7 +21,7 @@ interface Props {
   onClose: () => void;
   sessions: ThermalInspectionSession[];
   facilityName: string;
-  onDeleteSelected: (sessionIds: string[]) => Promise<void>;
+  onDeleteSelected: (sessionIds: string[], confirmUsername: string) => Promise<void>;
 }
 
 export const ThermalBulkDeleteReportsModal: React.FC<Props> = ({
@@ -29,10 +31,17 @@ export const ThermalBulkDeleteReportsModal: React.FC<Props> = ({
   facilityName,
   onDeleteSelected
 }) => {
+  const { user } = useAuth();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmStep, setConfirmStep] = useState(false);
+  const [typedUsername, setTypedUsername] = useState('');
+
+  const isUsernameMatch = Boolean(
+    user?.username && 
+    typedUsername.trim().toLowerCase() === user.username.trim().toLowerCase()
+  );
 
   if (!isOpen) return null;
 
@@ -63,10 +72,10 @@ export const ThermalBulkDeleteReportsModal: React.FC<Props> = ({
     .reduce((acc, curr) => acc + (curr._count?.items ?? (curr.items?.length || 0)), 0);
 
   const handleDelete = async () => {
-    if (selectedIds.length === 0) return;
+    if (selectedIds.length === 0 || !isUsernameMatch) return;
     setIsDeleting(true);
     try {
-      await onDeleteSelected(selectedIds);
+      await onDeleteSelected(selectedIds, typedUsername.trim());
       onClose();
     } finally {
       setIsDeleting(false);
@@ -188,15 +197,36 @@ export const ThermalBulkDeleteReportsModal: React.FC<Props> = ({
             )}
           </div>
 
-          {/* Onay Adımı Uyarısı */}
+          {/* Onay Adımı Uyarısı & Kullanıcı Adı Doğrulama */}
           {selectedIds.length > 0 && confirmStep && (
-            <div className="p-3.5 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 rounded-xl flex items-start gap-3 text-rose-800 dark:text-rose-300 text-xs animate-in slide-in-from-top-1">
-              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold">DİKKAT: Kalıcı Silme İşlemi!</p>
-                <p className="mt-0.5 leading-relaxed text-[11px]">
-                  Seçtiğiniz <strong>{selectedIds.length} adet rapor</strong> ve bu raporlara bağlı toplam <strong>{totalItemsToDelete} adet pano ölçüm kaydı</strong>, fotoğrafları ve aksiyon geçmişleri ile birlikte sistemden <strong>tamamen ve geri alınamaz şekilde silinecektir</strong>.
-                </p>
+            <div className="space-y-3 animate-in slide-in-from-top-1">
+              <div className="p-3.5 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 rounded-xl flex items-start gap-3 text-rose-800 dark:text-rose-300 text-xs">
+                <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold">DİKKAT: Kalıcı Silme İşlemi!</p>
+                  <p className="mt-0.5 leading-relaxed text-[11px]">
+                    Seçtiğiniz <strong>{selectedIds.length} adet rapor</strong> ve bu raporlara bağlı toplam <strong>{totalItemsToDelete} adet pano ölçüm kaydı</strong>, fotoğrafları ve aksiyon geçmişleri ile birlikte sistemden <strong>tamamen ve geri alınamaz şekilde silinecektir</strong>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl space-y-1.5 text-xs">
+                <label className="font-medium text-slate-800 dark:text-slate-200 block">
+                  İşlemi onaylamak için kullanıcı adınızı (<span className="font-bold font-mono text-primary select-all">{user?.username}</span>) yazınız:
+                </label>
+                <Input
+                  type="text"
+                  value={typedUsername}
+                  onChange={(e) => setTypedUsername(e.target.value)}
+                  placeholder={user?.username || ''}
+                  className="h-8 text-xs font-mono"
+                  autoFocus
+                />
+                {isUsernameMatch ? (
+                  <span className="text-[11px] text-emerald-600 font-medium block">✓ Kullanıcı adı doğrulandı.</span>
+                ) : (
+                  <span className="text-[11px] text-muted-foreground block">Devam etmek için kullanıcı adınızı eksiksiz girmelisiniz.</span>
+                )}
               </div>
             </div>
           )}
@@ -209,8 +239,12 @@ export const ThermalBulkDeleteReportsModal: React.FC<Props> = ({
             variant="ghost"
             size="sm"
             onClick={() => {
-              if (confirmStep) setConfirmStep(false);
-              else onClose();
+              if (confirmStep) {
+                setConfirmStep(false);
+                setTypedUsername('');
+              } else {
+                onClose();
+              }
             }}
             disabled={isDeleting}
             className="text-xs"
@@ -236,9 +270,9 @@ export const ThermalBulkDeleteReportsModal: React.FC<Props> = ({
                 type="button"
                 size="sm"
                 variant="destructive"
-                disabled={isDeleting}
+                disabled={!isUsernameMatch || isDeleting}
                 onClick={handleDelete}
-                className="text-xs gap-1.5 font-bold bg-rose-700 hover:bg-rose-800 shadow-md"
+                className="text-xs gap-1.5 font-bold bg-rose-700 hover:bg-rose-800 shadow-md disabled:opacity-50"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 {isDeleting ? 'Siliniyor...' : 'Evet, Hepsini Kalıcı Olarak Sil'}

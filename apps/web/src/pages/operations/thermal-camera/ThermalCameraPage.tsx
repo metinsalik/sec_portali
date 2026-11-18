@@ -213,9 +213,9 @@ export default function ThermalCameraPage() {
     }
   };
 
-  const handleBulkDeleteSessions = async (sessionIds: string[]) => {
+  const handleBulkDeleteSessions = async (sessionIds: string[], confirmUsername: string) => {
     try {
-      const res = await thermalInspectionService.deleteSessionsBulk(sessionIds);
+      const res = await thermalInspectionService.deleteSessionsBulk(sessionIds, confirmUsername);
       toast.success(res.message || `${sessionIds.length} adet rapor silindi.`);
       setSessions(prev => prev.filter(s => !sessionIds.includes(s.id)));
       setAllItems(prev => prev.filter(i => !sessionIds.includes(i.sessionId)));
@@ -373,7 +373,7 @@ export default function ThermalCameraPage() {
               setShowQuickEntryModal(true);
             }}
             onDeleteSession={handleDeleteSession}
-            onOpenBulkDeleteSessions={() => setShowBulkDeleteModal(true)}
+            onOpenBulkDeleteSessions={isAdminOrMgmt ? () => setShowBulkDeleteModal(true) : undefined}
           />
         ) : activeTab === 'panels' ? (
           /* Panels Inventory and Cycles View */

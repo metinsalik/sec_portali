@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import * as xlsx from 'xlsx';
 import api from '@/lib/api';
+import { BulkDeleteConfirmDialog } from '@/components/shared/BulkDeleteConfirmDialog';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -217,18 +218,24 @@ export default function IsgKurulSettings() {
     },
     onError: () => toast.error('Hata oluştu')
   });
+  const [bulkDeleteAllOpen, setBulkDeleteAllOpen] = useState(false);
+
   // Delete All Data Mutation
   const deleteAllMutation = useMutation({
-    mutationFn: async () => {
-      const res = await api.delete(`/operations/board/bulk-delete?facilityId=${selectedFacilityId}`);
+    mutationFn: async (confirmUsername: string) => {
+      const res = await api.delete(`/operations/board/bulk-delete?facilityId=${selectedFacilityId}&confirmUsername=${encodeURIComponent(confirmUsername)}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Silme işlemi başarısız');
+      }
       return res.json();
     },
     onSuccess: (res) => {
       toast.success(res.message || 'Tüm veriler başarıyla silindi.');
       queryClient.invalidateQueries({ queryKey: ['ohs-board-meetings'] });
-      setDeleteConfirm({ open: false, type: null, id: null });
+      setBulkDeleteAllOpen(false);
     },
-    onError: () => toast.error('Silme işlemi başarısız.')
+    onError: (err: any) => toast.error(err.message || 'Silme işlemi başarısız.')
   });
 
   // Import Mutation
@@ -710,7 +717,7 @@ export default function IsgKurulSettings() {
                   </div>
                   <Button 
                     variant="destructive" 
-                    onClick={() => setDeleteConfirm({ open: true, type: 'all-data', id: null })}
+                    onClick={() => setBulkDeleteAllOpen(true)}
                     disabled={deleteAllMutation.isPending || !selectedFacilityId}
                     className="shrink-0"
                   >
@@ -821,21 +828,28 @@ export default function IsgKurulSettings() {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setDeleteConfirm(prev => ({ ...prev, open: false }))}>İptal</AlertDialogCancel>
             <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={() => {
-                if (deleteConfirm.type === 'all-data') {
-                  deleteAllMutation.mutate();
-                } else if (deleteConfirm.id !== null) {
+                if (deleteConfirm.id !== null) {
                   if (deleteConfirm.type === 'category') deleteCategory.mutate(deleteConfirm.id);
                   else if (deleteConfirm.type === 'subcategory') deleteSubCategory.mutate(deleteConfirm.id);
                   else if (deleteConfirm.type === 'department') deleteDepartment.mutate(deleteConfirm.id);
                   else if (deleteConfirm.type === 'member') deleteMember.mutate(deleteConfirm.id);
                 }
-                if (deleteConfirm.type !== 'all-data') {
-                  setDeleteConfirm(prev => ({ ...prev, open: false }));
-                }
+                setDeleteConfirm(prev => ({ ...prev, open: false }));
               }}>Sil</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Toplu Kurul Verilerini Silme Modalı (Yöneticiler) */}
+      <BulkDeleteConfirmDialog
+        isOpen={bulkDeleteAllOpen && Boolean(hasAdminAccess && selectedFacilityId)}
+        onClose={() => setBulkDeleteAllOpen(false)}
+        onConfirm={(confirmUsername) => deleteAllMutation.mutate(confirmUsername)}
+        title="Seçili Tesisin Tüm Kurul Verilerini Sil"
+        description="Bu tesise ait tüm Kurul Toplantıları, Kararları ve geçmiş kayıtlar kalıcı olarak silinecektir. Diğer tesisler etkilenmez."
+        itemName="tesis verisi"
+        isDeleting={deleteAllMutation.isPending}
+      />
     </div>
   );
 }

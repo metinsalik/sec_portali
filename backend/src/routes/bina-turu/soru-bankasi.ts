@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
 import ExcelJS from 'exceljs';
+import { authMiddleware, AuthRequest } from '../../middleware/auth';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -60,9 +61,19 @@ router.put('/:id', async (req: Request, res: Response) => {
   } catch (err) { handleError(res, err); }
 });
 
-router.delete('/bulk', async (req: Request, res: Response): Promise<void> => {
+router.delete('/bulk', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { ids, facilityId, deleteAll } = req.body;
+    if (!req.user?.isAdmin && !req.user?.isManagement) {
+      res.status(403).json({ error: 'Toplu silme yetkisi sadece yöneticilere aittir.' });
+      return;
+    }
+
+    const { ids, facilityId, deleteAll, confirmUsername } = req.body;
+
+    if (!confirmUsername || String(confirmUsername).trim().toLowerCase() !== req.user?.username?.trim().toLowerCase()) {
+      res.status(400).json({ error: 'Toplu silme onayı için kullanıcı adınızı doğru girmelisiniz.' });
+      return;
+    }
     
     if (!facilityId) {
       res.status(400).json({ error: 'FacilityId eksik.' });

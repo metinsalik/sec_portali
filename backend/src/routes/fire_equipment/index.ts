@@ -974,10 +974,18 @@ router.post('/equipment/:facilityId', async (req, res) => {
   }
 });
 
-router.delete('/equipment/bulk/:facilityId', async (req, res) => {
+router.delete('/equipment/bulk/:facilityId', async (req: any, res) => {
   try {
+    if (!req.user?.isAdmin && !req.user?.isManagement) {
+      return res.status(403).json({ error: 'Toplu silme yetkisi sadece yöneticilere aittir.' });
+    }
+
     const { facilityId } = req.params;
-    const { categoryId } = req.query;
+    const { categoryId, confirmUsername } = req.query;
+
+    if (!confirmUsername || String(confirmUsername).trim().toLowerCase() !== req.user?.username?.trim().toLowerCase()) {
+      return res.status(400).json({ error: 'Toplu silme onayı için kullanıcı adınızı doğru girmelisiniz.' });
+    }
 
     if (!categoryId) {
       return res.status(400).json({ error: 'Kategori ID gereklidir.' });

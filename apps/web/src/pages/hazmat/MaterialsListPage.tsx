@@ -19,6 +19,7 @@ import {
   PackageOpen
 } from 'lucide-react';
 import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
+import { BulkDeleteConfirmDialog } from '@/components/shared/BulkDeleteConfirmDialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -106,9 +107,12 @@ export default function MaterialsListPage() {
 
   // Bulk delete materials from database
   const bulkGlobalDeleteMutation = useMutation({
-    mutationFn: async (ids: string[]) => {
-      const res = await api.post(`/hazmat/materials/bulk-delete`, { ids });
-      if (!res.ok) throw new Error('Toplu silinemedi');
+    mutationFn: async ({ ids, confirmUsername }: { ids: string[]; confirmUsername: string }) => {
+      const res = await api.post(`/hazmat/materials/bulk-delete`, { ids, confirmUsername });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Toplu silinemedi');
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -118,7 +122,7 @@ export default function MaterialsListPage() {
       queryClient.invalidateQueries({ queryKey: ['global-materials-list'] });
       queryClient.invalidateQueries({ queryKey: ['facility-materials'] });
     },
-    onError: () => toast.error('Toplu silme işlemi başarısız.')
+    onError: (err: any) => toast.error(err.message || 'Toplu silme işlemi başarısız.')
   });
 
   const uniqueBrands = useMemo(() => {
@@ -618,25 +622,16 @@ export default function MaterialsListPage() {
       </AlertDialog>
 
       {/* Bulk Delete Confirmation */}
-      <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}>
-        <AlertDialogContent className="rounded-2xl border border-border shadow-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-lg font-bold">Toplu Tehlikeli Madde Silme</AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-muted-foreground">
-              Seçilen {selectedIds.length} tehlikeli maddeyi merkezi veritabanından kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="text-xs h-8">İptal</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground text-xs h-8"
-              onClick={() => bulkGlobalDeleteMutation.mutate(selectedIds)}
-            >
-              {bulkGlobalDeleteMutation.isPending ? 'Siliniyor...' : 'Seçilenleri Sil'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <BulkDeleteConfirmDialog
+        isOpen={bulkDeleteConfirm && isGlobalAdmin && selectedIds.length > 0}
+        onClose={() => setBulkDeleteConfirm(false)}
+        onConfirm={(confirmUsername) => bulkGlobalDeleteMutation.mutate({ ids: selectedIds, confirmUsername })}
+        title="Toplu Tehlikeli Madde Silme"
+        itemCount={selectedIds.length}
+        itemName="tehlikeli madde"
+        description="Seçilen tehlikeli maddeleri merkezi veritabanından kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz."
+        isDeleting={bulkGlobalDeleteMutation.isPending}
+      />
 
       {/* Print Modal */}
       <PrintCardModal

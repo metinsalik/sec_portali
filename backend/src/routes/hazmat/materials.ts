@@ -749,7 +749,11 @@ router.post('/bulk-delete', authMiddleware, async (req: AuthRequest, res) => {
   }
 
   try {
-    const { ids } = req.body;
+    const { ids, confirmUsername } = req.body;
+    if (!confirmUsername || confirmUsername.trim().toLowerCase() !== req.user?.username?.trim().toLowerCase()) {
+      return res.status(400).json({ error: 'Toplu silme onayı için kullanıcı adınızı doğru girmelisiniz.' });
+    }
+
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: 'Silinecek materyaller belirtilmedi.' });
     }

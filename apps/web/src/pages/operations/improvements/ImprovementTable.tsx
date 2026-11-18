@@ -15,6 +15,7 @@ import {
   InspectRecordDialog, EditRecordDialog, ActionNoteDialog, CreateRecordDialog 
 } from './ImprovementRecordDialogs';
 import { useAuth } from '@/context/AuthContext';
+import { BulkDeleteConfirmDialog } from '@/components/shared/BulkDeleteConfirmDialog';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -144,7 +145,7 @@ export const ImprovementTable: React.FC<Props> = ({
   };
 
   // Toplu Kayıt Silme (Yöneticiler)
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = async (confirmUsername: string) => {
     const ids = Array.from(selectedRecordIds);
     if (ids.length === 0) return;
 
@@ -157,7 +158,7 @@ export const ImprovementTable: React.FC<Props> = ({
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : ''
         },
-        body: JSON.stringify({ ids })
+        body: JSON.stringify({ ids, confirmUsername })
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -1934,73 +1935,16 @@ export const ImprovementTable: React.FC<Props> = ({
       )}
 
       {/* Toplu Kayıt Silme Onay Modalı (Yöneticiler) */}
-      {hasAdminAccess && bulkDeleteConfirmOpen && selectedRecordIds.size > 0 && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-card text-card-foreground border rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
-                <Trash2 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-foreground">
-                  {selectedRecordIds.size} Kaydı Silmek İstiyor Musunuz?
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Bu işlem geri alınamaz. Seçili tüm kayıtlar ve varsa aksiyon geçmişleri kalıcı olarak silinecek, sıra numaraları yeniden düzenlenecektir.
-                </p>
-              </div>
-            </div>
-
-            <div className="p-3 bg-muted/40 rounded-xl border text-xs space-y-1.5 max-h-40 overflow-y-auto">
-              {records
-                .filter((r) => selectedRecordIds.has(r.id))
-                .slice(0, 5)
-                .map((r) => (
-                  <div key={r.id} className="truncate text-foreground">
-                    <span className="tabular-nums text-muted-foreground mr-1.5">#{r.rowNo || '-'}</span>
-                    <span className="font-medium mr-1">{r.facility?.shortName || r.facility?.name || '-'}:</span>
-                    <span className="text-muted-foreground">{r.finding}</span>
-                  </div>
-                ))}
-              {selectedRecordIds.size > 5 && (
-                <div className="text-[11px] text-muted-foreground italic pt-1 border-t border-border/50">
-                  ...ve {selectedRecordIds.size - 5} kayıt daha
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setBulkDeleteConfirmOpen(false)}
-                disabled={isBulkDeleting}
-              >
-                Vazgeç
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleBulkDelete}
-                disabled={isBulkDeleting}
-                className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5"
-              >
-                {isBulkDeleting ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    Siliniyor...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Evet, {selectedRecordIds.size} Kaydı Sil
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <BulkDeleteConfirmDialog
+        isOpen={hasAdminAccess && bulkDeleteConfirmOpen && selectedRecordIds.size > 0}
+        onClose={() => setBulkDeleteConfirmOpen(false)}
+        onConfirm={(confirmUsername) => handleBulkDelete(confirmUsername)}
+        title="DÖF / İyileştirme Kayıtlarını Toplu Sil"
+        itemCount={selectedRecordIds.size}
+        itemName="DÖF kaydı"
+        description="Seçili tüm kayıtlar ve varsa aksiyon geçmişleri kalıcı olarak silinecek, sıra numaraları yeniden düzenlenecektir."
+        isDeleting={isBulkDeleting}
+      />
 
     </>
   );

@@ -271,7 +271,14 @@ router.post('/bulk-import', async (req: AuthRequest, res: Response) => {
 // DELETE /api/operations/board/bulk-delete - Delete all decisions and meetings
 router.delete('/bulk-delete', async (req: AuthRequest, res: Response) => {
   try {
-    const { facilityId } = req.query;
+    if (!req.user?.isAdmin && !req.user?.isManagement) {
+      return res.status(403).json({ error: 'Toplu silme yetkisi sadece yöneticilere aittir.' });
+    }
+
+    const { facilityId, confirmUsername } = req.query;
+    if (!confirmUsername || String(confirmUsername).trim().toLowerCase() !== req.user?.username?.trim().toLowerCase()) {
+      return res.status(400).json({ error: 'Toplu silme onayı için kullanıcı adınızı doğru girmelisiniz.' });
+    }
     
     if (facilityId) {
       const meetings = await prisma.ohsBoardMeeting.findMany({

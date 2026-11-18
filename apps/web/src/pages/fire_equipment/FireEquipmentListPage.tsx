@@ -17,6 +17,7 @@ import { ExcelBulkImportDolapModal } from './components/ExcelBulkImportDolapModa
 import { ExcelBulkImportAlarmModal } from './components/ExcelBulkImportAlarmModal';
 import { ExcelBulkImportFlasorModal } from './components/ExcelBulkImportFlasorModal';
 import { ExcelBulkImportItfaiyeModal } from './components/ExcelBulkImportItfaiyeModal';
+import { BulkDeleteConfirmDialog } from '@/components/shared/BulkDeleteConfirmDialog';
 
 export default function FireEquipmentListPage() {
   const facilityId = localStorage.getItem('activeFacilityId');
@@ -137,17 +138,26 @@ export default function FireEquipmentListPage() {
     }
   };
 
-  const handleBulkDelete = async () => {
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  const handleBulkDelete = async (confirmUsername: string) => {
     if (filterCategory === 'all') return;
-    if (!window.confirm('Bu kategori altındaki tüm ekipmanları silmek istediğinize emin misiniz? Bu işlem geri alınamaz!')) return;
 
     try {
-      const res = await api.delete(`/fire-equipment/equipment/bulk/${facilityId}?categoryId=${filterCategory}`);
-      if (!res.ok) throw new Error('Toplu silme işlemi başarısız oldu.');
+      setIsBulkDeleting(true);
+      const res = await api.delete(`/fire-equipment/equipment/bulk/${facilityId}?categoryId=${filterCategory}&confirmUsername=${encodeURIComponent(confirmUsername)}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Toplu silme işlemi başarısız oldu.');
+      }
       toast.success('Seçilen kategori altındaki tüm ekipmanlar silindi.');
+      setBulkDeleteConfirmOpen(false);
       queryClient.invalidateQueries({ queryKey: ['fire-equipment', facilityId] });
     } catch (error: any) {
       toast.error(error.message || 'Bir hata oluştu.');
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
 
@@ -370,8 +380,8 @@ export default function FireEquipmentListPage() {
                     <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
                 </select>
-                {filterCategory !== 'all' && (user?.isManagement || user?.isAdmin || user?.roles?.some((r: string) => r.includes('MERKEZ'))) && (
-                  <Button variant="destructive" size="sm" onClick={handleBulkDelete} title="Bu kategorideki tüm kayıtları sil">
+                {filterCategory !== 'all' && isAdmin && (
+                  <Button variant="destructive" size="sm" onClick={() => setBulkDeleteConfirmOpen(true)} title="Bu kategorideki tüm kayıtları sil">
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 )}
@@ -608,6 +618,17 @@ export default function FireEquipmentListPage() {
           <span className="font-bold text-base">QR Okut</span>
         </Button>
       </div>
+
+      {/* Toplu Ekipman Silme Onay Modalı (Yöneticiler) */}
+      <BulkDeleteConfirmDialog
+        isOpen={bulkDeleteConfirmOpen && Boolean(isAdmin && filterCategory !== 'all')}
+        onClose={() => setBulkDeleteConfirmOpen(false)}
+        onConfirm={(confirmUsername) => handleBulkDelete(confirmUsername)}
+        title="Kategoriye Ait Ekipmanları Toplu Sil"
+        description="Seçilen kategori ve alt kategorilerindeki tüm yangın ekipmanları, periyodik bakım kayıtları ile birlikte kalıcı olarak silinecektir."
+        itemName="ekipman grubu"
+        isDeleting={isBulkDeleting}
+      />
     </div>
   );
 }

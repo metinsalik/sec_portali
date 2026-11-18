@@ -1780,7 +1780,11 @@ router.post('/records/bulk-delete', async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ success: false, message: 'Toplu silme yetkisi sadece yöneticilere aittir.' });
     }
 
-    const { ids } = req.body as { ids?: string[] };
+    const { ids, confirmUsername } = req.body as { ids?: string[]; confirmUsername?: string };
+    if (!confirmUsername || confirmUsername.trim().toLowerCase() !== req.user?.username?.trim().toLowerCase()) {
+      return res.status(400).json({ success: false, message: 'Toplu silme onayı için kullanıcı adınızı doğru girmelisiniz.' });
+    }
+
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ success: false, message: 'Silinecek en az bir kayıt seçilmelidir.' });
     }
