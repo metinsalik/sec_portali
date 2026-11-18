@@ -1,4 +1,5 @@
-import type { IsometricBuildingData, IsometricFloor, IsometricRoom, RiskDistribution } from './types';
+import type { IsometricBuildingData, IsometricFloor, IsometricRoom, RiskDistribution, StatusType } from './types';
+import { parseFloorRank } from '@/utils/locationHierarchy';
 
 export const MOCK_ISOMETRIC_BUILDING: IsometricBuildingData = {
   id: 'bld-florya-main',
@@ -345,10 +346,10 @@ export function buildBuildingDataFromTree(
   
   const floors: IsometricFloor[] = floorEntries.map(([fName, fNode]: [string, any], index) => {
     const cleanFloorName = formatFloorLabel(fName);
-    const numMatch = cleanFloorName.match(/(-?\d+)/);
-    const floorNum = numMatch ? parseInt(numMatch[1], 10) : (floorEntries.length - index);
+    const parsedRank = parseFloorRank(cleanFloorName);
+    const floorNum = parsedRank > -8000 ? parsedRank : (floorEntries.length - index);
 
-    // Check if mock floors have a template for this floor (e.g. 13th floor, basement, etc.)
+    // Check if mock template has technical telemetry for this floor
     const mockMatch = MOCK_ISOMETRIC_BUILDING.floors.find(mf => 
       mf.floorNumber === floorNum || 
       cleanFloorName.toLowerCase().includes(mf.name.toLowerCase().slice(0, 5)) ||
@@ -356,46 +357,87 @@ export function buildBuildingDataFromTree(
     );
 
     const deptEntries = Object.entries(fNode.children || {});
-    // If the DB only has 1 generic entry like "Belirtilmemiş Birim" or empty, use the rich mock template!
-    const isGenericOnly = deptEntries.length <= 1 && (deptEntries[0]?.[0]?.includes('Belirtilmemiş') || deptEntries.length === 0);
+    const rawRooms: {
+      name: string;
+      code: string;
+      departmentName: string;
+      departmentId?: string;
+      unitId?: string;
+      risks: number;
+      stats: { acik: number; mudahale: number; takip: number; kapali: number };
+      loc?: any;
+    }[] = [];
+
+    // Extract all real mahaller (units) and departments under this floor
+    deptEntries.forEach(([dName, dNode]: [string, any]) => {
+      const units = dNode.units || [];
+      const mahalUnits = units.filter((u: any) => u.description && String(u.description).trim().length > 0);
+
+      if (mahalUnits.length > 0) {
+        mahalUnits.forEach((u: any) => {
+          rawRooms.push({
+            name: String(u.description).trim(),
+            code: `M-${floorNum}${String(rawRooms.length + 1).padStart(2, '0')}`,
+            departmentName: dName,
+            departmentId: u.id,
+            unitId: u.id,
+            risks: u.riskCount || 0,
+            stats: u.stats || { acik: 0, mudahale: 0, takip: 0, kapali: 0 },
+            loc: u,
+          });
+        });
+      } else {
+        rawRooms.push({
+          name: dName,
+          code: `D-${floorNum}${String(rawRooms.length + 1).padStart(2, '0')}`,
+          departmentName: dName,
+          departmentId: units[0]?.id,
+          unitId: units[0]?.id,
+          risks: dNode.risks || 0,
+          stats: dNode.stats || { acik: 0, mudahale: 0, takip: 0, kapali: 0 },
+          loc: units[0],
+        });
+      }
+    });
 
     let rooms: IsometricRoom[] = [];
 
-    if (isGenericOnly && mockMatch) {
-      // Use the rich architectural rooms from mock template
-      rooms = mockMatch.rooms;
-    } else if (deptEntries.length > 0) {
-      // Use real departments
-      rooms = deptEntries.map(([dName, dNode]: [string, any], rIdx) => {
-        const gx = rIdx % 3;
-        const gy = Math.floor(rIdx / 3) % 3;
-        const openRisks = dNode.stats?.acik || 0;
-        const isCritical = openRisks > 0 || (floorNum === 13 && /pano|elektrik/i.test(dName));
-        const status = isCritical ? 'critical' : (dNode.stats?.mudahale > 0 || dNode.stats?.takip > 0) ? 'warning' : 'normal';
+    if (rawRooms.length > 0) {
+      // Dynamic procedural grid size (e.g. 3x3, 4x4)
+      const gridSize = Math.max(3, Math.ceil(Math.sqrt(rawRooms.length)));
 
-        const isElectrical = /pano|trafo|elektrik|ups/i.test(dName);
-        const isMedical = /ameliyat|klinik|yatak|hasta|radyoloji|laboratuvar/i.test(dName);
-        const isElevator = /asansör/i.test(dName);
-        const type = isElectrical ? 'electrical' : isMedical ? 'medical' : isElevator ? 'elevator' : 'office';
+      rooms = rawRooms.map((r, rIdx) => {
+        const gx = rIdx % gridSize;
+        const gy = Math.floor(rIdx / gridSize);
+        const openRisks = r.stats?.acik || 0;
+        const isCritical = openRisks > 0 || (floorNum === 13 && /pano|elektrik|trafo/i.test(r.name));
+        const isWarning = !isCritical && (r.stats?.mudahale > 0 || r.stats?.takip > 0);
+        const status: StatusType = isCritical ? 'critical' : isWarning ? 'warning' : 'normal';
+
+        const isElectrical = /pano|trafo|elektrik|ups|jeneratör/i.test(r.name) || /pano|elektrik/i.test(r.departmentName);
+        const isMedical = /ameliyat|klinik|yatak|hasta|radyoloji|laboratuvar|yoğun bakım|acil|diyaliz/i.test(r.name) || /sağlık|medikal|klinik/i.test(r.departmentName);
+        const isElevator = /asansör|merdiven|şaft/i.test(r.name);
+        const isArchive = /arşiv|depo|atık/i.test(r.name);
+        const type = isElectrical ? 'electrical' : isMedical ? 'medical' : isElevator ? 'elevator' : isArchive ? 'archive' : 'office';
 
         return {
-          id: `room-${floorNum}-${rIdx}`,
-          name: dName,
-          code: `R-${floorNum}0${rIdx + 1}`,
-          departmentId: dNode.units?.[0]?.id,
+          id: r.unitId || `room-${floorNum}-${rIdx}`,
+          name: r.name,
+          code: r.code,
+          departmentId: r.departmentId,
           gridX: gx,
           gridY: gy,
-          height: isElectrical ? 36 : 28,
+          height: isElectrical ? 36 : isMedical ? 30 : 26,
           type,
           status,
-          openRiskCount: dNode.risks || 0,
+          openRiskCount: r.risks,
           safetyScore: status === 'critical' ? 42 : status === 'warning' ? 74 : 95,
           riskDistribution: {
             tolereGosterilmez: openRisks > 1 ? 1 : 0,
             yuksek: openRisks > 0 ? 1 : 0,
-            onemli: dNode.stats?.mudahale || 0,
-            olasi: dNode.stats?.takip || 0,
-            onemsiz: dNode.stats?.kapali || 1,
+            onemli: r.stats?.mudahale || 0,
+            olasi: r.stats?.takip || 0,
+            onemsiz: r.stats?.kapali || 1,
           },
           telemetry: isElectrical ? {
             voltageL1: 238,
@@ -410,12 +452,6 @@ export function buildBuildingDataFromTree(
           } : undefined
         };
       });
-
-      // If less than 4 rooms, complement with realistic technical rooms
-      if (rooms.length < 4 && mockMatch) {
-        const extraRooms = mockMatch.rooms.slice(rooms.length);
-        rooms = [...rooms, ...extraRooms];
-      }
     } else if (mockMatch) {
       rooms = mockMatch.rooms;
     }
@@ -431,18 +467,20 @@ export function buildBuildingDataFromTree(
       onemsiz: acc.onemsiz + (r.riskDistribution?.onemsiz || 1),
     }), { tolereGosterilmez: 0, yuksek: 0, onemli: 0, olasi: 0, onemsiz: 0 });
 
+    const maxGridDim = rooms.reduce((max, r) => Math.max(max, r.gridX + 1, r.gridY + 1), 3);
+
     return {
       id: `floor-${floorNum}`,
       floorNumber: floorNum,
       name: cleanFloorName,
-      gridSize: 3,
+      gridSize: maxGridDim,
       rooms,
       status: floorStatus,
       riskCount: rooms.reduce((sum, r) => sum + r.openRiskCount, 0) || fNode.risks || (floorNum === 13 ? 4 : 1),
       riskDistribution: floorRiskDist,
       safetyScore: hasCritical ? 48 : floorStatus === 'warning' ? 74 : 94,
       hasCriticalFault: hasCritical,
-      criticalFaultText: hasCritical ? '13. Kat Ana Pano Odası aşırı yük ve bara ısınma arızası!' : undefined,
+      criticalFaultText: hasCritical ? 'Kritik risk veya aşırı yük arızası tespit edildi!' : undefined,
     };
   });
 

@@ -1,5 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Check, X } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   decodeGroup5LocationId,
   encodeGroup5LocationId,
@@ -29,7 +32,34 @@ export default function LocationCascadingSelector({
   const [customDepartment, setCustomDepartment] = useState<string>('');
   const [customMahal, setCustomMahal] = useState<string>('');
 
+  const [dynamicDepartments, setDynamicDepartments] = useState<string[]>([]);
+  const [dynamicMahals, setDynamicMahals] = useState<string[]>([]);
+
   const lastEmittedValueRef = useRef<string>('');
+
+  const confirmCustomDepartment = () => {
+    const val = customDepartment.trim();
+    if (!val) {
+      toast.error('Lütfen birim adını yazınız.');
+      return;
+    }
+    setDynamicDepartments((prev) => Array.from(new Set([...prev, val])));
+    setSelectedDepartment(val);
+    setCustomDepartment('');
+    toast.success(`"${val}" birimi eklendi ve seçildi ✓`);
+  };
+
+  const confirmCustomMahal = () => {
+    const val = customMahal.trim();
+    if (!val) {
+      toast.error('Lütfen mahal adını yazınız.');
+      return;
+    }
+    setDynamicMahals((prev) => Array.from(new Set([...prev, val])));
+    setSelectedMahal(val);
+    setCustomMahal('');
+    toast.success(`"${val}" mahali eklendi ve seçildi ✓`);
+  };
 
   const parsedLocations = useMemo(
     () => locations.map((l) => ({ raw: l, parts: extractLocationParts(l) })),
@@ -102,8 +132,9 @@ export default function LocationCascadingSelector({
         set.add(parts.department);
       }
     });
+    dynamicDepartments.forEach((d) => set.add(d));
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'tr'));
-  }, [parsedLocations]);
+  }, [parsedLocations, dynamicDepartments]);
 
   const otherDepartments = useMemo(() => {
     return allFacilityDepartments.filter((d) => !floorDepartments.includes(d));
@@ -133,8 +164,9 @@ export default function LocationCascadingSelector({
         set.add(parts.description);
       }
     });
+    dynamicMahals.forEach((m) => set.add(m));
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'tr'));
-  }, [parsedLocations, activeDept]);
+  }, [parsedLocations, activeDept, dynamicMahals]);
 
   const otherMahals = useMemo(() => {
     return allDeptMahals.filter((m) => !floorMahals.includes(m));
@@ -366,13 +398,45 @@ export default function LocationCascadingSelector({
           <option value="custom">+ Yeni Birim Yaz...</option>
         </select>
         {selectedDepartment === 'custom' && (
-          <input
-            type="text"
-            placeholder="Birim Adı (Örn: Acil Servis)"
-            value={customDepartment}
-            onChange={(e) => setCustomDepartment(e.target.value)}
-            className="w-full h-8 mt-1 rounded-md border border-input bg-background px-2.5 text-xs"
-          />
+          <div className="flex items-center gap-1 mt-1">
+            <input
+              type="text"
+              placeholder="Birim Adı (Örn: Acil Servis)"
+              value={customDepartment}
+              onChange={(e) => setCustomDepartment(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  confirmCustomDepartment();
+                }
+              }}
+              autoFocus
+              className="flex-1 h-8 rounded-md border border-input bg-background px-2.5 text-xs focus:ring-1 focus:ring-ring"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="default"
+              className="h-8 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 shadow-xs"
+              onClick={confirmCustomDepartment}
+              title="Kaydet ve Seç (✓)"
+            >
+              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-8 px-2 text-muted-foreground hover:text-foreground shrink-0"
+              onClick={() => {
+                setSelectedDepartment('');
+                setCustomDepartment('');
+              }}
+              title="İptal"
+            >
+              <X className="w-3.5 h-3.5" />
+            </Button>
+          </div>
         )}
       </div>
 
@@ -406,13 +470,45 @@ export default function LocationCascadingSelector({
           <option value="custom">+ Yeni Mahal Yaz...</option>
         </select>
         {selectedMahal === 'custom' && (
-          <input
-            type="text"
-            placeholder="Mahal (Örn: Triaj Odası)"
-            value={customMahal}
-            onChange={(e) => setCustomMahal(e.target.value)}
-            className="w-full h-8 mt-1 rounded-md border border-input bg-background px-2.5 text-xs"
-          />
+          <div className="flex items-center gap-1 mt-1">
+            <input
+              type="text"
+              placeholder="Mahal (Örn: Triaj Odası)"
+              value={customMahal}
+              onChange={(e) => setCustomMahal(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  confirmCustomMahal();
+                }
+              }}
+              autoFocus
+              className="flex-1 h-8 rounded-md border border-input bg-background px-2.5 text-xs focus:ring-1 focus:ring-ring"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="default"
+              className="h-8 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 shadow-xs"
+              onClick={confirmCustomMahal}
+              title="Kaydet ve Seç (✓)"
+            >
+              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-8 px-2 text-muted-foreground hover:text-foreground shrink-0"
+              onClick={() => {
+                setSelectedMahal('');
+                setCustomMahal('');
+              }}
+              title="İptal"
+            >
+              <X className="w-3.5 h-3.5" />
+            </Button>
+          </div>
         )}
       </div>
     </div>
