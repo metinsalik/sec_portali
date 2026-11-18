@@ -3,9 +3,93 @@ import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from "../../middleware/auth";
 import { authMiddleware } from '../../middleware/auth';
 import { suggestFmsProgram } from './settings';
+import { decodeGroup5LocationId, upsertFacilityLocation } from '../../utils/locationHierarchy';
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+async function resolveOrCreateRiskLocation(
+  prismaClient: PrismaClient,
+  params: {
+    locationId?: string;
+    selectedLocationPath?: any;
+    facilityId?: string;
+  }
+): Promise<string> {
+  let locId = params.locationId ? String(params.locationId).trim() : '';
+  const path = params.selectedLocationPath;
+  let facId = params.facilityId;
+
+  // 1. If locId starts with 'group5:'
+  if (locId.startsWith('group5:')) {
+    const parts = decodeGroup5LocationId(locId);
+    if (parts && facId) {
+      const { location } = await upsertFacilityLocation(prismaClient, {
+        facilityId: facId,
+        buildingName: parts.buildingName,
+        block: parts.block,
+        building: parts.block,
+        floor: parts.floor,
+        department: parts.department,
+        description: parts.description,
+        returnExistingOnDuplicate: true,
+      });
+      return location.id;
+    }
+  }
+
+  // 2. If valid UUID locationId exists in DB
+  if (locId && !locId.startsWith('group5:')) {
+    const existing = await prismaClient.facilityLocation.findUnique({
+      where: { id: locId },
+    });
+    if (existing) {
+      facId = facId || existing.facilityId;
+      // If path specifies a department or description different from this existing row
+      if (path && (path.department || path.description)) {
+        const pDept = (path.department || '').trim();
+        const pDesc = (path.description || '').trim();
+        const curDept = (existing.department || '').trim();
+        const curDesc = (existing.description || '').trim();
+
+        if (
+          (pDept && pDept.toLowerCase() !== curDept.toLowerCase()) ||
+          (pDesc && pDesc.toLowerCase() !== curDesc.toLowerCase())
+        ) {
+          const { location } = await upsertFacilityLocation(prismaClient, {
+            facilityId: facId,
+            buildingName: path.buildingName || (existing as any).buildingName,
+            block: path.block || path.building || existing.building,
+            building: path.block || path.building || existing.building,
+            floor: path.floor || existing.floor,
+            department: pDept || existing.department,
+            description: pDesc || existing.description,
+            returnExistingOnDuplicate: true,
+          });
+          return location.id;
+        }
+      }
+      return existing.id;
+    }
+  }
+
+  // 3. If path is provided and we have facId
+  if (path && facId && (path.buildingName || path.building || path.floor || path.department || path.description)) {
+    const { location } = await upsertFacilityLocation(prismaClient, {
+      facilityId: facId,
+      buildingName: path.buildingName,
+      block: path.block || path.building,
+      building: path.block || path.building,
+      floor: path.floor,
+      department: path.department,
+      description: path.description,
+      returnExistingOnDuplicate: true,
+    });
+    return location.id;
+  }
+
+  return locId;
+}
 
 // Helper to check facility access
 async function checkFacilityAccess(req: AuthRequest, facilityId: string): Promise<boolean> {
@@ -562,7 +646,7 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
 router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const username = req.user?.username;
-    const {
+    let {
       locationId, riskNo, riskCategory, subCategory, area, method,
       activity, hazard, riskDescription, initialCondition, initialImage, initialImages,
       initialProb, initialFreq, initialSev, initialScore, status,
@@ -572,7 +656,17 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       finalProb, finalFreq, finalSev, finalScore, postImprovementResponsible, postImprovementDueDate,
       effectivenessMethod, controlResponsible, controlResult, legislation,
       dueDatePeriod, statusDate,
+      selectedLocationPath, facilityId,
     } = req.body;
+
+    // Resolve or upsert new Birim / Mahal into FacilityLocation
+    if (facilityId || locationId || selectedLocationPath) {
+      locationId = await resolveOrCreateRiskLocation(prisma, {
+        locationId,
+        selectedLocationPath,
+        facilityId: facilityId || (req.query.facilityId as string),
+      });
+    }
 
     let dept = await prisma.facilityLocation.findUnique({
       where: { id: locationId as string },
@@ -598,7 +692,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
         riskCategory:    riskCategory || 'Genel',
         subCategory:     subCategory || null,
         fmsProgram:      req.body.fmsProgram || suggestFmsProgram(riskCategory || 'Genel', subCategory),
-        area:            area || '',
+        area:            area || selectedLocationPath?.description || selectedLocationPath?.department || '',
         method:          method || 'Fine Kinney',
         activity:        activity || '',
         hazard:          hazard || '',
@@ -687,11 +781,28 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     const data: any = { ...req.body };
 
-    // id alanını temizle (Prisma'ya gönderilmemeli)
+    // Clean fields that shouldn't go to Prisma update
     delete data.id;
     delete data.department;
     delete data.createdAt;
     delete data.updatedAt;
+    delete data.facilityId;
+    const selectedLocationPath = data.selectedLocationPath;
+    delete data.selectedLocationPath;
+
+    // Resolve or upsert new Birim / Mahal into FacilityLocation if needed
+    const currentFacilityId = req.body.facilityId || risk.location?.facilityId;
+    if (currentFacilityId && (data.locationId || selectedLocationPath)) {
+      data.locationId = await resolveOrCreateRiskLocation(prisma, {
+        locationId: data.locationId,
+        selectedLocationPath,
+        facilityId: currentFacilityId,
+      });
+    }
+
+    if (selectedLocationPath?.description && !data.area) {
+      data.area = selectedLocationPath.description;
+    }
 
     if (data.locationId) {
       const newDept = await prisma.facilityLocation.findUnique({

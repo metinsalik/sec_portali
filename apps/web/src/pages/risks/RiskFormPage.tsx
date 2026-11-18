@@ -233,6 +233,7 @@ export default function RiskFormPage() {
   });
 
   const [uploadingField, setUploadingField] = useState<string | null>(null);
+  const [selectedLocationPath, setSelectedLocationPath] = useState<any>(null);
 
   // 1. Fetch Department & Facility Context
   const { data: department, isLoading: deptLoading } = useQuery({
@@ -540,7 +541,13 @@ export default function RiskFormPage() {
       const res = await fetch(url, {
         method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ...form, locationId: form.locationId || locationId, area: form.area }),
+        body: JSON.stringify({
+          ...form,
+          locationId: form.locationId || locationId,
+          selectedLocationPath,
+          facilityId,
+          area: selectedLocationPath?.description || selectedLocationPath?.department || form.area,
+        }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -548,12 +555,16 @@ export default function RiskFormPage() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       toast.success(isEdit ? 'Risk değerlendirmesi güncellendi.' : 'Risk değerlendirmesi eklendi.');
-      queryClient.invalidateQueries({ queryKey: ['risks', locationId] });
+      queryClient.invalidateQueries({ queryKey: ['risks'] });
+      queryClient.invalidateQueries({ queryKey: ['risk-locations-flat', facilityId] });
+      queryClient.invalidateQueries({ queryKey: ['facility-locations'] });
       queryClient.invalidateQueries({ queryKey: ['facility-risks'] });
       queryClient.invalidateQueries({ queryKey: ['risk-departments'] });
-      navigate(returnUrl);
+      const targetLocId = data?.locationId || form.locationId || locationId;
+      const targetUrl = (location.state as any)?.from || (targetLocId ? `/risks/location/${targetLocId}` : returnUrl);
+      navigate(targetUrl);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -683,6 +694,7 @@ export default function RiskFormPage() {
                   locations={locations}
                   value={form.locationId || locationId || ''}
                   onChange={(val, level, path) => {
+                    setSelectedLocationPath(path);
                     updateField('locationId', val);
                     updateField('area', path.description || path.department || path.floor || path.building);
                   }}

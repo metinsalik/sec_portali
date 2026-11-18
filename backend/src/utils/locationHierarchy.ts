@@ -852,3 +852,24 @@ export async function mergeLocationNodes(
   };
 }
 
+export function encodeGroup5LocationId(parts: Partial<NormalizedLocationParts>): string {
+  const enc = (v?: string) => encodeURIComponent(cleanStr(v));
+  return `group5:${enc(parts.buildingName)}|${enc(parts.block)}|${enc(parts.floor)}|${enc(parts.department)}|${enc(parts.description)}`;
+}
+
+export function decodeGroup5LocationId(id: string): NormalizedLocationParts | null {
+  if (!id || !id.startsWith('group5:')) return null;
+  const raw = id.slice('group5:'.length);
+  const [buildingName = '', block = '', floor = '', department = '', description = ''] = raw
+    .split('|')
+    .map((s) => {
+      try {
+        return decodeURIComponent(s || '');
+      } catch {
+        return s || '';
+      }
+    });
+  return { buildingName, block, floor, department, description };
+}
+
+

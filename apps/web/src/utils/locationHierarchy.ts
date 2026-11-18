@@ -111,4 +111,41 @@ export function formatGroup5Breadcrumb(id: string, separator = ' › '): string 
   return [p.buildingName, p.block, p.floor, p.department, p.description].filter(Boolean).join(separator) || id;
 }
 
+export function parseFloorRank(name?: string | null): number {
+  if (!name) return -10000;
+  const s = String(name).trim().toLowerCase();
+  if (s.includes('belirtilmemiş')) return -10000;
+  if (s.includes('çatı') || s.includes('teras')) return 1000;
+  if (s.includes('asma')) return 0.5;
+  if (s.startsWith('z') || s.includes('zemin') || s.includes('giriş')) return 0;
+
+  // Negative / bodrum floors: -1, -2, b1, b2, bodrum 1
+  const bodrumMatch = s.match(/(?:bodrum|b)\s*([0-9]+)/);
+  if (bodrumMatch) {
+    return -parseInt(bodrumMatch[1], 10);
+  }
+  const negMatch = s.match(/-\s*([0-9]+)/);
+  if (negMatch) {
+    return -parseInt(negMatch[1], 10);
+  }
+  // Positive number: 13. Kat, 13., 13, 1. Kat
+  const numMatch = s.match(/([0-9]+)/);
+  if (numMatch) {
+    return parseInt(numMatch[1], 10);
+  }
+  return -9000;
+}
+
+export function compareFloors(a: any, b: any, sortDesc = true): number {
+  const nameA = typeof a === 'string' ? a : (a?.name || a?.label || '');
+  const nameB = typeof b === 'string' ? b : (b?.name || b?.label || '');
+  const rankA = parseFloorRank(nameA);
+  const rankB = parseFloorRank(nameB);
+  if (rankA !== rankB) {
+    return sortDesc ? rankB - rankA : rankA - rankB;
+  }
+  return nameA.localeCompare(nameB, 'tr', { numeric: true });
+}
+
+
 

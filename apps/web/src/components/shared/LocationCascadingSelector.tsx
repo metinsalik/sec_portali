@@ -4,6 +4,7 @@ import {
   decodeGroup5LocationId,
   encodeGroup5LocationId,
   extractLocationParts,
+  compareFloors,
 } from '@/utils/locationHierarchy';
 
 interface LocationCascadingSelectorProps {
@@ -23,175 +24,207 @@ export default function LocationCascadingSelector({
   const [selectedBlock, setSelectedBlock] = useState<string>('');
   const [selectedFloor, setSelectedFloor] = useState<string>('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
-  const [selectedUnit, setSelectedUnit] = useState<string>('');
+  const [selectedMahal, setSelectedMahal] = useState<string>('');
 
-  const [customBuildingName, setCustomBuildingName] = useState<string>('');
-  const [customBlock, setCustomBlock] = useState<string>('');
-  const [customFloor, setCustomFloor] = useState<string>('');
   const [customDepartment, setCustomDepartment] = useState<string>('');
-  const [customUnit, setCustomUnit] = useState<string>('');
+  const [customMahal, setCustomMahal] = useState<string>('');
 
   const parsedLocations = useMemo(
     () => locations.map((l) => ({ raw: l, parts: extractLocationParts(l) })),
     [locations]
   );
 
-  // 1. Bina Adları
+  // 1. Bina Adları (Sadece sistemde mevcut olanlar)
   const buildingNames = useMemo(() => {
     const set = new Set<string>();
     parsedLocations.forEach(({ parts }) => {
       if (parts.buildingName) set.add(parts.buildingName);
     });
-    return Array.from(set).sort();
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'tr'));
   }, [parsedLocations]);
 
-  const activeBName = selectedBuildingName === 'custom' ? customBuildingName : selectedBuildingName;
+  // Otomatik tek bina varsa seç
+  useEffect(() => {
+    if (!selectedBuildingName && buildingNames.length === 1) {
+      setSelectedBuildingName(buildingNames[0]);
+    }
+  }, [buildingNames, selectedBuildingName]);
 
-  // 2. Bloklar (seçili bina için)
+  // 2. Bloklar (Seçili bina için sistemde mevcut olanlar)
   const blocks = useMemo(() => {
-    if (!activeBName) return [];
+    if (!selectedBuildingName) return [];
     const set = new Set<string>();
     parsedLocations.forEach(({ parts }) => {
-      if (parts.buildingName === activeBName && parts.block) set.add(parts.block);
+      if (parts.buildingName === selectedBuildingName && parts.block) {
+        set.add(parts.block);
+      }
     });
-    return Array.from(set).sort();
-  }, [parsedLocations, activeBName]);
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'tr'));
+  }, [parsedLocations, selectedBuildingName]);
 
-  const activeBlock = selectedBlock === 'custom' ? customBlock : selectedBlock;
-
-  // 3. Katlar (seçili bina ve blok için; blok seçilmediyse bloğu olmayanlar da dahil)
+  // 3. Katlar (Sayısal olarak yukarıdan aşağıya sıralı: 13, 12, ... 1, Zemin, -1, -2)
   const floors = useMemo(() => {
-    if (!activeBName) return [];
+    if (!selectedBuildingName) return [];
     const set = new Set<string>();
     parsedLocations.forEach(({ parts }) => {
-      const bMatch = parts.buildingName === activeBName;
-      const blkMatch = !activeBlock || parts.block === activeBlock;
-      if (bMatch && blkMatch && parts.floor) set.add(parts.floor);
+      const bMatch = parts.buildingName === selectedBuildingName;
+      const blkMatch = !selectedBlock || parts.block === selectedBlock;
+      if (bMatch && blkMatch && parts.floor) {
+        set.add(parts.floor);
+      }
     });
-    return Array.from(set).sort();
-  }, [parsedLocations, activeBName, activeBlock]);
+    return Array.from(set).sort((a, b) => compareFloors(a, b, true));
+  }, [parsedLocations, selectedBuildingName, selectedBlock]);
 
-  const activeFloor = selectedFloor === 'custom' ? customFloor : selectedFloor;
+  const activeDept = selectedDepartment === 'custom' ? customDepartment.trim() : selectedDepartment;
 
-  // 4. Birimler
-  const departments = useMemo(() => {
-    if (!activeBName) return [];
+  // 4. Birimler (Seçili kata ait olanlar ve tesis genelinde kayıtlı olanlar)
+  const floorDepartments = useMemo(() => {
+    if (!selectedBuildingName) return [];
     const set = new Set<string>();
     parsedLocations.forEach(({ parts }) => {
-      const bMatch = parts.buildingName === activeBName;
-      const blkMatch = !activeBlock ? !parts.block : parts.block === activeBlock;
-      const flrMatch = !activeFloor ? !parts.floor : parts.floor === activeFloor;
+      const bMatch = parts.buildingName === selectedBuildingName;
+      const blkMatch = !selectedBlock || parts.block === selectedBlock;
+      const flrMatch = !selectedFloor || parts.floor === selectedFloor;
       if (bMatch && blkMatch && flrMatch && parts.department) {
         set.add(parts.department);
       }
     });
-    return Array.from(set).sort();
-  }, [parsedLocations, activeBName, activeBlock, activeFloor]);
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'tr'));
+  }, [parsedLocations, selectedBuildingName, selectedBlock, selectedFloor]);
 
-  const activeDept = selectedDepartment === 'custom' ? customDepartment : selectedDepartment;
-
-  // 5. Mahaller
-  const units = useMemo(() => {
-    if (!activeBName) return [];
-    const list: { id: string; label: string; raw: any }[] = [];
-    parsedLocations.forEach(({ raw, parts }) => {
-      const bMatch = parts.buildingName === activeBName;
-      const blkMatch = !activeBlock ? !parts.block : parts.block === activeBlock;
-      const flrMatch = !activeFloor ? !parts.floor : parts.floor === activeFloor;
-      const deptMatch = !activeDept ? !parts.department : parts.department === activeDept;
-      if (bMatch && blkMatch && flrMatch && deptMatch && parts.description) {
-        list.push({ id: raw.id, label: parts.description, raw });
+  const allFacilityDepartments = useMemo(() => {
+    const set = new Set<string>();
+    parsedLocations.forEach(({ parts }) => {
+      if (parts.department) {
+        set.add(parts.department);
       }
     });
-    return list.sort((a, b) => a.label.localeCompare(b.label));
-  }, [parsedLocations, activeBName, activeBlock, activeFloor, activeDept]);
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'tr'));
+  }, [parsedLocations]);
 
-  // Initial sync
+  const otherDepartments = useMemo(() => {
+    return allFacilityDepartments.filter((d) => !floorDepartments.includes(d));
+  }, [allFacilityDepartments, floorDepartments]);
+
+  // 5. Mahaller (Seçili kata/birime ait olanlar ve birimin diğer mahalleri)
+  const floorMahals = useMemo(() => {
+    if (!selectedBuildingName) return [];
+    const set = new Set<string>();
+    parsedLocations.forEach(({ parts }) => {
+      const bMatch = parts.buildingName === selectedBuildingName;
+      const blkMatch = !selectedBlock || parts.block === selectedBlock;
+      const flrMatch = !selectedFloor || parts.floor === selectedFloor;
+      const deptMatch = !activeDept || parts.department.toLowerCase() === activeDept.toLowerCase();
+      if (bMatch && blkMatch && flrMatch && deptMatch && parts.description) {
+        set.add(parts.description);
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'tr'));
+  }, [parsedLocations, selectedBuildingName, selectedBlock, selectedFloor, activeDept]);
+
+  const allDeptMahals = useMemo(() => {
+    if (!activeDept) return [];
+    const set = new Set<string>();
+    parsedLocations.forEach(({ parts }) => {
+      if (parts.department.toLowerCase() === activeDept.toLowerCase() && parts.description) {
+        set.add(parts.description);
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'tr'));
+  }, [parsedLocations, activeDept]);
+
+  const otherMahals = useMemo(() => {
+    return allDeptMahals.filter((m) => !floorMahals.includes(m));
+  }, [allDeptMahals, floorMahals]);
+
+  // Initial sync from external value (Edit mode or preset)
   useEffect(() => {
     if (!value) return;
+
     if (value.startsWith('group5:')) {
       const p = decodeGroup5LocationId(value);
       if (p) {
-        setSelectedBuildingName(p.buildingName);
-        setSelectedBlock(p.block);
-        setSelectedFloor(p.floor);
-        setSelectedDepartment(p.department);
+        if (p.buildingName) setSelectedBuildingName(p.buildingName);
+        if (p.block) setSelectedBlock(p.block);
+        if (p.floor) setSelectedFloor(p.floor);
+        if (p.department) setSelectedDepartment(p.department);
+        if (p.description) setSelectedMahal(p.description);
       }
       return;
     }
+
     const match = parsedLocations.find((item) => item.raw.id === value);
     if (match) {
-      setSelectedBuildingName(match.parts.buildingName);
-      setSelectedBlock(match.parts.block);
-      setSelectedFloor(match.parts.floor);
-      setSelectedDepartment(match.parts.department);
-      if (match.parts.description) setSelectedUnit(match.raw.id);
+      if (match.parts.buildingName) setSelectedBuildingName(match.parts.buildingName);
+      if (match.parts.block) setSelectedBlock(match.parts.block);
+      if (match.parts.floor) setSelectedFloor(match.parts.floor);
+      if (match.parts.department) setSelectedDepartment(match.parts.department);
+      if (match.parts.description) setSelectedMahal(match.parts.description);
     }
   }, [value, parsedLocations]);
 
-  // Emit value on selection change
-  useEffect(() => {
-    if (!activeBName) return;
+  const activeDesc = selectedMahal === 'custom' ? customMahal.trim() : selectedMahal;
 
-    const unitObj = units.find((u) => u.id === selectedUnit);
-    const activeDesc = selectedUnit === 'custom' ? customUnit.trim() : unitObj?.label || '';
+  // Emit change when user changes selection
+  useEffect(() => {
+    if (!selectedBuildingName) return;
 
     // Check exact existing FacilityLocation match
     const exactMatch = parsedLocations.find(({ parts }) => {
       return (
-        parts.buildingName === activeBName &&
-        parts.block === activeBlock &&
-        parts.floor === activeFloor &&
-        parts.department === activeDept &&
-        parts.description === activeDesc
+        parts.buildingName.toLowerCase() === selectedBuildingName.toLowerCase() &&
+        (parts.block || '').toLowerCase() === (selectedBlock || '').toLowerCase() &&
+        (parts.floor || '').toLowerCase() === (selectedFloor || '').toLowerCase() &&
+        (parts.department || '').toLowerCase() === (activeDept || '').toLowerCase() &&
+        (parts.description || '').toLowerCase() === (activeDesc || '').toLowerCase()
       );
     });
 
     const level = activeDesc
-      ? 'unit'
+      ? 'description'
       : activeDept
       ? 'department'
-      : activeFloor
+      : selectedFloor
       ? 'floor'
-      : activeBlock
-      ? 'block'
-      : 'building';
+      : selectedBlock
+      ? 'building'
+      : 'buildingName';
 
     const emitValue = exactMatch
       ? exactMatch.raw.id
       : encodeGroup5LocationId({
-          buildingName: activeBName,
-          block: activeBlock,
-          floor: activeFloor,
+          buildingName: selectedBuildingName,
+          block: selectedBlock,
+          floor: selectedFloor,
           department: activeDept,
           description: activeDesc,
         });
 
     if (emitValue && emitValue !== value) {
       onChange(emitValue, level, {
-        buildingName: activeBName,
-        building: activeBlock,
-        floor: activeFloor,
+        buildingName: selectedBuildingName,
+        block: selectedBlock,
+        building: selectedBlock,
+        floor: selectedFloor,
         department: activeDept,
         description: activeDesc,
       });
     }
   }, [
-    activeBName,
-    activeBlock,
-    activeFloor,
+    selectedBuildingName,
+    selectedBlock,
+    selectedFloor,
     activeDept,
-    selectedUnit,
-    customUnit,
+    activeDesc,
     parsedLocations,
-    units,
     value,
     onChange,
   ]);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-      {/* 1. Bina Adı */}
+      {/* 1. Bina Adı (Sistemde tanımlı olanlar) */}
       <div className="space-y-1.5">
         <Label className="text-xs font-medium">Bina Adı *</Label>
         <select
@@ -201,8 +234,9 @@ export default function LocationCascadingSelector({
             setSelectedBlock('');
             setSelectedFloor('');
             setSelectedDepartment('');
-            setSelectedUnit('');
-            if (e.target.value !== 'custom') setCustomBuildingName('');
+            setSelectedMahal('');
+            setCustomDepartment('');
+            setCustomMahal('');
           }}
           disabled={disabled}
           className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs focus:ring-2 focus:ring-ring focus:outline-none"
@@ -211,20 +245,10 @@ export default function LocationCascadingSelector({
           {buildingNames.map((b) => (
             <option key={b} value={b}>{b}</option>
           ))}
-          <option value="custom">+ Yeni Bina Yaz...</option>
         </select>
-        {selectedBuildingName === 'custom' && (
-          <input
-            type="text"
-            placeholder="Bina Adı (Örn: Ana Bina)"
-            value={customBuildingName}
-            onChange={(e) => setCustomBuildingName(e.target.value)}
-            className="w-full h-8 mt-1 rounded-md border border-input bg-background px-2.5 text-xs"
-          />
-        )}
       </div>
 
-      {/* 2. Blok */}
+      {/* 2. Blok (Sistemde tanımlı olanlar) */}
       <div className="space-y-1.5">
         <Label className="text-xs font-medium">Blok (Opsiyonel)</Label>
         <select
@@ -233,30 +257,21 @@ export default function LocationCascadingSelector({
             setSelectedBlock(e.target.value);
             setSelectedFloor('');
             setSelectedDepartment('');
-            setSelectedUnit('');
-            if (e.target.value !== 'custom') setCustomBlock('');
+            setSelectedMahal('');
+            setCustomDepartment('');
+            setCustomMahal('');
           }}
-          disabled={disabled || !activeBName}
+          disabled={disabled || !selectedBuildingName}
           className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs focus:ring-2 focus:ring-ring focus:outline-none disabled:opacity-50"
         >
-          <option value="">Tek Blok / Seçilmedi</option>
+          <option value="">{blocks.length > 0 ? 'Tüm Bloklar / Seçilmedi' : 'Tek Blok / Genel'}</option>
           {blocks.map((b) => (
             <option key={b} value={b}>{b}</option>
           ))}
-          <option value="custom">+ Yeni Blok Yaz...</option>
         </select>
-        {selectedBlock === 'custom' && (
-          <input
-            type="text"
-            placeholder="Blok Adı (Örn: A Blok)"
-            value={customBlock}
-            onChange={(e) => setCustomBlock(e.target.value)}
-            className="w-full h-8 mt-1 rounded-md border border-input bg-background px-2.5 text-xs"
-          />
-        )}
       </div>
 
-      {/* 3. Kat */}
+      {/* 3. Kat (Sayısal Sıralı) */}
       <div className="space-y-1.5">
         <Label className="text-xs font-medium">Kat</Label>
         <select
@@ -264,46 +279,49 @@ export default function LocationCascadingSelector({
           onChange={(e) => {
             setSelectedFloor(e.target.value);
             setSelectedDepartment('');
-            setSelectedUnit('');
-            if (e.target.value !== 'custom') setCustomFloor('');
+            setSelectedMahal('');
+            setCustomDepartment('');
+            setCustomMahal('');
           }}
-          disabled={disabled || !activeBName}
+          disabled={disabled || !selectedBuildingName}
           className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs focus:ring-2 focus:ring-ring focus:outline-none disabled:opacity-50"
         >
           <option value="">Kat Seçiniz... (Opsiyonel)</option>
           {floors.map((f) => (
             <option key={f} value={f}>{f}</option>
           ))}
-          <option value="custom">+ Yeni Kat Yaz...</option>
         </select>
-        {selectedFloor === 'custom' && (
-          <input
-            type="text"
-            placeholder="Kat Adı (Örn: 1.Kat)"
-            value={customFloor}
-            onChange={(e) => setCustomFloor(e.target.value)}
-            className="w-full h-8 mt-1 rounded-md border border-input bg-background px-2.5 text-xs"
-          />
-        )}
       </div>
 
-      {/* 4. Birim */}
+      {/* 4. Birim (Kayıtlılar + Yeni Birim Yaz) */}
       <div className="space-y-1.5">
         <Label className="text-xs font-medium">Birim</Label>
         <select
           value={selectedDepartment}
           onChange={(e) => {
             setSelectedDepartment(e.target.value);
-            setSelectedUnit('');
+            setSelectedMahal('');
             if (e.target.value !== 'custom') setCustomDepartment('');
+            setCustomMahal('');
           }}
-          disabled={disabled || !activeFloor}
+          disabled={disabled || !selectedBuildingName}
           className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs focus:ring-2 focus:ring-ring focus:outline-none disabled:opacity-50"
         >
           <option value="">Birim Seçiniz... (Opsiyonel)</option>
-          {departments.map((d) => (
-            <option key={d} value={d}>{d}</option>
-          ))}
+          {floorDepartments.length > 0 && (
+            <optgroup label="Bu Katta Tanımlı Birimler">
+              {floorDepartments.map((d) => (
+                <option key={`flr-d-${d}`} value={d}>{d}</option>
+              ))}
+            </optgroup>
+          )}
+          {otherDepartments.length > 0 && (
+            <optgroup label="Diğer Kayıtlı Birimler">
+              {otherDepartments.map((d) => (
+                <option key={`oth-d-${d}`} value={d}>{d}</option>
+              ))}
+            </optgroup>
+          )}
           <option value="custom">+ Yeni Birim Yaz...</option>
         </select>
         {selectedDepartment === 'custom' && (
@@ -317,30 +335,41 @@ export default function LocationCascadingSelector({
         )}
       </div>
 
-      {/* 5. Mahal */}
+      {/* 5. Mahal (Kayıtlılar + Yeni Mahal Yaz) */}
       <div className="space-y-1.5">
         <Label className="text-xs font-medium">Mahal / Oda</Label>
         <select
-          value={selectedUnit}
+          value={selectedMahal}
           onChange={(e) => {
-            setSelectedUnit(e.target.value);
-            if (e.target.value !== 'custom') setCustomUnit('');
+            setSelectedMahal(e.target.value);
+            if (e.target.value !== 'custom') setCustomMahal('');
           }}
-          disabled={disabled || !activeDept}
+          disabled={disabled || (!selectedFloor && !activeDept)}
           className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs focus:ring-2 focus:ring-ring focus:outline-none disabled:opacity-50"
         >
           <option value="">Mahal Seçiniz... (Opsiyonel)</option>
-          {units.map((u) => (
-            <option key={u.id} value={u.id}>{u.label}</option>
-          ))}
+          {floorMahals.length > 0 && (
+            <optgroup label="Bu Katta / Birimde Tanımlı Mahaller">
+              {floorMahals.map((m) => (
+                <option key={`flr-m-${m}`} value={m}>{m}</option>
+              ))}
+            </optgroup>
+          )}
+          {otherMahals.length > 0 && (
+            <optgroup label="Diğer Kayıtlı Mahaller">
+              {otherMahals.map((m) => (
+                <option key={`oth-m-${m}`} value={m}>{m}</option>
+              ))}
+            </optgroup>
+          )}
           <option value="custom">+ Yeni Mahal Yaz...</option>
         </select>
-        {selectedUnit === 'custom' && (
+        {selectedMahal === 'custom' && (
           <input
             type="text"
             placeholder="Mahal (Örn: Triaj Odası)"
-            value={customUnit}
-            onChange={(e) => setCustomUnit(e.target.value)}
+            value={customMahal}
+            onChange={(e) => setCustomMahal(e.target.value)}
             className="w-full h-8 mt-1 rounded-md border border-input bg-background px-2.5 text-xs"
           />
         )}
