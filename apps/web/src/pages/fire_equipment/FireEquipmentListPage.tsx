@@ -68,7 +68,7 @@ export default function FireEquipmentListPage() {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const categoryNameQuery = searchParams.get('category');
-  
+
   useEffect(() => {
     if (categories) {
       if (categoryNameQuery) {
@@ -100,30 +100,30 @@ export default function FireEquipmentListPage() {
 
   // Hierarchical Locations Data Extraction
   const blocks = Array.from(new Set(locations?.map((l: any) => l.building).filter(Boolean))).sort();
-  
+
   const availableFloors = Array.from(new Set(
     locations?.filter((l: any) => filterBlock === 'all' || l.building === filterBlock)
-    .map((l: any) => l.floor)
-    .filter(Boolean)
+      .map((l: any) => l.floor)
+      .filter(Boolean)
   )).sort();
 
   const availableDepartments = Array.from(new Set(
-    locations?.filter((l: any) => 
+    locations?.filter((l: any) =>
       (filterBlock === 'all' || l.building === filterBlock) &&
       (filterFloor === 'all' || l.floor === filterFloor)
     )
-    .map((l: any) => l.department)
-    .filter(Boolean)
+      .map((l: any) => l.department)
+      .filter(Boolean)
   )).sort();
 
   const availableDescriptions = Array.from(new Set(
-    locations?.filter((l: any) => 
+    locations?.filter((l: any) =>
       (filterBlock === 'all' || l.building === filterBlock) &&
       (filterFloor === 'all' || l.floor === filterFloor) &&
       (filterDepartment === 'all' || l.department === filterDepartment)
     )
-    .map((l: any) => l.description)
-    .filter(Boolean)
+      .map((l: any) => l.description)
+      .filter(Boolean)
   )).sort();
 
   const getStatusBadge = (status: string) => {
@@ -235,7 +235,7 @@ export default function FireEquipmentListPage() {
   // Dynamic KPIs based on filtered list
   const totalEquipment = filteredEquipment.length;
   const activeEquipment = filteredEquipment.filter((e: any) => e.status === 'AKTIF').length;
-  
+
   const now = new Date();
   const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
   const needingMaintenance = filteredEquipment.filter((e: any) => {
@@ -327,7 +327,7 @@ export default function FireEquipmentListPage() {
           </CardContent>
         </Card>
 
-        <Card 
+        <Card
           className="bg-gradient-to-br from-rose-50 to-white dark:from-rose-950 dark:to-slate-900 border-rose-100 dark:border-rose-900 shadow-sm cursor-pointer hover:shadow-md transition-all"
           onClick={() => setFilterStatus(filterStatus === 'DEGISIM_BEKLEYEN' ? 'all' : 'DEGISIM_BEKLEYEN')}
         >
@@ -366,7 +366,7 @@ export default function FireEquipmentListPage() {
             <div className="space-y-1 w-full md:w-1/4">
               <label className="text-xs font-medium text-muted-foreground">Kategori</label>
               <div className="flex gap-2">
-                <select 
+                <select
                   className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm disabled:opacity-50"
                   value={filterCategory}
                   disabled={!!categoryNameQuery}
@@ -390,7 +390,7 @@ export default function FireEquipmentListPage() {
 
             <div className="space-y-1 w-full md:w-1/4">
               <label className="text-xs font-medium text-muted-foreground">Alt Kategori</label>
-              <select 
+              <select
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm disabled:opacity-50"
                 value={filterSubcategory}
                 onChange={(e) => setFilterSubcategory(e.target.value)}
@@ -405,7 +405,7 @@ export default function FireEquipmentListPage() {
 
             <div className="space-y-1 w-full md:w-1/4">
               <label className="text-xs font-medium text-muted-foreground">Blok</label>
-              <select 
+              <select
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
                 value={filterBlock}
                 onChange={(e) => {
@@ -424,7 +424,7 @@ export default function FireEquipmentListPage() {
 
             <div className="space-y-1 w-full md:w-1/4">
               <label className="text-xs font-medium text-muted-foreground">Kat</label>
-              <select 
+              <select
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm disabled:opacity-50"
                 value={filterFloor}
                 onChange={(e) => {
@@ -443,7 +443,7 @@ export default function FireEquipmentListPage() {
 
             <div className="space-y-1 w-full md:w-1/4">
               <label className="text-xs font-medium text-muted-foreground">Birim</label>
-              <select 
+              <select
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm disabled:opacity-50"
                 value={filterDepartment}
                 onChange={(e) => {
@@ -461,7 +461,7 @@ export default function FireEquipmentListPage() {
 
             <div className="space-y-1 w-full md:w-1/4">
               <label className="text-xs font-medium text-muted-foreground">Mahal</label>
-              <select 
+              <select
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm disabled:opacity-50"
                 value={filterDescription}
                 onChange={(e) => setFilterDescription(e.target.value)}
@@ -473,10 +473,10 @@ export default function FireEquipmentListPage() {
                 ))}
               </select>
             </div>
-            
+
             <div className="space-y-1 w-full md:w-1/4">
               <label className="text-xs font-medium text-muted-foreground">Bakım Durumu</label>
-              <select 
+              <select
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
                 value={filterResult}
                 onChange={(e) => setFilterResult(e.target.value)}
@@ -491,7 +491,7 @@ export default function FireEquipmentListPage() {
 
             <div className="space-y-1 w-full md:w-1/5">
               <label className="text-xs font-medium text-muted-foreground">Ekipman Durumu</label>
-              <select 
+              <select
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
@@ -544,45 +544,45 @@ export default function FireEquipmentListPage() {
                     filteredEquipment.map((item: any) => (
                       <tr key={item.id} className="hover:bg-muted/30 transition-colors">
                         <td className="px-6 py-4 font-medium flex items-center gap-2">
-                        {item.qrCode && <QrCode className="w-4 h-4 text-blue-500" />}
-                        {item.equipmentNo}
-                      </td>
-                      <td className="px-6 py-4">{item.category?.name || '-'}</td>
-                      <td className="px-6 py-4 text-muted-foreground">
-                        {(item.status === 'DEPODA' || item.equipmentNo?.toUpperCase().includes('YSC-YDK-')) ? 'Teknik Depo (Yedek)' : (item.location ? `${item.location.building || ''}${item.location.floor ? ` / ${item.location.floor}` : ''}${(item.location.department || item.location.name) ? ` - ${item.location.department || item.location.name}` : ''}` : 'Lokasyon Yok')}
-                      </td>
-                      <td className="px-6 py-4 text-muted-foreground">
-                        {item.location?.description || '-'}
-                      </td>
-                      <td className="px-6 py-4 text-muted-foreground">
-                        {item.responsible ? item.responsible.name : (item.responsibleUnit || '-')}
-                      </td>
-                      <td className="px-6 py-4">
-                        {getStatusBadge(item.status)}
-                      </td>
-                      <td className="px-6 py-4">
-                        {item.maintenances && item.maintenances.length > 0 ? (
-                          <Badge variant={item.maintenances[0].result === 'UYGUN' ? 'default' : item.maintenances[0].result === 'SARTLI_UYGUN' ? 'outline' : 'destructive'} 
-                                 className={item.maintenances[0].result === 'UYGUN' ? 'bg-green-500 hover:bg-green-600' : item.maintenances[0].result === 'SARTLI_UYGUN' ? 'bg-orange-500 text-white hover:bg-orange-600 border-none' : ''}>
-                            {item.maintenances[0].result === 'UYGUN' ? '✅ Uygun' : item.maintenances[0].result === 'SARTLI_UYGUN' ? '⚠️ Şartlı Uygun' : '❌ Uygun Değil'}
-                          </Badge>
-                        ) : <span className="text-muted-foreground text-xs">Yok</span>}
-                      </td>
-                      <td className="px-6 py-4">
-                        {item.nextMaintenanceDate ? getMaintenanceWarning(item.nextMaintenanceDate) : <span className="text-muted-foreground text-xs">-</span>}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => navigate(`/fire-equipment/view/${item.id}`)}
-                          className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                        >
-                          Detay <ArrowRight className="w-4 h-4 ml-1" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
+                          {item.qrCode && <QrCode className="w-4 h-4 text-blue-500" />}
+                          {item.equipmentNo}
+                        </td>
+                        <td className="px-6 py-4">{item.category?.name || '-'}</td>
+                        <td className="px-6 py-4 text-muted-foreground">
+                          {(item.status === 'DEPODA' || item.equipmentNo?.toUpperCase().includes('YSC-YDK-')) ? 'Teknik Depo (Yedek)' : (item.location ? `${item.location.building || ''}${item.location.floor ? ` / ${item.location.floor}` : ''}${(item.location.department || item.location.name) ? ` - ${item.location.department || item.location.name}` : ''}` : 'Lokasyon Yok')}
+                        </td>
+                        <td className="px-6 py-4 text-muted-foreground">
+                          {item.location?.description || '-'}
+                        </td>
+                        <td className="px-6 py-4 text-muted-foreground">
+                          {item.responsible ? item.responsible.name : (item.responsibleUnit || '-')}
+                        </td>
+                        <td className="px-6 py-4">
+                          {getStatusBadge(item.status)}
+                        </td>
+                        <td className="px-6 py-4">
+                          {item.maintenances && item.maintenances.length > 0 ? (
+                            <Badge variant={item.maintenances[0].result === 'UYGUN' ? 'default' : item.maintenances[0].result === 'SARTLI_UYGUN' ? 'outline' : 'destructive'}
+                              className={item.maintenances[0].result === 'UYGUN' ? 'bg-green-500 hover:bg-green-600' : item.maintenances[0].result === 'SARTLI_UYGUN' ? 'bg-orange-500 text-white hover:bg-orange-600 border-none' : ''}>
+                              {item.maintenances[0].result === 'UYGUN' ? '✅ Uygun' : item.maintenances[0].result === 'SARTLI_UYGUN' ? '⚠️ Şartlı Uygun' : '❌ Uygun Değil'}
+                            </Badge>
+                          ) : <span className="text-muted-foreground text-xs">Yok</span>}
+                        </td>
+                        <td className="px-6 py-4">
+                          {item.nextMaintenanceDate ? getMaintenanceWarning(item.nextMaintenanceDate) : <span className="text-muted-foreground text-xs">-</span>}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(`/fire-equipment/view/${item.id}`)}
+                            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                          >
+                            Detay <ArrowRight className="w-4 h-4 ml-1" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
                   )}
                 </tbody>
               </table>
@@ -609,8 +609,8 @@ export default function FireEquipmentListPage() {
 
       {/* Mobile Floating QR Scanner Button */}
       <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 print:hidden">
-        <Button 
-          size="lg" 
+        <Button
+          size="lg"
           className="rounded-full shadow-xl bg-red-600 hover:bg-red-700 text-white px-6 h-14 flex items-center gap-2"
           onClick={() => navigate('/fire-equipment/scanner')}
         >

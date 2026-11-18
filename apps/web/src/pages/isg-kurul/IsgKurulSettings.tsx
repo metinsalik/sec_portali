@@ -83,7 +83,7 @@ export default function IsgKurulSettings() {
   const [parsedData, setParsedData] = useState<any[]>([]);
   const [isParsing, setIsParsing] = useState(false);
   const [importTargetFacilityId, setImportTargetFacilityId] = useState<string>('');
-  
+
   const toggleCat = (id: number) => {
     const newSet = new Set(expandedCats);
     if (newSet.has(id)) newSet.delete(id);
@@ -138,7 +138,7 @@ export default function IsgKurulSettings() {
     acc[member.year].push(member);
     return acc;
   }, {} as Record<number, BoardMember[]>);
-  
+
   const sortedYears = Object.keys(groupedMembers).map(Number).sort((a, b) => b - a);
 
   // Category Mutations
@@ -270,9 +270,9 @@ export default function IsgKurulSettings() {
         const workbook = xlsx.read(data, { type: 'binary', cellDates: true });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        
+
         const jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
-        
+
         if (jsonData.length < 2) {
           toast.error('Dosyada veri bulunamadı.');
           setIsParsing(false);
@@ -284,7 +284,7 @@ export default function IsgKurulSettings() {
         for (let i = 1; i < jsonData.length; i++) {
           const row: any = jsonData[i];
           if (row.length === 0 || !row[0]) continue;
-          
+
           const decisionText = row[3];
           if (!decisionText) continue;
 
@@ -328,8 +328,8 @@ export default function IsgKurulSettings() {
       const res = await fetch(url, {
         method: memberModal.edit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ 
-          ...memberForm, 
+        body: JSON.stringify({
+          ...memberForm,
           facilityId: selectedFacilityId,
           year: parseInt(memberForm.year),
         })
@@ -421,7 +421,7 @@ export default function IsgKurulSettings() {
             ) : sortedYears.length === 0 ? (
               <Card className="border-dashed"><CardContent className="py-16 text-center text-muted-foreground">
                 <Users className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-                Bu tesise ait kurul üyesi bulunamadı.<br/>Yukarıdaki butonu kullanarak yeni üye ekleyebilirsiniz.
+                Bu tesise ait kurul üyesi bulunamadı.<br />Yukarıdaki butonu kullanarak yeni üye ekleyebilirsiniz.
               </CardContent></Card>
             ) : (
               <div className="space-y-8">
@@ -432,14 +432,14 @@ export default function IsgKurulSettings() {
                       {year} Yılı Kurul Üyeleri
                       <Badge variant="secondary" className="text-xs bg-slate-100 dark:bg-slate-800 ml-1">{groupedMembers[year].length} Üye</Badge>
                     </h4>
-                    
+
                     <Card className="overflow-hidden border border-slate-200/60 dark:border-slate-800 shadow-sm">
                       <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
                         {groupedMembers[year].map(member => (
                           <div key={member.id} className="p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group">
                             <div className="flex items-center gap-3.5">
                               <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-700 dark:text-blue-300 font-semibold text-sm shrink-0">
-                                {member.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
+                                {member.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                               </div>
                               <div className="flex flex-col">
                                 <span className="font-medium text-[15px] text-slate-900 dark:text-slate-100">{member.name}</span>
@@ -501,7 +501,7 @@ export default function IsgKurulSettings() {
               ) : categories.length === 0 ? (
                 <Card className="border-dashed"><CardContent className="py-16 text-center text-muted-foreground">
                   <FolderTree className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-                  Kategori bulunamadı.<br/>Yukarıdaki butonu kullanarak yeni kategori ekleyebilirsiniz.
+                  Kategori bulunamadı.<br />Yukarıdaki butonu kullanarak yeni kategori ekleyebilirsiniz.
                 </CardContent></Card>
               ) : (
                 <>
@@ -515,52 +515,52 @@ export default function IsgKurulSettings() {
                         .filter(c => c.name.toLowerCase().includes(catSearch.toLowerCase()) || c.subCategories?.some(sub => sub.name.toLowerCase().includes(catSearch.toLowerCase())))
                         .sort((a, b) => a.name.localeCompare(b.name, 'tr'))
                         .map(cat => {
-                        const hasSub = cat.subCategories && cat.subCategories.length > 0;
-                        const isExpanded = expandedCats.has(cat.id);
-                        return (
-                          <div key={cat.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors flex flex-col group">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => hasSub && toggleCat(cat.id)}>
-                                {hasSub ? (
-                                  isExpanded ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />
-                                ) : <div className="w-4 h-4" />}
-                                <span className="font-medium text-[15px] text-slate-900 dark:text-slate-100">{cat.name}</span>
+                          const hasSub = cat.subCategories && cat.subCategories.length > 0;
+                          const isExpanded = expandedCats.has(cat.id);
+                          return (
+                            <div key={cat.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors flex flex-col group">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => hasSub && toggleCat(cat.id)}>
+                                  {hasSub ? (
+                                    isExpanded ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />
+                                  ) : <div className="w-4 h-4" />}
+                                  <span className="font-medium text-[15px] text-slate-900 dark:text-slate-100">{cat.name}</span>
+                                </div>
+                                <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                  <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setSubName(''); setSubModal({ open: true, categoryId: cat.id }); }} className="h-8 text-xs border-slate-200 dark:border-slate-700">
+                                    <Plus className="w-3 h-3 mr-1" /> Alt Kategori
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 ml-2" onClick={(e) => { e.stopPropagation(); setCatName(cat.name); setCatModal({ open: true, edit: cat }); }}>
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20" onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ open: true, type: 'category', id: cat.id }); }}>
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
                               </div>
-                              <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setSubName(''); setSubModal({ open: true, categoryId: cat.id }); }} className="h-8 text-xs border-slate-200 dark:border-slate-700">
-                                  <Plus className="w-3 h-3 mr-1" /> Alt Kategori
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 ml-2" onClick={(e) => { e.stopPropagation(); setCatName(cat.name); setCatModal({ open: true, edit: cat }); }}>
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20" onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ open: true, type: 'category', id: cat.id }); }}>
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </div>
-                            {hasSub && isExpanded && (
-                              <div className="ml-6 mt-3 border-l-2 border-slate-200/80 dark:border-slate-700/80 pl-4 space-y-1">
-                                {cat.subCategories!.map(sub => (
-                                  <div key={sub.id} className="flex justify-between items-center group/sub py-1.5 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 rounded-md px-2 -ml-2 transition-colors">
-                                    <span className="text-sm flex items-center text-slate-600 dark:text-slate-400">
-                                      <CornerDownRight className="w-3.5 h-3.5 mr-2 text-slate-400" />
-                                      {sub.name}
-                                    </span>
-                                    <div className="flex gap-1 opacity-0 group-hover/sub:opacity-100 transition-opacity">
-                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20" onClick={() => { setSubName(sub.name); setSubModal({ open: true, edit: sub, categoryId: cat.id }); }}>
-                                        <Edit className="w-3.5 h-3.5" />
-                                      </Button>
-                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" onClick={() => setDeleteConfirm({ open: true, type: 'subcategory', id: sub.id })}>
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </Button>
+                              {hasSub && isExpanded && (
+                                <div className="ml-6 mt-3 border-l-2 border-slate-200/80 dark:border-slate-700/80 pl-4 space-y-1">
+                                  {cat.subCategories!.map(sub => (
+                                    <div key={sub.id} className="flex justify-between items-center group/sub py-1.5 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 rounded-md px-2 -ml-2 transition-colors">
+                                      <span className="text-sm flex items-center text-slate-600 dark:text-slate-400">
+                                        <CornerDownRight className="w-3.5 h-3.5 mr-2 text-slate-400" />
+                                        {sub.name}
+                                      </span>
+                                      <div className="flex gap-1 opacity-0 group-hover/sub:opacity-100 transition-opacity">
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20" onClick={() => { setSubName(sub.name); setSubModal({ open: true, edit: sub, categoryId: cat.id }); }}>
+                                          <Edit className="w-3.5 h-3.5" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" onClick={() => setDeleteConfirm({ open: true, type: 'subcategory', id: sub.id })}>
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </Button>
+                                      </div>
                                     </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                     </div>
                   </Card>
                 </>
@@ -569,37 +569,37 @@ export default function IsgKurulSettings() {
           </TabsContent>
         )}
 
-          <TabsContent value="departments" className="space-y-6 outline-none">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-[#2c3135] p-4 rounded-xl border border-slate-200/80 dark:border-[#73787c]/30 gap-4 shadow-sm">
-              <div>
-                <h3 className="font-semibold text-lg text-slate-900 dark:text-slate-100">Departmanlar</h3>
-                <p className="text-sm text-muted-foreground">Toplantı katılımcıları ve kararlar için departman tanımları</p>
-              </div>
-              <Button onClick={() => { setDeptName(''); setDeptModal({ open: true }); }} size="sm" className="gap-2 shrink-0 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
-                <Plus className="w-4 h-4" /> Departman Ekle
-              </Button>
-            </div>
-
+        <TabsContent value="departments" className="space-y-6 outline-none">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-[#2c3135] p-4 rounded-xl border border-slate-200/80 dark:border-[#73787c]/30 gap-4 shadow-sm">
             <div>
-              {deptLoading ? (
-                <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>
-              ) : departments.length === 0 ? (
-                <Card className="border-dashed"><CardContent className="py-16 text-center text-muted-foreground">
-                  <Building2 className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-                  Departman bulunamadı.<br/>Yukarıdaki butonu kullanarak yeni departman ekleyebilirsiniz.
-                </CardContent></Card>
-              ) : (
-                <>
-                  <div className="mb-4 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input placeholder="Departman ara..." value={deptSearch} onChange={e => setDeptSearch(e.target.value)} className="pl-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
-                  </div>
-                  <Card className="overflow-hidden border border-slate-200/60 dark:border-slate-800 shadow-sm">
-                    <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                      {[...departments]
-                        .filter(d => d.name.toLowerCase().includes(deptSearch.toLowerCase()))
-                        .sort((a, b) => a.name.localeCompare(b.name, 'tr'))
-                        .map(dept => (
+              <h3 className="font-semibold text-lg text-slate-900 dark:text-slate-100">Departmanlar</h3>
+              <p className="text-sm text-muted-foreground">Toplantı katılımcıları ve kararlar için departman tanımları</p>
+            </div>
+            <Button onClick={() => { setDeptName(''); setDeptModal({ open: true }); }} size="sm" className="gap-2 shrink-0 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+              <Plus className="w-4 h-4" /> Departman Ekle
+            </Button>
+          </div>
+
+          <div>
+            {deptLoading ? (
+              <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>
+            ) : departments.length === 0 ? (
+              <Card className="border-dashed"><CardContent className="py-16 text-center text-muted-foreground">
+                <Building2 className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+                Departman bulunamadı.<br />Yukarıdaki butonu kullanarak yeni departman ekleyebilirsiniz.
+              </CardContent></Card>
+            ) : (
+              <>
+                <div className="mb-4 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input placeholder="Departman ara..." value={deptSearch} onChange={e => setDeptSearch(e.target.value)} className="pl-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
+                </div>
+                <Card className="overflow-hidden border border-slate-200/60 dark:border-slate-800 shadow-sm">
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                    {[...departments]
+                      .filter(d => d.name.toLowerCase().includes(deptSearch.toLowerCase()))
+                      .sort((a, b) => a.name.localeCompare(b.name, 'tr'))
+                      .map(dept => (
                         <div key={dept.id} className="p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors flex items-center justify-between group">
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
@@ -617,12 +617,12 @@ export default function IsgKurulSettings() {
                           </div>
                         </div>
                       ))}
-                    </div>
-                  </Card>
-                </>
-              )}
-            </div>
-          </TabsContent>
+                  </div>
+                </Card>
+              </>
+            )}
+          </div>
+        </TabsContent>
 
         {hasAdminAccess && (
           <TabsContent value="import" className="space-y-6 outline-none">
@@ -640,11 +640,11 @@ export default function IsgKurulSettings() {
                     </div>
                     <p className="text-base font-medium text-slate-700 dark:text-slate-200 mb-1">Dosya seçmek için tıklayın</p>
                     <p className="text-sm text-slate-500">.xlsx veya .csv (Maks. 10MB)</p>
-                    <input 
-                      type="file" 
-                      onChange={handleImportFileSelect} 
-                      accept=".xlsx, .xls, .csv" 
-                      className="hidden" 
+                    <input
+                      type="file"
+                      onChange={handleImportFileSelect}
+                      accept=".xlsx, .xls, .csv"
+                      className="hidden"
                     />
                   </label>
                 ) : (
@@ -681,7 +681,7 @@ export default function IsgKurulSettings() {
                         <X className="w-5 h-5" />
                       </button>
                     </div>
-                    
+
                     {!isParsing && parsedData.length > 0 && (
                       <div className="mt-6 bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 flex items-start gap-3 border border-slate-100 dark:border-slate-700/50">
                         <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
@@ -690,13 +690,13 @@ export default function IsgKurulSettings() {
                         </p>
                       </div>
                     )}
-                    
+
                     <div className="mt-6 flex justify-end">
-                      <Button 
-                        onClick={() => importMutation.mutate({ 
-                          data: parsedData, 
-                          targetFacilityId: importTargetFacilityId === 'none' ? '' : importTargetFacilityId 
-                        })} 
+                      <Button
+                        onClick={() => importMutation.mutate({
+                          data: parsedData,
+                          targetFacilityId: importTargetFacilityId === 'none' ? '' : importTargetFacilityId
+                        })}
                         disabled={isParsing || parsedData.length === 0 || importMutation.isPending}
                         className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]"
                       >
@@ -707,7 +707,7 @@ export default function IsgKurulSettings() {
                   </div>
                 )}
               </div>
-              
+
               {/* Delete All Data Section */}
               <div className="mt-10 border-t border-slate-200 dark:border-slate-700/50 pt-8">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-red-50 dark:bg-red-900/10 p-5 rounded-lg border border-red-100 dark:border-red-900/30 gap-4">
@@ -715,8 +715,8 @@ export default function IsgKurulSettings() {
                     <h4 className="text-red-800 dark:text-red-400 font-semibold mb-1">Bu Tesisin Kurul Verilerini Temizle</h4>
                     <p className="text-sm text-red-600 dark:text-red-500/80">Sadece <b>seçili tesise</b> ait tüm Kurul Toplantılarını ve Kararlarını kalıcı olarak siler. Diğer tesisler etkilenmez.</p>
                   </div>
-                  <Button 
-                    variant="destructive" 
+                  <Button
+                    variant="destructive"
                     onClick={() => setBulkDeleteAllOpen(true)}
                     disabled={deleteAllMutation.isPending || !selectedFacilityId}
                     className="shrink-0"
@@ -774,8 +774,8 @@ export default function IsgKurulSettings() {
               <Select value={memberForm.departmentId} onValueChange={(val) => setMemberForm({ ...memberForm, departmentId: val })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seçiniz">
-                    {memberForm.departmentId 
-                      ? departments.find(d => String(d.id) === memberForm.departmentId)?.name || memberForm.departmentId 
+                    {memberForm.departmentId
+                      ? departments.find(d => String(d.id) === memberForm.departmentId)?.name || memberForm.departmentId
                       : "Seçiniz"}
                   </SelectValue>
                 </SelectTrigger>
@@ -828,14 +828,14 @@ export default function IsgKurulSettings() {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setDeleteConfirm(prev => ({ ...prev, open: false }))}>İptal</AlertDialogCancel>
             <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={() => {
-                if (deleteConfirm.id !== null) {
-                  if (deleteConfirm.type === 'category') deleteCategory.mutate(deleteConfirm.id);
-                  else if (deleteConfirm.type === 'subcategory') deleteSubCategory.mutate(deleteConfirm.id);
-                  else if (deleteConfirm.type === 'department') deleteDepartment.mutate(deleteConfirm.id);
-                  else if (deleteConfirm.type === 'member') deleteMember.mutate(deleteConfirm.id);
-                }
-                setDeleteConfirm(prev => ({ ...prev, open: false }));
-              }}>Sil</AlertDialogAction>
+              if (deleteConfirm.id !== null) {
+                if (deleteConfirm.type === 'category') deleteCategory.mutate(deleteConfirm.id);
+                else if (deleteConfirm.type === 'subcategory') deleteSubCategory.mutate(deleteConfirm.id);
+                else if (deleteConfirm.type === 'department') deleteDepartment.mutate(deleteConfirm.id);
+                else if (deleteConfirm.type === 'member') deleteMember.mutate(deleteConfirm.id);
+              }
+              setDeleteConfirm(prev => ({ ...prev, open: false }));
+            }}>Sil</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

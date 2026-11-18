@@ -455,11 +455,10 @@ export default function MaterialsListPage() {
                   return (
                     <tr
                       key={item.id}
-                      className={`transition-colors duration-150 ${
-                        updateStatus.isInstant
+                      className={`transition-colors duration-150 ${updateStatus.isInstant
                           ? 'bg-emerald-50/60 dark:bg-emerald-950/20'
                           : 'hover:bg-muted/40'
-                      }`}
+                        }`}
                     >
                       {/* Checkbox */}
                       {isGlobalAdmin && (

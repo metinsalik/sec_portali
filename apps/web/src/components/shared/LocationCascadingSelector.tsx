@@ -299,7 +299,9 @@ export default function LocationCascadingSelector({
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
       {/* 1. Bina Adı (Sistemde tanımlı olanlar) */}
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium">Bina Adı *</Label>
+        <div className="flex items-center min-h-[20px]">
+          <Label className="text-xs font-medium">Bina Adı *</Label>
+        </div>
         <select
           value={selectedBuildingName}
           onChange={(e) => {
@@ -323,7 +325,9 @@ export default function LocationCascadingSelector({
 
       {/* 2. Blok (Sistemde tanımlı olanlar) */}
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium">Blok (Opsiyonel)</Label>
+        <div className="flex items-center min-h-[20px]">
+          <Label className="text-xs font-medium">Blok (Opsiyonel)</Label>
+        </div>
         <select
           value={selectedBlock}
           onChange={(e) => {
@@ -346,7 +350,9 @@ export default function LocationCascadingSelector({
 
       {/* 3. Kat (Sayısal Sıralı) */}
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium">Kat</Label>
+        <div className="flex items-center min-h-[20px]">
+          <Label className="text-xs font-medium">Kat</Label>
+        </div>
         <select
           value={selectedFloor}
           onChange={(e) => {
@@ -368,37 +374,45 @@ export default function LocationCascadingSelector({
 
       {/* 4. Birim (Kayıtlılar + Yeni Birim Yaz) */}
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium">Birim</Label>
-        <select
-          value={selectedDepartment}
-          onChange={(e) => {
-            setSelectedDepartment(e.target.value);
-            setSelectedMahal('');
-            if (e.target.value !== 'custom') setCustomDepartment('');
-            setCustomMahal('');
-          }}
-          disabled={disabled || !selectedBuildingName}
-          className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs focus:ring-2 focus:ring-ring focus:outline-none disabled:opacity-50"
-        >
-          <option value="">Birim Seçiniz... (Opsiyonel)</option>
-          {floorDepartments.length > 0 && (
-            <optgroup label="Bu Katta Tanımlı Birimler">
-              {floorDepartments.map((d) => (
-                <option key={`flr-d-${d}`} value={d}>{d}</option>
-              ))}
-            </optgroup>
+        <div className="flex items-center justify-between min-h-[20px]">
+          <Label className="text-xs font-medium">
+            {selectedDepartment === 'custom' ? (
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                Yeni Birim
+              </span>
+            ) : (
+              'Birim'
+            )}
+          </Label>
+          {selectedDepartment === 'custom' ? (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedDepartment('');
+                setCustomDepartment('');
+              }}
+              className="text-[11px] text-muted-foreground hover:text-foreground hover:underline transition-colors cursor-pointer"
+            >
+              Listeye Dön
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={disabled || !selectedBuildingName}
+              onClick={() => {
+                setSelectedDepartment('custom');
+                setCustomDepartment('');
+              }}
+              className="text-[11px] text-primary hover:underline font-normal disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              + Yeni Yaz
+            </button>
           )}
-          {otherDepartments.length > 0 && (
-            <optgroup label="Diğer Kayıtlı Birimler">
-              {otherDepartments.map((d) => (
-                <option key={`oth-d-${d}`} value={d}>{d}</option>
-              ))}
-            </optgroup>
-          )}
-          <option value="custom">+ Yeni Birim Yaz...</option>
-        </select>
-        {selectedDepartment === 'custom' && (
-          <div className="flex items-center gap-1 mt-1">
+        </div>
+
+        {selectedDepartment === 'custom' ? (
+          <div className="relative flex items-center">
             <input
               type="text"
               placeholder="Birim Adı (Örn: Acil Servis)"
@@ -408,69 +422,113 @@ export default function LocationCascadingSelector({
                 if (e.key === 'Enter') {
                   e.preventDefault();
                   confirmCustomDepartment();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setSelectedDepartment('');
+                  setCustomDepartment('');
                 }
               }}
               autoFocus
-              className="flex-1 h-8 rounded-md border border-input bg-background px-2.5 text-xs focus:ring-1 focus:ring-ring"
+              className="w-full h-9 rounded-md border-2 border-emerald-500/80 bg-background pl-2.5 pr-14 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-colors shadow-xs"
             />
-            <Button
-              type="button"
-              size="sm"
-              variant="default"
-              className="h-8 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 shadow-xs"
-              onClick={confirmCustomDepartment}
-              title="Kaydet ve Seç (✓)"
-            >
-              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="h-8 px-2 text-muted-foreground hover:text-foreground shrink-0"
-              onClick={() => {
-                setSelectedDepartment('');
-                setCustomDepartment('');
-              }}
-              title="İptal"
-            >
-              <X className="w-3.5 h-3.5" />
-            </Button>
+            <div className="absolute right-1 inset-y-1 flex items-center gap-0.5">
+              <Button
+                type="button"
+                size="sm"
+                className="h-7 w-7 p-0 bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 shadow-xs rounded flex items-center justify-center cursor-pointer"
+                onClick={confirmCustomDepartment}
+                title="Kaydet ve Seç (Enter / ✓)"
+              >
+                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground shrink-0 rounded flex items-center justify-center cursor-pointer"
+                onClick={() => {
+                  setSelectedDepartment('');
+                  setCustomDepartment('');
+                }}
+                title="İptal (Esc / ✕)"
+              >
+                <X className="w-3.5 h-3.5" />
+              </Button>
+            </div>
           </div>
+        ) : (
+          <select
+            value={selectedDepartment}
+            onChange={(e) => {
+              setSelectedDepartment(e.target.value);
+              setSelectedMahal('');
+              if (e.target.value !== 'custom') setCustomDepartment('');
+              setCustomMahal('');
+            }}
+            disabled={disabled || !selectedBuildingName}
+            className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs focus:ring-2 focus:ring-ring focus:outline-none disabled:opacity-50"
+          >
+            <option value="">Birim Seçiniz... (Opsiyonel)</option>
+            {floorDepartments.length > 0 && (
+              <optgroup label="Bu Katta Tanımlı Birimler">
+                {floorDepartments.map((d) => (
+                  <option key={`flr-d-${d}`} value={d}>{d}</option>
+                ))}
+              </optgroup>
+            )}
+            {otherDepartments.length > 0 && (
+              <optgroup label="Diğer Kayıtlı Birimler">
+                {otherDepartments.map((d) => (
+                  <option key={`oth-d-${d}`} value={d}>{d}</option>
+                ))}
+              </optgroup>
+            )}
+            <option value="custom">+ Yeni Birim Yaz...</option>
+          </select>
         )}
       </div>
 
       {/* 5. Mahal (Kayıtlılar + Yeni Mahal Yaz) */}
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium">Mahal / Oda</Label>
-        <select
-          value={selectedMahal}
-          onChange={(e) => {
-            setSelectedMahal(e.target.value);
-            if (e.target.value !== 'custom') setCustomMahal('');
-          }}
-          disabled={disabled || (!selectedFloor && !activeDept)}
-          className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs focus:ring-2 focus:ring-ring focus:outline-none disabled:opacity-50"
-        >
-          <option value="">Mahal Seçiniz... (Opsiyonel)</option>
-          {floorMahals.length > 0 && (
-            <optgroup label="Bu Katta / Birimde Tanımlı Mahaller">
-              {floorMahals.map((m) => (
-                <option key={`flr-m-${m}`} value={m}>{m}</option>
-              ))}
-            </optgroup>
+        <div className="flex items-center justify-between min-h-[20px]">
+          <Label className="text-xs font-medium">
+            {selectedMahal === 'custom' ? (
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                Yeni Mahal
+              </span>
+            ) : (
+              'Mahal / Oda'
+            )}
+          </Label>
+          {selectedMahal === 'custom' ? (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedMahal('');
+                setCustomMahal('');
+              }}
+              className="text-[11px] text-muted-foreground hover:text-foreground hover:underline transition-colors cursor-pointer"
+            >
+              Listeye Dön
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={disabled || (!selectedFloor && !activeDept)}
+              onClick={() => {
+                setSelectedMahal('custom');
+                setCustomMahal('');
+              }}
+              className="text-[11px] text-primary hover:underline font-normal disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              + Yeni Yaz
+            </button>
           )}
-          {otherMahals.length > 0 && (
-            <optgroup label="Diğer Kayıtlı Mahaller">
-              {otherMahals.map((m) => (
-                <option key={`oth-m-${m}`} value={m}>{m}</option>
-              ))}
-            </optgroup>
-          )}
-          <option value="custom">+ Yeni Mahal Yaz...</option>
-        </select>
-        {selectedMahal === 'custom' && (
-          <div className="flex items-center gap-1 mt-1">
+        </div>
+
+        {selectedMahal === 'custom' ? (
+          <div className="relative flex items-center">
             <input
               type="text"
               placeholder="Mahal (Örn: Triaj Odası)"
@@ -480,35 +538,67 @@ export default function LocationCascadingSelector({
                 if (e.key === 'Enter') {
                   e.preventDefault();
                   confirmCustomMahal();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setSelectedMahal('');
+                  setCustomMahal('');
                 }
               }}
               autoFocus
-              className="flex-1 h-8 rounded-md border border-input bg-background px-2.5 text-xs focus:ring-1 focus:ring-ring"
+              className="w-full h-9 rounded-md border-2 border-emerald-500/80 bg-background pl-2.5 pr-14 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-colors shadow-xs"
             />
-            <Button
-              type="button"
-              size="sm"
-              variant="default"
-              className="h-8 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 shadow-xs"
-              onClick={confirmCustomMahal}
-              title="Kaydet ve Seç (✓)"
-            >
-              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="h-8 px-2 text-muted-foreground hover:text-foreground shrink-0"
-              onClick={() => {
-                setSelectedMahal('');
-                setCustomMahal('');
-              }}
-              title="İptal"
-            >
-              <X className="w-3.5 h-3.5" />
-            </Button>
+            <div className="absolute right-1 inset-y-1 flex items-center gap-0.5">
+              <Button
+                type="button"
+                size="sm"
+                className="h-7 w-7 p-0 bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 shadow-xs rounded flex items-center justify-center cursor-pointer"
+                onClick={confirmCustomMahal}
+                title="Kaydet ve Seç (Enter / ✓)"
+              >
+                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground shrink-0 rounded flex items-center justify-center cursor-pointer"
+                onClick={() => {
+                  setSelectedMahal('');
+                  setCustomMahal('');
+                }}
+                title="İptal (Esc / ✕)"
+              >
+                <X className="w-3.5 h-3.5" />
+              </Button>
+            </div>
           </div>
+        ) : (
+          <select
+            value={selectedMahal}
+            onChange={(e) => {
+              setSelectedMahal(e.target.value);
+              if (e.target.value !== 'custom') setCustomMahal('');
+            }}
+            disabled={disabled || (!selectedFloor && !activeDept)}
+            className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs focus:ring-2 focus:ring-ring focus:outline-none disabled:opacity-50"
+          >
+            <option value="">Mahal Seçiniz... (Opsiyonel)</option>
+            {floorMahals.length > 0 && (
+              <optgroup label="Bu Katta / Birimde Tanımlı Mahaller">
+                {floorMahals.map((m) => (
+                  <option key={`flr-m-${m}`} value={m}>{m}</option>
+                ))}
+              </optgroup>
+            )}
+            {otherMahals.length > 0 && (
+              <optgroup label="Diğer Kayıtlı Mahaller">
+                {otherMahals.map((m) => (
+                  <option key={`oth-m-${m}`} value={m}>{m}</option>
+                ))}
+              </optgroup>
+            )}
+            <option value="custom">+ Yeni Mahal Yaz...</option>
+          </select>
         )}
       </div>
     </div>

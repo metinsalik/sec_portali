@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { 
-  Thermometer, FileSpreadsheet, Plus, Settings, 
-  Layers, ArrowLeft, RefreshCw, BarChart3, Clock, 
+import {
+  Thermometer, FileSpreadsheet, Plus, Settings,
+  Layers, ArrowLeft, RefreshCw, BarChart3, Clock,
   ShieldAlert, AlertTriangle, Menu, X, PanelLeftClose, PanelLeftOpen,
   Building2, Sliders, Upload, User, LogOut
 } from 'lucide-react';
@@ -10,10 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { 
-  thermalInspectionService, 
-  type ThermalInspectionSession, 
-  type ThermalInspectionItem 
+import {
+  thermalInspectionService,
+  type ThermalInspectionSession,
+  type ThermalInspectionItem
 } from '@/services/thermal-inspection.service';
 import { ThermalCleanDashboard } from './ThermalCleanDashboard';
 import { ThermalPaginatedTable } from './ThermalPaginatedTable';
@@ -39,9 +39,9 @@ export default function ThermalCameraPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const isAdminOrMgmt = !!(
-    user?.isAdmin || 
-    user?.isManagement || 
-    user?.roles?.includes('admin') || 
+    user?.isAdmin ||
+    user?.isManagement ||
+    user?.roles?.includes('admin') ||
     user?.roles?.includes('management')
   );
 
@@ -246,9 +246,9 @@ export default function ThermalCameraPage() {
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
               {activeTab === 'dashboard' ? 'Termal Kamera & Pano Kontrol Özeti' :
-               activeTab === 'table' ? 'Pano Ölçüm Listesi' :
-               activeTab === 'panels' ? 'Pano Envanteri ve Ölçüm Döngüleri' :
-               'Termal Kamera Modül Ayarları'}
+                activeTab === 'table' ? 'Pano Ölçüm Listesi' :
+                  activeTab === 'panels' ? 'Pano Envanteri ve Ölçüm Döngüleri' :
+                    'Termal Kamera Modül Ayarları'}
             </h1>
             <Badge variant="outline" className="text-xs font-semibold px-2 border-slate-300">
               {activeTab === 'settings' ? 'Yönetici Paneli' : `${allItems.length} Kayıt`}
@@ -267,11 +267,10 @@ export default function ThermalCameraPage() {
             <button
               type="button"
               onClick={() => handleTabChange('dashboard')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                activeTab === 'dashboard'
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'dashboard'
                   ? 'bg-white dark:bg-slate-900 text-orange-600 dark:text-orange-400 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+                }`}
             >
               <BarChart3 className="w-3.5 h-3.5" />
               Dashboard
@@ -279,11 +278,10 @@ export default function ThermalCameraPage() {
             <button
               type="button"
               onClick={() => handleTabChange('table')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                activeTab === 'table'
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'table'
                   ? 'bg-white dark:bg-slate-900 text-orange-600 dark:text-orange-400 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+                }`}
             >
               <Thermometer className="w-3.5 h-3.5" />
               Ölçüm Tablosu
@@ -291,11 +289,10 @@ export default function ThermalCameraPage() {
             <button
               type="button"
               onClick={() => handleTabChange('panels')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                activeTab === 'panels'
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'panels'
                   ? 'bg-white dark:bg-slate-900 text-orange-600 dark:text-orange-400 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+                }`}
             >
               <Layers className="w-3.5 h-3.5" />
               Pano Envanteri
@@ -304,11 +301,10 @@ export default function ThermalCameraPage() {
               <button
                 type="button"
                 onClick={() => handleTabChange('settings')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                  activeTab === 'settings'
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'settings'
                     ? 'bg-white dark:bg-slate-900 text-orange-600 dark:text-orange-400 shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 <Settings className="w-3.5 h-3.5" />
                 Ayarlar

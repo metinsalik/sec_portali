@@ -6,8 +6,8 @@ import { FloorGrid } from './FloorGrid';
 import { RoomDetailSheet } from './RoomDetailSheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Building2, Layers, Sparkles, AlertTriangle, 
+import {
+  Building2, Layers, Sparkles, AlertTriangle,
   RefreshCw, CheckCircle2, ChevronRight, Eye,
   Columns, Maximize2, ShieldAlert, X, Filter
 } from 'lucide-react';
@@ -22,11 +22,11 @@ interface IsometricFacilityViewerProps {
   scopedRisks?: any[];
   isEmbedded?: boolean;
   onClose?: () => void;
-  onSelectScope: (scope: { 
-    building?: string | null; 
-    floor?: string | null; 
-    dept?: string | null; 
-    unit?: { id: string; name: string } | null 
+  onSelectScope: (scope: {
+    building?: string | null;
+    floor?: string | null;
+    dept?: string | null;
+    unit?: { id: string; name: string } | null
   }) => void;
 }
 
@@ -93,9 +93,9 @@ export const IsometricFacilityViewer: React.FC<IsometricFacilityViewerProps> = (
       const cleanTarget = formatFloorLabel(selectedFloor).toLowerCase();
       const match = buildingData.floors.find(f => {
         const cleanF = formatFloorLabel(f.name).toLowerCase();
-        return cleanF.includes(cleanTarget) || 
-               cleanTarget.includes(cleanF) ||
-               f.floorNumber.toString() === selectedFloor.replace(/[^0-9-]/g, '');
+        return cleanF.includes(cleanTarget) ||
+          cleanTarget.includes(cleanF) ||
+          f.floorNumber.toString() === selectedFloor.replace(/[^0-9-]/g, '');
       });
       if (match) {
         setActiveFloor(match);
@@ -106,8 +106,8 @@ export const IsometricFacilityViewer: React.FC<IsometricFacilityViewerProps> = (
   // Blok Değiştirme
   const handleSelectBuilding = (bName: string) => {
     setActiveBuildingName(bName);
-    const newBData = tree && Object.keys(tree).length > 0 
-      ? buildBuildingDataFromTree(tree, bName) 
+    const newBData = tree && Object.keys(tree).length > 0
+      ? buildBuildingDataFromTree(tree, bName)
       : { ...MOCK_ISOMETRIC_BUILDING, name: bName };
     const firstFloor = newBData.floors[0] || null;
     setActiveFloor(firstFloor);
@@ -141,8 +141,8 @@ export const IsometricFacilityViewer: React.FC<IsometricFacilityViewerProps> = (
     if (activeFloor) {
       setActiveFloor(prev => {
         if (!prev) return null;
-        const updatedRooms = prev.rooms.map(r => r.id === roomId ? { 
-          ...r, 
+        const updatedRooms = prev.rooms.map(r => r.id === roomId ? {
+          ...r,
           status: 'normal' as const,
           safetyScore: 95,
           riskDistribution: {
