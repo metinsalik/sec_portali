@@ -131,6 +131,18 @@ export default function FacilityDepartmentsPage() {
   const [selectedUnit, setSelectedUnit] = useState<{ id: string; name: string } | null>(null);
   const [viewMode, setViewMode] = useState<'overview' | 'location'>('location');
   const [scopeViewMode, setScopeViewMode] = useState<'both' | 'isometric' | 'hierarchy'>('both');
+  const [show3DDrawer, setShow3DDrawer] = useState<boolean>(false);
+
+  // ESC tuşu ile sol 3D çekmeceyi kapat
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && show3DDrawer) {
+        setShow3DDrawer(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [show3DDrawer]);
 
   const handleIsometricSelectScope = (scope: { 
     building?: string | null; 
@@ -418,58 +430,28 @@ export default function FacilityDepartmentsPage() {
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Fiziksel Kapsam & Lokasyon Gezgini
             </span>
+            <Badge variant="outline" className="text-[10px] font-semibold text-primary border-primary/30 ml-1">
+              {Object.keys(tree).length} Blok / Bina
+            </Badge>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Görünüm Modu Seçici */}
-            <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border/60">
-              <button
-                type="button"
-                onClick={() => setScopeViewMode('isometric')}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
-                  scopeViewMode === 'isometric'
-                    ? 'bg-background text-foreground shadow-2xs'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-                title="2.5D İzometrik Dijital İkiz Görünümü"
-              >
-                <Cuboid className="w-3.5 h-3.5 text-primary" />
-                2.5D İzometrik
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setScopeViewMode('both')}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
-                  scopeViewMode === 'both'
-                    ? 'bg-background text-foreground shadow-2xs'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-                title="İzometrik Model ve Adım Seçici Birlikte"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                İkili Görünüm
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setScopeViewMode('hierarchy')}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
-                  scopeViewMode === 'hierarchy'
-                    ? 'bg-background text-foreground shadow-2xs'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-                title="Klasik Hiyerarşik Adım Seçici"
-              >
-                <Layers className="w-3.5 h-3.5 text-blue-500" />
-                Adım Seçici
-              </button>
-            </div>
+          <div className="flex items-center gap-2.5">
+            {/* 3D Dijital İkiz Sol Panel Açma Butonu */}
+            <Button
+              onClick={() => setShow3DDrawer(true)}
+              className="gap-2 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white shadow-xs font-semibold h-8 px-3 rounded-xl transition-all"
+            >
+              <Cuboid className="w-4 h-4 text-white animate-pulse" />
+              <span>3D Dijital İkiz (Sol Panel)</span>
+              <span className="px-1.5 py-0.2 rounded-md bg-white/20 text-white text-[10px] font-mono ml-0.5">
+                {selectedBuilding ? `${selectedBuilding}${selectedFloor ? ` › ${selectedFloor}` : ''}` : 'Modeli Aç'}
+              </span>
+            </Button>
 
             <Button
               variant={!selectedBuilding && !selectedFloor && !selectedDept ? 'default' : 'ghost'}
               size="sm"
-              className="h-7 text-xs rounded-lg"
+              className="h-8 text-xs rounded-xl"
               onClick={() => {
                 setSelectedBuilding(null);
                 setSelectedFloor(null);
@@ -482,23 +464,7 @@ export default function FacilityDepartmentsPage() {
           </div>
         </div>
 
-        {/* 2.5D İzometrik Dijital İkiz Modeli */}
-        {(scopeViewMode === 'isometric' || scopeViewMode === 'both') && (
-          <div className={`animate-in fade-in duration-200 ${scopeViewMode === 'both' ? 'border-b' : ''}`}>
-            <IsometricFacilityViewer
-              tree={tree}
-              selectedBuilding={selectedBuilding}
-              selectedFloor={selectedFloor}
-              selectedDept={selectedDept}
-              scopedRisks={scopedRisks}
-              isEmbedded={true}
-              onSelectScope={handleIsometricSelectScope}
-            />
-          </div>
-        )}
-
-        {/* Çok Kademeli Segmentli Kontrol Paneli (Klasik Hiyerarşik Seçici) */}
-        {(scopeViewMode === 'hierarchy' || scopeViewMode === 'both') && (
+        {/* Çok Kademeli Segmentli Kontrol Paneli (Klasik Hiyerarşik Seçici - 100% Tam Sayfa) */}
         <div className="p-4 space-y-4 animate-in fade-in duration-200">
           {/* 1. SEVİYE: BİNALAR */}
           <div className="space-y-2">
@@ -696,7 +662,6 @@ export default function FacilityDepartmentsPage() {
             </div>
           )}
         </div>
-        )}
       </div>
 
 
@@ -1244,6 +1209,31 @@ export default function FacilityDepartmentsPage() {
             unitId: selectedUnit?.id || undefined,
           }}
         />
+      )}
+
+      {/* ─── SOL YAN 3D DİJİTAL İKİZ MENÜSÜ / DRAWER (4 Blok & 15 Kat) ──── */}
+      {show3DDrawer && (
+        <div className="fixed inset-0 z-50 flex">
+          {/* Karartılmış Arka Plan (Backdrop) */}
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+            onClick={() => setShow3DDrawer(false)}
+          />
+          {/* Sol Panel (Slide-Over Drawer) */}
+          <div className="relative z-50 w-full sm:w-[580px] md:w-[680px] lg:w-[740px] xl:w-[800px] h-full bg-background border-r border-border shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
+            <IsometricFacilityViewer
+              tree={tree}
+              selectedBuilding={selectedBuilding}
+              selectedFloor={selectedFloor}
+              selectedDept={selectedDept}
+              selectedUnit={selectedUnit}
+              scopedRisks={scopedRisks}
+              isEmbedded={false}
+              onClose={() => setShow3DDrawer(false)}
+              onSelectScope={handleIsometricSelectScope}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
