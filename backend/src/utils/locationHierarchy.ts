@@ -353,10 +353,9 @@ export async function renameLocationNode(
   return { updatedCount: matchingLocs.length };
 }
 
-export async function deleteLocationNode(
-  prisma: PrismaClient,
+export function findMatchingLocationIds(
+  allLocs: any[],
   params: {
-    facilityId: string;
     level: string;
     value: string;
     parentBuildingName?: string;
@@ -365,27 +364,11 @@ export async function deleteLocationNode(
     parentDepartment?: string;
     id?: string;
   }
-) {
-  if (params.id) {
-    await prisma.facilityLocation.update({
-      where: { id: params.id },
-      data: { isActive: false },
-    });
-    return { deletedCount: 1 };
-  }
-
-  const allLocs = await prisma.facilityLocation.findMany({
-    where: {
-      facilityId: params.facilityId,
-      isActive: true,
-      OR: [{ type: null }, { type: { not: 'TEMIZLIK_ARABASI' } }],
-    },
-    include: { facilityBuilding: true },
-  });
-
+): string[] {
+  if (params.id) return [params.id];
   const targetVal = isPlaceholder(params.value) ? '' : cleanStr(params.value);
 
-  const idsToDeactivate = allLocs
+  return allLocs
     .filter((loc) => {
       const p = extractLocationParts(loc);
       if (params.level === 'buildingName') {
@@ -424,15 +407,218 @@ export async function deleteLocationNode(
       return false;
     })
     .map((l) => l.id);
+}
 
-  if (idsToDeactivate.length > 0) {
-    await prisma.facilityLocation.updateMany({
-      where: { id: { in: idsToDeactivate } },
-      data: { isActive: false },
-    });
+export async function checkLocationDependencies(
+  prisma: PrismaClient,
+  params: {
+    facilityId: string;
+    level: string;
+    value: string;
+    parentBuildingName?: string;
+    parentBuilding?: string;
+    parentFloor?: string;
+    parentDepartment?: string;
+    id?: string;
+  }
+) {
+  const allLocs = await prisma.facilityLocation.findMany({
+    where: {
+      facilityId: params.facilityId,
+      isActive: true,
+      OR: [{ type: null }, { type: { not: 'TEMIZLIK_ARABASI' } }],
+    },
+    include: { facilityBuilding: true },
+  });
+
+  const targetIds = findMatchingLocationIds(allLocs, params);
+  if (targetIds.length === 0) {
+    return {
+      hasDependencies: false,
+      totalCount: 0,
+      breakdown: {
+        risks: 0,
+        fireEquipments: 0,
+        hazmatMaterials: 0,
+        incidents: 0,
+        extraordinaryIncidents: 0,
+        buildProjects: 0,
+        btSoruBankasi: 0,
+        btUygunsuzluklar: 0,
+        fireDoors: 0,
+      },
+      targetLocationCount: 0,
+    };
   }
 
-  return { deletedCount: idsToDeactivate.length };
+  const [
+    risks,
+    fireEquipments,
+    hazmatMaterials,
+    incidents,
+    extraordinaryIncidents,
+    buildProjects,
+    btSoruBankasi,
+    btUygunsuzluklar,
+    fireDoors,
+  ] = await Promise.all([
+    prisma.riskLifecycle.count({ where: { locationId: { in: targetIds } } }),
+    prisma.fireEquipment.count({ where: { locationId: { in: targetIds } } }),
+    prisma.hazmatInventoryItem.count({ where: { locationId: { in: targetIds } } }),
+    prisma.hazmatIncident.count({ where: { locationId: { in: targetIds } } }),
+    prisma.extraordinaryIncident.count({ where: { locationId: { in: targetIds } } }),
+    prisma.buildProject.count({ where: { locationId: { in: targetIds } } }),
+    prisma.bTSoruBankasi.count({ where: { locationId: { in: targetIds } } }),
+    prisma.bTUygunsuzluk.count({ where: { locationId: { in: targetIds } } }),
+    prisma.fireDoor.count({ where: { locationId: { in: targetIds } } }),
+  ]);
+
+  const totalCount =
+    risks +
+    fireEquipments +
+    hazmatMaterials +
+    incidents +
+    extraordinaryIncidents +
+    buildProjects +
+    btSoruBankasi +
+    btUygunsuzluklar +
+    fireDoors;
+
+  return {
+    hasDependencies: totalCount > 0,
+    totalCount,
+    breakdown: {
+      risks,
+      fireEquipments,
+      hazmatMaterials,
+      incidents,
+      extraordinaryIncidents,
+      buildProjects,
+      btSoruBankasi,
+      btUygunsuzluklar,
+      fireDoors,
+    },
+    targetLocationCount: targetIds.length,
+    locationIds: targetIds,
+  };
+}
+
+export async function deleteLocationNode(
+  prisma: PrismaClient,
+  params: {
+    facilityId: string;
+    level: string;
+    value: string;
+    parentBuildingName?: string;
+    parentBuilding?: string;
+    parentFloor?: string;
+    parentDepartment?: string;
+    id?: string;
+    transferTargetId?: string;
+    transferTargetValue?: string;
+  }
+) {
+  const allLocs = await prisma.facilityLocation.findMany({
+    where: {
+      facilityId: params.facilityId,
+      isActive: true,
+      OR: [{ type: null }, { type: { not: 'TEMIZLIK_ARABASI' } }],
+    },
+    include: { facilityBuilding: true },
+  });
+
+  const idsToDeactivate = findMatchingLocationIds(allLocs, params);
+
+  if (idsToDeactivate.length === 0) {
+    return { deletedCount: 0, transferredCount: 0 };
+  }
+
+  let transferredCount = 0;
+
+  // Determine targetId if transferTargetValue is provided
+  let finalTargetId = params.transferTargetId || null;
+  if (!finalTargetId && params.transferTargetValue) {
+    const cleanTVal = cleanStr(params.transferTargetValue).toLowerCase();
+    const targetLoc = allLocs.find(
+      (l) =>
+        !idsToDeactivate.includes(l.id) &&
+        (cleanStr(l.name).toLowerCase() === cleanTVal ||
+          (params.level === 'floor' && cleanStr(l.floor).toLowerCase() === cleanTVal) ||
+          (params.level === 'building' && cleanStr(l.building).toLowerCase() === cleanTVal) ||
+          (params.level === 'department' && cleanStr(l.department).toLowerCase() === cleanTVal) ||
+          (params.level === 'description' && cleanStr(l.description).toLowerCase() === cleanTVal))
+    );
+    if (targetLoc) {
+      finalTargetId = targetLoc.id;
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    if (finalTargetId) {
+      // Re-point all relations from idsToDeactivate to finalTargetId
+      const [r1, r2, r3, r4, r5, r6, r7, r8, r9] = await Promise.all([
+        tx.riskLifecycle.updateMany({
+          where: { locationId: { in: idsToDeactivate } },
+          data: { locationId: finalTargetId },
+        }),
+        tx.fireEquipment.updateMany({
+          where: { locationId: { in: idsToDeactivate } },
+          data: { locationId: finalTargetId },
+        }),
+        tx.hazmatInventoryItem.updateMany({
+          where: { locationId: { in: idsToDeactivate } },
+          data: { locationId: finalTargetId },
+        }),
+        tx.hazmatIncident.updateMany({
+          where: { locationId: { in: idsToDeactivate } },
+          data: { locationId: finalTargetId },
+        }),
+        tx.extraordinaryIncident.updateMany({
+          where: { locationId: { in: idsToDeactivate } },
+          data: { locationId: finalTargetId },
+        }),
+        tx.buildProject.updateMany({
+          where: { locationId: { in: idsToDeactivate } },
+          data: { locationId: finalTargetId },
+        }),
+        tx.bTSoruBankasi.updateMany({
+          where: { locationId: { in: idsToDeactivate } },
+          data: { locationId: finalTargetId },
+        }),
+        tx.bTUygunsuzluk.updateMany({
+          where: { locationId: { in: idsToDeactivate } },
+          data: { locationId: finalTargetId },
+        }),
+        tx.fireDoor.updateMany({
+          where: { locationId: { in: idsToDeactivate } },
+          data: { locationId: finalTargetId },
+        }),
+      ]);
+      transferredCount =
+        r1.count + r2.count + r3.count + r4.count + r5.count + r6.count + r7.count + r8.count + r9.count;
+    }
+
+    // Deactivate and rename to prevent unique key conflict
+    for (const locId of idsToDeactivate) {
+      const loc = allLocs.find((l) => l.id === locId);
+      await tx.facilityLocation.update({
+        where: { id: locId },
+        data: {
+          isActive: false,
+          name: `${loc?.name || 'Lokasyon'}_deleted_${Date.now()}_${locId.slice(0, 6)}`,
+        },
+      });
+    }
+  });
+
+  return {
+    deletedCount: idsToDeactivate.length,
+    transferredCount,
+    message:
+      transferredCount > 0
+        ? `Lokasyon silindi ve ${transferredCount} bağlı kayıt hedef lokasyona aktarıldı.`
+        : 'Lokasyon silindi.',
+  };
 }
 
 export interface MergeLocationNodesParams {

@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../../middleware/auth';
 import {
   buildCanonicalLocationName,
+  checkLocationDependencies,
   deleteLocationNode,
   ensureFacilityBuilding,
   inferLocationType,
@@ -270,6 +271,35 @@ router.post('/:id/locations/rename-node', authMiddleware, async (req: AuthReques
   }
 });
 
+router.post('/:id/locations/check-dependencies', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const {
+    level,
+    value,
+    parentBuildingName,
+    parentBuilding,
+    parentFloor,
+    parentDepartment,
+    id: locId,
+  } = req.body;
+
+  try {
+    const result = await checkLocationDependencies(prisma, {
+      facilityId: id,
+      level,
+      value,
+      parentBuildingName,
+      parentBuilding,
+      parentFloor,
+      parentDepartment,
+      id: locId,
+    });
+    res.json(result);
+  } catch (err: any) {
+    res.status(err.statusCode || 500).json({ error: err.message || 'Kontrol yapılamadı.' });
+  }
+});
+
 router.post('/:id/locations/delete-node', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const {
@@ -279,6 +309,9 @@ router.post('/:id/locations/delete-node', authMiddleware, async (req: AuthReques
     parentBuilding,
     parentFloor,
     parentDepartment,
+    id: locId,
+    transferTargetId,
+    transferTargetValue,
   } = req.body;
 
   try {
@@ -290,6 +323,9 @@ router.post('/:id/locations/delete-node', authMiddleware, async (req: AuthReques
       parentBuilding,
       parentFloor,
       parentDepartment,
+      id: locId,
+      transferTargetId,
+      transferTargetValue,
     });
     res.json({ success: true, ...result });
   } catch (err: any) {

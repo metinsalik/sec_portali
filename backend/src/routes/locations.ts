@@ -4,6 +4,7 @@ import { AuthRequest } from '../middleware/auth';
 import { authMiddleware } from '../middleware/auth';
 import {
   buildCanonicalLocationName,
+  checkLocationDependencies,
   deleteLocationNode,
   ensureFacilityBuilding,
   inferLocationType,
@@ -98,8 +99,8 @@ router.post('/rename-node', authMiddleware, async (req: AuthRequest, res: Respon
   }
 });
 
-// Delete node (soft delete node and its subtree)
-router.post('/delete-node', authMiddleware, async (req: AuthRequest, res: Response) => {
+// Check dependencies before deleting node
+router.post('/check-dependencies', authMiddleware, async (req: AuthRequest, res: Response) => {
   const {
     facilityId,
     level,
@@ -113,6 +114,40 @@ router.post('/delete-node', authMiddleware, async (req: AuthRequest, res: Respon
   if (!facilityId) return res.status(400).json({ error: 'facilityId zorunludur' });
 
   try {
+    const result = await checkLocationDependencies(prisma, {
+      facilityId,
+      level,
+      value,
+      parentBuildingName,
+      parentBuilding,
+      parentFloor,
+      parentDepartment,
+      id,
+    });
+    res.json(result);
+  } catch (err: any) {
+    console.error('Bağlı kayıt kontrol hatası:', err);
+    res.status(err.statusCode || 500).json({ error: err.message || 'Kontrol yapılamadı.' });
+  }
+});
+
+// Delete node (soft delete node and its subtree, optionally transferring relations)
+router.post('/delete-node', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const {
+    facilityId,
+    level,
+    value,
+    parentBuildingName,
+    parentBuilding,
+    parentFloor,
+    parentDepartment,
+    id,
+    transferTargetId,
+    transferTargetValue,
+  } = req.body;
+  if (!facilityId) return res.status(400).json({ error: 'facilityId zorunludur' });
+
+  try {
     const result = await deleteLocationNode(prisma, {
       facilityId,
       level,
@@ -122,6 +157,8 @@ router.post('/delete-node', authMiddleware, async (req: AuthRequest, res: Respon
       parentFloor,
       parentDepartment,
       id,
+      transferTargetId,
+      transferTargetValue,
     });
     res.json({ success: true, ...result });
   } catch (err: any) {

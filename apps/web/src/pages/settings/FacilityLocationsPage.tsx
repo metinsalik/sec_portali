@@ -178,6 +178,38 @@ export default function FacilityLocationsPage() {
   const [mergeDestinationId, setMergeDestinationId] = useState('');
   const [isCustomDestination, setIsCustomDestination] = useState(false);
 
+  // Silme ve Bağlı Veri Aktarma (Dependency Transfer) durumları
+  const [deletePromptTarget, setDeletePromptTarget] = useState<{
+    label: string;
+    level: string;
+    value: string;
+    parentBuildingName?: string;
+    parentBuilding?: string;
+    parentFloor?: string;
+    parentDepartment?: string;
+    id?: string;
+  } | null>(null);
+  const [dependencyInfo, setDependencyInfo] = useState<{
+    hasDependencies: boolean;
+    totalCount: number;
+    breakdown: {
+      risks: number;
+      fireEquipments: number;
+      hazmatMaterials: number;
+      incidents: number;
+      extraordinaryIncidents: number;
+      buildProjects: number;
+      btSoruBankasi: number;
+      btUygunsuzluklar: number;
+      fireDoors: number;
+    };
+    targetLocationCount: number;
+  } | null>(null);
+  const [deleteTransferValue, setDeleteTransferValue] = useState('');
+  const [deleteTransferId, setDeleteTransferId] = useState('');
+  const [isCustomDeleteTransfer, setIsCustomDeleteTransfer] = useState(false);
+  const [isCheckingDelete, setIsCheckingDelete] = useState(false);
+
   const { data: facilities = [] } = useQuery({
     queryKey: ['facilities'],
     queryFn: async () => {
@@ -282,9 +314,14 @@ export default function FacilityLocationsPage() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       invalidateAllLocationQueries();
-      toast.success('Lokasyon silindi');
+      toast.success(data?.message || 'Lokasyon silindi');
+      setDeletePromptTarget(null);
+      setDependencyInfo(null);
+      setDeleteTransferValue('');
+      setDeleteTransferId('');
+      setIsCustomDeleteTransfer(false);
     },
     onError: (err: any) => {
       toast.error(err.message || 'Silme başarısız');
@@ -399,7 +436,7 @@ export default function FacilityLocationsPage() {
     });
   };
 
-  const removeNode = (payload: {
+  const removeNode = async (payload: {
     label: string;
     level: string;
     value: string;
@@ -409,7 +446,37 @@ export default function FacilityLocationsPage() {
     parentDepartment?: string;
     id?: string;
   }) => {
-    if (!window.confirm(`"${payload.label}" ve altındaki kayıtlar silinecek. Onaylıyor musunuz?`)) return;
+    setIsCheckingDelete(true);
+    try {
+      const res = await api.post('/locations/check-dependencies', {
+        facilityId,
+        level: payload.level,
+        value: payload.value,
+        parentBuildingName: payload.parentBuildingName,
+        parentBuilding: payload.parentBuilding,
+        parentFloor: payload.parentFloor,
+        parentDepartment: payload.parentDepartment,
+        id: payload.id,
+      });
+
+      const depData = await res.json();
+      if (depData?.hasDependencies && depData.totalCount > 0) {
+        // BAĞLI VERİLER VAR: Kullanıcıya aktaracağı yeni konumu sor
+        setDeletePromptTarget(payload);
+        setDependencyInfo(depData);
+        setDeleteTransferValue('');
+        setDeleteTransferId('');
+        setIsCustomDeleteTransfer(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('Bağlı kayıt kontrolü yapılamadı, standart silmeye geçiliyor:', err);
+    } finally {
+      setIsCheckingDelete(false);
+    }
+
+    // BAĞLI VERİ YOK: Normal hızlı onay ve silme
+    if (!window.confirm(`"${payload.label}" ve altındaki tüm kayıtlar silinecek. Onaylıyor musunuz?`)) return;
     deleteMutation.mutate({
       level: payload.level,
       value: payload.value,
@@ -418,6 +485,27 @@ export default function FacilityLocationsPage() {
       parentFloor: payload.parentFloor,
       parentDepartment: payload.parentDepartment,
       id: payload.id,
+    });
+  };
+
+  const executeDeleteWithTransfer = () => {
+    if (!deletePromptTarget) return;
+    const targetVal = deleteTransferValue.trim();
+    if (!targetVal && !deleteTransferId) {
+      toast.error('Lütfen verilerin aktarılacağı hedef lokasyonu seçin veya girin.');
+      return;
+    }
+
+    deleteMutation.mutate({
+      level: deletePromptTarget.level,
+      value: deletePromptTarget.value,
+      parentBuildingName: deletePromptTarget.parentBuildingName,
+      parentBuilding: deletePromptTarget.parentBuilding,
+      parentFloor: deletePromptTarget.parentFloor,
+      parentDepartment: deletePromptTarget.parentDepartment,
+      id: deletePromptTarget.id,
+      transferTargetId: deleteTransferId || undefined,
+      transferTargetValue: targetVal || undefined,
     });
   };
 
@@ -651,6 +739,85 @@ export default function FacilityLocationsPage() {
 
     return [];
   }, [mergeTarget, tree, floorSortDesc]);
+
+  const deleteTransferCandidates = useMemo(() => {
+    if (!deletePromptTarget) return [];
+    const { level, value, id, parentBuildingName, parentBuilding, parentFloor, parentDepartment } = deletePromptTarget;
+
+    if (level === 'buildingName') {
+      return Object.values(tree)
+        .map((b: any) => ({ label: b.name, value: b.name }))
+        .filter((b) => b.value.toLowerCase() !== value.toLowerCase());
+    }
+
+    if (level === 'building') {
+      const binaNode = Object.values(tree).find((b: any) => b.name === parentBuildingName) as any;
+      if (!binaNode) return [];
+      return Object.values(binaNode.blocks)
+        .filter((blk: any) => !blk.isPlaceholder && blk.name.toLowerCase() !== value.toLowerCase())
+        .sort(compareBlocks)
+        .map((blk: any) => ({ label: blk.name, value: blk.name }));
+    }
+
+    if (level === 'floor') {
+      const binaNode = Object.values(tree).find((b: any) => b.name === parentBuildingName) as any;
+      const blokNode = binaNode
+        ? (Object.values(binaNode.blocks).find(
+            (blk: any) => blk.name === parentBuilding || (blk.isPlaceholder && !parentBuilding)
+          ) as any)
+        : null;
+      if (!blokNode) return [];
+      return Object.values(blokNode.floors)
+        .filter((flr: any) => !flr.isPlaceholder && flr.name.toLowerCase() !== value.toLowerCase())
+        .sort((a: any, b: any) => compareFloors(a, b, floorSortDesc))
+        .map((flr: any) => ({ label: flr.name, value: flr.name }));
+    }
+
+    if (level === 'department') {
+      const binaNode = Object.values(tree).find((b: any) => b.name === parentBuildingName) as any;
+      const blokNode = binaNode
+        ? (Object.values(binaNode.blocks).find(
+            (blk: any) => blk.name === parentBuilding || (blk.isPlaceholder && !parentBuilding)
+          ) as any)
+        : null;
+      const floorNode = blokNode
+        ? (Object.values(blokNode.floors).find(
+            (f: any) => f.name === parentFloor || (f.isPlaceholder && !parentFloor)
+          ) as any)
+        : null;
+      if (!floorNode) return [];
+      return Object.values(floorNode.departments)
+        .filter((dept: any) => !dept.isPlaceholder && dept.name.toLowerCase() !== value.toLowerCase())
+        .sort(compareDepartments)
+        .map((dept: any) => ({ label: dept.name, value: dept.name }));
+    }
+
+    if (level === 'description') {
+      const binaNode = Object.values(tree).find((b: any) => b.name === parentBuildingName) as any;
+      const blokNode = binaNode
+        ? (Object.values(binaNode.blocks).find(
+            (blk: any) => blk.name === parentBuilding || (blk.isPlaceholder && !parentBuilding)
+          ) as any)
+        : null;
+      const floorNode = blokNode
+        ? (Object.values(blokNode.floors).find(
+            (f: any) => f.name === parentFloor || (f.isPlaceholder && !parentFloor)
+          ) as any)
+        : null;
+      const deptNode = floorNode
+        ? (Object.values(floorNode.departments).find(
+            (d: any) => d.name === parentDepartment || (d.isPlaceholder && !parentDepartment)
+          ) as any)
+        : null;
+      if (!deptNode) return [];
+      return deptNode.rooms
+        .filter((rm: any) => rm.id !== id && rm.name.toLowerCase() !== value.toLowerCase())
+        .sort(compareRooms)
+        .map((rm: any) => ({ label: rm.name, value: rm.name, id: rm.id }));
+    }
+
+    return [];
+  }, [deletePromptTarget, tree, floorSortDesc]);
 
   const generatedCode = useMemo(() => {
     const blockOrBuilding = newLocation.block || newLocation.buildingName;
@@ -1927,6 +2094,200 @@ export default function FacilityLocationsPage() {
                 <GitMerge className="w-3.5 h-3.5" />
               )}
               Birleştir ve Aktar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bağlı Verileri Aktar ve Sil Modalı */}
+      <Dialog
+        open={!!deletePromptTarget && !!dependencyInfo?.hasDependencies}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeletePromptTarget(null);
+            setDependencyInfo(null);
+            setDeleteTransferValue('');
+            setDeleteTransferId('');
+            setIsCustomDeleteTransfer(false);
+          }
+        }}
+      >
+        <DialogContent className="max-w-md rounded-lg">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold flex items-center gap-2 text-destructive">
+              <div className="w-7 h-7 rounded-md bg-destructive/10 text-destructive flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
+              Bağlı Verileri Aktar ve Sil
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              <strong>&quot;{deletePromptTarget?.label}&quot;</strong> lokasyonuna bağlı başka modüllere ait veriler bulundu. Silme işleminden önce bu kayıtların aktarılacağı yeni konumu seçmelisiniz.
+            </DialogDescription>
+          </DialogHeader>
+
+          {deletePromptTarget && dependencyInfo && (
+            <div className="space-y-4 py-2 text-xs">
+              {/* Tespit Edilen Bağlı Veriler */}
+              <div className="p-3 bg-muted/40 border border-border/70 rounded-md space-y-2">
+                <div className="text-[11px] font-semibold text-foreground flex items-center justify-between">
+                  <span>Bu Lokasyona Bağlı Kayıtlar:</span>
+                  <Badge variant="destructive" className="text-[10px] py-0 px-1.5 font-bold">
+                    Toplam {dependencyInfo.totalCount} Kayıt
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 pt-1 text-[11px]">
+                  {dependencyInfo.breakdown.risks > 0 && (
+                    <div className="flex items-center gap-1.5 p-1.5 rounded bg-background border border-border/50 text-foreground">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                      <span><strong>{dependencyInfo.breakdown.risks}</strong> Risk Değerlendirmesi</span>
+                    </div>
+                  )}
+                  {dependencyInfo.breakdown.fireEquipments > 0 && (
+                    <div className="flex items-center gap-1.5 p-1.5 rounded bg-background border border-border/50 text-foreground">
+                      <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+                      <span><strong>{dependencyInfo.breakdown.fireEquipments}</strong> Yangın Ekipmanı</span>
+                    </div>
+                  )}
+                  {dependencyInfo.breakdown.hazmatMaterials > 0 && (
+                    <div className="flex items-center gap-1.5 p-1.5 rounded bg-background border border-border/50 text-foreground">
+                      <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
+                      <span><strong>{dependencyInfo.breakdown.hazmatMaterials}</strong> Kimyasal / Hazmat</span>
+                    </div>
+                  )}
+                  {dependencyInfo.breakdown.incidents > 0 && (
+                    <div className="flex items-center gap-1.5 p-1.5 rounded bg-background border border-border/50 text-foreground">
+                      <span className="w-2 h-2 rounded-full bg-red-600 shrink-0" />
+                      <span><strong>{dependencyInfo.breakdown.incidents}</strong> Olay Bildirimi</span>
+                    </div>
+                  )}
+                  {dependencyInfo.breakdown.extraordinaryIncidents > 0 && (
+                    <div className="flex items-center gap-1.5 p-1.5 rounded bg-background border border-border/50 text-foreground">
+                      <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" />
+                      <span><strong>{dependencyInfo.breakdown.extraordinaryIncidents}</strong> Olağanüstü Olay</span>
+                    </div>
+                  )}
+                  {dependencyInfo.breakdown.fireDoors > 0 && (
+                    <div className="flex items-center gap-1.5 p-1.5 rounded bg-background border border-border/50 text-foreground">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                      <span><strong>{dependencyInfo.breakdown.fireDoors}</strong> Yangın Kapısı</span>
+                    </div>
+                  )}
+                  {dependencyInfo.breakdown.buildProjects > 0 && (
+                    <div className="flex items-center gap-1.5 p-1.5 rounded bg-background border border-border/50 text-foreground">
+                      <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                      <span><strong>{dependencyInfo.breakdown.buildProjects}</strong> Proje / İnşaat</span>
+                    </div>
+                  )}
+                  {dependencyInfo.breakdown.btUygunsuzluklar > 0 && (
+                    <div className="flex items-center gap-1.5 p-1.5 rounded bg-background border border-border/50 text-foreground">
+                      <span className="w-2 h-2 rounded-full bg-cyan-500 shrink-0" />
+                      <span><strong>{dependencyInfo.breakdown.btUygunsuzluklar}</strong> BT Uygunsuzluğu</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Hedef Seçimi */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-foreground">
+                    Verilerin Aktarılacağı Yeni Lokasyon:
+                  </Label>
+                  {deleteTransferCandidates.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomDeleteTransfer((prev) => !prev);
+                        setDeleteTransferValue('');
+                        setDeleteTransferId('');
+                      }}
+                      className="text-[11px] text-primary hover:underline"
+                    >
+                      {isCustomDeleteTransfer ? 'Listeden Seç' : 'Yeni İsim Yaz'}
+                    </button>
+                  )}
+                </div>
+
+                {!isCustomDeleteTransfer && deleteTransferCandidates.length > 0 ? (
+                  <Select
+                    value={deleteTransferValue}
+                    onValueChange={(val) => {
+                      if (val === '__custom__') {
+                        setIsCustomDeleteTransfer(true);
+                        setDeleteTransferValue('');
+                        setDeleteTransferId('');
+                      } else {
+                        setDeleteTransferValue(val);
+                        const cand = deleteTransferCandidates.find((c) => c.value === val);
+                        setDeleteTransferId(cand?.id || '');
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue placeholder="Aktarılacak hedef lokasyonu seçin..." />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {deleteTransferCandidates.map((cand) => (
+                        <SelectItem key={cand.id || cand.value} value={cand.value} className="text-xs">
+                          {cand.label}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="__custom__" className="text-xs text-primary font-medium border-t border-border/50">
+                        + Farklı Bir İsim Belirt...
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    autoFocus
+                    placeholder="Hedef lokasyon adı (ör. 12. Kat, A Blok, Acil Servis)..."
+                    value={deleteTransferValue}
+                    onChange={(e) => setDeleteTransferValue(e.target.value)}
+                    className="h-9 text-xs"
+                  />
+                )}
+              </div>
+
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-md text-[11px] text-muted-foreground space-y-1">
+                <div className="font-semibold text-foreground flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Otomatik &amp; Kesintisiz Aktarım
+                </div>
+                <p>
+                  &quot;Aktar ve Sil&quot; butonuna bastığınızda bu {dependencyInfo.totalCount} kayıt hedef konuma geçirilecek ve ardından <strong>&quot;{deletePromptTarget.label}&quot;</strong> silinecektir.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setDeletePromptTarget(null);
+                setDependencyInfo(null);
+                setDeleteTransferValue('');
+                setDeleteTransferId('');
+                setIsCustomDeleteTransfer(false);
+              }}
+              className="h-8 text-xs rounded-md"
+              disabled={deleteMutation.isPending}
+            >
+              Vazgeç
+            </Button>
+            <Button
+              size="sm"
+              onClick={executeDeleteWithTransfer}
+              disabled={deleteMutation.isPending || (!deleteTransferValue.trim() && !deleteTransferId)}
+              className="h-8 text-xs rounded-md gap-1.5 bg-destructive hover:bg-destructive/90 text-white"
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="w-3.5 h-3.5" />
+              )}
+              Aktar ve Sil
             </Button>
           </DialogFooter>
         </DialogContent>
