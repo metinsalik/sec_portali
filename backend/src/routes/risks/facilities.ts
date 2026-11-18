@@ -360,7 +360,7 @@ router.post('/:id/locations/merge-nodes', authMiddleware, async (req: AuthReques
       parentFloor,
       parentDepartment,
     });
-    res.json({ success: true, ...result });
+    res.json(result);
   } catch (err: any) {
     console.error('Lokasyon birleştirme hatası:', err);
     res.status(err.statusCode || 500).json({ error: err.message || 'Lokasyonlar birleştirilemedi.' });

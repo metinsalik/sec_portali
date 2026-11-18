@@ -751,6 +751,7 @@ export async function mergeLocationNodes(
       const updatedParts = {
         buildingName: level === 'buildingName' ? cleanTarget : p.buildingName,
         building: level === 'building' ? cleanTarget : p.block,
+        block: level === 'building' ? cleanTarget : p.block,
         floor: level === 'floor' ? cleanTarget : p.floor,
         department: level === 'department' ? cleanTarget : p.department,
         description: level === 'description' ? cleanTarget : p.description,
