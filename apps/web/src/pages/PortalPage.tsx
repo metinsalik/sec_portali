@@ -19,7 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Building2, Settings, User, LogOut, ArrowRight,
   ShieldCheck, Wrench, HardHat, Flame, Building, 
-  Compass, Activity, CheckCircle2, AlertCircle, LayoutGrid
+  Compass, Activity, CheckCircle2, AlertCircle, LayoutGrid, UploadCloud
 } from 'lucide-react';
 
 export default function PortalPage() {
@@ -272,6 +272,30 @@ export default function PortalPage() {
                   </h3>
                   <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
                     Hastanelerde periyodik bina turları planlama, saha bulguları ve aksiyon takip süreçleri.
+                  </p>
+                </div>
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/40 text-xs font-medium text-primary">
+                  <span>Modüle Git</span>
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                </div>
+              </Card>
+            )}
+
+            {/* Card 7: Kurumsal Dosya Transferi */}
+            {(hasAdminAccess || user?.modules?.includes('FILE_TRANSFER')) && (
+              <Card
+                onClick={() => navigate('/transfer')}
+                className="group border border-border/60 hover:border-primary/50 shadow-xs hover:shadow-sm transition-all duration-200 rounded-lg p-5 flex flex-col justify-between cursor-pointer bg-card"
+              >
+                <div>
+                  <div className="w-10 h-10 rounded-md bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center mb-3.5 transition-colors group-hover:bg-sky-600 group-hover:text-white">
+                    <UploadCloud className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                    Kurumsal Dosya Transferi
+                  </h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
+                    2 GB&apos;a kadar süreli, isteğe bağlı şifreli ve otomatik silinen kurumsal dosya paylaşımı.
                   </p>
                 </div>
                 <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/40 text-xs font-medium text-primary">

@@ -36,6 +36,7 @@ yarn-debug.log*
 
 # Uploads
 backend/uploads/
+backend/storage/
 
 # Backups
 backups/

@@ -7,7 +7,7 @@ import {
   ClipboardList, FileText, Settings, Bell, ChevronDown, LogOut,
   User, BarChart3, ChevronRight, LayoutGrid, Database, Users2, Mail,
   BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame, PenTool, Menu, X, ShoppingCart, PieChart, Calendar, AlertCircle, MessageSquare, BookOpen, DoorClosed,
-  PanelLeftClose, PanelLeftOpen, PanelLeft, Zap, Camera, ShieldCheck, Thermometer, Sliders
+  PanelLeftClose, PanelLeftOpen, PanelLeft, Zap, Camera, ShieldCheck, Thermometer, Sliders, UploadCloud, HardDrive
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -273,6 +273,16 @@ const fm200NavItems = (hasAdminAccess: boolean) => [
   ] : []),
 ];
 
+const transferNavItems = (hasAdminAccess: boolean) => [
+  { label: 'TRANSFER', type: 'group' },
+  { label: 'Dosya Yükle', icon: UploadCloud, to: '/transfer?tab=upload' },
+  { label: 'Aktif Transferlerim', icon: FileText, to: '/transfer?tab=my' },
+  ...(hasAdminAccess ? [
+    { label: 'YÖNETİM', type: 'group' },
+    { label: 'Tüm Transferler', icon: HardDrive, to: '/transfer?tab=all' },
+  ] : []),
+];
+
 const profileNavItems = (hasAdminAccess: boolean) => [
   { label: 'UYGULAMALAR', type: 'group' },
   ...(hasAdminAccess ? [{ label: 'Operasyon Yönetim Sistemi', icon: LayoutDashboard, to: '/operations-management' }] : []),
@@ -386,6 +396,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   } else if (path.startsWith('/fm200')) {
     navItems = fm200NavItems(!!hasAdminAccess);
     moduleName = 'FM-200 Kontrol ve Sızdırmazlık';
+  } else if (path.startsWith('/transfer')) {
+    navItems = transferNavItems(!!hasAdminAccess);
+    moduleName = 'Kurumsal Dosya Transferi';
   } else if (path.startsWith('/profile') || path.startsWith('/notifications')) {
     navItems = profileNavItems(!!hasAdminAccess);
     moduleName = path.startsWith('/profile') ? 'Kullanıcı Profili' : 'Bildirim Merkezi';
@@ -520,7 +533,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
             if (item.to?.includes('?category=')) {
               customIsActive = (location.pathname + decodedSearch) === item.to;
             } else if (item.to?.includes('?tab=')) {
-              const currentTab = new URLSearchParams(location.search).get('tab') || 'dashboard';
+              const defaultTab = location.pathname === '/transfer' ? 'upload' : 'dashboard';
+              const currentTab = new URLSearchParams(location.search).get('tab') || defaultTab;
               const itemTab = new URLSearchParams(item.to.split('?')[1]).get('tab');
               customIsActive = location.pathname === item.to.split('?')[0] && currentTab === itemTab;
             } else if (item.to === '/fire-equipment/list') {

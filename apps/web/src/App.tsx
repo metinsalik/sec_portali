@@ -214,6 +214,10 @@ import Fm200SettingsPage from './pages/fm200/Fm200SettingsPage';
 import Fm200WorkOrdersPage from './pages/fm200/Fm200WorkOrdersPage';
 import Fm200InspectionViewPage from './pages/fm200/Fm200InspectionViewPage';
 
+// Kurumsal Dosya Transferi
+import TransferUploadPage from './pages/transfer/TransferUploadPage';
+import TransferDownloadPage from './pages/transfer/TransferDownloadPage';
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -235,6 +239,19 @@ function App() {
                 <Routes>
                   {/* Public */}
                   <Route path="/login" element={<LoginPage />} />
+                  <Route path="/transfer/:token" element={<TransferDownloadPage />} />
+
+                  {/* ── KURUMSAL DOSYA TRANSFERİ (Yetkili Yükleme) ── */}
+                  <Route
+                    path="/transfer"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout>
+                          <TransferUploadPage />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
 
                   {/* ── PORTAL (Modül Seçimi) ─────────────────────── */}
                   <Route

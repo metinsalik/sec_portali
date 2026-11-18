@@ -76,7 +76,8 @@ async function ensureModulesExist() {
     { code: 'ELECTRIC_PANEL_INSPECTION', name: 'Elektrik Pano Kontrolü', description: 'Termal kamera ile elektrik panoları sıcaklık ölçümü ve denetim formu', icon: 'photo_camera' },
     { code: 'FIRE_SAFETY_CONTROL', name: 'Yangın Güvenliği Kontrol Sistemi', description: 'Yangın güvenliği denetimleri, saha tespitleri ve aksiyon takip sistemi', icon: 'local_fire_department' },
     { code: 'FM200_TRACKING', name: 'FM-200 Kontrol ve Sızdırmazlık Durum Kontrolü', description: 'FM-200 ve gazlı yangın söndürme sistemleri denetim, bakım, sızdırmazlık ve iş emri takip sistemi', icon: 'propane_tank' },
-    { code: 'IMPROVEMENTS_TRACKING', name: 'İyileştirme ve Aksiyon Takip', description: 'Hastane denetimleri, elektrik PK, topraklama, pano ve trafo periyodik kontrolleri konsolide takibi', icon: 'fact_check' }
+    { code: 'IMPROVEMENTS_TRACKING', name: 'İyileştirme ve Aksiyon Takip', description: 'Hastane denetimleri, elektrik PK, topraklama, pano ve trafo periyodik kontrolleri konsolide takibi', icon: 'fact_check' },
+    { code: 'FILE_TRANSFER', name: 'Kurumsal Dosya Transferi', description: '2 GB\'a kadar süreli ve şifreli kurumsal dosya paylaşım modülü', icon: 'UploadCloud' }
   ];
   for (const mod of defaultModules) {
     await prisma.module.upsert({

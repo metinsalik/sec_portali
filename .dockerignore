@@ -21,6 +21,7 @@ packages/shared/src/generated
 
 # Runtime volumes and assets (mounted at runtime, not needed in image build)
 backend/uploads
+backend/storage
 backend/database_dump.sql
 ssl
 harici_sayfalar

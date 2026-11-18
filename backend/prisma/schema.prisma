@@ -3376,3 +3376,32 @@ model ImprovementPeriodicReport {
   @@index([sheetType])
   @@index([result])
 }
+
+model FileTransfer {
+  id                 String    @id @default(uuid())
+  token              String    @unique
+  originalName       String
+  storedName         String
+  mimeType           String
+  sizeBytes          BigInt
+  note               String?
+
+  passwordHash       String?
+  maxDownloads       Int?
+  downloadCount      Int       @default(0)
+
+  expiresAt          DateTime
+  isDeleted          Boolean   @default(false)
+  deletedAt          DateTime?
+
+  uploadedByUsername String
+  uploadedByName     String
+  uploaderIp         String?
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([token])
+  @@index([expiresAt, isDeleted])
+  @@index([uploadedByUsername])
+}

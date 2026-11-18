@@ -28,6 +28,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./backend/uploads:/app/backend/uploads
+      - ./backend/storage/transfers:/app/backend/storage/transfers
     environment:
       DATABASE_URL: postgresql://isguser:${DB_PASSWORD}@postgres:5432/isgdb
       JWT_SECRET: ${JWT_SECRET}
@@ -39,6 +40,10 @@ services:
       SMTP_PASS: ${SMTP_PASS}
       NODE_ENV: ${NODE_ENV}
       FRONTEND_URL: ${FRONTEND_URL}
+      TRANSFER_STORAGE_DIR: /app/backend/storage/transfers
+      TRANSFER_MAX_FILE_SIZE_MB: ${TRANSFER_MAX_FILE_SIZE_MB:-2048}
+      TRANSFER_MAX_TOTAL_GB: ${TRANSFER_MAX_TOTAL_GB:-50}
+      TRANSFER_DEFAULT_EXPIRY_DAYS: ${TRANSFER_DEFAULT_EXPIRY_DAYS:-3}
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { PrismaClient, WfTask } from '@prisma/client';
 import { addDays, addWeeks, addMonths, addYears } from 'date-fns';
+import { cleanupExpiredTransfers, cleanupOrphanTransferFiles } from '../services/transferService';
 
 const prisma = new PrismaClient();
 
@@ -106,4 +107,31 @@ export const startCronJobs = () => {
   });
 
   console.log('[CRON] Recurring tasks cron job scheduled.');
+
+  // Her saat başı süresi dolan veya indirme limitine ulaşan transfer dosyalarını sil
+  cron.schedule('0 * * * *', async () => {
+    try {
+      const { deletedCount, freedBytes } = await cleanupExpiredTransfers();
+      if (deletedCount > 0) {
+        const freedMb = (freedBytes / (1024 * 1024)).toFixed(2);
+        console.log(`[CRON][Transfer] ${deletedCount} adet süresi dolmuş dosya temizlendi, ${freedMb} MB alan açıldı.`);
+      }
+    } catch (err) {
+      console.error('[CRON][Transfer] Süresi dolan dosya temizlik hatası:', err);
+    }
+  });
+
+  // Her gece 03:00'te sahipsiz/yarım kalmış yetim transfer dosyalarını diskten temizle
+  cron.schedule('0 3 * * *', async () => {
+    try {
+      const { removedFiles } = await cleanupOrphanTransferFiles();
+      if (removedFiles > 0) {
+        console.log(`[CRON][Transfer] ${removedFiles} adet yetim dosya diskten temizlendi.`);
+      }
+    } catch (err) {
+      console.error('[CRON][Transfer] Yetim dosya temizlik hatası:', err);
+    }
+  });
+
+  console.log('[CRON] File transfer cleanup cron jobs scheduled.');
 };
