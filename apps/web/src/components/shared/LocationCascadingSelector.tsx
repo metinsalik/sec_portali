@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Label } from '@/components/ui/label';
 import {
   decodeGroup5LocationId,
@@ -28,6 +28,8 @@ export default function LocationCascadingSelector({
 
   const [customDepartment, setCustomDepartment] = useState<string>('');
   const [customMahal, setCustomMahal] = useState<string>('');
+
+  const lastEmittedValueRef = useRef<string>('');
 
   const parsedLocations = useMemo(
     () => locations.map((l) => ({ raw: l, parts: extractLocationParts(l) })),
@@ -141,6 +143,8 @@ export default function LocationCascadingSelector({
   // Initial sync from external value (Edit mode or preset)
   useEffect(() => {
     if (!value) return;
+    // Do not re-sync if this value was emitted by this component itself
+    if (value === lastEmittedValueRef.current) return;
 
     if (value.startsWith('group5:')) {
       const p = decodeGroup5LocationId(value);
@@ -148,8 +152,32 @@ export default function LocationCascadingSelector({
         if (p.buildingName) setSelectedBuildingName(p.buildingName);
         if (p.block) setSelectedBlock(p.block);
         if (p.floor) setSelectedFloor(p.floor);
-        if (p.department) setSelectedDepartment(p.department);
-        if (p.description) setSelectedMahal(p.description);
+
+        if (p.department) {
+          const deptMatch = parsedLocations.find(
+            (l) => l.parts.department?.toLowerCase() === p.department.toLowerCase()
+          );
+          if (deptMatch) {
+            setSelectedDepartment(deptMatch.parts.department);
+            setCustomDepartment('');
+          } else {
+            setSelectedDepartment('custom');
+            setCustomDepartment(p.department);
+          }
+        }
+
+        if (p.description) {
+          const descMatch = parsedLocations.find(
+            (l) => l.parts.description?.toLowerCase() === p.description.toLowerCase()
+          );
+          if (descMatch) {
+            setSelectedMahal(descMatch.parts.description);
+            setCustomMahal('');
+          } else {
+            setSelectedMahal('custom');
+            setCustomMahal(p.description);
+          }
+        }
       }
       return;
     }
@@ -159,8 +187,20 @@ export default function LocationCascadingSelector({
       if (match.parts.buildingName) setSelectedBuildingName(match.parts.buildingName);
       if (match.parts.block) setSelectedBlock(match.parts.block);
       if (match.parts.floor) setSelectedFloor(match.parts.floor);
-      if (match.parts.department) setSelectedDepartment(match.parts.department);
-      if (match.parts.description) setSelectedMahal(match.parts.description);
+      if (match.parts.department) {
+        setSelectedDepartment(match.parts.department);
+        setCustomDepartment('');
+      } else {
+        setSelectedDepartment('');
+        setCustomDepartment('');
+      }
+      if (match.parts.description) {
+        setSelectedMahal(match.parts.description);
+        setCustomMahal('');
+      } else {
+        setSelectedMahal('');
+        setCustomMahal('');
+      }
     }
   }, [value, parsedLocations]);
 
@@ -202,6 +242,7 @@ export default function LocationCascadingSelector({
         });
 
     if (emitValue && emitValue !== value) {
+      lastEmittedValueRef.current = emitValue;
       onChange(emitValue, level, {
         buildingName: selectedBuildingName,
         block: selectedBlock,
