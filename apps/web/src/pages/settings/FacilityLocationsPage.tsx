@@ -34,6 +34,9 @@ import {
   Briefcase,
   DoorOpen,
   RefreshCw,
+  GitMerge,
+  ArrowUpDown,
+  AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -60,6 +63,75 @@ type RenameTarget = {
   parentDepartment?: string;
   nodeKey: string;
 };
+
+type MergeTarget = {
+  level: 'buildingName' | 'building' | 'floor' | 'department' | 'description';
+  sourceValue: string;
+  sourceId?: string;
+  parentBuildingName?: string;
+  parentBuilding?: string;
+  parentFloor?: string;
+  parentDepartment?: string;
+};
+
+const LEVEL_LABELS: Record<string, string> = {
+  buildingName: 'Bina Adı',
+  building: 'Blok',
+  floor: 'Kat',
+  department: 'Birim / Bölüm',
+  description: 'Mahal / Oda',
+};
+
+// Helper to extract floor numeric rank (e.g. 13. Kat -> 13, -1. Kat -> -1, Zemin Kat -> 0)
+export function parseFloorRank(name?: string | null): number {
+  if (!name) return -10000;
+  const s = name.trim().toLowerCase();
+  if (s.includes('belirtilmemiş')) return -10000;
+  if (s.includes('çatı') || s.includes('teras')) return 1000;
+  if (s.includes('asma')) return 0.5;
+  if (s.startsWith('z') || s.includes('zemin') || s.includes('giriş')) return 0;
+
+  // Negative / bodrum floors: -1, -2, b1, b2, bodrum 1
+  const bodrumMatch = s.match(/(?:bodrum|b)\s*([0-9]+)/);
+  if (bodrumMatch) {
+    return -parseInt(bodrumMatch[1], 10);
+  }
+  const negMatch = s.match(/-\s*([0-9]+)/);
+  if (negMatch) {
+    return -parseInt(negMatch[1], 10);
+  }
+  // Positive number: 13. Kat, 13., 13, 1. Kat
+  const numMatch = s.match(/([0-9]+)/);
+  if (numMatch) {
+    return parseInt(numMatch[1], 10);
+  }
+  return -9000;
+}
+
+export function compareFloors(a: any, b: any, sortDesc = true): number {
+  const rankA = parseFloorRank(a.name);
+  const rankB = parseFloorRank(b.name);
+  if (rankA !== rankB) {
+    return sortDesc ? rankB - rankA : rankA - rankB;
+  }
+  return (a.name || '').localeCompare(b.name || '', 'tr', { numeric: true });
+}
+
+export function compareBlocks(a: any, b: any): number {
+  if (a.isPlaceholder && !b.isPlaceholder) return 1;
+  if (!a.isPlaceholder && b.isPlaceholder) return -1;
+  return (a.name || '').localeCompare(b.name || '', 'tr', { numeric: true });
+}
+
+export function compareDepartments(a: any, b: any): number {
+  if (a.isPlaceholder && !b.isPlaceholder) return 1;
+  if (!a.isPlaceholder && b.isPlaceholder) return -1;
+  return (a.name || '').localeCompare(b.name || '', 'tr', { numeric: true });
+}
+
+export function compareRooms(a: any, b: any): number {
+  return (a.name || '').localeCompare(b.name || '', 'tr', { numeric: true });
+}
 
 export default function FacilityLocationsPage() {
   const queryClient = useQueryClient();
@@ -98,6 +170,13 @@ export default function FacilityLocationsPage() {
   const [inlineValue, setInlineValue] = useState('');
   const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null);
   const [renameValue, setRenameValue] = useState('');
+
+  // Sıralama ve Birleştirme (Merge) durumları
+  const [floorSortDesc, setFloorSortDesc] = useState<boolean>(true);
+  const [mergeTarget, setMergeTarget] = useState<MergeTarget | null>(null);
+  const [mergeDestinationValue, setMergeDestinationValue] = useState('');
+  const [mergeDestinationId, setMergeDestinationId] = useState('');
+  const [isCustomDestination, setIsCustomDestination] = useState(false);
 
   const { data: facilities = [] } = useQuery({
     queryKey: ['facilities'],
@@ -211,6 +290,60 @@ export default function FacilityLocationsPage() {
       toast.error(err.message || 'Silme başarısız');
     },
   });
+
+  const mergeMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await api.post('/locations/merge-nodes', { ...data, facilityId });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Birleştirme işlemi başarısız');
+      }
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      invalidateAllLocationQueries();
+      toast.success(data?.message || 'Lokasyonlar başarıyla birleştirildi');
+      setMergeTarget(null);
+      setMergeDestinationValue('');
+      setMergeDestinationId('');
+      setIsCustomDestination(false);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Birleştirme işlemi sırasında hata oluştu');
+    },
+  });
+
+  const openMergeModal = (target: MergeTarget) => {
+    setMergeTarget(target);
+    setMergeDestinationValue('');
+    setMergeDestinationId('');
+    setIsCustomDestination(false);
+  };
+
+  const executeMerge = () => {
+    if (!mergeTarget) return;
+    const targetVal = mergeDestinationValue.trim();
+    if (!targetVal && !mergeDestinationId) {
+      toast.error('Lütfen birleştirilecek hedef lokasyonu seçin veya girin.');
+      return;
+    }
+    if (!mergeDestinationId && targetVal.toLowerCase() === mergeTarget.sourceValue.toLowerCase()) {
+      toast.error('Kaynak ve hedef lokasyon aynı olamaz.');
+      return;
+    }
+
+    mergeMutation.mutate({
+      level: mergeTarget.level,
+      sourceValue: mergeTarget.sourceValue,
+      sourceId: mergeTarget.sourceId,
+      targetValue: targetVal,
+      targetId: mergeDestinationId || undefined,
+      parentBuildingName: mergeTarget.parentBuildingName,
+      parentBuilding: mergeTarget.parentBuilding,
+      parentFloor: mergeTarget.parentFloor,
+      parentDepartment: mergeTarget.parentDepartment,
+    });
+  };
 
   const addLocFromForm = () => {
     if (!newLocation.buildingName.trim()) {
@@ -440,6 +573,85 @@ export default function FacilityLocationsPage() {
     return root;
   }, [locations, searchQuery]);
 
+  const mergeTargetCandidates = useMemo(() => {
+    if (!mergeTarget) return [];
+    const { level, sourceValue, sourceId, parentBuildingName, parentBuilding, parentFloor, parentDepartment } = mergeTarget;
+
+    if (level === 'buildingName') {
+      return Object.values(tree)
+        .map((b: any) => ({ label: b.name, value: b.name }))
+        .filter((b) => b.value.toLowerCase() !== sourceValue.toLowerCase());
+    }
+
+    if (level === 'building') {
+      const binaNode = Object.values(tree).find((b: any) => b.name === parentBuildingName) as any;
+      if (!binaNode) return [];
+      return Object.values(binaNode.blocks)
+        .filter((blk: any) => !blk.isPlaceholder && blk.name.toLowerCase() !== sourceValue.toLowerCase())
+        .sort(compareBlocks)
+        .map((blk: any) => ({ label: blk.name, value: blk.name }));
+    }
+
+    if (level === 'floor') {
+      const binaNode = Object.values(tree).find((b: any) => b.name === parentBuildingName) as any;
+      const blokNode = binaNode
+        ? (Object.values(binaNode.blocks).find(
+            (blk: any) => blk.name === parentBuilding || (blk.isPlaceholder && !parentBuilding)
+          ) as any)
+        : null;
+      if (!blokNode) return [];
+      return Object.values(blokNode.floors)
+        .filter((flr: any) => !flr.isPlaceholder && flr.name.toLowerCase() !== sourceValue.toLowerCase())
+        .sort((a: any, b: any) => compareFloors(a, b, floorSortDesc))
+        .map((flr: any) => ({ label: flr.name, value: flr.name }));
+    }
+
+    if (level === 'department') {
+      const binaNode = Object.values(tree).find((b: any) => b.name === parentBuildingName) as any;
+      const blokNode = binaNode
+        ? (Object.values(binaNode.blocks).find(
+            (blk: any) => blk.name === parentBuilding || (blk.isPlaceholder && !parentBuilding)
+          ) as any)
+        : null;
+      const floorNode = blokNode
+        ? (Object.values(blokNode.floors).find(
+            (f: any) => f.name === parentFloor || (f.isPlaceholder && !parentFloor)
+          ) as any)
+        : null;
+      if (!floorNode) return [];
+      return Object.values(floorNode.departments)
+        .filter((dept: any) => !dept.isPlaceholder && dept.name.toLowerCase() !== sourceValue.toLowerCase())
+        .sort(compareDepartments)
+        .map((dept: any) => ({ label: dept.name, value: dept.name }));
+    }
+
+    if (level === 'description') {
+      const binaNode = Object.values(tree).find((b: any) => b.name === parentBuildingName) as any;
+      const blokNode = binaNode
+        ? (Object.values(binaNode.blocks).find(
+            (blk: any) => blk.name === parentBuilding || (blk.isPlaceholder && !parentBuilding)
+          ) as any)
+        : null;
+      const floorNode = blokNode
+        ? (Object.values(blokNode.floors).find(
+            (f: any) => f.name === parentFloor || (f.isPlaceholder && !parentFloor)
+          ) as any)
+        : null;
+      const deptNode = floorNode
+        ? (Object.values(floorNode.departments).find(
+            (d: any) => d.name === parentDepartment || (d.isPlaceholder && !parentDepartment)
+          ) as any)
+        : null;
+      if (!deptNode) return [];
+      return deptNode.rooms
+        .filter((rm: any) => rm.id !== sourceId && rm.name.toLowerCase() !== sourceValue.toLowerCase())
+        .sort(compareRooms)
+        .map((rm: any) => ({ label: rm.name, value: rm.name, id: rm.id }));
+    }
+
+    return [];
+  }, [mergeTarget, tree, floorSortDesc]);
+
   const generatedCode = useMemo(() => {
     const blockOrBuilding = newLocation.block || newLocation.buildingName;
     if (!blockOrBuilding && !newLocation.floor) return '';
@@ -502,6 +714,26 @@ export default function FacilityLocationsPage() {
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-muted-foreground" />
             Excel'den Yükle
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => {
+              const firstBina = Object.values(tree)[0] as any;
+              const firstBlok = firstBina ? (Object.values(firstBina.blocks)[0] as any) : null;
+              const firstFloor = firstBlok ? (Object.values(firstBlok.floors)[0] as any) : null;
+              openMergeModal({
+                level: 'floor',
+                sourceValue: firstFloor?.name || '',
+                parentBuildingName: firstBina?.name || '',
+                parentBuilding: firstBlok?.isPlaceholder ? '' : (firstBlok?.name || ''),
+              });
+            }}
+            className="flex items-center gap-1.5 text-xs h-9 rounded-md border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
+            title="Mükerrer veya eski/yeni kat, blok, birim ve mahalleri birleştirin"
+          >
+            <GitMerge className="w-3.5 h-3.5" />
+            Lokasyon Birleştir (Merge)
           </Button>
 
           <div className="w-56">
@@ -674,14 +906,32 @@ export default function FacilityLocationsPage() {
                 </div>
               </div>
 
-              <div className="relative w-full sm:w-72">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-muted-foreground" />
-                <Input
-                  placeholder="Bina, blok, kat, birim veya mahal ara..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 h-8 text-xs rounded-md"
-                />
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFloorSortDesc((prev) => !prev)}
+                  className="h-8 text-xs flex items-center justify-center gap-1.5 px-2.5 shrink-0 border-border/80 hover:bg-muted/60"
+                  title={
+                    floorSortDesc
+                      ? "Katlar: 13. Kat'tan -2. Kat'a (Yukarıdan Aşağıya)"
+                      : "Katlar: -2. Kat'tan 13. Kat'a (Aşağıdan Yukarıya)"
+                  }
+                >
+                  <ArrowUpDown className="w-3.5 h-3.5 text-primary" />
+                  <span>Kat Sırası: {floorSortDesc ? '13 → -2' : '-2 → 13'}</span>
+                </Button>
+
+                <div className="relative w-full sm:w-72">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Bina, blok, kat, birim veya mahal ara..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8 h-8 text-xs rounded-md"
+                  />
+                </div>
               </div>
             </div>
 
@@ -699,7 +949,9 @@ export default function FacilityLocationsPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {Object.values(tree).map((binaNode: any) => {
+                {Object.values(tree)
+                  .sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', 'tr'))
+                  .map((binaNode: any) => {
                   const binaOpen = isNodeExpanded(binaNode.id, true);
                   const isRenamingBina =
                     renameTarget?.nodeKey === binaNode.id && renameTarget?.level === 'buildingName';
@@ -777,6 +1029,19 @@ export default function FacilityLocationsPage() {
                               <button
                                 type="button"
                                 onClick={() =>
+                                  openMergeModal({
+                                    level: 'buildingName',
+                                    sourceValue: binaNode.name,
+                                  })
+                                }
+                                className="p-1 text-muted-foreground hover:text-amber-600 rounded transition-colors"
+                                title="Binayı Başka Bir Bina ile Birleştir"
+                              >
+                                <GitMerge className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
                                   startRename({
                                     level: 'buildingName',
                                     oldValue: binaNode.name,
@@ -830,7 +1095,9 @@ export default function FacilityLocationsPage() {
                       {/* SEVİYE 2: BLOKLAR */}
                       {binaOpen && (
                         <div className="divide-y divide-border/50">
-                          {Object.values(binaNode.blocks).map((blokNode: any) => {
+                          {Object.values(binaNode.blocks)
+                            .sort(compareBlocks)
+                            .map((blokNode: any) => {
                             const blokOpen = isNodeExpanded(blokNode.id, true);
                             const isRenamingBlok =
                               renameTarget?.nodeKey === blokNode.id && renameTarget?.level === 'building';
@@ -898,6 +1165,20 @@ export default function FacilityLocationsPage() {
                                         <button
                                           type="button"
                                           onClick={() =>
+                                            openMergeModal({
+                                              level: 'building',
+                                              sourceValue: blokNode.isPlaceholder ? '' : blokNode.name,
+                                              parentBuildingName: binaNode.name,
+                                            })
+                                          }
+                                          className="p-1 text-muted-foreground hover:text-amber-600 rounded transition-colors"
+                                          title="Bloğu Başka Bir Blok ile Birleştir"
+                                        >
+                                          <GitMerge className="w-3 h-3" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
                                             startRename({
                                               level: 'building',
                                               oldValue: blokNode.isPlaceholder ? '' : blokNode.name,
@@ -961,7 +1242,9 @@ export default function FacilityLocationsPage() {
                                         Henüz kat eklenmemiş. Sağ üstten "+ Kat Ekle" kullanabilirsiniz.
                                       </div>
                                     ) : (
-                                      Object.values(blokNode.floors).map((floorNode: any) => {
+                                      Object.values(blokNode.floors)
+                                        .sort((a: any, b: any) => compareFloors(a, b, floorSortDesc))
+                                        .map((floorNode: any) => {
                                         const flrOpen = isNodeExpanded(floorNode.id, true);
                                         const isRenamingFloor =
                                           renameTarget?.nodeKey === floorNode.id && renameTarget?.level === 'floor';
@@ -1030,6 +1313,21 @@ export default function FacilityLocationsPage() {
                                                         <button
                                                           type="button"
                                                           onClick={() =>
+                                                            openMergeModal({
+                                                              level: 'floor',
+                                                              sourceValue: floorNode.name,
+                                                              parentBuildingName: binaNode.name,
+                                                              parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
+                                                            })
+                                                          }
+                                                          className="p-1 text-muted-foreground hover:text-amber-600 rounded transition-colors"
+                                                          title="Bu Katı Başka Bir Kat ile Birleştir (Örn: 13. -> 13. Kat)"
+                                                        >
+                                                          <GitMerge className="w-3 h-3" />
+                                                        </button>
+                                                        <button
+                                                          type="button"
+                                                          onClick={() =>
                                                             startRename({
                                                               level: 'floor',
                                                               oldValue: floorNode.name,
@@ -1090,7 +1388,7 @@ export default function FacilityLocationsPage() {
                                             {/* SEVİYE 4: BİRİMLER */}
                                             {flrOpen && deptCount > 0 && (
                                               <div className="pl-6 pr-2.5 py-2 space-y-1.5 border-t border-border/40 bg-background/60">
-                                                {Object.values(floorNode.departments).map((deptNode: any) => {
+                                                {Object.values(floorNode.departments).sort(compareDepartments).map((deptNode: any) => {
                                                   const deptOpen = isNodeExpanded(deptNode.id, true);
                                                   const isRenamingDept =
                                                     renameTarget?.nodeKey === deptNode.id && renameTarget?.level === 'department';
@@ -1158,6 +1456,22 @@ export default function FacilityLocationsPage() {
                                                                   <button
                                                                     type="button"
                                                                     onClick={() =>
+                                                                      openMergeModal({
+                                                                        level: 'department',
+                                                                        sourceValue: deptNode.name,
+                                                                        parentBuildingName: binaNode.name,
+                                                                        parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
+                                                                        parentFloor: floorNode.isPlaceholder ? '' : floorNode.name,
+                                                                      })
+                                                                    }
+                                                                    className="p-1 text-muted-foreground hover:text-amber-600 rounded transition-colors"
+                                                                    title="Birimi Başka Bir Birim ile Birleştir"
+                                                                  >
+                                                                    <GitMerge className="w-3 h-3" />
+                                                                  </button>
+                                                                  <button
+                                                                    type="button"
+                                                                    onClick={() =>
                                                                       startRename({
                                                                         level: 'department',
                                                                         oldValue: deptNode.name,
@@ -1220,7 +1534,7 @@ export default function FacilityLocationsPage() {
                                                       {/* SEVİYE 5: MAHALLER */}
                                                       {deptOpen && deptNode.rooms.length > 0 && (
                                                         <div className="pl-7 pr-2.5 py-1.5 flex flex-wrap gap-1.5 border-t border-border/30 bg-muted/10">
-                                                          {deptNode.rooms.map((room: any) => {
+                                                          {[...deptNode.rooms].sort(compareRooms).map((room: any) => {
                                                             const isRenamingRoom =
                                                               renameTarget?.nodeKey === room.id && renameTarget?.level === 'description';
 
@@ -1247,6 +1561,24 @@ export default function FacilityLocationsPage() {
                                                               >
                                                                 <DoorOpen className="w-3 h-3 text-sky-600 shrink-0" />
                                                                 <span>{room.name}</span>
+                                                                <button
+                                                                  type="button"
+                                                                  onClick={() =>
+                                                                    openMergeModal({
+                                                                      level: 'description',
+                                                                      sourceValue: room.name,
+                                                                      sourceId: room.id,
+                                                                      parentBuildingName: binaNode.name,
+                                                                      parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
+                                                                      parentFloor: floorNode.isPlaceholder ? '' : floorNode.name,
+                                                                      parentDepartment: deptNode.isPlaceholder ? '' : deptNode.name,
+                                                                    })
+                                                                  }
+                                                                  className="text-muted-foreground hover:text-amber-600 p-0.5"
+                                                                  title="Mahali Başka Bir Mahal ile Birleştir"
+                                                                >
+                                                                  <GitMerge className="w-2.5 h-2.5" />
+                                                                </button>
                                                                 <button
                                                                   type="button"
                                                                   onClick={() =>
@@ -1451,6 +1783,154 @@ export default function FacilityLocationsPage() {
         isOpen={isCodesModalOpen}
         onClose={() => setIsCodesModalOpen(false)}
       />
+
+      {/* Lokasyon Birleştirme (Merge) Modalı */}
+      <Dialog open={!!mergeTarget} onOpenChange={(open) => !open && setMergeTarget(null)}>
+        <DialogContent className="max-w-md rounded-lg">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
+              <div className="w-7 h-7 rounded-md bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <GitMerge className="w-4 h-4" />
+              </div>
+              Lokasyon Birleştirme (Merge)
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Mükerrer veya farklı adlandırılmış lokasyonları birleştirin. Tüm riskler, ekipmanlar ve mahaller güvenle hedef lokasyona aktarılır.
+            </DialogDescription>
+          </DialogHeader>
+
+          {mergeTarget && (
+            <div className="space-y-4 py-2 text-xs">
+              {/* Seviye ve Üst Düğüm Bilgisi */}
+              <div className="flex flex-wrap items-center gap-2 p-2.5 bg-muted/30 rounded-md border border-border/60">
+                <Badge variant="secondary" className="text-[11px] font-semibold">
+                  Seviye: {LEVEL_LABELS[mergeTarget.level] || mergeTarget.level}
+                </Badge>
+                {(mergeTarget.parentBuildingName || mergeTarget.parentBuilding || mergeTarget.parentFloor) && (
+                  <span className="text-[11px] text-muted-foreground truncate">
+                    {[mergeTarget.parentBuildingName, mergeTarget.parentBuilding, mergeTarget.parentFloor, mergeTarget.parentDepartment]
+                      .filter(Boolean)
+                      .join(' › ')}
+                  </span>
+                )}
+              </div>
+
+              {/* Kaynak Bilgisi */}
+              <div className="p-3 bg-destructive/5 border border-destructive/20 rounded-md">
+                <div className="text-[10px] uppercase font-bold text-destructive tracking-wider">
+                  Kaynak (Birleştirilip Kaldırılacak):
+                </div>
+                <div className="text-sm font-semibold text-foreground mt-0.5">
+                  {mergeTarget.sourceValue || '(İsimsiz/Belirtilmemiş)'}
+                </div>
+              </div>
+
+              {/* Hedef Seçimi */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-foreground">
+                    Hedef Lokasyon (Aktarılacak Ana Konum):
+                  </Label>
+                  {mergeTargetCandidates.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomDestination((prev) => !prev);
+                        setMergeDestinationValue('');
+                        setMergeDestinationId('');
+                      }}
+                      className="text-[11px] text-primary hover:underline"
+                    >
+                      {isCustomDestination ? 'Listeden Seç' : 'Yeni İsim Yaz'}
+                    </button>
+                  )}
+                </div>
+
+                {!isCustomDestination && mergeTargetCandidates.length > 0 ? (
+                  <Select
+                    value={mergeDestinationValue}
+                    onValueChange={(val) => {
+                      if (val === '__custom__') {
+                        setIsCustomDestination(true);
+                        setMergeDestinationValue('');
+                        setMergeDestinationId('');
+                      } else {
+                        setMergeDestinationValue(val);
+                        const cand = mergeTargetCandidates.find((c) => c.value === val);
+                        setMergeDestinationId(cand?.id || '');
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue placeholder="Birleştirilecek hedef lokasyonu seçin..." />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {mergeTargetCandidates.map((cand) => (
+                        <SelectItem key={cand.id || cand.value} value={cand.value} className="text-xs">
+                          {cand.label}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="__custom__" className="text-xs text-primary font-medium border-t border-border/50">
+                        + Farklı Bir İsim Belirt...
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    autoFocus
+                    placeholder="Hedef lokasyon adı (ör. 13. Kat, A Blok)..."
+                    value={mergeDestinationValue}
+                    onChange={(e) => setMergeDestinationValue(e.target.value)}
+                    className="h-9 text-xs"
+                  />
+                )}
+              </div>
+
+              {/* Bilgilendirme Uyarısı */}
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-md space-y-1.5">
+                <div className="font-semibold flex items-center gap-1.5 text-amber-700 dark:text-amber-400 text-xs">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  Güvenli Aktarım Garantisi
+                </div>
+                <ul className="list-disc pl-4 space-y-1 text-[11px] text-muted-foreground">
+                  <li>
+                    <strong>&quot;{mergeTarget.sourceValue}&quot;</strong> lokasyonundaki tüm Risk Değerlendirmeleri, Yangın Ekipmanları, Tehlikeli Madde Envanterleri ve Olay Bildirimleri seçilen hedefe aktarılır.
+                  </li>
+                  <li>
+                    Ortak olan alt birimler ve mahaller birleştirilerek mükerrer kayıtlar temizlenir.
+                  </li>
+                  <li>Hiçbir veri veya risk kaydı kaybolmaz.</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setMergeTarget(null)}
+              className="h-8 text-xs rounded-md"
+              disabled={mergeMutation.isPending}
+            >
+              Vazgeç
+            </Button>
+            <Button
+              size="sm"
+              onClick={executeMerge}
+              disabled={mergeMutation.isPending || (!mergeDestinationValue.trim() && !mergeDestinationId)}
+              className="h-8 text-xs rounded-md gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {mergeMutation.isPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <GitMerge className="w-3.5 h-3.5" />
+              )}
+              Birleştir ve Aktar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

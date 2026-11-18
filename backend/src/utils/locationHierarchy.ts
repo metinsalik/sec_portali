@@ -435,3 +435,233 @@ export async function deleteLocationNode(
   return { deletedCount: idsToDeactivate.length };
 }
 
+export interface MergeLocationNodesParams {
+  facilityId: string;
+  level: 'buildingName' | 'building' | 'floor' | 'department' | 'description' | 'id';
+  sourceValue?: string;
+  targetValue?: string;
+  sourceId?: string;
+  targetId?: string;
+  parentBuildingName?: string;
+  parentBuilding?: string;
+  parentFloor?: string;
+  parentDepartment?: string;
+}
+
+export async function mergeLocationNodes(
+  prisma: PrismaClient,
+  params: MergeLocationNodesParams
+) {
+  const { facilityId, level } = params;
+  if (!facilityId) {
+    const err: any = new Error('facilityId zorunludur.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const cleanSource = isPlaceholder(params.sourceValue) ? '' : cleanStr(params.sourceValue);
+  const cleanTarget = isPlaceholder(params.targetValue) ? '' : cleanStr(params.targetValue);
+
+  if (!params.sourceId && !cleanSource) {
+    const err: any = new Error('Birleştirilecek kaynak lokasyon belirtilmelidir.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (!params.targetId && !cleanTarget) {
+    const err: any = new Error('Hedef lokasyon belirtilmelidir.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (params.sourceId && params.targetId && params.sourceId === params.targetId) {
+    const err: any = new Error('Kaynak ve hedef lokasyon aynı olamaz.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (!params.sourceId && !params.targetId && cleanSource.toLowerCase() === cleanTarget.toLowerCase()) {
+    const err: any = new Error('Kaynak ve hedef isimleri aynı olamaz.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Load all active locations for facility
+  const allLocs = await prisma.facilityLocation.findMany({
+    where: {
+      facilityId,
+      isActive: true,
+      OR: [{ type: null }, { type: { not: 'TEMIZLIK_ARABASI' } }],
+    },
+    include: { facilityBuilding: true },
+  });
+
+  // Identify source locations
+  const sourceLocations = allLocs.filter((loc) => {
+    if (params.sourceId) {
+      return loc.id === params.sourceId;
+    }
+    const p = extractLocationParts(loc);
+    if (level === 'buildingName') {
+      return p.buildingName.toLowerCase() === cleanSource.toLowerCase();
+    }
+    if (level === 'building') {
+      return (
+        matchesField(p.buildingName, params.parentBuildingName) &&
+        p.block.toLowerCase() === cleanSource.toLowerCase()
+      );
+    }
+    if (level === 'floor') {
+      return (
+        matchesField(p.buildingName, params.parentBuildingName) &&
+        matchesField(p.block, params.parentBuilding) &&
+        p.floor.toLowerCase() === cleanSource.toLowerCase()
+      );
+    }
+    if (level === 'department') {
+      return (
+        matchesField(p.buildingName, params.parentBuildingName) &&
+        matchesField(p.block, params.parentBuilding) &&
+        matchesField(p.floor, params.parentFloor) &&
+        p.department.toLowerCase() === cleanSource.toLowerCase()
+      );
+    }
+    if (level === 'description') {
+      return (
+        matchesField(p.buildingName, params.parentBuildingName) &&
+        matchesField(p.block, params.parentBuilding) &&
+        matchesField(p.floor, params.parentFloor) &&
+        matchesField(p.department, params.parentDepartment) &&
+        p.description.toLowerCase() === cleanSource.toLowerCase()
+      );
+    }
+    return false;
+  });
+
+  if (sourceLocations.length === 0) {
+    return {
+      success: true,
+      mergedCount: 0,
+      transferredRelationsCount: 0,
+      message: 'Birleştirilecek kaynak lokasyon kaydı bulunamadı.',
+    };
+  }
+
+  let updatedBuildingId: number | null = null;
+  if (level === 'buildingName' && cleanTarget) {
+    updatedBuildingId = await ensureFacilityBuilding(prisma, facilityId, cleanTarget);
+  }
+
+  let transferredRelationsCount = 0;
+  let mergedRecordsCount = 0;
+
+  await prisma.$transaction(async (tx) => {
+    // Current pool of active locations (excluding the ones we are merging)
+    const sourceIdsSet = new Set(sourceLocations.map((l) => l.id));
+    const activeTargets = allLocs.filter((l) => !sourceIdsSet.has(l.id));
+
+    for (const sourceLoc of sourceLocations) {
+      const p = extractLocationParts(sourceLoc);
+      const updatedParts = {
+        buildingName: level === 'buildingName' ? cleanTarget : p.buildingName,
+        building: level === 'building' ? cleanTarget : p.block,
+        floor: level === 'floor' ? cleanTarget : p.floor,
+        department: level === 'department' ? cleanTarget : p.department,
+        description: level === 'description' ? cleanTarget : p.description,
+      };
+
+      const targetCanonicalName = buildCanonicalLocationName({
+        ...updatedParts,
+        name: sourceLoc.name,
+      });
+
+      // Find if an active target already matches
+      let targetLoc: any = null;
+      if (params.targetId) {
+        targetLoc = activeTargets.find((l) => l.id === params.targetId);
+      } else {
+        targetLoc =
+          activeTargets.find((l) => {
+            const tp = extractLocationParts(l);
+            return (
+              tp.buildingName.toLowerCase() === updatedParts.buildingName.toLowerCase() &&
+              tp.block.toLowerCase() === updatedParts.block.toLowerCase() &&
+              tp.floor.toLowerCase() === updatedParts.floor.toLowerCase() &&
+              tp.department.toLowerCase() === updatedParts.department.toLowerCase() &&
+              tp.description.toLowerCase() === updatedParts.description.toLowerCase()
+            );
+          }) ||
+          activeTargets.find((l) => l.name?.toLowerCase() === targetCanonicalName.toLowerCase());
+      }
+
+      if (targetLoc && targetLoc.id !== sourceLoc.id) {
+        // CASE A: Target exists -> transfer all foreign keys to targetLoc.id
+        const tId = targetLoc.id;
+        const sId = sourceLoc.id;
+
+        const [r1, r2, r3, r4, r5, r6, r7, r8, r9] = await Promise.all([
+          tx.riskLifecycle.updateMany({ where: { locationId: sId }, data: { locationId: tId } }),
+          tx.fireEquipment.updateMany({ where: { locationId: sId }, data: { locationId: tId } }),
+          tx.hazmatInventoryItem.updateMany({ where: { locationId: sId }, data: { locationId: tId } }),
+          tx.hazmatIncident.updateMany({ where: { locationId: sId }, data: { locationId: tId } }),
+          tx.extraordinaryIncident.updateMany({ where: { locationId: sId }, data: { locationId: tId } }),
+          tx.buildProject.updateMany({ where: { locationId: sId }, data: { locationId: tId } }),
+          tx.bTSoruBankasi.updateMany({ where: { locationId: sId }, data: { locationId: tId } }),
+          tx.bTUygunsuzluk.updateMany({ where: { locationId: sId }, data: { locationId: tId } }),
+          tx.fireDoor.updateMany({ where: { locationId: sId }, data: { locationId: tId } }),
+        ]);
+
+        transferredRelationsCount +=
+          r1.count + r2.count + r3.count + r4.count + r5.count + r6.count + r7.count + r8.count + r9.count;
+
+        // Soft-delete sourceLoc and suffix name to avoid unique constraint collision
+        await tx.facilityLocation.update({
+          where: { id: sId },
+          data: {
+            isActive: false,
+            name: `${sourceLoc.name || 'Lokasyon'}_merged_${Date.now()}_${sId.slice(0, 6)}`,
+          },
+        });
+        mergedRecordsCount++;
+      } else {
+        // CASE B: Target does not exist yet -> rename inactive collisions, then update sourceLoc to target state
+        await tx.facilityLocation.updateMany({
+          where: {
+            facilityId,
+            name: targetCanonicalName,
+            isActive: false,
+          },
+          data: {
+            name: `${targetCanonicalName}_inactive_${Date.now()}`,
+          },
+        });
+
+        const updatedLoc = await tx.facilityLocation.update({
+          where: { id: sourceLoc.id },
+          data: {
+            buildingName: toNullable(updatedParts.buildingName),
+            building: toNullable(updatedParts.building),
+            floor: toNullable(updatedParts.floor),
+            department: toNullable(updatedParts.department),
+            description: toNullable(updatedParts.description),
+            name: targetCanonicalName,
+            ...(updatedBuildingId !== null ? { buildingId: updatedBuildingId } : {}),
+          },
+          include: { facilityBuilding: true },
+        });
+
+        // Add to activeTargets so any subsequent duplicate matches it
+        activeTargets.push(updatedLoc);
+        mergedRecordsCount++;
+      }
+    }
+  });
+
+  return {
+    success: true,
+    mergedCount: mergedRecordsCount,
+    transferredRelationsCount,
+    message: `${mergedRecordsCount} lokasyon kaydı birleştirildi, ${transferredRelationsCount} bağlı kayıt (Risk, Yangın, Hazmat vb.) hedef lokasyona aktarıldı.`,
+  };
+}
+

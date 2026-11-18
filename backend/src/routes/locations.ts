@@ -7,6 +7,7 @@ import {
   deleteLocationNode,
   ensureFacilityBuilding,
   inferLocationType,
+  mergeLocationNodes,
   renameLocationNode,
   upsertFacilityLocation,
 } from '../utils/locationHierarchy';
@@ -125,6 +126,42 @@ router.post('/delete-node', authMiddleware, async (req: AuthRequest, res: Respon
     res.json({ success: true, ...result });
   } catch (err: any) {
     res.status(err.statusCode || 500).json({ error: err.message || 'Düğüm silinemedi.' });
+  }
+});
+
+// Merge nodes (re-points all relations and merges duplicate locations)
+router.post('/merge-nodes', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const {
+    facilityId,
+    level,
+    sourceValue,
+    targetValue,
+    sourceId,
+    targetId,
+    parentBuildingName,
+    parentBuilding,
+    parentFloor,
+    parentDepartment,
+  } = req.body;
+  if (!facilityId) return res.status(400).json({ error: 'facilityId zorunludur' });
+
+  try {
+    const result = await mergeLocationNodes(prisma, {
+      facilityId,
+      level,
+      sourceValue,
+      targetValue,
+      sourceId,
+      targetId,
+      parentBuildingName,
+      parentBuilding,
+      parentFloor,
+      parentDepartment,
+    });
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    console.error('Lokasyon birleştirme hatası:', err);
+    res.status(err.statusCode || 500).json({ error: err.message || 'Lokasyonlar birleştirilemedi.' });
   }
 });
 
