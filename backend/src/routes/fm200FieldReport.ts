@@ -367,6 +367,40 @@ export interface ConsolidatedFieldReport {
   categoryRiskMap: Record<string, string[]>;
 }
 
+export interface FacilityComparisonDelta {
+  hasPrevious: boolean;
+  previousSecurityReportRate: number;
+  securityRateDelta: number;
+  previousCompletedCount: number;
+  completedDelta: number;
+  previousInProgressCount: number;
+  inProgressDelta: number;
+  previousTotalItems: number;
+  totalItemsDelta: number;
+  previousActionedRoomCount: number;
+  actionedRoomDelta: number;
+  previousEffectivePoints: number;
+  effectivePointsDelta: number;
+  status: 'improved' | 'regressed' | 'unchanged' | 'new';
+}
+
+export interface OverallComparisonSummary {
+  hasPrevious: boolean;
+  previousFileName: string | null;
+  previousUploadedAt: string | null;
+  previousOverallSecurityReportRate: number;
+  overallSecurityRateDelta: number;
+  previousOverallCompleted: number;
+  overallCompletedDelta: number;
+  previousOverallInProgress: number;
+  overallInProgressDelta: number;
+  previousTotalItems: number;
+  totalItemsDelta: number;
+  improvedFacilitiesCount: number;
+  regressedFacilitiesCount: number;
+  unchangedFacilitiesCount: number;
+}
+
 // Dosya Saklama Yolları
 const getReportsDir = () => {
   const dir = path.join(process.cwd(), 'uploads', 'fm200', 'reports');
@@ -376,7 +410,16 @@ const getReportsDir = () => {
   return dir;
 };
 
+const getHistoryDir = () => {
+  const dir = path.join(getReportsDir(), 'history');
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  return dir;
+};
+
 const getLatestJsonPath = () => path.join(getReportsDir(), 'field_report_latest.json');
+const getPreviousJsonPath = () => path.join(getReportsDir(), 'field_report_previous.json');
 const getLatestExcelPath = () => path.join(getReportsDir(), 'field_report_latest.xlsx');
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -672,6 +715,186 @@ export async function parseFieldReportExcel(
 // RAPOR VERİSİ GETİR / OTOMATİK İLK BAŞLATMA
 // ──────────────────────────────────────────────────────────────────────────────
 let inMemoryCache: ConsolidatedFieldReport | null = null;
+let inMemoryPreviousCache: ConsolidatedFieldReport | null | undefined = undefined;
+
+export function getPreviousFieldReport(): ConsolidatedFieldReport | null {
+  if (inMemoryPreviousCache !== undefined) {
+    return inMemoryPreviousCache;
+  }
+  const prevPath = getPreviousJsonPath();
+  if (fs.existsSync(prevPath)) {
+    try {
+      const raw = fs.readFileSync(prevPath, 'utf8');
+      const parsed = JSON.parse(raw) as ConsolidatedFieldReport;
+      if (parsed?.facilitySummaries) {
+        for (const sum of Object.values(parsed.facilitySummaries)) {
+          if (sum.actionedRoomCount === undefined && sum.rooms) {
+            sum.actionedRoomCount = sum.rooms.filter((r) => r.completedCount > 0).length;
+          }
+        }
+      }
+      inMemoryPreviousCache = parsed;
+      return parsed;
+    } catch (e) {
+      console.error('Error reading field_report_previous.json:', e);
+    }
+  }
+  inMemoryPreviousCache = null;
+  return null;
+}
+
+export function findFacilitySummaryInReport(
+  report: ConsolidatedFieldReport | null,
+  facilityId: string,
+  facilityName?: string
+): FacilityFieldSummary | null {
+  if (!report || !report.facilitySummaries) return null;
+  if (report.facilitySummaries[facilityId]) return report.facilitySummaries[facilityId];
+
+  const facKey = cleanKey(facilityId);
+  const facNameKey = facilityName ? cleanKey(facilityName) : '';
+  for (const [k, s] of Object.entries(report.facilitySummaries)) {
+    if (
+      cleanKey(k) === facKey ||
+      (facNameKey && cleanKey(k) === facNameKey) ||
+      (s.facilityId && cleanKey(s.facilityId) === facKey) ||
+      (facNameKey && (cleanKey(s.tesis) === facNameKey || (s.facilityName && cleanKey(s.facilityName) === facNameKey)))
+    ) {
+      return s;
+    }
+  }
+  return null;
+}
+
+export function computeFacilityComparison(
+  current: FacilityFieldSummary | null | undefined,
+  previous: FacilityFieldSummary | null | undefined
+): FacilityComparisonDelta {
+  if (!current) {
+    return {
+      hasPrevious: false,
+      previousSecurityReportRate: 0,
+      securityRateDelta: 0,
+      previousCompletedCount: 0,
+      completedDelta: 0,
+      previousInProgressCount: 0,
+      inProgressDelta: 0,
+      previousTotalItems: 0,
+      totalItemsDelta: 0,
+      previousActionedRoomCount: 0,
+      actionedRoomDelta: 0,
+      previousEffectivePoints: 0,
+      effectivePointsDelta: 0,
+      status: 'unchanged',
+    };
+  }
+
+  if (!previous) {
+    return {
+      hasPrevious: false,
+      previousSecurityReportRate: 0,
+      securityRateDelta: current.securityReportRate,
+      previousCompletedCount: 0,
+      completedDelta: current.completedCount,
+      previousInProgressCount: 0,
+      inProgressDelta: current.inProgressCount,
+      previousTotalItems: 0,
+      totalItemsDelta: current.totalItems,
+      previousActionedRoomCount: 0,
+      actionedRoomDelta: current.actionedRoomCount || 0,
+      previousEffectivePoints: 0,
+      effectivePointsDelta: current.effectiveCompletedPoints,
+      status: 'new',
+    };
+  }
+
+  const securityRateDelta = Number((current.securityReportRate - previous.securityReportRate).toFixed(1));
+  const completedDelta = current.completedCount - previous.completedCount;
+  const inProgressDelta = current.inProgressCount - previous.inProgressCount;
+  const totalItemsDelta = current.totalItems - previous.totalItems;
+  const curActioned = current.actionedRoomCount || 0;
+  const prevActioned = previous.actionedRoomCount || 0;
+  const actionedRoomDelta = curActioned - prevActioned;
+  const effectivePointsDelta = Number((current.effectiveCompletedPoints - previous.effectiveCompletedPoints).toFixed(1));
+
+  let status: FacilityComparisonDelta['status'] = 'unchanged';
+  if (securityRateDelta > 0 || (securityRateDelta === 0 && (completedDelta > 0 || effectivePointsDelta > 0))) {
+    status = 'improved';
+  } else if (securityRateDelta < 0) {
+    status = 'regressed';
+  }
+
+  return {
+    hasPrevious: true,
+    previousSecurityReportRate: previous.securityReportRate,
+    securityRateDelta,
+    previousCompletedCount: previous.completedCount,
+    completedDelta,
+    previousInProgressCount: previous.inProgressCount,
+    inProgressDelta,
+    previousTotalItems: previous.totalItems,
+    totalItemsDelta,
+    previousActionedRoomCount: prevActioned,
+    actionedRoomDelta,
+    previousEffectivePoints: previous.effectiveCompletedPoints,
+    effectivePointsDelta,
+    status,
+  };
+}
+
+export function computeOverallComparison(
+  current: ConsolidatedFieldReport,
+  previous: ConsolidatedFieldReport | null
+): OverallComparisonSummary {
+  if (!previous || previous.totalItems === 0) {
+    return {
+      hasPrevious: false,
+      previousFileName: null,
+      previousUploadedAt: null,
+      previousOverallSecurityReportRate: 0,
+      overallSecurityRateDelta: 0,
+      previousOverallCompleted: 0,
+      overallCompletedDelta: 0,
+      previousOverallInProgress: 0,
+      overallInProgressDelta: 0,
+      previousTotalItems: 0,
+      totalItemsDelta: 0,
+      improvedFacilitiesCount: 0,
+      regressedFacilitiesCount: 0,
+      unchangedFacilitiesCount: 0,
+    };
+  }
+
+  let improvedFacilitiesCount = 0;
+  let regressedFacilitiesCount = 0;
+  let unchangedFacilitiesCount = 0;
+
+  for (const [key, curSum] of Object.entries(current.facilitySummaries)) {
+    const prevSum = findFacilitySummaryInReport(previous, curSum.facilityId || key, curSum.facilityName || curSum.tesis);
+    if (!prevSum) continue;
+    const delta = computeFacilityComparison(curSum, prevSum);
+    if (delta.status === 'improved') improvedFacilitiesCount += 1;
+    else if (delta.status === 'regressed') regressedFacilitiesCount += 1;
+    else unchangedFacilitiesCount += 1;
+  }
+
+  return {
+    hasPrevious: true,
+    previousFileName: previous.fileName,
+    previousUploadedAt: previous.uploadedAt,
+    previousOverallSecurityReportRate: previous.overallSecurityReportRate,
+    overallSecurityRateDelta: Number((current.overallSecurityReportRate - previous.overallSecurityReportRate).toFixed(1)),
+    previousOverallCompleted: previous.overallCompleted,
+    overallCompletedDelta: current.overallCompleted - previous.overallCompleted,
+    previousOverallInProgress: previous.overallInProgress,
+    overallInProgressDelta: current.overallInProgress - previous.overallInProgress,
+    previousTotalItems: previous.totalItems,
+    totalItemsDelta: current.totalItems - previous.totalItems,
+    improvedFacilitiesCount,
+    regressedFacilitiesCount,
+    unchangedFacilitiesCount,
+  };
+}
 
 export async function getConsolidatedFieldReport(): Promise<ConsolidatedFieldReport> {
   if (inMemoryCache) {
@@ -772,9 +995,13 @@ const upload = multer({
 router.get('/field-report', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const report = await getConsolidatedFieldReport();
+    const previousReport = getPreviousFieldReport();
+    const overallComparison = computeOverallComparison(report, previousReport);
+
     // Item dizilerini yanıtı şişirmemek için kırpıp sadece tesis özetlerini dönüyoruz
     const trimmedSummaries: Record<string, any> = {};
     for (const [key, sum] of Object.entries(report.facilitySummaries)) {
+      const prevSum = findFacilitySummaryInReport(previousReport, sum.facilityId || key, sum.facilityName || sum.tesis);
       trimmedSummaries[key] = {
         tesis: sum.tesis,
         facilityId: sum.facilityId,
@@ -796,7 +1023,8 @@ router.get('/field-report', authMiddleware, async (req: AuthRequest, res: Respon
         iletilmeDurumu: sum.iletilmeDurumu,
         hastaneNotu: sum.hastaneNotu,
         categories: sum.categories,
-        risks: sum.risks
+        risks: sum.risks,
+        comparison: previousReport ? computeFacilityComparison(sum, prevSum) : null
       };
     }
 
@@ -813,7 +1041,8 @@ router.get('/field-report', authMiddleware, async (req: AuthRequest, res: Respon
       overallCancelled: report.overallCancelled,
       effectiveCompletedPoints: report.effectiveCompletedPoints,
       facilitySummaries: trimmedSummaries,
-      categoryRiskMap: report.categoryRiskMap
+      categoryRiskMap: report.categoryRiskMap,
+      comparison: overallComparison
     });
   } catch (err: any) {
     console.error('Get field report error:', err);
@@ -872,9 +1101,26 @@ router.post('/field-report/upload', authMiddleware, upload.single('file'), async
     const fileName = req.file.originalname || `FM200_Saha_Raporu_${Date.now()}.xlsx`;
     const parsed = await parseFieldReportExcel(req.file.buffer, fileName);
 
-    // Dosyaları kaydet
+    // Dosyaları kaydetmeden önce mevcut raporu "Önceki Rapor" ve tarihli arşiv olarak sakla
     const jsonPath = getLatestJsonPath();
+    const prevJsonPath = getPreviousJsonPath();
     const excelPath = getLatestExcelPath();
+
+    if (fs.existsSync(jsonPath)) {
+      try {
+        const existingRaw = fs.readFileSync(jsonPath, 'utf8');
+        const existingParsed = JSON.parse(existingRaw) as ConsolidatedFieldReport;
+        if (existingParsed && existingParsed.totalItems > 0) {
+          fs.writeFileSync(prevJsonPath, existingRaw, 'utf8');
+          const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const historyPath = path.join(getHistoryDir(), `field_report_${stamp}.json`);
+          fs.writeFileSync(historyPath, existingRaw, 'utf8');
+          inMemoryPreviousCache = existingParsed;
+        }
+      } catch (archiveErr) {
+        console.error('Previous field report archive warning:', archiveErr);
+      }
+    }
 
     fs.writeFileSync(jsonPath, JSON.stringify(parsed, null, 2), 'utf8');
     fs.writeFileSync(excelPath, req.file.buffer);
@@ -882,9 +1128,14 @@ router.post('/field-report/upload', authMiddleware, upload.single('file'), async
     // Bellek önbelleğini yenile
     inMemoryCache = parsed;
 
+    const comparison = computeOverallComparison(parsed, getPreviousFieldReport());
+    const deltaNote = comparison.hasPrevious
+      ? ` (Önceki rapora göre: ${comparison.overallSecurityRateDelta >= 0 ? '+' : ''}${comparison.overallSecurityRateDelta}%, ${comparison.improvedFacilitiesCount} hastanede iyileştirme)`
+      : '';
+
     res.json({
       success: true,
-      message: `Saha raporu başarıyla sisteme aktarıldı. ${parsed.totalFacilities} tesis ve ${parsed.totalItems} saha kaydı işlendi. Güvenlik Raporu genel tamamlanma: %${parsed.overallSecurityReportRate}`,
+      message: `Saha raporu başarıyla sisteme aktarıldı. ${parsed.totalFacilities} tesis ve ${parsed.totalItems} saha kaydı işlendi. Güvenlik Raporu genel tamamlanma: %${parsed.overallSecurityReportRate}${deltaNote}`,
       report: {
         uploadedAt: parsed.uploadedAt,
         fileName: parsed.fileName,
@@ -896,7 +1147,8 @@ router.post('/field-report/upload', authMiddleware, upload.single('file'), async
         overallNotStarted: parsed.overallNotStarted,
         overallDetected: parsed.overallDetected,
         overallCancelled: parsed.overallCancelled,
-        effectiveCompletedPoints: parsed.effectiveCompletedPoints
+        effectiveCompletedPoints: parsed.effectiveCompletedPoints,
+        comparison
       }
     });
   } catch (err: any) {
@@ -921,6 +1173,78 @@ router.get('/field-report/download', authMiddleware, async (req: AuthRequest, re
     res.status(404).json({ error: 'İndirilebilecek Excel raporu bulunamadı.' });
   } catch (err: any) {
     res.status(500).json({ error: 'Excel indirilemedi: ' + err.message });
+  }
+});
+
+// 5. Yüklenmiş Tüm Saha Raporu Excel ve Karşılaştırma Geçmişini Temizleme (Sıfırlama)
+router.delete('/field-report/reset', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user;
+    const isAdminOrMgmt = Boolean(
+      user?.isAdmin ||
+      user?.isManagement ||
+      user?.roles?.includes('admin') ||
+      user?.roles?.includes('management')
+    );
+
+    if (!isAdminOrMgmt) {
+      return res.status(403).json({ error: 'Rapor geçmişini temizlemek için yönetici yetkisi gereklidir.' });
+    }
+
+    const jsonPath = getLatestJsonPath();
+    const prevJsonPath = getPreviousJsonPath();
+    const excelPath = getLatestExcelPath();
+    const historyDir = getHistoryDir();
+
+    // Önceki rapor ve ham Excel dosyasını sil
+    if (fs.existsSync(prevJsonPath)) fs.unlinkSync(prevJsonPath);
+    if (fs.existsSync(excelPath)) fs.unlinkSync(excelPath);
+
+    // Arşiv (history) klasöründeki tüm eski snapshot'ları temizle
+    if (fs.existsSync(historyDir)) {
+      for (const file of fs.readdirSync(historyDir)) {
+        const full = path.join(historyDir, file);
+        try {
+          if (fs.statSync(full).isFile()) {
+            fs.unlinkSync(full);
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    // Boş rapor şablonunu kaydet (varsayılan V1 Excel'in otomatik geri yüklenmesini engeller)
+    const emptyReport: ConsolidatedFieldReport = {
+      uploadedAt: new Date().toISOString(),
+      fileName: 'Henüz Rapor Yüklenmedi',
+      totalFacilities: 0,
+      totalItems: 0,
+      overallSecurityReportRate: 0,
+      overallCompleted: 0,
+      overallInProgress: 0,
+      overallNotStarted: 0,
+      overallDetected: 0,
+      overallCancelled: 0,
+      effectiveCompletedPoints: 0,
+      facilitySummaries: {},
+      hospitalNotes: {},
+      categoryRiskMap: {}
+    };
+
+    fs.writeFileSync(jsonPath, JSON.stringify(emptyReport, null, 2), 'utf8');
+
+    // Bellek önbelleklerini sıfırla
+    inMemoryCache = emptyReport;
+    inMemoryPreviousCache = null;
+
+    return res.json({
+      success: true,
+      message: 'Yüklenmiş tüm saha raporu Excel verileri ve karşılaştırma geçmişi temizlendi. Şimdi sırasıyla raporlarınızı yükleyebilirsiniz.'
+    });
+  } catch (err: any) {
+    console.error('Reset field report error:', err);
+    return res.status(500).json({ error: 'Raporlar temizlenirken hata oluştu: ' + err.message });
   }
 });
 

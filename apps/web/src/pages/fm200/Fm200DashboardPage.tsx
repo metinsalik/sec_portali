@@ -35,7 +35,11 @@ import {
   Sparkles,
   Upload,
   Clock,
-  ExternalLink
+  ExternalLink,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  History
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -47,7 +51,7 @@ export default function Fm200DashboardPage() {
   // Arama, filtre ve seçili hastane state'i (İlk Bakış ➔ Detay mimarisi)
   const [selectedHospital, setSelectedHospital] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterMode, setFilterMode] = useState<'all' | 'inspected' | 'missing'>('all');
+  const [filterMode, setFilterMode] = useState<'all' | 'inspected' | 'missing' | 'improved' | 'unchanged'>('all');
   const [detailSubTab, setDetailSubTab] = useState<'locations' | 'workOrders'>('locations');
 
   // Saha Raporu Detay Modalı ve Excel Yükleme Modalı State'leri
@@ -143,6 +147,12 @@ export default function Fm200DashboardPage() {
       if (filterMode === 'missing') {
         return row.locationCount === 0;
       }
+      if (filterMode === 'improved') {
+        return row.fieldReport?.comparison?.status === 'improved';
+      }
+      if (filterMode === 'unchanged') {
+        return row.fieldReport?.comparison?.status === 'unchanged' && row.fieldReport?.comparison?.hasPrevious;
+      }
       return true;
     });
   }, [matrix, searchQuery, filterMode]);
@@ -189,6 +199,12 @@ export default function Fm200DashboardPage() {
   const totalHospitals = matrix.length;
   const configuredHospitals = matrix.filter((r) => r.locationCount > 0).length;
   const missingHospitals = totalHospitals - configuredHospitals;
+  const improvedHospitalsCount = matrix.filter((r) => r.fieldReport?.comparison?.status === 'improved').length;
+  const unchangedHospitalsCount = matrix.filter(
+    (r) => r.fieldReport?.comparison?.status === 'unchanged' && r.fieldReport?.comparison?.hasPrevious
+  ).length;
+  const overallComparison = fieldReportSummary?.comparison || null;
+  const hasPreviousReport = Boolean(overallComparison?.hasPrevious);
   const inspectedWithScore = matrix.filter((r) => r.score > 0);
   const avgOverallScore =
     inspectedWithScore.length > 0
@@ -205,11 +221,15 @@ export default function Fm200DashboardPage() {
     try {
       const exportData = filteredMatrix.map((r, idx) => {
         const fr = r.fieldReport || {};
+        const cmp = fr.comparison;
         return {
           'No': idx + 1,
           'Hastaneler': r.name,
           'İl': r.city || '-',
           'Saha Güvenlik Raporu (%)': fr.hasData ? `%${fr.securityReportRate}` : '-',
+          'Önceki Rapor (%)': cmp?.hasPrevious ? `%${cmp.previousSecurityReportRate}` : '-',
+          'Gelişim Farkı (%)': cmp?.hasPrevious ? `${cmp.securityRateDelta > 0 ? '+' : ''}${cmp.securityRateDelta}%` : '-',
+          'Yeni Tamamlanan İş': cmp?.hasPrevious ? `${cmp.completedDelta > 0 ? '+' : ''}${cmp.completedDelta}` : '-',
           'Saha Aksiyon Sayısı': fr.totalItems || 0,
           'Devam Eden İş (0.5x)': fr.inProgressCount || 0,
           'Tamamlanan İş (1.0x)': fr.completedCount || 0,
@@ -232,6 +252,13 @@ export default function Fm200DashboardPage() {
         'Hastaneler': 'GENEL TOPLAM',
         'İl': '-',
         'Saha Güvenlik Raporu (%)': `%${overallSecurityRate}`,
+        'Önceki Rapor (%)': hasPreviousReport ? `%${overallComparison.previousOverallSecurityReportRate}` : '-',
+        'Gelişim Farkı (%)': hasPreviousReport
+          ? `${overallComparison.overallSecurityRateDelta > 0 ? '+' : ''}${overallComparison.overallSecurityRateDelta}%`
+          : '-',
+        'Yeni Tamamlanan İş': hasPreviousReport
+          ? `${overallComparison.overallCompletedDelta > 0 ? '+' : ''}${overallComparison.overallCompletedDelta}`
+          : '-',
         'Saha Aksiyon Sayısı': totals.fieldItems,
         'Devam Eden İş (0.5x)': totals.fieldInProgress,
         'Tamamlanan İş (1.0x)': totals.fieldCompleted,
@@ -671,11 +698,40 @@ export default function Fm200DashboardPage() {
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
               Saha Güvenlik Raporu
             </span>
-            <div className="text-2xl font-black text-emerald-600 mt-0.5">
-              %{overallSecurityRate}
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-2xl font-black text-emerald-600">
+                %{overallSecurityRate}
+              </span>
+              {hasPreviousReport && overallComparison && (
+                <span
+                  title={`Önceki Rapor: %${overallComparison.previousOverallSecurityReportRate} → Güncel: %${overallSecurityRate}`}
+                  className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-[11px] font-black ${
+                    overallComparison.overallSecurityRateDelta > 0
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300'
+                      : overallComparison.overallSecurityRateDelta < 0
+                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300'
+                        : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                  }`}
+                >
+                  {overallComparison.overallSecurityRateDelta > 0 ? (
+                    <TrendingUp className="w-3 h-3" />
+                  ) : overallComparison.overallSecurityRateDelta < 0 ? (
+                    <TrendingDown className="w-3 h-3" />
+                  ) : (
+                    <Minus className="w-3 h-3" />
+                  )}
+                  {overallComparison.overallSecurityRateDelta > 0 ? '+' : ''}
+                  {overallComparison.overallSecurityRateDelta}%
+                </span>
+              )}
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
               Devam: <b>{totals.fieldInProgress}</b> · Biten: <b>{totals.fieldCompleted}</b>
+              {hasPreviousReport && overallComparison && overallComparison.overallCompletedDelta !== 0 && (
+                <span className={`ml-1 font-bold ${overallComparison.overallCompletedDelta > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                  ({overallComparison.overallCompletedDelta > 0 ? '+' : ''}{overallComparison.overallCompletedDelta})
+                </span>
+              )}
             </p>
           </div>
           <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40">
@@ -764,6 +820,36 @@ export default function Fm200DashboardPage() {
               Mahal Girilmemiş Hastaneler ({missingHospitals})
             </button>
 
+            {hasPreviousReport && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setFilterMode('improved')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                    filterMode === 'improved'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-900/40'
+                  }`}
+                >
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  İyileştirme Olanlar ({improvedHospitalsCount})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFilterMode('unchanged')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                    filterMode === 'unchanged'
+                      ? 'bg-slate-700 text-white shadow-xs dark:bg-slate-200 dark:text-slate-900'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700'
+                  }`}
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                  Aynı Kalanlar ({unchangedHospitalsCount})
+                </button>
+              </>
+            )}
+
             <span className="px-3.5 py-1.5 rounded-xl text-xs font-black bg-indigo-50 text-indigo-700 border border-indigo-200/80 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900/40 flex items-center gap-1.5">
               <DoorOpen className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               Mahal: <b>{totals.locations}/{totals.actionedRooms} oda</b>
@@ -806,6 +892,51 @@ export default function Fm200DashboardPage() {
           </div>
         </div>
 
+        {/* Önceki Rapor Karşılaştırma Bilgi Şeridi */}
+        {hasPreviousReport && overallComparison && (
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-900/40 text-xs">
+            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200 flex-wrap">
+              <History className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>
+                <b>Önceki Rapor:</b>{' '}
+                <span className="font-mono text-[11px]">{overallComparison.previousFileName}</span>
+                {overallComparison.previousUploadedAt && (
+                  <span className="text-slate-500 ml-1">
+                    ({new Date(overallComparison.previousUploadedAt).toLocaleDateString('tr-TR')})
+                  </span>
+                )}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setFilterMode(filterMode === 'improved' ? 'all' : 'improved')}
+                className="cursor-pointer"
+                title="İyileştirme olan hastaneleri filtrele"
+              >
+                <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold">
+                  ▲ {overallComparison.improvedFacilitiesCount} Hastanede İyileştirme
+                </Badge>
+              </button>
+              {overallComparison.regressedFacilitiesCount > 0 && (
+                <Badge className="bg-rose-600 text-white text-[11px] font-bold">
+                  ▼ {overallComparison.regressedFacilitiesCount} Gerileme
+                </Badge>
+              )}
+              <button
+                type="button"
+                onClick={() => setFilterMode(filterMode === 'unchanged' ? 'all' : 'unchanged')}
+                className="cursor-pointer"
+                title="Durumu aynı kalan hastaneleri filtrele"
+              >
+                <Badge variant="outline" className="text-[11px] font-semibold hover:bg-slate-200/60 dark:hover:bg-slate-800">
+                  — {overallComparison.unchangedFacilitiesCount} Aynı Kalan
+                </Badge>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Tablo Alanı */}
         <div className="overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-800">
           <table className="w-full text-left text-xs border-collapse">
@@ -815,6 +946,9 @@ export default function Fm200DashboardPage() {
                 <th className="py-3 px-3 text-center text-xs font-extrabold">Mahal</th>
                 <th className="py-3 px-3 text-center text-xs font-extrabold bg-blue-900/60 text-blue-200">
                   Saha Güvenlik Raporu (%)
+                </th>
+                <th className="py-3 px-3 text-center text-xs font-extrabold bg-emerald-900/60 text-emerald-200">
+                  Önceki Rapora Göre Gelişim
                 </th>
                 <th className="py-3 px-3 text-center text-xs font-extrabold bg-purple-950/40 text-purple-200">
                   Saha Aksiyonları
@@ -833,7 +967,7 @@ export default function Fm200DashboardPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredMatrix.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="py-12 text-center text-slate-400">
+                  <td colSpan={14} className="py-12 text-center text-slate-400">
                     Aramaya veya filtreye uygun hastane bulunamadı.
                   </td>
                 </tr>
@@ -841,6 +975,8 @@ export default function Fm200DashboardPage() {
                 filteredMatrix.map((row, idx) => {
                   const hasLocs = (row.locationCount ?? 0) > 0;
                   const fr = row.fieldReport || {};
+                  const cmp = fr.comparison || null;
+                  const isImprovedRow = cmp?.status === 'improved';
                   const hasFieldData = fr.hasData && (fr.totalItems ?? 0) > 0;
                   const secRate = fr.securityReportRate ?? row.score ?? 0;
 
@@ -848,7 +984,9 @@ export default function Fm200DashboardPage() {
                     <tr
                       key={row.facilityId || idx}
                       onClick={() => setDetailModalFacility({ id: row.facilityId, name: row.name })}
-                      className="hover:bg-blue-50/50 dark:hover:bg-blue-950/20 cursor-pointer transition-colors group"
+                      className={`hover:bg-blue-50/50 dark:hover:bg-blue-950/20 cursor-pointer transition-colors group ${
+                        isImprovedRow ? 'bg-emerald-50/25 dark:bg-emerald-950/10 border-l-3 border-l-emerald-500' : ''
+                      }`}
                     >
                       <td className="py-3 px-4">
                         <div className="font-bold text-slate-900 dark:text-white group-hover:text-[#0051d5] flex items-center gap-1.5">
@@ -897,6 +1035,62 @@ export default function Fm200DashboardPage() {
                           </div>
                         ) : (
                           <span className="text-slate-400 font-bold text-xs">%0</span>
+                        )}
+                      </td>
+
+                      {/* Önceki Rapora Göre Gelişim / İyileştirme */}
+                      <td className="py-3 px-3 text-center bg-emerald-50/20 dark:bg-emerald-950/10">
+                        {!hasPreviousReport ? (
+                          <span className="text-[10px] text-slate-400 font-medium" title="Yeni bir Excel raporu yüklendiğinde önceki raporla karşılaştırma otomatik görünür.">
+                            İlk Rapor
+                          </span>
+                        ) : !hasFieldData || !cmp ? (
+                          <span className="text-slate-300 text-xs">-</span>
+                        ) : cmp.status === 'new' ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                            Yeni Eklendi
+                          </span>
+                        ) : cmp.status === 'improved' ? (
+                          <div
+                            className="inline-flex flex-col items-center gap-0.5"
+                            title={`Önceki: %${cmp.previousSecurityReportRate} → Güncel: %${secRate}`}
+                          >
+                            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-[11px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300/70 dark:border-emerald-800">
+                              <TrendingUp className="w-3 h-3" />
+                              {cmp.securityRateDelta > 0 ? `+${cmp.securityRateDelta}%` : 'İyileşme'}
+                            </span>
+                            <span className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400">
+                              {cmp.completedDelta > 0 ? `+${cmp.completedDelta} Biten` : ''}
+                              {cmp.completedDelta > 0 && cmp.actionedRoomDelta > 0 ? ' · ' : ''}
+                              {cmp.actionedRoomDelta > 0 ? `+${cmp.actionedRoomDelta} Oda` : ''}
+                              {cmp.completedDelta <= 0 && cmp.actionedRoomDelta <= 0 && cmp.effectivePointsDelta > 0
+                                ? `+${cmp.effectivePointsDelta} Puan`
+                                : ''}
+                            </span>
+                          </div>
+                        ) : cmp.status === 'regressed' ? (
+                          <div
+                            className="inline-flex flex-col items-center gap-0.5"
+                            title={`Önceki: %${cmp.previousSecurityReportRate} → Güncel: %${secRate}`}
+                          >
+                            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-[11px] font-black bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300/70 dark:border-rose-800">
+                              <TrendingDown className="w-3 h-3" />
+                              {cmp.securityRateDelta}%
+                            </span>
+                            {cmp.totalItemsDelta > 0 && (
+                              <span className="text-[9px] font-medium text-rose-600 dark:text-rose-400">
+                                +{cmp.totalItemsDelta} Yeni Tespit
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span
+                            className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-slate-400"
+                            title={`Önceki: %${cmp.previousSecurityReportRate} → Güncel: %${secRate}`}
+                          >
+                            <Minus className="w-3 h-3" />
+                            Değişim Yok
+                          </span>
                         )}
                       </td>
 
@@ -1029,6 +1223,27 @@ export default function Fm200DashboardPage() {
                 </td>
                 <td className="py-3.5 px-3 text-center text-emerald-300 bg-blue-950 font-black">
                   %{overallSecurityRate}
+                </td>
+                <td className="py-3.5 px-3 text-center bg-emerald-950/80 font-black">
+                  {hasPreviousReport && overallComparison ? (
+                    <div className="flex flex-col items-center">
+                      <span className={
+                        overallComparison.overallSecurityRateDelta > 0
+                          ? 'text-emerald-300'
+                          : overallComparison.overallSecurityRateDelta < 0
+                            ? 'text-rose-300'
+                            : 'text-slate-300'
+                      }>
+                        {overallComparison.overallSecurityRateDelta > 0 ? '▲ +' : overallComparison.overallSecurityRateDelta < 0 ? '▼ ' : ''}
+                        {overallComparison.overallSecurityRateDelta}%
+                      </span>
+                      <span className="text-[9px] font-normal text-emerald-200/80">
+                        {overallComparison.overallCompletedDelta > 0 ? `+${overallComparison.overallCompletedDelta}` : overallComparison.overallCompletedDelta} Biten
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-slate-400 text-[10px] font-normal">-</span>
+                  )}
                 </td>
                 <td className="py-3.5 px-3 text-center text-purple-300 bg-purple-950 font-black">
                   {totals.fieldItems} Kalem

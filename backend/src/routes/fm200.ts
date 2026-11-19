@@ -5,7 +5,13 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import * as XLSX from 'xlsx';
-import fm200FieldReportRoutes, { getConsolidatedFieldReport, cleanKey } from './fm200FieldReport';
+import fm200FieldReportRoutes, {
+  getConsolidatedFieldReport,
+  getPreviousFieldReport,
+  findFacilitySummaryInReport,
+  computeFacilityComparison,
+  cleanKey
+} from './fm200FieldReport';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -2602,6 +2608,7 @@ export async function calculateHospitalConsolidatedMatrix() {
   });
 
   const fieldReport = await getConsolidatedFieldReport();
+  const previousFieldReport = getPreviousFieldReport();
 
   return facilities.map((fac) => {
     const locations = fac.fm200Locations || [];
@@ -2747,6 +2754,13 @@ export async function calculateHospitalConsolidatedMatrix() {
       ? inspectedLocationsCount
       : frActioned;
 
+    const prevFrSummary = previousFieldReport
+      ? findFacilitySummaryInReport(previousFieldReport, fac.id, fac.name)
+      : null;
+    const comparison = previousFieldReport && frSummary
+      ? computeFacilityComparison(frSummary, prevFrSummary)
+      : null;
+
     const fieldReportData = frSummary ? {
       hasData: true,
       totalItems: frSummary.totalItems,
@@ -2766,7 +2780,8 @@ export async function calculateHospitalConsolidatedMatrix() {
       iletilmeDurumu: frSummary.iletilmeDurumu,
       hastaneNotu: frSummary.hastaneNotu,
       categories: frSummary.categories,
-      risks: frSummary.risks
+      risks: frSummary.risks,
+      comparison
     } : {
       hasData: false,
       totalItems: 0,
@@ -2786,7 +2801,8 @@ export async function calculateHospitalConsolidatedMatrix() {
       iletilmeDurumu: null,
       hastaneNotu: null,
       categories: {},
-      risks: {}
+      risks: {},
+      comparison: null
     };
 
     return {

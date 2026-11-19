@@ -19,7 +19,8 @@ import {
   Info,
   RefreshCw,
   FileCheck,
-  ShieldCheck
+  ShieldCheck,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -67,6 +68,28 @@ export default function FieldReportUploadModal({
     },
     onError: (err: any) => {
       toast.error(err.message || 'Excel dosyası işlenirken bir hata oluştu');
+    }
+  });
+
+  // Tüm Raporları Temizleme (Sıfırlama) Mutasyonu
+  const resetMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.delete('/fm200/field-report/reset');
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Raporlar temizlenemedi');
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast.success(data.message || 'Tüm yüklenmiş Excel raporları ve geçmiş temizlendi.');
+      queryClient.invalidateQueries({ queryKey: ['fm200HospitalMatrix'] });
+      queryClient.invalidateQueries({ queryKey: ['fm200FieldReport'] });
+      queryClient.invalidateQueries({ queryKey: ['fm200FieldFacilityDetail'] });
+      setSelectedFile(null);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Raporlar temizlenirken hata oluştu');
     }
   });
 
@@ -136,6 +159,7 @@ export default function FieldReportUploadModal({
               <li><b>Güvenlik Raporu Katsayısı</b>: <i>Tamamlandı</i> = 1.0 katsayı, <i>Devam Ediyor</i> = 0.5 katsayı ile hesaplanır.</li>
               <li><b>Akıllı Kavram Eşleme</b>: 8 ana Kategori ve 8 ana Risk kavramı otomatik eşlenir.</li>
               <li><b>Hastane İletim Notları</b>: İletildi/Levent Erol gibi saha notları tesis bazında saklanır.</li>
+              <li><b>Otomatik Gelişim Karşılaştırması</b>: Mevcut rapor otomatik olarak &quot;Önceki Rapor&quot; olarak arşivlenir ve yeni yüklenen Excel ile hastane bazlı iyileştirme/gelişim farkları tabloda gösterilir.</li>
             </ul>
           </div>
 
@@ -146,13 +170,12 @@ export default function FieldReportUploadModal({
             onDragOver={handleDrag}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${
-              dragActive
+            className={`border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${dragActive
                 ? 'border-[#0051d5] bg-blue-50/60 dark:bg-blue-950/40 scale-[1.01]'
                 : selectedFile
-                ? 'border-emerald-500 bg-emerald-50/30 dark:bg-emerald-950/20'
-                : 'border-slate-200 dark:border-slate-700 hover:border-blue-400 bg-slate-50/50 dark:bg-slate-800/40'
-            }`}
+                  ? 'border-emerald-500 bg-emerald-50/30 dark:bg-emerald-950/20'
+                  : 'border-slate-200 dark:border-slate-700 hover:border-blue-400 bg-slate-50/50 dark:bg-slate-800/40'
+              }`}
           >
             <input
               ref={fileInputRef}
@@ -206,26 +229,56 @@ export default function FieldReportUploadModal({
 
           {/* Aktif Sistem Durumu Bilgi Çubuğu */}
           {activeReportInfo && (
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs">
+              <div className="min-w-0">
                 <span className="font-bold text-slate-700 dark:text-slate-300 block">
                   Sistemde Yüklü Rapor:
                 </span>
-                <span className="text-[11px] text-slate-400">
-                  {activeReportInfo.fileName || 'FM200_Saha_Is_Listesi_Raporu_2026-10-06_V1.xlsx'} · {activeReportInfo.totalFacilities || 31} Tesis ({activeReportInfo.totalItems || 2009} Kalem)
+                <span className="text-[11px] text-slate-400 break-all">
+                  {(activeReportInfo.totalItems ?? 0) > 0
+                    ? `${activeReportInfo.fileName || 'Rapor.xlsx'} · ${activeReportInfo.totalFacilities ?? 0} Tesis (${activeReportInfo.totalItems ?? 0} Kalem)`
+                    : 'Henüz rapor yüklenmedi (temiz başlangıç hazır)'}
                 </span>
               </div>
 
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleDownloadActiveReport}
-                className="h-8 text-xs font-bold text-emerald-600 hover:bg-emerald-50"
-              >
-                <Download className="w-3.5 h-3.5 mr-1" />
-                İndir
-              </Button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {(activeReportInfo.totalItems ?? 0) > 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDownloadActiveReport}
+                    className="h-8 text-xs font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                  >
+                    <Download className="w-3.5 h-3.5 mr-1" />
+                    İndir
+                  </Button>
+                )}
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={resetMutation.isPending || uploadMutation.isPending}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        'Sistemde yüklü tüm FM-200 saha raporu Excel verileri ve önceki rapor karşılaştırma geçmişi kalıcı olarak silinsin mi?\n\n(Bu işlem sonrasında önce eski raporu, ardından yeni raporu sırasıyla yükleyebilirsiniz.)'
+                      )
+                    ) {
+                      resetMutation.mutate();
+                    }
+                  }}
+                  className="h-8 text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                >
+                  {resetMutation.isPending ? (
+                    <RefreshCw className="w-3.5 h-3.5 mr-1 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3.5 h-3.5 mr-1" />
+                  )}
+                  Tümünü Temizle
+                </Button>
+              </div>
             </div>
           )}
         </div>
