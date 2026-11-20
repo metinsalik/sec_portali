@@ -4,7 +4,6 @@ import {
   Table2,
   FileText,
   Heading2,
-  ArrowUpLeft,
   Trash2,
   ChevronUp,
   ChevronDown,
@@ -25,8 +24,6 @@ interface GbfSubCardProps {
   title: string;
   data: GbfSubData;
   onChange: (next: GbfSubData) => void;
-  getSelectedSourceText: () => string;
-  onNotify: (msg: string) => void;
   extraContent?: React.ReactNode;
 }
 
@@ -35,25 +32,12 @@ export const GbfSubCard: React.FC<GbfSubCardProps> = ({
   title,
   data,
   onChange,
-  getSelectedSourceText,
-  onNotify,
   extraContent,
 }) => {
   const suggest = GBF_SUGGEST[code] || [];
 
   const update = (patch: Partial<GbfSubData>) => {
     onChange({ ...data, ...patch });
-  };
-
-  const transferToMain = () => {
-    const selected = getSelectedSourceText();
-    if (!selected) {
-      onNotify('Önce sağdaki kaynak metinden bir bölüm seçin.');
-      return;
-    }
-    const merged = [data.text.trim(), selected].filter(Boolean).join('\n');
-    update({ text: merged });
-    onNotify(`Seçili metin ${code} başlığına aktarıldı.`);
   };
 
   // Pairs
@@ -85,18 +69,6 @@ export const GbfSubCard: React.FC<GbfSubCardProps> = ({
     const b = data.textBoxes[idx];
     if (b?.text?.trim() && !window.confirm('Bu metin kutusu ve içindeki açıklama silinsin mi?')) return;
     update({ textBoxes: data.textBoxes.filter((_, i) => i !== idx) });
-  };
-
-  const transferToTextBox = (idx: number) => {
-    const selected = getSelectedSourceText();
-    if (!selected) {
-      onNotify('Önce sağdaki kaynak metinden aktarmak istediğiniz kısmı seçin.');
-      return;
-    }
-    const b = data.textBoxes[idx];
-    const merged = [b.text.trim(), selected].filter(Boolean).join('\n');
-    updateTextBox(idx, 'text', merged);
-    onNotify('Metin seçili kutuya aktarıldı.');
   };
 
   // Tables
@@ -164,7 +136,7 @@ export const GbfSubCard: React.FC<GbfSubCardProps> = ({
               {table.headers.map((h, ci) => (
                 <th key={ci} className="border-b border-r border-border/60 p-1 last:border-r-0">
                   <input
-                    className="w-full bg-transparent px-2 py-1 font-semibold text-foreground outline-none focus:bg-teal-50/60 dark:focus:bg-teal-950/40 rounded"
+                    className="w-full bg-transparent px-2 py-1 font-semibold text-foreground outline-none focus:bg-muted/60 rounded"
                     aria-label="Sütun başlığı"
                     value={h}
                     onChange={(e) => {
@@ -182,7 +154,7 @@ export const GbfSubCard: React.FC<GbfSubCardProps> = ({
                 {table.headers.map((_, ci) => (
                   <td key={ci} className="border-r border-border/40 p-1 last:border-r-0">
                     <input
-                      className="w-full bg-transparent px-2 py-1 text-foreground outline-none focus:bg-teal-50/60 dark:focus:bg-teal-950/40 rounded"
+                      className="w-full bg-transparent px-2 py-1 text-foreground outline-none focus:bg-muted/40 rounded"
                       aria-label={`Satır ${ri + 1} değer`}
                       value={row[ci] || ''}
                       onChange={(e) => {
@@ -253,16 +225,13 @@ export const GbfSubCard: React.FC<GbfSubCardProps> = ({
         <Textarea
           value={data.text}
           onChange={(e) => update({ text: e.target.value })}
-          placeholder="Bu alt başlıkla ilgili açıklamayı yazın veya sağdaki kaynak metinden seçip aktarın…"
+          placeholder="Bu alt başlıkla ilgili açıklamayı yazın…"
           className="min-h-[92px] text-xs leading-relaxed bg-background"
         />
 
         {/* Metin Kutuları */}
         {data.textBoxes.map((box, bi) => (
-          <div
-            key={bi}
-            className="border border-teal-600/20 rounded-lg bg-muted/20 p-3 space-y-2"
-          >
+          <div key={bi} className="border border-border/70 rounded-lg bg-muted/20 p-3 space-y-2">
             <div className="flex items-center gap-2">
               <Input
                 value={box.title}
@@ -287,21 +256,6 @@ export const GbfSubCard: React.FC<GbfSubCardProps> = ({
               placeholder="Açıklama, paragraf, uyarı veya SDS metni girin…"
               className="min-h-[95px] text-xs bg-background"
             />
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] text-muted-foreground">
-                Uzun açıklamalar ve birden fazla paragraf için
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-7 text-[11px]"
-                onClick={() => transferToTextBox(bi)}
-              >
-                <ArrowUpLeft className="w-3.5 h-3.5 mr-1" />
-                Kaynaktan aktar
-              </Button>
-            </div>
           </div>
         ))}
 
@@ -350,10 +304,7 @@ export const GbfSubCard: React.FC<GbfSubCardProps> = ({
 
         {/* Kullanıcı Tarafından Eklenen Özel Alt Başlıklar */}
         {data.headings.map((h, hi) => (
-          <div
-            key={h.id}
-            className="border border-border rounded-xl bg-muted/20 overflow-hidden"
-          >
+          <div key={h.id} className="border border-border rounded-xl bg-muted/20 overflow-hidden">
             <div className="px-3 py-2.5 bg-muted/50 border-b border-border/60 flex items-center gap-2 flex-wrap">
               <span className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold tracking-wide whitespace-nowrap">
                 ÖZEL ALT BAŞLIK
@@ -494,31 +445,6 @@ export const GbfSubCard: React.FC<GbfSubCardProps> = ({
                     placeholder="Açıklama veya SDS metni…"
                     className="min-h-[75px] text-xs"
                   />
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-[11px]"
-                      onClick={() => {
-                        const sel = getSelectedSourceText();
-                        if (!sel) {
-                          onNotify('Önce sağdaki kaynak metinden aktarmak istediğiniz kısmı seçin.');
-                          return;
-                        }
-                        updateHeading(hi, {
-                          ...h,
-                          textBoxes: h.textBoxes.map((item, idx) =>
-                            idx === bi ? { ...item, text: [item.text.trim(), sel].filter(Boolean).join('\n') } : item
-                          ),
-                        });
-                        onNotify('Metin özel alt başlıktaki kutuya aktarıldı.');
-                      }}
-                    >
-                      <ArrowUpLeft className="w-3 h-3 mr-1" />
-                      Kaynaktan aktar
-                    </Button>
-                  </div>
                 </div>
               ))}
 
@@ -575,24 +501,6 @@ export const GbfSubCard: React.FC<GbfSubCardProps> = ({
                 >
                   + Metin kutusu
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-[11px]"
-                  onClick={() => {
-                    const sel = getSelectedSourceText();
-                    if (!sel) {
-                      onNotify('Önce sağdaki kaynak metinden bir bölüm seçin.');
-                      return;
-                    }
-                    updateHeading(hi, { ...h, text: [h.text.trim(), sel].filter(Boolean).join('\n') });
-                    onNotify('Seçili metin özel alt başlığa aktarıldı.');
-                  }}
-                >
-                  <ArrowUpLeft className="w-3 h-3 mr-1" />
-                  Seçileni aktar
-                </Button>
               </div>
             </div>
           </div>
@@ -616,16 +524,6 @@ export const GbfSubCard: React.FC<GbfSubCardProps> = ({
             <Heading2 className="w-3 h-3 mr-1" />
             Alt başlık
           </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="h-7 text-[11px]"
-            onClick={transferToMain}
-          >
-            <ArrowUpLeft className="w-3 h-3 mr-1" />
-            Seçileni aktar
-          </Button>
         </div>
 
         {/* Önerilen veri başlıkları (Chips) */}
@@ -640,7 +538,7 @@ export const GbfSubCard: React.FC<GbfSubCardProps> = ({
                   key={label}
                   type="button"
                   onClick={() => addPair(label)}
-                  className="px-2.5 py-1 rounded-full border border-border bg-background hover:border-teal-500 hover:text-teal-700 dark:hover:text-teal-300 text-[11px] text-muted-foreground transition-colors"
+                  className="px-2.5 py-1 rounded-full border border-border bg-background hover:border-primary hover:text-primary text-[11px] text-muted-foreground transition-colors"
                 >
                   + {label}
                 </button>
