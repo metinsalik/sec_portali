@@ -874,6 +874,13 @@ model HazmatMaterial {
   disposalConsiderations        String?
   transportInfo                 String?
   regulatoryInfo                String?
+  otherInfo                     String?
+  sdsNumber                     String?
+  sdsRevision                   String?
+  sdsDate                       DateTime?
+  sdsRegime                     String?
+  productKind                   String?
+  sdsStructuredData             Json?
   imageUrl                      String?
   sdsUrl                        String?
   sdsExpiryDate                 DateTime?

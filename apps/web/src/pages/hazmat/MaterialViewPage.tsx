@@ -27,6 +27,8 @@ import {
 } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
 import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
+import { GbfStructuredViewer } from '@/components/hazmat/gbf/GbfStructuredViewer';
+import { hydrateGbfFromMaterial } from '@/components/hazmat/gbf/gbfSchema';
 
 export default function MaterialViewPage() {
   const { id } = useParams();
@@ -393,79 +395,17 @@ export default function MaterialViewPage() {
                 </Card>
               </div>
 
-              {/* SAĞ KOLON: Yapılandırılmış Teknik & Güvenlik Özellikleri */}
+              {/* SAĞ KOLON: Birleşik 16 Resmî Bölümlü GBF Görünümü (Hem yeni hem eski kayıtlar için) */}
               <div className="lg:col-span-2 space-y-4">
-                {/* Kart 1: Tehlike Tanımı & Acil Durum Bilgileri */}
-                {hasEmergencyInfo && (
-                  <Card className="border border-border/70 shadow-2xs rounded-lg overflow-hidden">
-                    <CardHeader className="p-3 px-4 border-b border-border/60 bg-muted/15">
-                      <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-1.5 text-foreground">
-                        <Flame className="w-3.5 h-3.5 text-red-500" />
-                        Tehlike Tanımları & Acil Durum Tedbirleri
-                      </CardTitle>
-                      <CardDescription className="text-[11px] text-muted-foreground mt-0.5">
-                        Zararlılık ifadeleri, ilk yardım adımları ve yangın/kaza anı tedbirleri.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-3 px-4 space-y-0.5">
-                      {renderField("Tehlike Tanımı (H-İfadeleri)", material.hazardDescription)}
-                      {renderField("İlkyardım Önlemleri", material.firstAid)}
-                      {renderField("Yangınla Mücadele Tedbirleri", material.fireFightingMeasures)}
-                      {renderField("Kaza Sonucu Serbest Kalma Tedbirleri", material.accidentalReleaseMeasures)}
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Kart 2: Kullanım, Depolama & Taşıma */}
-                {hasUsageInfo && (
-                  <Card className="border border-border/70 shadow-2xs rounded-lg overflow-hidden">
-                    <CardHeader className="p-3 px-4 border-b border-border/60 bg-muted/15">
-                      <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-1.5 text-foreground">
-                        <Truck className="w-3.5 h-3.5 text-primary" />
-                        Kullanım, Depolama & Taşıma Bilgileri
-                      </CardTitle>
-                      <CardDescription className="text-[11px] text-muted-foreground mt-0.5">
-                        Kullanım şekli, bileşim, depolama ve bertaraf prosedürleri.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-3 px-4 space-y-0.5">
-                      {renderField("Kullanım Şekli", material.usageMethod)}
-                      {renderField("Bileşimi / İçeriği", material.composition)}
-                      {renderField("Kullanım ve Depolama Şartları", material.handlingAndStorage)}
-                      {renderField("Maruz Kalma Kontrolü & Kişisel Korunma", material.exposureControlsPpe)}
-                      {renderField("Taşımacılık Bilgisi (UN No vb.)", material.transportInfo)}
-                      {renderField("Bertaraf Etme / İmha Bilgileri", material.disposalConsiderations)}
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Kart 3: Fiziksel, Kimyasal & Yasal Özellikler */}
-                {hasTechnicalInfo && (
-                  <Card className="border border-border/70 shadow-2xs rounded-lg overflow-hidden">
-                    <CardHeader className="p-3 px-4 border-b border-border/60 bg-muted/15">
-                      <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-1.5 text-foreground">
-                        <FlaskConical className="w-3.5 h-3.5 text-primary" />
-                        Fiziksel, Kimyasal & Mevzuat Özellikleri
-                      </CardTitle>
-                      <CardDescription className="text-[11px] text-muted-foreground mt-0.5">
-                        Kimyasal stabilite, toksisite ve yasal yönetmelik verileri.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-3 px-4 space-y-0.5">
-                      {renderField("Fiziksel ve Kimyasal Özellikleri", material.physicalAndChemicalProperties)}
-                      {renderField("Stabilite ve Reaktivite", material.stabilityAndReactivity)}
-                      {renderField("Toksikolojik Bilgi", material.toxicologicalInformation)}
-                      {renderField("Ekolojik Bilgi", material.ecologicalInformation)}
-                      {renderField("Mevzuat Bilgisi", material.regulatoryInfo)}
-                    </CardContent>
-                  </Card>
-                )}
-
-                {!hasEmergencyInfo && !hasUsageInfo && !hasTechnicalInfo && (
-                  <div className="py-8 text-center text-muted-foreground border rounded-lg bg-card">
-                    <p className="text-xs">Bu tehlikeli madde için henüz detaylı güvenlik alanı doldurulmamış.</p>
+                {(material.sdsNumber || material.sdsRevision || material.sdsRegime || material.productKind) && (
+                  <div className="flex flex-wrap items-center gap-2 px-3.5 py-2.5 rounded-xl border border-border/70 bg-card text-xs shadow-2xs">
+                    {material.sdsNumber && <Badge variant="secondary">GBF No: {material.sdsNumber}</Badge>}
+                    {material.sdsRevision && <Badge variant="outline">Rev: {material.sdsRevision}</Badge>}
+                    {material.sdsRegime && <Badge variant="outline">{material.sdsRegime}</Badge>}
+                    {material.productKind && <Badge variant="outline" className="capitalize">{material.productKind}</Badge>}
                   </div>
                 )}
+                <GbfStructuredViewer doc={hydrateGbfFromMaterial(material)} />
               </div>
             </div>
           </TabsContent>

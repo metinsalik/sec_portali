@@ -272,6 +272,14 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
       }
     }
 
+    let parsedSdsDate: Date | null = null;
+    if (materialData.sdsDate && String(materialData.sdsDate).trim() !== '') {
+      const d = new Date(materialData.sdsDate);
+      if (!isNaN(d.getTime())) {
+        parsedSdsDate = d;
+      }
+    }
+
     // Create the global material
     const newMaterial = await prisma.hazmatMaterial.create({
       data: {
@@ -292,6 +300,13 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
         disposalConsiderations: materialData.disposalConsiderations || null,
         transportInfo: materialData.transportInfo || null,
         regulatoryInfo: materialData.regulatoryInfo || null,
+        otherInfo: materialData.otherInfo || null,
+        sdsNumber: materialData.sdsNumber?.trim() || null,
+        sdsRevision: materialData.sdsRevision?.trim() || null,
+        sdsDate: parsedSdsDate,
+        sdsRegime: materialData.sdsRegime || null,
+        productKind: materialData.productKind || null,
+        sdsStructuredData: materialData.sdsStructuredData ?? undefined,
         categoryId: materialData.categoryId || null,
         imageUrl: materialData.imageUrl || null,
         sdsUrl: materialData.sdsUrl || null,
@@ -610,12 +625,20 @@ router.put('/:materialId', authMiddleware, async (req: AuthRequest, res) => {
   try {
     const { facilityId, amountValue, unitId, hazardLabels, adrLabels, ppes, ...materialData } = data;
 
-    // Safely parse sdsExpiryDate
+    // Safely parse sdsExpiryDate & sdsDate
     let parsedExpiryDate: Date | null = null;
     if (materialData.sdsExpiryDate && String(materialData.sdsExpiryDate).trim() !== '') {
       const d = new Date(materialData.sdsExpiryDate);
       if (!isNaN(d.getTime())) {
         parsedExpiryDate = d;
+      }
+    }
+
+    let parsedSdsDate: Date | null = null;
+    if (materialData.sdsDate && String(materialData.sdsDate).trim() !== '') {
+      const d = new Date(materialData.sdsDate);
+      if (!isNaN(d.getTime())) {
+        parsedSdsDate = d;
       }
     }
 
@@ -645,6 +668,13 @@ router.put('/:materialId', authMiddleware, async (req: AuthRequest, res) => {
         disposalConsiderations: materialData.disposalConsiderations,
         transportInfo: materialData.transportInfo,
         regulatoryInfo: materialData.regulatoryInfo,
+        otherInfo: materialData.otherInfo ?? undefined,
+        sdsNumber: materialData.sdsNumber !== undefined ? (materialData.sdsNumber?.trim() || null) : undefined,
+        sdsRevision: materialData.sdsRevision !== undefined ? (materialData.sdsRevision?.trim() || null) : undefined,
+        sdsDate: materialData.sdsDate !== undefined ? parsedSdsDate : undefined,
+        sdsRegime: materialData.sdsRegime !== undefined ? (materialData.sdsRegime || null) : undefined,
+        productKind: materialData.productKind !== undefined ? (materialData.productKind || null) : undefined,
+        sdsStructuredData: materialData.sdsStructuredData !== undefined ? materialData.sdsStructuredData : undefined,
         categoryId: materialData.categoryId || null,
         imageUrl: materialData.imageUrl || null,
         sdsUrl: materialData.sdsUrl || null,

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
 import { BulkDeleteConfirmDialog } from '@/components/shared/BulkDeleteConfirmDialog';
+import { countGbfProgress, normalizeGbfDoc } from '@/components/hazmat/gbf/gbfSchema';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -456,8 +457,8 @@ export default function MaterialsListPage() {
                     <tr
                       key={item.id}
                       className={`transition-colors duration-150 ${updateStatus.isInstant
-                          ? 'bg-emerald-50/60 dark:bg-emerald-950/20'
-                          : 'hover:bg-muted/40'
+                        ? 'bg-emerald-50/60 dark:bg-emerald-950/20'
+                        : 'hover:bg-muted/40'
                         }`}
                     >
                       {/* Checkbox */}
@@ -510,8 +511,24 @@ export default function MaterialsListPage() {
                               </span>
                             )}
                           </div>
-                          <div className="text-[11px] text-muted-foreground">
-                            {item.brandName || <span className="italic">Marka Belirtilmemiş</span>}
+                          <div className="text-[11px] text-muted-foreground flex flex-wrap items-center gap-1.5">
+                            <span>{item.brandName || <span className="italic">Marka Belirtilmemiş</span>}</span>
+                            {item.sdsNumber && (
+                              <span className="px-1.5 py-0.2 rounded bg-muted text-foreground/80 font-mono text-[10px]">
+                                GBF {item.sdsNumber}
+                              </span>
+                            )}
+                            {item.sdsStructuredData && (() => {
+                              const stats = countGbfProgress(normalizeGbfDoc(item.sdsStructuredData));
+                              return (
+                                <span
+                                  className="px-1.5 py-0.2 rounded bg-teal-500/15 text-teal-700 dark:text-teal-300 font-semibold text-[10px]"
+                                  title={`${stats.any}/16 bölüm dolu (${stats.structured} yapısal)`}
+                                >
+                                  GBF {stats.any}/16
+                                </span>
+                              );
+                            })()}
                           </div>
                         </div>
                       </td>
