@@ -878,6 +878,7 @@ model HazmatMaterial {
   sdsNumber                     String?
   sdsRevision                   String?
   sdsDate                       DateTime?
+  sdsRevisionDate               DateTime?
   sdsRegime                     String?
   productKind                   String?
   sdsStructuredData             Json?

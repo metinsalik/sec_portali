@@ -27,6 +27,7 @@ import {
   Image as ImageIcon,
   Layers,
   ClipboardList,
+  Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { HazardStatementSelector } from '@/components/hazmat/HazardStatementSelector';
@@ -53,6 +54,7 @@ interface PortalMetaState {
   sdsNumber: string;
   sdsRevision: string;
   sdsDate: string;
+  sdsRevisionDate: string;
   sdsExpiryDate: string;
   imageUrl: string;
   sdsUrl: string;
@@ -60,6 +62,9 @@ interface PortalMetaState {
   adrLabelIds: string[];
   ppeIds: string[];
 }
+
+const stripPrefix = (val: string | null | undefined, regex: RegExp): string =>
+  String(val || '').trim().replace(regex, '').trim();
 
 const initialPortalMeta: PortalMetaState = {
   productName: '',
@@ -70,6 +75,7 @@ const initialPortalMeta: PortalMetaState = {
   sdsNumber: '',
   sdsRevision: '',
   sdsDate: '',
+  sdsRevisionDate: '',
   sdsExpiryDate: '',
   imageUrl: '',
   sdsUrl: '',
@@ -103,6 +109,7 @@ export default function MaterialFormPage() {
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGlobalMaterial, setSelectedGlobalMaterial] = useState<any>(null);
+  const [showKindInfo, setShowKindInfo] = useState(false);
 
   // Reference Data Queries
   const { data: units = [] } = useQuery<any[]>({
@@ -179,9 +186,10 @@ export default function MaterialFormPage() {
         categoryId: mat.categoryId || '',
         amountValue: fac?.amountValue !== undefined && fac?.amountValue !== null ? String(fac.amountValue) : '',
         unitId: fac?.unitId || '',
-        sdsNumber: mat.sdsNumber || '',
-        sdsRevision: mat.sdsRevision || '',
+        sdsNumber: stripPrefix(mat.sdsNumber, /^SDS[-\s]*/i),
+        sdsRevision: stripPrefix(mat.sdsRevision, /^Rev[-\s]*/i),
         sdsDate: mat.sdsDate ? new Date(mat.sdsDate).toISOString().split('T')[0] : '',
+        sdsRevisionDate: mat.sdsRevisionDate ? new Date(mat.sdsRevisionDate).toISOString().split('T')[0] : '',
         sdsExpiryDate: mat.sdsExpiryDate ? new Date(mat.sdsExpiryDate).toISOString().split('T')[0] : '',
         imageUrl: mat.imageUrl || '',
         sdsUrl: mat.sdsUrl || '',
@@ -196,6 +204,8 @@ export default function MaterialFormPage() {
       return data;
     },
     enabled: isEditMode,
+    staleTime: 0,
+    refetchOnMount: 'always',
     refetchOnWindowFocus: false,
   });
 
@@ -261,9 +271,10 @@ export default function MaterialFormPage() {
       productName: mat.productName || '',
       brandName: mat.brandName || '',
       categoryId: mat.categoryId || '',
-      sdsNumber: mat.sdsNumber || '',
-      sdsRevision: mat.sdsRevision || '',
+      sdsNumber: stripPrefix(mat.sdsNumber, /^SDS[-\s]*/i),
+      sdsRevision: stripPrefix(mat.sdsRevision, /^Rev[-\s]*/i),
       sdsDate: mat.sdsDate ? new Date(mat.sdsDate).toISOString().split('T')[0] : '',
+      sdsRevisionDate: mat.sdsRevisionDate ? new Date(mat.sdsRevisionDate).toISOString().split('T')[0] : '',
       sdsExpiryDate: mat.sdsExpiryDate ? new Date(mat.sdsExpiryDate).toISOString().split('T')[0] : '',
       imageUrl: mat.imageUrl || '',
       sdsUrl: mat.sdsUrl || '',
@@ -316,9 +327,9 @@ export default function MaterialFormPage() {
     toast.info('Taslak temizlendi.');
   };
 
-  // Save Mutation
+  // Save Mutation (varsayılan: sayfada kalır; exitAfterSave=true ise listeye döner)
   const saveMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (options?: { exitAfterSave?: boolean }) => {
       if (!meta.productName.trim()) {
         throw new Error('Ürün / madde adı zorunludur.');
       }
@@ -333,9 +344,10 @@ export default function MaterialFormPage() {
         categoryId: meta.categoryId || null,
         amountValue: meta.amountValue || null,
         unitId: meta.unitId || null,
-        sdsNumber: meta.sdsNumber.trim() || null,
-        sdsRevision: meta.sdsRevision.trim() || null,
+        sdsNumber: meta.sdsNumber.trim() ? `SDS-${stripPrefix(meta.sdsNumber, /^SDS[-\s]*/i)}` : null,
+        sdsRevision: meta.sdsRevision.trim() ? `Rev-${stripPrefix(meta.sdsRevision, /^Rev[-\s]*/i)}` : null,
         sdsDate: meta.sdsDate || null,
+        sdsRevisionDate: meta.sdsRevisionDate || null,
         sdsExpiryDate: meta.sdsExpiryDate || null,
         sdsRegime: gbfDoc.regime || 'KKDİK Ek-2',
         productKind: gbfDoc.kind || 'karışım',
@@ -356,17 +368,26 @@ export default function MaterialFormPage() {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || 'Kayıt başarısız oldu.');
       }
-      return res.json();
+      const resData = await res.json();
+      return { resData, exitAfterSave: Boolean(options?.exitAfterSave) };
     },
-    onSuccess: (resData) => {
+    onSuccess: ({ resData, exitAfterSave }) => {
       localStorage.removeItem(draftKey);
       setIsDirty(false);
+      setAutoSaveStatus('saved');
+      const savedId = resData?.material?.id || resData?.id || id;
       queryClient.invalidateQueries({ queryKey: ['global-materials-list'] });
       queryClient.invalidateQueries({ queryKey: ['facility-materials'] });
-      queryClient.invalidateQueries({ queryKey: ['material-details', id] });
-      toast.success(isEditMode ? 'Kimyasal madde kaydı güncellendi.' : 'Yeni kimyasal madde başarıyla kaydedildi.');
-      const savedId = resData?.material?.id || resData?.id || id;
-      navigate(returnTo, { state: { justUpdatedMaterialId: savedId } });
+      queryClient.invalidateQueries({ queryKey: ['material-details'] });
+      queryClient.invalidateQueries({ queryKey: ['material-edit-details', savedId] });
+      toast.success(isEditMode ? 'Değişiklikler kaydedildi.' : 'Kimyasal madde kaydedildi.');
+
+      if (exitAfterSave) {
+        navigate(returnTo, { state: { justUpdatedMaterialId: savedId } });
+      } else if (!isEditMode && savedId) {
+        // Yeni kaydı ilk kez kaydettikten sonra sayfada kal ve edit URL'sine geç (çift kayıt önlenir)
+        navigate(`/hazmat/materials/edit/${savedId}`, { replace: true, state: { returnTo } });
+      }
     },
     onError: (err: Error) => {
       toast.error(err.message);
@@ -608,7 +629,7 @@ export default function MaterialFormPage() {
               {meta.productName || (isEditMode ? 'Kimyasal Madde Düzenle' : 'Yeni Kimyasal Madde Ekle')}
             </h1>
             <div className="text-xs text-muted-foreground truncate">
-              {[meta.sdsNumber && `GBF ${meta.sdsNumber}`, meta.brandName, gbfDoc.regime].filter(Boolean).join(' · ') ||
+              {[meta.sdsNumber && `SDS-${meta.sdsNumber}`, meta.sdsRevision && `Rev-${meta.sdsRevision}`, meta.brandName, gbfDoc.regime].filter(Boolean).join(' · ') ||
                 'Önce belge bilgilerini kaydedebilir, 16 bölümlü GBF verisini dilerseniz sonra ekleyebilirsiniz.'}
             </div>
           </div>
@@ -625,7 +646,7 @@ export default function MaterialFormPage() {
             type="button"
             size="sm"
             disabled={saveMutation.isPending}
-            onClick={() => saveMutation.mutate()}
+            onClick={() => saveMutation.mutate({ exitAfterSave: false })}
             className="h-8 text-xs font-semibold"
           >
             {saveMutation.isPending ? (
@@ -633,7 +654,7 @@ export default function MaterialFormPage() {
             ) : (
               <Save className="w-3.5 h-3.5 mr-1.5" />
             )}
-            {isEditMode ? 'Güncelle ve Çık' : 'Kaydet ve Çık'}
+            {isEditMode ? 'Güncelle' : 'Kaydet'}
           </Button>
         </div>
       </div>
@@ -797,30 +818,50 @@ export default function MaterialFormPage() {
 
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">GBF Numarası</Label>
-              <Input
-                value={meta.sdsNumber}
-                onChange={(e) => updateMeta('sdsNumber', e.target.value)}
-                placeholder="Örn: SDS-7404"
-                className="h-9 text-xs"
-              />
+              <div className="flex items-center h-9 rounded-md border border-input bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring/40">
+                <span className="px-2.5 h-full flex items-center bg-muted/70 border-r border-input text-xs font-mono font-semibold text-muted-foreground select-none">
+                  SDS-
+                </span>
+                <input
+                  value={meta.sdsNumber}
+                  onChange={(e) => updateMeta('sdsNumber', e.target.value)}
+                  placeholder="7404"
+                  className="flex-1 min-w-0 h-full px-2.5 text-xs bg-transparent outline-none"
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Revizyon Numarası</Label>
+              <div className="flex items-center h-9 rounded-md border border-input bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring/40">
+                <span className="px-2.5 h-full flex items-center bg-muted/70 border-r border-input text-xs font-mono font-semibold text-muted-foreground select-none">
+                  Rev-
+                </span>
+                <input
+                  value={meta.sdsRevision}
+                  onChange={(e) => updateMeta('sdsRevision', e.target.value)}
+                  placeholder="02"
+                  className="flex-1 min-w-0 h-full px-2.5 text-xs bg-transparent outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Hazırlanma Tarihi</Label>
               <Input
-                value={meta.sdsRevision}
-                onChange={(e) => updateMeta('sdsRevision', e.target.value)}
-                placeholder="Örn: Rev 02"
+                type="date"
+                value={meta.sdsDate}
+                onChange={(e) => updateMeta('sdsDate', e.target.value)}
                 className="h-9 text-xs"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Hazırlanma / Revizyon Tarihi</Label>
+              <Label className="text-xs font-semibold">Revizyon Tarihi</Label>
               <Input
                 type="date"
-                value={meta.sdsDate}
-                onChange={(e) => updateMeta('sdsDate', e.target.value)}
+                value={meta.sdsRevisionDate}
+                onChange={(e) => updateMeta('sdsRevisionDate', e.target.value)}
                 className="h-9 text-xs"
               />
             </div>
@@ -835,8 +876,18 @@ export default function MaterialFormPage() {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Ürün Türü</Label>
+            <div className="space-y-1.5 relative">
+              <Label className="text-xs font-semibold flex items-center gap-1.5">
+                <span>Ürün Türü</span>
+                <button
+                  type="button"
+                  onClick={() => setShowKindInfo((v) => !v)}
+                  className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-primary transition-colors"
+                  title="Ürün türü hakkında bilgi"
+                >
+                  <Info className="w-3.5 h-3.5" />
+                </button>
+              </Label>
               <select
                 value={gbfDoc.kind}
                 onChange={(e) =>
@@ -847,6 +898,36 @@ export default function MaterialFormPage() {
                 <option value="karışım">Karışım</option>
                 <option value="madde">Madde</option>
               </select>
+
+              {showKindInfo && (
+                <div className="absolute left-0 top-full mt-1.5 z-40 w-full sm:w-80 rounded-xl border border-border bg-popover text-popover-foreground shadow-lg p-3.5 space-y-2 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-foreground flex items-center gap-1.5">
+                      <Info className="w-3.5 h-3.5 text-primary" />
+                      Ürün Türü Nasıl Seçilir?
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowKindInfo(false)}
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label="Kapat"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    GBF belgesindeki <b className="text-foreground">BÖLÜM 3: Bileşimi/içindekiler hakkında bilgi</b> kısmına bakarak seçim yapınız:
+                  </p>
+                  <ul className="space-y-1 text-[11px] text-muted-foreground">
+                    <li>
+                      <b className="text-foreground">• Madde (3.1):</b> Tek bir saf kimyasal bileşenden oluşuyorsa.
+                    </li>
+                    <li>
+                      <b className="text-foreground">• Karışım (3.2):</b> Birden fazla bileşen içeren ürünlerde.
+                    </li>
+                  </ul>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -863,31 +944,29 @@ export default function MaterialFormPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Tesis Miktarı (Opsiyonel)</Label>
-              <Input
-                type="number"
-                step="any"
-                value={meta.amountValue}
-                onChange={(e) => updateMeta('amountValue', e.target.value)}
-                placeholder="Örn: 20"
-                className="h-9 text-xs"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Miktar Birimi</Label>
-              <select
-                value={meta.unitId}
-                onChange={(e) => updateMeta('unitId', e.target.value)}
-                className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs outline-none focus:ring-2 focus:ring-ring/40"
-              >
-                <option value="">Birim seçin...</option>
-                {units.map((u: any) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} {u.symbol ? `(${u.symbol})` : ''}
-                  </option>
-                ))}
-              </select>
+              <Label className="text-xs font-semibold">Miktar</Label>
+              <div className="flex items-center h-9 rounded-md border border-input bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring/40">
+                <input
+                  type="number"
+                  step="any"
+                  value={meta.amountValue}
+                  onChange={(e) => updateMeta('amountValue', e.target.value)}
+                  placeholder="Örn: 20"
+                  className="w-24 sm:w-28 h-full px-2.5 text-xs bg-transparent outline-none border-r border-input"
+                />
+                <select
+                  value={meta.unitId}
+                  onChange={(e) => updateMeta('unitId', e.target.value)}
+                  className="flex-1 min-w-0 h-full px-2.5 text-xs bg-muted/30 outline-none"
+                >
+                  <option value="">Birim seçin...</option>
+                  {units.map((u: any) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} {u.symbol ? `(${u.symbol})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -951,13 +1030,23 @@ export default function MaterialFormPage() {
                   : 'Sadece belge bilgilerini kaydedip çıkabilir veya 2. aşamadan devam edebilirsiniz.'}
             </span>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 disabled={saveMutation.isPending}
-                onClick={() => saveMutation.mutate()}
+                onClick={() => saveMutation.mutate({ exitAfterSave: true })}
+                className="h-9 text-xs font-semibold"
+              >
+                {isEditMode ? 'Güncelle ve Çık' : 'Kaydet ve Çık'}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={saveMutation.isPending}
+                onClick={() => saveMutation.mutate({ exitAfterSave: false })}
                 className="h-9 text-xs font-semibold"
               >
                 {saveMutation.isPending ? (
@@ -965,7 +1054,7 @@ export default function MaterialFormPage() {
                 ) : (
                   <Save className="w-3.5 h-3.5 mr-1.5" />
                 )}
-                {isEditMode ? 'Güncelle ve Çık' : 'Kaydet ve Çık'}
+                {isEditMode ? 'Güncelle' : 'Kaydet'}
               </Button>
               <Button
                 type="button"
@@ -997,22 +1086,12 @@ export default function MaterialFormPage() {
                   {progressStats.any} / 16 Dolu
                 </Badge>
               </div>
-              <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  Ayrıntılı giriş
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-400" />
-                  Ham metin
-                </span>
-                <div className="hidden sm:flex items-center gap-2">
-                  <div className="w-24 h-1.5 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full bg-primary transition-all"
-                      style={{ width: `${(progressStats.any / 16) * 100}%` }}
-                    />
-                  </div>
+              <div className="hidden sm:flex items-center gap-2">
+                <div className="w-24 h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${(progressStats.any / 16) * 100}%` }}
+                  />
                 </div>
               </div>
             </div>
@@ -1327,7 +1406,7 @@ export default function MaterialFormPage() {
                   type="button"
                   size="sm"
                   disabled={saveMutation.isPending}
-                  onClick={() => saveMutation.mutate()}
+                  onClick={() => saveMutation.mutate({ exitAfterSave: false })}
                   className="h-8 text-xs font-semibold"
                 >
                   {saveMutation.isPending ? (

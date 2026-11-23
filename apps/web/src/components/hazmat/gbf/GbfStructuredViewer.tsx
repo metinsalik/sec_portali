@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutList, CheckCircle2 } from 'lucide-react';
+import { LayoutList, ChevronDown, ChevronRight, ChevronsUpDown } from 'lucide-react';
 import type { GbfDoc, GbfTable } from './gbfSchema';
 import {
   GBF_SECTIONS,
@@ -51,6 +51,7 @@ const RenderReadOnlyTable: React.FC<{ table: GbfTable }> = ({ table }) => {
 
 export const GbfStructuredViewer: React.FC<GbfStructuredViewerProps> = ({ doc }) => {
   const [selectedSection, setSelectedSection] = useState<number | 'all'>('all');
+  const [collapsedSections, setCollapsedSections] = useState<Record<number, boolean>>({});
   const progress = countGbfProgress(doc);
 
   const filledSections = GBF_SECTIONS.filter((sec) => {
@@ -62,6 +63,33 @@ export const GbfStructuredViewer: React.FC<GbfStructuredViewerProps> = ({ doc })
     selectedSection === 'all'
       ? filledSections
       : GBF_SECTIONS.filter((sec) => sec.num === selectedSection);
+
+  const allCollapsed =
+    sectionsToDisplay.length > 0 &&
+    sectionsToDisplay.every((sec) => Boolean(collapsedSections[sec.num]));
+
+  const toggleSection = (num: number) => {
+    setCollapsedSections((prev) => ({ ...prev, [num]: !prev[num] }));
+  };
+
+  const toggleAllSections = () => {
+    const nextCollapsed = !allCollapsed;
+    const next: Record<number, boolean> = {};
+    for (const sec of sectionsToDisplay) {
+      next[sec.num] = nextCollapsed;
+    }
+    setCollapsedSections((prev) => ({ ...prev, ...next }));
+  };
+
+  const handleSelectSection = (num: number) => {
+    if (selectedSection === num) {
+      setSelectedSection('all');
+    } else {
+      setSelectedSection(num);
+      // Seçilen bölümü otomatik açık getir
+      setCollapsedSections((prev) => ({ ...prev, [num]: false }));
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -76,7 +104,19 @@ export const GbfStructuredViewer: React.FC<GbfStructuredViewerProps> = ({ doc })
               {progress.any} / 16 Dolu
             </Badge>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {sectionsToDisplay.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={toggleAllSections}
+                className="h-7 text-[11px]"
+              >
+                <ChevronsUpDown className="w-3.5 h-3.5 mr-1" />
+                {allCollapsed ? 'Tümünü Aç' : 'Tümünü Kapat'}
+              </Button>
+            )}
             {selectedSection !== 'all' && (
               <Button
                 type="button"
@@ -113,7 +153,7 @@ export const GbfStructuredViewer: React.FC<GbfStructuredViewerProps> = ({ doc })
                 key={sec.num}
                 type="button"
                 disabled={!hasAny}
-                onClick={() => setSelectedSection(isActive ? 'all' : sec.num)}
+                onClick={() => handleSelectSection(sec.num)}
                 title={`${sec.num}. ${sec.title}${hasAny ? '' : ' (Veri girilmemiş)'}`}
                 className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-left transition-all min-w-0 ${
                   isActive
@@ -150,7 +190,7 @@ export const GbfStructuredViewer: React.FC<GbfStructuredViewerProps> = ({ doc })
         </div>
       </div>
 
-      {/* Bölüm İçerikleri */}
+      {/* Açılır / Kapanır Bölüm Kartları */}
       {sectionsToDisplay.length === 0 ? (
         <div className="py-10 text-center text-muted-foreground border border-border/70 rounded-xl bg-card">
           <p className="text-xs">Bu tehlikeli madde için henüz 16 bölümlü GBF verisi doldurulmamış.</p>
@@ -161,154 +201,162 @@ export const GbfStructuredViewer: React.FC<GbfStructuredViewerProps> = ({ doc })
             const s = doc.sections[sec.num];
             const structured = isSectionStructured(s);
             const visibleSubs = getVisibleSubsForSection(sec.num, doc.kind);
+            const isCollapsed = Boolean(collapsedSections[sec.num]);
 
             return (
               <Card key={sec.num} className="border-border/70 shadow-2xs overflow-hidden rounded-xl">
-                <CardHeader className="py-2.5 px-4 bg-muted/35 border-b border-border/60 flex flex-row items-center justify-between gap-2">
-                  <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2">
-                    <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono text-[11px] font-bold">
+                <CardHeader
+                  onClick={() => toggleSection(sec.num)}
+                  className="py-2.5 px-4 bg-muted/35 hover:bg-muted/55 transition-colors border-b border-border/60 flex flex-row items-center justify-between gap-2 cursor-pointer select-none"
+                >
+                  <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2 min-w-0">
+                    {isCollapsed ? (
+                      <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                    )}
+                    <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono text-[11px] font-bold shrink-0">
                       {String(sec.num).padStart(2, '0')}
                     </span>
-                    <span>{sec.title}</span>
+                    <span className="truncate">{sec.title}</span>
                   </CardTitle>
-                  <Badge variant="outline" className="text-[10px] font-medium gap-1 shrink-0">
-                    {structured && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
-                    {structured ? 'Ayrıntılı Giriş' : 'Ham Metin'}
-                  </Badge>
                 </CardHeader>
-                <CardContent className="p-4 space-y-3 text-xs">
-                  {structured ? (
-                    <>
-                      {visibleSubs.map((subDef) => {
-                        const sub = s.sub?.[subDef.code];
-                        if (!sub) return null;
-                        const hasAny =
-                          sub.text?.trim() ||
-                          sub.rows?.some((r) => r.label?.trim() || r.value?.trim()) ||
-                          sub.tables?.some((t) => t.rows?.some((row) => row.some((c) => c.trim()))) ||
-                          sub.textBoxes?.some((b) => b.title?.trim() || b.text?.trim()) ||
-                          sub.headings?.some(
-                            (h) =>
-                              h.title?.trim() ||
-                              h.text?.trim() ||
-                              h.rows?.some((r) => r.label?.trim() || r.value?.trim()) ||
-                              h.tables?.length ||
-                              h.textBoxes?.length
-                          );
-                        if (!hasAny) return null;
 
-                        return (
-                          <div
-                            key={subDef.code}
-                            className="space-y-2 pb-3 border-b border-border/40 last:border-b-0 last:pb-0"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="px-1.5 py-0.5 rounded bg-muted text-foreground font-mono font-bold text-[11px]">
-                                {subDef.code}
-                              </span>
-                              <span className="font-semibold text-foreground">{subDef.title}</span>
-                            </div>
+                {!isCollapsed && (
+                  <CardContent className="p-4 space-y-3 text-xs">
+                    {structured ? (
+                      <>
+                        {visibleSubs.map((subDef) => {
+                          const sub = s.sub?.[subDef.code];
+                          if (!sub) return null;
+                          const hasAny =
+                            sub.text?.trim() ||
+                            sub.rows?.some((r) => r.label?.trim() || r.value?.trim()) ||
+                            sub.tables?.some((t) => t.rows?.some((row) => row.some((c) => c.trim()))) ||
+                            sub.textBoxes?.some((b) => b.title?.trim() || b.text?.trim()) ||
+                            sub.headings?.some(
+                              (h) =>
+                                h.title?.trim() ||
+                                h.text?.trim() ||
+                                h.rows?.some((r) => r.label?.trim() || r.value?.trim()) ||
+                                h.tables?.length ||
+                                h.textBoxes?.length
+                            );
+                          if (!hasAny) return null;
 
-                            {sub.text?.trim() && (
-                              <p className="whitespace-pre-wrap text-foreground/90 leading-relaxed">
-                                {sub.text}
-                              </p>
-                            )}
+                          return (
+                            <div
+                              key={subDef.code}
+                              className="space-y-2 pb-3 border-b border-border/40 last:border-b-0 last:pb-0"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="px-1.5 py-0.5 rounded bg-muted text-foreground font-mono font-bold text-[11px]">
+                                  {subDef.code}
+                                </span>
+                                <span className="font-semibold text-foreground">{subDef.title}</span>
+                              </div>
 
-                            {sub.textBoxes?.map((b, bi) =>
-                              b.title?.trim() || b.text?.trim() ? (
-                                <div key={bi} className="rounded-lg border border-border/60 bg-muted/20 p-2.5 space-y-1">
-                                  {b.title?.trim() && <div className="font-semibold text-foreground">{b.title}</div>}
-                                  {b.text?.trim() && (
-                                    <p className="whitespace-pre-wrap text-foreground/90 leading-relaxed">{b.text}</p>
+                              {sub.text?.trim() && (
+                                <p className="whitespace-pre-wrap text-foreground/90 leading-relaxed">
+                                  {sub.text}
+                                </p>
+                              )}
+
+                              {sub.textBoxes?.map((b, bi) =>
+                                b.title?.trim() || b.text?.trim() ? (
+                                  <div key={bi} className="rounded-lg border border-border/60 bg-muted/20 p-2.5 space-y-1">
+                                    {b.title?.trim() && <div className="font-semibold text-foreground">{b.title}</div>}
+                                    {b.text?.trim() && (
+                                      <p className="whitespace-pre-wrap text-foreground/90 leading-relaxed">{b.text}</p>
+                                    )}
+                                  </div>
+                                ) : null
+                              )}
+
+                              {sub.rows?.some((r) => r.label?.trim() || r.value?.trim()) && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                  {sub.rows.map((r, ri) =>
+                                    r.label?.trim() || r.value?.trim() ? (
+                                      <div key={ri} className="rounded-md border border-border/60 bg-background px-2.5 py-1.5">
+                                        {r.label?.trim() && (
+                                          <span className="text-[10px] font-semibold text-muted-foreground block">
+                                            {r.label}
+                                          </span>
+                                        )}
+                                        <span className="text-xs text-foreground">{r.value}</span>
+                                      </div>
+                                    ) : null
                                   )}
+                                </div>
+                              )}
+
+                              {sub.tables?.map((t, ti) => (
+                                <RenderReadOnlyTable key={ti} table={t} />
+                              ))}
+
+                              {sub.headings?.map((h) => (
+                                <div
+                                  key={h.id}
+                                  className="rounded-lg border border-border bg-muted/20 p-3 space-y-2"
+                                >
+                                  {h.title?.trim() && (
+                                    <div className="font-semibold text-foreground text-xs">{h.title}</div>
+                                  )}
+                                  {h.text?.trim() && (
+                                    <p className="whitespace-pre-wrap text-foreground/90 leading-relaxed">{h.text}</p>
+                                  )}
+                                  {h.rows?.some((r) => r.label?.trim() || r.value?.trim()) && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                      {h.rows.map((r, ri) =>
+                                        r.label?.trim() || r.value?.trim() ? (
+                                          <div key={ri} className="rounded border border-border/60 bg-background px-2.5 py-1.5">
+                                            {r.label?.trim() && (
+                                              <span className="text-[10px] font-semibold text-muted-foreground block">
+                                                {r.label}
+                                              </span>
+                                            )}
+                                            <span className="text-xs text-foreground">{r.value}</span>
+                                          </div>
+                                        ) : null
+                                      )}
+                                    </div>
+                                  )}
+                                  {h.textBoxes?.map((b, bi) =>
+                                    b.title?.trim() || b.text?.trim() ? (
+                                      <div key={bi} className="rounded border border-border/60 bg-background p-2 space-y-1">
+                                        {b.title?.trim() && <div className="font-semibold">{b.title}</div>}
+                                        {b.text?.trim() && <p className="whitespace-pre-wrap">{b.text}</p>}
+                                      </div>
+                                    ) : null
+                                  )}
+                                  {h.tables?.map((t, ti) => (
+                                    <RenderReadOnlyTable key={ti} table={t} />
+                                  ))}
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })}
+
+                        {s.custom?.some((c) => c.label?.trim() || c.value?.trim()) && (
+                          <div className="pt-2 space-y-1.5">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase">Ek Bilgiler</span>
+                            {s.custom.map((c, ci) =>
+                              c.label?.trim() || c.value?.trim() ? (
+                                <div key={ci} className="rounded border border-border/60 px-2.5 py-1.5">
+                                  <span className="font-semibold">{c.label}: </span>
+                                  <span>{c.value}</span>
                                 </div>
                               ) : null
                             )}
-
-                            {sub.rows?.some((r) => r.label?.trim() || r.value?.trim()) && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                                {sub.rows.map((r, ri) =>
-                                  r.label?.trim() || r.value?.trim() ? (
-                                    <div key={ri} className="rounded-md border border-border/60 bg-background px-2.5 py-1.5">
-                                      {r.label?.trim() && (
-                                        <span className="text-[10px] font-semibold text-muted-foreground block">
-                                          {r.label}
-                                        </span>
-                                      )}
-                                      <span className="text-xs text-foreground">{r.value}</span>
-                                    </div>
-                                  ) : null
-                                )}
-                              </div>
-                            )}
-
-                            {sub.tables?.map((t, ti) => (
-                              <RenderReadOnlyTable key={ti} table={t} />
-                            ))}
-
-                            {sub.headings?.map((h) => (
-                              <div
-                                key={h.id}
-                                className="rounded-lg border border-border bg-muted/20 p-3 space-y-2"
-                              >
-                                {h.title?.trim() && (
-                                  <div className="font-semibold text-foreground text-xs">{h.title}</div>
-                                )}
-                                {h.text?.trim() && (
-                                  <p className="whitespace-pre-wrap text-foreground/90 leading-relaxed">{h.text}</p>
-                                )}
-                                {h.rows?.some((r) => r.label?.trim() || r.value?.trim()) && (
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                                    {h.rows.map((r, ri) =>
-                                      r.label?.trim() || r.value?.trim() ? (
-                                        <div key={ri} className="rounded border border-border/60 bg-background px-2.5 py-1.5">
-                                          {r.label?.trim() && (
-                                            <span className="text-[10px] font-semibold text-muted-foreground block">
-                                              {r.label}
-                                            </span>
-                                          )}
-                                          <span className="text-xs text-foreground">{r.value}</span>
-                                        </div>
-                                      ) : null
-                                    )}
-                                  </div>
-                                )}
-                                {h.textBoxes?.map((b, bi) =>
-                                  b.title?.trim() || b.text?.trim() ? (
-                                    <div key={bi} className="rounded border border-border/60 bg-background p-2 space-y-1">
-                                      {b.title?.trim() && <div className="font-semibold">{b.title}</div>}
-                                      {b.text?.trim() && <p className="whitespace-pre-wrap">{b.text}</p>}
-                                    </div>
-                                  ) : null
-                                )}
-                                {h.tables?.map((t, ti) => (
-                                  <RenderReadOnlyTable key={ti} table={t} />
-                                ))}
-                              </div>
-                            ))}
                           </div>
-                        );
-                      })}
-
-                      {s.custom?.some((c) => c.label?.trim() || c.value?.trim()) && (
-                        <div className="pt-2 space-y-1.5">
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase">Ek Bilgiler</span>
-                          {s.custom.map((c, ci) =>
-                            c.label?.trim() || c.value?.trim() ? (
-                              <div key={ci} className="rounded border border-border/60 px-2.5 py-1.5">
-                                <span className="font-semibold">{c.label}: </span>
-                                <span>{c.value}</span>
-                              </div>
-                            ) : null
-                          )}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <p className="whitespace-pre-wrap text-foreground/90 leading-relaxed">{s.raw}</p>
-                  )}
-                </CardContent>
+                        )}
+                      </>
+                    ) : (
+                      <p className="whitespace-pre-wrap text-foreground/90 leading-relaxed">{s.raw}</p>
+                    )}
+                  </CardContent>
+                )}
               </Card>
             );
           })}

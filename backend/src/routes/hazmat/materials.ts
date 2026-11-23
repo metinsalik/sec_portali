@@ -44,6 +44,11 @@ router.get('/global', authMiddleware, async (req: AuthRequest, res) => {
         hazardLabels: { include: { label: true } },
         adrLabels: { include: { label: true } },
         ppes: { include: { ppe: true } },
+        facilityItems: {
+          orderBy: { updatedAt: 'desc' },
+          take: 1,
+          include: { unit: true }
+        },
         auditLogs: {
           where: { action: 'UPDATE' },
           select: { id: true, createdAt: true },
@@ -54,7 +59,15 @@ router.get('/global', authMiddleware, async (req: AuthRequest, res) => {
     });
 
     if (!facilityId) {
-      return res.json(allMaterials.map(m => ({ material: m, isInFacility: false })));
+      return res.json(allMaterials.map(m => {
+        const latestFac = m.facilityItems?.[0];
+        return {
+          material: m,
+          isInFacility: false,
+          facilityAmount: latestFac?.amountValue ?? null,
+          facilityUnit: latestFac?.unit?.symbol || latestFac?.unit?.name || null
+        };
+      }));
     }
 
     // If facilityId is provided, check which ones are in the facility
@@ -65,7 +78,13 @@ router.get('/global', authMiddleware, async (req: AuthRequest, res) => {
 
     const result = allMaterials.map(m => {
       const fItem = facilityItems.find(f => f.materialId === m.id);
-      return { material: m, isInFacility: !!fItem, facilityAmount: fItem?.amountValue || null, facilityUnit: fItem?.unit?.name || null };
+      const fallbackItem = fItem || m.facilityItems?.[0];
+      return {
+        material: m,
+        isInFacility: !!fItem,
+        facilityAmount: fallbackItem?.amountValue ?? null,
+        facilityUnit: fallbackItem?.unit?.symbol || fallbackItem?.unit?.name || null
+      };
     });
 
     res.json(result);
@@ -280,6 +299,14 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
       }
     }
 
+    let parsedSdsRevisionDate: Date | null = null;
+    if (materialData.sdsRevisionDate && String(materialData.sdsRevisionDate).trim() !== '') {
+      const d = new Date(materialData.sdsRevisionDate);
+      if (!isNaN(d.getTime())) {
+        parsedSdsRevisionDate = d;
+      }
+    }
+
     // Create the global material
     const newMaterial = await prisma.hazmatMaterial.create({
       data: {
@@ -304,6 +331,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
         sdsNumber: materialData.sdsNumber?.trim() || null,
         sdsRevision: materialData.sdsRevision?.trim() || null,
         sdsDate: parsedSdsDate,
+        sdsRevisionDate: parsedSdsRevisionDate,
         sdsRegime: materialData.sdsRegime || null,
         productKind: materialData.productKind || null,
         sdsStructuredData: materialData.sdsStructuredData ?? undefined,
@@ -563,6 +591,7 @@ router.get('/:materialId', authMiddleware, async (req: AuthRequest, res) => {
     if (!facilityItem) {
       facilityItem = await prisma.facilityHazmatItem.findFirst({
         where: { materialId },
+        orderBy: { updatedAt: 'desc' },
         include: { unit: true }
       });
     }
@@ -642,6 +671,14 @@ router.put('/:materialId', authMiddleware, async (req: AuthRequest, res) => {
       }
     }
 
+    let parsedSdsRevisionDate: Date | null = null;
+    if (materialData.sdsRevisionDate && String(materialData.sdsRevisionDate).trim() !== '') {
+      const d = new Date(materialData.sdsRevisionDate);
+      if (!isNaN(d.getTime())) {
+        parsedSdsRevisionDate = d;
+      }
+    }
+
     // Delete existing relations to recreate them
     await prisma.hazmatMaterialHazardLabel.deleteMany({ where: { materialId } });
     await prisma.hazmatMaterialAdrLabel.deleteMany({ where: { materialId } });
@@ -672,6 +709,7 @@ router.put('/:materialId', authMiddleware, async (req: AuthRequest, res) => {
         sdsNumber: materialData.sdsNumber !== undefined ? (materialData.sdsNumber?.trim() || null) : undefined,
         sdsRevision: materialData.sdsRevision !== undefined ? (materialData.sdsRevision?.trim() || null) : undefined,
         sdsDate: materialData.sdsDate !== undefined ? parsedSdsDate : undefined,
+        sdsRevisionDate: materialData.sdsRevisionDate !== undefined ? parsedSdsRevisionDate : undefined,
         sdsRegime: materialData.sdsRegime !== undefined ? (materialData.sdsRegime || null) : undefined,
         productKind: materialData.productKind !== undefined ? (materialData.productKind || null) : undefined,
         sdsStructuredData: materialData.sdsStructuredData !== undefined ? materialData.sdsStructuredData : undefined,
@@ -701,7 +739,8 @@ router.put('/:materialId', authMiddleware, async (req: AuthRequest, res) => {
     let actualFacilityId = (targetFacilityId && targetFacilityId !== 'all') ? targetFacilityId : null;
     if (!actualFacilityId) {
       const existingItem = await prisma.facilityHazmatItem.findFirst({
-        where: { materialId }
+        where: { materialId },
+        orderBy: { updatedAt: 'desc' }
       });
       if (existingItem) {
         actualFacilityId = existingItem.facilityId;

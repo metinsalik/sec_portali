@@ -61,7 +61,9 @@ export default function MaterialViewPage() {
       if (!res.ok) throw new Error('Yüklenemedi');
       return res.json();
     },
-    enabled: !!id
+    enabled: !!id,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   if (isLoading) {
@@ -249,8 +251,8 @@ export default function MaterialViewPage() {
           {/* SEKME 1: Ürün Detayları & Güvenlik */}
           <TabsContent value="details" className="space-y-4 mt-0">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-              {/* SOL KOLON: Tek Birleşik Ürün Kimlik, Miktar ve Tehlike Sınıfları Kartı */}
-              <div className="lg:col-span-1">
+              {/* SOL KOLON: Tek Birleşik Ürün Kimlik, Miktar ve Tehlike Sınıfları Kartı (Sağ tarafla birlikte kayar) */}
+              <div className="lg:col-span-1 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-5.5rem)] lg:overflow-y-auto pr-0.5">
                 <Card className="border border-border/70 shadow-2xs rounded-lg overflow-hidden">
                   {/* 1. Ürün Görseli */}
                   <div className="p-3 bg-muted/10 flex flex-col items-center justify-center min-h-[150px] border-b border-border/50">
@@ -397,10 +399,20 @@ export default function MaterialViewPage() {
 
               {/* SAĞ KOLON: Birleşik 16 Resmî Bölümlü GBF Görünümü (Hem yeni hem eski kayıtlar için) */}
               <div className="lg:col-span-2 space-y-4">
-                {(material.sdsNumber || material.sdsRevision || material.sdsRegime || material.productKind) && (
+                {(material.sdsNumber || material.sdsRevision || material.sdsDate || material.sdsRevisionDate || material.sdsRegime || material.productKind) && (
                   <div className="flex flex-wrap items-center gap-2 px-3.5 py-2.5 rounded-xl border border-border/70 bg-card text-xs shadow-2xs">
-                    {material.sdsNumber && <Badge variant="secondary">GBF No: {material.sdsNumber}</Badge>}
-                    {material.sdsRevision && <Badge variant="outline">Rev: {material.sdsRevision}</Badge>}
+                    {material.sdsNumber && <Badge variant="secondary">GBF: {material.sdsNumber}</Badge>}
+                    {material.sdsRevision && <Badge variant="outline">{material.sdsRevision}</Badge>}
+                    {material.sdsDate && (
+                      <Badge variant="outline">
+                        Hazırlanma: {new Date(material.sdsDate).toLocaleDateString('tr-TR')}
+                      </Badge>
+                    )}
+                    {material.sdsRevisionDate && (
+                      <Badge variant="outline">
+                        Revizyon: {new Date(material.sdsRevisionDate).toLocaleDateString('tr-TR')}
+                      </Badge>
+                    )}
                     {material.sdsRegime && <Badge variant="outline">{material.sdsRegime}</Badge>}
                     {material.productKind && <Badge variant="outline" className="capitalize">{material.productKind}</Badge>}
                   </div>
