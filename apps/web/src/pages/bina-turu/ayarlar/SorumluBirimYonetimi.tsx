@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Trash2, Edit2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { DepartmentSelect } from '@/components/shared/DepartmentSelect';
 
 const SorumluBirimYonetimi = () => {
   const [data, setData] = useState<any[]>([]);
@@ -68,12 +69,15 @@ const SorumluBirimYonetimi = () => {
       </CardHeader>
       <CardContent>
         <div className="flex gap-2 mb-6">
-          <Input 
-            placeholder="Sorumlu Birim Adı" 
-            value={ad} 
-            onChange={(e) => setAd(e.target.value)}
-          />
-          <Button onClick={handleSave}>
+          <div className="flex-1">
+            <DepartmentSelect
+              value={ad}
+              onChange={(val) => setAd(val)}
+              placeholder="Merkezi departmanlardan sorumlu birim seçin..."
+              allowClear
+            />
+          </div>
+          <Button onClick={handleSave} disabled={!ad}>
             {editId ? <Edit2 className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
             {editId ? 'Güncelle' : 'Ekle'}
           </Button>

@@ -1480,6 +1480,21 @@ export const ImprovementTable: React.FC<Props> = ({
                             </span>
                           </div>
                         )}
+                        {record.verificationStatus === 'DOGRULANDI' && (
+                          <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-500/15 text-teal-700 dark:text-teal-300 border border-teal-300 dark:border-teal-800 leading-tight whitespace-nowrap">
+                            ✓ Doğrulandı
+                          </span>
+                        )}
+                        {record.verificationStatus === 'KISMI' && (
+                          <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800 leading-tight whitespace-nowrap">
+                            ⚠ Kısmi Doğr.
+                          </span>
+                        )}
+                        {record.verificationStatus === 'RED' && (
+                          <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-500/15 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800 leading-tight whitespace-nowrap">
+                            ✕ Doğr. Red
+                          </span>
+                        )}
                       </td>
 
                       {/* Mahal (2 satıra sığabilir) */}

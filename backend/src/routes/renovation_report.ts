@@ -5,41 +5,68 @@ import { authMiddleware } from '../middleware/auth';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 
 const router = Router();
 const prisma = new PrismaClient();
 
-// Setup Multer for image uploads
-const uploadDir = path.join(__dirname, '../../uploads/integrated_audits');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Setup Multer for facility-grouped image & document uploads
+const baseUploadDir = path.join(__dirname, '../../uploads/integrated_audits');
+if (!fs.existsSync(baseUploadDir)) {
+  fs.mkdirSync(baseUploadDir, { recursive: true });
+}
+
+function toFacilityFolderSlug(raw?: string): string {
+  if (!raw) return 'genel';
+  const trMap: Record<string, string> = {
+    ç: 'c', Ç: 'c', ğ: 'g', Ğ: 'g', ı: 'i', İ: 'i',
+    ö: 'o', Ö: 'o', ş: 's', Ş: 's', ü: 'u', Ü: 'u',
+  };
+  const slug = raw
+    .replace(/[çÇğĞıİöÖşŞüÜ]/g, (c) => trMap[c] || c)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+  return slug || 'genel';
 }
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
+  destination: (req, _file, cb) => {
+    const facilityName = String(req.query.facilityName || req.query.facilityId || '');
+    const slug = toFacilityFolderSlug(facilityName);
+    const targetDir = path.join(baseUploadDir, slug);
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+    cb(null, targetDir);
   },
-  filename: (req, file, cb) => {
+  filename: (_req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
+    const ext = path.extname(file.originalname) || '.webp';
     cb(null, `audit-${uniqueSuffix}${ext}`);
   }
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 15 * 1024 * 1024 },
+});
 
-// Upload files for findings/actions (Option 1: Upload immediately)
+// Upload files for findings/actions (facility-grouped folder, WebP compressed on client)
 router.post('/upload', authMiddleware, upload.array('files', 20), async (req: AuthRequest, res: Response) => {
   try {
     if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
       return res.status(400).json({ error: 'Dosya yüklenmedi.' });
     }
 
+    const facilityName = String(req.query.facilityName || req.query.facilityId || '');
+    const slug = toFacilityFolderSlug(facilityName);
     const files = req.files as Express.Multer.File[];
-    // Return array of objects with url, name, type matching the frontend
+
     const uploadedFiles = files.map(file => ({
       name: file.originalname,
-      url: `/uploads/integrated_audits/${file.filename}`,
+      url: `/uploads/integrated_audits/${slug}/${file.filename}`,
       type: file.mimetype,
       size: file.size
     }));
@@ -127,80 +154,146 @@ router.post('/save', authMiddleware, async (req: AuthRequest, res: Response) => 
           where: { id },
           data: auditData
         });
-        
-        // Delete all existing relations so we can recreate them clean (team, findings, actions, files)
-        // Cascade delete on findings will delete actions and finding files. Team is deleted separately.
-        
-        await tx.integratedFinding.deleteMany({ where: { auditId } });
       }
 
+      // 2. Sync Findings WITH PERMANENT UUIDs (Upsert existing, create new with UUID, delete only removed)
+      const incomingFindings = Array.isArray(findings) ? findings : [];
+      const resolvedFindings = incomingFindings.map((finding: any) => {
+        const rawId = typeof finding.id === 'string' ? finding.id.trim() : '';
+        const isPersistentId = Boolean(rawId) && !rawId.startsWith('f_') && !rawId.startsWith('temp_');
+        return {
+          ...finding,
+          _resolvedId: isPersistentId ? rawId : crypto.randomUUID(),
+        };
+      });
 
+      const keepFindingIds = resolvedFindings.map((f: any) => f._resolvedId);
 
-      // 2. Create Findings
-      if (findings && findings.length > 0) {
-        for (const finding of findings) {
-          const createdFinding = await tx.integratedFinding.create({
+      // Delete ONLY findings that were removed from this audit
+      await tx.integratedFinding.deleteMany({
+        where: {
+          auditId,
+          ...(keepFindingIds.length > 0 ? { id: { notIn: keepFindingIds } } : {}),
+        },
+      });
+
+      // Upsert each finding preserving its exact UUID
+      for (const finding of resolvedFindings) {
+        const findingId = finding._resolvedId;
+        const findingPayload = {
+          no: finding.no,
+          area: finding.area || '',
+          subarea: finding.subarea || null,
+          category: finding.category || '',
+          subcategory: finding.subcategory || null,
+          risk: finding.risk || 'Önemli',
+          targetDate: finding.targetDate ? new Date(finding.targetDate) : null,
+          isStarted: finding.isStarted || false,
+          residualRisk: finding.residualRisk || null,
+          riskReasoning: finding.riskReasoning || null,
+          findingDesc: finding.findingDesc || '',
+          riskDesc: finding.riskDesc || '',
+          recommendation: finding.recommendation || '',
+          status: finding.status || 'Yeni Tespit Edilen',
+          history: finding.history || null,
+          departments: finding.departments || [],
+        };
+
+        const existingFinding = await tx.integratedFinding.findFirst({
+          where: { id: findingId, auditId },
+          select: { id: true },
+        });
+
+        if (existingFinding) {
+          await tx.integratedFinding.update({
+            where: { id: findingId },
+            data: findingPayload,
+          });
+          // Replace finding-level files cleanly
+          await tx.integratedFile.deleteMany({ where: { findingId } });
+        } else {
+          await tx.integratedFinding.create({
             data: {
+              id: findingId,
               auditId,
-              no: finding.no,
-              area: finding.area,
-              subarea: finding.subarea || null,
-              category: finding.category,
-              subcategory: finding.subcategory || null,
-              risk: finding.risk,
-              targetDate: finding.targetDate ? new Date(finding.targetDate) : null,
-              isStarted: finding.isStarted || false,
-              residualRisk: finding.residualRisk || null,
-              riskReasoning: finding.riskReasoning || null,
-              findingDesc: finding.findingDesc || '',
-              riskDesc: finding.riskDesc || '',
-              recommendation: finding.recommendation || '',
-              status: finding.status,
-              history: finding.history || null,
-              departments: finding.departments || [],
-            }
+              ...findingPayload,
+            },
+          });
+        }
+
+        // Finding Files
+        if (finding.files && finding.files.length > 0) {
+          await tx.integratedFile.createMany({
+            data: finding.files.map((f: any) => ({
+              findingId,
+              name: f.name || 'dosya',
+              url: f.url,
+              type: f.type || 'unknown',
+            })),
+          });
+        }
+
+        // 3. Sync Actions (preserve persistent action UUIDs too)
+        const incomingSteps = Array.isArray(finding.steps) ? finding.steps : [];
+        const resolvedSteps = incomingSteps.map((step: any) => {
+          const rawStepId = typeof step.id === 'string' ? step.id.trim() : '';
+          const isPersistentStepId = Boolean(rawStepId) && !rawStepId.startsWith('step_');
+          return {
+            ...step,
+            _resolvedStepId: isPersistentStepId ? rawStepId : crypto.randomUUID(),
+          };
+        });
+        const keepStepIds = resolvedSteps.map((s: any) => s._resolvedStepId);
+
+        await tx.integratedAction.deleteMany({
+          where: {
+            findingId,
+            ...(keepStepIds.length > 0 ? { id: { notIn: keepStepIds } } : {}),
+          },
+        });
+
+        for (const step of resolvedSteps) {
+          const actionId = step._resolvedStepId;
+          const actionPayload = {
+            department: step.department,
+            order: step.order || 1,
+            status: step.status,
+            actionDate: step.actionDate ? new Date(step.actionDate) : null,
+            title: step.title || null,
+            explanation: step.explanation || null,
+            completedAt: step.completedAt ? new Date(step.completedAt) : null,
+          };
+
+          const existingAction = await tx.integratedAction.findFirst({
+            where: { id: actionId, findingId },
+            select: { id: true },
           });
 
-          // Finding Files
-          if (finding.files && finding.files.length > 0) {
-            await tx.integratedFile.createMany({
-              data: finding.files.map((f: any) => ({
-                findingId: createdFinding.id,
-                name: f.name || 'dosya',
-                url: f.url,
-                type: f.type || 'unknown'
-              }))
+          if (existingAction) {
+            await tx.integratedAction.update({
+              where: { id: actionId },
+              data: actionPayload,
+            });
+            await tx.integratedFile.deleteMany({ where: { actionId } });
+          } else {
+            await tx.integratedAction.create({
+              data: {
+                id: actionId,
+                findingId,
+                ...actionPayload,
+              },
             });
           }
 
-          // 3. Actions
-          if (finding.steps && finding.steps.length > 0) {
-            for (const step of finding.steps) {
-              const createdAction = await tx.integratedAction.create({
-                data: {
-                  findingId: createdFinding.id,
-                  department: step.department,
-                  order: step.order || 1,
-                  status: step.status,
-                  actionDate: step.actionDate ? new Date(step.actionDate) : null,
-                  title: step.title || null,
-                  explanation: step.explanation || null,
-                  completedAt: step.completedAt ? new Date(step.completedAt) : null,
-                }
-              });
-
-              // Action Files
-              if (step.files && step.files.length > 0) {
-                await tx.integratedFile.createMany({
-                  data: step.files.map((f: any) => ({
-                    actionId: createdAction.id,
-                    name: f.name || 'dosya',
-                    url: f.url,
-                    type: f.type || 'unknown'
-                  }))
-                });
-              }
-            }
+          if (step.files && step.files.length > 0) {
+            await tx.integratedFile.createMany({
+              data: step.files.map((f: any) => ({
+                actionId,
+                name: f.name || 'dosya',
+                url: f.url,
+                type: f.type || 'unknown',
+              })),
+            });
           }
         }
       }
@@ -225,6 +318,321 @@ router.post('/save', authMiddleware, async (req: AuthRequest, res: Response) => 
   } catch (err) {
     console.error('Save Audit Error:', err);
     res.status(500).json({ error: 'Rapor kaydedilemedi.' });
+  }
+});
+
+// ============================================================================
+// DENETİM HAVUZU (IRSC STANDART BULGU ŞABLON KÜTÜPHANESİ)
+// ============================================================================
+
+const TR_STOP_WORDS = new Set([
+  've', 'ile', 'bir', 'bu', 'da', 'de', 'için', 'olarak', 'olan', 'olup',
+  'veya', 'gibi', 'daha', 'çok', 'her', 'var', 'yok', 'içinde', 'üzerinde',
+  'kat', 'bina', 'oda', 'alan', 'mahal', 'tesis', 'hastane', 'bulunmaktadır',
+  'bulunmamaktadır', 'tespit', 'edilmiştir', 'gerekmektedir', 'yapılmalıdır'
+]);
+
+function tokenizeTurkish(text: string): Set<string> {
+  const clean = String(text || '')
+    .toLocaleLowerCase('tr-TR')
+    .replace(/[^a-zçğıöşü0-9\s]/g, ' ')
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length >= 3 && !TR_STOP_WORDS.has(w));
+  return new Set(clean);
+}
+
+function computeSimilarity(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0;
+  let overlap = 0;
+  a.forEach((word) => {
+    if (b.has(word)) overlap++;
+  });
+  const union = new Set([...a, ...b]).size;
+  return union > 0 ? Math.round((overlap / union) * 100) : 0;
+}
+
+const isIrscManager = (req: AuthRequest): boolean => !!(
+  req.user?.isAdmin ||
+  req.user?.isManagement ||
+  req.user?.roles?.includes('admin') ||
+  req.user?.roles?.includes('management') ||
+  req.user?.roles?.includes('safety')
+);
+
+// 1. Havuz şablonlarını listele
+router.get('/pool', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { q, category, risk, tag, includeInactive } = req.query as Record<string, string>;
+    const where: any = {};
+    if (includeInactive !== 'true') {
+      where.isActive = true;
+    }
+    if (category && category !== 'ALL') {
+      where.category = category;
+    }
+    if (risk && risk !== 'ALL') {
+      where.defaultRisk = risk;
+    }
+    if (tag && tag !== 'ALL') {
+      where.tags = { has: tag };
+    }
+    if (q && q.trim()) {
+      const term = q.trim();
+      where.OR = [
+        { title: { contains: term, mode: 'insensitive' } },
+        { code: { contains: term, mode: 'insensitive' } },
+        { findingDesc: { contains: term, mode: 'insensitive' } },
+        { riskDesc: { contains: term, mode: 'insensitive' } },
+        { recommendation: { contains: term, mode: 'insensitive' } },
+        { category: { contains: term, mode: 'insensitive' } },
+        { legislationRef: { contains: term, mode: 'insensitive' } },
+        { tags: { has: term } },
+      ];
+    }
+
+    const templates = await prisma.irscFindingTemplate.findMany({
+      where,
+      orderBy: [{ usageCount: 'desc' }, { updatedAt: 'desc' }],
+    });
+    res.json(templates);
+  } catch (err) {
+    console.error('Fetch Pool Error:', err);
+    res.status(500).json({ error: 'Denetim havuzu yüklenemedi.' });
+  }
+});
+
+// 2. Benzerlik kontrolü (Çöp/mükerrer kayıt önleyici)
+router.post('/pool/check-similar', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { title = '', findingDesc = '', category = '' } = req.body || {};
+    const inputTokens = tokenizeTurkish(`${title} ${findingDesc}`);
+    if (inputTokens.size === 0) {
+      return res.json([]);
+    }
+
+    const activeTemplates = await prisma.irscFindingTemplate.findMany({
+      where: { isActive: true },
+    });
+
+    const scored = activeTemplates
+      .map((tpl) => {
+        const tplTokens = tokenizeTurkish(`${tpl.title} ${tpl.findingDesc} ${(tpl.tags || []).join(' ')}`);
+        let score = computeSimilarity(inputTokens, tplTokens);
+        if (category && tpl.category && category === tpl.category && score > 0) {
+          score = Math.min(100, score + 10);
+        }
+        return { template: tpl, similarity: score };
+      })
+      .filter((item) => item.similarity >= 25)
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, 3);
+
+    res.json(scored);
+  } catch (err) {
+    console.error('Check Similar Pool Error:', err);
+    res.status(500).json({ error: 'Benzerlik kontrolü yapılamadı.' });
+  }
+});
+
+// 3. Yeni şablon ekle
+router.post('/pool', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!isIrscManager(req)) {
+      return res.status(403).json({ error: 'Denetim havuzuna yalnızca yetkililer şablon ekleyebilir.' });
+    }
+    const {
+      code,
+      title,
+      mainCategory,
+      category,
+      subcategory,
+      tags = [],
+      findingDesc,
+      riskDesc,
+      recommendation,
+      defaultRisk = 'Önemli',
+      defaultDepartments = [],
+      legislationRef,
+    } = req.body || {};
+
+    if (!title?.trim() || !findingDesc?.trim()) {
+      return res.status(400).json({ error: 'Şablon başlığı ve standart tespit metni zorunludur.' });
+    }
+
+    const cleanTags = Array.from(
+      new Set(
+        (Array.isArray(tags) ? tags : String(tags || '').split(','))
+          .map((t: any) => String(t || '').replace(/^#/, '').trim())
+          .filter(Boolean)
+      )
+    );
+
+    let finalCode = code?.trim() || null;
+    if (!finalCode) {
+      const total = await prisma.irscFindingTemplate.count();
+      finalCode = `HVZ-${String(total + 1).padStart(3, '0')}`;
+    }
+
+    const created = await prisma.irscFindingTemplate.create({
+      data: {
+        code: finalCode,
+        title: title.trim(),
+        mainCategory: mainCategory?.trim() || null,
+        category: category?.trim() || null,
+        subcategory: subcategory?.trim() || null,
+        tags: cleanTags,
+        findingDesc: findingDesc.trim(),
+        riskDesc: riskDesc?.trim() || null,
+        recommendation: recommendation?.trim() || null,
+        defaultRisk: defaultRisk || 'Önemli',
+        defaultDepartments: Array.isArray(defaultDepartments) ? defaultDepartments : [],
+        legislationRef: legislationRef?.trim() || null,
+        createdBy: req.user?.username || null,
+        createdByName: req.user?.fullName || req.user?.username || null,
+      },
+    });
+
+    res.status(201).json(created);
+  } catch (err) {
+    console.error('Create Pool Template Error:', err);
+    res.status(500).json({ error: 'Şablon kaydedilemedi.' });
+  }
+});
+
+// 4. Şablonu güncelle
+router.put('/pool/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!isIrscManager(req)) {
+      return res.status(403).json({ error: 'Şablon düzenleme yetkiniz yok.' });
+    }
+    const { id } = req.params;
+    const {
+      code,
+      title,
+      mainCategory,
+      category,
+      subcategory,
+      tags,
+      findingDesc,
+      riskDesc,
+      recommendation,
+      defaultRisk,
+      defaultDepartments,
+      legislationRef,
+      isActive,
+    } = req.body || {};
+
+    const updateData: any = {};
+    if (code !== undefined) updateData.code = code?.trim() || null;
+    if (title !== undefined) updateData.title = String(title).trim();
+    if (mainCategory !== undefined) updateData.mainCategory = mainCategory?.trim() || null;
+    if (category !== undefined) updateData.category = category?.trim() || null;
+    if (subcategory !== undefined) updateData.subcategory = subcategory?.trim() || null;
+    if (tags !== undefined) {
+      updateData.tags = Array.from(
+        new Set(
+          (Array.isArray(tags) ? tags : String(tags || '').split(','))
+            .map((t: any) => String(t || '').replace(/^#/, '').trim())
+            .filter(Boolean)
+        )
+      );
+    }
+    if (findingDesc !== undefined) updateData.findingDesc = String(findingDesc).trim();
+    if (riskDesc !== undefined) updateData.riskDesc = riskDesc?.trim() || null;
+    if (recommendation !== undefined) updateData.recommendation = recommendation?.trim() || null;
+    if (defaultRisk !== undefined) updateData.defaultRisk = defaultRisk;
+    if (Array.isArray(defaultDepartments)) updateData.defaultDepartments = defaultDepartments;
+    if (legislationRef !== undefined) updateData.legislationRef = legislationRef?.trim() || null;
+    if (isActive !== undefined) updateData.isActive = Boolean(isActive);
+
+    const updated = await prisma.irscFindingTemplate.update({
+      where: { id },
+      data: updateData,
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error('Update Pool Template Error:', err);
+    res.status(500).json({ error: 'Şablon güncellenemedi.' });
+  }
+});
+
+// 5. Şablon kullanım sayacını artır
+router.post('/pool/:id/use', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const updated = await prisma.irscFindingTemplate.update({
+      where: { id: req.params.id },
+      data: { usageCount: { increment: 1 } },
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error('Increment Pool Usage Error:', err);
+    res.status(500).json({ error: 'Kullanım sayacı güncellenemedi.' });
+  }
+});
+
+// 6. Benzer şablonları tek şablonda birleştir (Merge)
+router.post('/pool/merge', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!isIrscManager(req)) {
+      return res.status(403).json({ error: 'Birleştirme yetkiniz yok.' });
+    }
+    const { targetId, sourceIds } = req.body as { targetId?: string; sourceIds?: string[] };
+    if (!targetId || !Array.isArray(sourceIds) || sourceIds.length === 0) {
+      return res.status(400).json({ error: 'Hedef şablon ve en az bir kaynak şablon seçilmelidir.' });
+    }
+
+    const cleanSourceIds = sourceIds.filter((sid) => sid && sid !== targetId);
+    if (cleanSourceIds.length === 0) {
+      return res.status(400).json({ error: 'Geçerli kaynak şablon bulunamadı.' });
+    }
+
+    const [target, sources] = await Promise.all([
+      prisma.irscFindingTemplate.findUnique({ where: { id: targetId } }),
+      prisma.irscFindingTemplate.findMany({ where: { id: { in: cleanSourceIds } } }),
+    ]);
+
+    if (!target) {
+      return res.status(404).json({ error: 'Hedef şablon bulunamadı.' });
+    }
+
+    const addedUsage = sources.reduce((sum, s) => sum + (s.usageCount || 0), 0);
+    const mergedTags = Array.from(
+      new Set([...(target.tags || []), ...sources.flatMap((s) => s.tags || [])])
+    );
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const upd = await tx.irscFindingTemplate.update({
+        where: { id: targetId },
+        data: {
+          usageCount: (target.usageCount || 0) + addedUsage,
+          tags: mergedTags,
+        },
+      });
+      await tx.irscFindingTemplate.deleteMany({
+        where: { id: { in: cleanSourceIds } },
+      });
+      return upd;
+    });
+
+    res.json({ success: true, mergedCount: cleanSourceIds.length, target: updated });
+  } catch (err) {
+    console.error('Merge Pool Templates Error:', err);
+    res.status(500).json({ error: 'Şablonlar birleştirilemedi.' });
+  }
+});
+
+// 7. Şablon sil
+router.delete('/pool/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!isIrscManager(req)) {
+      return res.status(403).json({ error: 'Şablon silme yetkiniz yok.' });
+    }
+    await prisma.irscFindingTemplate.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete Pool Template Error:', err);
+    res.status(500).json({ error: 'Şablon silinemedi.' });
   }
 });
 

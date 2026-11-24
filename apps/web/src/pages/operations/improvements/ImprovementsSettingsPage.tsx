@@ -3,7 +3,8 @@ import {
   Settings, Sliders, Shield, Bell, FileSpreadsheet, Building2, 
   Info, Tag, Plus, Trash2, RotateCcw, Check, Save,
   FileText, Scale, ShoppingCart, HardHat, Package, Wrench, 
-  CheckCircle2, MoreHorizontal, Sparkles, Layers, Edit2, X, ToggleLeft, ToggleRight, Users
+  CheckCircle2, MoreHorizontal, Sparkles, Layers, Edit2, X, ToggleLeft, ToggleRight, Users,
+  ShieldCheck, Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -63,6 +64,80 @@ export const ImprovementsSettingsPage: React.FC = () => {
   const [cleanupFacilityId, setCleanupFacilityId] = useState('');
   const [cleanupSheetType, setCleanupSheetType] = useState('ALL');
   const [cleaning, setCleaning] = useState(false);
+
+  // Doğrulama Yetkilileri State
+  const [verifierUsers, setVerifierUsers] = useState<Array<{
+    username: string;
+    fullName: string;
+    department: string | null;
+    title: string | null;
+    facilities?: string[];
+    isAdmin: boolean;
+  }>>([]);
+  const [authorizedVerifiers, setAuthorizedVerifiers] = useState<string[]>([]);
+  const [savedAuthorizedVerifiers, setSavedAuthorizedVerifiers] = useState<string[]>([]);
+  const [verifiersLoading, setVerifiersLoading] = useState(true);
+  const [verifiersSaving, setVerifiersSaving] = useState(false);
+  const [verifierSearch, setVerifierSearch] = useState('');
+  const [verifierDropdownOpen, setVerifierDropdownOpen] = useState(false);
+
+  const fetchVerifiers = async () => {
+    try {
+      setVerifiersLoading(true);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/api/operations/improvements/verifiers`, {
+        headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const list = Array.isArray(data.data.authorizedUsernames) ? data.data.authorizedUsernames : [];
+        setAuthorizedVerifiers(list);
+        setSavedAuthorizedVerifiers(list);
+        setVerifierUsers(Array.isArray(data.data.users) ? data.data.users : []);
+      }
+    } catch (err) {
+      console.error('Error fetching verifiers:', err);
+    } finally {
+      setVerifiersLoading(false);
+    }
+  };
+
+  const addVerifierUser = (username: string) => {
+    setAuthorizedVerifiers(prev => (prev.includes(username) ? prev : [...prev, username]));
+  };
+
+  const removeVerifierUser = (username: string) => {
+    setAuthorizedVerifiers(prev => prev.filter(u => u !== username));
+  };
+
+  const hasUnsavedVerifierChanges =
+    authorizedVerifiers.length !== savedAuthorizedVerifiers.length ||
+    authorizedVerifiers.some(u => !savedAuthorizedVerifiers.includes(u));
+
+  const handleSaveVerifiers = async () => {
+    try {
+      setVerifiersSaving(true);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/api/operations/improvements/verifiers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify({ authorizedUsernames: authorizedVerifiers }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Doğrulama yetkileri kaydedilemedi.');
+      }
+      setSavedAuthorizedVerifiers(authorizedVerifiers);
+      toast.success(data.message || 'Doğrulama yetkileri başarıyla kaydedildi.');
+    } catch (err: any) {
+      toast.error('Hata: ' + err.message);
+    } finally {
+      setVerifiersSaving(false);
+    }
+  };
 
   const fetchFacilities = async () => {
     try {
@@ -141,6 +216,7 @@ export const ImprovementsSettingsPage: React.FC = () => {
   useEffect(() => {
     fetchActionTemplates();
     fetchFacilities();
+    fetchVerifiers();
   }, []);
 
   // 🎯 Aksiyon Kalıpları Kaydet
@@ -262,6 +338,261 @@ export const ImprovementsSettingsPage: React.FC = () => {
             Aksiyon kalıpları, kategori yönetimi, modül parametreleri ve veri temizleme.
           </p>
         </div>
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* 0. DOĞRULAMA YETKİLİLERİ YÖNETİMİ (4. ADIM YETKİLENDİRME)           */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      <div className="bg-card text-card-foreground border-2 border-teal-500/30 rounded-2xl p-6 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-foreground flex items-center gap-2 flex-wrap">
+                <span>4. Adım Doğrulama Yetkilileri</span>
+                <Badge variant="outline" className="text-xs bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-300 dark:border-teal-800">
+                  {authorizedVerifiers.length} Seçili Kullanıcı
+                </Badge>
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Bulgu detayındaki 4. Adım (Doğrulama Bölümü) alanına yalnızca burada yetki verilen kullanıcılar ve sistem yöneticileri (Admin) giriş yapabilir.
+              </p>
+            </div>
+          </div>
+
+          {hasAdminAccess && (
+            <Button
+              size="sm"
+              onClick={handleSaveVerifiers}
+              disabled={verifiersSaving || verifiersLoading}
+              className="h-8 text-xs bg-teal-600 hover:bg-teal-700 text-white font-bold gap-1.5 shrink-0"
+            >
+              <Save className="w-3.5 h-3.5" />
+              {verifiersSaving ? 'Kaydediliyor...' : 'Doğrulama Yetkilerini Kaydet'}
+            </Button>
+          )}
+        </div>
+
+        {!hasAdminAccess ? (
+          <div className="p-4 rounded-xl bg-muted/40 border text-xs text-muted-foreground">
+            Doğrulama yetkilerini yalnızca sistem yöneticileri veya üst yönetim görüntüleyip düzenleyebilir.
+          </div>
+        ) : verifiersLoading ? (
+          <div className="py-6 text-center text-xs text-muted-foreground animate-pulse">
+            Kullanıcı listesi yükleniyor...
+          </div>
+        ) : (() => {
+          const q = verifierSearch.trim().toLowerCase();
+          const nonAdminUsers = verifierUsers.filter((u) => !u.isAdmin);
+          const adminUsers = verifierUsers.filter((u) => u.isAdmin);
+          const matchingCandidates = q.length > 0
+            ? nonAdminUsers.filter((u) => {
+                const facText = (u.facilities || []).join(' ').toLowerCase();
+                return (
+                  u.fullName.toLowerCase().includes(q) ||
+                  u.username.toLowerCase().includes(q) ||
+                  (u.department || '').toLowerCase().includes(q) ||
+                  (u.title || '').toLowerCase().includes(q) ||
+                  facText.includes(q)
+                );
+              })
+            : [];
+          const visibleCandidates = matchingCandidates.slice(0, 15);
+          const selectedUserObjects = authorizedVerifiers
+            .filter((uname) => !adminUsers.some((a) => a.username === uname))
+            .map((uname) => {
+              const found = verifierUsers.find((u) => u.username === uname);
+              return found || { username: uname, fullName: uname, department: null, title: null, facilities: [], isAdmin: false };
+            });
+
+          return (
+            <div className="space-y-4">
+              {/* 1. Kullanıcı Ara & Yetki Ekle (Yüzlerce kullanıcı için ölçeklenebilir arama) */}
+              <div className="space-y-1.5 relative">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-xs font-bold text-foreground">
+                    Kullanıcı Ara ve Doğrulama Yetkisi Ver ({nonAdminUsers.length} aktif kullanıcı içinde ara)
+                  </label>
+                  {hasUnsavedVerifierChanges && (
+                    <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-400/50 text-[10px] font-bold">
+                      Kaydedilmemiş değişiklik var
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={verifierSearch}
+                    onFocus={() => setVerifierDropdownOpen(true)}
+                    onChange={(e) => {
+                      setVerifierSearch(e.target.value);
+                      setVerifierDropdownOpen(true);
+                    }}
+                    placeholder="Ad soyad, kullanıcı adı, departman, ünvan veya hastane adı yazarak arayın..."
+                    className="w-full h-10 pl-9 pr-9 rounded-xl border bg-background text-foreground text-xs outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500"
+                  />
+                  {verifierSearch && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVerifierSearch('');
+                        setVerifierDropdownOpen(false);
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
+                      title="Aramayı temizle"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Arama Sonuçları Listesi */}
+                {verifierDropdownOpen && q.length > 0 && (
+                  <div className="rounded-xl border border-teal-500/30 bg-card shadow-lg overflow-hidden">
+                    <div className="px-3 py-1.5 bg-muted/40 border-b flex items-center justify-between text-[11px] text-muted-foreground">
+                      <span>
+                        <strong>{matchingCandidates.length}</strong> kullanıcı bulundu
+                        {matchingCandidates.length > 15 ? ' (ilk 15 gösteriliyor — aramayı daraltabilirsiniz)' : ''}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setVerifierDropdownOpen(false)}
+                        className="text-xs font-semibold hover:text-foreground"
+                      >
+                        Kapat
+                      </button>
+                    </div>
+
+                    {visibleCandidates.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-muted-foreground">
+                        &quot;{verifierSearch}&quot; ile eşleşen kullanıcı bulunamadı.
+                      </div>
+                    ) : (
+                      <div className="divide-y max-h-64 overflow-y-auto">
+                        {visibleCandidates.map((u) => {
+                          const alreadyAuthorized = authorizedVerifiers.includes(u.username);
+                          return (
+                            <div
+                              key={u.username}
+                              className="px-3 py-2.5 flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs font-bold text-foreground">{u.fullName}</span>
+                                  <span className="text-[11px] text-muted-foreground">@{u.username}</span>
+                                  {u.title && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
+                                      {u.title}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                                  {u.department || 'Departman belirtilmemiş'}
+                                  {u.facilities && u.facilities.length > 0 ? ` • ${u.facilities.slice(0, 3).join(', ')}${u.facilities.length > 3 ? ` +${u.facilities.length - 3}` : ''}` : ''}
+                                </p>
+                              </div>
+
+                              {alreadyAuthorized ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => removeVerifierUser(u.username)}
+                                  className="h-7 text-[11px] border-teal-300 text-teal-700 dark:text-teal-300 hover:bg-red-50 hover:text-red-600 hover:border-red-300 shrink-0 gap-1"
+                                >
+                                  <Check className="w-3 h-3" /> Yetkili (Kaldır)
+                                </Button>
+                              ) : (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  onClick={() => addVerifierUser(u.username)}
+                                  className="h-7 text-[11px] bg-teal-600 hover:bg-teal-700 text-white font-semibold shrink-0 gap-1"
+                                >
+                                  <Plus className="w-3 h-3" /> Yetki Ver
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Doğrulama Yetkisi Verilen Kullanıcılar */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-foreground">
+                    Yetkilendirilen Doğrulama Sorumluları ({selectedUserObjects.length})
+                  </span>
+                </div>
+
+                {selectedUserObjects.length === 0 ? (
+                  <div className="p-4 rounded-xl border border-dashed bg-muted/20 text-center text-xs text-muted-foreground">
+                    Henüz özel doğrulama yetkilisi eklenmemiş. Yukarıdaki arama kutusundan ad soyad veya hastane yazarak kullanıcı ekleyebilirsiniz.
+                  </div>
+                ) : (
+                  <div className="divide-y rounded-xl border bg-background overflow-hidden">
+                    {selectedUserObjects.map((u) => (
+                      <div
+                        key={u.username}
+                        className="px-3.5 py-2.5 flex items-center justify-between gap-3 hover:bg-muted/20 transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 rounded-full bg-teal-500/15 text-teal-700 dark:text-teal-300 font-bold text-xs flex items-center justify-center shrink-0">
+                            {u.fullName.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-xs font-bold text-foreground">{u.fullName}</span>
+                              <span className="text-[11px] text-muted-foreground">@{u.username}</span>
+                              {u.title && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
+                                  {u.title}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              {u.department || 'Departman belirtilmemiş'}
+                              {u.facilities && u.facilities.length > 0 ? ` • ${u.facilities.slice(0, 3).join(', ')}${u.facilities.length > 3 ? ` +${u.facilities.length - 3}` : ''}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeVerifierUser(u.username)}
+                          className="h-7 px-2 text-xs text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 shrink-0 gap-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Kaldır
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 3. Varsayılan Admin Yetkilileri Bilgisi */}
+              {adminUsers.length > 0 && (
+                <div className="p-3 rounded-xl bg-muted/30 border flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                  <span className="font-bold text-foreground">Varsayılan Yetkililer (Admin):</span>
+                  {adminUsers.map((a) => (
+                    <Badge key={a.username} variant="outline" className="text-[10px] bg-background">
+                      {a.fullName} (@{a.username})
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────── */}
@@ -459,20 +790,33 @@ export const ImprovementsSettingsPage: React.FC = () => {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 2. SORUMLU BİRİM / KİŞİ VE DENETİM ADI YÖNETİMİ                    */}
+      {/* 2. SORUMLU BİRİM (MERKEZİ DEPARTMAN) VE DENETİM ADI YÖNETİMİ        */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      <StringListSettingCard
-        title="Sorumlu Birim / Kişi Yönetimi"
-        description="Denetim ve bulgu kayıtlarında seçilebilecek sorumlu birim ve kişiler"
-        icon={<Users className="w-5 h-5 text-blue-500" />}
-        dotColorClass="bg-blue-500"
-        endpoint="/api/operations/improvements/responsibles"
-        bodyField="responsibles"
-        defaults={DEFAULT_RESPONSIBLES}
-        placeholder="Yeni sorumlu birim veya kişi adı yazın (Örn: Kalite Direktörlüğü)..."
-        itemLabel="Sorumlu"
-        hasAdminAccess={hasAdminAccess}
-      />
+      <div className="bg-card text-card-foreground border border-border rounded-2xl p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Building2 className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-foreground">
+              Sorumlu Birim / Departman Yönetimi (Merkezi Katalog)
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              İyileştirme ve aksiyon kayıtlarındaki sorumlu birimler artık tüm modüllerle ortak olarak{' '}
+              <strong className="text-foreground">Ayarlar &gt; Tanımlar &gt; Departmanlar</strong> listesinden çekilmektedir.
+            </p>
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => (window.location.href = '/settings/definitions')}
+          className="h-8 text-xs shrink-0"
+        >
+          Merkezi Departmanlara Git
+        </Button>
+      </div>
 
       <StringListSettingCard
         title="Denetim Adı Yönetimi"

@@ -506,15 +506,7 @@ function App() {
 
                   {/* ── ENTEGRE RİSK VE GÜVENLİK DENETİMİ ──────────── */}
                   <Route
-                    path="/renovation-report"
-                    element={
-                      <ProtectedRoute>
-                        <AppLayout><RenovationReportPage /></AppLayout>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/renovation-report/settings"
+                    path="/renovation-report/*"
                     element={
                       <ProtectedRoute>
                         <AppLayout><RenovationReportPage /></AppLayout>

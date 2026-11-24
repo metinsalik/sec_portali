@@ -1,5 +1,6 @@
 import api from '../../../lib/api';
-import type { Audit } from '../types';
+import { type Audit, normalizeRiskLevel } from '../types';
+import { compressImageToWebP } from '../../operations/improvements/ImprovementMediaManager';
 
 
 
@@ -34,7 +35,7 @@ const transformAudit = (backendAudit: any): Audit => {
       subarea: f.subarea,
       category: f.category,
       subcategory: f.subcategory,
-      risk: f.risk,
+      risk: normalizeRiskLevel(f.risk),
       targetDate: f.targetDate ? f.targetDate.split('T')[0] : '',
       isStarted: f.isStarted,
       residualRisk: f.residualRisk,
@@ -85,13 +86,36 @@ export const saveAudit = async (audit: Audit, facilityId: string) => {
   return transformAudit(data);
 };
 
-export const uploadAuditFiles = async (files: File[]) => {
+export const uploadAuditFiles = async (
+  files: File[],
+  facilityId?: string,
+  facilityName?: string
+) => {
+  const processedFiles: File[] = [];
+  for (const f of files) {
+    if (f.type.startsWith('image/')) {
+      try {
+        processedFiles.push(await compressImageToWebP(f));
+      } catch {
+        processedFiles.push(f);
+      }
+    } else {
+      processedFiles.push(f);
+    }
+  }
+
   const formData = new FormData();
-  files.forEach(file => {
+  processedFiles.forEach((file) => {
     formData.append('files', file);
   });
-  const response = await api.post(`/renovation-reports/upload`, formData);
-  if (!response.ok) throw new Error('Failed to upload files');
+
+  const params = new URLSearchParams();
+  if (facilityId) params.set('facilityId', facilityId);
+  if (facilityName) params.set('facilityName', facilityName);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+
+  const response = await api.post(`/renovation-reports/upload${qs}`, formData);
+  if (!response.ok) throw new Error('Dosya yüklenemedi');
   return response.json(); // Array of { name, url, type, size }
 };
 
@@ -109,5 +133,74 @@ export const fetchRenovationSettings = async () => {
 export const saveRenovationSettings = async (settings: any) => {
   const response = await api.post('/renovation-reports/settings', settings);
   if (!response.ok) throw new Error('Failed to save renovation settings');
+  return response.json();
+};
+
+// ── DENETİM HAVUZU (BULGU ŞABLON KÜTÜPHANESİ) ──
+export const fetchFindingPool = async (params?: {
+  q?: string;
+  category?: string;
+  risk?: string;
+  tag?: string;
+  includeInactive?: boolean;
+}) => {
+  const qs = new URLSearchParams();
+  if (params?.q) qs.set('q', params.q);
+  if (params?.category && params.category !== 'ALL') qs.set('category', params.category);
+  if (params?.risk && params.risk !== 'ALL') qs.set('risk', params.risk);
+  if (params?.tag && params.tag !== 'ALL') qs.set('tag', params.tag);
+  if (params?.includeInactive) qs.set('includeInactive', 'true');
+  const queryStr = qs.toString();
+  const response = await api.get(`/renovation-reports/pool${queryStr ? `?${queryStr}` : ''}`);
+  if (!response.ok) throw new Error('Denetim havuzu alınamadı');
+  return response.json();
+};
+
+export const checkSimilarPoolTemplates = async (payload: {
+  title?: string;
+  findingDesc?: string;
+  category?: string;
+}) => {
+  const response = await api.post('/renovation-reports/pool/check-similar', payload);
+  if (!response.ok) return [];
+  return response.json();
+};
+
+export const createPoolTemplate = async (payload: any) => {
+  const response = await api.post('/renovation-reports/pool', payload);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || 'Şablon kaydedilemedi');
+  }
+  return response.json();
+};
+
+export const updatePoolTemplate = async (id: string, payload: any) => {
+  const response = await api.put(`/renovation-reports/pool/${id}`, payload);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || 'Şablon güncellenemedi');
+  }
+  return response.json();
+};
+
+export const incrementPoolTemplateUsage = async (id: string) => {
+  const response = await api.post(`/renovation-reports/pool/${id}/use`, {});
+  if (!response.ok) return null;
+  return response.json();
+};
+
+export const mergePoolTemplates = async (targetId: string, sourceIds: string[]) => {
+  const response = await api.post('/renovation-reports/pool/merge', { targetId, sourceIds });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || 'Şablonlar birleştirilemedi');
+  }
+  return response.json();
+};
+
+export const deletePoolTemplate = async (id: string) => {
+  const response = await api.delete(`/renovation-reports/pool/${id}`);
+  if (!response.ok) throw new Error('Şablon silinemedi');
   return response.json();
 };

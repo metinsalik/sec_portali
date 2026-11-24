@@ -179,6 +179,16 @@ export default function FireSafetyAuditPage() {
     return defaults;
   };
 
+  // Global Departments (Single Source of Truth)
+  const { data: globalDepartments = [] } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ['departments'],
+    queryFn: async () => {
+      const res = await api.get('/settings/definitions/departments');
+      if (!res.ok) return [];
+      return res.json();
+    }
+  });
+
   const sourcesList = getArray(settingsData?.sources, ['İtfaiye Denetim Raporu', 'SEGEM Raporu', 'İç Süreç', 'Saha Turu', 'Yasal Denetim']);
   const categoriesList = getArray(settingsData?.categories, [
     'Yangın Kompartımanı & İzolasyon',
@@ -188,14 +198,7 @@ export default function FireSafetyAuditPage() {
     'Algılama & Otomatik Söndürme',
     'İnşaat, Boya & Fiziki Alan Bakımı'
   ]);
-  const responsiblesList = getArray(settingsData?.responsibles, [
-    'Teknik Hizmetler – Hastane',
-    'Teknik Hizmetler – Merkez',
-    'Teknik Hizmetler & İSG – Hastane',
-    'Satın Alma Direktörlüğü',
-    'Dizayn Yöneticisi & Satınalma',
-    'Merkez Satın Alma & Mimar'
-  ]);
+  const responsiblesList = globalDepartments.map((d) => d.name);
 
   // Fetch Existing Audit or Active Facility Master Audit
   const { data: auditData, isLoading: loadingAudit } = useQuery({

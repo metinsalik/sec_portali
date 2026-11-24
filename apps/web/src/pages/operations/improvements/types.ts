@@ -59,6 +59,30 @@ export interface ImprovementRecordHistory {
   createdAt: string;
 }
 
+export interface ImprovementCheckedAction {
+  id: string;
+  title: string;
+  checked: boolean;
+}
+
+export type VerificationResultType = 'DOGRULANDI' | 'KISMI' | 'RED';
+export type VerificationStatusType = 'BEKLIYOR' | 'DOGRULANDI' | 'KISMI' | 'RED';
+
+export interface ImprovementRecordVerification {
+  id: string;
+  recordId: string;
+  result: VerificationResultType | string;
+  verificationDate: string;
+  notes: string;
+  checkedActions?: ImprovementCheckedAction[] | null;
+  photos?: ImprovementFileAttachment[] | null;
+  documents?: ImprovementFileAttachment[] | null;
+  verifiedBy: string;
+  verifiedByName?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ImprovementRecord {
   id: string;
   facilityId: string;
@@ -103,6 +127,11 @@ export interface ImprovementRecord {
   standardNoteCode?: string | null;
 
   sourceFileName?: string | null;
+  verificationStatus?: VerificationStatusType | string | null;
+  verifiedAt?: string | null;
+  verifiedBy?: string | null;
+  verifiedByName?: string | null;
+  canVerify?: boolean;
   createdAt: string;
   updatedAt: string;
   createdBy?: string | null;
@@ -110,6 +139,7 @@ export interface ImprovementRecord {
   updatedBy?: string | null;
   updatedByName?: string | null;
   histories?: ImprovementRecordHistory[];
+  verifications?: ImprovementRecordVerification[];
 }
 
 export interface ImprovementPeriodicReport {

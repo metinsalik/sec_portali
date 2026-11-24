@@ -3309,12 +3309,19 @@ model ImprovementRecord {
 
   sourceFileName  String?   // Kaynak Excel dosyasının adı
   isArchived      Boolean   @default(false)
+
+  // 4. Adım: Doğrulama & Kapanış Kontrolü Özeti
+  verificationStatus String?   @default("BEKLIYOR") // "BEKLIYOR" | "DOGRULANDI" | "KISMI" | "RED"
+  verifiedAt         DateTime?
+  verifiedBy         String?
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   createdBy       String?
   updatedBy       String?
 
   histories       ImprovementRecordHistory[]
+  verifications   ImprovementRecordVerification[]
 
   @@index([facilityId])
   @@index([moduleGroup])
@@ -3322,6 +3329,27 @@ model ImprovementRecord {
   @@index([status])
   @@index([riskScore])
   @@index([periodicReportId])
+  @@index([verificationStatus])
+}
+
+model ImprovementRecordVerification {
+  id               String            @id @default(uuid())
+  recordId         String
+  record           ImprovementRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  result           String            // "DOGRULANDI" | "KISMI" | "RED"
+  verificationDate DateTime          @default(now())
+  notes            String            // Doğrulama değerlendirme ve kontrol açıklaması
+  checkedActions   Json              @default("[]") // Kontrol edilen aksiyon adımları [{ id, title, checked }]
+  photos           Json              @default("[]") // [{ url, name, type, size, uploadedAt }]
+  documents        Json              @default("[]") // [{ url, name, type, size, uploadedAt }]
+
+  verifiedBy       String            // Kullanıcı username
+  verifiedByName   String?           // Kullanıcı Ad Soyad
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([recordId])
 }
 
 model ImprovementRecordHistory {
@@ -3412,4 +3440,30 @@ model FileTransfer {
   @@index([token])
   @@index([expiresAt, isDeleted])
   @@index([uploadedByUsername])
+}
+
+model IrscFindingTemplate {
+  id                 String   @id @default(uuid())
+  code               String?
+  title              String
+  mainCategory       String?
+  category           String?
+  subcategory        String?
+  tags               String[] @default([])
+  findingDesc        String
+  riskDesc           String?
+  recommendation     String?
+  defaultRisk        String   @default("Önemli")
+  defaultDepartments String[] @default([])
+  legislationRef     String?
+  usageCount         Int      @default(0)
+  isActive           Boolean  @default(true)
+  createdBy          String?
+  createdByName      String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([category])
+  @@index([defaultRisk])
+  @@index([isActive])
 }

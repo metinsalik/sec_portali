@@ -219,11 +219,18 @@ const buildManagementNavItems = [
   { label: 'Modül Ayarları', icon: Settings, to: '/build-management/settings' },
 ];
 
-const renovationReportNavItems = [
+const renovationReportNavItems = (hasManagerAccess: boolean) => [
   { label: 'GENEL', type: 'group' },
   { label: 'Dashboard', icon: LayoutDashboard, to: '/renovation-report', end: true },
-  { label: 'AYARLAR', type: 'group' },
-  { label: 'Modül Ayarları', icon: Settings, to: '/renovation-report/settings' },
+  { label: 'RAPORLAR & DENETİM', type: 'group' },
+  { label: 'Yayınlanan Raporlar', icon: FileText, to: '/renovation-report/reports' },
+  ...(hasManagerAccess ? [
+    { label: 'Taslak Denetimler', icon: ClipboardList, to: '/renovation-report/drafts' },
+    { label: 'Yeni Denetim', icon: PenTool, to: '/renovation-report/new' },
+    { label: 'Denetim Havuzu', icon: Database, to: '/renovation-report/pool' },
+    { label: 'AYARLAR', type: 'group' },
+    { label: 'Modül Ayarları', icon: Settings, to: '/renovation-report/settings' },
+  ] : []),
 ];
 
 const checklistNavItems = (hasAdminAccess: boolean, hasSpecialistAccess: boolean) => [
@@ -379,7 +386,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
     navItems = buildManagementNavItems;
     moduleName = 'İnşaat ve Renovasyon Yönetimi';
   } else if (path.startsWith('/renovation-report')) {
-    navItems = renovationReportNavItems;
+    const hasIrscManagerAccess = !!(hasAdminAccess || user?.roles?.includes('safety'));
+    navItems = renovationReportNavItems(hasIrscManagerAccess);
     moduleName = 'Entegre Risk ve Güvenlik Denetimi';
   } else if (path.startsWith('/checklists')) {
     navItems = checklistNavItems(!!hasAdminAccess, !!hasSpecialistAccess);

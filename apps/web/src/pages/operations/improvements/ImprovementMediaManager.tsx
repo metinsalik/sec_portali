@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { 
-  Camera, Upload, FileText, Image as ImageIcon, X, 
-  Eye, Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, AlertCircle, Loader2 
+import { createPortal } from 'react-dom';
+import {
+  Camera, Upload, FileText, Image as ImageIcon, X,
+  Eye, Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, AlertCircle, Loader2
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,8 +20,8 @@ const API = import.meta.env.VITE_API_URL || '';
  * standart WebP formatına sıkıştırır (~150-280 KB).
  */
 export async function compressImageToWebP(
-  file: File, 
-  maxDimension = 1920, 
+  file: File,
+  maxDimension = 1920,
   quality = 0.85
 ): Promise<File> {
   // Eğer dosya resim değilse (örn. PDF) doğrudan kendisini döndür
@@ -186,10 +187,14 @@ export const ImprovementMediaLightbox: React.FC<LightboxProps> = ({
     setZoomLevel(1);
   };
 
-  return (
-    <div 
-      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col justify-between p-4 select-none animate-in fade-in duration-200"
-      onClick={onClose}
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[200] pointer-events-auto bg-black/90 backdrop-blur-md flex flex-col justify-between p-4 select-none animate-in fade-in duration-200"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
     >
       {/* Üst Çubuk */}
       <div className="flex items-center justify-between text-white z-10" onClick={(e) => e.stopPropagation()}>
@@ -251,7 +256,7 @@ export const ImprovementMediaLightbox: React.FC<LightboxProps> = ({
       </div>
 
       {/* Orta Görsel Alanı */}
-      <div 
+      <div
         className="flex-1 flex items-center justify-center relative overflow-hidden my-3"
         onClick={(e) => e.stopPropagation()}
       >
@@ -289,8 +294,8 @@ export const ImprovementMediaLightbox: React.FC<LightboxProps> = ({
 
       {/* Alt Küçük Resim Şeridi */}
       {photos.length > 1 && (
-        <div 
-          className="flex items-center justify-center gap-2 overflow-x-auto py-2 z-10" 
+        <div
+          className="flex items-center justify-center gap-2 overflow-x-auto py-2 z-10"
           onClick={(e) => e.stopPropagation()}
         >
           {photos.map((p, idx) => (
@@ -301,16 +306,16 @@ export const ImprovementMediaLightbox: React.FC<LightboxProps> = ({
                 setCurrentIndex(idx);
                 setZoomLevel(1);
               }}
-              className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${
-                idx === currentIndex ? 'border-primary ring-2 ring-primary/40 scale-105' : 'border-white/20 opacity-60 hover:opacity-100'
-              }`}
+              className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${idx === currentIndex ? 'border-primary ring-2 ring-primary/40 scale-105' : 'border-white/20 opacity-60 hover:opacity-100'
+                }`}
             >
               <img src={p.url} alt={p.name} className="w-full h-full object-cover" />
             </button>
           ))}
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -325,6 +330,7 @@ interface UploaderProps {
   documents?: ImprovementFileAttachment[];
   onDocumentsChange?: (documents: ImprovementFileAttachment[]) => void;
   maxPhotos?: number; // Varsayılan 3
+  photoLabel?: string;
   isReadOnly?: boolean;
 }
 
@@ -336,6 +342,7 @@ export const ImprovementAttachmentManager: React.FC<UploaderProps> = ({
   documents = [],
   onDocumentsChange,
   maxPhotos = 3,
+  photoLabel = 'Bulgu Fotoğrafları',
   isReadOnly = false,
 }) => {
   const [uploading, setUploading] = useState(false);
@@ -412,15 +419,14 @@ export const ImprovementAttachmentManager: React.FC<UploaderProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
               <Camera className="w-3.5 h-3.5 text-primary" />
-              Bulgu Fotoğrafları
+              {photoLabel}
             </span>
-            <Badge 
-              variant="outline" 
-              className={`text-[10px] tabular-nums ${
-                photos.length >= maxPhotos 
-                  ? 'border-amber-500 text-amber-600 bg-amber-50/50 dark:bg-amber-950/20' 
+            <Badge
+              variant="outline"
+              className={`text-[10px] tabular-nums ${photos.length >= maxPhotos
+                  ? 'border-amber-500 text-amber-600 bg-amber-50/50 dark:bg-amber-950/20'
                   : 'text-muted-foreground'
-              }`}
+                }`}
             >
               {photos.length} / {maxPhotos} Fotoğraf
             </Badge>
@@ -434,11 +440,10 @@ export const ImprovementAttachmentManager: React.FC<UploaderProps> = ({
                 type="button"
                 disabled={!canAddPhoto || uploading}
                 onClick={() => cameraInputRef.current?.click()}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-white shadow-2xs transition-all ${
-                  canAddPhoto && !uploading 
-                    ? 'bg-emerald-600 hover:bg-emerald-700 active:scale-95' 
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-white shadow-2xs transition-all ${canAddPhoto && !uploading
+                    ? 'bg-emerald-600 hover:bg-emerald-700 active:scale-95'
                     : 'bg-muted-foreground/40 cursor-not-allowed opacity-50'
-                }`}
+                  }`}
                 title="Mobil Cihaz Kamerasını Aç"
               >
                 <Camera className="w-3.5 h-3.5" />
@@ -450,11 +455,10 @@ export const ImprovementAttachmentManager: React.FC<UploaderProps> = ({
                 type="button"
                 disabled={!canAddPhoto || uploading}
                 onClick={() => fileInputRef.current?.click()}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-white shadow-2xs transition-all ${
-                  canAddPhoto && !uploading 
-                    ? 'bg-primary hover:bg-primary/90 active:scale-95' 
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-white shadow-2xs transition-all ${canAddPhoto && !uploading
+                    ? 'bg-primary hover:bg-primary/90 active:scale-95'
                     : 'bg-muted-foreground/40 cursor-not-allowed opacity-50'
-                }`}
+                  }`}
                 title="Galeriden veya Bilgisayardan Fotoğraf Seç"
               >
                 {uploading ? (
@@ -496,7 +500,7 @@ export const ImprovementAttachmentManager: React.FC<UploaderProps> = ({
         {photos.length > 0 ? (
           <div className="grid grid-cols-3 gap-2.5 pt-1">
             {photos.map((photo, idx) => (
-              <div 
+              <div
                 key={idx}
                 className="relative group rounded-xl overflow-hidden border border-border/80 bg-background aspect-4/3 shadow-2xs flex items-center justify-center"
               >
@@ -508,7 +512,7 @@ export const ImprovementAttachmentManager: React.FC<UploaderProps> = ({
                 />
 
                 {/* Üst Karartma ve Önizleme İkonu */}
-                <div 
+                <div
                   onClick={() => setLightboxIndex(idx)}
                   className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white cursor-pointer"
                   title="Büyüt ve Önizle"
@@ -536,20 +540,19 @@ export const ImprovementAttachmentManager: React.FC<UploaderProps> = ({
             ))}
           </div>
         ) : (
-          <div 
+          <div
             onClick={() => canAddPhoto && fileInputRef.current?.click()}
-            className={`text-center py-4 border-2 border-dashed rounded-xl transition-colors ${
-              canAddPhoto 
-                ? 'border-muted hover:border-primary/50 cursor-pointer bg-background/50 hover:bg-primary/5' 
+            className={`text-center py-4 border-2 border-dashed rounded-xl transition-colors ${canAddPhoto
+                ? 'border-muted hover:border-primary/50 cursor-pointer bg-background/50 hover:bg-primary/5'
                 : 'border-muted bg-muted/20 text-muted-foreground'
-            }`}
+              }`}
           >
             <ImageIcon className="w-6 h-6 text-muted-foreground/60 mx-auto mb-1" />
             <p className="text-xs font-medium text-foreground">
               {isReadOnly ? 'Fotoğraf eklenmemiş' : 'Fotoğraf yüklemek için tıklayın veya kamera ile çekin'}
             </p>
             <p className="text-[11px] text-muted-foreground">
-              Otomatik WebP sıkıştırmasıyla kalite kaybı olmadan kaydedilir (Maks. 3 adet).
+              Otomatik WebP sıkıştırmasıyla kalite kaybı olmadan kaydedilir (Maks. {maxPhotos} adet).
             </p>
           </div>
         )}

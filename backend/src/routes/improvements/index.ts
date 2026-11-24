@@ -1213,6 +1213,8 @@ function formatHistoryItem(h: any, userMap?: any) {
       finalStepTitle = 'Durum Güncellendi';
     } else if (stepType === 'KESIF_NOTU') {
       finalStepTitle = 'Saha Keşif Notu Kaydı';
+    } else if (stepType === 'DOGRULAMA') {
+      finalStepTitle = 'Doğrulama Kontrolü';
     } else {
       finalStepTitle = 'Aksiyon Adımı';
     }
@@ -1236,38 +1238,94 @@ function formatHistoryItem(h: any, userMap?: any) {
   };
 }
 
+const VERIFICATION_SETTING_KEY = 'verification_authorized_users';
+
+const VERIFICATION_RESULT_LABELS: Record<string, string> = {
+  DOGRULANDI: 'Doğrulandı (Uygun)',
+  KISMI: 'Kısmen Doğrulandı (Eksik Var)',
+  RED: 'Uygun Değil (Tekrar Aksiyon Gerekli)',
+};
+
+async function getAuthorizedVerifierUsernames(): Promise<string[]> {
+  try {
+    const setting = await prisma.improvementSetting.findUnique({
+      where: { key: VERIFICATION_SETTING_KEY }
+    });
+    if (setting?.value && Array.isArray(setting.value)) {
+      return (setting.value as any[]).map(v => String(v || '').trim()).filter(Boolean);
+    }
+    return [];
+  } catch (err) {
+    console.error('Error fetching authorized verifier usernames:', err);
+    return [];
+  }
+}
+
+async function canUserVerify(req: AuthRequest): Promise<boolean> {
+  const user = getUser(req);
+  if (!user) return false;
+  if (user.isAdmin || user.roles?.includes('admin')) {
+    return true;
+  }
+  const authorized = await getAuthorizedVerifierUsernames();
+  return authorized.includes(user.username);
+}
+
+async function buildFormattedRecordDetail(id: string, req: AuthRequest): Promise<any> {
+  const record = await prisma.improvementRecord.findUnique({
+    where: { id },
+    include: {
+      facility: {
+        select: { id: true, name: true, shortName: true, city: true }
+      },
+      histories: {
+        orderBy: { createdAt: 'desc' }
+      },
+      verifications: {
+        orderBy: [{ verificationDate: 'desc' }, { createdAt: 'desc' }]
+      }
+    }
+  });
+
+  if (!record) return null;
+
+  const [userMap, canVerify] = await Promise.all([
+    getUserFullNamesMap([
+      record.createdBy,
+      record.updatedBy,
+      record.verifiedBy,
+      ...record.histories.map(h => h.changedBy),
+      ...record.verifications.map(v => v.verifiedBy)
+    ]),
+    canUserVerify(req)
+  ]);
+
+  return {
+    ...record,
+    createdByName: (record.createdBy && userMap.get(record.createdBy)) || record.createdBy || null,
+    updatedByName: (record.updatedBy && userMap.get(record.updatedBy)) || record.updatedBy || null,
+    verifiedByName: (record.verifiedBy && userMap.get(record.verifiedBy)) || record.verifiedBy || null,
+    canVerify,
+    histories: record.histories.map(h => formatHistoryItem(h, userMap)),
+    verifications: record.verifications.map(v => ({
+      ...v,
+      verifiedByName: (v.verifiedBy && userMap.get(v.verifiedBy)) || v.verifiedByName || v.verifiedBy,
+      checkedActions: Array.isArray(v.checkedActions) ? v.checkedActions : [],
+      photos: Array.isArray(v.photos) ? v.photos : [],
+      documents: Array.isArray(v.documents) ? v.documents : [],
+    }))
+  };
+}
+
 // 5.5 TEK BİR KAYDIN DETAYINI GETİR (Dinamik Detay Sayfası & Geçmiş Tarihçesi İçin)
 router.get('/records/:id', async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const record = await prisma.improvementRecord.findUnique({
-      where: { id },
-      include: {
-        facility: {
-          select: { id: true, name: true, shortName: true, city: true }
-        },
-        histories: {
-          orderBy: { createdAt: 'desc' }
-        }
-      }
-    });
+    const formattedRecord = await buildFormattedRecordDetail(id, req);
 
-    if (!record) {
+    if (!formattedRecord) {
       return res.status(404).json({ success: false, message: 'Kayıt bulunamadı.' });
     }
-
-    const userMap = await getUserFullNamesMap([
-      record.createdBy,
-      record.updatedBy,
-      ...record.histories.map(h => h.changedBy)
-    ]);
-
-    const formattedRecord = {
-      ...record,
-      createdByName: (record.createdBy && userMap.get(record.createdBy)) || record.createdBy || null,
-      updatedByName: (record.updatedBy && userMap.get(record.updatedBy)) || record.updatedBy || null,
-      histories: record.histories.map(h => formatHistoryItem(h, userMap))
-    };
 
     res.json({ success: true, data: formattedRecord });
   } catch (error: any) {
@@ -2936,6 +2994,371 @@ router.delete('/periodic-reports/:id', async (req: AuthRequest, res: Response) =
     res.json({ success: true, message: 'Periyodik kontrol raporu silindi.' });
   } catch (error: any) {
     console.error('Error deleting periodic report:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ============================================================================
+// 14. DOĞRULAMA YETKİLİLERİ YÖNETİMİ & 4. ADIM DOĞRULAMA KAYITLARI
+// ============================================================================
+
+async function syncRecordVerificationSummary(recordId: string) {
+  const latest = await prisma.improvementRecordVerification.findFirst({
+    where: { recordId },
+    orderBy: [{ verificationDate: 'desc' }, { createdAt: 'desc' }]
+  });
+
+  if (latest) {
+    await prisma.improvementRecord.update({
+      where: { id: recordId },
+      data: {
+        verificationStatus: latest.result,
+        verifiedAt: latest.verificationDate,
+        verifiedBy: latest.verifiedBy,
+      }
+    });
+  } else {
+    await prisma.improvementRecord.update({
+      where: { id: recordId },
+      data: {
+        verificationStatus: 'BEKLIYOR',
+        verifiedAt: null,
+        verifiedBy: null,
+      }
+    });
+  }
+}
+
+// 14.1 DOĞRULAMA YETKİLİLERİNİ GETİR
+router.get('/verifiers', async (req: AuthRequest, res: Response) => {
+  try {
+    const [authorizedUsernames, canVerify] = await Promise.all([
+      getAuthorizedVerifierUsernames(),
+      canUserVerify(req)
+    ]);
+
+    const isAdmin = isImprovementAdmin(req);
+    let users: Array<{
+      username: string;
+      fullName: string;
+      department: string | null;
+      title: string | null;
+      facilities: string[];
+      isAdmin: boolean;
+    }> = [];
+
+    if (isAdmin) {
+      const dbUsers = await prisma.user.findMany({
+        where: { isActive: true },
+        select: {
+          username: true,
+          fullName: true,
+          department: true,
+          title: true,
+          roles: {
+            select: {
+              role: { select: { name: true } }
+            }
+          },
+          facilities: {
+            select: {
+              facility: { select: { name: true, shortName: true } }
+            }
+          }
+        },
+        orderBy: { fullName: 'asc' }
+      });
+
+      users = dbUsers.map(u => ({
+        username: u.username,
+        fullName: u.fullName || u.username,
+        department: u.department,
+        title: u.title,
+        facilities: u.facilities.map(f => f.facility?.shortName || f.facility?.name || '').filter(Boolean),
+        isAdmin: u.roles.some(r => r.role.name === 'admin'),
+      }));
+    }
+
+    res.json({
+      success: true,
+      data: {
+        authorizedUsernames,
+        canVerify,
+        users,
+      }
+    });
+  } catch (error: any) {
+    console.error('Error fetching verifiers:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 14.2 DOĞRULAMA YETKİLİLERİNİ KAYDET (Yalnızca Yöneticiler)
+router.post('/verifiers', async (req: AuthRequest, res: Response) => {
+  try {
+    if (!isImprovementAdmin(req)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Doğrulama yetkilerini yalnızca yöneticiler düzenleyebilir.'
+      });
+    }
+
+    const raw = req.body?.authorizedUsernames;
+    if (!Array.isArray(raw)) {
+      return res.status(400).json({
+        success: false,
+        message: 'authorizedUsernames alanı dizi olmalıdır.'
+      });
+    }
+
+    const cleaned = Array.from(new Set(raw.map((u: any) => String(u || '').trim()).filter(Boolean)));
+
+    await prisma.improvementSetting.upsert({
+      where: { key: VERIFICATION_SETTING_KEY },
+      update: { value: cleaned },
+      create: {
+        key: VERIFICATION_SETTING_KEY,
+        value: cleaned,
+        description: 'İyileştirme Bulguları 4. Adım Doğrulama Yetkisine Sahip Kullanıcılar',
+      }
+    });
+
+    res.json({
+      success: true,
+      data: { authorizedUsernames: cleaned },
+      message: `${cleaned.length} kullanıcıya doğrulama yetkisi kaydedildi.`
+    });
+  } catch (error: any) {
+    console.error('Error saving verifiers:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 14.3 YENİ DOĞRULAMA KAYDI EKLE (Mevcut durumu Tamamlandı olsa bile çalışır, sadece yetkili kişiler)
+router.post('/records/:id/verifications', async (req: AuthRequest, res: Response) => {
+  try {
+    const allowed = await canUserVerify(req);
+    if (!allowed) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bu işlem için Doğrulama Yetkisi gereklidir. Yöneticinizden yetki talep ediniz.'
+      });
+    }
+
+    const user = getUser(req);
+    const { id } = req.params;
+    const {
+      result = 'DOGRULANDI',
+      verificationDate,
+      notes,
+      checkedActions = [],
+      photos = [],
+      documents = [],
+      reopenFinding = false,
+    } = req.body;
+
+    if (!notes || !String(notes).trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Doğrulama değerlendirme açıklaması zorunludur.'
+      });
+    }
+
+    const validResult = ['DOGRULANDI', 'KISMI', 'RED'].includes(String(result))
+      ? String(result)
+      : 'DOGRULANDI';
+
+    const existing = await prisma.improvementRecord.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Bulgu kaydı bulunamadı.' });
+    }
+
+    const verDate = verificationDate ? new Date(verificationDate) : new Date();
+    const validPhotos = Array.isArray(photos) ? photos.slice(0, 6) : [];
+    const validDocs = Array.isArray(documents) ? documents : [];
+    const validChecked = Array.isArray(checkedActions) ? checkedActions : [];
+
+    await prisma.improvementRecordVerification.create({
+      data: {
+        recordId: id,
+        result: validResult,
+        verificationDate: verDate,
+        notes: String(notes).trim(),
+        checkedActions: validChecked as any,
+        photos: validPhotos as any,
+        documents: validDocs as any,
+        verifiedBy: user.username,
+        verifiedByName: user.fullName || user.username,
+      }
+    });
+
+    await syncRecordVerificationSummary(id);
+
+    // Opsiyonel: Uygun değil / Kısmi seçildiyse ve kullanıcı bulguyu yeniden açmak istediyse
+    let nextStatus = existing.status;
+    let nextProgress = existing.progress;
+    if (reopenFinding && validResult !== 'DOGRULANDI' && existing.status === 'Tamamlandı') {
+      nextStatus = 'Devam Ediyor';
+      nextProgress = 75;
+      await prisma.improvementRecord.update({
+        where: { id },
+        data: {
+          status: nextStatus,
+          progress: nextProgress,
+          updatedBy: user.username,
+        }
+      });
+    }
+
+    const resultLabel = VERIFICATION_RESULT_LABELS[validResult] || validResult;
+    const checkedCount = validChecked.filter((a: any) => a?.checked).length;
+    const summaryPrefix = checkedCount > 0
+      ? `[${resultLabel} • ${checkedCount} aksiyon kontrol edildi] `
+      : `[${resultLabel}] `;
+
+    await prisma.improvementRecordHistory.create({
+      data: {
+        recordId: id,
+        previousNote: existing.currentNote,
+        newNote: `${summaryPrefix}${String(notes).trim()}`,
+        previousStatus: existing.status,
+        newStatus: nextStatus,
+        progress: nextProgress,
+        progressAdded: 0,
+        stepType: 'DOGRULAMA',
+        stepTitle: `Doğrulama Kontrolü: ${resultLabel}`,
+        evidencePhotos: {
+          photos: validPhotos,
+          documents: validDocs,
+          stepType: 'DOGRULAMA',
+          stepTitle: `Doğrulama Kontrolü: ${resultLabel}`,
+          stepFields: {
+            sonuc: resultLabel,
+            dogrulamaTarihi: verDate.toLocaleDateString('tr-TR'),
+          }
+        },
+        changedBy: user.username,
+        changedByName: user.fullName || user.username,
+      }
+    });
+
+    const formatted = await buildFormattedRecordDetail(id, req);
+    res.json({
+      success: true,
+      message: 'Doğrulama kaydı başarıyla eklendi.',
+      data: formatted,
+    });
+  } catch (error: any) {
+    console.error('Error creating verification:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 14.4 DOĞRULAMA KAYDINI GÜNCELLE (Yalnızca Doğrulama Yetkilileri)
+router.put('/records/:recordId/verifications/:verificationId', async (req: AuthRequest, res: Response) => {
+  try {
+    const allowed = await canUserVerify(req);
+    if (!allowed) {
+      return res.status(403).json({
+        success: false,
+        message: 'Doğrulama kaydını düzenlemek için Doğrulama Yetkisi gereklidir.'
+      });
+    }
+
+    const { recordId, verificationId } = req.params;
+    const {
+      result,
+      verificationDate,
+      notes,
+      checkedActions,
+      photos,
+      documents,
+    } = req.body;
+
+    const existingVer = await prisma.improvementRecordVerification.findUnique({
+      where: { id: verificationId }
+    });
+
+    if (!existingVer || existingVer.recordId !== recordId) {
+      return res.status(404).json({ success: false, message: 'Doğrulama kaydı bulunamadı.' });
+    }
+
+    const updateData: any = {};
+    if (result && ['DOGRULANDI', 'KISMI', 'RED'].includes(String(result))) {
+      updateData.result = String(result);
+    }
+    if (verificationDate) {
+      updateData.verificationDate = new Date(verificationDate);
+    }
+    if (notes !== undefined) {
+      if (!String(notes).trim()) {
+        return res.status(400).json({ success: false, message: 'Doğrulama açıklaması boş olamaz.' });
+      }
+      updateData.notes = String(notes).trim();
+    }
+    if (Array.isArray(checkedActions)) {
+      updateData.checkedActions = checkedActions;
+    }
+    if (Array.isArray(photos)) {
+      updateData.photos = photos.slice(0, 6);
+    }
+    if (Array.isArray(documents)) {
+      updateData.documents = documents;
+    }
+
+    await prisma.improvementRecordVerification.update({
+      where: { id: verificationId },
+      data: updateData,
+    });
+
+    await syncRecordVerificationSummary(recordId);
+
+    const formatted = await buildFormattedRecordDetail(recordId, req);
+    res.json({
+      success: true,
+      message: 'Doğrulama kaydı güncellendi.',
+      data: formatted,
+    });
+  } catch (error: any) {
+    console.error('Error updating verification:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 14.5 DOĞRULAMA KAYDINI SİL (Yalnızca Doğrulama Yetkilileri)
+router.delete('/records/:recordId/verifications/:verificationId', async (req: AuthRequest, res: Response) => {
+  try {
+    const allowed = await canUserVerify(req);
+    if (!allowed) {
+      return res.status(403).json({
+        success: false,
+        message: 'Doğrulama kaydını silmek için Doğrulama Yetkisi gereklidir.'
+      });
+    }
+
+    const { recordId, verificationId } = req.params;
+    const existingVer = await prisma.improvementRecordVerification.findUnique({
+      where: { id: verificationId }
+    });
+
+    if (!existingVer || existingVer.recordId !== recordId) {
+      return res.status(404).json({ success: false, message: 'Doğrulama kaydı bulunamadı.' });
+    }
+
+    await prisma.improvementRecordVerification.delete({
+      where: { id: verificationId }
+    });
+
+    await syncRecordVerificationSummary(recordId);
+
+    const formatted = await buildFormattedRecordDetail(recordId, req);
+    res.json({
+      success: true,
+      message: 'Doğrulama kaydı silindi.',
+      data: formatted,
+    });
+  } catch (error: any) {
+    console.error('Error deleting verification:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

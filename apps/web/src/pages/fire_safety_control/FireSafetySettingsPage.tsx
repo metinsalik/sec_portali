@@ -5,17 +5,17 @@ import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  ArrowLeft, 
-  Plus, 
-  Trash2, 
-  Settings, 
-  ShieldAlert, 
-  Users, 
-  Layers, 
-  Pencil, 
-  Check, 
-  X 
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Settings,
+  ShieldAlert,
+  Users,
+  Layers,
+  Pencil,
+  Check,
+  X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -109,7 +109,7 @@ export default function FireSafetySettingsPage() {
       return;
     }
     const updated = [...currentList, newItem.trim()].map((name, i) => ({ id: String(i + 1), name }));
-    
+
     saveMutation.mutate({
       sources: (type === 'sources' ? updated : sources.map((n, i) => ({ id: String(i + 1), name: n }))),
       categories: (type === 'categories' ? updated : categories.map((n, i) => ({ id: String(i + 1), name: n }))),
@@ -125,7 +125,7 @@ export default function FireSafetySettingsPage() {
       return;
     }
     const updated = currentList.filter((_, i) => i !== indexToRemove).map((name, i) => ({ id: String(i + 1), name }));
-    
+
     saveMutation.mutate({
       sources: (type === 'sources' ? updated : sources.map((n, i) => ({ id: String(i + 1), name: n }))),
       categories: (type === 'categories' ? updated : categories.map((n, i) => ({ id: String(i + 1), name: n }))),
@@ -154,7 +154,7 @@ export default function FireSafetySettingsPage() {
     const updatedList = [...currentList];
     updatedList[editingItem.index] = newVal;
     const updated = updatedList.map((name, i) => ({ id: String(i + 1), name }));
-    
+
     saveMutation.mutate({
       sources: (type === 'sources' ? updated : sources.map((n, i) => ({ id: String(i + 1), name: n }))),
       categories: (type === 'categories' ? updated : categories.map((n, i) => ({ id: String(i + 1), name: n }))),
@@ -180,7 +180,7 @@ export default function FireSafetySettingsPage() {
             Yangın Güvenliği Modül Ayarları
           </h1>
           <p className="text-sm text-slate-500">
-            {isManager 
+            {isManager
               ? 'Toplantı tutanakları ve tespitlerde kullanılan kaynaklar, kategoriler ve sorumlu birimleri ekleyebilir veya düzenleyebilirsiniz.'
               : 'Toplantı tutanakları ve tespitlerde kullanılan standart kaynak, kategori ve sorumlu birim tanımları (Salt Okunur).'
             }
@@ -219,7 +219,7 @@ export default function FireSafetySettingsPage() {
                     onKeyDown={e => e.key === 'Enter' && addItem('sources', sources, newSource, () => setNewSource(''))}
                     className="text-sm"
                   />
-                  <Button 
+                  <Button
                     size="sm"
                     onClick={() => addItem('sources', sources, newSource, () => setNewSource(''))}
                     disabled={saveMutation.isPending}
@@ -236,13 +236,12 @@ export default function FireSafetySettingsPage() {
                   const isEditing = editingItem?.type === 'sources' && editingItem.index === idx;
 
                   return (
-                    <div 
-                      key={idx} 
-                      className={`flex items-center justify-between p-2 rounded-lg border text-sm transition-colors ${
-                        isEditing 
-                          ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700' 
+                    <div
+                      key={idx}
+                      className={`flex items-center justify-between p-2 rounded-lg border text-sm transition-colors ${isEditing
+                          ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700'
                           : 'bg-slate-50 dark:bg-slate-800/60 border-slate-100 dark:border-slate-700'
-                      }`}
+                        }`}
                     >
                       {isEditing && isManager ? (
                         <div className="flex items-center gap-1.5 w-full">
@@ -326,7 +325,7 @@ export default function FireSafetySettingsPage() {
                     onKeyDown={e => e.key === 'Enter' && addItem('categories', categories, newCategory, () => setNewCategory(''))}
                     className="text-sm"
                   />
-                  <Button 
+                  <Button
                     size="sm"
                     onClick={() => addItem('categories', categories, newCategory, () => setNewCategory(''))}
                     disabled={saveMutation.isPending}
@@ -343,13 +342,12 @@ export default function FireSafetySettingsPage() {
                   const isEditing = editingItem?.type === 'categories' && editingItem.index === idx;
 
                   return (
-                    <div 
-                      key={idx} 
-                      className={`flex items-center justify-between p-2 rounded-lg border text-sm transition-colors ${
-                        isEditing 
-                          ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700' 
+                    <div
+                      key={idx}
+                      className={`flex items-center justify-between p-2 rounded-lg border text-sm transition-colors ${isEditing
+                          ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700'
                           : 'bg-slate-50 dark:bg-slate-800/60 border-slate-100 dark:border-slate-700'
-                      }`}
+                        }`}
                     >
                       {isEditing && isManager ? (
                         <div className="flex items-center gap-1.5 w-full">
@@ -410,8 +408,8 @@ export default function FireSafetySettingsPage() {
           </div>
         </Card>
 
-        {/* 3. Sorumlu Birimler */}
-        <Card className="border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+        {/* 3. Sorumlu Birimler (Merkezi Departman Kataloğu) */}
+        <Card className="border-border shadow-sm flex flex-col justify-between">
           <div>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
@@ -423,95 +421,20 @@ export default function FireSafetySettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Ekleme Input - Sadece Yöneticiler */}
-              {isManager && (
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Yeni sorumlu birim..."
-                    value={newResp}
-                    onChange={e => setNewResp(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && addItem('responsibles', responsibles, newResp, () => setNewResp(''))}
-                    className="text-sm"
-                  />
-                  <Button 
-                    size="sm"
-                    onClick={() => addItem('responsibles', responsibles, newResp, () => setNewResp(''))}
-                    disabled={saveMutation.isPending}
-                    className="bg-red-600 hover:bg-red-700 text-white shrink-0"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-              )}
-
-              {/* Liste ve Edit */}
-              <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
-                {responsibles.map((item: string, idx: number) => {
-                  const isEditing = editingItem?.type === 'responsibles' && editingItem.index === idx;
-
-                  return (
-                    <div 
-                      key={idx} 
-                      className={`flex items-center justify-between p-2 rounded-lg border text-sm transition-colors ${
-                        isEditing 
-                          ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-700' 
-                          : 'bg-slate-50 dark:bg-slate-800/60 border-slate-100 dark:border-slate-700'
-                      }`}
-                    >
-                      {isEditing && isManager ? (
-                        <div className="flex items-center gap-1.5 w-full">
-                          <Input
-                            autoFocus
-                            value={editingItem.value}
-                            onChange={e => setEditingItem({ ...editingItem, value: e.target.value })}
-                            onKeyDown={e => {
-                              if (e.key === 'Enter') saveEdit('responsibles', responsibles);
-                              if (e.key === 'Escape') setEditingItem(null);
-                            }}
-                            className="h-8 text-xs bg-white dark:bg-slate-900"
-                          />
-                          <button
-                            onClick={() => saveEdit('responsibles', responsibles)}
-                            disabled={saveMutation.isPending}
-                            className="p-1.5 text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-950 rounded"
-                            title="Kaydet"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setEditingItem(null)}
-                            className="p-1.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
-                            title="İptal"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <span className="truncate max-w-[200px]">{item}</span>
-                          {isManager && (
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                onClick={() => setEditingItem({ type: 'responsibles', index: idx, value: item })}
-                                className="text-slate-400 hover:text-blue-600 transition-colors p-1"
-                                title="Düzenle"
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => removeItem('responsibles', responsibles, idx)}
-                                className="text-slate-400 hover:text-red-600 transition-colors p-1"
-                                title="Sil"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
+              <div className="p-5 text-center bg-muted/30 border border-dashed border-border rounded-lg space-y-3">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Sorumlu birimler artık tüm modüllerle ortak olarak{' '}
+                  <strong className="text-foreground">Ayarlar &gt; Tanımlar &gt; Departmanlar</strong>{' '}
+                  kataloğundan yönetilmektedir.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => navigate('/settings/definitions')}
+                  className="text-xs"
+                >
+                  Merkezi Departmanlara Git
+                </Button>
               </div>
             </CardContent>
           </div>

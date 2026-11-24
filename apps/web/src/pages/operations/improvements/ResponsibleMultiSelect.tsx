@@ -1,14 +1,6 @@
 import React from 'react';
 import { SettingMultiSelect } from './SettingMultiSelect';
-
-const DEFAULT_RESPONSIBLES = [
-  'Teknik Müdürlük',
-  'İSG Birimi',
-  'Biyomedikal',
-  'Başhekimlik',
-  'Destek Hizmetleri',
-  'Bilgi İşlem',
-];
+import { DepartmentMultiSelect } from '@/components/shared/DepartmentSelect';
 
 const DEFAULT_AUDIT_NAMES = [
   'Hastane İç Denetimleri',
@@ -28,16 +20,14 @@ interface MultiSelectFieldProps {
 export const ResponsibleMultiSelect: React.FC<MultiSelectFieldProps> = ({
   value,
   onChange,
-  placeholder = 'Sorumlu seçin (birden fazla seçilebilir)...',
+  placeholder = 'Sorumlu departman seçin (birden fazla seçilebilir)...',
 }) => (
-  <SettingMultiSelect
+  <DepartmentMultiSelect
     value={value}
     onChange={onChange}
-    endpoint="/api/operations/improvements/responsibles"
-    defaultOptions={DEFAULT_RESPONSIBLES}
+    mode="csv"
     placeholder={placeholder}
-    searchPlaceholder="Sorumlu ara..."
-    emptyText="Eşleşen sorumlu bulunamadı."
+    searchPlaceholder="Departman ara..."
   />
 );
 

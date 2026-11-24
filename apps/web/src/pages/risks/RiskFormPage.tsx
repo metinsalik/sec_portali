@@ -58,7 +58,7 @@ interface FormState {
   impactDamage: string;
   affectedPeople: string;
   legislation: string;
-  
+
   // Mevcut durum
   initialCondition: string;
   initialImage: string;
@@ -94,19 +94,19 @@ interface FormState {
   controlResult: string;
   effectivenessImages: string[];
   documents: { name: string; url: string; size?: number }[];
-  
+
   status: string;
   statusDate: string;
 }
 
-const MultiSelectResponsibles = ({ 
-  value, 
-  onChange, 
-  options 
-}: { 
-  value: string; 
-  onChange: (val: string) => void; 
-  options: { id: string | number; name: string }[] 
+const MultiSelectResponsibles = ({
+  value,
+  onChange,
+  options
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  options: { id: string | number; name: string }[]
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const selected = value ? value.split(',').map(s => s.trim()).filter(Boolean) : [];
@@ -138,7 +138,7 @@ const MultiSelectResponsibles = ({
       <PopoverContent className="w-80 p-2" align="start">
         <div className="relative mb-2">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
-          <Input 
+          <Input
             placeholder="Sorumlu veya departman ara..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -148,18 +148,18 @@ const MultiSelectResponsibles = ({
         </div>
         <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
           {filteredOptions.map((opt) => (
-            <div 
-              key={opt.id} 
+            <div
+              key={opt.id}
               className="flex items-center space-x-2 p-1 rounded hover:bg-muted/40 cursor-pointer"
               onClick={() => toggleOption(opt.name)}
             >
-              <Checkbox 
-                id={`resp-${opt.id}`} 
+              <Checkbox
+                id={`resp-${opt.id}`}
                 checked={selected.includes(opt.name)}
                 onCheckedChange={() => toggleOption(opt.name)}
               />
-              <label 
-                htmlFor={`resp-${opt.id}`} 
+              <label
+                htmlFor={`resp-${opt.id}`}
                 className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer select-none flex-1"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -265,19 +265,16 @@ export default function RiskFormPage() {
     enabled: !!facilityId,
   });
 
-  // 3. Fetch Settings (Custom Departments)
-  const { data: settingsData } = useQuery<{
-    departments: any[];
-  }>({
-    queryKey: ['risk-settings', facilityId],
+  // 3. Fetch Global Departments (Single Source of Truth)
+  const { data: globalDepartments = [] } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ['departments'],
     queryFn: async () => {
-      const res = await fetch(`${API}/api/risks/settings?facilityId=${facilityId}`, {
+      const res = await fetch(`${API}/api/settings/definitions/departments`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error();
       return res.json();
     },
-    enabled: !!facilityId,
   });
 
   // 3.5. Fetch Global Categories
@@ -445,13 +442,13 @@ export default function RiskFormPage() {
       toast.error('En fazla 5 fotoğraf yükleyebilirsiniz.');
       return;
     }
-    
+
     setUploadingField(field);
     const fd = new FormData();
     fd.append('file', file);
     try {
-      const uploadUrl = facilityId 
-        ? `${API}/api/risks/upload?facilityId=${encodeURIComponent(facilityId)}` 
+      const uploadUrl = facilityId
+        ? `${API}/api/risks/upload?facilityId=${encodeURIComponent(facilityId)}`
         : `${API}/api/risks/upload`;
       const res = await fetch(uploadUrl, {
         method: 'POST',
@@ -460,7 +457,7 @@ export default function RiskFormPage() {
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      
+
       setForm((prev) => {
         const newArray = [...prev[arrayField], data.url];
         return {
@@ -494,8 +491,8 @@ export default function RiskFormPage() {
     const fd = new FormData();
     fd.append('file', file);
     try {
-      const uploadUrl = facilityId 
-        ? `${API}/api/risks/upload?facilityId=${encodeURIComponent(facilityId)}` 
+      const uploadUrl = facilityId
+        ? `${API}/api/risks/upload?facilityId=${encodeURIComponent(facilityId)}`
         : `${API}/api/risks/upload`;
       const res = await fetch(uploadUrl, {
         method: 'POST',
@@ -504,7 +501,7 @@ export default function RiskFormPage() {
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      
+
       const newDoc = {
         name: file.name,
         url: data.url,
@@ -578,7 +575,7 @@ export default function RiskFormPage() {
   }, [globalCategories, form.riskCategory]);
 
   const selectedCatObj = categoryOptions.find((c) => c.name === form.riskCategory);
-  
+
   const subCategoryOptions = useMemo(() => {
     const list = selectedCatObj ? globalCategories.filter((c) => c.parentId === selectedCatObj.id) : [];
     if (form.subCategory && !list.some((sc) => sc.name === form.subCategory)) {
@@ -587,7 +584,7 @@ export default function RiskFormPage() {
     return list;
   }, [globalCategories, selectedCatObj, form.subCategory]);
 
-  const settingsDepartments = settingsData?.departments || [];
+  const settingsDepartments = globalDepartments;
 
   const isFormValid =
     !!form.detectionDate &&
@@ -657,7 +654,7 @@ export default function RiskFormPage() {
         </div>
       </div>
 
-      
+
       <div className="space-y-6">
         {/* Bölüm 1: Genel Bilgiler */}
         <Card className="shadow-sm border-muted">
@@ -690,7 +687,7 @@ export default function RiskFormPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="col-span-1 md:col-span-3">
-                <LocationCascadingSelector 
+                <LocationCascadingSelector
                   locations={locations}
                   value={form.locationId || locationId || ''}
                   onChange={(val, level, path) => {
@@ -841,10 +838,10 @@ export default function RiskFormPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground">İyileştirme Sorumlusu</label>
-                <MultiSelectResponsibles 
-                  value={form.improvementResponsible} 
-                  onChange={(val) => updateField('improvementResponsible', val)} 
-                  options={settingsDepartments} 
+                <MultiSelectResponsibles
+                  value={form.improvementResponsible}
+                  onChange={(val) => updateField('improvementResponsible', val)}
+                  options={settingsDepartments}
                 />
               </div>
               <div className="space-y-1.5">
@@ -949,10 +946,10 @@ export default function RiskFormPage() {
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground">İyileştirme Kontrol Sorumlusu</label>
-                <MultiSelectResponsibles 
-                  value={form.controlResponsible} 
-                  onChange={(val) => updateField('controlResponsible', val)} 
-                  options={settingsDepartments} 
+                <MultiSelectResponsibles
+                  value={form.controlResponsible}
+                  onChange={(val) => updateField('controlResponsible', val)}
+                  options={settingsDepartments}
                 />
               </div>
             </div>
@@ -970,16 +967,16 @@ export default function RiskFormPage() {
                   { id: 'TAKIP_SURECINDE', label: 'Takip Sürecinde' },
                   { id: 'KAPATILDI_GUVENLI', label: 'Kapatıldı ✓' },
                 ].map((st) => (
-                  <Button 
+                  <Button
                     key={st.id}
                     type="button"
                     variant={form.status === st.id ? 'default' : 'outline'}
                     onClick={() => updateField('status', st.id)}
                     className={
-                      form.status === st.id 
-                        ? st.id === 'KAPATILDI_GUVENLI' 
-                          ? 'bg-green-600 hover:bg-green-700 text-white' 
-                          : st.id === 'TAKIP_SURECINDE' 
+                      form.status === st.id
+                        ? st.id === 'KAPATILDI_GUVENLI'
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : st.id === 'TAKIP_SURECINDE'
                             ? 'bg-blue-600 hover:bg-blue-700 text-white'
                             : ''
                         : ''
@@ -988,14 +985,14 @@ export default function RiskFormPage() {
                     {st.label}
                   </Button>
                 ))}
-                
+
                 <div className="flex items-center gap-2 ml-auto">
                   <span className="text-xs text-muted-foreground font-medium">İşlem / Durum Tarihi:</span>
-                  <Input 
-                    type="date" 
+                  <Input
+                    type="date"
                     className="w-40 h-9"
-                    value={form.statusDate ? form.statusDate.slice(0, 10) : ''} 
-                    onChange={(e) => updateField('statusDate', e.target.value)} 
+                    value={form.statusDate ? form.statusDate.slice(0, 10) : ''}
+                    onChange={(e) => updateField('statusDate', e.target.value)}
                   />
                 </div>
               </div>

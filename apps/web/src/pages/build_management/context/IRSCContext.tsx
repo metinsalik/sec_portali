@@ -46,7 +46,7 @@ export function IRSCProvider({ children }: { children: ReactNode }) {
   const [departments, setDepartments] = useState<IRSCDepartment[]>([]);
   const [isSettingsLoaded, setIsSettingsLoaded] = useState(false);
 
-  // Fetch facilities on mount
+  // Fetch facilities & global departments on mount
   useEffect(() => {
     import('../../../lib/api').then(({ default: api }) => {
       api.get('/settings/facilities')
@@ -57,6 +57,15 @@ export function IRSCProvider({ children }: { children: ReactNode }) {
           }
         })
         .catch(err => console.error("Error fetching facilities", err));
+
+      api.get('/settings/definitions/departments')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setDepartments(data.map((d: any) => ({ id: String(d.id), name: d.name })));
+          }
+        })
+        .catch(err => console.error("Error fetching global departments", err));
     });
   }, []);
 
@@ -67,13 +76,12 @@ export function IRSCProvider({ children }: { children: ReactNode }) {
     }).catch(err => console.error("Error fetching audits", err));
   }, []);
 
-  // Fetch settings on mount
+  // Fetch settings on mount (categories/areas/criteria only; departments now come from global /settings/definitions)
   useEffect(() => {
     import('../services/auditApi').then(({ fetchRenovationSettings }) => {
       fetchRenovationSettings().then(settings => {
         if (settings) {
           if (settings.categories?.length > 0) setCategories(settings.categories);
-          if (settings.departments?.length > 0) setDepartments(settings.departments);
           if (settings.areas?.length > 0) setGlobalAreas(settings.areas);
           if (settings.criteria?.length > 0) setGlobalCriteria(settings.criteria);
         }

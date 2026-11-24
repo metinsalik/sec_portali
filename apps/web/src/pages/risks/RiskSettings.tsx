@@ -519,55 +519,25 @@ export default function RiskSettings() {
           </TabsContent>
 
           {/* ── 2. DEPARTMANLAR ────────────────────────────────────────────── */}
-          <TabsContent value="departments" className="pt-4 space-y-4">
-            <div className="flex justify-between items-center bg-card border px-4 py-3 rounded-xl">
-              <div className="text-xs text-muted-foreground font-medium">
-                Örn: Başhekimlik, İSG, Kalite Müdürlüğü, Biyomedikal Müdürlüğü, Teknik Hizmetler.
+          <TabsContent value="departments" className="pt-4">
+            <div className="flex flex-col items-center justify-center p-8 text-center bg-muted/30 border border-dashed border-border rounded-xl space-y-3">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                <Building2 className="w-6 h-6" />
               </div>
-              <Button size="sm" onClick={() => { setDeptName(''); setDeptModal({ open: true }); }} className="shrink-0 ml-4">
-                <Plus className="w-4 h-4 mr-1.5" /> Departman Ekle
+              <div className="space-y-1">
+                <h3 className="text-base font-semibold text-foreground">
+                  Sorumlu Departmanlar Artık Merkezi Katalogdan Yönetiliyor
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  Risk formlarındaki iyileştirme ve kontrol sorumluları artık{' '}
+                  <strong className="text-foreground">Ayarlar &gt; Tanımlar &gt; Departmanlar</strong>{' '}
+                  listesinden otomatik çekilmektedir.
+                </p>
+              </div>
+              <Button size="sm" onClick={() => (window.location.href = '/settings/definitions')}>
+                Merkezi Departmanlara Git
               </Button>
             </div>
-
-            {settingsLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => <div key={i} className="h-14 bg-muted rounded-xl animate-pulse" />)}
-              </div>
-            ) : (
-              <div className="bg-card border rounded-xl overflow-hidden divide-y">
-                {settingsData.departments.map((dept) => (
-                  <div key={dept.id} className="flex items-center justify-between px-5 py-4 hover:bg-muted/30 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <Building2 className="w-4.5 h-4.5 text-blue-500/70" />
-                      <span className="text-sm font-semibold text-foreground">{dept.name}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Button variant="ghost" size="sm" onClick={() => openDeptEdit(dept)} className="h-8 px-3 text-xs text-muted-foreground">
-                        <Edit className="w-3.5 h-3.5 mr-1" /> Düzenle
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => {
-                          if (confirm('Bu departmanı silmek istediğinize emin misiniz?')) {
-                            deleteDeptMutation.mutate(dept.id);
-                          }
-                        }} 
-                        className="h-8 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                {settingsData.departments.length === 0 && (
-                  <div className="text-center py-16 bg-background rounded-xl border border-dashed">
-                    <Building2 className="w-10 h-10 text-muted-foreground/30 mx-auto mb-4" />
-                    <p className="text-muted-foreground text-sm">Henüz departman eklenmemiş.</p>
-                  </div>
-                )}
-              </div>
-            )}
           </TabsContent>
 
 

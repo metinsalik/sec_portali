@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FolderTree, Building2, Edit, Trash2, Plus, Loader2, Users, CornerDownRight, CalendarDays, Search, ChevronDown, ChevronRight, Upload, FileText, CheckCircle, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { DepartmentSelect } from '@/components/shared/DepartmentSelect';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import * as xlsx from 'xlsx';
@@ -815,8 +816,18 @@ export default function IsgKurulSettings() {
       {/* Department Modal */}
       <Dialog open={deptModal.open} onOpenChange={(open) => !open && setDeptModal({ open: false })}>
         <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader><DialogTitle>{deptModal.edit ? 'Departman Düzenle' : 'Yeni Departman'}</DialogTitle></DialogHeader>
-          <div className="py-4"><label className="text-sm font-medium mb-1.5 block">Departman Adı</label><Input value={deptName} onChange={e => setDeptName(e.target.value)} placeholder="Örn: Teknik Servis" autoFocus /></div>
+          <DialogHeader><DialogTitle>{deptModal.edit ? 'Departman Düzenle' : 'Kurula Departman Ekle'}</DialogTitle></DialogHeader>
+          <div className="py-4 space-y-2">
+            <label className="text-sm font-medium block">Merkezi Departman Seçimi *</label>
+            <DepartmentSelect
+              value={deptName}
+              onChange={(val) => setDeptName(val)}
+              placeholder="Merkezi departmanlardan seçiniz..."
+            />
+            <p className="text-xs text-muted-foreground">
+              Yalnızca Ayarlar &gt; Tanımlar &gt; Departmanlar altındaki departmanlar seçilebilir.
+            </p>
+          </div>
           <DialogFooter><Button variant="outline" onClick={() => setDeptModal({ open: false })}>İptal</Button><Button onClick={() => saveDepartment.mutate()} disabled={!deptName.trim() || saveDepartment.isPending} className="bg-blue-600 hover:bg-blue-700 text-white">{saveDepartment.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Kaydet</Button></DialogFooter>
         </DialogContent>
       </Dialog>

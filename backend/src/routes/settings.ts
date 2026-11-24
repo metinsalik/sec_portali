@@ -9,6 +9,14 @@ import {
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import {
+  getDepartmentDependencies,
+  getDepartmentsWithUsage,
+  mergeDepartments,
+  normalizeDeptName,
+  renameDepartmentSafe,
+  syncDepartmentsFromModules,
+} from '../utils/departmentMerge';
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -720,24 +728,66 @@ router.delete('/definitions/categories/:id', managementMiddleware, async (req: A
 
 router.get('/definitions/departments', async (req: AuthRequest, res: Response) => {
   try {
+    if (req.query.withUsage === 'true') {
+      const departments = await getDepartmentsWithUsage();
+      return res.json(departments);
+    }
     const departments = await prisma.department.findMany({ orderBy: { name: 'asc' } });
     res.json(departments);
-  } catch {
+  } catch (err) {
+    console.error('GET /definitions/departments error:', err);
     res.status(500).json({ error: 'Departmanlar getirilemedi.' });
   }
 });
 
-router.post('/definitions/departments', managementMiddleware, async (req: AuthRequest, res: Response) => {
-  const { name } = req.body;
-  if (!name) return res.status(400).json({ error: 'Departman adı zorunludur.' });
+router.get('/definitions/departments/:id/dependencies', managementMiddleware, async (req: AuthRequest, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (Number.isNaN(id)) return res.status(400).json({ error: 'Geçersiz departman ID.' });
   try {
-    const trimmedName = name.trim();
-    let dept = await prisma.department.findFirst({
+    const report = await getDepartmentDependencies(id);
+    res.json(report);
+  } catch (err: any) {
+    res.status(404).json({ error: err.message || 'Bağımlılık analizi yapılamadı.' });
+  }
+});
+
+router.post('/definitions/departments/sync-from-modules', managementMiddleware, async (_req: AuthRequest, res: Response) => {
+  try {
+    const result = await syncDepartmentsFromModules();
+    res.json(result);
+  } catch (err: any) {
+    console.error('POST /definitions/departments/sync-from-modules error:', err);
+    res.status(500).json({ error: err.message || 'Modüllerden departman senkronizasyonu başarısız.' });
+  }
+});
+
+router.post('/definitions/departments/merge', managementMiddleware, async (req: AuthRequest, res: Response) => {
+  const { sourceIds, targetId } = req.body;
+  if (!Array.isArray(sourceIds) || sourceIds.length === 0 || !targetId) {
+    return res.status(400).json({ error: 'Kaynak departmanlar ve hedef departman zorunludur.' });
+  }
+  try {
+    const parsedSources = sourceIds.map((s: any) => parseInt(String(s), 10)).filter((n: number) => !Number.isNaN(n));
+    const parsedTarget = parseInt(String(targetId), 10);
+    const result = await mergeDepartments(parsedSources, parsedTarget);
+    res.json(result);
+  } catch (err: any) {
+    console.error('POST /definitions/departments/merge error:', err);
+    res.status(400).json({ error: err.message || 'Departman birleştirme işlemi başarısız.' });
+  }
+});
+
+router.post('/definitions/departments', managementMiddleware, async (req: AuthRequest, res: Response) => {
+  const trimmedName = normalizeDeptName(req.body?.name);
+  if (!trimmedName) return res.status(400).json({ error: 'Departman adı zorunludur.' });
+  try {
+    const existing = await prisma.department.findFirst({
       where: { name: { equals: trimmedName, mode: 'insensitive' } }
     });
-    if (!dept) {
-      dept = await prisma.department.create({ data: { name: trimmedName } });
+    if (existing) {
+      return res.status(409).json({ error: `"${existing.name}" departmanı zaten tanımlı.` });
     }
+    const dept = await prisma.department.create({ data: { name: trimmedName } });
     res.status(201).json(dept);
   } catch {
     res.status(500).json({ error: 'Departman oluşturulamadı.' });
@@ -745,23 +795,36 @@ router.post('/definitions/departments', managementMiddleware, async (req: AuthRe
 });
 
 router.put('/definitions/departments/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
-  const id = parseInt(String(req.params.id));
-  const { name } = req.body;
+  const id = parseInt(String(req.params.id), 10);
+  if (Number.isNaN(id)) return res.status(400).json({ error: 'Geçersiz departman ID.' });
   try {
-    const dept = await prisma.department.update({ where: { id }, data: { name } });
+    const dept = await renameDepartmentSafe(id, req.body?.name);
     res.json(dept);
-  } catch {
-    res.status(500).json({ error: 'Departman güncellenemedi.' });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Departman güncellenemedi.' });
   }
 });
 
 router.delete('/definitions/departments/:id', managementMiddleware, async (req: AuthRequest, res: Response) => {
-  const id = parseInt(String(req.params.id));
+  const id = parseInt(String(req.params.id), 10);
+  if (Number.isNaN(id)) return res.status(400).json({ error: 'Geçersiz departman ID.' });
+  const transferTargetId = req.query.transferTargetId ? parseInt(String(req.query.transferTargetId), 10) : undefined;
   try {
+    if (transferTargetId && !Number.isNaN(transferTargetId)) {
+      const result = await mergeDepartments([id], transferTargetId);
+      return res.json(result);
+    }
+    const deps = await getDepartmentDependencies(id);
+    if (deps.hasDependencies) {
+      return res.status(409).json({
+        error: `Bu departman ${deps.totalCount} kayıtta kullanıldığı için doğrudan silinemez. Önce başka bir departmana aktarın.`,
+        dependencies: deps,
+      });
+    }
     await prisma.department.delete({ where: { id } });
     res.json({ message: 'Departman silindi.' });
-  } catch {
-    res.status(500).json({ error: 'Departman silinemedi.' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Departman silinemedi.' });
   }
 });
 

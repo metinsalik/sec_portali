@@ -21,7 +21,8 @@ COPY apps/web/ apps/web/
 WORKDIR /app/apps/web
 
 ENV RUST_BACKTRACE=full
-RUN npx vite build
+ENV RAYON_NUM_THREADS=2
+RUN VITE_BIN=$([ -f /app/apps/web/node_modules/.bin/vite ] && echo /app/apps/web/node_modules/.bin/vite || echo /app/node_modules/.bin/vite) && node --no-maglev "$VITE_BIN" build
 
 FROM nginx:alpine
 COPY --from=builder /app/apps/web/dist /usr/share/nginx/html

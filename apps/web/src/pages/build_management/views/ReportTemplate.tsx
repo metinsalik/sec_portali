@@ -1,5 +1,11 @@
 import React, { forwardRef, useEffect, useState } from 'react';
-import type { Finding, AuditMeta, IRSCFacility } from '../types';
+import {
+  type Finding,
+  type AuditMeta,
+  type IRSCFacility,
+  normalizeRiskLevel,
+  getRiskSolidClass,
+} from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 interface ReportTemplateProps {
@@ -11,45 +17,36 @@ interface ReportTemplateProps {
 
 const ReportTemplate = forwardRef<HTMLDivElement, ReportTemplateProps>(
   ({ auditMeta, findings, facility, logoUrl }, ref) => {
-    
+
     const riskWeights: Record<string, number> = {
-      'Tolere Edilemez Risk': 5,
-      'Yüksek Risk': 4,
-      'Önemli Risk': 3,
-      'Olası Risk': 2,
-      'Önemsiz': 1
+      'Kritik': 5,
+      'Yüksek': 4,
+      'Önemli': 3,
+      'Olası': 2,
+      'Önemsiz': 1,
     };
 
     const sortedFindings = [...findings].sort((a, b) => {
       const areaCompare = (a.area || '').localeCompare(b.area || '');
       if (areaCompare !== 0) return areaCompare;
-      const riskA = riskWeights[a.risk] || 0;
-      const riskB = riskWeights[b.risk] || 0;
+      const riskA = riskWeights[normalizeRiskLevel(a.risk)] || 0;
+      const riskB = riskWeights[normalizeRiskLevel(b.risk)] || 0;
       return riskB - riskA;
     });
 
-    const getRiskBg = (risk: string) => {
-      switch(risk) {
-        case 'Tolere Edilemez Risk': return 'bg-red-700 text-white';
-        case 'Yüksek Risk': return 'bg-red-500 text-white';
-        case 'Önemli Risk': return 'bg-orange-500 text-white';
-        case 'Olası Risk': return 'bg-yellow-400 text-slate-900';
-        case 'Önemsiz': return 'bg-green-500 text-white';
-        default: return 'bg-slate-200 text-slate-800';
-      }
-    };
+    const getRiskBg = (risk: string) => getRiskSolidClass(risk);
 
     // Calculate charts data
     const totalFindings = findings.length;
-    
+
     // Improvement chart
     const impStats = {
-      'Yeni Tespit Edilen': findings.filter(f => f.status === 'Açık').length,
-      'İyileştirilmeyen': 0, // Placeholder
-      'Kısmen İyileştirilen': findings.filter(f => f.status === 'İyileştirme Bekliyor').length,
-      'Tamamlanan': findings.filter(f => f.status === 'Kapalı').length
+      'Yeni Tespit Edilen': findings.filter(f => f.status === 'Yeni Tespit Edilen').length,
+      'İyileştirilmeyen': findings.filter(f => f.status === 'İyileştirilmeyen').length,
+      'Kısmen İyileştirilen': findings.filter(f => f.status === 'Kısmen İyileştirilen').length,
+      'Tamamlanan': findings.filter(f => f.status === 'Tamamlanan').length
     };
-    
+
     const impData = [
       { name: 'Yeni Tespit Edilen', value: impStats['Yeni Tespit Edilen'], color: '#3b82f6' },
       { name: 'İyileştirilmeyen', value: impStats['İyileştirilmeyen'], color: '#ef4444' },
@@ -57,8 +54,8 @@ const ReportTemplate = forwardRef<HTMLDivElement, ReportTemplateProps>(
       { name: 'Tamamlanan', value: impStats['Tamamlanan'], color: '#22c55e' }
     ].filter(d => d.value > 0);
 
-    const tamamlanmaOrani = totalFindings > 0 
-      ? Math.round((impStats['Tamamlanan'] / totalFindings) * 100) 
+    const tamamlanmaOrani = totalFindings > 0
+      ? Math.round((impStats['Tamamlanan'] / totalFindings) * 100)
       : 0;
 
     const [headerReady, setHeaderReady] = useState(false);
@@ -73,7 +70,7 @@ const ReportTemplate = forwardRef<HTMLDivElement, ReportTemplateProps>(
               {logoUrl && <img src={logoUrl} alt="Logo" className="max-h-20 max-w-full object-contain mx-auto" />}
             </td>
             <td className="w-[50%] h-24 p-4 align-middle text-center">
-              <h1 className="text-xl font-black uppercase tracking-wide text-slate-800 m-0">Entegre Risk ve Güvenlik<br/>Denetim Raporu</h1>
+              <h1 className="text-xl font-black uppercase tracking-wide text-slate-800 m-0">Entegre Risk ve Güvenlik<br />Denetim Raporu</h1>
             </td>
             <td className="w-[25%] h-24 border-l-[3px] border-slate-700 p-0 align-top">
               <table className="w-full h-full border-collapse font-medium text-xs">
@@ -117,7 +114,7 @@ const ReportTemplate = forwardRef<HTMLDivElement, ReportTemplateProps>(
           <div className="absolute top-1/4 flex flex-col items-center">
             {logoUrl && <img src={logoUrl} alt="Logo" className="w-64 mb-24 object-contain" />}
             <h1 className="text-4xl font-black uppercase tracking-widest text-center leading-tight mb-8 text-slate-900">
-              Entegre Risk ve Güvenlik<br/>Denetim Raporu
+              Entegre Risk ve Güvenlik<br />Denetim Raporu
             </h1>
             <h2 className="text-xl font-bold tracking-wide mb-6 text-slate-700">
               {facility ? facility.name : 'Tesis Seçilmedi'}
@@ -127,7 +124,7 @@ const ReportTemplate = forwardRef<HTMLDivElement, ReportTemplateProps>(
             </h3>
           </div>
           <div className="absolute bottom-12 font-bold text-sm tracking-widest text-slate-800 text-center">
-            MLPCARE | HSE<br/><span className="text-[10px] font-normal opacity-80">HEALTH SAFETY ENVIRONMENT DIRECTORATE</span>
+            MLPCARE | HSE<br /><span className="text-[10px] font-normal opacity-80">HEALTH SAFETY ENVIRONMENT DIRECTORATE</span>
           </div>
         </div>
 
@@ -143,12 +140,12 @@ const ReportTemplate = forwardRef<HTMLDivElement, ReportTemplateProps>(
           <tbody>
             <tr>
               <td>
-                
+
                 {/* --- BÖLÜM 1: YÖNETİCİ ÖZETİ --- */}
                 <div className="page-break w-full pb-8">
                   <h2 className="text-xl font-bold text-center mb-6">BÖLÜM 1: YÖNETİCİ ÖZETİ</h2>
-                  
-                  <div className="text-justify mb-8 leading-relaxed text-[15px]" dangerouslySetInnerHTML={{__html: auditMeta.executiveSummary || 'Yönetici özeti girilmedi.'}}>
+
+                  <div className="text-justify mb-8 leading-relaxed text-[15px]" dangerouslySetInnerHTML={{ __html: auditMeta.executiveSummary || 'Yönetici özeti girilmedi.' }}>
                   </div>
 
                   <div className="flex border-[3px] border-slate-200 mt-8">
@@ -162,7 +159,7 @@ const ReportTemplate = forwardRef<HTMLDivElement, ReportTemplateProps>(
                         <li>İyileştirilen Tespit Sayısı: {impStats['Tamamlanan']}</li>
                         <li>İyileştirmesi Devam Eden Tespit Sayısı: {impStats['Kısmen İyileştirilen']}</li>
                       </ul>
-                      <div className="font-black text-red-600 text-lg">Tamamlanma Oranı: % {tamamlanmaOrani}</div>
+                      <div className="font-bold text-red-600 text-lg">Tamamlanma Oranı: % {tamamlanmaOrani}</div>
                     </div>
                     <div className="w-1/2 p-4 flex flex-col items-center">
                       <div className="font-bold text-slate-700 mb-2">İyileştirme Çalışmaları (Tümü)</div>
@@ -171,7 +168,7 @@ const ReportTemplate = forwardRef<HTMLDivElement, ReportTemplateProps>(
                           <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                               <Pie data={impData} innerRadius={30} outerRadius={70} paddingAngle={2} dataKey="value"
-                                label={({name, percent}) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                                 labelLine={true}
                               >
                                 {impData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
@@ -189,7 +186,7 @@ const ReportTemplate = forwardRef<HTMLDivElement, ReportTemplateProps>(
                 {/* --- BÖLÜM 2: DENETİM HAKKINDA BİLGİLER --- */}
                 <div className="page-break w-full pb-8">
                   <h2 className="text-xl font-bold text-center mb-6">BÖLÜM 2: DENETİM HAKKINDA BİLGİLER</h2>
-                  
+
                   <table className="w-full text-left text-sm border-collapse border-[3px] border-slate-700 mb-8">
                     <tbody>
                       <tr>
@@ -302,7 +299,7 @@ const ReportTemplate = forwardRef<HTMLDivElement, ReportTemplateProps>(
                           <td className="p-2 font-bold bg-slate-100 border-r border-slate-700 w-[15%] text-center">Yer/Konum:</td>
                           <td className="p-2 border-r border-slate-700 w-[30%] text-center">{finding.area}{finding.subarea ? ` - ${finding.subarea}` : ''}</td>
                           <td className="p-2 font-bold bg-slate-100 border-r border-slate-700 w-[15%] text-center">Risk Düzeyi:</td>
-                          <td className={`p-2 font-bold text-center ${getRiskBg(finding.risk)}`}>{finding.risk}</td>
+                          <td className={`p-2 font-bold text-center ${getRiskBg(finding.risk)}`}>{normalizeRiskLevel(finding.risk)}</td>
                         </tr>
                         <tr className="border-b-[3px] border-slate-700">
                           <td className="p-2 font-bold bg-slate-100 border-r border-slate-700 text-center" colSpan={2}>İlgili Süreç:</td>
@@ -310,30 +307,30 @@ const ReportTemplate = forwardRef<HTMLDivElement, ReportTemplateProps>(
                           <td className="p-2 font-bold bg-slate-100 border-r border-slate-700 text-center">İlgili Birim:</td>
                           <td className="p-2 text-center">{Array.from(new Set([...(finding.departments || []), ...(finding.steps?.map(s => s.department) || [])])).join(', ') || 'Atanmadı'}</td>
                         </tr>
-                        
+
                         {/* Tespit Detayları Header */}
                         <tr className="border-b-[3px] border-slate-700 bg-slate-200">
                           <td colSpan={6} className="p-2 font-bold text-center text-base">Tespit Detayları</td>
                         </tr>
-                        
+
                         {/* Tespit */}
                         <tr className="border-b border-slate-700">
                           <td className="p-4 font-bold bg-slate-100 border-r-[3px] border-slate-700 text-center align-middle" colSpan={1}>Tespit:</td>
                           <td className="p-4 align-middle text-justify leading-relaxed" colSpan={5}>{finding.findingDesc}</td>
                         </tr>
-                        
+
                         {/* Risk */}
                         <tr className="border-b border-slate-700">
                           <td className="p-4 font-bold bg-slate-100 border-r-[3px] border-slate-700 text-center align-middle" colSpan={1}>Risk:</td>
                           <td className="p-4 align-middle text-justify leading-relaxed" colSpan={5}>{finding.riskDesc}</td>
                         </tr>
-                        
+
                         {/* Öneri */}
                         <tr className="border-b-[3px] border-slate-700">
                           <td className="p-4 font-bold bg-slate-100 border-r-[3px] border-slate-700 text-center align-middle" colSpan={1}>Öneri:</td>
                           <td className="p-4 align-middle text-justify leading-relaxed" colSpan={5}>{finding.recommendation}</td>
                         </tr>
-                        
+
                         {/* Ek */}
                         <tr className="border-b-[3px] border-slate-700 bg-slate-200">
                           <td colSpan={6} className="p-2 font-bold text-center text-base">Ek (Form, fotoğraf, vb. doküman)</td>
@@ -346,7 +343,7 @@ const ReportTemplate = forwardRef<HTMLDivElement, ReportTemplateProps>(
                             {finding.files && finding.files[1] ? <img src={finding.files[1].url} className="max-h-[220px] mx-auto object-contain" /> : <div className="text-slate-400">Görsel yok</div>}
                           </td>
                         </tr>
-                        
+
                         {/* İyileştirme */}
                         <tr className="border-b-[3px] border-slate-700 bg-slate-200">
                           <td colSpan={3} className="p-2 font-bold text-center border-r-[3px] border-slate-700 text-base">İyileştirme Durumu</td>
@@ -398,7 +395,7 @@ const ReportTemplate = forwardRef<HTMLDivElement, ReportTemplateProps>(
                 {/* --- BÖLÜM 4: GENEL DEĞERLENDİRME VE SONUÇ --- */}
                 <div className="w-full">
                   <h2 className="text-xl font-bold text-center mb-6">BÖLÜM 4: GENEL DEĞERLENDİRME VE SONUÇ</h2>
-                  <div className="text-justify mb-8 leading-relaxed text-[15px]" dangerouslySetInnerHTML={{__html: auditMeta.generalConclusion || 'Genel değerlendirme girilmedi.'}}>
+                  <div className="text-justify mb-8 leading-relaxed text-[15px]" dangerouslySetInnerHTML={{ __html: auditMeta.generalConclusion || 'Genel değerlendirme girilmedi.' }}>
                   </div>
                 </div>
 

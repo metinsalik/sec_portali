@@ -100,14 +100,14 @@ const OperationsSettings = () => {
     for (let month = 0; month < 12; month++) {
       let workingDays = 0;
       const daysInMonth = new Date(year, month + 1, 0).getDate();
-      
+
       for (let d = 1; d <= daysInMonth; d++) {
         const date = new Date(year, month, d);
         const dayOfWeek = date.getDay(); // 0: Sunday, 6: Saturday
-        
+
         if (dayOfWeek === 0) continue; // Skip Sundays
         if (dayOfWeek === 6 && !includeSat) continue; // Skip Saturdays if not included
-        
+
         workingDays++;
       }
       monthlyDays[month + 1] = workingDays;
@@ -153,7 +153,7 @@ const OperationsSettings = () => {
           <h1 className="text-2xl font-bold tracking-tight">Operasyonel Parametreler</h1>
           <p className="text-sm text-muted-foreground">Bu modüldeki hesaplamalar için kullanılan varsayılan değerler.</p>
         </div>
-        
+
         <div className="flex items-center gap-2 bg-background p-2 rounded-xl border shadow-sm w-fit">
           <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-2">Yıl:</span>
           <Select value={dashboardYear} onValueChange={setDashboardYear}>
@@ -187,7 +187,7 @@ const OperationsSettings = () => {
           <div className="bg-muted/50 border border-border/50 p-4 rounded-xl flex gap-3 text-foreground">
             <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-muted-foreground" />
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Bu parametreler kaza sıklık hızı ve kaza ağırlık hızı hesaplamalarında varsayılan olarak kullanılmaktadır. 
+              Bu parametreler kaza sıklık hızı ve kaza ağırlık hızı hesaplamalarında varsayılan olarak kullanılmaktadır.
               Şu an <strong>{dashboardYear}</strong> yılı için yapılandırma yapmaktasınız.
             </p>
           </div>
@@ -203,22 +203,22 @@ const OperationsSettings = () => {
                 <CardContent className="space-y-4 pt-6">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Günlük Çalışma Süresi (Saat)</label>
-                    <Input 
-                      type="number" 
-                      step="0.5" 
+                    <Input
+                      type="number"
+                      step="0.5"
                       className="bg-background"
-                      value={formData.dailyWorkHours || ''} 
-                      onChange={e => setFormData({...formData, dailyWorkHours: parseFloat(e.target.value)})}
+                      value={formData.dailyWorkHours || ''}
+                      onChange={e => setFormData({ ...formData, dailyWorkHours: parseFloat(e.target.value) })}
                     />
                     <p className="text-[11px] text-muted-foreground italic">Örn: 7.5 veya 8</p>
                   </div>
                   <div className="flex items-center gap-3 pt-2">
-                    <input 
-                      type="checkbox" 
-                      id="saturday" 
+                    <input
+                      type="checkbox"
+                      id="saturday"
                       checked={formData.includeSaturday || false}
-                      onChange={e => setFormData({...formData, includeSaturday: e.target.checked})}
-                      className="w-4 h-4 rounded border-muted-foreground/30 accent-primary cursor-pointer" 
+                      onChange={e => setFormData({ ...formData, includeSaturday: e.target.checked })}
+                      className="w-4 h-4 rounded border-muted-foreground/30 accent-primary cursor-pointer"
                     />
                     <label htmlFor="saturday" className="text-sm font-medium cursor-pointer select-none">Cumartesi günü çalışma dahil mi?</label>
                   </div>
@@ -234,11 +234,11 @@ const OperationsSettings = () => {
                 <CardContent className="space-y-4 pt-6">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Ciddi Kaza Eşiği (Gün)</label>
-                    <Input 
-                      type="number" 
+                    <Input
+                      type="number"
                       className="bg-background"
-                      value={formData.seriousAccidentDays || ''} 
-                      onChange={e => setFormData({...formData, seriousAccidentDays: parseInt(e.target.value)})}
+                      value={formData.seriousAccidentDays || ''}
+                      onChange={e => setFormData({ ...formData, seriousAccidentDays: parseInt(e.target.value) })}
                     />
                     <p className="text-[11px] text-muted-foreground italic">İstirahat süresi bu değerden büyükse "Ciddi Kaza" sayılır.</p>
                   </div>
@@ -273,7 +273,7 @@ const OperationsSettings = () => {
                           <TableRow key={name} className="hover:bg-muted/30 transition-colors">
                             <TableCell className="font-medium py-2">{name}</TableCell>
                             <TableCell className="py-2">
-                              <Input 
+                              <Input
                                 type="number"
                                 className="h-8 w-16 mx-auto text-center"
                                 value={days || ''}
@@ -297,7 +297,7 @@ const OperationsSettings = () => {
             <div className="text-sm text-emerald-600 font-medium flex items-center gap-2 transition-opacity" style={{ opacity: isSuccess ? 1 : 0 }}>
               <CheckCircle2 className="w-4 h-4" /> {dashboardYear} Ayarları başarıyla kaydedildi.
             </div>
-            <Button 
+            <Button
               onClick={handleSave}
               disabled={saveMutation.isPending}
               className="min-w-[140px] shadow-sm shadow-primary/20"
@@ -348,11 +348,28 @@ const OperationsSettings = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="definitions" className="pt-4">
+        <TabsContent value="definitions" className="pt-4 space-y-6">
           <OperationsDefinitions types={[
             { key: 'operations-categories', label: 'Genel Kategoriler', icon: Tag },
-            { key: 'operations-departments', label: 'Departmanlar', icon: Building2 },
           ]} />
+          <Card className="border-border/60">
+            <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground">Departmanlar Artık Merkezi Katalogdan Yönetiliyor</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Kurumsal departman tanımları ve birleştirme (merge) işlemleri <strong>Ayarlar &gt; Tanımlar &gt; Departmanlar</strong> ekranına taşınmıştır.
+                  </p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => (window.location.href = '/settings/definitions')}>
+                Merkezi Departmanlara Git
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="incidents" className="pt-4">
@@ -389,7 +406,7 @@ const OperationsDefinitions = ({ types }: { types: { key: string; label: string;
 
   const mutation = useMutation({
     mutationFn: async ({ type, name, id }: { type: string; name: string; id?: number }) => {
-      const res = id 
+      const res = id
         ? await api.put(`/settings/definitions/${type}/${id}`, { name })
         : await api.post(`/settings/definitions/${type}`, { name });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
@@ -437,7 +454,7 @@ const OperationsDefinitions = ({ types }: { types: { key: string; label: string;
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => { setName(item.name); setModal({ open: true, type: t.key, title: t.label, edit: item }); }}>
                       <Edit className="w-3.5 h-3.5" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => { if(confirm('Silmek istediğinize emin misiniz?')) deleteMutation.mutate({ type: t.key, id: item.id }); }}>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => { if (confirm('Silmek istediğinize emin misiniz?')) deleteMutation.mutate({ type: t.key, id: item.id }); }}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>

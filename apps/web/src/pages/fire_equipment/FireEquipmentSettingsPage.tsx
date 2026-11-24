@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { DepartmentSelect } from '@/components/shared/DepartmentSelect';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -367,10 +368,11 @@ export default function FireEquipmentSettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Departmanı</Label>
-                  <Input 
-                    value={newResponsible.department} 
-                    onChange={e => setNewResponsible({...newResponsible, department: e.target.value})} 
-                    placeholder="Örn: İnsan Kaynakları" 
+                  <DepartmentSelect
+                    value={newResponsible.department}
+                    onChange={(val) => setNewResponsible({ ...newResponsible, department: val })}
+                    placeholder="Departman seçiniz..."
+                    allowClear
                   />
                 </div>
                 <Button 
@@ -395,7 +397,12 @@ export default function FireEquipmentSettingsPage() {
                         {editingResponsible?.id === resp.id ? (
                           <div className="space-y-3">
                             <Input value={editingResponsible.name} onChange={e => setEditingResponsible({...editingResponsible, name: e.target.value})} placeholder="Adı Soyadı" />
-                            <Input value={editingResponsible.department || ''} onChange={e => setEditingResponsible({...editingResponsible, department: e.target.value})} placeholder="Departman" />
+                            <DepartmentSelect
+                              value={editingResponsible.department || ''}
+                              onChange={(val) => setEditingResponsible({ ...editingResponsible, department: val })}
+                              placeholder="Departman seçiniz..."
+                              allowClear
+                            />
                             <div className="flex gap-2">
                               <Button size="sm" onClick={() => updateResponsibleMutation.mutate(editingResponsible)}><Check className="w-4 h-4 mr-1" /> Kaydet</Button>
                               <Button size="sm" variant="ghost" onClick={() => setEditingResponsible(null)}>İptal</Button>

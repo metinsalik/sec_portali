@@ -1,10 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useIRSC } from '../context/IRSCContext';
-import { FileText, Clock, CheckCircle2, AlertTriangle, ArrowRight, Trash2 } from 'lucide-react';
+import {
+  FileText,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  ArrowRight,
+  ArrowLeft,
+  Trash2,
+  Plus,
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import toast from 'react-hot-toast';
 
-export default function LocationConsole({ onNavigate }: { onNavigate: (v: 'TRACKING' | 'WORKSPACE' | 'SETTINGS') => void }) {
+export default function LocationConsole() {
   const { setCurrentView, facilities, audits, setAudits, setActiveAuditId } = useIRSC();
-  const [alertMsg, setAlertMsg] = useState('');
   const [confirmDialog, setConfirmDialog] = useState<{ msg: string; onConfirm: () => void } | null>(null);
   const [facId, setFacId] = useState<string | null>(null);
 
@@ -14,177 +34,222 @@ export default function LocationConsole({ onNavigate }: { onNavigate: (v: 'TRACK
     if (fId) setFacId(fId);
   }, []);
 
-  const facility = facilities.find(f => f.id === facId);
-  const facilityAudits = audits.filter(a => a.meta.locationId === facId).sort((a, b) => b.id.localeCompare(a.id));
+  const facility = facilities.find((f) => f.id === facId);
+  const facilityAudits = audits
+    .filter((a) => a.meta.locationId === facId)
+    .sort((a, b) => b.id.localeCompare(a.id));
+
+  const draftAudits = facilityAudits.filter((a) => a.status === 'DRAFT');
+  const publishedAudits = facilityAudits.filter((a) => a.status === 'PUBLISHED');
+
+  const formatDate = (audit: any) => {
+    if (audit.meta?.reportDate) {
+      const d = new Date(audit.meta.reportDate);
+      if (!isNaN(d.getTime())) return d.toLocaleDateString('tr-TR');
+    }
+    const ts = parseInt(String(audit.id).split('_')[1], 10);
+    return !isNaN(ts) ? new Date(ts).toLocaleDateString('tr-TR') : '—';
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setCurrentView('TRACKING')}
-            className="p-2 text-slate-500 hover:bg-slate-100 rounded-full dark:text-slate-400 dark:hover:bg-slate-800"
-          >
-            ←
-          </button>
-          <div>
-            <h2 className="text-xl font-bold text-slate-800 dark:text-white">
-              {facility ? facility.name : 'Tesis Seçilmedi'}
-            </h2>
-            <div className="text-sm text-slate-500 dark:text-slate-400">Tesis Detay ve Rapor Geçmişi</div>
+      {/* Üst Kart */}
+      <Card>
+        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setCurrentView('TRACKING')}
+              aria-label="Yönetim paneline dön"
+              className="h-9 w-9 shrink-0"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                {facility ? facility.name : 'Tesis Seçilmedi'}
+              </h2>
+              <p className="text-xs text-muted-foreground">Tesis Detay ve Rapor Geçmişi</p>
+            </div>
           </div>
-        </div>
-        <button 
-          onClick={() => setCurrentView('WORKSPACE')}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-        >
-          ＋ Yeni Denetim
-        </button>
-      </div>
+          <Button
+            size="sm"
+            onClick={() => {
+              setActiveAuditId(null);
+              setCurrentView('WORKSPACE');
+            }}
+            className="gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            Yeni Denetim
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Drafts */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden dark:bg-slate-800 dark:border-slate-700">
-          <div className="px-6 py-4 border-b border-slate-200 bg-amber-50 flex items-center justify-between dark:border-slate-700 dark:bg-amber-900/10">
-            <h3 className="font-semibold text-amber-800 dark:text-amber-500 flex items-center gap-2">
-              <Clock size={18} /> Devam Eden / Taslak Raporlar
-            </h3>
-            <span className="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded-full font-bold dark:bg-amber-900/50 dark:text-amber-400">
-              {facilityAudits.filter(a => a.status === 'DRAFT').length}
-            </span>
-          </div>
-          <div className="p-4">
-            {facilityAudits.filter(a => a.status === 'DRAFT').length === 0 ? (
-              <p className="text-slate-500 text-sm text-center py-4">Bu tesis için taslak rapor bulunmuyor.</p>
+        {/* Taslak Raporlar */}
+        <Card className="overflow-hidden">
+          <CardHeader className="py-4 px-5 border-b border-border bg-amber-500/5 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Devam Eden / Taslak Raporlar
+            </CardTitle>
+            <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 tabular-nums">
+              {draftAudits.length}
+            </Badge>
+          </CardHeader>
+          <CardContent className="p-4">
+            {draftAudits.length === 0 ? (
+              <p className="text-muted-foreground text-sm text-center py-6">
+                Bu tesis için taslak rapor bulunmuyor.
+              </p>
             ) : (
               <div className="space-y-3">
-                {facilityAudits.filter(a => a.status === 'DRAFT').map(audit => (
-                  <div key={audit.id} className="p-4 border border-slate-200 rounded-lg hover:border-amber-300 transition-colors flex items-center justify-between dark:border-slate-700 dark:hover:border-amber-700">
-                    <div>
-                      <div className="font-semibold text-slate-800 dark:text-white">{audit.meta.reportNo || 'İsimsiz Rapor'}</div>
-                      <div className="text-xs text-slate-500 mt-1 flex gap-3 dark:text-slate-400">
-                        <span>Oluşturulma: {new Date(parseInt(audit.id.split('_')[1])).toLocaleDateString('tr-TR')}</span>
+                {draftAudits.map((audit) => (
+                  <div
+                    key={audit.id}
+                    className="p-3.5 border border-border rounded-lg hover:border-amber-500/40 transition-colors duration-200 flex items-center justify-between gap-3 bg-card"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-semibold text-sm text-foreground truncate">
+                        {audit.meta.reportNo || 'İsimsiz Rapor'}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 tabular-nums">
+                        <span>Oluşturulma: {formatDate(audit)}</span>
                         <span>•</span>
                         <span>{audit.findings.length} Bulgu</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button 
-                        className="flex items-center gap-1 text-sm text-amber-600 font-medium hover:text-amber-700 dark:text-amber-500 bg-amber-50 px-3 py-1.5 rounded-lg dark:bg-amber-900/30"
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs gap-1 border-amber-500/30 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
                         onClick={() => {
                           setActiveAuditId(audit.id);
                           setCurrentView('WORKSPACE');
                         }}
                       >
-                        Düzenle <ArrowRight size={14} />
-                      </button>
-                      <button
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg dark:text-red-400 dark:hover:bg-red-900/30"
+                        Düzenle <ArrowRight className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                        aria-label="Taslağı sil"
                         onClick={() => {
                           setConfirmDialog({
                             msg: 'Bu taslağı tamamen silmek istediğinize emin misiniz?',
                             onConfirm: async () => {
                               try {
                                 if (!audit.id.startsWith('draft_')) {
-                                  // Requires actual API call
                                   const { deleteAudit } = await import('../services/auditApi');
                                   await deleteAudit(audit.id);
                                 }
-                                setAudits(audits.filter(a => a.id !== audit.id));
+                                setAudits(audits.filter((a) => a.id !== audit.id));
+                                toast.success('Taslak rapor silindi.');
                               } catch (err) {
-                                console.error("Silme hatası", err);
-                                alert("Rapor silinemedi.");
+                                console.error('Silme hatası', err);
+                                toast.error('Rapor silinemedi.');
                               }
-                            }
+                            },
                           });
                         }}
                       >
-                        <Trash2 size={16} />
-                      </button>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Published */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden dark:bg-slate-800 dark:border-slate-700">
-          <div className="px-6 py-4 border-b border-slate-200 bg-emerald-50 flex items-center justify-between dark:border-slate-700 dark:bg-emerald-900/10">
-            <h3 className="font-semibold text-emerald-800 dark:text-emerald-500 flex items-center gap-2">
-              <CheckCircle2 size={18} /> Yayınlanmış Raporlar
-            </h3>
-            <span className="bg-emerald-100 text-emerald-700 text-xs px-2 py-1 rounded-full font-bold dark:bg-emerald-900/50 dark:text-emerald-400">
-              {facilityAudits.filter(a => a.status === 'PUBLISHED').length}
-            </span>
-          </div>
-          <div className="p-4">
-            {facilityAudits.filter(a => a.status === 'PUBLISHED').length === 0 ? (
-              <p className="text-slate-500 text-sm text-center py-4">Bu tesis için yayınlanmış rapor bulunmuyor.</p>
+        {/* Yayınlanmış Raporlar */}
+        <Card className="overflow-hidden">
+          <CardHeader className="py-4 px-5 border-b border-border bg-emerald-500/5 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              Yayınlanmış Raporlar
+            </CardTitle>
+            <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 tabular-nums">
+              {publishedAudits.length}
+            </Badge>
+          </CardHeader>
+          <CardContent className="p-4">
+            {publishedAudits.length === 0 ? (
+              <p className="text-muted-foreground text-sm text-center py-6">
+                Bu tesis için yayınlanmış rapor bulunmuyor.
+              </p>
             ) : (
               <div className="space-y-3">
-                {facilityAudits.filter(a => a.status === 'PUBLISHED').map(audit => (
-                  <div key={audit.id} className="p-4 border border-slate-200 rounded-lg hover:border-emerald-300 transition-colors flex items-center justify-between dark:border-slate-700 dark:hover:border-emerald-700">
-                    <div>
-                      <div className="font-semibold text-slate-800 dark:text-white">{audit.meta.reportNo || 'İsimsiz Rapor'}</div>
-                      <div className="text-xs text-slate-500 mt-1 flex gap-3 dark:text-slate-400">
-                        <span>Tarih: {new Date(parseInt(audit.id.split('_')[1])).toLocaleDateString('tr-TR')}</span>
-                        <span>•</span>
-                        <span className="text-red-500 flex items-center gap-1"><AlertTriangle size={12}/> {audit.findings.filter(f => f.status === 'OPEN').length} Açık Bulgu</span>
-                      </div>
-                    </div>
-                    <button 
-                      className="flex items-center gap-1 text-sm text-emerald-600 font-medium hover:text-emerald-700 dark:text-emerald-500 bg-emerald-50 px-3 py-1.5 rounded-lg dark:bg-emerald-900/30"
-                      onClick={() => {
-                        setActiveAuditId(audit.id);
-                        setCurrentView('WORKSPACE');
-                      }}
+                {publishedAudits.map((audit) => {
+                  const openCount = audit.findings.filter(
+                    (f) => f.status === 'OPEN' || f.status !== 'Tamamlanan'
+                  ).length;
+                  return (
+                    <div
+                      key={audit.id}
+                      className="p-3.5 border border-border rounded-lg hover:border-emerald-500/40 transition-colors duration-200 flex items-center justify-between gap-3 bg-card"
                     >
-                      Raporu Görüntüle / Aksiyon Gir <FileText size={14} />
-                    </button>
-                  </div>
-                ))}
+                      <div className="min-w-0">
+                        <div className="font-semibold text-sm text-foreground truncate">
+                          {audit.meta.reportNo || 'İsimsiz Rapor'}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 tabular-nums">
+                          <span>Tarih: {formatDate(audit)}</span>
+                          <span>•</span>
+                          <span className="text-red-600 dark:text-red-400 flex items-center gap-1 font-medium">
+                            <AlertTriangle className="w-3 h-3" /> {openCount} Açık Bulgu
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs gap-1.5 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 shrink-0"
+                        onClick={() => {
+                          setActiveAuditId(audit.id);
+                          setCurrentView('WORKSPACE');
+                        }}
+                      >
+                        Görüntüle / Aksiyon <FileText className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* CUSTOM MODALS */}
-      {alertMsg && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 dark:bg-slate-800 border dark:border-slate-700">
-            <h4 className="text-lg font-bold text-slate-800 mb-2 dark:text-white">Bilgi</h4>
-            <p className="text-slate-600 dark:text-slate-300 mb-6">{alertMsg}</p>
-            <div className="flex justify-end">
-              <button onClick={() => setAlertMsg('')} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Tamam</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {confirmDialog && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 dark:bg-slate-800 border dark:border-slate-700">
-            <h4 className="text-lg font-bold text-slate-800 mb-2 dark:text-white">Onay</h4>
-            <p className="text-slate-600 dark:text-slate-300 mb-6">{confirmDialog.msg}</p>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setConfirmDialog(null)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg dark:text-slate-300 dark:hover:bg-slate-700">İptal</button>
-              <button 
-                onClick={() => {
-                  confirmDialog.onConfirm();
-                  setConfirmDialog(null);
-                }} 
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
-                Sil
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* Silme Onay Diyaloğu (Shadcn Dialog) */}
+      <Dialog open={Boolean(confirmDialog)} onOpenChange={(open) => !open && setConfirmDialog(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Silme Onayı</DialogTitle>
+            <DialogDescription>{confirmDialog?.msg}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" size="sm" onClick={() => setConfirmDialog(null)}>
+              İptal
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                confirmDialog?.onConfirm();
+                setConfirmDialog(null);
+              }}
+            >
+              Sil
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
